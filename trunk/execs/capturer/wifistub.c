@@ -117,7 +117,7 @@ void capture_init(char *device) {
 	}
 	memset(filter_exp, 0, 200);
 
-	//unsigned char dev_macAddress[17];
+	uint8_t dev_mac[] = "00234d1a4dcc";
 	//	getDevice_MACAddress(dev_macAddress,dev);
 	//	strcat(filter_exp,dev_macAddress);
 
@@ -127,8 +127,10 @@ void capture_init(char *device) {
 	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
 	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
 	//strcat(filter_exp, "(ether dst a0:0b:ba:e9:4b:b0) or (ether broadcast and (not ether src a0:0b:ba:e9:4b:b0))"); //phone0 wlan0 //must have ':'s
-	strcat(filter_exp, "(ether dst 10:68:3f:4f:74:67) or (ether broadcast and (not ether src 10:68:3f:4f:74:67))"); //phone1 wlan0
+	//strcat(filter_exp, "(ether dst 10:68:3f:4f:74:67) or (ether broadcast and (not ether src 10:68:3f:4f:74:67))"); //phone1 wlan0
 	//strcat(filter_exp, "(ether dst 50:46:5d:14:e0:7f) or (ether broadcast and (not ether src 50:46:5d:14:e0:7f))"); //tablet1 wlan0
+	strcat(filter_exp, "(ether dst 00:23:4d:1a:4d:cc) or (ether broadcast and (not ether src 00:23:4d:1a:4d:cc))"); //laptop15 wlan0
+	//sprintf(filter_exp, "(ether dst %02x:%02x:%02x:%02x:%02x:%02x) or (ether broadcast and (not ether src %02x:%02x:%02x:%02x:%02x:%02x))", dev_mac[0],dev_mac[1],dev_mac[2],dev_mac[3],dev_mac[4],dev_mac[5],dev_mac[6],dev_mac[1],dev_mac[2],dev_mac[3],dev_mac[4],dev_mac[5],dev_mac[6]);
 
 	uint8_t *dev = (uint8_t *) device;
 	bpf_u_int32 net; /* ip */

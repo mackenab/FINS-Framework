@@ -857,7 +857,7 @@ void main_established(struct tcp_connection *conn) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
 			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
-			//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
+				//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -1088,7 +1088,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
 			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
-			//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
+				//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -1858,10 +1858,11 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 		return NULL;
 	}
 
+	uint32_t family;
+	secure_metadata_readFromElement(meta, "recv_family", &family);
+
 	secure_metadata_readFromElement(meta, "recv_src_ipv4", &seg->src_ip);
-	//host
 	secure_metadata_readFromElement(meta, "recv_dst_ipv4", &seg->dst_ip);
-	//remote
 
 	struct tcpv4_header *hdr = (struct tcpv4_header *) ff->dataFrame.pdu;
 	seg->src_port = ntohs(hdr->src_port);
@@ -2204,7 +2205,7 @@ void tcp_seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16
 	case TS_FIN_WAIT_1:
 		tcp_seg_delayed_ack(seg, conn);
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) { //TODO remove?
-		//send fin
+			//send fin
 			PRINT_DEBUG("add FIN");
 			seg->flags |= FLAG_FIN;
 		}
@@ -3030,7 +3031,7 @@ void tcp_dummy(void) {
 }
 
 static struct fins_module_ops tcp_ops = { .init = tcp_init, .run = tcp_run, .pause = tcp_pause, .unpause = tcp_unpause, .shutdown = tcp_shutdown, .release =
-		tcp_release, };
+tcp_release, };
 
 struct fins_module *tcp_create(uint32_t index, uint32_t id, uint8_t *name) {
 	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);

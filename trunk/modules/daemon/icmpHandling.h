@@ -26,7 +26,7 @@ void connect_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 void accept_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int sock_index_new, int flags);
 void getname_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int peer);
 void ioctl_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
-void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags,
+void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 		struct sockaddr_storage *dest_addr, int addr_len);
 void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int buf_len, uint32_t msg_controllen, int flags);
 void getsockopt_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval);

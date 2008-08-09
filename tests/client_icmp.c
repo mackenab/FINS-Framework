@@ -13,7 +13,6 @@
 //#include <netinet/ip.h>
 #include <linux/errqueue.h>
 
-
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
 #define POLLRDNORM POLLIN
@@ -74,9 +73,9 @@ uint16_t icmp_checksum(uint8_t *pt, uint32_t len) {
 	}
 	sum = ~sum;
 
-//hdr->checksum = htons((uint16_t) sum);
+	//hdr->checksum = htons((uint16_t) sum);
 
-//PRINT_DEBUG("checksum=%x", (uint16_t) sum);
+	//PRINT_DEBUG("checksum=%x", (uint16_t) sum);
 	return (uint16_t) sum;
 }
 
@@ -139,7 +138,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = 0; //htons(port);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,15);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -171,8 +170,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 
-	printf("Connecting to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
-			server_addr.sin_addr.s_addr);
+	printf("Connecting to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 
 	if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
 		perror("Connect");
@@ -219,14 +217,14 @@ int main(int argc, char *argv[]) {
 				memcpy(pkt->data, send_data, len);
 
 				pkt->checksum = 0;
-				pkt->param_1 = i;
-				pkt->param_2 = j++;
+				pkt->param_1 = htons(i);
+				pkt->param_2 = htons(j++);
 
 				pkt->checksum = htons(icmp_checksum(msg, len + 8));
 
 				//numbytes = sendto(sock, msg, len + 8, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 				numbytes = send(sock, msg, len + 8, 0);
-
+				continue;
 				int ret = 0;
 				ret = poll(fds, nfds, time);
 
@@ -260,10 +258,9 @@ int main(int argc, char *argv[]) {
 					///*
 					printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
 					printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
-							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-							(fds[ret].revents & POLLWRBAND) > 0);
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR)
+									> 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+							(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 					fflush(stdout);
 					//*/
 					struct msghdr recv_msg;

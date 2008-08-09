@@ -351,7 +351,7 @@ int randoming(int min, int max);
 
 //TODO fix the usage of these
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
-uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint8_t *data, uint32_t data_len, metadata *meta);
+uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta);
 
 //TODO standardize these, so that there aren't different ones for each proto
 //#define EXEC_TCP_CONNECT 0
@@ -508,7 +508,7 @@ struct daemon_socket_out_ops {
 	void (*accept_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint64_t uniqueSockID_new, int index_new, int flags);
 	void (*getname_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int peer);
 	void (*ioctl_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
-	void (*sendmsg_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags,
+	void (*sendmsg_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 			struct sockaddr_storage *dest_addr, int addr_len);
 	void (*recvmsg_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_controllen, int flags);
 	void (*getsockopt_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval);

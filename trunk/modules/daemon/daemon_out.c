@@ -156,12 +156,9 @@ void listen_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	int backlog;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	backlog = *(int *) pt;
+	int backlog = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
@@ -184,14 +181,9 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	socklen_t addrlen;
-	struct sockaddr_storage addr;
-	int flags;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	addrlen = *(int *) pt;
+	socklen_t addrlen = *(int *) pt;
 	pt += sizeof(int);
 
 	if (addrlen <= 0) {
@@ -200,10 +192,12 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 		return;
 	}
 
+	struct sockaddr_storage addr;
+	memset(&addr, 0, sizeof(struct sockaddr_storage));
 	memcpy(&addr, pt, addrlen);
 	pt += addrlen;
 
-	flags = *(int *) pt;
+	int flags = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
@@ -226,20 +220,15 @@ void accept_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint64_t sock_id_new;
-	int sock_index_new;
-	int flags;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	sock_id_new = *(uint64_t *) pt;
+	uint64_t sock_id_new = *(uint64_t *) pt;
 	pt += sizeof(uint64_t);
 
-	sock_index_new = *(int *) pt;
+	int sock_index_new = *(int *) pt;
 	pt += sizeof(int);
 
-	flags = *(int *) pt;
+	int flags = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
@@ -262,12 +251,9 @@ void getname_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	int peer;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	peer = *(int *) pt;
+	int peer = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
@@ -781,45 +767,38 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint32_t sk_flags;
-	int timestamp;
-	int addr_len;
-	struct sockaddr_storage addr;
-	uint32_t msg_flags;
-	uint32_t msg_controllen;
-	void *msg_control = NULL;
-	uint32_t msg_len;
-	uint8_t *msg = NULL;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	sk_flags = *(uint32_t *) pt;
+	uint32_t sk_flags = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
-	timestamp = sk_flags & ((1 << SOCK_TIMESTAMP) | (1 << SOCK_RCVTSTAMP));
+	int timestamp = sk_flags & ((1 << SOCK_TIMESTAMP) | (1 << SOCK_RCVTSTAMP));
 
-	addr_len = *(int *) pt;
+	int addr_len = *(int *) pt;
 	pt += sizeof(int);
 
+	struct sockaddr_storage addr;
+	memset(&addr, 0, sizeof(struct sockaddr_storage));
 	memcpy(&addr, pt, addr_len);
 	pt += addr_len;
 
-	msg_flags = *(uint32_t *) pt;
+	uint32_t msg_flags = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
 
-	msg_controllen = *(uint32_t *) pt;
+	uint32_t msg_controllen = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
 
-	if (msg_controllen) {
+	void *msg_control = NULL;
+	if (msg_controllen > 0) {
 		msg_control = secure_malloc(msg_controllen);
 		memcpy(msg_control, pt, msg_controllen);
 		pt += msg_controllen;
 	}
 
-	msg_len = *(uint32_t *) pt;
+	uint32_t msg_len = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
 
-	if (msg_len) {
+	uint8_t *msg = NULL;
+	if (msg_len > 0) {
 		msg = (uint8_t *) secure_malloc(msg_len);
 		memcpy(msg, pt, msg_len);
 		pt += msg_len;
@@ -855,7 +834,7 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	//#########################
 
 	if (md->sockets[hdr->sock_index].out_ops->sendmsg_out != NULL) {
-		(md->sockets[hdr->sock_index].out_ops->sendmsg_out)(module, hdr, msg, msg_len, msg_flags, &addr, addr_len);
+		(md->sockets[hdr->sock_index].out_ops->sendmsg_out)(module, hdr, msg_len, msg, msg_flags, &addr, addr_len);
 	} else {
 		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -873,26 +852,19 @@ void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint32_t sk_flags;
-	int timestamp;
-	int msg_len;
-	uint32_t msg_controllen;
-	int flags;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	sk_flags = *(uint32_t *) pt;
+	uint32_t sk_flags = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
-	timestamp = sk_flags & ((1 << SOCK_TIMESTAMP) | (1 << SOCK_RCVTSTAMP)); //TODO remove rcvtstamp? or figure out/expand
+	int timestamp = sk_flags & ((1 << SOCK_TIMESTAMP) | (1 << SOCK_RCVTSTAMP)); //TODO remove rcvtstamp? or figure out/expand
 
-	msg_len = *(int *) pt; //check on not in original socket_interceptor: recvmsg
+	int msg_len = *(int *) pt; //check on not in original socket_interceptor: recvmsg
 	pt += sizeof(int);
 
-	msg_controllen = *(uint32_t *) pt;
+	uint32_t msg_controllen = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
 
-	flags = *(int *) pt;
+	int flags = *(int *) pt;
 	pt += sizeof(int);
 
 	/*
@@ -939,23 +911,18 @@ void getsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	int level;
-	int optname;
-	int optlen;
+	uint8_t *pt = buf;
+
+	int level = *(int *) pt;
+	pt += sizeof(int);
+
+	int optname = *(int *) pt;
+	pt += sizeof(int);
+
+	int optlen = *(int *) pt;
+	pt += sizeof(int);
+
 	uint8_t *optval = NULL;
-	uint8_t *pt;
-
-	pt = buf;
-
-	level = *(int *) pt;
-	pt += sizeof(int);
-
-	optname = *(int *) pt;
-	pt += sizeof(int);
-
-	optlen = *(int *) pt;
-	pt += sizeof(int);
-
 	if (optlen > 0) { //TODO remove?
 		optval = (uint8_t *) secure_malloc(optlen);
 		memcpy(optval, pt, optlen);
@@ -988,23 +955,18 @@ void setsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	int level;
-	int optname;
-	int optlen;
-	uint8_t *optval = NULL;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	level = *(int *) pt;
+	int level = *(int *) pt;
 	pt += sizeof(int);
 
-	optname = *(int *) pt;
+	int optname = *(int *) pt;
 	pt += sizeof(int);
 
-	optlen = (int) (*(uint32_t *) pt);
+	int optlen = (int) (*(uint32_t *) pt);
 	pt += sizeof(uint32_t);
 
+	uint8_t *optval = NULL;
 	if (optlen > 0) {
 		optval = (uint8_t *) secure_malloc(optlen);
 		memcpy(optval, pt, optlen);
@@ -1036,9 +998,7 @@ void release_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint8_t *pt;
-
-	pt = buf;
+	uint8_t *pt = buf;
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
@@ -1058,12 +1018,9 @@ void poll_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint8_t *pt;
-	int events;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	events = *(int *) pt;
+	int events = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
@@ -1091,8 +1048,7 @@ void mmap_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint8_t *pt;
-	pt = buf;
+	uint8_t *pt = buf;
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
@@ -1119,12 +1075,9 @@ void shutdown_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	int how;
-	uint8_t *pt;
+	uint8_t *pt = buf;
 
-	pt = buf;
-
-	how = *(int *) pt;
+	int how = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {

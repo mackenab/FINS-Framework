@@ -76,6 +76,8 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint32_t src_ip;
 
 	metadata *meta = ff->metaData;
+	uint32_t family;
+	secure_metadata_readFromElement(meta, "send_family", &family);
 	secure_metadata_readFromElement(meta, "send_src_ipv4", &src_ip);
 	secure_metadata_readFromElement(meta, "send_src_port", &src_port);
 	secure_metadata_readFromElement(meta, "send_dst_ipv4", &dst_ip);

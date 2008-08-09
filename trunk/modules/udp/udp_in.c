@@ -46,6 +46,7 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
 
 	uint32_t protocol;
+	uint32_t family;
 	uint32_t src_ip;
 	uint32_t dst_ip;
 	uint32_t src_port;
@@ -53,6 +54,7 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 
 	metadata *meta = ff->metaData;
 	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
+	secure_metadata_readFromElement(meta, "recv_family", &family);
 	secure_metadata_readFromElement(meta, "recv_src_ipv4", &src_ip);
 	secure_metadata_readFromElement(meta, "recv_dst_ipv4", &dst_ip);
 

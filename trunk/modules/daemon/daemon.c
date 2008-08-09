@@ -320,6 +320,8 @@ void daemon_store_free(struct daemon_store *store) {
 	if (store->addr != NULL) {
 		free(store->addr);
 	}
+
+	free(store);
 }
 
 struct daemon_call *daemon_call_create(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index) {
@@ -393,8 +395,8 @@ int daemon_calls_insert(struct fins_module *module, uint32_t call_id, int call_i
 		PRINT_ERROR("Error, call_index in use: daemon_calls[%d].call_id=%u", call_index, md->calls[call_index].id);
 		PRINT_ERROR("Overwriting with: daemon_calls[%d].call_id=%u", call_index, call_id);
 
-		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id
-				&& (md->calls[call_index].type == POLL_CALL || md->calls[call_index].type == RECVMSG_CALL)) {
+		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id && (md->calls[call_index].type == POLL_CALL
+				|| md->calls[call_index].type == RECVMSG_CALL)) {
 			list_remove(md->sockets[md->calls[call_index].sock_index].call_list, &md->calls[call_index]);
 		}
 
@@ -635,7 +637,7 @@ uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadat
 	return sent;
 }
 
-uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint8_t *data, uint32_t data_len, metadata *meta) {
+uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta) {
 	PRINT_DEBUG("Entered: flow=%u, data=%p, data_len=%u, meta=%p", flow, data, data_len, meta);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
@@ -1229,7 +1231,7 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	} else if (family == AF_INET6) {
 		PRINT_ERROR("todo");
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error: family=%u", family);
 		exit(-1);
 	}
 
@@ -1700,7 +1702,7 @@ void daemon_dummy(void) {
 }
 
 static struct fins_module_ops daemon_ops = { .init = daemon_init, .run = daemon_run, .pause = daemon_pause, .unpause = daemon_unpause, .shutdown =
-		daemon_shutdown, .release = daemon_release, };
+daemon_shutdown, .release = daemon_release, };
 
 struct fins_module *daemon_create(uint32_t index, uint32_t id, uint8_t *name) {
 	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);

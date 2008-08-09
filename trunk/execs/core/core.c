@@ -684,7 +684,7 @@ void core_main() {
 		}
 
 		mod_admin = config_setting_get_member(mod_elem, "admin");
-		PRINT_DEBUG("admin=%u", mod_admin != NULL)
+		PRINT_DEBUG("admin=%u", mod_admin != NULL);
 
 		//############
 		library = (struct fins_library *) list_find1(overall->lib_list, lib_name_test, mod_lib);

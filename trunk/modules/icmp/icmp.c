@@ -435,6 +435,8 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 
 	metadata *meta = ff->metaData;
 
+	uint32_t family;
+	secure_metadata_readFromElement(meta, "recv_family", &family);
 	uint32_t src_ip;
 	secure_metadata_readFromElement(meta, "recv_src_ipv4", &src_ip);
 	uint32_t dst_ip;
@@ -445,6 +447,7 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 
 	uint32_t protocol = ICMP_PROTOCOL;
 	secure_metadata_writeToElement(meta_reply, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta_reply, "send_family", &family, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta_reply, "send_src_ipv4", &dst_ip, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta_reply, "send_dst_ipv4", &src_ip, META_TYPE_INT32);
 
@@ -492,21 +495,14 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct icmp_data *md = (struct icmp_data *) module->data;
 
-	if (ff->metaData == NULL) {
-		PRINT_ERROR("Metadata null, dropping: ff=%p", ff);
-
-		freeFinsFrame(ff);
-		return;
-	}
-
-	metadata *meta = ff->metaData;
-
+	uint32_t family;
+	secure_metadata_readFromElement(ff->metaData, "send_family", &family);
 	uint32_t src_ip;
-	secure_metadata_readFromElement(meta, "send_src_ipv4", &src_ip);
+	secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
 	uint32_t dst_ip;
-	secure_metadata_readFromElement(meta, "send_dst_ipv4", &dst_ip);
+	secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
 	uint32_t protocol = ICMP_PROTOCOL;
-	secure_metadata_writeToElement(meta, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "send_protocol", &protocol, META_TYPE_INT32);
 
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 	if (module_send_flow(module, ff, ICMP_FLOW_IPV4)) {

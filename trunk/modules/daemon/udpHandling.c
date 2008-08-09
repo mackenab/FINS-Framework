@@ -9,11 +9,11 @@
 #include <finstypes.h>
 
 struct daemon_socket_general_ops udp_general_ops = { .proto = IPPROTO_UDP, .socket_type_test = socket_udp_test, .socket_out = socket_out_udp, .daemon_in_fdf =
-		daemon_in_fdf_udp, .daemon_in_error = daemon_in_error_udp, };
+daemon_in_fdf_udp, .daemon_in_error = daemon_in_error_udp, };
 static struct daemon_socket_out_ops udp_out_ops = { .socket_out = socket_out_udp, .bind_out = bind_out_udp, .listen_out = listen_out_udp, .connect_out =
-		connect_out_udp, .accept_out = accept_out_udp, .getname_out = getname_out_udp, .ioctl_out = ioctl_out_udp, .sendmsg_out = sendmsg_out_udp,
+connect_out_udp, .accept_out = accept_out_udp, .getname_out = getname_out_udp, .ioctl_out = ioctl_out_udp, .sendmsg_out = sendmsg_out_udp,
 		.recvmsg_out = recvmsg_out_udp, .getsockopt_out = getsockopt_out_udp, .setsockopt_out = setsockopt_out_udp, .release_out = release_out_udp, .poll_out =
-				poll_out_udp, .mmap_out = mmap_out_udp, .socketpair_out = socketpair_out_udp, .shutdown_out = shutdown_out_udp, .close_out = close_out_udp,
+		poll_out_udp, .mmap_out = mmap_out_udp, .socketpair_out = socketpair_out_udp, .shutdown_out = shutdown_out_udp, .close_out = close_out_udp,
 		.sendpage_out = sendpage_out_udp, };
 static struct daemon_socket_in_ops udp_in_ops = { };
 static struct daemon_socket_other_ops udp_other_ops = { .recvmsg_timeout = recvmsg_timeout_udp, };
@@ -244,39 +244,55 @@ void getname_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				addr_port = 0;
 			}
 		} else {
-			//TODO error
 			PRINT_ERROR("todo error");
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //remove
-			return;
+			addr_ip = 0;
+			addr_port = 0;
 		}
 
 		address_len = sizeof(struct sockaddr_in);
-
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
-		addr4->sin_family = md->sockets[hdr->sock_index].family;
 		addr4->sin_addr.s_addr = htonl(addr_ip);
 		addr4->sin_port = htons(addr_port);
 		PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
+
+		uint16_t addr_port;
+
+		if (peer == 0) { //getsockname
+			addr_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
+		} else if (peer == 1) { //getpeername
+			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+				addr_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+			} else {
+				addr_port = 0;
+			}
+		} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
+			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+				addr_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+			} else {
+				addr_port = 0;
+			}
+		} else {
+			addr_port = 0;
+		}
+
 		address_len = sizeof(struct sockaddr_in6);
-
-		PRINT_ERROR("todo");
-
 		struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &address;
-		addr6->sin6_family = md->sockets[hdr->sock_index].family;
+		addr6->sin6_port = htons(addr_port);
 	} else {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
-		address_len = sizeof(struct sockaddr_in);
-
 		//AF_UNSPEC, only occurs when not bound
 		//returns struct sockaddr with just family filled out
 		//Family defaults to AF_INET, probably because of the main address of main interface
+
+		address_len = sizeof(struct sockaddr_in);
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
 		addr4->sin_family = md->sockets[hdr->sock_index].family;
 		addr4->sin_addr.s_addr = 0;
 		addr4->sin_port = 0;
 	}
+	address.ss_family = md->sockets[hdr->sock_index].family;
 
 	//send msg to wedge
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + address_len;
@@ -404,7 +420,7 @@ void ioctl_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 	free(msg);
 }
 
-void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags,
+void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 		struct sockaddr_storage *addr, int addr_len) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -496,7 +512,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_dst_port", &rem_port, META_TYPE_INT32);
-	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
+	} else if (addr->ss_family == AF_INET6) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET6) {
 			PRINT_ERROR("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
@@ -509,13 +525,46 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		free(data);
 		return;
 	} else {
-		PRINT_ERROR("Wrong address family=%d", addr->ss_family);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
-		free(data);
-		return;
+		if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+			uint32_t host_port;
+			uint32_t rem_port;
+			if (md->sockets[hdr->sock_index].family == AF_INET) {
+				uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+				host_port = (uint32_t) addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
+
+				struct addr_record *address = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+				if (address != NULL) {
+					host_ip = addr4_get_ip(&address->ip);
+				} else {
+					PRINT_ERROR("todo error");
+				}
+
+				uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
+				rem_port = (uint32_t) addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+
+				meta = (metadata *) secure_malloc(sizeof(metadata));
+				metadata_create(meta);
+
+				secure_metadata_writeToElement(meta, "send_src_ipv4", &host_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
+			} else { //AF_INET6
+				PRINT_ERROR("todo error");
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				free(data);
+				return;
+			}
+
+			secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_dst_port", &rem_port, META_TYPE_INT32);
+		} else {
+			PRINT_ERROR("Wrong address family=%d", addr->ss_family);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
+			free(data);
+			return;
+		}
 	}
 
-	uint32_t family = addr->ss_family;
+	uint32_t family = md->sockets[hdr->sock_index].family;
 	secure_metadata_writeToElement(meta, "send_family", &family, META_TYPE_INT32);
 
 	uint32_t ttl = md->sockets[hdr->sock_index].sockopts.FIP_TTL;
@@ -523,7 +572,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	uint32_t tos = md->sockets[hdr->sock_index].sockopts.FIP_TOS;
 	secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
-	if (daemon_fdf_to_switch(module, DAEMON_FLOW_UDP, data, data_len, meta)) {
+	if (daemon_fdf_to_switch(module, DAEMON_FLOW_UDP, data_len, data, meta)) {
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("Exited: failed to send ff");
@@ -672,6 +721,10 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				list_prepend(md->sockets[hdr->sock_index].data_list, store);
 				md->sockets[hdr->sock_index].data_buf += store->ff->dataFrame.pduLength - store->pos;
 			}
+		}
+
+		if (ret_val != 0) {
+			free(control);
 		}
 		return;
 	}
@@ -884,6 +937,7 @@ void mmap_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_ERROR("todo");
 }
+
 void socketpair_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_ERROR("todo");
@@ -1384,6 +1438,9 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 	}
 	daemon_calls_remove(module, call->index);
 
+	if (ret_val != 0) {
+		free(control);
+	}
 	return data_len;
 }
 
@@ -1511,7 +1568,7 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 			PRINT_ERROR("data_list full: sock_index=%d, ff=%p", sock_index, ff);
 			daemon_store_free(store);
 		}
-	} else {
+	} else { //AF_INET
 		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 	}

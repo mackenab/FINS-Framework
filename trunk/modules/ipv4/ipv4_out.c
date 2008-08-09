@@ -9,24 +9,22 @@
 #include <finsqueue.h>
 
 int ipv4_route_dst_test(struct route_record *route, uint32_t *dst) {
-	return ((addr4_get_ip(&route->dst) & addr4_get_ip(&route->mask)) == (*dst & addr4_get_ip(&route->mask)))
-			|| (addr4_get_ip(&route->dst) == IPV4_ADDR_ANY_IP);
+	return ((addr4_get_ip(&route->dst) & addr4_get_ip(&route->mask)) == (*dst & addr4_get_ip(&route->mask))) || (addr4_get_ip(&route->dst) == IPV4_ADDR_ANY_IP);
 }
 
 void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
-	metadata *meta = ff->metaData;
 	uint32_t protocol;
-	secure_metadata_readFromElement(meta, "send_protocol", &protocol);
+	secure_metadata_readFromElement(ff->metaData, "send_protocol", &protocol);
 	uint32_t family;
-	secure_metadata_readFromElement(meta, "send_family", &family);
+	secure_metadata_readFromElement(ff->metaData, "send_family", &family);
 
 	uint32_t src_ip;
-	secure_metadata_readFromElement(meta, "send_src_ipv4", &src_ip);
+	secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
 	uint32_t dst_ip;
-	secure_metadata_readFromElement(meta, "send_dst_ipv4", &dst_ip);
+	secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
 	PRINT_DEBUG("protocol=%u, src_ip=%u, dst_ip=%u", protocol, src_ip, dst_ip);
 
 	struct ip4_packet_header pkt;
@@ -34,12 +32,12 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	ipv4_const_header(pkt_buf, src_ip, dst_ip, protocol);
 
 	uint32_t send_ttl = 0;
-	if (metadata_readFromElement(meta, "send_ttl", &send_ttl) == META_TRUE) {
+	if (metadata_readFromElement(ff->metaData, "send_ttl", &send_ttl) == META_TRUE) {
 		pkt_buf->ip_ttl = send_ttl;
 	}
 
 	uint32_t send_tos = 0;
-	if (metadata_readFromElement(meta, "send_tos", &send_tos) == META_TRUE) {
+	if (metadata_readFromElement(ff->metaData, "send_tos", &send_tos) == META_TRUE) {
 		//TODO implement
 	}
 
@@ -68,22 +66,22 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 			}
 		}
 
-		if (loopback) {
+		if (loopback != 0) {
 			PRINT_DEBUG("internal, routing back to netw layer");
 			struct timeval current;
 			gettimeofday(&current, 0);
-			secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
+			secure_metadata_writeToElement(ff->metaData, "recv_stamp", &current, META_TYPE_INT64);
 
-			secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "recv_family", &family, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_protocol", &protocol, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_family", &family, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
 
 			if (send_ttl) {
-				secure_metadata_writeToElement(meta, "recv_ttl", &send_ttl, META_TYPE_INT32);
+				secure_metadata_writeToElement(ff->metaData, "recv_ttl", &send_ttl, META_TYPE_INT32);
 			}
 			if (send_tos) {
-				secure_metadata_writeToElement(meta, "recv_tos", &send_tos, META_TYPE_INT32);
+				secure_metadata_writeToElement(ff->metaData, "recv_tos", &send_tos, META_TYPE_INT32);
 			}
 
 			ff->dataFrame.directionFlag = DIR_UP;
@@ -92,6 +90,22 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 			switch (protocol) {
 			case IP4_PT_ICMP:
 				flow = IPV4_FLOW_ICMP;
+
+				uint16_t length = ff->dataFrame.pduLength;
+				pkt_buf->ip_fragoff = htons(0);
+				pkt_buf->ip_id = htons(0);
+				pkt_buf->ip_len = htons(length + IP4_MIN_HLEN);
+				pkt_buf->ip_cksum = 0;
+				pkt_buf->ip_cksum = ipv4_checksum(pkt_buf, IP4_MIN_HLEN);
+
+				uint8_t *pdu = ff->dataFrame.pdu;
+				ff->dataFrame.pduLength += IP4_MIN_HLEN;
+				ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+				memcpy(ff->dataFrame.pdu, pkt_buf, IP4_MIN_HLEN);
+				memcpy(ff->dataFrame.pdu + IP4_MIN_HLEN, pdu, length);
+
+				PRINT_DEBUG("Freeing: pdu=%p", pdu);
+				free(pdu);
 				break;
 			case IP4_PT_TCP:
 				flow = IPV4_FLOW_TCP;

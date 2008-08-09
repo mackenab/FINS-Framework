@@ -723,7 +723,8 @@ void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t
 			//if listening stub remove
 			/*#*/PRINT_DEBUG("");
 			secure_sem_wait(&md->conn_stub_list_sem);
-			struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+			struct tcp_connection_stub *conn_stub =
+					(struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 			if (conn_stub) {
 				list_remove(md->conn_stub_list, conn_stub);
 				if (conn_stub->threads < TCP_THREADS_MAX) {
@@ -1460,7 +1461,8 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
 			secure_sem_wait(&md->conn_stub_list_sem);
-			struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+			struct tcp_connection_stub *conn_stub =
+					(struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 			if (conn_stub) {
 				if (conn_stub->threads < TCP_THREADS_MAX) {
 					conn_stub->threads++;

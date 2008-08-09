@@ -9,16 +9,16 @@
 #include <finstypes.h>
 
 struct daemon_socket_general_ops tcp_general_ops = { .proto = IPPROTO_TCP, .socket_type_test = socket_tcp_test, .socket_out = socket_out_tcp, .daemon_in_fdf =
-		daemon_in_fdf_tcp, .daemon_in_error = daemon_in_error_tcp, .daemon_in_poll = daemon_in_poll_tcp };
+daemon_in_fdf_tcp, .daemon_in_error = daemon_in_error_tcp, .daemon_in_poll = daemon_in_poll_tcp };
 static struct daemon_socket_out_ops tcp_out_ops = { .socket_out = socket_out_tcp, .bind_out = bind_out_tcp, .listen_out = listen_out_tcp, .connect_out =
-		connect_out_tcp, .accept_out = accept_out_tcp, .getname_out = getname_out_tcp, .ioctl_out = ioctl_out_tcp, .sendmsg_out = sendmsg_out_tcp,
+connect_out_tcp, .accept_out = accept_out_tcp, .getname_out = getname_out_tcp, .ioctl_out = ioctl_out_tcp, .sendmsg_out = sendmsg_out_tcp,
 		.recvmsg_out = recvmsg_out_tcp, .getsockopt_out = getsockopt_out_tcp, .setsockopt_out = setsockopt_out_tcp, .release_out = release_out_tcp, .poll_out =
-				poll_out_tcp, .mmap_out = mmap_out_tcp, .socketpair_out = socketpair_out_tcp, .shutdown_out = shutdown_out_tcp, .close_out = close_out_tcp,
+		poll_out_tcp, .mmap_out = mmap_out_tcp, .socketpair_out = socketpair_out_tcp, .shutdown_out = shutdown_out_tcp, .close_out = close_out_tcp,
 		.sendpage_out = sendpage_out_tcp, };
 static struct daemon_socket_in_ops tcp_in_ops = { .connect_in = connect_in_tcp, .accept_in = accept_in_tcp, .sendmsg_in = sendmsg_in_tcp, .getsockopt_in =
-		getsockopt_in_tcp, .setsockopt_in = setsockopt_in_tcp, .release_in = release_in_tcp, .poll_in = poll_in_tcp_fcf, };
+getsockopt_in_tcp, .setsockopt_in = setsockopt_in_tcp, .release_in = release_in_tcp, .poll_in = poll_in_tcp_fcf, };
 static struct daemon_socket_other_ops tcp_other_ops = { .connect_timeout = connect_timeout_tcp, .connect_expired = connect_expired_tcp, .accept_timeout =
-		accept_timeout_tcp, .accept_expired = accept_expired_tcp, .recvmsg_timeout = recvmsg_timeout_tcp, };
+accept_timeout_tcp, .accept_expired = accept_expired_tcp, .recvmsg_timeout = recvmsg_timeout_tcp, };
 
 int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port) {
 	PRINT_DEBUG("Entered: module=%p, host=%u/%u", module, host_ip, host_port);
@@ -62,8 +62,8 @@ int match_conn_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t 
 			test_rem_ip = addr4_get_ip(&md->sockets[i].rem_addr);
 			test_rem_port = addr4_get_port(&md->sockets[i].rem_addr);
 
-			if (test_host_port == host_port && test_rem_port == rem_port && (test_host_ip == INADDR_ANY || test_host_ip == host_ip)
-					&& (test_rem_ip == INADDR_ANY || test_rem_ip == rem_ip)) {
+			if (test_host_port == host_port && test_rem_port == rem_port && (test_host_ip == INADDR_ANY || test_host_ip == host_ip) && (test_rem_ip
+					== INADDR_ANY || test_rem_ip == rem_ip)) {
 				return i;
 			}
 		}
@@ -310,7 +310,7 @@ void connect_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		return;
 	}
 
-	uint32_t family = addr->ss_family;
+	uint32_t family = md->sockets[hdr->sock_index].family;
 	secure_metadata_writeToElement(meta, "family", &family, META_TYPE_INT32);
 	uint32_t state = md->sockets[hdr->sock_index].state;
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
@@ -629,7 +629,7 @@ void ioctl_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 	free(msg);
 }
 
-void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags,
+void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 		struct sockaddr_storage *addr, int addr_len) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -746,7 +746,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	uint32_t serial_num = gen_control_serial_num();
 	secure_metadata_writeToElement(meta, "serial_num", &serial_num, META_TYPE_INT32);
 
-	uint32_t sent = daemon_fdf_to_switch(module, DAEMON_FLOW_TCP, data, data_len, meta);
+	uint32_t sent = daemon_fdf_to_switch(module, DAEMON_FLOW_TCP, data_len, data, meta);
 	if (sent > 0) {
 		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 			md->calls[hdr->call_index].serial_num = serial_num;
@@ -902,6 +902,10 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				list_prepend(md->sockets[hdr->sock_index].data_list, store);
 				md->sockets[hdr->sock_index].data_buf += store->ff->dataFrame.pduLength - store->pos;
 			}
+		}
+
+		if (ret_val != 0) {
+			free(control);
 		}
 
 		//send size back to TCP handlers
@@ -1434,7 +1438,7 @@ void getsockopt_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *h
 		}
 		break;
 	case SO_PEERCRED:
-//TODO trickier
+		//TODO trickier
 	case SO_PEERNAME:
 	case SO_ACCEPTCONN:
 	case SO_PASSSEC:
@@ -1447,7 +1451,7 @@ void getsockopt_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *h
 	case SO_DETACH_FILTER:
 		break;
 	default:
-//nack?
+		//nack?
 		PRINT_ERROR("default=%d", optname);
 		break;
 	}
@@ -1459,7 +1463,7 @@ void getsockopt_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *h
 	} else if (send_dst == 0) {
 		metadata_destroy(meta);
 
-//send msg to wedge
+		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
 		uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
@@ -1836,12 +1840,12 @@ void getsockopt_in_tcp(struct fins_module *module, struct finsFrame *ff, struct 
 		nack_send(module, call->id, call->index, call->type, 1);
 	} else {
 
-//################ //TODO switch by param_id, convert into val/len
+		//################ //TODO switch by param_id, convert into val/len
 		int len = 0;
 		uint8_t *val = NULL;
-//################
+		//################
 
-//send msg to wedge
+		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
 		uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
@@ -1992,7 +1996,7 @@ void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint3
 	uint32_t ret_mask = events & mask;
 	PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
 	if (ret_mask) {
-//send msg to wedge
+		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge);
 		uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
@@ -2081,6 +2085,10 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 
 	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 			md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
+
+	if (ret_val != 0) {
+		free(control);
+	}
 
 	metadata *meta_reply = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_reply);

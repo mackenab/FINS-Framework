@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 
 	//ret = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *) &tv, sizeof(struct timeval));
 	//printf("\n ret=%d tv.tv_sec=%d tv.tv_usec=%d", ret, tv.tv_sec, tv.tv_usec);
-	fflush(stdout);
+	//fflush(stdout);
 
 	int j = 0;
 	while (++j <= 3) {

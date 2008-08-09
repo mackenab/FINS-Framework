@@ -11,10 +11,10 @@
 struct daemon_socket_general_ops icmp_general_ops = { .proto = IPPROTO_ICMP, .socket_type_test = socket_icmp_test, .socket_out = socket_out_icmp,
 		.daemon_in_fdf = daemon_in_fdf_icmp, .daemon_in_error = daemon_in_error_icmp, };
 static struct daemon_socket_out_ops icmp_out_ops = { .socket_out = socket_out_icmp, .bind_out = bind_out_icmp, .listen_out = listen_out_icmp, .connect_out =
-		connect_out_icmp, .accept_out = accept_out_icmp, .getname_out = getname_out_icmp, .ioctl_out = ioctl_out_icmp, .sendmsg_out = sendmsg_out_icmp,
+connect_out_icmp, .accept_out = accept_out_icmp, .getname_out = getname_out_icmp, .ioctl_out = ioctl_out_icmp, .sendmsg_out = sendmsg_out_icmp,
 		.recvmsg_out = recvmsg_out_icmp, .getsockopt_out = getsockopt_out_icmp, .setsockopt_out = setsockopt_out_icmp, .release_out = release_out_icmp,
 		.poll_out = poll_out_icmp, .mmap_out = mmap_out_icmp, .socketpair_out = socketpair_out_icmp, .shutdown_out = shutdown_out_icmp, .close_out =
-				close_out_icmp, .sendpage_out = sendpage_out_icmp, };
+		close_out_icmp, .sendpage_out = sendpage_out_icmp, };
 static struct daemon_socket_in_ops icmp_in_ops = { };
 static struct daemon_socket_other_ops icmp_other_ops = { .recvmsg_timeout = recvmsg_timeout_icmp, };
 
@@ -64,7 +64,7 @@ void bind_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, s
 	}
 
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
-} // end of bind_icmp
+}
 
 void listen_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int backlog) {
 	PRINT_DEBUG("Entered: hdr=%p, backlog=%d", hdr, backlog);
@@ -124,7 +124,6 @@ void connect_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 				PRINT_ERROR("todo error");
 			}
 		}
-
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr));
 	} else if (addr->ss_family == AF_INET6) {
@@ -133,8 +132,9 @@ void connect_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			return;
 		}
-
-		//TODO
+		PRINT_ERROR("todo");
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		return;
 	} else {
 		PRINT_ERROR("Wrong address family=%d", addr->ss_family);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
@@ -163,15 +163,12 @@ void getname_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 	struct sockaddr_storage address;
 
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
-				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
+				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr));
 
 		uint32_t addr_ip;
-		uint16_t addr_port;
-
 		if (peer == 0) { //getsockname
 			addr_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
-			addr_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 
 			if (addr_ip == INADDR_ANY) { //TODO change this when have multiple interfaces
 				struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
@@ -184,47 +181,42 @@ void getname_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 		} else if (peer == 1) { //getpeername
 			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
 				addr_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
-				addr_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
 			} else {
 				addr_ip = 0;
-				addr_port = 0;
 			}
 		} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
 			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
 				addr_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
-				addr_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
 			} else {
 				addr_ip = 0;
-				addr_port = 0;
 			}
 		} else {
-			//TODO error
 			PRINT_ERROR("todo error");
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //remove
-			return;
+			addr_ip = 0;
 		}
 
 		address_len = sizeof(struct sockaddr_in);
-
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
 		addr4->sin_addr.s_addr = htonl(addr_ip);
-		addr4->sin_port = htons(addr_port);
-		PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+		addr4->sin_port = 0;
+		PRINT_DEBUG("addr=%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
-		PRINT_ERROR("todo");
-		//TODO
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	} else {
-		//AF_UNSPEC, only occurs when not bound
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
+		address_len = sizeof(struct sockaddr_in6);
 
+		PRINT_ERROR("todo");
+	} else {
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
+		//AF_UNSPEC, only occurs when not bound
 		//returns struct sockaddr with just family filled out
 		//Family defaults to AF_INET, probably because of the main address of main interface
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //remove
-		return;
-	}
 
+		address_len = sizeof(struct sockaddr_in);
+		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
+		addr4->sin_family = md->sockets[hdr->sock_index].family;
+		addr4->sin_addr.s_addr = 0;
+		addr4->sin_port = 0;
+	}
 	address.ss_family = md->sockets[hdr->sock_index].family;
 
 	//send msg to wedge
@@ -353,7 +345,7 @@ void ioctl_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	free(msg);
 }
 
-void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags,
+void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 		struct sockaddr_storage *addr, int addr_len) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -426,7 +418,7 @@ void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 
 		secure_metadata_writeToElement(meta, "send_src_ipv4", &host_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
-	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
+	} else if (addr->ss_family == AF_INET6) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET6) {
 			PRINT_ERROR("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
@@ -439,13 +431,39 @@ void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 		free(data);
 		return;
 	} else {
-		PRINT_ERROR("Wrong address family=%d", addr->ss_family);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
-		free(data);
-		return;
+		if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+			if (md->sockets[hdr->sock_index].family == AF_INET) {
+				uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+
+				struct addr_record *address = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+				if (address != NULL) {
+					host_ip = addr4_get_ip(&address->ip);
+				} else {
+					PRINT_ERROR("todo error");
+				}
+
+				uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
+
+				meta = (metadata *) secure_malloc(sizeof(metadata));
+				metadata_create(meta);
+
+				secure_metadata_writeToElement(meta, "send_src_ipv4", &host_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
+			} else { //AF_INET6
+				PRINT_ERROR("todo error");
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				free(data);
+				return;
+			}
+		} else {
+			PRINT_ERROR("Wrong address family=%d", addr->ss_family);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
+			free(data);
+			return;
+		}
 	}
 
-	uint32_t family = addr->ss_family;
+	uint32_t family = md->sockets[hdr->sock_index].family;
 	secure_metadata_writeToElement(meta, "send_family", &family, META_TYPE_INT32);
 
 	uint32_t ttl = md->sockets[hdr->sock_index].sockopts.FIP_TTL;
@@ -453,7 +471,7 @@ void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 	uint32_t tos = md->sockets[hdr->sock_index].sockopts.FIP_TOS;
 	secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
-	if (daemon_fdf_to_switch(module, DAEMON_FLOW_ICMP, data, data_len, meta)) {
+	if (daemon_fdf_to_switch(module, DAEMON_FLOW_ICMP, data_len, data, meta)) {
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("Exited: failed to send ff");
@@ -497,7 +515,8 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 
 					uint32_t dst_ip = addr4->sin_addr.s_addr;
 					addr4->sin_addr.s_addr = htonl(dst_ip);
-					PRINT_DEBUG("address: %s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
+					addr4->sin_port = 0;
+					PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 				} else { //AF_INET6
 					addr_len = sizeof(struct sockaddr_in6);
 					addr6 = (struct sockaddr_in6 *) store->addr;
@@ -533,10 +552,8 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 
 				uint32_t src_ip = addr4->sin_addr.s_addr;
 				addr4->sin_addr.s_addr = htonl(src_ip);
-
-				uint32_t src_port = addr4->sin_port;
-				addr4->sin_port = htons(src_port);
-				PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), src_port, addr4->sin_addr.s_addr);
+				addr4->sin_port = 0;
+				PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 			} else { //AF_INET6
 				addr_len = sizeof(struct sockaddr_in6);
 				addr6 = (struct sockaddr_in6 *) store->addr;
@@ -599,6 +616,10 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 				list_prepend(md->sockets[hdr->sock_index].data_list, store);
 				md->sockets[hdr->sock_index].data_buf += store->ff->dataFrame.pduLength - store->pos;
 			}
+		}
+
+		if (ret_val != 0) {
+			free(control);
 		}
 		return;
 	}
@@ -675,12 +696,12 @@ void poll_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 			}
 		}
 
-		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-			mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-		}
-
 		if (events & (POLLHUP)) {
 			//mask |= POLLHUP; //TODO implement
+		}
+
+		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+			mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 		}
 
 		uint32_t ret_mask = events & mask;
@@ -741,12 +762,12 @@ void poll_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 					}
 				}
 
-				if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-				}
-
 				if (events & (POLLHUP)) {
 					//mask |= POLLHUP; //TODO implement
+				}
+
+				if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 				}
 
 				ret_mask = events & mask;
@@ -783,33 +804,19 @@ void mmap_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_ERROR("todo");
 }
+
 void socketpair_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_ERROR("todo");
 }
 
-/** .......................................................................*/
-
 void shutdown_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int how) {
 	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
 
 	/**
-	 *
 	 * TODO Implement the checking of the shut_RD, shut_RW flags before making any operations
 	 * applied on a TCP socket
 	 */
-
-	//index = find_daemonSocket(uniqueSockID);
-	/** TODO unlock access to the daemonsockets */
-	/*
-	 if (index == -1) {
-	 PRINT_DEBUG("socket descriptor not found into daemon sockets");
-	 return;
-	 }
-
-	 PRINT_DEBUG("index = %d", index);
-	 */
-
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
@@ -1261,8 +1268,8 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 		addr_len = sizeof(struct sockaddr_in);
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 		addr4->sin_addr.s_addr = htonl(addr4->sin_addr.s_addr);
-		addr4->sin_port = htons(addr4->sin_port);
-		PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+		addr4->sin_port = 0;
+		PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 	} else { //AF_INET6
 		PRINT_ERROR("todo");
 		nack_send(module, call->id, call->index, call->type, 1);
@@ -1298,17 +1305,15 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 	}
 	daemon_calls_remove(module, call->index);
 
+	if (ret_val != 0) {
+		free(control);
+	}
 	return data_len;
 }
 
 void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr, struct sockaddr_storage *dst_addr) {
 	PRINT_DEBUG("Entered: ff=%p, family=%u, src_addr=%p, dst_addr=%p", ff, family, src_addr, dst_addr);
 	struct daemon_data *md = (struct daemon_data *) module->data;
-
-	uint32_t src_port;
-	secure_metadata_readFromElement(ff->metaData, "recv_src_port", &src_port);
-	uint32_t dst_port;
-	secure_metadata_readFromElement(ff->metaData, "recv_dst_port", &dst_port);
 
 	int i;
 	uint32_t flags;
@@ -1382,11 +1387,6 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 		struct sockaddr_storage *dst_addr) {
 	PRINT_DEBUG("Entered: ff=%p, family=%u, src_addr=%p, dst_addr=%p", ff, family, src_addr, dst_addr);
 	struct daemon_data *md = (struct daemon_data *) module->data;
-
-	uint32_t src_port;
-	secure_metadata_readFromElement(ff->metaData, "recv_src_port", &src_port);
-	uint32_t dst_port;
-	secure_metadata_readFromElement(ff->metaData, "recv_dst_port", &dst_port);
 
 	int i;
 	uint32_t flags;
