@@ -11,12 +11,15 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -113,7 +116,6 @@ void interface_store_free(struct interface_store *store);
 #define INTERFACE_FLOW_IPV4 0
 #define INTERFACE_FLOW_ARP 	1
 #define INTERFACE_FLOW_IPV6	2 //TODO add eventually
-
 struct interface_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
@@ -126,6 +128,8 @@ struct interface_data {
 	int client_inject_fd;
 
 	struct linked_list *if_list;
+	struct if_record *if_loopback;
+	struct if_record *if_main;
 	struct linked_list *cache_list; //The list of current cache we have
 	struct linked_list *store_list; //Stored FDF waiting to send
 };
@@ -162,6 +166,5 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 #define INTERFACE_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define INTERFACE_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define INTERFACE_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
-
 
 #endif /* INTERFACE_INTERNAL_H_ */

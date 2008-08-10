@@ -163,7 +163,7 @@ void core_termination_handler(int sig) {
 	exit(-1);
 }
 
-void core_main() {
+void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	PRINT_IMPORTANT("Entered");
 
 	register_to_signal(SIGRTMIN);
@@ -191,7 +191,7 @@ void core_main() {
 	metadata *meta_envi = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_envi);
 
-	status = config_read_file(meta_envi, "envi.cfg");
+	status = config_read_file(meta_envi, (char *) envi_name);
 	if (status == META_FALSE) {
 		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta_envi), config_error_line(meta_envi), config_error_text(meta_envi));
 		metadata_destroy(meta_envi);
@@ -603,7 +603,7 @@ void core_main() {
 	metadata *meta_stack = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_stack);
 
-	status = config_read_file(meta_stack, "stack.cfg");
+	status = config_read_file(meta_stack, (char *) stack_name);
 	if (status == META_FALSE) {
 		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta_stack), config_error_line(meta_stack), config_error_text(meta_stack));
 		metadata_destroy(meta_stack);
@@ -1049,8 +1049,133 @@ void core_main() {
 }
 
 #ifndef BUILD_FOR_ANDROID
-int main() {
-	core_main();
+int main(int argc, char *argv[]) {
+	uint8_t envi_default = 1;
+	uint8_t envi_name[FILE_NAME_SIZE];
+	memset((char *) envi_name, 0, FILE_NAME_SIZE);
+
+	uint8_t stack_default = 1;
+	uint8_t stack_name[FILE_NAME_SIZE];
+	memset((char *) stack_name, 0, FILE_NAME_SIZE);
+
+	uint8_t capturer_default = 1;
+	uint8_t capturer_name[FILE_NAME_SIZE];
+	memset((char *) capturer_name, 0, FILE_NAME_SIZE);
+
+	uint8_t core_default = 1;
+	uint8_t core_name[FILE_NAME_SIZE];
+	memset((char *) core_name, 0, FILE_NAME_SIZE);
+
+	int i;
+	int j;
+	uint32_t len;
+	uint8_t ch;
+	for (i = 1; i < argc; i++) {
+		if (argv[i][0] == '-' || argv[i][0] == '\\') {
+			len = strlen(argv[i]);
+
+			for (j = 1; j < len; j++) {
+				ch = (uint8_t) argv[i][j];
+
+				if (ch == 'e' || ch == 'E') {
+					if (j + 1 == len) {
+						if (i + 1 < argc) {
+							strcpy((char *) envi_name, argv[i + 1]);
+							printf("Using environment configuration: '%s'\n", envi_name);
+							envi_default = 0;
+							i += 1;
+						} else {
+							printf("Incorrect format. Usage: -e <file>\n");
+							exit(-1);
+						}
+					} else {
+						strcpy((char *) envi_name, &argv[i][j + 1]);
+						printf("Using environment configuration: '%s'\n", envi_name);
+						envi_default = 0;
+						j = len;
+					}
+				} else if (ch == 's' || ch == 'S') {
+					if (j + 1 == len) {
+						if (i + 1 < argc) {
+							strcpy((char *) stack_name, argv[i + 1]);
+							printf("Using stack configuration: '%s'\n", stack_name);
+							stack_default = 0;
+							i += 1;
+						} else {
+							printf("Incorrect format. Usage: -s <file>\n");
+							exit(-1);
+						}
+					} else {
+						strcpy((char *) stack_name, &argv[i][j + 1]);
+						printf("Using stack configuration: '%s'\n", stack_name);
+						stack_default = 0;
+						j = len;
+					}
+				} else if (ch == 'c' || ch == 'C') {
+					if (j + 1 == len) {
+						if (i + 1 < argc) {
+							strcpy((char *) capturer_name, argv[i + 1]);
+							printf("Capturer output to: '%s'\n", capturer_name);
+							capturer_default = 0;
+							i += 1;
+						} else {
+							printf("Incorrect format. Usage: -c <file>\n");
+							exit(-1);
+						}
+					} else {
+						strcpy((char *) capturer_name, &argv[i][j + 1]);
+						printf("Capturer output to: '%s'\n", capturer_name);
+						capturer_default = 0;
+						j = len;
+					}
+				} else if (ch == 'o' || ch == 'O') {
+					if (j + 1 == len) {
+						if (i + 1 < argc) {
+							strcpy((char *) core_name, argv[i + 1]);
+							printf("Core output to: '%s'\n", core_name);
+							core_default = 0;
+							i += 1;
+						} else {
+							printf("Incorrect format. Usage: -o <file>\n");
+							exit(-1);
+						}
+					} else {
+						strcpy((char *) core_name, &argv[i][j + 1]);
+						printf("Core output to: '%s'\n", core_name);
+						core_default = 0;
+						j = len;
+					}
+				} else if (ch == 'x' || ch == 'X') {
+					printf("option x\n");
+				} else {
+					printf("Illegal option code = '%c'\n", ch);
+					exit(-1);
+				}
+			}
+		} else {
+			printf("Illegal text: '%s'.\nUsage: core [-e <envi cfg>][-s <stack cfg>][-c <capturer output>][-o <core output>]\n", argv[i]);
+			exit(-1);
+		}
+	}
+
+	if (envi_default == 1) {
+		strcpy((char *) envi_name, (char *) DEFAULT_ENVI_FILE);
+		printf("Using default environment configuration: '%s'\n", envi_name);
+	}
+	if (stack_default == 1) {
+		strcpy((char *) stack_name, (char *) DEFAULT_STACK_FILE);
+		printf("Using default stack configuration: '%s'\n", stack_name);
+	}
+	if (capturer_default == 1) {
+		strcpy((char *) capturer_name, (char *) DEFAULT_CAPTURER_FILE);
+		//printf("Default: capturer output to: '%s'\n", capturer_name);
+	}
+	if (core_default == 1) {
+		strcpy((char *) core_name, (char *) DEFAULT_CORE_FILE);
+		//printf("Default: core output to: '%s'\n", core_name);
+	}
+
+	core_main(envi_name, stack_name);
 	return 0;
 }
 #endif

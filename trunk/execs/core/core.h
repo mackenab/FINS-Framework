@@ -17,17 +17,14 @@
 
 //#include <stdint.h>
 
-//uint8_t my_host_if_name[IFNAMSIZ];
-//uint8_t my_host_if_num;
-//uint64_t my_host_mac_addr;
-//uint32_t my_host_ip_addr;
-//uint32_t my_host_mask;
-//uint32_t loopback_ip_addr;
-//uint32_t loopback_mask;
-//uint32_t any_ip_addr;
+#define FILE_NAME_SIZE 100
+#define DEFAULT_ENVI_FILE "envi.cfg"
+#define DEFAULT_STACK_FILE "stack.cfg"
+#define DEFAULT_CORE_FILE "output_core.txt"
+#define DEFAULT_CAPTURER_FILE "output_capturer.txt"
 
 void core_dummy(void);
-void core_main(void);
+void core_main(uint8_t *envi_name, uint8_t *stack_name);
 
 #endif /* CORE_H_ */
 

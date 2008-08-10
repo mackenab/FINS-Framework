@@ -34,19 +34,19 @@
 #define ERROR
 
 #ifdef DEBUG
-#define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_DEBUG(format, args...)
 #endif
 
 #ifdef IMPORTANT
-#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR
-#define PRINT_ERROR(format, args...) printf("ERROR(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#define PRINT_ERROR(format, args...) printf("ERROR(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_ERROR(format, args...)
 #endif
@@ -80,6 +80,8 @@ extern int server_inject_fd;
 #define UNIX_PATH_MAX 108
 #endif
 
+#define MAX_FILTER_LEN 500
+
 #ifdef BUILD_FOR_ANDROID
 #define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 //#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS"
@@ -93,7 +95,7 @@ extern int server_inject_fd;
 
 /** Functions prototypes fully defined in wifistub.c */
 
-void capture_init(char *device);
+void capture_init(char *device, int argc, char *argv[]);
 void inject_init(char *device);
 void wifi_terminate();
 void close_pipes();

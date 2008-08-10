@@ -79,7 +79,7 @@ void capturer_dummy(void) {
 #include <sys/ioctl.h>
 #include <net/if.h>
 
-void capturer_main(void) {
+void capturer_main(int argc, char *argv[]) {
 	PRINT_IMPORTANT("Entered");
 
 	print_app_banner();
@@ -153,24 +153,24 @@ void capturer_main(void) {
 	 PRINT_IMPORTANT("test9=%f", test5/test6);
 	 }
 
-	if (0) { //test interfaces
-		int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	 if (0) { //test interfaces
+	 int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-		struct ifreq ifr;
-		int num;
-		for (num = 0; num < 20; num++) {
-			ifr.ifr_ifindex = num;
-			ret = ioctl(fd, SIOCGIFNAME, &ifr);
-			PRINT_IMPORTANT("ifr_ifindex=%d, ifr_name='%s'", ifr.ifr_ifindex, ifr.ifr_name);
-			//printf("ifr_ifindex=%d, ifr_name='%s'\n", ifr.ifr_ifindex, ifr.ifr_name);
-		}
+	 struct ifreq ifr;
+	 int num;
+	 for (num = 0; num < 20; num++) {
+	 ifr.ifr_ifindex = num;
+	 ret = ioctl(fd, SIOCGIFNAME, &ifr);
+	 PRINT_IMPORTANT("ifr_ifindex=%d, ifr_name='%s'", ifr.ifr_ifindex, ifr.ifr_name);
+	 //printf("ifr_ifindex=%d, ifr_name='%s'\n", ifr.ifr_ifindex, ifr.ifr_name);
+	 }
 
-		close(fd);
-		printf("FIN, waiting\n");
-		while (1)
-			;
-		return;
-	}
+	 close(fd);
+	 printf("FIN, waiting\n");
+	 while (1)
+	 ;
+	 return;
+	 }
 
 	 PRINT_IMPORTANT("Gaining su status");
 	 if ((ret = system("su"))) {
@@ -187,14 +187,12 @@ void capturer_main(void) {
 	}
 	fflush(stdout);
 
-	char device[20];
-	device[19] = '\0';
+	char device[IFNAMSIZ];
+	device[IFNAMSIZ - 1] = '\0';
+	strcpy(device, "any");
 	//strcpy(device, "lo");
 	//strcpy(device, "eth0");
-	//strcpy(device, "eth1");
-	//strcpy(device, "eth2");
-	strcpy(device, "wlan0");
-	//strcpy(device, "wlan4");
+	//strcpy(device, "wlan0");
 
 	pid_t pID = 0;
 	pID = fork();
@@ -207,7 +205,7 @@ void capturer_main(void) {
 
 		char device_capture[20];
 		strcpy(device_capture, device);
-		capture_init(device_capture);
+		capture_init(device_capture, argc, argv);
 		while (1)
 			;
 	} else { // parent
@@ -229,16 +227,15 @@ void capturer_main(void) {
 	exit(0);
 }
 
-#ifdef BUILD_FOR_ANDROID
-int main(int argc, char **argv) {
-	capturer_main();
+//#ifdef BUILD_FOR_ANDROID
+int main(int argc, char *argv[]) {
+	int i;
+	for (i = 0; i < argc; i++) {
+		PRINT_ERROR("argv[%d]='%s'", i, argv[i]);
+	}
+
+	capturer_main(argc, argv);
 	return 0;
 }
-#else
-int main() {
-	capturer_main();
-	return 0;
-}
-#endif
 
 // end of main function

@@ -70,7 +70,7 @@ extern int server_capture_count;
 	return;
 } // end of the function got_packet
 
-void capture_init(char *device) {
+void capture_init(char *device, int argc, char *argv[]) {
 	PRINT_IMPORTANT("Entered: device='%s'", device);
 
 	struct sockaddr_un addr;
@@ -110,27 +110,39 @@ void capture_init(char *device) {
 	sleep(2);
 
 	//TODO recv MAC/ip address from Core?
-	char *filter_exp = (char *) malloc(200);
+	char *filter_exp = (char *) malloc(MAX_FILTER_LEN);
 	if (filter_exp == NULL) {
 		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
-	memset(filter_exp, 0, 200);
+	memset(filter_exp, 0, MAX_FILTER_LEN);
+	char *pt = filter_exp;
 
-	uint8_t dev_mac[] = "00234d1a4dcc";
+	//uint8_t dev_mac[] = "00234d1a4dcc";
 	//	getDevice_MACAddress(dev_macAddress,dev);
 	//	strcat(filter_exp,dev_macAddress);
 
+	int ret;
+	int total = 0;
+
+	int i;
+	for (i = 1; i < argc - 1 && total < MAX_FILTER_LEN; i++) {
+		ret = sprintf(pt, "(ether dst %c%c:%c%c:%c%c:%c%c:%c%c:%c%c) or (ether broadcast and (not ether src %c%c:%c%c:%c%c:%c%c:%c%c:%c%c)) or ", argv[i][0],
+				argv[i][1], argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10], argv[i][11],
+				argv[i][0], argv[i][1], argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10],
+				argv[i][11]);
+		if (ret > 0) {
+			total += ret;
+			pt += ret;
+		}
+	}
+	sprintf(pt, "(ether dst %c%c:%c%c:%c%c:%c%c:%c%c:%c%c) or (ether broadcast and (not ether src %c%c:%c%c:%c%c:%c%c:%c%c:%c%c))", argv[i][0], argv[i][1],
+			argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10], argv[i][11], argv[i][0], argv[i][1],
+			argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10], argv[i][11]);
+
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //Vbox eth2
-	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
-	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
-	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
-	//strcat(filter_exp, "(ether dst a0:0b:ba:e9:4b:b0) or (ether broadcast and (not ether src a0:0b:ba:e9:4b:b0))"); //phone0 wlan0 //must have ':'s
-	//strcat(filter_exp, "(ether dst 10:68:3f:4f:74:67) or (ether broadcast and (not ether src 10:68:3f:4f:74:67))"); //phone1 wlan0
 	//strcat(filter_exp, "(ether dst 50:46:5d:14:e0:7f) or (ether broadcast and (not ether src 50:46:5d:14:e0:7f))"); //tablet1 wlan0
-	strcat(filter_exp, "(ether dst 00:23:4d:1a:4d:cc) or (ether broadcast and (not ether src 00:23:4d:1a:4d:cc))"); //laptop15 wlan0
-	//sprintf(filter_exp, "(ether dst %02x:%02x:%02x:%02x:%02x:%02x) or (ether broadcast and (not ether src %02x:%02x:%02x:%02x:%02x:%02x))", dev_mac[0],dev_mac[1],dev_mac[2],dev_mac[3],dev_mac[4],dev_mac[5],dev_mac[6],dev_mac[1],dev_mac[2],dev_mac[3],dev_mac[4],dev_mac[5],dev_mac[6]);
+	//strcat(filter_exp, "(ether dst 00:23:4d:1a:4d:cc) or (ether broadcast and (not ether src 00:23:4d:1a:4d:cc))"); //laptop15 wlan0
 
 	uint8_t *dev = (uint8_t *) device;
 	bpf_u_int32 net; /* ip */
