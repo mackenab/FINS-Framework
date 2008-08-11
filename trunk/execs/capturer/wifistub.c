@@ -126,19 +126,20 @@ void capture_init(char *device, int argc, char *argv[]) {
 	int total = 0;
 
 	int i;
-	for (i = 1; i < argc - 1 && total < MAX_FILTER_LEN; i++) {
-		ret = sprintf(pt, "(ether dst %c%c:%c%c:%c%c:%c%c:%c%c:%c%c) or (ether broadcast and (not ether src %c%c:%c%c:%c%c:%c%c:%c%c:%c%c)) or ", argv[i][0],
-				argv[i][1], argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10], argv[i][11],
-				argv[i][0], argv[i][1], argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10],
-				argv[i][11]);
+	for (i = 1; i < argc - 2 && total < MAX_FILTER_LEN; i += 2) {
+		ret = sprintf(pt, "(ether dst %c%c:%c%c:%c%c:%c%c:%c%c:%c%c) or (ether broadcast and (not ether src %c%c:%c%c:%c%c:%c%c:%c%c:%c%c)) or ",
+				argv[i + 1][0], argv[i + 1][1], argv[i + 1][2], argv[i + 1][3], argv[i + 1][4], argv[i + 1][5], argv[i + 1][6], argv[i + 1][7], argv[i + 1][8],
+				argv[i + 1][9], argv[i + 1][10], argv[i + 1][11], argv[i + 1][0], argv[i + 1][1], argv[i + 1][2], argv[i + 1][3], argv[i + 1][4],
+				argv[i + 1][5], argv[i + 1][6], argv[i + 1][7], argv[i + 1][8], argv[i + 1][9], argv[i + 1][10], argv[i + 1][11]);
 		if (ret > 0) {
 			total += ret;
 			pt += ret;
 		}
 	}
-	sprintf(pt, "(ether dst %c%c:%c%c:%c%c:%c%c:%c%c:%c%c) or (ether broadcast and (not ether src %c%c:%c%c:%c%c:%c%c:%c%c:%c%c))", argv[i][0], argv[i][1],
-			argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10], argv[i][11], argv[i][0], argv[i][1],
-			argv[i][2], argv[i][3], argv[i][4], argv[i][5], argv[i][6], argv[i][7], argv[i][8], argv[i][9], argv[i][10], argv[i][11]);
+	sprintf(pt, "(ether dst %c%c:%c%c:%c%c:%c%c:%c%c:%c%c) or (ether broadcast and (not ether src %c%c:%c%c:%c%c:%c%c:%c%c:%c%c))", argv[i + 1][0],
+			argv[i + 1][1], argv[i + 1][2], argv[i + 1][3], argv[i + 1][4], argv[i + 1][5], argv[i + 1][6], argv[i + 1][7], argv[i + 1][8], argv[i + 1][9],
+			argv[i + 1][10], argv[i + 1][11], argv[i + 1][0], argv[i + 1][1], argv[i + 1][2], argv[i + 1][3], argv[i + 1][4], argv[i + 1][5], argv[i + 1][6],
+			argv[i + 1][7], argv[i + 1][8], argv[i + 1][9], argv[i + 1][10], argv[i + 1][11]);
 
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
 	//strcat(filter_exp, "(ether dst 50:46:5d:14:e0:7f) or (ether broadcast and (not ether src 50:46:5d:14:e0:7f))"); //tablet1 wlan0

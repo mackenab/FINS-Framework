@@ -178,6 +178,11 @@ void capturer_main(int argc, char *argv[]) {
 	 }
 	 */
 
+	if (argc != 3) {
+		PRINT_ERROR("Error, can only capture/inject from 1 interface currently");
+		exit(-1);
+	}
+
 	(void) signal(SIGINT, capturer_termination_handler);
 
 	PRINT_IMPORTANT("Attempting to make " FINS_TMP_ROOT "");
@@ -189,7 +194,7 @@ void capturer_main(int argc, char *argv[]) {
 
 	char device[IFNAMSIZ];
 	device[IFNAMSIZ - 1] = '\0';
-	strcpy(device, "any");
+	strcpy(device, argv[1]);
 	//strcpy(device, "lo");
 	//strcpy(device, "eth0");
 	//strcpy(device, "wlan0");
@@ -230,8 +235,10 @@ void capturer_main(int argc, char *argv[]) {
 //#ifdef BUILD_FOR_ANDROID
 int main(int argc, char *argv[]) {
 	int i;
+
+	PRINT_IMPORTANT("argc=%u", argc);
 	for (i = 0; i < argc; i++) {
-		PRINT_ERROR("argv[%d]='%s'", i, argv[i]);
+		PRINT_IMPORTANT("argv[%d]='%s'", i, argv[i]);
 	}
 
 	capturer_main(argc, argv);

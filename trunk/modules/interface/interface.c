@@ -170,63 +170,48 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		interface_read_param(module, ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		interface_set_param(module, ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		interface_exec(module, ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
 		interface_exec_reply(module, ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		exit(-1);
 		break;
 	}
@@ -243,23 +228,19 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case INTERFACE_SET_PARAM_FLOWS:
-		PRINT_DEBUG("INTERFACE_GET_PARAM_FLOWS")
-		;
+		PRINT_DEBUG("INTERFACE_GET_PARAM_FLOWS");
 		module_set_param_flows(module, ff);
 		break;
 	case INTERFACE_SET_PARAM_LINKS:
-		PRINT_DEBUG("INTERFACE_GET_PARAM_LINKS")
-		;
+		PRINT_DEBUG("INTERFACE_GET_PARAM_LINKS");
 		module_set_param_links(module, ff);
 		break;
 	case INTERFACE_SET_PARAM_DUAL:
-		PRINT_DEBUG("INTERFACE_GET_PARAM_DUAL")
-		;
+		PRINT_DEBUG("INTERFACE_GET_PARAM_DUAL");
 		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -276,15 +257,12 @@ void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_INTERFACE_GET_ADDR:
-		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 		interface_exec_reply_get_addr(module, ff);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -764,23 +742,19 @@ void *capturer_to_interface(void *local) {
 		uint32_t flow;
 		switch (ether_type) {
 		case ETH_TYPE_IP4:
-			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type)
-			;
+			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
 			flow = INTERFACE_FLOW_IPV4;
 			break;
 		case ETH_TYPE_ARP:
-			PRINT_DEBUG("ARP: proto=0x%x (%u)", ether_type, ether_type)
-			;
+			PRINT_DEBUG("ARP: proto=0x%x (%u)", ether_type, ether_type);
 			flow = INTERFACE_FLOW_ARP;
 			break;
 		case ETH_TYPE_IP6:
-			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type)
-			;
+			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
 			flow = INTERFACE_FLOW_IPV6;
 			continue;
 		default:
-			PRINT_DEBUG("default: proto=0x%x (%u)", ether_type, ether_type)
-			;
+			PRINT_DEBUG("default: proto=0x%x (%u)", ether_type, ether_type);
 			freeFinsFrame(ff);
 			continue;
 		}
@@ -877,14 +851,16 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 
 		struct if_record *ifr;
 
-		PRINT_ERROR("Creating arg list");
+		PRINT_DEBUG("Creating arg list");
 		int i, j;
 		for (i = 0, j = 1; i < md->if_list->len && j < INTERFACE_IF_LIST_MAX; i++) {
 			ifr = (struct if_record *) list_look(md->if_list, i);
 			if (ifr_running_test(ifr) && ifr->mac != 0) {
 				args[j] = (uint8_t *) secure_malloc(IFNAMSIZ);
-				sprintf((char *) args[j], "%012llx", ifr->mac);
-				j += 1;
+				sprintf((char *) args[j], "%s", ifr->name);
+				args[j + 1] = (uint8_t *) secure_malloc(IFHWADDRLEN);
+				sprintf((char *) args[j + 1], "%012llx", ifr->mac);
+				j += 2;
 			}
 		}
 		args[j] = NULL;
