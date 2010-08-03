@@ -32,7 +32,6 @@ int testcreator(int argc, char *argv[])
 
 
         char buffer[10];
-        int intermediate;
         unsigned char *frame;
         unsigned char metadata[]="metadata";
         metadata[9]='\0';
@@ -318,7 +317,7 @@ int testcreator(int argc, char *argv[])
         fclose ( tcp_in );
         fclose (ft);
 /** .......................................................*/
-/** .................Prepare UDP Outgoing direction...............*/
+/** .................Prepare TCP Outgoing direction...............*/
 
 	    strcpy(arg_temp1,argv[1]);
         tcp_out = fopen (strcat(arg_temp1,"_TCPSOCKETOUT"),"r");

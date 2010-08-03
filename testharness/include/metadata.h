@@ -36,6 +36,10 @@ metadata_element *metadata_add(metadata *cfgptr,char *elementName, int type);
 int metadata_element_delete(metadata *cfgptr,char *elementName);
 
 void metadata_print(metadata *cfgptr);
+int metadata_copy(metadata *dest,metadata *src);
+int metadata_size(metadata *cfgptr);
+
+
 
 
 #endif /* METADATA_H_ */

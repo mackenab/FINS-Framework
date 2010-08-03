@@ -13,6 +13,12 @@
 #ifndef FINSTYPES_H_
 #define FINSTYPES_H_
 
+#include "metadata.h"
+
+/* macro to convert IPv4 address from human readable format (_P_resentation) to long int (_N_etwork)*/
+#define IP4_ADR_P2N(a,b,c,d) (16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
+
+
 /* Definition of the modules IDs */
 #define SOCKETSTUBID 55
 #define UDPID	44
@@ -62,7 +68,7 @@ struct finsDataFrame
 	unsigned char directionFlag;
 	unsigned int	pduLength;
 	unsigned char 	*pdu;
-	unsigned char metaData[MAX_METADATASIZE];
+	metadata metaData;
 
 };
 
@@ -109,9 +115,7 @@ struct readRequestFrame
 	unsigned short int opcode;
 	unsigned int serialNum;
 
-unsigned int paramterID;
-
-
+	unsigned int paramterID;
 };
 
 struct readReplyFrame
@@ -122,9 +126,7 @@ struct readReplyFrame
 	unsigned short int opcode;
 	unsigned int serialNum;
 
-void *paramterValue;
-
-
+	void *paramterValue;
 };
 
 struct writeRequestFrame
@@ -136,8 +138,6 @@ struct writeRequestFrame
 
 unsigned int paramterID;
 void *paramterValue;
-
-
 };
 
 
