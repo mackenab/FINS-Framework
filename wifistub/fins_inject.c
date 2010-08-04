@@ -187,6 +187,8 @@ void packet_injection ( u_char* user,
         exit ( 1 );
     }
     
+
+
     /*
     packet_header->len  The length of the packet captured
     packet_header->ts   The time stamp the packet was captured
@@ -204,6 +206,7 @@ void packet_injection ( u_char* user,
     tv.tv_nsec = ( long ) ( ( delay_time - tv.tv_sec ) * 1e+9 );
     nanosleep (&tv, &tv);
     
+
     pcap_inject ( inject_int_desc, packet_data, packet_header->len );
     
     pcap_close ( inject_int_desc );

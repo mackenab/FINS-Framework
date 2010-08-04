@@ -211,11 +211,13 @@
 #include <linux/if_ether.h>
 #include <pthread.h>
 #include "getMAC_Address.h"
+#include "finstypes.h"
+#include "finsdebug.h"
 #include "list.h"
 
 
 void *packet_capture(void *device);
- void *packet_inject(pcap_t *capture_handle);
+ void *packet_inject(void *device);
 /* default snap length (maximum bytes per packet to capture) */
 #define SNAP_LEN 1518
 
@@ -544,6 +546,7 @@ void handling (u_char *packet)
 	int size_payload;
 	*/
 	int size_payload;
+	u_short ether_t;
 
 	/* this is the child process */
         printf("this is the child, will continue processing the data \n");
@@ -551,7 +554,7 @@ void handling (u_char *packet)
 		/* define ethernet header */
 			ethernet = (struct sniff_ethernet*)(packet);
 
-			u_short ether_t = ntohs(ethernet->ether_type);
+			ether_t = ntohs(ethernet->ether_type);
 			printf("%X \n", ether_t);
 				/* determine Network protocol */
 			switch (ether_t){
@@ -568,7 +571,7 @@ void handling (u_char *packet)
 								printf("   Protocol: RARP\n");
 								return;
 					default :
-								printf("   Protocol: unknown\n");
+								printf("   Protocol: unknown network\n");
 								return;
 							}
 			/* define/compute ip header offset */
@@ -599,7 +602,7 @@ void handling (u_char *packet)
 					printf("   Protocol: IP\n");
 					return;
 				default:
-					printf("   Protocol: unknown\n");
+					printf("   Protocol: unknown transport\n");
 					return;
 			}
 
@@ -610,7 +613,8 @@ void handling (u_char *packet)
 			/* define/compute tcp header offset */
 			tcp = (struct sniff_tcp*)(packet + SIZE_ETHERNET + size_ip);
 			size_tcp = TH_OFF(tcp)*4;
-			if (size_tcp < 20) {
+			if (size_tcp < 20)
+			{
 				printf("   * Invalid TCP header length: %u bytes\n", size_tcp);
 				return;
 			}
@@ -628,11 +632,16 @@ void handling (u_char *packet)
 			 * Print payload data; it might be binary, so don't just
 			 * treat it as a string.
 			 */
-			if (size_payload > 0) {
+			if (size_payload > 0)
+			{
 				printf("   Payload (%d bytes):\n", size_payload);
 				print_payload(payload, size_payload);
+				//print the whole packet instead of only the payload
+				//print_payload(packet, strlen(packet));
+
 			}
-			else {
+			else
+			{
 			printf("   Payload (%d bytes):\n", size_payload);
 
 			}
@@ -644,36 +653,36 @@ void handling (u_char *packet)
 
 }
 
-/*
+/**
  * dissect/print packet
  */
 void
 got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packetReceived)
 {
-	static int count = 1;                   /* packet counter */
-	u_char *packet;						 	/* Packet Pointer */
+		static int count = 1;                   /* packet counter */
+		u_char *packet;						 	/* Packet Pointer */
 
-	printf("\nPacket number %d:\n", count);
-	count++;
-//packet=packetReceived;
-if (header->caplen != header->len)
-{
-printf("Snaplen value is not enough to capture the whole packet as it is on wire \n");
-exit(1);
-}
-packet= (u_char *) malloc(header->caplen);
-memcpy(packet,packetReceived,header->caplen);
+		printf("\nPacket number %d:\n", count);
+		count++;
+
+		if (header->caplen != header->len)
+		{
+			printf("Snaplen value is not enough to capture the whole packet as it is on wire \n");
+			exit(1);
+		}
+		packet= (u_char *) malloc(header->caplen);
+		memcpy(packet,packetReceived,header->caplen);
 
 
-//Insert( packet, L, P );
-handling(packet);
-free(packet);
-return;
+		//Insert( packet, L, P );
+		handling(packet);
+		free(packet);
+		return;
 
 
 }  // end of the function got_packet
 
-int main(int argc, char **argv)
+void main(int argc, char **argv)
 {
 
 	L = MakeEmpty( NULL );		/* Initialize the packets buffer */
@@ -687,22 +696,23 @@ int main(int argc, char **argv)
 	char errbuf[PCAP_ERRBUF_SIZE];		/* error buffer */
 
 	/* check for capture device name on command-line */
-	if (argc == 2) {
+	if (argc == 2)
+	{
 		dev = argv[1];
-	}
-	else if (argc > 2) {
-		fprintf(stderr, "error: unrecognized command-line options\n\n");
-		print_app_usage();
-		exit(EXIT_FAILURE);
-	}
-	else {
-		/* find a capture device if not specified on command-line */
-		dev = pcap_lookupdev(errbuf);
-		if (dev == NULL) {
-			fprintf(stderr, "Couldn't find default device: %s\n",
-			    errbuf);
+		}
+		else if (argc > 2) {
+			fprintf(stderr, "error: unrecognized command-line options\n\n");
+			print_app_usage();
 			exit(EXIT_FAILURE);
 		}
+		else {
+			/* find a capture device if not specified on command-line */
+			dev = pcap_lookupdev(errbuf);
+			if (dev == NULL) {
+				fprintf(stderr, "Couldn't find default device: %s\n",
+					errbuf);
+				exit(EXIT_FAILURE);
+			}
 	}
 
 
@@ -714,43 +724,31 @@ int main(int argc, char **argv)
         printf ( "\nError: Capture thread creation.\n" );
         exit ( 1 );
     }
-/*
+
     if ( ( pthread_create ( &threads.inject_thread, NULL,
-                            packet_inject, &dev ) ) != 0 )
+                            packet_inject, dev ) ) != 0 )
     {
         printf ( "\nError: Inject thread creation.\n" );
         exit ( 1 );
     }
-*/
+
 
     pthread_join ( threads.capture_thread, NULL );
-  //  pthread_join ( threads.inject_thread, NULL );
+   pthread_join ( threads.inject_thread, NULL );
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	printf("\nCapture complete.\n");
-
-return 0;
+	PRINT_DEBUG("\nCapture complete.\n");
+	PRINT_DEBUG("\nINJECTION complete.\n");
+return;
 }
+
+
+
 
 void *packet_capture(void *device)
 {
+	printf("\n capture thread \n");
+
 	pcap_t *handle;				/* packet capture handle */
 
 	/* we need to filter frames based on the sender mac address !!
@@ -769,8 +767,8 @@ void *packet_capture(void *device)
 
 	//char filter_exp[] = "ether src 00:1e:2a:52:ec:9c";		/* filter expression [3] */
 	struct bpf_program fp;			/* compiled filter program (expression) */
-	bpf_u_int32 mask;			/* subnet mask */
-	bpf_u_int32 net;			/* ip */
+	bpf_u_int32 mask;				/* subnet mask */
+	bpf_u_int32 net;				/* ip */
 	int num_packets = 20;			/* number of packets to capture */
 	int data_linkValue;
 	print_app_banner();
@@ -780,9 +778,10 @@ void *packet_capture(void *device)
 /* Build the filter expression based on the mac address of the passed
 	 * device name
 	 */
-	getMAC_Address(dev_macAddress,dev);
+	getDevice_MACAddress(dev_macAddress,dev);
 	strcat(filter_exp,dev_macAddress);
-
+	//strcat(filter_exp," and not arp");
+	strcpy(filter_exp,"not arp");
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n",
@@ -790,7 +789,7 @@ void *packet_capture(void *device)
 		net = 0;
 		mask = 0;
 	}
-/* print capture info */
+	/* print capture info */
 	printf("Device: %s\n", dev);
 	printf("Number of packets: %d\n", num_packets);
 	printf("Filter expression: %s\n", filter_exp);
@@ -825,7 +824,6 @@ void *packet_capture(void *device)
 	}
 
 
-	printf("\n capture thread \n");
 	/* now we can set our callback function */
 		pcap_loop(handle, 20, got_packet, NULL);
 
@@ -836,21 +834,107 @@ void *packet_capture(void *device)
 return NULL;
 }
 
-void *packet_inject(pcap_t *inject_handle)
+void *packet_inject(void *device)
 {
+		printf("\n Inject thread \n");
 
-printf("\n Inject thread \n");
+		static int numberOfCalls= 0;
+
+		numberOfCalls ++;
+		pcap_t *inject_handle;				/* packet capture handle */
+		unsigned char *packet_data;
+		packet_data = (unsigned char *)malloc(500);
+		int lenghtOfData;
+
+	/** Prepration of fake IP packet */
+		char fakeData[]="001b2ff486cc001cbf871afd080045000028c8b6400040069f1bc0a801033ff5d15db39800506244457629f0d03f50111fa3675f0000";
+		int i,j;
+
+		unsigned char *token;
+		unsigned char buf;
+		token=(unsigned char *)malloc(3);
+		j=0;
+	/** NOTE THAT IF THE DATA to be copied has
+	 * NULL equal characters , strlen  does not work correclty because
+	 * it detects false NULL termination !!!!! DAM IT
+	 */
+		j=0;
+		for (i=0; i< strlen(fakeData); i=i+2)
+		{
+			strncpy(token,&fakeData[i],2);
+			PRINT_DEBUG("%s",token);
+			buf=htoi(token);
+//			if (buf == '\0')
+	//			PRINT_DEBUG("ooops");
+			PRINT_DEBUG("%d--%u",j+1,buf);
+			strcat(packet_data,&buf);
+
+			j=j+1;
+		}
+
+		PRINT_DEBUG("%s\n",fakeData);
+		PRINT_DEBUG("%s\n",packet_data);
+		lenghtOfData = j-1;
+		PRINT_DEBUG("%d",strlen(fakeData));
+		PRINT_DEBUG("%d",lenghtOfData);
+
+
+		char errbuf[PCAP_ERRBUF_SIZE];		/* error buffer */
+		unsigned char *dev;
+		struct bpf_program fp;			/* compiled filter program (expression) */
+		bpf_u_int32 mask;				/* subnet mask */
+		bpf_u_int32 net;				/* ip */
+		dev= (unsigned char *)device;
+
+
+		/* Setup the Injection Interface */
+		    if ( ( inject_handle = pcap_open_live ( dev, BUFSIZ,
+		                             1, -1, errbuf ) ) == NULL )
+		    {
+		        printf ( "\nError: %s\n", errbuf );
+		        exit ( 1 );
+		    }
+
+		    /** pcap_t *pcap_open_live(const char *device, int snaplen,
+		                 int promisc, int to_ms, char *errbuf);
+
+		  		DESCRIPTION
+		         pcap_open_live()  is  used to obtain a packet capture handle to look at
+		         packets on the network.  device is a string that specifies the  network
+		         device  to  open;  on Linux systems with 2.2 or later kernels, a device
+		         argument of "any" or NULL can be  used  to  capture  packets  from  all
+		         interfaces.
+
+		         snaplen specifies the snapshot length to be set on the handle.
+
+		         promisc specifies if the interface is to be put into promiscuous mode.
+
+		         to_ms specifies the read timeout in milliseconds.
+		       *
+		       */
+
+
+
+
+
+
  /*  While sending buffer is not empty*/
-
-	while (1)
+	i=0;
+	for (i=0;i <= 10; i++)
 
 {
 
+		sleep(1);
+		pcap_inject ( inject_handle, packet_data,lenghtOfData );
+		PRINT_DEBUG("\n Message #%d has been injected",i);
 
-//	pcap_inject ( inject_handle, packet_data, packet_header->len );
 
 }
 
+    pcap_close ( inject_handle );
+    free(packet_data);
+    PRINT_DEBUG("\n%d",numberOfCalls);
+    PRINT_DEBUG("\n end of injection thread");
 
 return NULL;
 }
