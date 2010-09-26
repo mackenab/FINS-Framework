@@ -51,21 +51,21 @@ struct tableRecord* UpdateCache(struct finsFrame Q, struct tableRecord *PTRX);
 @param DF is the directionFlag
 */
 
-struct destinationList* searchLocalTable(struct tableRecord *ptrCache, unsigned char vc, unsigned char DF);
+struct destinationList* SearchLocalTable(struct tableRecord *ptrCache, unsigned char vc, unsigned char DF);
 
 /**
 @brief removes the dynamic linked list to prevent memory leakage, also makes use of ConnectLists function (see below)
 @param ptr is a pointer to the first record of this list
 */
 
-void Freerecords(struct tableRecord *ptr);
+void FreeRecords(struct tableRecord *ptr);
 
 /**
 @brief prints the contents of the linked list
 @param ptr is a pointer to the first record of this list
 */
 
-void Printrecords(struct tableRecord *ptr);
+void PrintRecords(struct tableRecord *ptr);
 
 
 /**
@@ -76,4 +76,22 @@ void Printrecords(struct tableRecord *ptr);
 
 int UniqueRecord(struct tableRecord *PTRX, struct tableRecord *ptr);
 
+/**
+@brief prints the destination list as searched in the local cache
+@param dList points to the first element of the found list
+*/
 
+void PrintDestinationList (struct destinationList *dList);
+
+/**
+@brief frees the elements of the destination list which has a dynamic size
+@param ptr points to the first element of the found list
+*/
+
+void FreeDestList(struct destinationList *ptr);
+
+/**
+@brief counts the number of elements of the destination list @param ptr points to the first element of the found list
+*/
+
+int LengthDstList(struct destinationList *ptr);
