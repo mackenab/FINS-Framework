@@ -1,9 +1,15 @@
 /**
- * @file htoi.c
+ * @file finstypes.h
  *
  * @date July 2, 2010
  * @brief has all the constants definitions and the FDF/FCF , and FinsFrame format.
- * @version 2 fix the define values to be into capital letters
+ * @version 2
+ * +fix the define values to be into capital letters
+ * +The destination ID has been modified to be list of destination IDs
+ * which is implemented as a linked list grows dynamically
+ * + wifistub is renamed to be ETHERSTUB and its ID became ETHERSTUBID
+ * + Static MetaData is replaced with The fully functionning MetaData
+ * based on the MetaDate Library
  * @author: Abdallah Abdallah
  */
 
@@ -13,12 +19,17 @@
 #ifndef FINSTYPES_H_
 #define FINSTYPES_H_
 
+/* Include MetaData header File */
+
+
+
+
 /* Definition of the modules IDs */
 #define SOCKETSTUBID 55
 #define UDPID	44
 #define TCPID	33
 #define IPID	22
-#define WIFISTUBID	11
+#define ETHERSTUBID	11
 
 /* Definition of the possible Opcodes */
 
@@ -35,8 +46,7 @@
 #define UP 0
 #define DOWN 1
 
-/*meta data related definitions */
-#define MAX_METADATASIZE	200
+
 
 struct destinationList
 {
