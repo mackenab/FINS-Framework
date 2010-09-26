@@ -4,11 +4,12 @@
  * @date July 2, 2010
  * @brief has all the constants definitions and the FDF/FCF , and FinsFrame format.
  * @version 2
+ * @version 3 "September 25,2010"
  * +fix the define values to be into capital letters
  * +The destination ID has been modified to be list of destination IDs
  * which is implemented as a linked list grows dynamically
  * + wifistub is renamed to be ETHERSTUB and its ID became ETHERSTUBID
- * + Static MetaData is replaced with The fully functionning MetaData
+ * + Static MetaData is replaced with The fully functioning MetaData
  * based on the MetaDate Library
  * @author: Abdallah Abdallah
  */
@@ -19,9 +20,10 @@
 #ifndef FINSTYPES_H_
 #define FINSTYPES_H_
 
+
+
 /* Include MetaData header File */
-
-
+#include "metadata.h"
 
 
 /* Definition of the modules IDs */
@@ -72,7 +74,7 @@ struct finsDataFrame
 	unsigned char directionFlag;
 	unsigned int	pduLength;
 	unsigned char 	*pdu;
-	unsigned char metaData[MAX_METADATASIZE];
+	metadata 		*metadata;
 
 };
 
