@@ -4,37 +4,16 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../getMAC_Address.c \
-../handlers.c \
-../htoi.c \
-../icmp.c \
-../socketjinni.c \
-../swito.c \
-../tcpHandling.c \
-../udpHandling.c \
-../wifidemux.c 
+../core.c \
+../getMAC_Address.c 
 
 OBJS += \
-./getMAC_Address.o \
-./handlers.o \
-./htoi.o \
-./icmp.o \
-./socketjinni.o \
-./swito.o \
-./tcpHandling.o \
-./udpHandling.o \
-./wifidemux.o 
+./core.o \
+./getMAC_Address.o 
 
 C_DEPS += \
-./getMAC_Address.d \
-./handlers.d \
-./htoi.d \
-./icmp.d \
-./socketjinni.d \
-./swito.d \
-./tcpHandling.d \
-./udpHandling.d \
-./wifidemux.d 
+./core.d \
+./getMAC_Address.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

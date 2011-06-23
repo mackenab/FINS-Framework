@@ -1,8 +1,8 @@
 /*
-* finsdebug.h
-*
-*
-*/
+ * finsdebug.h
+ *
+ *
+ */
 
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
@@ -22,5 +22,4 @@
 #define PRINT_ERROR(format, args...)
 #endif
 #endif /* FINSDEBUG_H_ */
-
 

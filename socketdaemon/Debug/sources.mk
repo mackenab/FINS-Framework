@@ -13,11 +13,15 @@ EXECUTABLES :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
-. \
 udp \
 tcp \
+switch \
 ipv4 \
+. \
 fins_headers \
 data_structure \
 arp \
+RTM \
+Jinni \
+ICMP \
 

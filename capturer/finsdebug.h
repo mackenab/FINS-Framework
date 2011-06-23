@@ -1,8 +1,8 @@
 /*
-* finsdebug.h
-*
-*
-*/
+ * finsdebug.h
+ *
+ *
+ */
 
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_

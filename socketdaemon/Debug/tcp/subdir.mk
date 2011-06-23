@@ -4,13 +4,19 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../tcp/tcp.c 
+../tcp/tcp.c \
+../tcp/tcp_in.c \
+../tcp/tcp_out.c 
 
 OBJS += \
-./tcp/tcp.o 
+./tcp/tcp.o \
+./tcp/tcp_in.o \
+./tcp/tcp_out.o 
 
 C_DEPS += \
-./tcp/tcp.d 
+./tcp/tcp.d \
+./tcp/tcp_in.d \
+./tcp/tcp_out.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

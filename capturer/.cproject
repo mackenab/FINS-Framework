@@ -47,7 +47,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="wifidemux.h|wifidemux.c|queueModule.h|queueModule.c|metadata.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="htoi.h|htoi.c|getMAC_Address.h|getMAC_Address.c|wifidemux.h|wifidemux.c|queueModule.h|queueModule.c|metadata.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
@@ -344,7 +344,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="wifidemux.h|wifidemux.c|queueModule.h|queueModule.c|metadata.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="htoi.h|htoi.c|getMAC_Address.h|getMAC_Address.c|wifidemux.h|wifidemux.c|queueModule.h|queueModule.c|metadata.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>

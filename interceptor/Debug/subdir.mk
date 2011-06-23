@@ -3,19 +3,13 @@
 ################################################################################
 
 # Add inputs and outputs from these tool invocations to the build variables 
-O_SRCS += \
-../socket_interceptor.o 
-
 C_SRCS += \
-../client.c \
 ../socket_interceptor.c 
 
 OBJS += \
-./client.o \
 ./socket_interceptor.o 
 
 C_DEPS += \
-./client.d \
 ./socket_interceptor.d 
 
 

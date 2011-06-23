@@ -20,39 +20,36 @@
  * @param metadata a pointer to the metadata
  */
 
-
 extern struct udp_statistics udpStat;
 
 struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID,
-		int PDU_length, unsigned char* PDU, metadata  *meta)
-{
-struct finsFrame *ff = (struct finsFrame *)malloc(sizeof(struct finsFrame));
-char *data;
-data = (char *) malloc(PDU_length);
-memcpy(data,PDU,PDU_length);
+		int PDU_length, unsigned char* PDU, metadata *meta) {
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
+	char *data;
+	data = (char *) malloc(PDU_length);
+	memcpy(data, PDU, PDU_length);
 
-	if (dataOrCtrl == DATA)
-	{
+	if (dataOrCtrl == DATA) {
 		ff->dataOrCtrl = dataOrCtrl;
 		ff->destinationID.id = destID;
-		ff->destinationID.next=NULL;
+		ff->destinationID.next = NULL;
 
 		ff->dataFrame.directionFlag = direction;
 		ff->dataFrame.pduLength = PDU_length;
 		ff->dataFrame.pdu = data;
 		ff->dataFrame.metaData = meta;
-	//	memcpy(&ff.dataFrame.metaData, metadata, MAX_METADATASIZE);
+		//	memcpy(&ff.dataFrame.metaData, metadata, MAX_METADATASIZE);
 	}
 
-	if (dataOrCtrl == CONTROL)
-	{
+	if (dataOrCtrl == CONTROL) {
 		ff->dataOrCtrl = dataOrCtrl;
 		ff->destinationID.id = destID;
 
-		ff->destinationID.next=NULL;
+		ff->destinationID.next = NULL;
 
 		// fill the important FCF data in here
 	}
-//print_finsFrame(ff);
+	//print_finsFrame(ff);
 	return ff;
 }

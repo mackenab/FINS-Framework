@@ -8,13 +8,11 @@
 
 extern struct ip4_routing_table* routing_table;
 
-struct ip4_next_hop_info IP4_next_hop(IP4addr dst)
-{
+struct ip4_next_hop_info IP4_next_hop(IP4addr dst) {
 	struct ip4_next_hop_info info;
 	IP4addr mask;
 	struct ip4_routing_table* current_table_entry = routing_table;
-	while (current_table_entry != NULL)
-	{
+	while (current_table_entry != NULL) {
 		mask = 0xffff << (IP4_ALEN * 8 - current_table_entry->mask);
 		if (((current_table_entry->dst & mask) == (dst & mask))
 				| (current_table_entry->dst == 0)) // if dst=0, this is the default route, always match

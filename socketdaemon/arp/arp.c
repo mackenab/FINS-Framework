@@ -414,13 +414,6 @@ void ARP_init()
 
 
 PRINT_DEBUG("ARP STARTED");
-while(1)
-{
-
-
-}
-
-
 
 
 

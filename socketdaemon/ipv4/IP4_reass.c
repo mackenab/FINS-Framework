@@ -22,27 +22,21 @@ static struct ip4_reass_list *packet_list = NULL;
  * In case it isn't it returns NULL
  */
 struct ip4_packet* IP4_reass(struct ip4_header *pheader,
-		struct ip4_packet *ppacket)
-{
+		struct ip4_packet *ppacket) {
 	struct ip4_reass_list *packet_entry;
 
-	if (packet_list == NULL)
-	{
+	if (packet_list == NULL) {
 		packet_entry = packet_list = IP4_new_packet_entry(pheader, NULL, NULL);
-	} else
-	{
+	} else {
 		packet_entry = packet_list;
-		while (1)
-		{
+		while (1) {
 			if ((packet_entry->header.id == pheader->id)
 					& (packet_entry->header.source == pheader->source)
 					& (packet_entry->header.protocol == pheader->protocol)
-					& (packet_entry->header.destination == pheader->destination))
-			{
+					& (packet_entry->header.destination == pheader->destination)) {
 				break;
 			}
-			if (packet_entry->next_packet == NULL)
-			{
+			if (packet_entry->next_packet == NULL) {
 				struct ip4_reass_list* new_packet_entry = IP4_new_packet_entry(
 						pheader, packet_entry, NULL);
 				packet_entry->next_packet = new_packet_entry;
@@ -54,11 +48,7 @@ struct ip4_packet* IP4_reass(struct ip4_header *pheader,
 	}
 
 	struct ip4_fragment* fragment = IP4_construct_fragment(pheader, ppacket);
-	PRINT_DEBUG("Packet pointer: %lu",(unsigned long)ppacket);
-	PRINT_DEBUG("Fragment.first: %d",fragment->first);
-	PRINT_DEBUG("Fragment.last: %d",fragment->last);
-	PRINT_DEBUG("Fragment.more_fragments: %d", fragment->more_fragments);
-	PRINT_DEBUG("Fragment.data: %lu", (unsigned long)fragment->data);
+	PRINT_DEBUG("Packet pointer: %lu",(unsigned long)ppacket); PRINT_DEBUG("Fragment.first: %d",fragment->first); PRINT_DEBUG("Fragment.last: %d",fragment->last); PRINT_DEBUG("Fragment.more_fragments: %d", fragment->more_fragments); PRINT_DEBUG("Fragment.data: %lu", (unsigned long)fragment->data);
 
 	IP4_add_fragment(packet_entry, fragment);
 
@@ -66,29 +56,24 @@ struct ip4_packet* IP4_reass(struct ip4_header *pheader,
 }
 
 uint8_t IP4_add_fragment(struct ip4_reass_list *list,
-		struct ip4_fragment *fragment)
-{
+		struct ip4_fragment *fragment) {
 	int i;
 	uint8_t use_fragment = 0;
 	struct ip4_reass_hole *current_hole = NULL, *next_hole_abs_pointer,
 			*prev_hole_abs_pointer, *new_hole;
 
-	for (i = 0; 1; i++)
-	{
+	for (i = 0; 1; i++) {
 		/* Step 1
 		 * Select the next hole descriptor from the hole descriptor
 		 * list. If there are no more entries, go to step eight.
 		 */
-		if (current_hole == NULL)
-		{
+		if (current_hole == NULL) {
 			current_hole
 					= (struct ip4_reass_hole*) ((unsigned long) list->buffer
 							+ list->first_hole_rel_pointer);
-		} else if (current_hole->next_hole_rel_pointer != 0)
-		{
+		} else if (current_hole->next_hole_rel_pointer != 0) {
 			current_hole = IP4_next_hole(current_hole);
-		} else
-		{
+		} else {
 			break;
 		}
 		prev_hole_abs_pointer = IP4_previous_hole(current_hole);
@@ -99,8 +84,7 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 		 * 3. If fragment.last is less than hole.first, go to step one.
 		 */
 		if ((fragment->first > current_hole->last) || (fragment->last
-				< current_hole->first))
-		{
+				< current_hole->first)) {
 			use_fragment = 0;
 			continue;
 		}
@@ -123,27 +107,22 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 		 * hole.first, and new_hole.last equal to  fragment.first  minus
 		 * one.
 		 */
-		if (fragment->first > current_hole->first)
-		{
+		if (fragment->first > current_hole->first) {
 			new_hole = current_hole;
-			if (IP4_previous_hole(current_hole) == NULL)
-			{
+			if (IP4_previous_hole(current_hole) == NULL) {
 				new_hole->prev_hole_rel_pointer = 0;
 				list ->first_hole_rel_pointer = (unsigned long) new_hole
 						- (unsigned long) list->buffer;
-			} else
-			{
+			} else {
 				new_hole->prev_hole_rel_pointer = (unsigned long) new_hole
 						- (unsigned long) IP4_previous_hole(current_hole);
 				IP4_previous_hole(current_hole)->next_hole_rel_pointer
 						= new_hole->prev_hole_rel_pointer;
 			}
 
-			if (IP4_next_hole(current_hole) == NULL)
-			{
+			if (IP4_next_hole(current_hole) == NULL) {
 				new_hole->next_hole_rel_pointer = 0;
-			} else
-			{
+			} else {
 				new_hole->next_hole_rel_pointer
 						= (unsigned long) IP4_next_hole(current_hole)
 								- (unsigned long) new_hole;
@@ -154,7 +133,7 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 			new_hole->first = current_hole->first;
 			new_hole->last = fragment->first - 1;
 			list->hole_count++;
-			current_hole=new_hole;
+			current_hole = new_hole;
 		}
 
 		/* Step 6
@@ -164,29 +143,24 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 		 * one and new_hole.last equal to hole.last.
 		 */
 		if ((fragment->last < current_hole->last) && (fragment->more_fragments
-				== 1))
-		{
+				== 1)) {
 			new_hole = (struct ip4_reass_hole*) ((unsigned long) list->buffer
 					+ (unsigned long) fragment->last + 1);
 
-			if (IP4_previous_hole(current_hole) == NULL)
-			{
+			if (IP4_previous_hole(current_hole) == NULL) {
 				list->first_hole_rel_pointer = (unsigned long) new_hole
 						- (unsigned long) IP4_previous_hole(current_hole);
 				new_hole->prev_hole_rel_pointer = 0;
-			} else
-			{
+			} else {
 				new_hole->prev_hole_rel_pointer = (unsigned long) new_hole
 						- (unsigned long) IP4_previous_hole(current_hole);
 				IP4_previous_hole(current_hole)->next_hole_rel_pointer
 						= new_hole->prev_hole_rel_pointer;
 			}
 
-			if (IP4_next_hole(current_hole) == NULL)
-			{
+			if (IP4_next_hole(current_hole) == NULL) {
 				new_hole->next_hole_rel_pointer = 0;
-			} else
-			{
+			} else {
 				new_hole->next_hole_rel_pointer
 						= (unsigned long) IP4_next_hole(current_hole)
 								- (unsigned long) new_hole;
@@ -197,7 +171,7 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 			new_hole->first = fragment->last + 1;
 			new_hole->last = current_hole->last;
 			list->hole_count++;
-			current_hole=new_hole;
+			current_hole = new_hole;
 		}
 
 		/* Step 7
@@ -205,15 +179,12 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 		 */
 	}
 
-	if (use_fragment == 1)
-	{
-		if (fragment->last < list->length)
-		{
+	if (use_fragment == 1) {
+		if (fragment->last < list->length) {
 			memcpy((void *) ((unsigned long) list->buffer
 					+ (unsigned long) fragment->first),
 					(void *) fragment->data, fragment->data_length);
-		} else
-		{
+		} else {
 			/* todo: Packet reassembly buffer extension*/
 			PRINT_DEBUG("Packet buffer needs to be expanded to for packets larger than the defined initial buffer size.");
 		}
@@ -225,18 +196,15 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 	 * complete.  Pass it on to the higher level protocol  processor
 	 * for further handling.  Otherwise, return.
 	 */
-	if (list->hole_count == 0)
-	{
+	if (list->hole_count == 0) {
 		return (1);
-	} else
-	{
+	} else {
 		return (0);
 	}
 }
 
 struct ip4_reass_list* IP4_new_packet_entry(struct ip4_header* pheader,
-		struct ip4_reass_list* previous, struct ip4_reass_list* next)
-{
+		struct ip4_reass_list* previous, struct ip4_reass_list* next) {
 	struct ip4_reass_list* packet_list_entry = (struct ip4_reass_list*) malloc(
 			sizeof(struct ip4_reass_list*));
 	packet_list_entry->next_packet = next;
@@ -260,8 +228,7 @@ struct ip4_reass_list* IP4_new_packet_entry(struct ip4_header* pheader,
 }
 
 struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader,
-		struct ip4_packet* ppacket)
-{
+		struct ip4_packet* ppacket) {
 	struct ip4_fragment* fragment = (struct ip4_fragment*) malloc(
 			sizeof(struct ip4_fragment));
 	fragment->first = (pheader->fragmentation_offset) * 8;
@@ -276,20 +243,16 @@ struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader,
 	return (fragment);
 }
 
-struct ip4_reass_hole* IP4_previous_hole(struct ip4_reass_hole* current_hole)
-{
-	if (current_hole->prev_hole_rel_pointer == 0)
-	{
+struct ip4_reass_hole* IP4_previous_hole(struct ip4_reass_hole* current_hole) {
+	if (current_hole->prev_hole_rel_pointer == 0) {
 		return (NULL);
 	}
 	return ((struct ip4_reass_hole*) ((unsigned long) current_hole
 			+ current_hole->prev_hole_rel_pointer));
 }
 
-struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole)
-{
-	if (current_hole->next_hole_rel_pointer == 0)
-	{
+struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole) {
+	if (current_hole->next_hole_rel_pointer == 0) {
 		return (NULL);
 	}
 	return ((struct ip4_reass_hole*) ((unsigned long) current_hole
@@ -297,24 +260,20 @@ struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole)
 }
 
 void IP4_remove_hole(struct ip4_reass_hole* current_hole,
-		struct ip4_reass_list *list)
-{
+		struct ip4_reass_list *list) {
 	struct ip4_reass_hole* next_hole = IP4_next_hole(current_hole);
 	struct ip4_reass_hole* previous_hole = IP4_previous_hole(current_hole);
-	if (previous_hole == NULL && next_hole == NULL)
-	{
+	if (previous_hole == NULL && next_hole == NULL) {
 		list->first_hole_rel_pointer = 0;
 		list->hole_count = 0;
 		return;
 	}
-	if (next_hole == NULL)
-	{
+	if (next_hole == NULL) {
 		previous_hole->next_hole_rel_pointer = 0;
 		list->hole_count--;
 		return;
 	}
-	if (previous_hole == NULL)
-	{
+	if (previous_hole == NULL) {
 		next_hole->prev_hole_rel_pointer = 0;
 		list->first_hole_rel_pointer += current_hole->next_hole_rel_pointer;
 		list->hole_count--;
