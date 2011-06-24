@@ -34,6 +34,7 @@
  */
 
 struct finssocket jinniSockets[MAX_sockets];
+
 struct socketIdentifier FinsHistory[MAX_sockets];
 
 /** The list of major Queues which connect the modules to each other
