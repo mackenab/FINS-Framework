@@ -22,19 +22,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: libinterceptor.so
+all: socket_interceptor.so
 
 # Tool invocations
-libinterceptor.so: $(OBJS) $(USER_OBJS)
+socket_interceptor.so: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc -shared -o"libinterceptor.so" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -shared -o"socket_interceptor.so" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(LIBRARIES) libinterceptor.so
+	-$(RM) $(OBJS)$(C_DEPS)$(LIBRARIES) socket_interceptor.so
 	-@echo ' '
 
 .PHONY: all clean dependents

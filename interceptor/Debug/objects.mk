@@ -4,4 +4,4 @@
 
 USER_OBJS :=
 
-LIBS := -lpthread
+LIBS := -lpthread -lpcap -ldl

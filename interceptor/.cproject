@@ -38,12 +38,15 @@
 <tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.470463776" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
 <option id="gnu.c.link.option.libs.2103791722" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="pthread"/>
+<listOptionValue builtIn="false" value="pcap"/>
+<listOptionValue builtIn="false" value="dl"/>
 </option>
 <option defaultValue="true" id="gnu.c.link.option.shared.1315859137" name="Shared (-shared)" superClass="gnu.c.link.option.shared" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1350175450" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
 </inputType>
+<outputType id="cdt.managedbuild.tool.gnu.c.linker.output.so.1114023805" outputPrefix="socket_" superClass="cdt.managedbuild.tool.gnu.c.linker.output.so"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.1311597405" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 <option defaultValue="true" id="gnu.cpp.link.option.shared.870270475" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
@@ -54,7 +57,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="fins_server.sh|fins_interceptor.sh|fins_client.sh|client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
@@ -352,7 +355,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="fins_server.sh|fins_interceptor.sh|fins_client.sh|client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>

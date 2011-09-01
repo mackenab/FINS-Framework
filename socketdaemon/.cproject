@@ -36,7 +36,7 @@
 <listOptionValue builtIn="false" value=".././data_structure"/>
 <listOptionValue builtIn="false" value="../fins_headers"/>
 </option>
-<option id="gnu.c.compiler.option.warnings.toerrors.878450768" superClass="gnu.c.compiler.option.warnings.toerrors" value="false" valueType="boolean"/>
+<option id="gnu.c.compiler.option.warnings.toerrors.878450768" name="Warnings as errors (-Werror)" superClass="gnu.c.compiler.option.warnings.toerrors" value="false" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.285950128" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.1503880479" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
@@ -61,7 +61,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="wifidemux_bak.c|arp/test_file|arp/test_arp.h|arp/test_arp.c|udp/udp_test.c|_finsframe.h|_finsframe.c|client.c|socket_interceptor.h|socket_interceptor.c|queueModule.h|queueModule.c|mysocketstub_test1.h|mysocketstub_test1.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="Debug/fins_jinni.sh|fins_jinni.sh|wifidemux_bak.c|arp/test_file|arp/test_arp.h|arp/test_arp.c|udp/udp_test.c|_finsframe.h|_finsframe.c|client.c|socket_interceptor.h|socket_interceptor.c|queueModule.h|queueModule.c|mysocketstub_test1.h|mysocketstub_test1.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
@@ -358,7 +358,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="wifidemux_bak.c|arp/test_file|arp/test_arp.h|arp/test_arp.c|udp/udp_test.c|_finsframe.h|_finsframe.c|client.c|socket_interceptor.h|socket_interceptor.c|queueModule.h|queueModule.c|mysocketstub_test1.h|mysocketstub_test1.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="Debug/fins_jinni.sh|fins_jinni.sh|wifidemux_bak.c|arp/test_file|arp/test_arp.h|arp/test_arp.c|udp/udp_test.c|_finsframe.h|_finsframe.c|client.c|socket_interceptor.h|socket_interceptor.c|queueModule.h|queueModule.c|mysocketstub_test1.h|mysocketstub_test1.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>

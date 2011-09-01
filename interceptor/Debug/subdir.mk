@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 O_SRCS += \
+../client_loopback.o \
 ../socket_interceptor.o 
 
 C_SRCS += \
