@@ -5,20 +5,14 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../ethermod.c \
-../getMAC_Address.c \
-../htoi.c \
 ../wifistub.c 
 
 OBJS += \
 ./ethermod.o \
-./getMAC_Address.o \
-./htoi.o \
 ./wifistub.o 
 
 C_DEPS += \
 ./ethermod.d \
-./getMAC_Address.d \
-./htoi.d \
 ./wifistub.d 
 
 

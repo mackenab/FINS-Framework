@@ -7,6 +7,6 @@
 
 #include "ipv4.h"
 
-void ip4_exit(){
+void ip4_exit() {
 
 }

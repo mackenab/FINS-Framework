@@ -7,15 +7,15 @@ O_SRCS += \
 ../socket_interceptor.o 
 
 C_SRCS += \
-../client.c \
+../client_recvmsg.c \
 ../socket_interceptor.c 
 
 OBJS += \
-./client.o \
+./client_recvmsg.o \
 ./socket_interceptor.o 
 
 C_DEPS += \
-./client.d \
+./client_recvmsg.d \
 ./socket_interceptor.d 
 
 

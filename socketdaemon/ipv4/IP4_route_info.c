@@ -1,14 +1,11 @@
-
 #include "ipv4.h"
 
-void IP4_print_routing_table(struct ip4_routing_table * table_pointer)
-{
+void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 	struct ip4_routing_table *current_pointer;
 	current_pointer = table_pointer;
 	printf("Routing table:\n");
 	printf("Destination\tGateway\t\tMask\tMetric\tInterface\n");
-	while (current_pointer != NULL)
-	{
+	while (current_pointer != NULL) {
 		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->dst >> 24,
 				(unsigned int) (current_pointer->dst >> 16) & 0xFF,
 				(unsigned int) (current_pointer->dst >> 8) & 0xFF,
@@ -26,32 +23,25 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer)
 }
 
 struct ip4_routing_table * IP4_sort_routing_table(
-		struct ip4_routing_table * table_pointer)
-{
-	if (table_pointer == NULL)
-	{
+		struct ip4_routing_table * table_pointer) {
+	if (table_pointer == NULL) {
 		return NULL;
 	}
 	struct ip4_routing_table *first = table_pointer;
 	struct ip4_routing_table *previous;
 	struct ip4_routing_table *current;
 	int swapped = 1;
-	while (swapped)
-	{
+	while (swapped) {
 		swapped = 0;
 		previous = NULL;
 		current = table_pointer;
-		while ((current!=NULL)&&(current->next_entry != NULL))
-		{
-			if (current->mask < current->next_entry->mask)
-			{
-				if (previous == NULL)
-				{
+		while ((current != NULL) && (current->next_entry != NULL)) {
+			if (current->mask < current->next_entry->mask) {
+				if (previous == NULL) {
 					first = current->next_entry;
 					current->next_entry = current->next_entry->next_entry;
 					first->next_entry = current;
-				} else
-				{
+				} else {
 					previous->next_entry = current->next_entry;
 					current->next_entry = current->next_entry->next_entry;
 					previous->next_entry->next_entry = current;
@@ -66,24 +56,20 @@ struct ip4_routing_table * IP4_sort_routing_table(
 
 }
 
-struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg)
-{
+struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	char dst_temp[IP4_ALEN];
 	char gw_temp[IP4_ALEN];
 	unsigned int priority;
 	unsigned int interface;
 	struct ip4_routing_table *table_pointer = NULL;
 
-	switch (msg->nlmsg_type)
-	{
-	case NLMSG_ERROR:
-	{
+	switch (msg->nlmsg_type) {
+	case NLMSG_ERROR: {
 		struct nlmsgerr* errorMsg = (struct nlmsgerr*) NLMSG_DATA(msg);
 		PRINT_DEBUG("\nrecvd NLMSG_ERROR error seq:%d code:%d...", msg->nlmsg_seq, errorMsg->error);
 		break;
 	}
-	case RTM_NEWROUTE:
-	{
+	case RTM_NEWROUTE: {
 		struct rtmsg* rtm = (struct rtmsg*) NLMSG_DATA(msg);
 		struct rtattr* rta = RTM_RTA(rtm);
 		int rtaLen = msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -92,10 +78,8 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg)
 			table_pointer = (struct ip4_routing_table*) malloc(
 					sizeof(struct ip4_routing_table));
 			memset(table_pointer, 0, sizeof(struct ip4_routing_table)); // zero the routing table entry data
-			for (; RTA_OK(rta, rtaLen); rta = RTA_NEXT(rta, rtaLen))
-			{
-				switch (rta->rta_type)
-				{
+			for (; RTA_OK(rta, rtaLen); rta = RTA_NEXT(rta, rtaLen)) {
+				switch (rta->rta_type) {
 				case RTA_DST: //destination
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(dst_temp, RTA_DATA(rta), IP4_ALEN);
@@ -131,8 +115,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg)
 	return (NULL);
 }
 
-struct ip4_routing_table * IP4_get_routing_table()
-{
+struct ip4_routing_table * IP4_get_routing_table() {
 	int nlmsg_len;
 	struct nlmsghdr* msg;
 	char receive_buffer[IP4_NETLINK_BUFF_SIZE];
@@ -145,8 +128,7 @@ struct ip4_routing_table * IP4_get_routing_table()
 	unsigned int pid = (uint32_t) getpid();
 	unsigned int seq = (uint32_t) getppid();
 
-	if ((sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1)
-	{
+	if ((sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {
 		PRINT_DEBUG("couldn't open NETLINK_ROUTE socket");
 		return NULL;
 	}
@@ -169,8 +151,7 @@ struct ip4_routing_table * IP4_get_routing_table()
 
 	// write the message to our netlink socket
 	int result = send(sock, &route_req, sizeof(route_req), 0);
-	if (result < 0)
-	{
+	if (result < 0) {
 		PRINT_ERROR("Routing table request send error.");
 		return NULL;
 	}
@@ -178,31 +159,23 @@ struct ip4_routing_table * IP4_get_routing_table()
 	memset(receive_buffer, 0, IP4_NETLINK_BUFF_SIZE);
 	receive_ptr = receive_buffer;
 	nlmsg_len = 0;
-	while (1)
-	{
+	while (1) {
 		int msg_len = recv(sock, receive_ptr, IP4_NETLINK_BUFF_SIZE, 0);
-		if (msg_len < 0)
-		{
+		if (msg_len < 0) {
 			PRINT_ERROR("recv() error.");
 			return NULL; //ERROR
 		}
 		msg = (struct nlmsghdr *) receive_ptr;
-		if (msg->nlmsg_type == NLMSG_DONE)
-		{
+		if (msg->nlmsg_type == NLMSG_DONE) {
 			break;
 		}
-		for (; 0 != NLMSG_OK(msg, msg_len); msg = NLMSG_NEXT(msg, msg_len))
-		{
-			if (msg->nlmsg_seq == seq)
-			{
-				if (routing_table == NULL)
-				{
+		for (; 0 != NLMSG_OK(msg, msg_len); msg = NLMSG_NEXT(msg, msg_len)) {
+			if (msg->nlmsg_seq == seq) {
+				if (routing_table == NULL) {
 					routing_table = current_table_entry = parse_nlmsg(msg);
-				} else
-				{
+				} else {
 					current_table_entry->next_entry = parse_nlmsg(msg);
-					if (current_table_entry->next_entry != NULL)
-					{
+					if (current_table_entry->next_entry != NULL) {
 						current_table_entry = current_table_entry->next_entry;
 					}
 				}

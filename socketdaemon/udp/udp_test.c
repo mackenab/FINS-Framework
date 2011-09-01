@@ -136,5 +136,51 @@ int main() {
 
 
 
+STORE BELOEW:
+
+
+
+
+
+
+
+struct udp_packet packet2;
+	struct udp_metadata_parsed pseudoheader2;
+	unsigned short int lolo;
+
+packet2.u_src = 58088;
+packet2.u_dst = 5001;
+packet2.u_len = 53;
+packet2.u_cksum = 0;
+
+
+pseudoheader2.u_pslen = 53;
+pseudoheader2.u_prcl = 17;
+pseudoheader2.u_IPsrc = IP4_ADR_P2N(172,31,54,87);
+pseudoheader2.u_IPdst = IP4_ADR_P2N(172,31,51,249 );
+
+char str[45] = "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+str[45] = '\0';
+strcpy(packet2.u_data, str);
+lolo = UDP_checksum(&packet2, &pseudoheader2);
+	PRINT_DEBUG("The checksums value is %x \n ", lolo);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

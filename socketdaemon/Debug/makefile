@@ -11,10 +11,14 @@ RM := rm -rf
 -include subdir.mk
 -include udp/subdir.mk
 -include tcp/subdir.mk
+-include switch/subdir.mk
 -include ipv4/subdir.mk
 -include fins_headers/subdir.mk
 -include data_structure/subdir.mk
 -include arp/subdir.mk
+-include RTM/subdir.mk
+-include Jinni/subdir.mk
+-include ICMP/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)

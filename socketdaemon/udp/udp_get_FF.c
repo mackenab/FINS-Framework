@@ -5,7 +5,6 @@
  *      Author: Abdallah Abdallah
  */
 
-
 /**
  * @brief fetches the FF packet and sends it to the proper function in the UDP module
  *
@@ -21,8 +20,5 @@
 #include "udp.h"
 #include <queueModule.h>
 
-
-
 extern struct udp_statistics udpStat;
-
 

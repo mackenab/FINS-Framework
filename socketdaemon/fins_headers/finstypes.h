@@ -1,27 +1,24 @@
 /**
-* @file finstypes.h
-*
-* @date July 2, 2010
-* @brief has all the constants definitions and the FDF/FCF , and FinsFrame format.
-* @version 2
-* @version 3 "September 25,2010"
-* +fix the define values to be into capital letters
-* +The destination ID has been modified to be list of destination IDs
-* which is implemented as a linked list grows dynamically
-* + wifistub is renamed to be ETHERSTUB and its ID became ETHERSTUBID
-* + Static MetaData is replaced with The fully functioning MetaData
-* based on the MetaDate Library
-* @author: Abdallah Abdallah
-*/
-
-
+ * @file finstypes.h
+ *
+ * @date July 2, 2010
+ * @brief has all the constants definitions and the FDF/FCF , and FinsFrame format.
+ * @version 2
+ * @version 3 "September 25,2010"
+ * +fix the define values to be into capital letters
+ * +The destination ID has been modified to be list of destination IDs
+ * which is implemented as a linked list grows dynamically
+ * + wifistub is renamed to be ETHERSTUB and its ID became ETHERSTUBID
+ * + Static MetaData is replaced with The fully functioning MetaData
+ * based on the MetaDate Library
+ * @author: Abdallah Abdallah
+ */
 
 #ifndef FINSTYPES_H_
 #define FINSTYPES_H_
 
 /* Include MetaData header File */
 #include <metadata.h>
-
 
 /* Definition of the modules IDs */
 #define ARPID 66
@@ -30,6 +27,7 @@
 #define TCPID 33
 #define ICMPID 77
 #define IPID 22
+#define RTMID 88
 #define ETHERSTUBID 11
 #define SWITCHID 00
 
@@ -50,141 +48,114 @@
 #define UP 0
 #define DOWN 1
 
-
-
-struct destinationList
-{
-unsigned char id;
-struct destinationList *next;
+struct destinationList {
+	unsigned char id;
+	struct destinationList *next;
 };
 
-
-struct tableRecord
-{
-unsigned char sourceID;
-unsigned char directionFlag;
-unsigned char vci;
-unsigned char destinationID;
-struct tableRecord *next;
+struct tableRecord {
+	unsigned char sourceID;
+	unsigned char directionFlag;
+	unsigned char vci;
+	unsigned char destinationID;
+	struct tableRecord *next;
 };
 
+struct finsDataFrame {
 
-struct finsDataFrame
-{
-
-/* Only for FINS DATA FRAMES */
-unsigned char directionFlag;
-unsigned int pduLength;
-unsigned char *pdu;
-metadata *metaData;
+	/* Only for FINS DATA FRAMES */
+	unsigned char directionFlag;
+	unsigned int pduLength;
+	unsigned char *pdu;
+	metadata *metaData;
 
 };
 
-struct finsCtrlFrame
-{
+struct finsCtrlFrame {
 
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
 
-/* Special fields for control frames depending on the Opcode */
-unsigned int paramterID;
-void *paramterValue;
-struct tableRecord *replyRecord;
-
-};
-
-
-struct finsFrame
-{
-
-/* Common Fields between data and control */
-unsigned char dataOrCtrl;
-struct destinationList destinationID;
-union
-{
-struct finsDataFrame dataFrame;
-struct finsCtrlFrame ctrlFrame;
-};
+	/* Special fields for control frames depending on the Opcode */
+	unsigned int paramterID;
+	void *paramterValue;
+	struct tableRecord *replyRecord;
 
 };
 
+struct finsFrame {
 
-
-struct readRequestFrame
-{
-
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
-
-unsigned int paramterID;
-
+	/* Common Fields between data and control */
+	unsigned char dataOrCtrl;
+	struct destinationList destinationID;
+	union {
+		struct finsDataFrame dataFrame;
+		struct finsCtrlFrame ctrlFrame;
+	};
 
 };
 
-struct readReplyFrame
-{
+struct readRequestFrame {
 
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
 
-void *paramterValue;
-
+	unsigned int paramterID;
 
 };
 
-struct writeRequestFrame
-{
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
+struct readReplyFrame {
 
-unsigned int paramterID;
-void *paramterValue;
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
 
+	void *paramterValue;
 
 };
 
+struct writeRequestFrame {
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
 
-struct writeConfirmationFrame
-{
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
-
-};
-
-struct queryRequestFrame
-{
-
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
+	unsigned int paramterID;
+	void *paramterValue;
 
 };
 
+struct writeConfirmationFrame {
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
 
-
-struct queryReplyFrame
-{
-
-/* only for FINS control frames */
-unsigned char senderID;
-unsigned short int opcode;
-unsigned int serialNum;
-
-struct tableRecord *replyRecord;
 };
 
+struct queryRequestFrame {
 
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
+
+};
+
+struct queryReplyFrame {
+
+	/* only for FINS control frames */
+	unsigned char senderID;
+	unsigned short int opcode;
+	unsigned int serialNum;
+
+	struct tableRecord *replyRecord;
+};
 
 #endif /* FINSTYPES_H_ */
 
