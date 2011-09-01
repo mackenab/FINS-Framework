@@ -1,0 +1,86 @@
+To fix the following:
+------------------------------------
+**************          When a Client call the CORE ***************************
+1) at interceptor.c
+DEBUG(socket_interceptor.c, 166):
+DEBUG(socket_interceptor.c, 188):
+DEBUG(socket_interceptor.c, 190):errno is 2
+DEBUG(socket_interceptor.c, 194):
+DEBUG(socket_interceptor.c, 198):
+
+
+The following code needs to be fixed because openning the named pipelines crashes
+--------------------------------------------------------------------------------------
+
+//			do {
+//				FinsHistory[i].s = sem_open(FinsHistory[i].semaphore_name, 0);
+//			}while (errno == ENOENT);
+//
+//			PRINT_DEBUG("");
+//
+//			do {
+//				FinsHistory[i].as = sem_open(FinsHistory[i].asemaphore_name, 0);
+//				//PRINT_DEBUG("");
+//			} while (errno == ENOENT);
+
+			//}
+
+			FinsHistory[i].s = sem_open(FinsHistory[i].semaphore_name, 0);
+			FinsHistory[i].as = sem_open(FinsHistory[i].asemaphore_name, 0);
+
+
+2) at udpHandling.c
+--------------------------------------------------
+DEBUG(../Jinni/udpHandling.c, 242):
+
+insertjinniSocket(processid, sockfd, fakeID, type, protocol);
+
+	PRINT_DEBUG();
+	if ( sprintf(clientName, CLIENT_CHANNEL_RX, processid, fakeID) < 0 ){
+		PRINT_DEBUG("sprintf Failed");
+	}
+
+	/** Crashing at error because there is no way to send a NACK
+	 * application process
+	 */
+	if  (mkfifo(clientName, 0777) == -1 ){
+		PRINT_DEBUG("mkfifo  Failed CRASH");
+		exit(1);
+	}
+
+
+
+***********************************************************************************************8
+ *******************************        When the server Calls the CORE ************************88
+***********************************************************************************************8
+At udphandling.c line 81
+receive from calls ->>>>>>>>>>>>> readFrome_FINS which calls the following While Loop
+causing a deadlock
+	if (block_flag == 1) {
+		PRINT_DEBUG();
+
+		do {
+
+			sem_wait(&(jinniSockets[index].Qs));
+			//		PRINT_DEBUG();
+
+
+			ff = read_queue(jinniSockets[index].dataQueue);
+			//	ff = get_fake_frame();
+			//					PRINT_DEBUG();
+
+			sem_post(&(jinniSockets[index].Qs));
+		} while (ff == NULL);
+
+
+
+At socket_interceptor.c Line 1027
+
+
+	sem_wait(FinsHistory[index].as);
+	PRINT_DEBUG();
+	sem_wait(FinsHistory[index].s);
+	PRINT_DEBUG();
+	numOfBytes = read(sockfd, &confirmation, sizeof(int));
+
+
