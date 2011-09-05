@@ -25,11 +25,15 @@ extern finsQueue Switch_to_RTM_Queue;
 extern int rtm_in_fd;
 extern int rtm_out_fd;
 
-#define RTM_PIPE_IN "/tmp/fins/rtm_in"
-#define RTM_PIPE_OUT "/tmp/fins/rtm_out"
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#define FINS_TMP_ROOT "/data/data/fins"
+#else
+	#define FINS_TMP_ROOT "/tmp/fins"
+#endif
 
-
-
+#define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
+#define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 void rtm_get_FF() {
 
 	struct finsFrame *ff;

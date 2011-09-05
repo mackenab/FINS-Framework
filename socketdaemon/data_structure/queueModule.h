@@ -14,7 +14,14 @@
 #include <finstypes.h>
 #include <semaphore.h>
 #include <queue.h>
-#include <sys/sem.h>
+
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <linux/sem.h>
+#else
+	#include  <sys/sem.h> 
+#endif
+
 #include <pthread.h>    /* POSIX Threads */
 
 typedef Queue finsQueue;

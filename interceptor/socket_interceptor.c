@@ -35,7 +35,13 @@
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #define _FCNTL_H
-#include <bits/fcntl.h>
+
+//changed mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <linux/fcntl.h>
+#else	
+	#include <bits/fcntl.h>  
+#endif
 
 #include <fcntl.h>
 /* to handle pcap functions */

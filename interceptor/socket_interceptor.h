@@ -29,10 +29,21 @@ extern "C" {
 #include <ctype.h>
 
 #include <signal.h>
-#include <execinfo.h>
+
+//CHANGED mrd015 !!!!!
+#ifndef BUILD_FOR_ANDROID
+	#include <execinfo.h> 
+#endif
 
 #include <semaphore.h>
-#include <sys/sem.h>
+
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <linux/sem.h> 
+#else
+	#include <sys/sem.h> 
+#endif
+
 #include <pthread.h>    /* POSIX Threads */
 
 /*additional headers for testing */
@@ -72,9 +83,16 @@ struct socketIdentifier {
 //struct socketUniqueID socketsUniqueIDs[MAX_sockets];
 struct socketIdentifier FinsHistory[MAX_sockets];
 
-#define MAIN_SOCKET_CHANNEL "/tmp/fins/mainsocket_channel"
-#define CLIENT_CHANNEL_TX "/tmp/fins/processID_%d_TX_%d"
-#define CLIENT_CHANNEL_RX "/tmp/fins/processID_%d_RX_%d"
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#define FINS_TMP_ROOT "/data/data/fins"
+#else
+	#define FINS_TMP_ROOT "/tmp/fins"
+#endif
+
+#define MAIN_SOCKET_CHANNEL FINS_TMP_ROOT "/mainsocket_channel"
+#define CLIENT_CHANNEL_TX FINS_TMP_ROOT "/processID_%d_TX_%d"
+#define CLIENT_CHANNEL_RX FINS_TMP_ROOT "/processID_%d_RX_%d"
 
 /** The Global socket channel descriptor is used to communicate between the socket
  * interceptor and the socket jinni until they exchange the socket UNIQUE ID, then a separate

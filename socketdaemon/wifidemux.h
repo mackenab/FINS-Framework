@@ -238,8 +238,8 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 		}
 	}
 	printf("   ");
-
-	/* ascii (if printable) */
+#ifndef BUILD_FOR_ANDROID
+	/* ascii (if printable)*/
 	ch = payload;
 	for (i = 0; i < len; i++) {
 		if (isprint(*ch))
@@ -248,9 +248,8 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 			printf(".");
 		ch++;
 	}
-
 	printf("\n");
-
+#endif
 	return;
 
 } //end of print_hex_ascii_line()

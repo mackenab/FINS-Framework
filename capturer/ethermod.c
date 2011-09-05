@@ -98,14 +98,40 @@ void termination_handler(int sig)
 void  main()
 {
 
-  	 (void) signal(SIGINT, termination_handler);
-
+  	(void) signal(SIGINT, termination_handler);
   	print_app_banner();
-    fflush(stdout);
+
+
+	// ADDED mrd015 !!!!! 
+	// trying to put code from fins_ethernet.sh here. This should allow mkfifo to be called w/o building coreutils for android?
+	
+	printf("\n\nAttempting to make " FINS_TMP_ROOT "\n");
+	if(system("mkdir " FINS_TMP_ROOT) != 0){
+		printf(FINS_TMP_ROOT " already exists! Cleaning...\n");
+		// if cannot create directory, assume it contains files and try to delete them
+		if(system("cd " FINS_TMP_ROOT ";rm *") != 0){
+			printf("Cannot remove files in " FINS_TMP_ROOT  "!\n");
+		}else {
+			printf(FINS_TMP_ROOT " was cleaned successfully.\n\n");
+		}
+	}
+
+	if(mkfifo(INCOME_PIPE, 0777) != 0){
+		PRINT_DEBUG("Failed to mkfifo(INCOME_PIPE, 0777)");
+		exit(1);
+	}
+
+	if(mkfifo(INJECT_PIPE, 0777) != 0){
+		PRINT_DEBUG("Failed to mkfifo(INJECT_PIPE, 0777)");
+		exit(1);
+	}
+	//^^^^^END^^^^^ !!!!!	
+
+	fflush(stdout);
 	pid_t pID;
 	char device[20];
-	strcpy(device, "lo");
-	//strcpy(device, "eth0");
+	//strcpy(device, "lo"); //original !!!!!
+	strcpy(device, "eth0"); //changed to this !!!!!
 	//strcpy(device, "wlan0");
 
 

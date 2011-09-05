@@ -30,37 +30,54 @@
 <option id="gnu.cpp.compiler.exe.debug.option.optimization.level.475442810" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.exe.debug.option.debugging.level.1331833195" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 </tool>
-<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1276355604" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
+<tool command="/home/bucknell/android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-gcc" id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1276355604" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
 <option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.1953762768" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" valueType="enumerated"/>
 <option id="gnu.c.compiler.exe.debug.option.debugging.level.1820360903" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+<option id="gnu.c.compiler.option.include.paths.2091364587" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+<listOptionValue builtIn="false" value="/home/bucknell/android/prebuilt/ndk/android-ndk-r4/platforms/android-8/arch-arm/usr/include/linux"/>
+<listOptionValue builtIn="false" value="/home/bucknell/android/bionic/libc/include"/>
+<listOptionValue builtIn="false" value="/home/bucknell/android/prebuilt/ndk/android-ndk-r4/platforms/android-8/arch-arm/usr/include"/>
+<listOptionValue builtIn="false" value="/home/bucknell/android/external/libpcap"/>
+<listOptionValue builtIn="false" value="/home/bucknell/android/external/libpcap/pcap"/>
+</option>
+<option id="gnu.c.compiler.option.preprocessor.nostdinc.341947858" name="Do not search system directories (-nostdinc)" superClass="gnu.c.compiler.option.preprocessor.nostdinc" value="true" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.2068955868" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 </tool>
-<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.470463776" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
+<tool command="/home/bucknell/android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-ld" id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.470463776" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
 <option id="gnu.c.link.option.libs.2103791722" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
-<listOptionValue builtIn="false" value="pthread"/>
-<listOptionValue builtIn="false" value="pcap"/>
+<listOptionValue builtIn="false" value="m"/>
+<listOptionValue builtIn="false" value="stdc++"/>
 <listOptionValue builtIn="false" value="dl"/>
+<listOptionValue builtIn="false" value="c"/>
 </option>
 <option defaultValue="true" id="gnu.c.link.option.shared.1315859137" name="Shared (-shared)" superClass="gnu.c.link.option.shared" valueType="boolean"/>
+<option id="gnu.c.link.option.paths.478863620" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
+<listOptionValue builtIn="false" value="/home/bucknell/android/out/target/product/crespo/system/lib"/>
+<listOptionValue builtIn="false" value="/home/bucknell/android/prebuilt/ndk/android-ndk-r4/platforms/android-8/arch-arm/usr/lib"/>
+</option>
+<option id="gnu.c.link.option.nostdlibs.1758280437" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1350175450" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
 </inputType>
-<outputType id="cdt.managedbuild.tool.gnu.c.linker.output.so.1114023805" outputPrefix="socket_" superClass="cdt.managedbuild.tool.gnu.c.linker.output.so"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.1311597405" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 <option defaultValue="true" id="gnu.cpp.link.option.shared.870270475" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
 </tool>
-<tool id="cdt.managedbuild.tool.gnu.assembler.exe.debug.1776333727" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
+<tool command="/home/bucknell/android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-as" id="cdt.managedbuild.tool.gnu.assembler.exe.debug.1776333727" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
 <inputType id="cdt.managedbuild.tool.gnu.assembler.input.1744580913" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 </tool>
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="fins_server.sh|fins_interceptor.sh|fins_client.sh|client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
+<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -191,7 +208,7 @@
 <parser enabled="true"/>
 </buildOutputProvider>
 <scannerInfoProvider id="specsFile">
-<runAction arguments="-E -P -v -dD ${plugin_state_location}/specs.c" command="gcc" useDefault="true"/>
+<runAction arguments="-E -P -v -dD ${plugin_state_location}/specs.c" command="/home/bucknell/android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-gcc" useDefault="true"/>
 <parser enabled="true"/>
 </scannerInfoProvider>
 </profile>
@@ -310,10 +327,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
-<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
-<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.config.gnu.exe.release.1942630674">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.release.1942630674" moduleId="org.eclipse.cdt.core.settings" name="Release">
@@ -355,10 +368,14 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="fins_server.sh|fins_interceptor.sh|fins_client.sh|client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="client_getsock.c|client_Node_send.c|client_loop3.c|client_Node.c|client_loopback3.c|client_loopback2.c|client_loopback1.c|client_loopback.c|server.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
+<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -489,7 +506,7 @@
 <parser enabled="true"/>
 </buildOutputProvider>
 <scannerInfoProvider id="specsFile">
-<runAction arguments="-E -P -v -dD ${plugin_state_location}/specs.c" command="gcc" useDefault="true"/>
+<runAction arguments="-E -P -v -dD ${plugin_state_location}/specs.c" command="/home/bucknell/android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-gcc" useDefault="true"/>
 <parser enabled="true"/>
 </scannerInfoProvider>
 </profile>
@@ -608,10 +625,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
-<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
-<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">

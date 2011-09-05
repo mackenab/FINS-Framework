@@ -7,11 +7,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include<inttypes.h>
+#include <inttypes.h>
 #include "finstypes.h"
 #include "arp.h"
 #include "finsdebug.h"
 #include "metadata.h"
+
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <sys/endian.h>
+#endif
 
 #define DEBUG
 

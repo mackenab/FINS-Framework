@@ -50,8 +50,15 @@ extern int income_pipe_fd;
 
 extern int inject_pipe_fd;
 
-#define INCOME_PIPE "/tmp/fins/fins_capture"
-#define INJECT_PIPE "/tmp/fins/fins_inject"
+// ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#define FINS_TMP_ROOT "/data/data/fins"
+#else
+	#define FINS_TMP_ROOT "/tmp/fins"
+#endif
+
+#define INCOME_PIPE FINS_TMP_ROOT "/fins_capture"
+#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
 
 /** Functions prototypes fully defined in wifistub.c */
 

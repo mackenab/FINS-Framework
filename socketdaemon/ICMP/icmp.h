@@ -14,6 +14,11 @@
 #include <finsdebug.h>
 #include <queueModule.h>
 
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <sys/endian.h>
+#endif
+
 //Define some common ICMP message types (Common values for the "Type" field of the ICMP header)
 #define TYPE_ECHOREPLY		0	//Echo reply
 #define TYPE_DESTUNREACH	3	//Destination unreachable

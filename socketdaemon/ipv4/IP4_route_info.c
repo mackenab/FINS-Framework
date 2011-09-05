@@ -1,5 +1,10 @@
 #include "ipv4.h"
 
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <sys/socket.h>
+#endif
+
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 	struct ip4_routing_table *current_pointer;
 	current_pointer = table_pointer;
@@ -35,23 +40,34 @@ struct ip4_routing_table * IP4_sort_routing_table(
 		swapped = 0;
 		previous = NULL;
 		current = table_pointer;
-		while ((current != NULL) && (current->next_entry != NULL)) {
+		while ((current != NULL) && (current->next_entry != NULL)) {	
+			PRINT_DEBUG("they arent null.");
+			PRINT_DEBUG("first jaunk  %d",current->mask);
+			PRINT_DEBUG("second jaunk  %d",current->next_entry->mask); //this must be null
+			PRINT_DEBUG("past jaunk");
 			if (current->mask < current->next_entry->mask) {
+				PRINT_DEBUG("mask < mask");
 				if (previous == NULL) {
+					PRINT_DEBUG("prev  ==  null");
 					first = current->next_entry;
 					current->next_entry = current->next_entry->next_entry;
 					first->next_entry = current;
 				} else {
+					PRINT_DEBUG("prev  !=  null");
 					previous->next_entry = current->next_entry;
 					current->next_entry = current->next_entry->next_entry;
 					previous->next_entry->next_entry = current;
 				}
 				swapped = 1;
 			}
+			PRINT_DEBUG("asd1234???");
 			previous = current;
+			PRINT_DEBUG("asdgs");
 			current = current->next_entry;
+			PRINT_DEBUG("1235346");
 		}
 	}
+	PRINT_DEBUG("WHAT THE FUCKKKKKKKKKKKKKKKKKKKKKKKKK");
 	return (first);
 
 }
@@ -127,12 +143,10 @@ struct ip4_routing_table * IP4_get_routing_table() {
 
 	unsigned int pid = (uint32_t) getpid();
 	unsigned int seq = (uint32_t) getppid();
-
 	if ((sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {
 		PRINT_DEBUG("couldn't open NETLINK_ROUTE socket");
 		return NULL;
 	}
-
 	/* prepare netlink message header*/
 	route_req.msg.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 	route_req.msg.nlmsg_type = RTM_GETROUTE;
@@ -148,14 +162,14 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	route_req.rt.rtm_scope = RT_SCOPE_UNIVERSE;
 	route_req.rt.rtm_type = RTN_UNSPEC;
 	route_req.rt.rtm_flags = 0;
-
+	
 	// write the message to our netlink socket
 	int result = send(sock, &route_req, sizeof(route_req), 0);
 	if (result < 0) {
 		PRINT_ERROR("Routing table request send error.");
 		return NULL;
 	}
-
+	
 	memset(receive_buffer, 0, IP4_NETLINK_BUFF_SIZE);
 	receive_ptr = receive_buffer;
 	nlmsg_len = 0;

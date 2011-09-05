@@ -18,8 +18,11 @@
 #include <udp.h>
 #include <tcp.h>
 #include <arp.h>
-#include <swito.h>
-#include <rtm.h>
+#include "switch/swito.h"		//was <swito.h>
+#include "RTM/rtm.h"	//was <rtm.h>
+#include <sys/types.h>
+//#include <stdlib.h> //added
+//#include <stdio.h> //added
 
 /** Global parameters of the socketjinni
  *
@@ -98,22 +101,29 @@ sem_t *IO_queues_sem[MAX_modules];
 /** ----------------------------------------------------------*/
 
 int socket_channel_desc = -1;
+
 int capture_pipe_fd; /** capture file descriptor to read from capturer */
 int inject_pipe_fd; /** inject file descriptor to read from capturer */
 int rtm_in_fd;
 int rtm_out_fd;
 
-sem_t *meen_channel_semaphore1;
+//named semaphore !!!!!
+sem_t *meen_channel_semaphore1; 
 sem_t *meen_channel_semaphore2;
-
 char meen_sem_name1[] = "main_channel1";
 char meen_sem_name2[] = "main_channel2";
 
 
 /** Ethernet Stub Variables  */
-#define CAPTURE_PIPE "/tmp/fins/fins_capture"
-#define INJECT_PIPE "/tmp/fins/fins_inject"
-
+#ifdef BUILD_FOR_ANDROID
+	#define FINS_TMP_ROOT "/data/data/fins"
+	#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
+	#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
+#else
+	#define FINS_TMP_ROOT "/tmp/fins"
+	#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
+	#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
+#endif
 
 
 /**
@@ -124,26 +134,26 @@ char meen_sem_name2[] = "main_channel2";
 void read_configurations()
 {
 
-	 config_t cfg;
-	  config_setting_t *setting;
-	  const char *str;
+	config_t cfg;
+	config_setting_t *setting;
+	const char *str;
 
-	  config_init(&cfg);
+	config_init(&cfg);
 
-	  /* Read the file. If there is an error, report it and exit. */
-	  if(! config_read_file(&cfg, "fins.cfg"))
-	  {
-	    fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
-	            config_error_line(&cfg), config_error_text(&cfg));
-	    config_destroy(&cfg);
-	    return(EXIT_FAILURE);
-	  }
-
-
-
-	  config_destroy(&cfg);
-	  return(EXIT_SUCCESS);
+	/* Read the file. If there is an error, report it and exit. */
+	if(! config_read_file(&cfg, "fins.cfg"))
+	{
+		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
+				config_error_line(&cfg), config_error_text(&cfg));
+		config_destroy(&cfg);
+		return(EXIT_FAILURE);
 	}
+
+
+
+	config_destroy(&cfg);
+	return(EXIT_SUCCESS);
+}
 
 
 
@@ -233,12 +243,12 @@ void Queues_init() {
 
 	RTM_to_Switch_Queue = init_queue("rtm2switch", MAX_Queue_size);
 	Switch_to_RTM_Queue = init_queue("switch2rtm", MAX_Queue_size);
-		modules_IO_queues[14] = RTM_to_Switch_Queue;
-		modules_IO_queues[15] = Switch_to_RTM_Queue;
-		sem_init(&RTM_to_Switch_Qsem, 0, 1);
-		sem_init(&Switch_to_RTM_Qsem, 0, 1);
-		IO_queues_sem[14] = &RTM_to_Switch_Qsem;
-		IO_queues_sem[15] = &Switch_to_RTM_Qsem;
+	modules_IO_queues[14] = RTM_to_Switch_Queue;
+	modules_IO_queues[15] = Switch_to_RTM_Queue;
+	sem_init(&RTM_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_RTM_Qsem, 0, 1);
+	IO_queues_sem[14] = &RTM_to_Switch_Qsem;
+	IO_queues_sem[15] = &Switch_to_RTM_Qsem;
 
 
 
@@ -247,46 +257,48 @@ void Queues_init() {
 
 void commChannel_init(){
 
+//changed mrd015 !!!!! bionic  does NOT support named semaphores
+#ifndef BUILD_FOR_ANDROID
 	/** the semaphore is initially locked */
 	//meen_channel_semaphore1 = sem_open(meen_sem_name1,O_CREAT|O_EXCL,0644,0);
-	meen_channel_semaphore1 = sem_open(meen_sem_name1, O_CREAT, 0644, 0);
+	meen_channel_semaphore1 = sem_open(meen_sem_name1, O_CREAT, 0644, 0); //named semaphore !!!!!
 
 	/**	if (meen_channel_semaphore1 == SEM_FAILED)
-	 {
-	 meen_channel_semaphore1 = sem_open(meen_sem_name1,0);
+	  {
+	  meen_channel_semaphore1 = sem_open(meen_sem_name1,0);
 
 
-	 } */
-	if (meen_channel_semaphore1 == SEM_FAILED) {
-		PRINT_DEBUG("meen_channel_semaphore failed to launch");
+	  } */
+
+	if (meen_channel_semaphore1 == SEM_FAILED) { //named semaphore !!!!!
+		PRINT_DEBUG("meen_channel_semaphore1 failed to launch");
 		sem_unlink(meen_sem_name1);
 		exit(1);
-
 	}
+
 	//meen_channel_semaphore2 = sem_open(meen_sem_name2,O_CREAT|O_EXCL,0644,0);
-	meen_channel_semaphore2 = sem_open(meen_sem_name2, O_CREAT, 0644, 0);
+	meen_channel_semaphore2 = sem_open(meen_sem_name2, O_CREAT, 0644, 0); //named semaphore !!!!!
+
+	
 	/**	if (meen_channel_semaphore2 == SEM_FAILED)
-	 {
+	  {
 
-	 meen_channel_semaphore2 = sem_open(meen_sem_name2,0);
+	  meen_channel_semaphore2 = sem_open(meen_sem_name2,0);
 
 
-	 } */
-	if (meen_channel_semaphore2 == SEM_FAILED) {
-		PRINT_DEBUG("meen_channel_semaphore failed to launch");
+	  } */
+
+	if (meen_channel_semaphore2 == SEM_FAILED) { //named semaphore !!!!!
+		PRINT_DEBUG("meen_channel_semaphore2 failed to launch");
 		sem_unlink(meen_sem_name2);
 		exit(1);
-
 	}
-
-	PRINT_DEBUG("6666");
-
+#endif
 	PRINT_DEBUG("Jinni was blocked waiting at mkfifo, it had just cross it");
-	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDONLY);
-	PRINT_DEBUG("5555");
-
+	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDONLY);  
+		
 	if (socket_channel_desc == -1) {
-		PRINT_DEBUG("socket geni failed to open the socket channel \n");
+		PRINT_DEBUG("socket GENIE failed to open the socket channel \n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -308,13 +320,13 @@ void *Switch_to_Jinni() {
 	int status;
 	uint16_t dstport, hostport;
 	uint32_t dstip, hostip;
-	PRINT_DEBUG("readFromSwitch_to_Jinni THREAD");
-
+	
 	while (1) {
-
+		
 		sem_wait(&Switch_to_Jinni_Qsem);
-			ff = read_queue(Switch_to_Jinni_Queue);
+		ff = read_queue(Switch_to_Jinni_Queue);
 		sem_post(&Switch_to_Jinni_Qsem);
+		
 
 		if (ff == NULL) {
 
@@ -329,7 +341,7 @@ void *Switch_to_Jinni() {
 			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",&hostport);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipdst", &dstip);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", &hostip);
-
+	
 			metadata_readFromElement(ff->dataFrame.metaData, "protocol",
 					&protocol);
 			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,",protocol,hostip,dstip,hostport,dstport);
@@ -346,53 +358,53 @@ void *Switch_to_Jinni() {
 			 * check if this datagram comes from the address this socket has been previously
 			 * connected to it (Only if the socket is already connected to certain address)
 			 */
-						if (jinniSockets[index].connection_status > 0)
-						{
+			if (jinniSockets[index].connection_status > 0)
+			{
 
-							PRINT_DEBUG("ICMPP shoud not enter here at all");
-							if ( (hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP ) )
-								{
-									PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
+				PRINT_DEBUG("ICMPP shoud not enter here at all");
+				if ( (hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP ) )
+				{
+					PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 
-									freeFinsFrame(ff);
-									continue;
+					freeFinsFrame(ff);
+					continue;
 
-								}
+				}
 
-						}
-						/**
-						 * check if this received datagram destIP and destport matching which socket hostIP
-						 * and hostport insidee our sockets database
-						 */
-						if (protocol == IPPROTO_ICMP){
-							index = matchjinniSocket(0, hostip, protocol);
-						}
+			}
+			/**
+			 * check if this received datagram destIP and destport matching which socket hostIP
+			 * and hostport insidee our sockets database
+			 */
+			if (protocol == IPPROTO_ICMP){
+				index = matchjinniSocket(0, hostip, protocol);
+			}
 
-						else{
+			else{
 
-							index = matchjinniSocket(dstport, dstip, protocol);
-						}
+				index = matchjinniSocket(dstport, dstip, protocol);
+			}
 
 
-						PRINT_DEBUG("index %d", index);
-						if (index != -1) {
-							sem_wait(&(jinniSockets[index].Qs));
-							/**
-							 * TODO Replace The data Queue with a pipeLine at least for
-							 * the RAW DATA in order to find a natural way to support
-							 * Blocking and Non-Blocking mode
-							 */
-							write_queue(ff, jinniSockets[index].dataQueue);
-							sem_post(&(jinniSockets[index].Qs));
-							PRINT_DEBUG("pdu lenght %d",ff->dataFrame.pduLength);
+			PRINT_DEBUG("index %d", index);
+			if (index != -1) {
+				sem_wait(&(jinniSockets[index].Qs));
+				/**
+				 * TODO Replace The data Queue with a pipeLine at least for
+				 * the RAW DATA in order to find a natural way to support
+				 * Blocking and Non-Blocking mode
+				 */
+				write_queue(ff, jinniSockets[index].dataQueue);
+				sem_post(&(jinniSockets[index].Qs));
+				PRINT_DEBUG("pdu lenght %d",ff->dataFrame.pduLength);
 
-						}
+			}
 
-						else {
-							PRINT_DEBUG();
+			else {
+				PRINT_DEBUG();
 
-							freeFinsFrame(ff);
-						}
+				freeFinsFrame(ff);
+			}
 		}
 		else {
 
@@ -420,8 +432,9 @@ void *interceptor_to_jinni() {
 	commChannel_init();
 
 	int counter = 0;
-	PRINT_DEBUG("");
-	sem_post(meen_channel_semaphore2);
+#ifndef BUILD_FOR_ANDROID
+	sem_post(meen_channel_semaphore2); //named semaphore !!!!!
+#endif
 	while (1) {
 
 		/**TODO lock the pipe before reading
@@ -430,15 +443,14 @@ void *interceptor_to_jinni() {
 
 		PRINT_DEBUG("COUNTER = %d",counter);
 		int tester;
-		errno = 0;
 		/**	sem_getvalue(meen_channel_semaphore1,&tester);
-		 PRINT_DEBUG ("errno %d", errno);
-		 PRINT_DEBUG("tester = %d",tester);
+		  PRINT_DEBUG ("errno %d", errno);
+		  PRINT_DEBUG("tester = %d",tester);
 		 */
-		sem_wait(meen_channel_semaphore1);
-		sem_wait(meen_channel_semaphore2);
-		PRINT_DEBUG("7777");
-
+#ifndef BUILD_FOR_ANDROID
+		sem_wait(meen_channel_semaphore1); //named semaphore !!!!!
+		sem_wait(meen_channel_semaphore2); //named semaphore !!!!! 
+#endif
 		numOfBytes =  read(socket_channel_desc, &sender, sizeof(pid_t));
 		numOfBytes = read(socket_channel_desc, &opcode, sizeof(u_int));
 		PRINT_DEBUG("%d", sender);
@@ -451,82 +463,80 @@ void *interceptor_to_jinni() {
 
 		}
 
-		PRINT_DEBUG("8888");
-
 		switch (opcode) {
 
-		case socket_call:
-			socket_call_handler(sender);	//DONE
-			break;
-		case socketpair_call:
-			socketpair_call_handler(sender);
-			break;
-		case bind_call:
-			bind_call_handler(sender);				//DONE
-			break;
-		case getsockname_call:
-			getsockname_call_handker(sender);		//DONE
-			break;
-		case connect_call:
-			connect_call_handler(sender);			//DONE
-			break;
-		case getpeername_call:
-			getpeername_call_handler(sender);		//DONE
-			break;
-			/**
-			 * the write call is encapuslated as a send call with the
-			 * parameter flags = -1000  			//DONE
-			 */
-		case send_call:
-			send_call_handler(sender);				//DONE
-			break;
-		case recv_call:
-			recv_call_handler(sender);				//DONE
-			break;
-		case sendto_call:
-			sendto_call_handler(sender);			//DONE
-			break;
-		case recvfrom_call:
-			recvfrom_call_handler(sender);		//DONE
-			break;
-		case sendmsg_call:
-			sendmsg_call_handler(sender);		//DONE
-			break;
-		case recvmsg_call:
-			recvmsg_call_handler(sender);
-			break;
-		case getsockopt_call:
-			getsockopt_call_handler(sender);		//Dummy response
-			break;
-		case setsockopt_call:
-			setsockopt_call_handler(sender);		// Dummy response
-			break;
-		case listen_call:
-			listen_call_handler(sender);
-			break;
-		case accept_call:
-			accept_call_handler(sender);
-			break;
-		case accept4_call:
-			accept4_call_handler(sender);
-			break;
-		case shutdown_call:
-			shutdown_call_handler(sender);			//DONE
-			break;
-		case close_call:
-			/**
-			 * TODO fix the problem into remove jinnisockets
-			 * the Queue Terminate function has a bug as explained into it
-			 */
-			close_call_handler(sender);
-			break;
-		default: {
-			PRINT_DEBUG("unknown opcode read from the socket main channel ! CRASHING");
-			/** a function must be called to clean and reset the pipe
-			 * to original conditions before crashing
-			 */
-			exit(1);
-		}
+			case socket_call:
+				socket_call_handler(sender);	//DONE
+				break;
+			case socketpair_call:
+				socketpair_call_handler(sender);
+				break;
+			case bind_call:
+				bind_call_handler(sender);				//DONE
+				break;
+			case getsockname_call:
+				getsockname_call_handker(sender);		//DONE
+				break;
+			case connect_call:
+				connect_call_handler(sender);			//DONE
+				break;
+			case getpeername_call:
+				getpeername_call_handler(sender);		//DONE
+				break;
+				/**
+				 * the write call is encapuslated as a send call with the
+				 * parameter flags = -1000  			//DONE
+				 */
+			case send_call:
+				send_call_handler(sender);				//DONE
+				break;
+			case recv_call:
+				recv_call_handler(sender);				//DONE
+				break;
+			case sendto_call:
+				sendto_call_handler(sender);			//DONE
+				break;
+			case recvfrom_call:
+				recvfrom_call_handler(sender);		//DONE
+				break;
+			case sendmsg_call:
+				sendmsg_call_handler(sender);		//DONE
+				break;
+			case recvmsg_call:
+				recvmsg_call_handler(sender);
+				break;
+			case getsockopt_call:
+				getsockopt_call_handler(sender);		//Dummy response
+				break;
+			case setsockopt_call:
+				setsockopt_call_handler(sender);		// Dummy response
+				break;
+			case listen_call:
+				listen_call_handler(sender);
+				break;
+			case accept_call:
+				accept_call_handler(sender);
+				break;
+			case accept4_call:
+				accept4_call_handler(sender);
+				break;
+			case shutdown_call:
+				shutdown_call_handler(sender);			//DONE
+				break;
+			case close_call:
+				/**
+				 * TODO fix the problem into remove jinnisockets
+				 * the Queue Terminate function has a bug as explained into it
+				 */
+				close_call_handler(sender);
+				break;
+			default: {
+					 PRINT_DEBUG("unknown opcode read from the socket main channel ! CRASHING");
+					 /** a function must be called to clean and reset the pipe
+					  * to original conditions before crashing
+					  */
+					 exit(1);
+				 }
 
 		} /** end of switch */
 
@@ -770,14 +780,29 @@ void cap_inj_init() {
 int main() {
 
 
+	//added to include code from fins_jinni.sh -- mrd015 !!!!!
+	if(mkfifo(MAIN_SOCKET_CHANNEL, 0777) != 0){
+		PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) failed.");
+		exit(1);
+	}
+	if(mkfifo(RTM_PIPE_IN, 0777) != 0) {
+		PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
+		exit(1);
+	}
+	if(mkfifo(RTM_PIPE_OUT, 0777) != 0) {
+		PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
+		exit(1);
+	}
+	// END of added section !!!!!
+
+
 	/** 1. init the Jinni sockets database
 	 * 2. Init the queues connecting Jinnin to thw FINS Switch
 	 * 3.
 	 */
-//	read_configurations();
+	//	read_configurations();
 	init_jinnisockets();
 	Queues_init();
-
 
 	cap_inj_init();
 
@@ -801,15 +826,16 @@ int main() {
 	pthread_t etherStub_capturing;
 	pthread_t etherStub_injecting;
 	pthread_t switch_thread;
-
+	
+	/* original !!!!!
 	pthread_create(&interceptor_to_jinni_thread, NULL, interceptor_to_jinni, NULL);
 	pthread_create(&Switch_to_jinni_thread, NULL, Switch_to_Jinni, NULL);
 
 	pthread_create(&udp_thread, NULL, UDP, NULL);
-//	pthread_create(&rtm_thread, NULL, RTM, NULL);
+	//	pthread_create(&rtm_thread, NULL, RTM, NULL);
 
-//	pthread_create(&icmp_thread,NULL,ICMP,NULL);
-//	pthread_create(&tcp_thread,NULL,TCP,NULL);
+	//	pthread_create(&icmp_thread,NULL,ICMP,NULL);
+	//	pthread_create(&tcp_thread,NULL,TCP,NULL);
 
 	pthread_create(&ipv4_thread, NULL, IPv4, NULL);
 	//pthread_create(&arp_thread,NULL,ARP,NULL);
@@ -818,22 +844,35 @@ int main() {
 
 	pthread_create(&etherStub_capturing, NULL, Capture, NULL);
 	pthread_create(&etherStub_injecting, NULL, Inject, NULL);
+	*/
 
+	// ADDED !!!!! start
+	pthread_attr_t fins_pthread_attr;
+	pthread_attr_init(&fins_pthread_attr);
+	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr, interceptor_to_jinni, NULL); //this has named pipe input from interceptor
+        pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr, Switch_to_Jinni, NULL);
+        pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
+        pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
+        pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
+        pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
+        pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
+	//^^^^^ end added !!!!!
 
-/**
- *************************************************************
- */
+	PRINT_DEBUG("created all threads\n");
+
+	/**
+	 *************************************************************
+	 */
 	pthread_join(interceptor_to_jinni_thread, NULL);
 	pthread_join(Switch_to_jinni_thread, NULL);
 	pthread_join(etherStub_capturing, NULL);
 	pthread_join(etherStub_injecting, NULL);
-
 	pthread_join(switch_thread, NULL);
 	pthread_join(udp_thread, NULL);
-//	pthread_join(tcp_thread, NULL);
-//	pthread_join(icmp_thread, NULL);
+//	//	pthread_join(tcp_thread, NULL);
+//	//	pthread_join(icmp_thread, NULL);
 	pthread_join(ipv4_thread, NULL);
-//	pthread_join(arp_thread, NULL);
+//	//	pthread_join(arp_thread, NULL);
 
 
 

@@ -12,6 +12,11 @@
 #include <metadata.h>
 #include <finsdebug.h>
 
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#include <sys/endian.h>
+#endif
+
 #define IP_MAXLEN 65535
 #define IP_MINLEN 5
 #define U_HEADER_LEN 8 										/* UDP header length in bytes, 64 bits. */

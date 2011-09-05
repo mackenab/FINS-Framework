@@ -169,7 +169,6 @@ int got_packet(u_char *args, const struct pcap_pkthdr *header,
 } // end of the function got_packet
 
 void capture_init(char *interface) {
-
 	char device[20];
 
 	strcpy(device, interface);
@@ -200,9 +199,7 @@ void capture_init(char *interface) {
 
 	/* has to run without return check to work as blocking call */
 	/** It blocks until the other communication side opens the pipe */
-
 	income_pipe_fd = open(INCOME_PIPE, O_WRONLY);
-
 	if (income_pipe_fd == -1) {
 		PRINT_DEBUG("Income Pipe failure \n");
 		exit(EXIT_FAILURE);
@@ -220,15 +217,14 @@ void capture_init(char *interface) {
 	//strcat(filter_exp," not arp and not tcp");
 	//strcat(filter_exp," and udp and");
 	//strcat(filter_exp,"dst host 127.0.0.1 and udp and port 5001");
-	strcat(filter_exp, "udp and port 5000");
-	//strcat(filter_exp, "");
+	//strcat(filter_exp, "udp and port 5000");
+	strcat(filter_exp, "");
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
 		net = 0;
 		mask = 0;
 	}
-
 	/* print capture info */
 	printf("Device: %s\n", dev);
 	printf("Number of packets: %d\n", num_packets);
@@ -240,6 +236,7 @@ void capture_init(char *interface) {
 		fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
 		exit(EXIT_FAILURE);
 	}
+	
 
 	/* make sure we're capturing on an Ethernet device [2] */
 	data_linkValue = pcap_datalink(capture_handle);
@@ -265,21 +262,24 @@ void capture_init(char *interface) {
 		exit(EXIT_FAILURE);
 	}
 
-	check_monitor_mode = pcap_can_set_rfmon(capture_handle);
-	if (check_monitor_mode) {
-		PRINT_DEBUG("\n Monitor mode can be set\n");
-	} else if (check_monitor_mode == 0) {
-		PRINT_DEBUG("\n Monitor mode could not be set\n");
-	} else
-		PRINT_DEBUG("\n check_monior_mode value is %d \n",check_monitor_mode);
+	//CHANGED mrd015 !!!!! start pcap_can_set_rfmon(...) not in Bionic!
+	#ifndef BUILD_FOR_ANDROID
+		check_monitor_mode = pcap_can_set_rfmon(capture_handle); 
+		if (check_monitor_mode) {
+			PRINT_DEBUG("\n Monitor mode can be set\n");
+		} else if (check_monitor_mode == 0) {
+			PRINT_DEBUG("\n Monitor mode could not be set\n");
+		} else
+			PRINT_DEBUG("\n check_monior_mode value is %d \n",check_monitor_mode);
+	#endif
+	//CHANGE END !!!!!	
 
 	/* now we can set our callback function */
 	pcap_loop(capture_handle, num_packets, got_packet, (u_char *) NULL);
-
 	/* cleanup */
 	pcap_freecode(&fp);
 	free(filter_exp);
-
+	PRINT_DEBUG("END of capt init");
 } // end of capture_init
 
 /** -----------------------------------------------------------------*/
@@ -312,9 +312,7 @@ void inject_init(char *interface) {
 	 * It blocks until the other communication side opens the pipe
 	 * */
 	//	mkfifo(INJECT_PIPE, 0777);
-
 	inject_pipe_fd = open(INJECT_PIPE, O_RDONLY);
-
 	if (inject_pipe_fd == -1) {
 		PRINT_DEBUG("Inject Pipe failure \n");
 		exit(EXIT_FAILURE);
@@ -327,9 +325,7 @@ void inject_init(char *interface) {
 	}
 
 	/** --------------------------------------------------------------------------*/
-
 	while (1) {
-
 		numBytes = read(inject_pipe_fd, &framelen, sizeof(int));
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);

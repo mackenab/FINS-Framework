@@ -4,5 +4,5 @@ cd /tmp/fins/
 rm *
 mkfifo fins_capture
 mkfifo fins_inject
-cd /home/alex/jreed/Pieces/merged/capturer/Debug
+cd ~/workspace3/FINS-Framework/capturer/Debug
 sudo ./capturer

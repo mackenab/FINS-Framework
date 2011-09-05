@@ -186,9 +186,18 @@ struct socketIdentifier {
 
 };
 
-#define MAIN_SOCKET_CHANNEL "/tmp/fins/mainsocket_channel"
-#define CLIENT_CHANNEL_TX "/tmp/fins/processID_%d_TX_%d"
-#define CLIENT_CHANNEL_RX "/tmp/fins/processID_%d_RX_%d"
+//ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
+#ifdef BUILD_FOR_ANDROID
+	#define FINS_TMP_ROOT "/data/data/fins"
+#else
+	#define FINS_TMP_ROOT "/tmp/fins"
+#endif
+
+#define MAIN_SOCKET_CHANNEL FINS_TMP_ROOT "/mainsocket_channel"
+#define CLIENT_CHANNEL_TX FINS_TMP_ROOT "/processID_%d_TX_%d"
+#define CLIENT_CHANNEL_RX FINS_TMP_ROOT "/processID_%d_RX_%d"
+#define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
+#define RTM_PIPE_OUT FINS_TMP_ROOT "rtm_out"
 
 void init_jinnisockets();
 int randoming(int min, int max);
