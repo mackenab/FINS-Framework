@@ -1,0 +1,11 @@
+This is a README file for the FINS checkout.  Needs to be filled out.
+
+########################
+Dependencies
+########################
+The FINS Framework requires the following libraries:
+PCAP - libpcap
+Config - libconfig
+Pthread - pthread
+Dynamic-link - dl
+
