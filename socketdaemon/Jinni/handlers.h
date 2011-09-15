@@ -197,7 +197,7 @@ struct socketIdentifier {
 #define CLIENT_CHANNEL_TX FINS_TMP_ROOT "/processID_%d_TX_%d"
 #define CLIENT_CHANNEL_RX FINS_TMP_ROOT "/processID_%d_RX_%d"
 #define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
-#define RTM_PIPE_OUT FINS_TMP_ROOT "rtm_out"
+#define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 void init_jinnisockets();
 int randoming(int min, int max);

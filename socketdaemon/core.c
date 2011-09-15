@@ -782,16 +782,28 @@ int main() {
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
 	if(mkfifo(MAIN_SOCKET_CHANNEL, 0777) != 0){
-		PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) failed.");
-		exit(1);
+		if (errno == EEXIST) {
+			PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) already exists.");
+		} else {
+			PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) failed.");
+			exit(1);
+		}
 	}
 	if(mkfifo(RTM_PIPE_IN, 0777) != 0) {
-		PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
-		exit(1);
+		if (errno == EEXIST) {
+			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
+		} else {
+			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
+			exit(1);
+		}
 	}
 	if(mkfifo(RTM_PIPE_OUT, 0777) != 0) {
-		PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
-		exit(1);
+		if (errno == EEXIST) {
+			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) already exists.");
+		} else {
+			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) failed.");
+			exit(1);
+		}
 	}
 	// END of added section !!!!!
 

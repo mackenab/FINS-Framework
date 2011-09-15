@@ -60,7 +60,7 @@ CCOPTS =
 INCLS =
 LDOPTS =
 LIBPATHS =
-LIBS = -lpthread -lconfig -lpcap -lc
+LIBS = -lpthread -lconfig -lpcap -lc -ldl
 endif
 
 
