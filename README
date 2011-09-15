@@ -1,11 +1,31 @@
 This is a README file for the FINS checkout.  Needs to be filled out.
 
 ########################
+Introduction
+########################
+asdf.
+
+########################
 Dependencies
 ########################
 The FINS Framework requires the following libraries:
-PCAP - libpcap
-Config - libconfig
-Pthread - pthread
-Dynamic-link - dl
+	Pcap: libpcap
+	Config: libconfig
+	Pthread: libpthread
+	Dl: libdl
+	C: libc
 
+########################
+Build steps
+########################
+Provided in the root directory of FINS is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" command.
+
+########################
+Run steps
+########################
+Single application mode:
+1) sudo capturer/capturer
+
+2) sudo socketdaemon/socketdaemon
+
+3) sudo LD_PRELOAD="./socket_interceptor.so" application
