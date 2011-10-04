@@ -9,6 +9,34 @@
 #define NETLINK_FINS    20	// must match userspace definition
 #define KERNEL_PID      0	// This is used to identify netlink traffic into and out of the kernel
 
+/** Socket related calls and their codes */
+#define socket_call 1
+#define socketpair_call 2
+#define bind_call 3
+#define getsockname_call 4
+#define connect_call 5
+#define getpeername_call 6
+#define send_call 7
+#define recv_call 8
+#define sendto_call 9
+#define recvfrom_call 10
+#define sendmsg_call 11
+#define recvmsg_call 12
+#define getsockopt_call 13
+#define setsockopt_call 14
+#define listen_call 15
+#define accept_call 16
+#define accept4_call 17
+#define shutdown_call 18
+/** Additional calls
+ * To hande special cases
+* overwriting the generic functions which write to a socket descriptor
+ * in order to make sure that we cover as many applications as possible
+ * This range of these functions will start from 30
+ */
+#define close_call 19
+#define write_call 30
+
 // Data declarations
 /* Data for netlink sockets */
 struct sock *FINS_nl_sk = NULL;

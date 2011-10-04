@@ -41,7 +41,7 @@ void udp_in(struct finsFrame* ff) {
 
 	PRINT_DEBUG("UDP_in");
 	/* point to the necessary data in the FDF */
-	PRINT_DEBUG("%d",ff);
+	PRINT_DEBUG("%d",(int)ff);
 	struct udp_header* packet = (struct udp_header*) ((ff->dataFrame).pdu);
 	metadata* meta = ff->dataFrame.metaData;
 
@@ -57,7 +57,7 @@ void udp_in(struct finsFrame* ff) {
 	PRINT_DEBUG("UDP_in");
 
 	/* begins checking the UDP packets integrity */
-	/** TODO Fix the lenght check below , I will highlighted for now */
+	/** TODO Fix the length check below , I will highlighted for now */
 	/**
 	 if (meta->u_pslen != packet->u_len) {
 	 udpStat.mismatchingLengths++;
@@ -100,11 +100,12 @@ void udp_in(struct finsFrame* ff) {
 	 */
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
-	PRINT_DEBUG("%d , %d, %d, %d, %d", protocol_type,srcip,dstip,
-			packet->u_dst,packet->u_src);
+	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip,
+			(int)packet->u_dst, (int)packet->u_src);
 
 	metadata_writeToElement(meta, "portdst", &packet->u_dst, META_TYPE_INT);
 	metadata_writeToElement(meta, "portsrc", &packet->u_src, META_TYPE_INT);
+
 
 	/* put the header into the meta data*/
 	//	meta->u_destPort = packet->u_dst;
@@ -126,6 +127,14 @@ void udp_in(struct finsFrame* ff) {
 
 	//freeFinsFrame(ff);
 	PRINT_DEBUG("UDP_in");
+
+	uint16_t new_u_dst;
+	uint16_t new_u_src;
+	metadata* newMeta = newFF->dataFrame.metaData;
+	metadata_readFromElement(newMeta, "portdst", &new_u_dst);
+	metadata_readFromElement(newMeta, "portsrc", &new_u_src);
+
+	PRINT_DEBUG("udp_in: new_u_dst=%i, new_u_src=%i", new_u_dst, new_u_src);
 
 	sendToSwitch(newFF);
 }

@@ -85,7 +85,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 	}
 
 	// Build the message
-	buf = SYS_SOCKET;
+	buf = socket_call; //SYS_SOCKET;
 	buffer_length = sizeof(int);
 
 	// Send message to FINS_daemon
@@ -184,7 +184,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len){
 	}
 
 	// Build the message
-	buf = SYS_BIND;
+	buf = bind_call; //SYS_BIND;
 	buffer_length = sizeof(int);
 
 	// Send message to FINS_daemon

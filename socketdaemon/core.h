@@ -41,7 +41,7 @@ struct bind_call_msg {
 	struct sockaddr addr;
 
 };
-void read_configurations();
+int read_configurations();
 void commChannel_init();
 void Queues_init();
 

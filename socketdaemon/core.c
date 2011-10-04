@@ -131,7 +131,7 @@ char meen_sem_name2[] = "main_channel2";
  * @param
  * @return nothing
  */
-void read_configurations()
+int read_configurations()
 {
 
 	config_t cfg;
@@ -146,13 +146,13 @@ void read_configurations()
 		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
 				config_error_line(&cfg), config_error_text(&cfg));
 		config_destroy(&cfg);
-		return(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 
 
 	config_destroy(&cfg);
-	return(EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }
 
 
@@ -334,8 +334,12 @@ void *Switch_to_Jinni() {
 		}
 
 		if (ff->dataOrCtrl == CONTROL) {
-
+			PRINT_DEBUG("control ff");
 		} else if (ff->dataOrCtrl == DATA) {
+
+			PRINT_DEBUG("pduLength=%d", ff->dataFrame.pduLength);
+			PRINT_DEBUG("pdu=%s", ff->dataFrame.pdu);
+			metadata_print(ff->dataFrame.metaData);
 
 			metadata_readFromElement(ff->dataFrame.metaData, "portdst",&dstport);
 			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",&hostport);
@@ -387,6 +391,7 @@ void *Switch_to_Jinni() {
 
 
 			PRINT_DEBUG("index %d", index);
+			index = 0;
 			if (index != -1) {
 				sem_wait(&(jinniSockets[index].Qs));
 				/**
@@ -396,7 +401,7 @@ void *Switch_to_Jinni() {
 				 */
 				write_queue(ff, jinniSockets[index].dataQueue);
 				sem_post(&(jinniSockets[index].Qs));
-				PRINT_DEBUG("pdu lenght %d",ff->dataFrame.pduLength);
+				PRINT_DEBUG("pdu length %d",ff->dataFrame.pduLength);
 
 			}
 
@@ -588,7 +593,7 @@ void *Capture() {
 
 		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 
-		PRINT_DEBUG("%d", ff);
+		PRINT_DEBUG("%d", (int)ff);
 
 		/** TODO
 		 * 1. extract the Ethernet Frame
@@ -619,9 +624,9 @@ void *Capture() {
 
 		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
 
-		//	PRINT_DEBUG("%d", &(ff->dataFrame).pdu);
-		//	PRINT_DEBUG("%d", & ((ff->dataFrame).pdu) );
-		//	PRINT_DEBUG("%d", data);
+			PRINT_DEBUG("%d", (int)&(ff->dataFrame).pdu);
+			PRINT_DEBUG("%d", (int)& ((ff->dataFrame).pdu) );
+			PRINT_DEBUG("%d", (int)data);
 
 		PRINT_DEBUG();
 

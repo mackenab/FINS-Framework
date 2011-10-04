@@ -720,7 +720,7 @@ void *packet_inject(void *device)
 		pcap_t *inject_handle;				/* packet capture handle */
 		unsigned char *packet_data;
 		packet_data = (unsigned char *)malloc(500);
-		int lenghtOfData;
+		int lengthOfData;
 
 	/** Prepration of fake IP packet */
 		char fakeData[]="001b2ff486cc001cbf871afd080045000028c8b6400040069f1bc0a801033ff5d15db39800506244457629f0d03f50111fa3675f0000";
@@ -750,9 +750,9 @@ void *packet_inject(void *device)
 
 		PRINT_DEBUG("%s\n",fakeData);
 		PRINT_DEBUG("%s\n",packet_data);
-		lenghtOfData = j-1;
+		lengthOfData = j-1;
 		PRINT_DEBUG("%d",strlen(fakeData));
-		PRINT_DEBUG("%d",lenghtOfData);
+		PRINT_DEBUG("%d",lengthOfData);
 
 
 		char errbuf[PCAP_ERRBUF_SIZE];		/* error buffer */
@@ -799,7 +799,7 @@ void *packet_inject(void *device)
 {
 
 		sleep(1);
-		pcap_inject ( inject_handle, packet_data,lenghtOfData );
+		pcap_inject ( inject_handle, packet_data,lengthOfData );
 		PRINT_DEBUG("\n Message #%d has been injected",i);
 
 

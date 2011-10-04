@@ -194,14 +194,14 @@ void udp_out(struct finsFrame* ff) {
 
 	ff->dataFrame.pdu = udp_dataunit;
 	/* creates a new FDF to be sent out */
-	PRINT_DEBUG("%d",ff->dataFrame.pdu);
+	PRINT_DEBUG("%d",(int)ff->dataFrame.pdu);
 
 	PRINT_DEBUG("UDP_out");
 
 	newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, ff->dataFrame.pdu,
 			ff->dataFrame.metaData);
 
-	PRINT_DEBUG("%d",newFF->dataFrame.pdu);
+	PRINT_DEBUG("%d",(int)newFF->dataFrame.pdu);
 
 	print_finsFrame(newFF);
 	udpStat.totalSent++;

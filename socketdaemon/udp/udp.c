@@ -25,6 +25,14 @@ void sendToSwitch(struct finsFrame *ff) {
 
 	sem_wait(&UDP_to_Switch_Qsem);
 	write_queue(ff, UDP_to_Switch_Queue);
+
+	uint16_t new_u_dst;
+	uint16_t new_u_src;
+	metadata* newMeta = ff->dataFrame.metaData;
+	metadata_readFromElement(newMeta, "portdst", &new_u_dst);
+	metadata_readFromElement(newMeta, "portsrc", &new_u_src);
+	PRINT_DEBUG("sendToSwitch: new_u_dst=%i, new_u_src=%i", new_u_dst, new_u_src);
+
 	sem_post(&UDP_to_Switch_Qsem);
 
 }

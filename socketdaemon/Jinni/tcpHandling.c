@@ -118,7 +118,7 @@ int TCPreadFrom_fins(int senderid, int sockfd, u_char **buf, int *buflen,
 			return (0);
 		}
 
-		PRINT_DEBUG("PDU lenght %d",ff->dataFrame.pduLength);
+		PRINT_DEBUG("PDU length %d",ff->dataFrame.pduLength);
 
 		if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",(uint16_t *) &srcport)
 				== 0) {

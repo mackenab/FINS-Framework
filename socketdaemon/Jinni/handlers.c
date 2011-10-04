@@ -44,10 +44,30 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 	int i;
 
 	for (i = 0; i < MAX_sockets; i++) {
+
+		if (protocol == IPPROTO_ICMP) {
+			if ((jinniSockets[i].protocol == protocol) && (jinniSockets[i].dst_IP == dstip)) {
+				PRINT_DEBUG("ICMP");
+				return(i);
+			}
+		} else {
+			if (jinniSockets[i].host_IP == INADDR_ANY) {
+				if (jinniSockets[i].hostport == dstport) {
+					PRINT_DEBUG("hostport == dstport");
+					return (i);
+				}
+			} else if ((jinniSockets[i].hostport == dstport)&& (jinniSockets[i].host_IP == dstip)/** && (jinniSockets[i].protocol == protocol)*/ ) {
+				PRINT_DEBUG("host_IP == dstip");
+				return (i);
+			} else {
+				PRINT_DEBUG("default");
+			}
+		}
+
+		if (0) {
 		if (jinniSockets[i].host_IP == INADDR_ANY && (protocol != IPPROTO_ICMP)) {
 			if ((jinniSockets[i].hostport == dstport))
 				return (i);
-
 		} else if ((jinniSockets[i].hostport == dstport)&& (jinniSockets[i].host_IP == dstip) && ((protocol != IPPROTO_ICMP))
 		/** && (jinniSockets[i].protocol == protocol)*/ )
 		{return (i); }
@@ -61,7 +81,7 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 		}
 		else {}
-
+		}
 
 	} // end of for loop
 

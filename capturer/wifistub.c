@@ -218,7 +218,8 @@ void capture_init(char *interface) {
 	//strcat(filter_exp," and udp and");
 	//strcat(filter_exp,"dst host 127.0.0.1 and udp and port 5001");
 	//strcat(filter_exp, "udp and port 5000");
-	strcat(filter_exp, "");
+	//strcat(filter_exp, "");
+	strcat(filter_exp, "dst host 127.0.0.1");
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
