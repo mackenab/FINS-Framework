@@ -4,6 +4,9 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #This name must be the same as the current directory name
 MODULE_NAME = ICMP
 
+#ICMP specific extra includes
+CORE_MODULES_INC += -I../ipv4
+
 #extra includes for the FINS core modules
 CFLAGS += $(CORE_MODULES_INC)
 
