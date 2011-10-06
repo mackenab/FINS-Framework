@@ -67,7 +67,7 @@ struct ip4_routing_table * IP4_sort_routing_table(
 			PRINT_DEBUG("1235346");
 		}
 	}
-	PRINT_DEBUG("WHAT THE FUCKKKKKKKKKKKKKKKKKKKKKKKKK");
+	PRINT_DEBUG("IP4_sort_routing_table end");
 	return (first);
 
 }
