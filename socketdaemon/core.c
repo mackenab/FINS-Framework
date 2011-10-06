@@ -392,7 +392,6 @@ void *Switch_to_Jinni() {
 
 
 			PRINT_DEBUG("index %d", index);
-			index = 0;
 			if (index != -1) {
 				sem_wait(&(jinniSockets[index].Qs));
 				/**
