@@ -112,7 +112,6 @@ void udp_in(struct finsFrame* ff) {
 	//	meta->u_srcPort = packet->u_src;
 
 	/* construct a FDF to send to the sockets */
-	PRINT_DEBUG("UDP_in");
 
 	ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
 	PRINT_DEBUG("UDP_in"); PRINT_DEBUG("PDU Length including UDP header %d", (ff->dataFrame).pduLength); PRINT_DEBUG("PDU Length %d", ((ff->dataFrame).pduLength) - U_HEADER_LEN);
@@ -126,15 +125,6 @@ void udp_in(struct finsFrame* ff) {
 	//print_finsFrame(newFF);
 
 	//freeFinsFrame(ff);
-	PRINT_DEBUG("UDP_in");
-
-	uint16_t new_u_dst;
-	uint16_t new_u_src;
-	metadata* newMeta = newFF->dataFrame.metaData;
-	metadata_readFromElement(newMeta, "portdst", &new_u_dst);
-	metadata_readFromElement(newMeta, "portsrc", &new_u_src);
-
-	PRINT_DEBUG("udp_in: new_u_dst=%i, new_u_src=%i", new_u_dst, new_u_src);
 
 	sendToSwitch(newFF);
 }

@@ -337,11 +337,6 @@ void *Switch_to_Jinni() {
 		if (ff->dataOrCtrl == CONTROL) {
 			PRINT_DEBUG("control ff");
 		} else if (ff->dataOrCtrl == DATA) {
-
-			PRINT_DEBUG("pduLength=%d", ff->dataFrame.pduLength);
-			PRINT_DEBUG("pdu=%s", ff->dataFrame.pdu);
-			metadata_print(ff->dataFrame.metaData);
-
 			metadata_readFromElement(ff->dataFrame.metaData, "portdst",&dstport);
 			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",&hostport);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipdst", &dstip);
@@ -366,7 +361,7 @@ void *Switch_to_Jinni() {
 			if (jinniSockets[index].connection_status > 0)
 			{
 
-				PRINT_DEBUG("ICMPP shoud not enter here at all");
+				PRINT_DEBUG("ICMP should not enter here at all");
 				if ( (hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP ) )
 				{
 					PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
@@ -401,8 +396,8 @@ void *Switch_to_Jinni() {
 				 */
 				write_queue(ff, jinniSockets[index].dataQueue);
 				sem_post(&(jinniSockets[index].Qs));
+				PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
 				PRINT_DEBUG("pdu length %d",ff->dataFrame.pduLength);
-
 			}
 
 			else {
