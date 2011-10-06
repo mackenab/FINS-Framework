@@ -41,10 +41,7 @@ struct ip4_routing_table * IP4_sort_routing_table(
 		previous = NULL;
 		current = table_pointer;
 		while ((current != NULL) && (current->next_entry != NULL)) {	
-			PRINT_DEBUG("they arent null.");
-			PRINT_DEBUG("first jaunk  %d",current->mask);
-			PRINT_DEBUG("second jaunk  %d",current->next_entry->mask); //this must be null
-			PRINT_DEBUG("past jaunk");
+			PRINT_DEBUG("masks (curr, next): %d %d",(int)current->mask, (int)current->next_entry->mask);
 			if (current->mask < current->next_entry->mask) {
 				PRINT_DEBUG("mask < mask");
 				if (previous == NULL) {
@@ -60,11 +57,8 @@ struct ip4_routing_table * IP4_sort_routing_table(
 				}
 				swapped = 1;
 			}
-			PRINT_DEBUG("asd1234???");
 			previous = current;
-			PRINT_DEBUG("asdgs");
 			current = current->next_entry;
-			PRINT_DEBUG("1235346");
 		}
 	}
 	PRINT_DEBUG("IP4_sort_routing_table end");

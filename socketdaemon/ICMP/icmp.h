@@ -14,7 +14,6 @@
 #include <queueModule.h>
 #include <stdint.h>
 #include "icmp_types.h"
-//#include <ctype.h>
 
 //typedef unsigned long IP4addr; /*  internet address			*/
 
