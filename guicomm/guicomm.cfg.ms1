@@ -1,0 +1,22 @@
+#DO NOT CHANGE THE NAME OF THIS FILE
+
+# This is a test configuration file for guicomm
+# NOTE: These modules need to be implemented as the integer opcode laid out in finstypes.h
+# This file uses the libconfig standards
+# supports up to 10 modules and 10 parameters per module
+
+#UDP
+M1val=44;	#to send as destID
+M1name="UDP";	#to display on the GUI
+
+#dummyA
+P1val1=123;
+P1name1="DummyA";
+
+#dummyB
+P1val2=456;
+P1name2="DummyB";
+
+#dummyC
+P1val3=789;
+P1name3="DummyC";

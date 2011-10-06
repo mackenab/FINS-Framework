@@ -39,7 +39,7 @@ int UDP_InputQueue_Read_local(struct finsFrame *pff_local) {
 			free(pff);
 		}
 	} else {
-		//todo: do the copy for control
+			//todo: do the copy for control if requested by Abdallah
 	}
 	return (1);
 }

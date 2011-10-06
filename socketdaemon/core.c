@@ -123,6 +123,7 @@ char meen_sem_name2[] = "main_channel2";
 	#define FINS_TMP_ROOT "/tmp/fins"
 	#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
 	#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
+	#define SEMAPHORE_ROOT "/dev/shm"
 #endif
 
 
@@ -810,6 +811,15 @@ int main() {
 			exit(1);
 		}
 	}
+
+	// added in semaphore clearing
+#ifndef BUILD_FOR_ANDROID
+	if(system("rm " SEMAPHORE_ROOT "/sem*.*") != 0){
+		printf("Cannot remove semaphore files in " SEMAPHORE_ROOT "!\n");
+	}else {
+		printf(SEMAPHORE_ROOT" cleaned successfully.\n\n");
+	}
+#endif
 	// END of added section !!!!!
 
 
