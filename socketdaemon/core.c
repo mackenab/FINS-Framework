@@ -503,7 +503,7 @@ int sendfins(int sockfd, void *buf, size_t len, int flags){
 	msg.msg_iovlen = 1;
 
 	// Send the message
-	printf("Sending message to kernel\n");
+	PRINT_DEBUG("Sending message to kernel\n");
 	ret_val = sendmsg(sockfd, &msg, 0);
 	if(ret_val == -1){
 		return -1;
@@ -574,7 +574,7 @@ void *interceptor_to_jinni() {
 		// if you want to see how the semaphore locking works, uncomment the following code block.
 		// this will hang each reply message to the kernel from this daemon until the user enters an integer
 		//int number;
-		//printf("The daemon received call number %d from the LKM. To send a response to the LKM and unblock the call, press enter.\n");
+		//PRINT_DEBUG("The daemon received call number %d from the LKM. To send a response to the LKM and unblock the call, press enter.\n");
 		//scanf("%d", &number);
 
 		// send the reply message
@@ -987,9 +987,9 @@ int main() {
 	// added in semaphore clearing
 #ifndef BUILD_FOR_ANDROID
 	if(system("rm " SEMAPHORE_ROOT "/sem*.*") != 0){
-		printf("Cannot remove semaphore files in " SEMAPHORE_ROOT "!\n");
+		PRINT_DEBUG("Cannot remove semaphore files in " SEMAPHORE_ROOT "!\n");
 	}else {
-		printf(SEMAPHORE_ROOT" cleaned successfully.\n\n");
+		PRINT_DEBUG(SEMAPHORE_ROOT" cleaned successfully.\n\n");
 	}
 #endif
 	// END of added section !!!!!

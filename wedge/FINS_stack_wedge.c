@@ -547,8 +547,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		return -1;	// pick an appropriate errno
 	}
 
-	if(down_interruptible(&FINS_bind_sem)){;}	// block until daemon replies
-	sema_init(&FINS_bind_sem, 0);	// relock semaphore
+	if(down_interruptible(&FINS_recvmsg_sem/*FINS_bind_sem*/)){;}	// block until daemon replies
+	sema_init(&FINS_recvmsg_sem/*FINS_bind_sem*/, 0);	// relock semaphore
 
 	return 0;
 }
