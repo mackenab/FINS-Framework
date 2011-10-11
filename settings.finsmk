@@ -50,7 +50,7 @@ endif
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
 
-PROJECT_LIST = common capturer socketdaemon interceptor
+PROJECT_LIST = common capturer socketdaemon interceptor wedge
 
 TARGET_PLATFORM = "Linux x86"
 
@@ -92,3 +92,6 @@ CORE_MODULES_INC = -I. -I.. -I../data_structure -I$(FINS_ROOT_DIR)/common
 
 #These are includes specifically for the Socket Interceptor
 INTERCEPTOR_INC = -I. -I$(FINS_ROOT_DIR)/common
+
+#These are includes specifically for the Kernel Wedge
+WEDGE_INC = -I. -I$(FINS_ROOT_DIR)/common

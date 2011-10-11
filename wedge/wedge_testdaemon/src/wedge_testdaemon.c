@@ -8,7 +8,7 @@
 #define TRUE	1
 #define FALSE	0
 
-#define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
+//#define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
 #define RECV_BUFFER_SIZE	10000	// Pick an appropriate value here
 
 struct sockaddr_nl local_sockaddress;	// sockaddr_nl for this process (source)
