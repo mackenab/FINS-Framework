@@ -537,7 +537,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	// Build the message
-	buf = SYS_RECV;
+	buf = recvmsg_call;//recv_call;//SYS_RECV; //orig
 	buffer_length = sizeof(int);
 
 	// Send message to FINS_daemon
