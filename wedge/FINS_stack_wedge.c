@@ -65,7 +65,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 	// Required stuff for kernel side	
 	rc = -ENOMEM;
-	sk = sk_alloc(net, PF_INET /*PF_FINS*/, GFP_KERNEL, &FINS_proto);
+	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &FINS_proto);
 	
 	if(!sk)	goto out;	// if allocation failed
 	
@@ -550,6 +550,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	if(down_interruptible(&FINS_recvmsg_sem/*FINS_bind_sem*/)){;}	// block until daemon replies
 	sema_init(&FINS_recvmsg_sem/*FINS_bind_sem*/, 0);	// relock semaphore
 
+	//do stuff? to return values?
+
 	return 0;
 }
 
@@ -623,14 +625,14 @@ static struct proto FINS_proto = {
 
 /* see IPX struct net_proto_family ipx_family_ops for comparison */
 static struct net_proto_family FINS_net_proto = {
-	.family = PF_INET/*PF_FINS*/,
+	.family = PF_FINS,
 	.create = FINS_wedge_create_socket,	// This function gets called when socket() is called from userspace
 	.owner = THIS_MODULE,
 };
 
 /* Defines which functions get called when corresponding calls are made from userspace */
 static struct proto_ops FINS_proto_ops = {
-	.family = PF_INET/*PF_FINS*/,
+	.family = PF_FINS,
 	.owner = THIS_MODULE,
 	.release = FINS_release,
 	.bind = FINS_bind, 			//sock_no_bind,

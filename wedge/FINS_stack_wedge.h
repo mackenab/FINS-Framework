@@ -6,7 +6,7 @@
  * (probably best to choose one under 32) following the list of NETLINK_ constants and define the constant here to
  * match that value as well as in the userspace program.
  */
-#define NETLINK_FINS    20	// must match userspace definition
+//#define NETLINK_FINS    20	// must match userspace definition
 #define KERNEL_PID      0	// This is used to identify netlink traffic into and out of the kernel
 
 /** Socket related calls and their codes */
