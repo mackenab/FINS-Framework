@@ -518,14 +518,20 @@ void *interceptor_to_jinni() {
 	struct sockaddr sockaddr_sender; // Needed for recvfrom
 	socklen_t sockaddr_senderlen; // Needed for recvfrom
 
-
 	struct nlmsghdr *nlh;
 	void *realdata; // Pointer to your actual data payload
 	ssize_t realdata_len; // Size of your actual data payload
+
+	int okFlag, doneFlag = 0;
+	unsigned char *msg_pt;
+	unsigned char *pt;
+
+	void *msg_buf;
+	ssize_t msg_len;
+	ssize_t part_len;
+	int pos;
+	unsigned long long uniqueSockID;
 	int socketCallType; // Integer representing what socketcall type was placed (for testing purposes)
-	int okFlag, doneFlag=0;
-	void *msg_buf, *pt;
-	int msg_len;
 
 	int counter = 0;
 	while (1) {
@@ -556,25 +562,34 @@ void *interceptor_to_jinni() {
 				realdata = NLMSG_DATA(nlh);
 				realdata_len = NLMSG_PAYLOAD(nlh, 0);
 
+				pt = realdata;
+				msg_len = *(ssize_t *) pt;
+				pt += sizeof(ssize_t);
+				part_len = *(ssize_t *) pt;
+				pt += sizeof(ssize_t);
+				pos = *(int *) pt;
+				pt += sizeof(int);
+
+				//could add check here, make sure msg_len's consistent across parts
+
 				if (nlh->nlmsg_seq == 0) {
-					msg_len = *(ssize_t *) realdata;
 					msg_buf = malloc(msg_len);
 					if (msg_buf == NULL) {
 						fprintf(stderr, "msg buffer allocation failed\n");
 						exit(-1);
 					}
-					pt = msg_buf;
+					msg_pt = msg_buf;
 				}
 
-				if (pt != NULL) {
-					memcpy(pt, realdata, realdata_len);
-					pt += realdata_len;
+				if (msg_pt != NULL) {
+					memcpy(msg_pt, pt, part_len);
+					msg_pt += part_len;
 				} else {
 					//there's been some error!
 				}
 
 				if ((nlh->nlmsg_flags & NLM_F_MULTI) == 0) {
-					doneFlag = 1;
+					doneFlag = 1; //not multi-part msg
 				}
 				break;
 			}
@@ -582,14 +597,24 @@ void *interceptor_to_jinni() {
 
 		if (okFlag != 1) {
 			//send kernel a resend request
+			//with pos of part being passed can store msg_buf, then recopy new part when received
 		}
 
 		if (doneFlag) {
-			pt = msg_buf + sizeof(ssize_t);
-			socketCallType = *(int *) (pt);
+			msg_pt = msg_buf;
+			uniqueSockID = *(unsigned long long *) msg_pt;
+			msg_pt += sizeof(unsigned long long);
+			socketCallType = *(int *) msg_pt;
+			msg_pt += sizeof(int);
+
+			//msg_len -= msg_pt-msg_buf;
+			msg_len -= sizeof(unsigned long long)+sizeof(int);
+			//handlers(uniqueSockID, socketCallType, msg_pt, msg_len);
 
 			//process msg_buf etc?
 			//essentially call handlers
+			/*handlers will need to return something so can send
+			 * back to daemon for blocking functs */
 
 			ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
 			if (ret_val != 0) {
@@ -599,13 +624,8 @@ void *interceptor_to_jinni() {
 
 			free(msg_buf);
 			doneFlag = 0;
-			pt = NULL;
+			msg_pt = NULL;
 		}
-		// if you want to see how the semaphore locking works, uncomment the following code block.
-		// this will hang each reply message to the kernel from this daemon until the user enters an integer
-		//int number;
-		//PRINT_DEBUG("The daemon received call number %d from the LKM. To send a response to the LKM and unblock the call, press enter.\n");
-		//scanf("%d", &number);
 	}
 
 	free(recv_buf);
