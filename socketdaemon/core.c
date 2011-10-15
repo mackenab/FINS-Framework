@@ -24,13 +24,9 @@
 //#include <stdlib.h> //added
 //#include <stdio.h> //added
 //kernel stuff
-//#include <stdlib.h>
-//#include <stdio.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <string.h>
-
-
 
 /** Global parameters of the socketjinni
  *
@@ -77,7 +73,6 @@ finsQueue EtherStub_to_Switch_Queue;
 finsQueue Switch_to_ICMP_Queue;
 finsQueue ICMP_to_Switch_Queue;
 
-
 sem_t Jinni_to_Switch_Qsem;
 sem_t Switch_to_Jinni_Qsem;
 
@@ -116,30 +111,28 @@ int rtm_in_fd;
 int rtm_out_fd;
 
 //named semaphore !!!!!
-sem_t *meen_channel_semaphore1; 
+sem_t *meen_channel_semaphore1;
 sem_t *meen_channel_semaphore2;
 char meen_sem_name1[] = "main_channel1";
 char meen_sem_name2[] = "main_channel2";
 
-
 /** Ethernet Stub Variables  */
 #ifdef BUILD_FOR_ANDROID
-	#define FINS_TMP_ROOT "/data/data/fins"
-	#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
-	#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
+#define FINS_TMP_ROOT "/data/data/fins"
+#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
+#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
 #else
-	#define FINS_TMP_ROOT "/tmp/fins"
-	#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
-	#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
-	#define SEMAPHORE_ROOT "/dev/shm"
+#define FINS_TMP_ROOT "/tmp/fins"
+#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
+#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
+#define SEMAPHORE_ROOT "/dev/shm"
 #endif
 
 //bu_mark kernel stuff
-//#define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
+#define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
 #define RECV_BUFFER_SIZE	10000	// Pick an appropriate value here
-
-struct sockaddr_nl local_sockaddress;	// sockaddr_nl for this process (source)
-struct sockaddr_nl kernel_sockaddress;	// sockaddr_nl for the kernel (destination)
+struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
+struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destination)
 //end kernel stuff
 
 
@@ -148,8 +141,7 @@ struct sockaddr_nl kernel_sockaddress;	// sockaddr_nl for the kernel (destinatio
  * @param
  * @return nothing
  */
-int read_configurations()
-{
+int read_configurations() {
 
 	config_t cfg;
 	config_setting_t *setting;
@@ -158,22 +150,16 @@ int read_configurations()
 	config_init(&cfg);
 
 	/* Read the file. If there is an error, report it and exit. */
-	if(! config_read_file(&cfg, "fins.cfg"))
-	{
+	if (!config_read_file(&cfg, "fins.cfg")) {
 		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
 				config_error_line(&cfg), config_error_text(&cfg));
 		config_destroy(&cfg);
 		return EXIT_FAILURE;
 	}
 
-
-
 	config_destroy(&cfg);
 	return EXIT_SUCCESS;
 }
-
-
-
 
 /**
  * @brief initialize the jinni sockets array by filling with value of -1
@@ -257,7 +243,6 @@ void Queues_init() {
 	IO_queues_sem[12] = &ICMP_to_Switch_Qsem;
 	IO_queues_sem[13] = &Switch_to_ICMP_Qsem;
 
-
 	RTM_to_Switch_Queue = init_queue("rtm2switch", MAX_Queue_size);
 	Switch_to_RTM_Queue = init_queue("switch2rtm", MAX_Queue_size);
 	modules_IO_queues[14] = RTM_to_Switch_Queue;
@@ -267,25 +252,22 @@ void Queues_init() {
 	IO_queues_sem[14] = &RTM_to_Switch_Qsem;
 	IO_queues_sem[15] = &Switch_to_RTM_Qsem;
 
-
-
-
 }
 
-void commChannel_init(){
+void commChannel_init() {
 
-//changed mrd015 !!!!! bionic  does NOT support named semaphores
+	//changed mrd015 !!!!! bionic  does NOT support named semaphores
 #ifndef BUILD_FOR_ANDROID
 	/** the semaphore is initially locked */
 	//meen_channel_semaphore1 = sem_open(meen_sem_name1,O_CREAT|O_EXCL,0644,0);
 	meen_channel_semaphore1 = sem_open(meen_sem_name1, O_CREAT, 0644, 0); //named semaphore !!!!!
 
 	/**	if (meen_channel_semaphore1 == SEM_FAILED)
-	  {
-	  meen_channel_semaphore1 = sem_open(meen_sem_name1,0);
+	 {
+	 meen_channel_semaphore1 = sem_open(meen_sem_name1,0);
 
 
-	  } */
+	 } */
 
 	if (meen_channel_semaphore1 == SEM_FAILED) { //named semaphore !!!!!
 		PRINT_DEBUG("meen_channel_semaphore1 failed to launch");
@@ -296,14 +278,14 @@ void commChannel_init(){
 	//meen_channel_semaphore2 = sem_open(meen_sem_name2,O_CREAT|O_EXCL,0644,0);
 	meen_channel_semaphore2 = sem_open(meen_sem_name2, O_CREAT, 0644, 0); //named semaphore !!!!!
 
-	
+
 	/**	if (meen_channel_semaphore2 == SEM_FAILED)
-	  {
+	 {
 
-	  meen_channel_semaphore2 = sem_open(meen_sem_name2,0);
+	 meen_channel_semaphore2 = sem_open(meen_sem_name2,0);
 
 
-	  } */
+	 } */
 
 	if (meen_channel_semaphore2 == SEM_FAILED) { //named semaphore !!!!!
 		PRINT_DEBUG("meen_channel_semaphore2 failed to launch");
@@ -312,8 +294,8 @@ void commChannel_init(){
 	}
 #endif
 	PRINT_DEBUG("Jinni was blocked waiting at mkfifo, it had just cross it");
-	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDONLY);  
-		
+	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDONLY);
+
 	if (socket_channel_desc == -1) {
 		PRINT_DEBUG("socket GENIE failed to open the socket channel \n");
 		exit(EXIT_FAILURE);
@@ -326,9 +308,6 @@ void commChannel_init(){
 
 }
 
-
-
-
 void *Switch_to_Jinni() {
 
 	struct finsFrame *ff;
@@ -337,13 +316,12 @@ void *Switch_to_Jinni() {
 	int status;
 	uint16_t dstport, hostport;
 	uint32_t dstip, hostip;
-	
+
 	while (1) {
-		
+
 		sem_wait(&Switch_to_Jinni_Qsem);
 		ff = read_queue(Switch_to_Jinni_Queue);
 		sem_post(&Switch_to_Jinni_Qsem);
-		
 
 		if (ff == NULL) {
 
@@ -353,14 +331,17 @@ void *Switch_to_Jinni() {
 		if (ff->dataOrCtrl == CONTROL) {
 			PRINT_DEBUG("control ff");
 		} else if (ff->dataOrCtrl == DATA) {
-			metadata_readFromElement(ff->dataFrame.metaData, "portdst",&dstport);
-			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",&hostport);
+			metadata_readFromElement(ff->dataFrame.metaData, "portdst",
+					&dstport);
+			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
+					&hostport);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipdst", &dstip);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", &hostip);
-	
+
 			metadata_readFromElement(ff->dataFrame.metaData, "protocol",
 					&protocol);
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,",protocol,hostip,dstip,hostport,dstport);
+			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
+					hostport, dstport);
 
 			protocol = ntohs(protocol);
 			dstport = ntohs(dstport);
@@ -368,19 +349,20 @@ void *Switch_to_Jinni() {
 			dstip = ntohl(dstip);
 			hostip = ntohl(hostip);
 
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,",protocol,hostip,dstip,hostport,dstport);
+			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
+					hostport, dstport);
 
 			/**
 			 * check if this datagram comes from the address this socket has been previously
 			 * connected to it (Only if the socket is already connected to certain address)
 			 */
-			if (jinniSockets[index].connection_status > 0)
-			{
+			if (jinniSockets[index].connection_status > 0) {
 
 				PRINT_DEBUG("ICMP should not enter here at all");
-				if ( (hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP ) )
-				{
-					PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
+				if ((hostport != jinniSockets[index].dstport) || (hostip
+						!= jinniSockets[index].dst_IP)) {
+					PRINT_DEBUG(
+							"Wrong address, the socket is already connected to another destination");
 
 					freeFinsFrame(ff);
 					continue;
@@ -392,15 +374,14 @@ void *Switch_to_Jinni() {
 			 * check if this received datagram destIP and destport matching which socket hostIP
 			 * and hostport insidee our sockets database
 			 */
-			if (protocol == IPPROTO_ICMP){
+			if (protocol == IPPROTO_ICMP) {
 				index = matchjinniSocket(0, hostip, protocol);
 			}
 
-			else{
+			else {
 
 				index = matchjinniSocket(dstport, dstip, protocol);
 			}
-
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1) {
@@ -413,7 +394,7 @@ void *Switch_to_Jinni() {
 				write_queue(ff, jinniSockets[index].dataQueue);
 				sem_post(&(jinniSockets[index].Qs));
 				PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
-				PRINT_DEBUG("pdu length %d",ff->dataFrame.pduLength);
+				PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
 			}
 
 			else {
@@ -421,10 +402,10 @@ void *Switch_to_Jinni() {
 
 				freeFinsFrame(ff);
 			}
-		}
-		else {
+		} else {
 
-			PRINT_DEBUG("unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
+			PRINT_DEBUG(
+					"unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
 
 		} // end of if , else if , else statement
 
@@ -435,13 +416,13 @@ void *Switch_to_Jinni() {
 
 //##begin: kernel stuff
 
-int init_fins_nl(){
+int init_fins_nl() {
 	int sockfd;
 	int ret_val;
 
 	// Get a netlink socket descriptor
 	sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_FINS);
-	if(sockfd == -1){
+	if (sockfd == -1) {
 		return -1;
 	}
 
@@ -449,12 +430,13 @@ int init_fins_nl(){
 	memset(&local_sockaddress, 0, sizeof(local_sockaddress));
 	local_sockaddress.nl_family = AF_NETLINK;
 	local_sockaddress.nl_pad = 0;
-	local_sockaddress.nl_pid = getpid(); 	//pthread_self() << 16 | getpid(),	// use second option for multi-threaded process
-	local_sockaddress.nl_groups = 0;	// unicast
+	local_sockaddress.nl_pid = getpid(); //pthread_self() << 16 | getpid(),	// use second option for multi-threaded process
+	local_sockaddress.nl_groups = 0; // unicast
 
 	// Bind the local netlink socket
-	ret_val = bind(sockfd, (struct sockaddr*) &local_sockaddress, sizeof(local_sockaddress));
-	if(ret_val == -1){
+	ret_val = bind(sockfd, (struct sockaddr*) &local_sockaddress,
+			sizeof(local_sockaddress));
+	if (ret_val == -1) {
 		return -1;
 	}
 
@@ -462,8 +444,8 @@ int init_fins_nl(){
 	memset(&kernel_sockaddress, 0, sizeof(kernel_sockaddress));
 	kernel_sockaddress.nl_family = AF_NETLINK;
 	kernel_sockaddress.nl_pad = 0;
-	kernel_sockaddress.nl_pid = 0;		// to kernel
-	kernel_sockaddress.nl_groups = 0;	// unicast
+	kernel_sockaddress.nl_pid = 0; // to kernel
+	kernel_sockaddress.nl_groups = 0; // unicast
 
 	return sockfd;
 }
@@ -471,22 +453,22 @@ int init_fins_nl(){
 /*
  * Sends len bytes from buf on the sockfd.  Returns 0 if successful.  Returns -1 if an error occurred, errno set appropriately.
  */
-int sendfins(int sockfd, void *buf, size_t len, int flags){
-	int ret_val;	// Holds system call return values for error checking
+int sendfins(int sockfd, void *buf, size_t len, int flags) {
+	int ret_val; // Holds system call return values for error checking
 	struct nlmsghdr *nlh = NULL;
 	struct iovec iov;
 	struct msghdr msg;
 
 	// Begin send message section
 	// Build a message to send to the kernel
-	nlh = (struct nlmsghdr *) malloc(NLMSG_LENGTH(len));	// malloc(NLMSG_SPACE(len));	// TODO: Test and remove
-	memset(nlh, 0, NLMSG_LENGTH(len));			// NLMSG_SPACE(len));		// TODO: Test and remove
+	nlh = (struct nlmsghdr *) malloc(NLMSG_LENGTH(len)); // malloc(NLMSG_SPACE(len));	// TODO: Test and remove
+	memset(nlh, 0, NLMSG_LENGTH(len)); // NLMSG_SPACE(len));		// TODO: Test and remove
 
 	nlh->nlmsg_len = NLMSG_LENGTH(len);
 	// following can be used by application to track message, opaque to netlink core
-	nlh->nlmsg_type = 0;		// arbitrary value
-	nlh->nlmsg_seq = 0; 		// sequence number
-	nlh->nlmsg_pid = getpid();	// pthread_self() << 16 | getpid();	// use the second one for multiple threads
+	nlh->nlmsg_type = 0; // arbitrary value
+	nlh->nlmsg_seq = 0; // sequence number
+	nlh->nlmsg_pid = getpid(); // pthread_self() << 16 | getpid();	// use the second one for multiple threads
 	nlh->nlmsg_flags = flags;
 
 	// Insert payload (memcpy)
@@ -505,7 +487,7 @@ int sendfins(int sockfd, void *buf, size_t len, int flags){
 	// Send the message
 	PRINT_DEBUG("Sending message to kernel\n");
 	ret_val = sendmsg(sockfd, &msg, 0);
-	if(ret_val == -1){
+	if (ret_val == -1) {
 		return -1;
 	}
 
@@ -519,80 +501,119 @@ void *interceptor_to_jinni() {
 	int nl_sockfd;
 
 	nl_sockfd = init_fins_nl();
-	if(nl_sockfd == -1){	// if you get an error here, check to make sure you've inserted the FINS LKM first.
+	if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
 		perror("init_fins_nl() caused an error");
 		exit(-1);
 	}
 
 	// Begin receive message section
 	// Allocate a buffer to hold contents of recvfrom call
-	void *buf;
-	buf = malloc(RECV_BUFFER_SIZE);
-	if(buf == NULL){
+	void *recv_buf;
+	recv_buf = malloc(RECV_BUFFER_SIZE);
+	if (recv_buf == NULL) {
 		fprintf(stderr, "buffer allocation failed\n");
 		exit(-1);
 	}
 
-	struct sockaddr sockaddr_sender;	// Needed for recvfrom
-	socklen_t sockaddr_senderlen;		// Needed for recvfrom
+	struct sockaddr sockaddr_sender; // Needed for recvfrom
+	socklen_t sockaddr_senderlen; // Needed for recvfrom
 
-	void *realdata;				// Pointer to your actual data payload
-	ssize_t realdata_len;			// Size of your actual data payload
-	int socketCallType;			// Integer representing what socketcall type was placed (for testing purposes)
+
+	struct nlmsghdr *nlh;
+	void *realdata; // Pointer to your actual data payload
+	ssize_t realdata_len; // Size of your actual data payload
+	int socketCallType; // Integer representing what socketcall type was placed (for testing purposes)
+	int okFlag, doneFlag=0;
+	void *msg_buf, *pt;
+	int msg_len;
 
 	int counter = 0;
-	while(1){
+	while (1) {
 		PRINT_DEBUG("Waiting for message from kernel\n");
 
-		PRINT_DEBUG("COUNTER = %d",counter);
-		ret_val = recvfrom(nl_sockfd, buf, RECV_BUFFER_SIZE, 0, &sockaddr_sender, &sockaddr_senderlen);
-		if(ret_val == -1){
-			perror("recvfrom() caused an error");
+		PRINT_DEBUG("COUNTER = %d", counter);
+		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE, 0,
+				&sockaddr_sender, &sockaddr_senderlen);
+		if (ret_val == -1) {
+			perror("recvf	rom() caused an error");
 			exit(-1);
 		}
 		//PRINT_DEBUG("%d", sockaddr_sender);
 
-		// Extract the payload from the buffer (or rather get a pointer to the payload in place)
-		// Make sure you remember to wrap your buf in NLMSG_DATA((struct nlmsghdr *) buf) or you won't get your data
-		// To get the size of the actual payload, use:  NLMSG_PAYLOAD((struct nlmsghdr *) buf, 0);
-		realdata = NLMSG_DATA((struct nlmsghdr *) buf);
-		realdata_len = NLMSG_PAYLOAD((struct nlmsghdr *) buf, 0);
+		nlh = (struct nlmsghdr *) recv_buf;
 
-		//or if you need to copy the data out of the buffer that was allocated before recvmsg, use
-		//memcpy(void *dest, NLMSG_DATA((struct nlmsghdr *) buf), NLMSG_PAYLOAD((struct nlmsghdr *) buf, 0));
+		if (okFlag = NLMSG_OK(nlh, ret_val)) {
+			switch (nlh->nlmsg_type) {
+			case NLMSG_NOOP:
+				break;
+			case NLMSG_ERROR:
+			case NLMSG_OVERRUN:
+				okFlag = 0;
+				break;
+			case NLMSG_DONE:
+				doneFlag = 1;
+			default:
+				realdata = NLMSG_DATA(nlh);
+				realdata_len = NLMSG_PAYLOAD(nlh, 0);
 
+				if (nlh->nlmsg_seq == 0) {
+					msg_len = *(ssize_t *) realdata;
+					msg_buf = malloc(msg_len);
+					if (msg_buf == NULL) {
+						fprintf(stderr, "msg buffer allocation failed\n");
+						exit(-1);
+					}
+					pt = msg_buf;
+				}
 
-		// get the type of call that was made and store it
-		socketCallType = *(int *)realdata;
+				if (pt != NULL) {
+					memcpy(pt, realdata, realdata_len);
+					pt += realdata_len;
+				} else {
+					//there's been some error!
+				}
 
-		/* Need to decide format, either:
-		 * A) Always single kernel->daemon, then single daemon->kernel
-		 * B) Multiple kernel->daemon, then single/multiple daemon->kernel
-		 * C) kernel->daemon until kernel->daemon stop signal, then daemon->kernel
-		 */
+				if ((nlh->nlmsg_flags & NLM_F_MULTI) == 0) {
+					doneFlag = 1;
+				}
+				break;
+			}
+		}
 
+		if (okFlag != 1) {
+			//send kernel a resend request
+		}
+
+		if (doneFlag) {
+			pt = msg_buf + sizeof(ssize_t);
+			socketCallType = *(int *) (pt);
+
+			//process msg_buf etc?
+			//essentially call handlers
+
+			ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
+			if (ret_val != 0) {
+				perror("sendfins() caused an error");
+				exit(-1);
+			}
+
+			free(msg_buf);
+			doneFlag = 0;
+			pt = NULL;
+		}
 		// if you want to see how the semaphore locking works, uncomment the following code block.
 		// this will hang each reply message to the kernel from this daemon until the user enters an integer
 		//int number;
 		//PRINT_DEBUG("The daemon received call number %d from the LKM. To send a response to the LKM and unblock the call, press enter.\n");
 		//scanf("%d", &number);
-
-		// send the reply message
-		ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
-		if(ret_val != 0){
-			perror("sendfins() caused an error");
-			exit(-1);
-		}
 	}
 
-	free(buf);
+	free(recv_buf);
 	close(nl_sockfd);
 	exit(0);
 }
 
 //##end: kernel stuff
-
-
 
 
 void *interceptor_to_jinni_old() {
@@ -604,8 +625,6 @@ void *interceptor_to_jinni_old() {
 	int numOfBytes = 0;
 	u_int opcode;
 	pid_t sender;
-
-
 
 	commChannel_init();
 
@@ -619,20 +638,19 @@ void *interceptor_to_jinni_old() {
 		 *	to make sure no other thread read at the same time
 		 * */
 
-		PRINT_DEBUG("COUNTER = %d",counter);
+		PRINT_DEBUG("COUNTER = %d", counter);
 		int tester;
 		/**	sem_getvalue(meen_channel_semaphore1,&tester);
-		  PRINT_DEBUG ("errno %d", errno);
-		  PRINT_DEBUG("tester = %d",tester);
+		 PRINT_DEBUG ("errno %d", errno);
+		 PRINT_DEBUG("tester = %d",tester);
 		 */
 #ifndef BUILD_FOR_ANDROID
 		sem_wait(meen_channel_semaphore1); //named semaphore !!!!!
 		sem_wait(meen_channel_semaphore2); //named semaphore !!!!!
 #endif
-		numOfBytes =  read(socket_channel_desc, &sender, sizeof(pid_t));
+		numOfBytes = read(socket_channel_desc, &sender, sizeof(pid_t));
 		numOfBytes = read(socket_channel_desc, &opcode, sizeof(u_int));
 		PRINT_DEBUG("%d", sender);
-
 
 		if (numOfBytes <= 0) {
 			PRINT_DEBUG("READING ERROR");
@@ -643,78 +661,79 @@ void *interceptor_to_jinni_old() {
 
 		switch (opcode) {
 
-			case socket_call:
-				socket_call_handler(sender);	//DONE
-				break;
-			case socketpair_call:
-				socketpair_call_handler(sender);
-				break;
-			case bind_call:
-				bind_call_handler(sender);				//DONE
-				break;
-			case getsockname_call:
-				getsockname_call_handker(sender);		//DONE
-				break;
-			case connect_call:
-				connect_call_handler(sender);			//DONE
-				break;
-			case getpeername_call:
-				getpeername_call_handler(sender);		//DONE
-				break;
-				/**
-				 * the write call is encapuslated as a send call with the
-				 * parameter flags = -1000  			//DONE
-				 */
-			case send_call:
-				send_call_handler(sender);				//DONE
-				break;
-			case recv_call:
-				recv_call_handler(sender);				//DONE
-				break;
-			case sendto_call:
-				sendto_call_handler(sender);			//DONE
-				break;
-			case recvfrom_call:
-				recvfrom_call_handler(sender);		//DONE
-				break;
-			case sendmsg_call:
-				sendmsg_call_handler(sender);		//DONE
-				break;
-			case recvmsg_call:
-				recvmsg_call_handler(sender);
-				break;
-			case getsockopt_call:
-				getsockopt_call_handler(sender);		//Dummy response
-				break;
-			case setsockopt_call:
-				setsockopt_call_handler(sender);		// Dummy response
-				break;
-			case listen_call:
-				listen_call_handler(sender);
-				break;
-			case accept_call:
-				accept_call_handler(sender);
-				break;
-			case accept4_call:
-				accept4_call_handler(sender);
-				break;
-			case shutdown_call:
-				shutdown_call_handler(sender);			//DONE
-				break;
-			case close_call:
-				/**
-				 * TODO fix the problem into remove jinnisockets
-				 * the Queue Terminate function has a bug as explained into it
-				 */
-				close_call_handler(sender);
-				break;
-			default: {
-					 PRINT_DEBUG("unknown opcode read from the socket main channel ! CRASHING");
-					 /** a function must be called to clean and reset the pipe
-					  * to original conditions before crashing
-					  */
-					 exit(1);
-				 }
+		case socket_call:
+			socket_call_handler(sender); //DONE
+			break;
+		case socketpair_call:
+			socketpair_call_handler(sender);
+			break;
+		case bind_call:
+			bind_call_handler(sender); //DONE
+			break;
+		case getsockname_call:
+			getsockname_call_handker(sender); //DONE
+			break;
+		case connect_call:
+			connect_call_handler(sender); //DONE
+			break;
+		case getpeername_call:
+			getpeername_call_handler(sender); //DONE
+			break;
+			/**
+			 * the write call is encapuslated as a send call with the
+			 * parameter flags = -1000  			//DONE
+			 */
+		case send_call:
+			send_call_handler(sender); //DONE
+			break;
+		case recv_call:
+			recv_call_handler(sender); //DONE
+			break;
+		case sendto_call:
+			sendto_call_handler(sender); //DONE
+			break;
+		case recvfrom_call:
+			recvfrom_call_handler(sender); //DONE
+			break;
+		case sendmsg_call:
+			sendmsg_call_handler(sender); //DONE
+			break;
+		case recvmsg_call:
+			recvmsg_call_handler(sender);
+			break;
+		case getsockopt_call:
+			getsockopt_call_handler(sender); //Dummy response
+			break;
+		case setsockopt_call:
+			setsockopt_call_handler(sender); // Dummy response
+			break;
+		case listen_call:
+			listen_call_handler(sender);
+			break;
+		case accept_call:
+			accept_call_handler(sender);
+			break;
+		case accept4_call:
+			accept4_call_handler(sender);
+			break;
+		case shutdown_call:
+			shutdown_call_handler(sender); //DONE
+			break;
+		case close_call:
+			/**
+			 * TODO fix the problem into remove jinnisockets
+			 * the Queue Terminate function has a bug as explained into it
+			 */
+			close_call_handler(sender);
+			break;
+		default: {
+			PRINT_DEBUG(
+					"unknown opcode read from the socket main channel ! CRASHING");
+			/** a function must be called to clean and reset the pipe
+			 * to original conditions before crashing
+			 */
+			exit(1);
+		}
 
 		} /** end of switch */
 
@@ -766,7 +785,7 @@ void *Capture() {
 
 		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 
-		PRINT_DEBUG("%d", (int)ff);
+		PRINT_DEBUG("%d", (int) ff);
 
 		/** TODO
 		 * 1. extract the Ethernet Frame
@@ -797,9 +816,9 @@ void *Capture() {
 
 		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
 
-			PRINT_DEBUG("%d", (int)&(ff->dataFrame).pdu);
-			PRINT_DEBUG("%d", (int)& ((ff->dataFrame).pdu) );
-			PRINT_DEBUG("%d", (int)data);
+		PRINT_DEBUG("%d", (int) &(ff->dataFrame).pdu);
+		PRINT_DEBUG("%d", (int) &((ff->dataFrame).pdu));
+		PRINT_DEBUG("%d", (int) data);
 
 		PRINT_DEBUG();
 
@@ -849,8 +868,8 @@ void *Inject() {
 		if (ff == NULL)
 			continue;
 
-
-		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub");
+		PRINT_DEBUG(
+				"\n At least one frame has been read from the Switch to Etherstub");
 
 		//	metadata_readFromElement(ff->dataFrame.metaData,"dstip",&destination);
 		//	loop_host = (struct hostent *) gethostbyname((char *)"");
@@ -875,9 +894,8 @@ void *Inject() {
 		//char dest[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		//char src[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-		char dest[]={0x00,0x1c,0xbf,0x86,0xd2,0xda};		// Mark Machine
-		char src[]={0x00,0x1c,0xbf,0x87,0x1a,0xfd};
-
+		char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
+		char src[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd };
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest,
 				ETHER_ADDR_LEN);
@@ -922,7 +940,6 @@ void *RTM() {
 
 }
 
-
 void *TCP() {
 	tcp_init();
 
@@ -957,9 +974,8 @@ void cap_inj_init() {
 
 int main() {
 
-
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
-	if(mkfifo(MAIN_SOCKET_CHANNEL, 0777) != 0){
+	if (mkfifo(MAIN_SOCKET_CHANNEL, 0777) != 0) {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) already exists.");
 		} else {
@@ -967,7 +983,7 @@ int main() {
 			exit(1);
 		}
 	}
-	if(mkfifo(RTM_PIPE_IN, 0777) != 0) {
+	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
 		} else {
@@ -975,7 +991,7 @@ int main() {
 			exit(1);
 		}
 	}
-	if(mkfifo(RTM_PIPE_OUT, 0777) != 0) {
+	if (mkfifo(RTM_PIPE_OUT, 0777) != 0) {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) already exists.");
 		} else {
@@ -986,9 +1002,9 @@ int main() {
 
 	// added in semaphore clearing
 #ifndef BUILD_FOR_ANDROID
-	if(system("rm " SEMAPHORE_ROOT "/sem*.*") != 0){
+	if (system("rm " SEMAPHORE_ROOT "/sem*.*") != 0) {
 		PRINT_DEBUG("Cannot remove semaphore files in " SEMAPHORE_ROOT "!\n");
-	}else {
+	} else {
 		PRINT_DEBUG(SEMAPHORE_ROOT" cleaned successfully.\n\n");
 	}
 #endif
@@ -1025,36 +1041,38 @@ int main() {
 	pthread_t etherStub_capturing;
 	pthread_t etherStub_injecting;
 	pthread_t switch_thread;
-	
+
 	/* original !!!!!
-	pthread_create(&interceptor_to_jinni_thread, NULL, interceptor_to_jinni, NULL);
-	pthread_create(&Switch_to_jinni_thread, NULL, Switch_to_Jinni, NULL);
+	 pthread_create(&interceptor_to_jinni_thread, NULL, interceptor_to_jinni, NULL);
+	 pthread_create(&Switch_to_jinni_thread, NULL, Switch_to_Jinni, NULL);
 
-	pthread_create(&udp_thread, NULL, UDP, NULL);
-	//	pthread_create(&rtm_thread, NULL, RTM, NULL);
+	 pthread_create(&udp_thread, NULL, UDP, NULL);
+	 //	pthread_create(&rtm_thread, NULL, RTM, NULL);
 
-	//	pthread_create(&icmp_thread,NULL,ICMP,NULL);
-	//	pthread_create(&tcp_thread,NULL,TCP,NULL);
+	 //	pthread_create(&icmp_thread,NULL,ICMP,NULL);
+	 //	pthread_create(&tcp_thread,NULL,TCP,NULL);
 
-	pthread_create(&ipv4_thread, NULL, IPv4, NULL);
-	//pthread_create(&arp_thread,NULL,ARP,NULL);
+	 pthread_create(&ipv4_thread, NULL, IPv4, NULL);
+	 //pthread_create(&arp_thread,NULL,ARP,NULL);
 
-	pthread_create(&switch_thread, NULL, fins_switch, NULL);
+	 pthread_create(&switch_thread, NULL, fins_switch, NULL);
 
-	pthread_create(&etherStub_capturing, NULL, Capture, NULL);
-	pthread_create(&etherStub_injecting, NULL, Inject, NULL);
-	*/
+	 pthread_create(&etherStub_capturing, NULL, Capture, NULL);
+	 pthread_create(&etherStub_injecting, NULL, Inject, NULL);
+	 */
 
 	// ADDED !!!!! start
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
-	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr, interceptor_to_jinni, NULL); //this has named pipe input from interceptor
-        pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr, Switch_to_Jinni, NULL);
-        pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
-        pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
-        pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
-        pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
-        pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
+	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr,
+			interceptor_to_jinni, NULL); //this has named pipe input from interceptor
+	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr,
+			Switch_to_Jinni, NULL);
+	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
+	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
+	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
+	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
+	pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
 	//^^^^^ end added !!!!!
 
 	PRINT_DEBUG("created all threads\n");
@@ -1068,12 +1086,10 @@ int main() {
 	pthread_join(etherStub_injecting, NULL);
 	pthread_join(switch_thread, NULL);
 	pthread_join(udp_thread, NULL);
-//	//	pthread_join(tcp_thread, NULL);
-//	//	pthread_join(icmp_thread, NULL);
+	//	//	pthread_join(tcp_thread, NULL);
+	//	//	pthread_join(icmp_thread, NULL);
 	pthread_join(ipv4_thread, NULL);
-//	//	pthread_join(arp_thread, NULL);
-
-
+	//	//	pthread_join(arp_thread, NULL);
 
 
 	while (1) {

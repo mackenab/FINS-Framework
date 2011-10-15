@@ -12,6 +12,11 @@ PROJECT_NAME = wedge
 
 obj-m += FINS_stack_wedge.o			# build type hardcoded to module
 
+#all:
+#	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+#clean:
+#	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
 .PHONY:all
 all:$(PROJECT_NAME)
 	@echo "$(PROJECT_NAME) is compiled\n"
@@ -24,17 +29,6 @@ clean:
 	@make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 		
 #### TARGETS #####
-#.PHONY:all
-#all:$(PROJECT_NAME)
-#	@echo "$(PROJECT_NAME) is compiled\n"
-
-#$(PROJECT_NAME):$(OBJS)  
-#	@$(LD) $(LDFLAGS) $^ -o $@ 
-
 #%.o:%.c $(INCLUDES) 
 #	@$(CC) $(CFLAGS) -c $<
 
-#.PHONY:clean
-#clean:
-#	@rm -f $(PROJECT_NAME) 
-#	@rm -f *.o
