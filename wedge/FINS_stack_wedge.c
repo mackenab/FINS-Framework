@@ -24,12 +24,12 @@
 
 #include "FINS_stack_wedge.h"	/* Defs for this module */
 
-#define RECV_BUFFER_SIZE	10000	// Same as userspace, Pick an appropriate value here
 // Create one semaphore here for every socketcall that is going to block
 struct semaphore FINS_socket_sem;
 struct semaphore FINS_bind_sem;
 struct semaphore FINS_recvmsg_sem;
 
+#define RECV_BUFFER_SIZE	10000	// Same as userspace, Pick an appropriate value here
 #define PF_FINS AF_INET //for compiling in non mod kernel
 #define NETLINK_FINS	20 //for compiling in non mod kernel
 /* Wedge core functions (Protocol Registration) */

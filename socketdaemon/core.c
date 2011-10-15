@@ -611,6 +611,8 @@ void *interceptor_to_jinni() {
 			msg_len -= sizeof(unsigned long long)+sizeof(int);
 			//handlers(uniqueSockID, socketCallType, msg_pt, msg_len);
 
+			//add in ID table for socket etc, tack onto buffer or as arg
+
 			//process msg_buf etc?
 			//essentially call handlers
 			/*handlers will need to return something so can send
