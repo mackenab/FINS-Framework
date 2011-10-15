@@ -519,16 +519,17 @@ void *interceptor_to_jinni() {
 	socklen_t sockaddr_senderlen; // Needed for recvfrom
 
 	struct nlmsghdr *nlh;
-	void *realdata; // Pointer to your actual data payload
-	ssize_t realdata_len; // Size of your actual data payload
-
-	int okFlag, doneFlag = 0;
-	unsigned char *msg_pt;
-	unsigned char *pt;
+	void *part_buf; // Pointer to your actual data payload
+	ssize_t part_len; // Size of your actual data payload
+	unsigned char *part_pt;
 
 	void *msg_buf;
 	ssize_t msg_len;
-	ssize_t part_len;
+	unsigned char *msg_pt;
+
+	int okFlag, doneFlag = 0;
+	ssize_t temp;
+
 	int pos;
 	unsigned long long uniqueSockID;
 	int socketCallType; // Integer representing what socketcall type was placed (for testing purposes)
@@ -559,18 +560,31 @@ void *interceptor_to_jinni() {
 			case NLMSG_DONE:
 				doneFlag = 1;
 			default:
-				realdata = NLMSG_DATA(nlh);
-				realdata_len = NLMSG_PAYLOAD(nlh, 0);
+				part_buf = NLMSG_DATA(nlh);
+				part_len = NLMSG_PAYLOAD(nlh, 0);
 
-				pt = realdata;
-				msg_len = *(ssize_t *) pt;
-				pt += sizeof(ssize_t);
-				part_len = *(ssize_t *) pt;
-				pt += sizeof(ssize_t);
-				pos = *(int *) pt;
-				pt += sizeof(int);
+				part_pt = part_buf;
+				temp = *(ssize_t *) part_pt;
+				part_pt += sizeof(ssize_t);
+				if (msg_len == null) {
+					msg_len = temp;
+				} else if (temp != msg_len) {
+					okFlag = 0;
+					//could just malloc msg_buff again
+					break; //might comment out or make so start new
+				}
 
-				//could add check here, make sure msg_len's consistent across parts
+				part_len = *(ssize_t *) part_pt;
+				part_pt += sizeof(ssize_t);
+				if (part_len > RECV_BUFFER_SIZE) {
+					//error
+				}
+
+				pos = *(int *) part_pt;
+				part_pt += sizeof(int);
+				if (pos > msg_len || pos != msg_pt - (char *)msg_buf) {
+					//error
+				}
 
 				if (nlh->nlmsg_seq == 0) {
 					msg_buf = malloc(msg_len);
@@ -582,7 +596,8 @@ void *interceptor_to_jinni() {
 				}
 
 				if (msg_pt != NULL) {
-					memcpy(msg_pt, pt, part_len);
+					msg_pt = msg_buf + pos;
+					memcpy(msg_pt, part_pt, part_len);
 					msg_pt += part_len;
 				} else {
 					//there's been some error!
@@ -596,6 +611,7 @@ void *interceptor_to_jinni() {
 		}
 
 		if (okFlag != 1) {
+			doneFlag = 0;
 			//send kernel a resend request
 			//with pos of part being passed can store msg_buf, then recopy new part when received
 		}
@@ -608,7 +624,7 @@ void *interceptor_to_jinni() {
 			msg_pt += sizeof(int);
 
 			//msg_len -= msg_pt-msg_buf;
-			msg_len -= sizeof(unsigned long long)+sizeof(int);
+			msg_len -= sizeof(unsigned long long) + sizeof(int);
 			//handlers(uniqueSockID, socketCallType, msg_pt, msg_len);
 
 			//add in ID table for socket etc, tack onto buffer or as arg
