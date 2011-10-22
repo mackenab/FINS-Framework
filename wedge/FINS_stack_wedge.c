@@ -561,9 +561,13 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *m, size_t len, int flags) {
 	unsigned long long uniqueSockID;
+	int symbol = 1; //default value unless passes msg->msg_name equal NULL
+	int controlFlag = 0;
+
 	int ret;
-	int buf; // used for test
-	ssize_t buffer_length; // used for test
+	void *buf;
+	unsigned char *pt;
+	ssize_t buf_len;
 
 	uniqueSockID = getUniqueSockID(sock);
 
@@ -574,9 +578,38 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		return -1; // pick an appropriate errno
 	}
 
+	if ((m->msg_controllen != 0) && (m->msg_control != NULL))
+		controlFlag = 1;
+	if (m->msg_name == NULL)
+		symbol = 0;
+
 	// Build the message
-	buf = recvmsg_call;//recv_call;//SYS_RECV; //orig
-	buffer_length = sizeof(int);
+	buf_len = sizeof(unsigned long long) + 5 * sizeof(int)
+			+ (controlFlag ? (sizeof(socklen_t) + m->msg_controllen) : 0);
+	buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		//error
+	}
+	pt = buf;
+
+	*pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+	*pt = recvmsg_call;
+	pt += sizeof(int);
+	*pt = flags;
+	pt += sizeof(int);
+	*pt = symbol;
+	pt += sizeof(int);
+	*pt = m->msg_flags;
+	pt += sizeof(int);
+	*pt = controlFlag;
+	pt += sizeof(int);
+	if (controlFlag) {
+		*pt = m->msg_controllen;
+		pt += sizeof(socklen_t);
+		memcpy(pt, m->msg_control, m->msg_controllen);
+		pt += m->msg_controllen;
+	}
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, &buf, buffer_length, 0);
@@ -585,10 +618,10 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		return -1; // pick an appropriate errno
 	}
 
-	if (down_interruptible(&FINS_recvmsg_sem/*FINS_bind_sem*/)) {
+	if (down_interruptible(&FINS_recvmsg_sem)) {
 		;
 	} // block until daemon replies
-	sema_init(&FINS_recvmsg_sem/*FINS_bind_sem*/, 0); // relock semaphore
+	sema_init(&FINS_recvmsg_sem, 0); // relock semaphore
 
 	//do stuff? to return values?
 
