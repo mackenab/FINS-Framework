@@ -22,7 +22,9 @@
 #include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
 #include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
 
+//#include <sys/socket.h> /* may need to be removed */
 #include "FINS_stack_wedge.h"	/* Defs for this module */
+
 
 // Create one semaphore here for every socketcall that is going to block
 struct semaphore FINS_socket_sem;
@@ -585,7 +587,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 
 	// Build the message
 	buf_len = sizeof(unsigned long long) + 5 * sizeof(int)
-			+ (controlFlag ? (sizeof(socklen_t) + m->msg_controllen) : 0);
+			+ (controlFlag ? (sizeof(unsigned long long)/*sizeof(socklen_t)*/ + m->msg_controllen) : 0);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		//error
@@ -606,13 +608,14 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	pt += sizeof(int);
 	if (controlFlag) {
 		*pt = m->msg_controllen;
-		pt += sizeof(socklen_t);
+		//pt += sizeof(socklen_t);
+		pt += sizeof(unsigned long long);
 		memcpy(pt, m->msg_control, m->msg_controllen);
 		pt += m->msg_controllen;
 	}
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, &buf, buffer_length, 0);
+	ret = nl_send(FINS_daemon_pid, &buf, buf_len, 0);
 	if (ret != 0) {
 		printk(KERN_ERR "%s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno

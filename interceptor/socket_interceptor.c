@@ -146,7 +146,7 @@ int searchFinsHistory(pid_t target1, int target2) {
  */
 
 
-int insertFinsHistory(pid_t value1, int value2, int value3) {
+int insertFinsHistory(pid_t value1, int value2, int value3) {//(pid, tempdescriptor, fakeid)
 	int i = 0;
 	for (i = 0; i < MAX_sockets; i++) {
 		if (FinsHistory[i].processID == -1) {

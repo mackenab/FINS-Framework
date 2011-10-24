@@ -534,11 +534,12 @@ void *interceptor_to_jinni() {
 	unsigned long long uniqueSockID;
 	int socketCallType; // Integer representing what socketcall type was placed (for testing purposes)
 
+	PRINT_DEBUG("Waiting for message from kernel\n");
+
 	int counter = 0;
 	while (1) {
-		PRINT_DEBUG("Waiting for message from kernel\n");
 
-		PRINT_DEBUG("COUNTER = %d", counter);
+		PRINT_DEBUG("NL counter = %d", counter);
 		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE, 0,
 				&sockaddr_sender, &sockaddr_senderlen);
 		if (ret_val == -1) {
@@ -552,24 +553,30 @@ void *interceptor_to_jinni() {
 		if (okFlag = NLMSG_OK(nlh, ret_val)) {
 			switch (nlh->nlmsg_type) {
 			case NLMSG_NOOP:
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
 				break;
 			case NLMSG_ERROR:
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR");
 			case NLMSG_OVERRUN:
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN");
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE");
 				doneFlag = 1;
 			default:
+				PRINT_DEBUG("nlh->nlmsg_type=default");
 				part_buf = NLMSG_DATA(nlh);
 				part_len = NLMSG_PAYLOAD(nlh, 0);
 
 				part_pt = part_buf;
 				temp = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
-				if (msg_len == null) {
+				if (msg_len == NULL) {
 					msg_len = temp;
 				} else if (temp != msg_len) {
 					okFlag = 0;
+					PRINT_DEBUG("temp != msg_len");
 					//could just malloc msg_buff again
 					break; //might comment out or make so start new
 				}
@@ -577,13 +584,13 @@ void *interceptor_to_jinni() {
 				part_len = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
 				if (part_len > RECV_BUFFER_SIZE) {
-					//error
+					PRINT_DEBUG("some error");
 				}
 
 				pos = *(int *) part_pt;
 				part_pt += sizeof(int);
-				if (pos > msg_len || pos != msg_pt - (char *)msg_buf) {
-					//error
+				if (pos > msg_len || pos != msg_pt - (unsigned char *)msg_buf) {
+					PRINT_DEBUG("some error");
 				}
 
 				if (nlh->nlmsg_seq == 0) {
@@ -600,7 +607,7 @@ void *interceptor_to_jinni() {
 					memcpy(msg_pt, part_pt, part_len);
 					msg_pt += part_len;
 				} else {
-					//there's been some error!
+					PRINT_DEBUG("some error");
 				}
 
 				if ((nlh->nlmsg_flags & NLM_F_MULTI) == 0) {
@@ -612,6 +619,7 @@ void *interceptor_to_jinni() {
 
 		if (okFlag != 1) {
 			doneFlag = 0;
+			PRINT_DEBUG("okFlag != 1");
 			//send kernel a resend request
 			//with pos of part being passed can store msg_buf, then recopy new part when received
 		}
@@ -634,6 +642,9 @@ void *interceptor_to_jinni() {
 			/*handlers will need to return something so can send
 			 * back to daemon for blocking functs */
 
+			PRINT_DEBUG("msg_len=%d", msg_len);
+			PRINT_DEBUG("msg=%s", msg_pt);
+
 			ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
 			if (ret_val != 0) {
 				perror("sendfins() caused an error");
@@ -643,6 +654,7 @@ void *interceptor_to_jinni() {
 			free(msg_buf);
 			doneFlag = 0;
 			msg_pt = NULL;
+			msg_len = NULL;
 		}
 	}
 
