@@ -42,8 +42,6 @@
 
 struct finssocket jinniSockets[MAX_sockets];
 
-struct socketIdentifier FinsHistory[MAX_sockets];
-
 /** The list of major Queues which connect the modules to each other
  * including the switch module
  * The list of Semaphores which protect the Queues
@@ -135,7 +133,7 @@ struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
 struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destination)
 //end kernel stuff
 //begin: interceptor merge
-int numberOfSockets = 0;
+int numberOfSockets = -1;
 
 int nl_sockfd; //temp for now
 
@@ -258,6 +256,7 @@ void Queues_init() {
 
 void commChannel_init() {
 
+	PRINT_DEBUG("entering: commChannel_init()");
 	//changed mrd015 !!!!! bionic  does NOT support named semaphores
 #ifndef BUILD_FOR_ANDROID
 	/** the semaphore is initially locked */
@@ -297,6 +296,7 @@ void commChannel_init() {
 #endif
 	PRINT_DEBUG("Jinni was blocked waiting at mkfifo, it had just cross it");
 	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDONLY);
+	PRINT_DEBUG("after opening");
 
 	if (socket_channel_desc == -1) {
 		PRINT_DEBUG("socket GENIE failed to open the socket channel \n");
@@ -308,6 +308,7 @@ void commChannel_init() {
 	 */
 	/** Needs NPTL because LinuxThreads does not support sharing semaphores between processes */
 
+	PRINT_DEBUG("exiting: commChannel_init()");
 }
 
 void *Switch_to_Jinni() {
@@ -608,6 +609,18 @@ int removeFinsHistory(unsigned long long targetID) {
 	return (0);
 
 }
+
+/** @brief
+ *
+ *  @param
+ *
+ *  @return
+ */
+
+/**
+ * TODO free and close/DESTORY all the semaphores before exit !!!
+ *
+ */
 void init_socketChannel() {
 
 	int i;
@@ -620,43 +633,47 @@ void init_socketChannel() {
 	/** the semaphore is initially locked */
 
 	//main_channel_semaphore1 = sem_open(main_sem_name1,O_CREAT|O_EXCL,0644,0);
-	main_channel_semaphore1 = sem_open(main_sem_name1, 0, 0644, 0);
-	PRINT_DEBUG();
-	if (main_channel_semaphore1 == SEM_FAILED) {
+	/*
+	 main_channel_semaphore1 = sem_open(main_sem_name1, 0, 0644, 0);
+	 PRINT_DEBUG();
+	 if (main_channel_semaphore1 == SEM_FAILED) {
 
-		main_channel_semaphore1 = sem_open(main_sem_name1, 0);
-		PRINT_DEBUG();
+	 main_channel_semaphore1 = sem_open(main_sem_name1, 0);
+	 PRINT_DEBUG();
 
-	}
-	if (main_channel_semaphore1 == SEM_FAILED) {
-		perror("unable to create semaphore");
-		sem_unlink(main_sem_name1);
-		exit(-1);
-	}
+	 }
+	 if (main_channel_semaphore1 == SEM_FAILED) {
+	 perror("unable to create semaphore");
+	 sem_unlink(main_sem_name1);
+	 exit(-1);
+	 }
 
-	// main_channel_semaphore2 = sem_open(main_sem_name2,O_CREAT|O_EXCL,0644,0);
-	main_channel_semaphore2 = sem_open(main_sem_name2, 0, 0644, 0);
-	PRINT_DEBUG();
-	if (main_channel_semaphore2 == SEM_FAILED) {
-		main_channel_semaphore2 = sem_open(main_sem_name2, 0);
-		PRINT_DEBUG();
+	 // main_channel_semaphore2 = sem_open(main_sem_name2,O_CREAT|O_EXCL,0644,0);
+	 main_channel_semaphore2 = sem_open(main_sem_name2, 0, 0644, 0);
+	 PRINT_DEBUG();
+	 if (main_channel_semaphore2 == SEM_FAILED) {
+	 main_channel_semaphore2 = sem_open(main_sem_name2, 0);
+	 PRINT_DEBUG();
 
-	}
-	if (main_channel_semaphore2 == SEM_FAILED) {
-		perror("unable to create semaphore");
-		sem_unlink(main_sem_name2);
-		exit(-1);
-	}
+	 }
+	 if (main_channel_semaphore2 == SEM_FAILED) {
+	 perror("unable to create semaphore");
+	 sem_unlink(main_sem_name2);
+	 exit(-1);
+	 }
 
-	//	PRINT_DEBUG("Blocking on the main_socket_channel THE FINS CORE HAS NOT BEEN STARTED");
-	//	PRINT_DEBUG("Kill the application, run the core, then run the application process again");
+	 //	PRINT_DEBUG("Blocking on the main_socket_channel THE FINS CORE HAS NOT BEEN STARTED");
+	 //	PRINT_DEBUG("Kill the application, run the core, then run the application process again");
 
-	//	mkfifo(MAIN_SOCKET_CHANNEL,0777);
-	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_WRONLY);
+	 //	mkfifo(MAIN_SOCKET_CHANNEL,0777);
+	 */
+	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDWR);
 
-	int tester;
-	sem_getvalue(main_channel_semaphore1, &tester);
-	PRINT_DEBUG("tester = %d", tester);
+	/*
+	 int tester;
+	 sem_getvalue(main_channel_semaphore1, &tester);
+	 PRINT_DEBUG("tester = %d",tester);
+	 */
 	//sem_wait(main_channel_semaphore);
 	PRINT_DEBUG("222");
 
@@ -670,11 +687,12 @@ void init_socketChannel() {
 	sem_init(&FinsHistory_semaphore, 1, 1);
 	for (i = 0; i < MAX_sockets; i++) {
 		FinsHistory[i].uniqueSockID = -1;
+
 	}
 
 }
 
-void handle_interception(int socketCallType, unsigned long long uniqueSockID,
+void handle_interception(unsigned long long uniqueSockID, int socketCallType,
 		unsigned char* msg_pt, ssize_t msg_len) {
 
 	/**TODO These static vars are not thread safe
@@ -688,8 +706,9 @@ void handle_interception(int socketCallType, unsigned long long uniqueSockID,
 	int confirmation;
 	int index;
 	int numOfBytes = -1;
+	int ret_val;
 
-	if (numberOfSockets == 0) {
+	if (numberOfSockets == -1) {
 		init_socketChannel();
 	}
 
@@ -698,7 +717,6 @@ void handle_interception(int socketCallType, unsigned long long uniqueSockID,
 		//PRINT_DEBUG("incorrect index !! Crash");
 		//exit(1);
 	}
-	//sockfd_alter = FinsHistory[index].fakeID;
 
 	switch (socketCallType) {
 	case socket_call:
@@ -714,16 +732,13 @@ void handle_interception(int socketCallType, unsigned long long uniqueSockID,
 		 * RX_channel but the current thread
 		 * */
 
-		sem_wait(main_channel_semaphore2);
-		writtenBytes = write(socket_channel_desc, &uniqueSockID,
-				sizeof(unsigned long long));
-		writtenBytes = write(socket_channel_desc, &socketCallType, sizeof(int));
+		//sem_wait(meen_channel_semaphore2);
 		writtenBytes = write(socket_channel_desc, msg_pt, msg_len
 				* sizeof(unsigned char));
 
-		sem_post(main_channel_semaphore1);
+		//sem_post(meen_channel_semaphore1);
 		/** Remember to unlock the MAIN CHANNEL */
-		sem_post(main_channel_semaphore2);
+		//sem_post(meen_channel_semaphore2);
 
 		if (writtenBytes > 0) {
 			PRINT_DEBUG("written bytes %d", writtenBytes);
@@ -806,6 +821,13 @@ void handle_interception(int socketCallType, unsigned long long uniqueSockID,
 		 */
 		numOfBytes = read(tempdescriptor, &confirmation, sizeof(int));
 		sem_post(FinsHistory[searchFinsHistory(uniqueSockID)].s);
+
+		ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
+		if (ret_val != 0) {
+			perror("sendfins() caused an error");
+			exit(-1);
+		}
+
 		/*
 		 if (confirmation != ACK) {
 		 PRINT_DEBUG("READING ERROR!! Probably Sync Failed!!");
@@ -920,12 +942,12 @@ void *interceptor_to_jinni() {
 	ssize_t nl_len, part_len; // Size of your actual data payload
 	unsigned char *part_pt;
 
-	void *msg_buf;
+	void *msg_buf = NULL;
 	ssize_t msg_len = -1;
-	unsigned char *msg_pt;
+	unsigned char *msg_pt = NULL;
 
 	int okFlag, doneFlag = 0;
-	ssize_t temp;
+	ssize_t test_msg_len;
 
 	int pos;
 	unsigned long long uniqueSockID;
@@ -969,16 +991,16 @@ void *interceptor_to_jinni() {
 				PRINT_DEBUG("nl_len= %d", nl_len);
 
 				part_pt = nl_buf;
-				temp = *(ssize_t *) part_pt;
+				test_msg_len = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
 
-				PRINT_DEBUG("temp=%d, msg_len=%d", temp, msg_len);
+				//PRINT_DEBUG("test_msg_len=%d, msg_len=%d", test_msg_len, msg_len);
 
 				if (msg_len == -1) {
-					msg_len = temp;
-				} else if (temp != msg_len) {
+					msg_len = test_msg_len;
+				} else if (test_msg_len != msg_len) {
 					okFlag = 0;
-					PRINT_DEBUG("temp != msg_len");
+					PRINT_DEBUG("test_msg_len != msg_len");
 					//could just malloc msg_buff again
 					break; //might comment out or make so start new
 				}
@@ -990,7 +1012,7 @@ void *interceptor_to_jinni() {
 							part_len, RECV_BUFFER_SIZE);
 				}
 
-				PRINT_DEBUG("part_len=%d", part_len);
+				//PRINT_DEBUG("part_len=%d", part_len);
 
 				pos = *(int *) part_pt;
 				part_pt += sizeof(int);
@@ -1002,7 +1024,10 @@ void *interceptor_to_jinni() {
 					}
 				}
 
-				PRINT_DEBUG("pos=%d", pos);
+				//PRINT_DEBUG("pos=%d", pos);
+
+				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len,
+						part_len, pos, nlh->nlmsg_seq);
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
@@ -1049,19 +1074,37 @@ void *interceptor_to_jinni() {
 
 			msg_len -= sizeof(unsigned long long) + sizeof(int);
 
+			PRINT_DEBUG("uniqueSockID=%llu socketCallType=%d", uniqueSockID,
+					socketCallType);
 			PRINT_DEBUG("msg_len=%d", msg_len);
-			PRINT_DEBUG("msg=%s", msg_pt);
+			PRINT_DEBUG("msg='%s'", msg_pt);
+			//###############################
+			unsigned char *temp, *pt;
+			temp
+					= (unsigned char *) malloc(msg_len * 3
+							* sizeof(unsigned char));
+			pt = temp;
+			int i;
+			for (i = 0; i < msg_len; i++) {
+				if (i == 0) {
+					sprintf(pt, "%02x", msg_pt[i]);
+					pt += 2;
+				} else if (i % 4 == 0) {
+					sprintf(pt, ":%02x", msg_pt[i]);
+					pt += 3;
+				} else {
+					sprintf(pt, " %02x", msg_pt[i]);
+					pt += 3;
+				}
+			}
+			PRINT_DEBUG("msg='%s'", temp);
+			free(temp);
+			//###############################
 
-			handle_interception(socketCallType, uniqueSockID, msg_pt, msg_len);
+			handle_interception(uniqueSockID, socketCallType, msg_pt, msg_len);
 
 			/* Extract msg from named pipe & then send back to daemon for blocking functs
 			 */
-
-			ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
-			if (ret_val != 0) {
-				perror("sendfins() caused an error");
-				exit(-1);
-			}
 
 			free(msg_buf);
 			doneFlag = 0;
@@ -1454,14 +1497,12 @@ int main() {
 		exit(-1);
 	}
 
-	//while (1);
-
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
-	if (mkfifo(MAIN_SOCKET_CHANNEL, 0777) != 0) {
+	if (open(MAIN_SOCKET_CHANNEL, O_RDWR|O_EXCL|O_CREAT) == -1) {
 		if (errno == EEXIST) {
-			PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) already exists.");
+			PRINT_DEBUG("open(" MAIN_SOCKET_CHANNEL ", 0777) already exists.");
 		} else {
-			PRINT_DEBUG("mkfifo(" MAIN_SOCKET_CHANNEL ", 0777) failed.");
+			PRINT_DEBUG("open(" MAIN_SOCKET_CHANNEL ", 0777) failed.");
 			exit(1);
 		}
 	}
@@ -1551,7 +1592,7 @@ int main() {
 	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr,
 			Switch_to_Jinni, NULL);
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
-	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
+	//pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
 	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
 	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
 	pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
@@ -1570,7 +1611,7 @@ int main() {
 	pthread_join(udp_thread, NULL);
 	//	//	pthread_join(tcp_thread, NULL);
 	//	//	pthread_join(icmp_thread, NULL);
-	pthread_join(ipv4_thread, NULL);
+	//pthread_join(ipv4_thread, NULL);
 	//	//	pthread_join(arp_thread, NULL);
 
 

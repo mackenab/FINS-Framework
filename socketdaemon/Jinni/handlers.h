@@ -76,15 +76,6 @@
 #define close_call 19
 #define daemonconnect_call 20
 
-struct socket_call_msg {
-	int domain;
-	int type;
-	int protocol;
-	int sockfd;
-	int fakeID;
-
-};
-
 enum sockOptions {
 
 
@@ -179,18 +170,6 @@ struct finssocket {
 	char asemaphore_name[30];
 	sem_t *s; /** The client channel semaphore pointer*/
 	sem_t *as;
-};
-
-struct socketIdentifier {
-	unsigned long long uniqueSockID;
-	pid_t processID;
-	int socketDesc;
-	int fakeID;
-	char semaphore_name[30];
-	char asemaphore_name[30];
-
-	sem_t *s; /** Named semaphore to protect the client named pipe between interceptor and Jinni */
-	sem_t *as; /** Additional named semaphore to force order between reading and writing to the pipe */
 };
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)

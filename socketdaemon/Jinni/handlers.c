@@ -12,7 +12,6 @@
 #include "handlers.h"
 
 extern struct finssocket jinniSockets[MAX_sockets];
-extern struct socketIdentifier FinsHistory[MAX_sockets];
 /** The queues might be moved later to another Master file */
 
 extern finsQueue Jinni_to_Switch_Queue;

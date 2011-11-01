@@ -80,7 +80,7 @@ struct socketIdentifier {
  * in case the library copu became shared among more than one application
  *
  * */
-//struct socketUniqueID socketsUniqueIDs[MAX_sockets];
+
 struct socketIdentifier FinsHistory[MAX_sockets];
 
 //ADDED mrd015 !!!!!

@@ -40,17 +40,18 @@ struct ip4_routing_table * IP4_sort_routing_table(
 		swapped = 0;
 		previous = NULL;
 		current = table_pointer;
-		while ((current != NULL) && (current->next_entry != NULL)) {	
-			PRINT_DEBUG("masks (curr, next): %d %d",(int)current->mask, (int)current->next_entry->mask);
+		while ((current != NULL) && (current->next_entry != NULL)) {
+			//uncomment these after kernel stuff stable
+			//PRINT_DEBUG("masks (curr, next): %d %d",(int)current->mask, (int)current->next_entry->mask);
 			if (current->mask < current->next_entry->mask) {
-				PRINT_DEBUG("mask < mask");
+				//PRINT_DEBUG("mask < mask");
 				if (previous == NULL) {
-					PRINT_DEBUG("prev  ==  null");
+					//PRINT_DEBUG("prev  ==  null");
 					first = current->next_entry;
 					current->next_entry = current->next_entry->next_entry;
 					first->next_entry = current;
 				} else {
-					PRINT_DEBUG("prev  !=  null");
+					//PRINT_DEBUG("prev  !=  null");
 					previous->next_entry = current->next_entry;
 					current->next_entry = current->next_entry->next_entry;
 					previous->next_entry->next_entry = current;

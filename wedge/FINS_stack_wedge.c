@@ -119,7 +119,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	*(int *)pt = protocol;
 	pt += sizeof(int);
 
-	printk(KERN_INFO "FINS: buf_len=%d", buf_len);
+	printk(KERN_INFO "FINS: uniqueSockID=%llu socket_call=%d buf_len=%d", uniqueSockID, socket_call, buf_len);
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
@@ -776,7 +776,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 				print_pt += 3;
 			}
 		}
-		printk(KERN_INFO "FINS: nl_buf:'%s'", print_buf);
+		printk(KERN_INFO "FINS: nl_send_msg: buf='%s'", print_buf);
 		kfree(print_buf);
 	}
 	//####################
@@ -820,6 +820,37 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	unsigned char *msg_start;
 	ssize_t header_size;
 	ssize_t part_len;
+
+
+	//####################
+	unsigned char *print_buf;
+	unsigned char *print_pt;
+	unsigned char *pt;
+	int i;
+
+	print_buf = kmalloc(5*msg_len, GFP_KERNEL);
+	if (!print_buf) {
+		printk	(KERN_ERR "FINS: print_buf allocation fail");
+	} else {
+		print_pt = print_buf;
+		pt = msg_buf;
+		for (i = 0; i < msg_len; i++) {
+			if (i == 0) {
+				sprintf(print_pt, "%02x", *(pt+i));
+				print_pt += 2;
+			} else if (i % 4 == 0) {
+				sprintf(print_pt, ":%02x", *(pt+i));
+				print_pt += 3;
+			} else {
+				sprintf(print_pt, " %02x", *(pt+i));
+				print_pt += 3;
+			}
+		}
+		printk(KERN_INFO "FINS: nl_send: msg_buf='%s'", print_buf);
+		kfree(print_buf);
+	}
+	//####################
+
 
 	part_buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
 	if (!part_buf) {

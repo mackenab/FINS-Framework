@@ -130,8 +130,8 @@ void  main()
 	fflush(stdout);
 	pid_t pID;
 	char device[20];
-	strcpy(device, "lo"); //original !!!!!
-	//strcpy(device, "eth0"); //changed to this !!!!!
+	//strcpy(device, "lo"); //original !!!!!
+	strcpy(device, "eth0"); //changed to this !!!!!
 	//strcpy(device, "wlan0");
 
 

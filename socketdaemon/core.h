@@ -52,7 +52,16 @@ void print_frame(const u_char *payload, int len);
 void print_hex_ascii_line(const u_char *payload, int len, int offset);
 
 //begin: interceptor merge
-//struct socketUniqueID socketsUniqueIDs[MAX_sockets]; //may merge in
+struct socketIdentifier {
+	unsigned long long uniqueSockID;
+	char semaphore_name[30];
+	char asemaphore_name[30];
+
+	sem_t *s; /** Named semaphore to protect the client named pipe between interceptor and Jinni */
+	sem_t *as; /** Additional named semaphore to force order between reading and writing to the pipe */
+
+};
+
 struct socketIdentifier FinsHistory[MAX_sockets];
 
 //ADDED mrd015 !!!!!
@@ -78,6 +87,9 @@ char main_sem_name2[] = "main_channel2";
  * and threads level semaphores! and how each one of them is important and where they were employed
  * in FINS code
  */
+#define write_call 30
+#define ACK 	200
+
 //end: interceptor merge
 
 
