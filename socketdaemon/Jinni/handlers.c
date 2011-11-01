@@ -23,6 +23,84 @@ extern int socket_channel_desc;
 extern sem_t *meen_channel_semaphore1;
 extern sem_t *meen_channel_semaphore2;
 
+int init_fins_nl() {
+	int sockfd;
+	int ret_val;
+
+	// Get a netlink socket descriptor
+	sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_FINS);
+	if (sockfd == -1) {
+		return -1;
+	}
+
+	// Populate local_sockaddress
+	memset(&local_sockaddress, 0, sizeof(local_sockaddress));
+	local_sockaddress.nl_family = AF_NETLINK;
+	local_sockaddress.nl_pad = 0;
+	local_sockaddress.nl_pid = getpid(); //pthread_self() << 16 | getpid(),	// use second option for multi-threaded process
+	local_sockaddress.nl_groups = 0; // unicast
+
+	// Bind the local netlink socket
+	ret_val = bind(sockfd, (struct sockaddr*) &local_sockaddress,
+			sizeof(local_sockaddress));
+	if (ret_val == -1) {
+		return -1;
+	}
+
+	// Populate kernel_sockaddress
+	memset(&kernel_sockaddress, 0, sizeof(kernel_sockaddress));
+	kernel_sockaddress.nl_family = AF_NETLINK;
+	kernel_sockaddress.nl_pad = 0;
+	kernel_sockaddress.nl_pid = 0; // to kernel
+	kernel_sockaddress.nl_groups = 0; // unicast
+
+	return sockfd;
+}
+/*
+ * Sends len bytes from buf on the sockfd.  Returns 0 if successful.  Returns -1 if an error occurred, errno set appropriately.
+ */
+int send_wedge(int sockfd, void *buf, size_t len, int flags) {
+	int ret_val; // Holds system call return values for error checking
+	struct nlmsghdr *nlh = NULL;
+	struct iovec iov;
+	struct msghdr msg;
+
+	// Begin send message section
+	// Build a message to send to the kernel
+	nlh = (struct nlmsghdr *) malloc(NLMSG_LENGTH(len)); // malloc(NLMSG_SPACE(len));	// TODO: Test and remove
+	memset(nlh, 0, NLMSG_LENGTH(len)); // NLMSG_SPACE(len));		// TODO: Test and remove
+
+	nlh->nlmsg_len = NLMSG_LENGTH(len);
+	// following can be used by application to track message, opaque to netlink core
+	nlh->nlmsg_type = 0; // arbitrary value
+	nlh->nlmsg_seq = 0; // sequence number
+	nlh->nlmsg_pid = getpid(); // pthread_self() << 16 | getpid();	// use the second one for multiple threads
+	nlh->nlmsg_flags = flags;
+
+	// Insert payload (memcpy)
+	memcpy(NLMSG_DATA(nlh), buf, len);
+
+	// finish message packing
+	iov.iov_base = (void *) nlh;
+	iov.iov_len = nlh->nlmsg_len;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_name = (void *) &kernel_sockaddress;
+	msg.msg_namelen = sizeof(kernel_sockaddress);
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+	// Send the message
+	PRINT_DEBUG("Sending message to kernel\n");
+	ret_val = sendmsg(sockfd, &msg, 0);
+	if (ret_val == -1) {
+		return -1;
+	}
+
+	free(nlh);
+	return 0;
+}
+
 /**
  * @brief find a jinni socket among the jinni sockets array
  * @param
@@ -305,7 +383,7 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 
 }
 
-void socket_call_handler(unsigned long long uniqueSockID) {
+void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 	int numOfBytes = -1;
 	int domain;
 	unsigned int type;
@@ -368,7 +446,7 @@ void socket_call_handler(unsigned long long uniqueSockID) {
  * End of socket_call_handler
  */
 
-void bind_call_handler(unsigned long long uniqueSockID) {
+void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -424,7 +502,7 @@ void bind_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of bind_call_handler-----------------
  */
 
-void send_call_handler(unsigned long long uniqueSockID) {
+void send_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -518,7 +596,7 @@ void send_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of send_call_handler-----------------
  */
 
-void sendto_call_handler(unsigned long long uniqueSockID) {
+void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -649,7 +727,7 @@ void sendto_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of sendto_call_handler-----------------
  */
 
-void recv_call_handler(unsigned long long uniqueSockID) {
+void recv_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -711,7 +789,7 @@ void recv_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of recv_call_handler-----------------
  */
 
-void recvfrom_call_handler(unsigned long long uniqueSockID) {
+void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -785,7 +863,7 @@ void recvfrom_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of recvfrom_call_handler-----------------
  */
 
-void sendmsg_call_handler(unsigned long long uniqueSockID) {
+void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -975,7 +1053,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void recvmsg_call_handler(unsigned long long uniqueSockID) {
+void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1095,7 +1173,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void getsockopt_call_handler(unsigned long long uniqueSockID) {
+void getsockopt_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1223,7 +1301,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void setsockopt_call_handler(unsigned long long uniqueSockID) {
+void setsockopt_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1364,18 +1442,18 @@ void setsockopt_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void listen_call_handler(unsigned long long uniqueSockID) {
+void listen_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 }
-void accept_call_handler(unsigned long long uniqueSockID) {
-
-}
-
-void accept4_call_handler(unsigned long long uniqueSockID) {
+void accept_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 }
 
-void shutdown_call_handler(unsigned long long uniqueSockID) {
+void accept4_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
+
+}
+
+void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1420,7 +1498,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void close_call_handler(unsigned long long uniqueSockID) {
+void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes = -1;
 
@@ -1512,7 +1590,7 @@ void getsockname_call_handker(unsigned long long uniqueSockID) {
 
 }
 
-void connect_call_handler(unsigned long long uniqueSockID) {
+void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1568,7 +1646,7 @@ void connect_call_handler(unsigned long long uniqueSockID) {
 	return;
 
 }
-void getpeername_call_handler(unsigned long long uniqueSockID) {
+void getpeername_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
