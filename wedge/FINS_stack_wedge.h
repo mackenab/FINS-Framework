@@ -35,6 +35,7 @@
  * This range of these functions will start from 30
  */
 #define close_call 19
+#define daemonconnect_call 20
 #define write_call 30
 
 // Data declarations
@@ -59,6 +60,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 /* FINS netlink functions*/ 
 int nl_send(int pid, void *buf, ssize_t len, int flags);
+int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags);
 void nl_data_ready(struct sk_buff *skb);
 
 // This function extracts a unique ID from the kernel-space perspective for each socket

@@ -74,6 +74,7 @@
  *
  */
 #define close_call 19
+#define daemonconnect_call 20
 
 struct socket_call_msg {
 	int domain;
@@ -143,10 +144,10 @@ struct finssocket {
 	 * socket is connected to it before approving or dropping any datagram
 	 */
 	int connection_status;
-	pid_t processid;
+	unsigned long long uniqueSockID;
 	pid_t childrenList[MaxChildrenNumSharingSocket];
-	int sockfd; /** it is equal to the value of the pipe descriptor from the client side */
-	int fakeID; /** The ID given by the interceptor side to distinguish this socket from other sockets
+	/*int sockfd;*/ /** it is equal to the value of the pipe descriptor from the client side */
+	/*int fakeID;*/ /** The ID given by the interceptor side to distinguish this socket from other sockets
 	 created by the sam process, it is used within the pipe name to open the correct pipe on both sides */
 	int jinniside_pipe_ds; /**  the descriptor to access the pipe from the jinni side */
 	int type;
@@ -181,9 +182,15 @@ struct finssocket {
 };
 
 struct socketIdentifier {
+	unsigned long long uniqueSockID;
 	pid_t processID;
-	int sockerDesc;
+	int socketDesc;
+	int fakeID;
+	char semaphore_name[30];
+	char asemaphore_name[30];
 
+	sem_t *s; /** Named semaphore to protect the client named pipe between interceptor and Jinni */
+	sem_t *as; /** Additional named semaphore to force order between reading and writing to the pipe */
 };
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
@@ -194,44 +201,44 @@ struct socketIdentifier {
 #endif
 
 #define MAIN_SOCKET_CHANNEL FINS_TMP_ROOT "/mainsocket_channel"
-#define CLIENT_CHANNEL_TX FINS_TMP_ROOT "/processID_%d_TX_%d"
-#define CLIENT_CHANNEL_RX FINS_TMP_ROOT "/processID_%d_RX_%d"
+#define CLIENT_CHANNEL_TX FINS_TMP_ROOT "/uniqueSockID_%llu_TX"
+#define CLIENT_CHANNEL_RX FINS_TMP_ROOT "/uniqueSockID_%llu_RX"
 #define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 void init_jinnisockets();
 int randoming(int min, int max);
-int checkjinniSocket(pid_t target1, int target2);
+int checkjinniSocket(unsigned long long uniqueSockID);
 int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol);
-int findjinniSocket(pid_t target1, int target2);
-int insertjinniSocket(pid_t processID, int sockfd, int fakeID, int type,
+int findjinniSocket(unsigned long long uniqueSockID);
+int insertjinniSocket(unsigned long long uniqueSockID, int type,
 		int protocol);
-int removejinniSocket(pid_t target1, int target2);
+int removejinniSocket(unsigned long long uniqueSockID);
 int checkjinniports(uint16_t hostport, uint32_t hostip);
 
-int nack_write(int pipe_desc, int processid, int sockfd);
-int ack_write(int pipe_desc, int processid, int sockfd);
+int nack_write(int pipe_desc, unsigned long long uniqueSockID);
+int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
 /** calls handling functions */
-void socket_call_handler(pid_t senderProcessid);
+void socket_call_handler(unsigned long long uniqueSockID);
 void socketpair_call_handler();
-void bind_call_handler(int senderid);
+void bind_call_handler(unsigned long long uniqueSockID);
 void getsockname_call_handker();
-void connect_call_handler(int senderid);
-void getpeername_call_handler(int senderid);
-void send_call_handler(int senderid);
-void recv_call_handler(int senderid);
-void sendto_call_handler(int senderid);
-void recvfrom_call_handler(int senderid);
-void sendmsg_call_handler(int senderid);
-void recvmsg_call_handler(int senderid);
-void getsockopt_call_handler(int senderid);
-void setsockopt_call_handler(int senderid);
-void listen_call_handler(int senderid);
-void accept_call_handler(int senderid);
-void accept4_call_handler(int senderid);
-void shutdown_call_handler(int senderid);
+void connect_call_handler(unsigned long long uniqueSockID);
+void getpeername_call_handler(unsigned long long uniqueSockID);
+void send_call_handler(unsigned long long uniqueSockID);
+void recv_call_handler(unsigned long long uniqueSockID);
+void sendto_call_handler(unsigned long long uniqueSockID);
+void recvfrom_call_handler(unsigned long long uniqueSockID);
+void sendmsg_call_handler(unsigned long long uniqueSockID);
+void recvmsg_call_handler(unsigned long long uniqueSockID);
+void getsockopt_call_handler(unsigned long long uniqueSockID);
+void setsockopt_call_handler(unsigned long long uniqueSockID);
+void listen_call_handler(unsigned long long uniqueSockID);
+void accept_call_handler(unsigned long long uniqueSockID);
+void accept4_call_handler(unsigned long long uniqueSockID);
+void shutdown_call_handler(unsigned long long uniqueSockID);
 
-void close_call_handler(int senderid);
+void close_call_handler(unsigned long long uniqueSockID);
 
 #endif /* HANDLERS_H_ */

@@ -88,7 +88,7 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	return (0);
 
 }
-int ICMPreadFrom_fins(int senderid, int sockfd, u_char **buf, int *buflen,
+int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
 		int symbol, struct sockaddr_in *address, int block_flag){
 
 		/**TODO MUST BE FIXED LATER
@@ -100,7 +100,7 @@ int ICMPreadFrom_fins(int senderid, int sockfd, u_char **buf, int *buflen,
 		uint16_t srcport;
 		uint32_t srcip;
 		struct sockaddr_in * addr_in = (struct sockaddr_in *) address;
-		index = findjinniSocket(senderid, sockfd);
+		index = findjinniSocket(uniqueSockID);
 		PRINT_DEBUG("index = %d",index);
 		/**
 		 * It keeps looping as a bad method to implement the blocking feature
@@ -216,7 +216,7 @@ int ICMPreadFrom_fins(int senderid, int sockfd, u_char **buf, int *buflen,
 
 
 
-void socket_icmp(int domain, int type, int protocol, int sockfd, int fakeID,pid_t processid){
+void socket_icmp(int domain, int type, int protocol, unsigned long long uniqueSockID){
 
 	char clientName[200];
 		int index;
@@ -224,10 +224,10 @@ void socket_icmp(int domain, int type, int protocol, int sockfd, int fakeID,pid_
 		int tester;
 		/** TODO lock the pipe semaphore then open the pipe*/
 
-		insertjinniSocket(processid, sockfd, fakeID, type, protocol);
+		insertjinniSocket(uniqueSockID, type, protocol);
 
 		PRINT_DEBUG();
-		if ( sprintf(clientName, CLIENT_CHANNEL_RX, processid, fakeID) < 0 ){
+		if ( sprintf(clientName, CLIENT_CHANNEL_RX, uniqueSockID) < 0 ){
 			PRINT_DEBUG("sprintf Failed");
 		}
 
@@ -239,7 +239,7 @@ void socket_icmp(int domain, int type, int protocol, int sockfd, int fakeID,pid_
 			exit(1);
 		}
 		pipe_desc = open(clientName, O_WRONLY);
-		index = findjinniSocket(processid, sockfd);
+		index = findjinniSocket(uniqueSockID);
 
 		if (index < 0) {
 			PRINT_DEBUG("incorrect index !! Crash");
@@ -256,7 +256,7 @@ void socket_icmp(int domain, int type, int protocol, int sockfd, int fakeID,pid_
 		PRINT_DEBUG("0001");
 
 		sem_wait(jinniSockets[index].s);
-		ack_write(pipe_desc, processid, sockfd);
+		ack_write(pipe_desc, uniqueSockID);
 		sem_post(jinniSockets[index].as);
 		/** TODO unlock the semaphore */
 		sem_post(jinniSockets[index].s);
@@ -270,14 +270,14 @@ void socket_icmp(int domain, int type, int protocol, int sockfd, int fakeID,pid_
 
 }
 
-void write_icmp(int senderid, int sockfd, int datalen, u_char *data){
+void write_icmp(unsigned long long uniqueSockID, int datalen, u_char *data){
 
 
 
 }
 
 
-void recv_icmp(int senderid, int sockfd, int datalen, int flags){
+void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags){
 
 
 
@@ -287,13 +287,13 @@ void recv_icmp(int senderid, int sockfd, int datalen, int flags){
 
 
 
-void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
+void sendto_icmp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags,
 		struct sockaddr *addr, socklen_t addrlen){
 
 
 //	int index;
 //
-//		index = findjinniSocket(senderid, sockfd);
+//		index = findjinniSocket(uniqueSockID);
 //		PRINT_DEBUG("");
 //
 //		/** TODO unlock access to the jinnisockets */
@@ -306,7 +306,7 @@ void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
 //		sem_wait(jinniSockets[index].s);
 //		PRINT_DEBUG("");
 //
-//			ack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+//			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 //			sem_post(jinniSockets[index].as);
 //
 //		sem_post(jinniSockets[index].s);
@@ -340,7 +340,7 @@ void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
 	address = (struct sockaddr_in *) addr;
 	/** TODO lock access to the jinnisockets */
 
-	index = findjinniSocket(senderid, sockfd);
+	index = findjinniSocket(uniqueSockID);
 	PRINT_DEBUG("");
 
 	/** TODO unlock access to the jinnisockets */
@@ -355,7 +355,7 @@ void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
 		sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
-		nack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 		sem_post(jinniSockets[index].as);
 
 		sem_post(jinniSockets[index].s);
@@ -407,7 +407,7 @@ void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
 		sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 		sem_post(jinniSockets[index].as);
 
 		sem_post(jinniSockets[index].s);
@@ -416,7 +416,7 @@ void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish sendto");
 		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 		sem_post(jinniSockets[index].as);
 
 		sem_post(jinniSockets[index].s);
@@ -426,7 +426,7 @@ void sendto_icmp(int senderid, int sockfd, int datalen, u_char *data, int flags,
 	return;
 
 }
-void recvfrom_icmp(int senderid, int sockfd, int datalen, int flags, int symbol){
+void recvfrom_icmp(unsigned long long uniqueSockID, int datalen, int flags, int symbol){
 
 
 	/** symbol parameter is the one to tell if an address has been passed from the
@@ -447,7 +447,7 @@ void recvfrom_icmp(int senderid, int sockfd, int datalen, int flags, int symbol)
 		int addressLen = sizeof(struct sockaddr_in);
 		/** TODO lock access to the jinnisockets */
 
-			index = findjinniSocket(senderid, sockfd);
+			index = findjinniSocket(uniqueSockID);
 			/** TODO unlock access to the jinnisockets */
 			if (index == -1) {
 				PRINT_DEBUG("socket descriptor not found into jinni sockets");
@@ -477,13 +477,13 @@ void recvfrom_icmp(int senderid, int sockfd, int datalen, int flags, int symbol)
 		 *
 		 */
 
-		if (ICMPreadFrom_fins(senderid, sockfd, bufptr, &buflen, symbol, address,
+		if (ICMPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
 				blocking_flag) == 1) {
 
 			if (symbol == 0) {
 				sem_wait(jinniSockets[index].s);
 
-				ack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+				ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 				buf[buflen] = '\0';
 				PRINT_DEBUG("%d",buflen ); PRINT_DEBUG("%s",buf);
 				write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
@@ -499,7 +499,7 @@ void recvfrom_icmp(int senderid, int sockfd, int datalen, int flags, int symbol)
 
 				sem_wait(jinniSockets[index].s);
 
-				ack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+				ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 				PRINT_DEBUG();
 				write(jinniSockets[index].jinniside_pipe_ds, &addressLen, sizeof(socklen_t));
 				write(jinniSockets[index].jinniside_pipe_ds, address,sizeof(struct sockaddr_in));
@@ -516,7 +516,7 @@ void recvfrom_icmp(int senderid, int sockfd, int datalen, int flags, int symbol)
 		} else {
 			PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
 			sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 
 			sem_post(jinniSockets[index].as);
 
@@ -552,13 +552,13 @@ void recvmsg_icmp(){
 
 
 }
-void getsockopt_icmp(int senderid, int sockfd, int level, int optname, int optlen, void *optval){
+void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval){
 
 	int index;
 
 
 	int optvalue=-1;
-		index = findjinniSocket(senderid, sockfd);
+		index = findjinniSocket(uniqueSockID);
 		/** TODO unlock access to the jinnisockets */
 		if (index == -1) {
 			PRINT_DEBUG("socket descriptor not found into jinni sockets");
@@ -569,7 +569,7 @@ void getsockopt_icmp(int senderid, int sockfd, int level, int optname, int optle
 
 		sem_wait(jinniSockets[index].s);
 
-			ack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 			write(jinniSockets[index].jinniside_pipe_ds,&optlen,sizeof(socklen_t));
 
 
@@ -601,13 +601,13 @@ void getsockopt_icmp(int senderid, int sockfd, int level, int optname, int optle
 
 
 }
-void setsockopt_icmp(int senderid, int sockfd, int level, int optname, int optlen, void *optval){
+void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval){
 
 	int index;
 
 
 
-	index = findjinniSocket(senderid, sockfd);
+	index = findjinniSocket(uniqueSockID);
 	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
@@ -619,7 +619,7 @@ void setsockopt_icmp(int senderid, int sockfd, int level, int optname, int optle
 
 	sem_wait(jinniSockets[index].s);
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, senderid, sockfd);
+		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 
 
 	sem_post(jinniSockets[index].as);
@@ -634,7 +634,7 @@ void setsockopt_icmp(int senderid, int sockfd, int level, int optname, int optle
 }
 
 
-void shutdown_icmp(int senderid,int sockfd,int  how){
+void shutdown_icmp(unsigned long long uniqueSockID, int  how){
 
 
 

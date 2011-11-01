@@ -130,11 +130,16 @@ char meen_sem_name2[] = "main_channel2";
 
 //bu_mark kernel stuff
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
-#define RECV_BUFFER_SIZE	10000	// Pick an appropriate value here
+#define RECV_BUFFER_SIZE	32// Pick an appropriate value here
 struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
 struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destination)
 //end kernel stuff
+//begin: interceptor merge
+int numberOfSockets = 0;
 
+int nl_sockfd; //temp for now
+
+//end: interceptor merge
 
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
@@ -169,11 +174,8 @@ int read_configurations() {
 void init_jinnisockets() {
 	int i;
 	for (i = 0; i < MAX_sockets; i++) {
-		jinniSockets[i].processid = -1;
-		jinniSockets[i].sockfd = -1;
-		jinniSockets[i].fakeID = -1;
+		jinniSockets[i].uniqueSockID = -1;
 		jinniSockets[i].connection_status = 0;
-
 	}
 
 }
@@ -495,21 +497,416 @@ int sendfins(int sockfd, void *buf, size_t len, int flags) {
 	return 0;
 }
 
-void *interceptor_to_jinni() {
+/**--------------------------------------------------------------------
+ *
+ */
 
-	int ret_val;
-	int nl_sockfd;
+int searchFinsHistory(unsigned long long targetID) {
+	int i = 0;
+	for (i = 0; i < MAX_sockets; i++) {
+		if (FinsHistory[i].uniqueSockID == targetID)
+			return (i);
+	}
+	return (-1);
+}
 
-	nl_sockfd = init_fins_nl();
-	if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
-		perror("init_fins_nl() caused an error");
+/**--------------------------------------------------------------------
+ *
+ */
+
+int insertFinsHistory(unsigned long long targetID) {//(pid, tempdescriptor, fakeid)
+	int i = 0;
+	for (i = 0; i < MAX_sockets; i++) {
+		if (FinsHistory[i].uniqueSockID == -1) {
+			FinsHistory[i].uniqueSockID = targetID;
+			sprintf(FinsHistory[i].semaphore_name, "socket%llu",
+					FinsHistory[i].uniqueSockID);
+			sprintf(FinsHistory[i].asemaphore_name, "socket%llua",
+					FinsHistory[i].uniqueSockID);
+
+			PRINT_DEBUG("%s, %s", FinsHistory[i].semaphore_name,
+					FinsHistory[i].asemaphore_name);
+			/** the semaphore is initially locked
+			 * If O_CREAT is specified in oflag, then
+			 the semaphore is created if it does not already exist.
+			 */
+
+			//	FinsHistory[i].s = sem_open(FinsHistory[i].semaphore_name, O_CREAT,0644,0);
+			//		FinsHistory[i].as = sem_open(FinsHistory[i].asemaphore_name, O_CREAT,0644,0);
+
+			//	FinsHistory[i].s  = sem_open(FinsHistory[i].semaphore_name, 0);
+			//	FinsHistory[i].as = sem_open(FinsHistory[i].asemaphore_name, 0);
+			PRINT_DEBUG("");
+			errno = 0;
+			//	if ( errno  == EEXIST )
+			//{
+			//	PRINT_DEBUG("errno is %d",errno);
+
+
+			do {
+				FinsHistory[i].s = sem_open(FinsHistory[i].semaphore_name, 0);
+			} while (errno == ENOENT);
+
+			PRINT_DEBUG("");
+
+			do {
+				FinsHistory[i].as = sem_open(FinsHistory[i].asemaphore_name, 0);
+				//PRINT_DEBUG("");
+			} while (errno == ENOENT);
+
+			//}
+
+			//	FinsHistory[i].s = sem_open(FinsHistory[i].semaphore_name, 0);
+			//		FinsHistory[i].as = sem_open(FinsHistory[i].asemaphore_name, 0);
+
+
+			PRINT_DEBUG("");
+			if (errno == ENOENT)
+				PRINT_DEBUG("errno is %d", errno);
+			if (FinsHistory[i].s == SEM_FAILED || FinsHistory[i].as
+					== SEM_FAILED) {
+				if (FinsHistory[i].s == SEM_FAILED) {
+					PRINT_DEBUG("");
+					sem_unlink(FinsHistory[i].semaphore_name);
+				}
+				if (FinsHistory[i].as == SEM_FAILED) {
+					PRINT_DEBUG("");
+					sem_unlink(FinsHistory[i].asemaphore_name);
+				}
+				exit(1);
+
+			}
+			//	sem_post(FinsHistory[i].s);
+			return (1);
+
+		}
+	}
+	PRINT_DEBUG(
+			"reached maximum # of processes to be served, FINS is out of sockets");
+	return (0);
+}
+
+/**--------------------------------------------------------------------
+ *
+ */
+
+int removeFinsHistory(unsigned long long targetID) {
+
+	int i = 0;
+	for (i = 0; i < MAX_sockets; i++) {
+		if (FinsHistory[i].uniqueSockID == targetID) {
+			FinsHistory[i].uniqueSockID = -1;
+			sem_close(FinsHistory[i].s);
+			sem_unlink(FinsHistory[i].semaphore_name);
+			sem_close(FinsHistory[i].as);
+			sem_unlink(FinsHistory[i].asemaphore_name);
+			sprintf(FinsHistory[i].semaphore_name, "NULL");
+
+			return (1);
+		}
+	}
+	return (0);
+
+}
+void init_socketChannel() {
+
+	int i;
+	/** Notice that the main_channel_Semaphore is a semaphore shared among processes
+	 * (It is processes level semaphore, NOT threads level)
+	 */
+
+	/** Needs NPTL because LinuxThreads does not support sharing semaphores between processes */
+
+	/** the semaphore is initially locked */
+
+	//main_channel_semaphore1 = sem_open(main_sem_name1,O_CREAT|O_EXCL,0644,0);
+	main_channel_semaphore1 = sem_open(main_sem_name1, 0, 0644, 0);
+	PRINT_DEBUG();
+	if (main_channel_semaphore1 == SEM_FAILED) {
+
+		main_channel_semaphore1 = sem_open(main_sem_name1, 0);
+		PRINT_DEBUG();
+
+	}
+	if (main_channel_semaphore1 == SEM_FAILED) {
+		perror("unable to create semaphore");
+		sem_unlink(main_sem_name1);
 		exit(-1);
 	}
 
+	// main_channel_semaphore2 = sem_open(main_sem_name2,O_CREAT|O_EXCL,0644,0);
+	main_channel_semaphore2 = sem_open(main_sem_name2, 0, 0644, 0);
+	PRINT_DEBUG();
+	if (main_channel_semaphore2 == SEM_FAILED) {
+		main_channel_semaphore2 = sem_open(main_sem_name2, 0);
+		PRINT_DEBUG();
+
+	}
+	if (main_channel_semaphore2 == SEM_FAILED) {
+		perror("unable to create semaphore");
+		sem_unlink(main_sem_name2);
+		exit(-1);
+	}
+
+	//	PRINT_DEBUG("Blocking on the main_socket_channel THE FINS CORE HAS NOT BEEN STARTED");
+	//	PRINT_DEBUG("Kill the application, run the core, then run the application process again");
+
+	//	mkfifo(MAIN_SOCKET_CHANNEL,0777);
+	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_WRONLY);
+
+	int tester;
+	sem_getvalue(main_channel_semaphore1, &tester);
+	PRINT_DEBUG("tester = %d", tester);
+	//sem_wait(main_channel_semaphore);
+	PRINT_DEBUG("222");
+
+	PRINT_DEBUG("333");
+
+	/** initialize the sockets database
+	 * this is a simplified version from the full detailed database available
+	 * on the socket jinni side
+	 * */
+
+	sem_init(&FinsHistory_semaphore, 1, 1);
+	for (i = 0; i < MAX_sockets; i++) {
+		FinsHistory[i].uniqueSockID = -1;
+	}
+
+}
+
+void handle_interception(int socketCallType, unsigned long long uniqueSockID,
+		unsigned char* msg_pt, ssize_t msg_len) {
+
+	/**TODO These static vars are not thread safe
+	 * we either find another way to keep tracking or
+	 * protect them with multi-processes semaphore
+	 */
+	//atm there are lots of garbage/temp vars while merging
+	char clientname[240];
+	int tempdescriptor;
+	int writtenBytes = -1;
+	int confirmation;
+	int index;
+	int numOfBytes = -1;
+
+	if (numberOfSockets == 0) {
+		init_socketChannel();
+	}
+
+	index = searchFinsHistory(uniqueSockID);
+	if (index < 0) {
+		//PRINT_DEBUG("incorrect index !! Crash");
+		//exit(1);
+	}
+	//sockfd_alter = FinsHistory[index].fakeID;
+
+	switch (socketCallType) {
+	case socket_call:
+		// TODO lock the locker protect the static variable
+		numberOfSockets++;
+		PRINT_DEBUG(" numberOfSockets = %d", numberOfSockets);
+		// TODO unlock the locker protect the static variable
+
+		/** TODO lock access to the MAIN SOCKET CHANNEL
+		 * to force synchronization with the socket jinni ,
+		 * we need also to lock access to the
+		 * CLIENT_CHANNEL_RX to make sure no one (NO OTHER THREAD from the same application) reads from the
+		 * RX_channel but the current thread
+		 * */
+
+		sem_wait(main_channel_semaphore2);
+		writtenBytes = write(socket_channel_desc, &uniqueSockID,
+				sizeof(unsigned long long));
+		writtenBytes = write(socket_channel_desc, &socketCallType, sizeof(int));
+		writtenBytes = write(socket_channel_desc, msg_pt, msg_len
+				* sizeof(unsigned char));
+
+		sem_post(main_channel_semaphore1);
+		/** Remember to unlock the MAIN CHANNEL */
+		sem_post(main_channel_semaphore2);
+
+		if (writtenBytes > 0) {
+			PRINT_DEBUG("written bytes %d", writtenBytes);
+		}
+
+		sprintf(clientname, CLIENT_CHANNEL_RX, uniqueSockID);
+		/** The default will be NON_BLOCKING so that the jinni can open for writing successfully
+		 *
+		 *  later we can set/reset the blocking option
+		 * according to the later desire of the application
+		 * */
+
+		/** client pipe is initialized as NONBlOCKING to be able to open and
+		 * proceed even if the writing side did not open yet OR
+		 * EVEN IF MKFIFO HAS NOT BEEN CALLED YET !!
+		 */
+
+		/** 1.The interceptor will MAKE FIFO THEN OPEN IT as a blocking reading until the Jinni side opens for writing !
+		 * 2. Jinni side opens the semaphore & WAIT , then OPEN the file for writing
+		 * 3. The block on this side will release then it we call WAIT on the semaphore
+		 * 4. Since semaphore has been already taken by the Jinni then we avoided any dead lock
+		 *  */
+		//tempdescriptor = open(clientname,O_RDONLY | O_NONBLOCK);
+		tempdescriptor = open(clientname, O_RDONLY);
+		PRINT_DEBUG("0001");
+
+		sem_wait(&FinsHistory_semaphore);
+		/** insertFinsHistory takes care of initializing the new socket
+		 * and its corresponding Clinet channel semaphore name and semaphore pointer
+		 */
+		insertFinsHistory(uniqueSockID);
+		sem_post(&FinsHistory_semaphore);
+
+		PRINT_DEBUG("0002");
+
+		/** TODO We depend on the initialization value of the semaphore since it is producing-consuming also known
+		 * as writing-reading semaphore !  to make sure not to fail into dead lock
+		 * but in case this fails then we have to implement our own synchronization to avoid
+		 * dead lock between the client reading side (the interceptor),and the writing side (socket Jinni)
+		 */
+		index = searchFinsHistory(uniqueSockID);
+		if (index < 0) {
+			PRINT_DEBUG("incorrect index !! Crash");
+			exit(1);
+		}
+
+		PRINT_DEBUG("index = %d", index);
+
+		//might not go here...need to figure out semaphores
+		socket_call_handler(uniqueSockID);
+
+		PRINT_DEBUG("");
+		sem_wait(FinsHistory[index].as);
+		sem_wait(FinsHistory[index].s);
+		PRINT_DEBUG("");
+
+		//seems like it pulls out new info so mod to pull out uniqueSockID & may be different
+		//confirmations are retrieving data from stream
+
+		/*
+		 numOfBytes = read(tempdescriptor, &confirmation, sizeof(int));
+		 */
+		/** locking the semaphore has been moved below to make sure that deadlock does not occure....*/
+		/*
+		 if (confirmation != processid) {
+
+		 PRINT_DEBUG("READING ERROR!! Probably Sync Failed!!");
+		 sem_post(FinsHistory[searchFinsHistory(processid, tempdescriptor)].s);
+
+		 return (-1);
+
+		 }
+		 numOfBytes = read(tempdescriptor, &confirmation, sizeof(int));
+		 if (confirmation != fakeid) {
+
+		 PRINT_DEBUG("READING ERROR!! Probably Sync Failed!!");
+		 sem_post(FinsHistory[searchFinsHistory(processid, tempdescriptor)].s);
+		 return (-1);
+		 }
+		 */
+		numOfBytes = read(tempdescriptor, &confirmation, sizeof(int));
+		sem_post(FinsHistory[searchFinsHistory(uniqueSockID)].s);
+		/*
+		 if (confirmation != ACK) {
+		 PRINT_DEBUG("READING ERROR!! Probably Sync Failed!!");
+		 return (-1);
+		 }
+		 */
+		/**
+		 * Writing a new record to our database after receiving a confirmation
+		 * that a new recorded has been created and added to the master database
+		 */
+
+		PRINT_DEBUG();
+		break;
+	case socketpair_call:
+		//socketpair_call_handler(sender);
+		break;
+	case bind_call:
+		//bind_call_handler(sender); //DONE
+		break;
+	case getsockname_call:
+		//getsockname_call_handker(sender); //DONE
+		break;
+	case connect_call:
+		//connect_call_handler(sender); //DONE
+		break;
+	case getpeername_call:
+		//getpeername_call_handler(sender); //DONE
+		break;
+		/**
+		 * the write call is encapuslated as a send call with the
+		 * parameter flags = -1000  			//DONE
+		 */
+	case send_call:
+		//send_call_handler(sender); //DONE
+		break;
+	case recv_call:
+		//recv_call_handler(sender); //DONE
+		break;
+	case sendto_call:
+		//sendto_call_handler(sender); //DONE
+		break;
+	case recvfrom_call:
+		//recvfrom_call_handler(sender); //DONE
+		break;
+	case sendmsg_call:
+		//sendmsg_call_handler(sender); //DONE
+		break;
+	case recvmsg_call:
+		//recvmsg_call_handler(sender);
+		break;
+	case getsockopt_call:
+		//getsockopt_call_handler(sender); //Dummy response
+		break;
+	case setsockopt_call:
+		//setsockopt_call_handler(sender); // Dummy response
+		break;
+	case listen_call:
+		//listen_call_handler(sender);
+		break;
+	case accept_call:
+		//accept_call_handler(sender);
+		break;
+	case accept4_call:
+		//accept4_call_handler(sender);
+		break;
+	case shutdown_call:
+		//shutdown_call_handler(sender); //DONE
+		break;
+	case close_call:
+		/**
+		 * TODO fix the problem into remove jinnisockets
+		 * the Queue Terminate function has a bug as explained into it
+		 */
+		//close_call_handler(sender);
+		break;
+	default:
+		PRINT_DEBUG(
+				"unknown opcode read from the socket main channel ! CRASHING");
+		/** a function must be called to clean and reset the pipe
+		 * to original conditions before crashing
+		 */
+		//exit(1);
+	} /** end of switch */
+
+}
+
+void *interceptor_to_jinni() {
+
+	int ret_val;
+	//int nl_sockfd;
+	/*
+	 nl_sockfd = init_fins_nl();
+	 if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
+	 perror("init_fins_nl() caused an error");
+	 exit(-1);
+	 }
+	 */
 	// Begin receive message section
 	// Allocate a buffer to hold contents of recvfrom call
 	void *recv_buf;
-	recv_buf = malloc(RECV_BUFFER_SIZE);
+	recv_buf = malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
 	if (recv_buf == NULL) {
 		fprintf(stderr, "buffer allocation failed\n");
 		exit(-1);
@@ -519,12 +916,12 @@ void *interceptor_to_jinni() {
 	socklen_t sockaddr_senderlen; // Needed for recvfrom
 
 	struct nlmsghdr *nlh;
-	void *part_buf; // Pointer to your actual data payload
-	ssize_t part_len; // Size of your actual data payload
+	void *nl_buf; // Pointer to your actual data payload
+	ssize_t nl_len, part_len; // Size of your actual data payload
 	unsigned char *part_pt;
 
 	void *msg_buf;
-	ssize_t msg_len;
+	ssize_t msg_len = -1;
 	unsigned char *msg_pt;
 
 	int okFlag, doneFlag = 0;
@@ -539,8 +936,8 @@ void *interceptor_to_jinni() {
 	int counter = 0;
 	while (1) {
 
-		PRINT_DEBUG("NL counter = %d", counter);
-		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE, 0,
+		PRINT_DEBUG("NL counter = %d", counter++);
+		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0,
 				&sockaddr_sender, &sockaddr_senderlen);
 		if (ret_val == -1) {
 			perror("recvf	rom() caused an error");
@@ -566,13 +963,18 @@ void *interceptor_to_jinni() {
 				doneFlag = 1;
 			default:
 				PRINT_DEBUG("nlh->nlmsg_type=default");
-				part_buf = NLMSG_DATA(nlh);
-				part_len = NLMSG_PAYLOAD(nlh, 0);
+				nl_buf = NLMSG_DATA(nlh);
+				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				part_pt = part_buf;
+				PRINT_DEBUG("nl_len= %d", nl_len);
+
+				part_pt = nl_buf;
 				temp = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
-				if (msg_len == NULL) {
+
+				PRINT_DEBUG("temp=%d, msg_len=%d", temp, msg_len);
+
+				if (msg_len == -1) {
 					msg_len = temp;
 				} else if (temp != msg_len) {
 					okFlag = 0;
@@ -584,16 +986,30 @@ void *interceptor_to_jinni() {
 				part_len = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
 				if (part_len > RECV_BUFFER_SIZE) {
-					PRINT_DEBUG("some error");
+					PRINT_DEBUG("part_len (%d) > RECV_BUFFER_SIZE (%d)",
+							part_len, RECV_BUFFER_SIZE);
 				}
+
+				PRINT_DEBUG("part_len=%d", part_len);
 
 				pos = *(int *) part_pt;
 				part_pt += sizeof(int);
-				if (pos > msg_len || pos != msg_pt - (unsigned char *)msg_buf) {
-					PRINT_DEBUG("some error");
+				if (pos > msg_len || pos != msg_pt - (unsigned char *) msg_buf) {
+					if (pos > msg_len) {
+						PRINT_DEBUG("pos > msg_len");
+					} else {
+						PRINT_DEBUG("pos != msg_pt - msg_buf");
+					}
 				}
 
+				PRINT_DEBUG("pos=%d", pos);
+
 				if (nlh->nlmsg_seq == 0) {
+					if (msg_buf != NULL) {
+						PRINT_DEBUG(
+								"error: msg_buf != NULL at new sequence, freeing");
+						free(msg_buf);
+					}
 					msg_buf = malloc(msg_len);
 					if (msg_buf == NULL) {
 						fprintf(stderr, "msg buffer allocation failed\n");
@@ -603,15 +1019,15 @@ void *interceptor_to_jinni() {
 				}
 
 				if (msg_pt != NULL) {
-					msg_pt = msg_buf + pos;
+					msg_pt = msg_buf + pos; //atm redundant, is for if out of sync msgs
 					memcpy(msg_pt, part_pt, part_len);
 					msg_pt += part_len;
 				} else {
-					PRINT_DEBUG("some error");
+					PRINT_DEBUG("error: msg_pt is NULL");
 				}
 
 				if ((nlh->nlmsg_flags & NLM_F_MULTI) == 0) {
-					doneFlag = 1; //not multi-part msg
+					//doneFlag = 1; //not multi-part msg //removed multi
 				}
 				break;
 			}
@@ -631,19 +1047,15 @@ void *interceptor_to_jinni() {
 			socketCallType = *(int *) msg_pt;
 			msg_pt += sizeof(int);
 
-			//msg_len -= msg_pt-msg_buf;
 			msg_len -= sizeof(unsigned long long) + sizeof(int);
-			//handlers(uniqueSockID, socketCallType, msg_pt, msg_len);
-
-			//add in ID table for socket etc, tack onto buffer or as arg
-
-			//process msg_buf etc?
-			//essentially call handlers
-			/*handlers will need to return something so can send
-			 * back to daemon for blocking functs */
 
 			PRINT_DEBUG("msg_len=%d", msg_len);
 			PRINT_DEBUG("msg=%s", msg_pt);
+
+			handle_interception(socketCallType, uniqueSockID, msg_pt, msg_len);
+
+			/* Extract msg from named pipe & then send back to daemon for blocking functs
+			 */
 
 			ret_val = sendfins(nl_sockfd, &socketCallType, sizeof(int), 0);
 			if (ret_val != 0) {
@@ -653,8 +1065,9 @@ void *interceptor_to_jinni() {
 
 			free(msg_buf);
 			doneFlag = 0;
+			msg_buf = NULL;
 			msg_pt = NULL;
-			msg_len = NULL;
+			msg_len = -1;
 		}
 	}
 
@@ -1023,6 +1436,25 @@ void cap_inj_init() {
 }
 
 int main() {
+
+	//init the netlink socket connection to daemon
+	//int nl_sockfd;
+	nl_sockfd = init_fins_nl();
+	if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
+		perror("init_fins_nl() caused an error");
+		exit(-1);
+	}
+
+	//prime the kernel to establish daemon's PID
+	int daemoncode = daemonconnect_call;
+	int ret_val;
+	ret_val = sendfins(nl_sockfd, &daemoncode, sizeof(int), 0);
+	if (ret_val != 0) {
+		perror("sendfins() caused an error");
+		exit(-1);
+	}
+
+	//while (1);
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
 	if (mkfifo(MAIN_SOCKET_CHANNEL, 0777) != 0) {

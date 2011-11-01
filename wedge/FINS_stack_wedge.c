@@ -25,15 +25,18 @@
 //#include <sys/socket.h> /* may need to be removed */
 #include "FINS_stack_wedge.h"	/* Defs for this module */
 
-
 // Create one semaphore here for every socketcall that is going to block
 struct semaphore FINS_socket_sem;
 struct semaphore FINS_bind_sem;
 struct semaphore FINS_recvmsg_sem;
 
-#define RECV_BUFFER_SIZE	10000	// Same as userspace, Pick an appropriate value here
+#define RECV_BUFFER_SIZE	32	// Same as userspace, Pick an appropriate value here
+#ifndef PF_FINS
 #define PF_FINS AF_INET //for compiling in non mod kernel
-#define NETLINK_FINS	20 //for compiling in non mod kernel
+#endif
+#ifndef NETLINK_FINS
+#define NETLINK_FINS 20 //for compiling in non mod kernel
+#endif
 /* Wedge core functions (Protocol Registration) */
 /*
  * This function tests whether the FINS data passthrough has been enabled or if the original stack is to be used
@@ -73,9 +76,11 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	rc = -ENOMEM;
 	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &FINS_proto);
 
-	if (!sk)
-		goto out; // if allocation failed
-
+	if (!sk) {
+		printk(KERN_ERR "%s: allocation failed\n", __FUNCTION__);
+		goto out;
+		// if allocation failed
+	}
 	sk_refcnt_debug_inc(sk);
 	sock_init_data(sock, sk);
 
@@ -86,6 +91,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
+		printk(KERN_ERR "%s: daemon not connected\n", __FUNCTION__);
 		rc = -1; // pick an appropriate errno
 		goto out;
 	}
@@ -94,28 +100,29 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	//buffer = socket_call; //SYS_SOCKET;
 	//buffer_length = sizeof(int);
 
-	buf_len = sizeof(unsigned long long) + 2 * sizeof(int)
-			+ sizeof(unsigned int);
+	buf_len = sizeof(unsigned long long) + 3 * sizeof(int)
+			+ sizeof(unsigned int) + sizeof(ssize_t);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		//error
+		printk(KERN_ERR "FINS: buffer allocation error");
 	}
+
 	pt = buf;
-
-	//memcpy(pt, buf_len, sizeof(ssize_t));
-	//pt += sizeof(ssize_t);
-
-	*pt = uniqueSockID;
+	*(unsigned long long *)pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
-	*pt = socket_call;
+	*(int *)pt = socket_call;
 	pt += sizeof(int);
-	*pt = sock->type;
+	*(int *)pt = AF_INET; //domain since this overrides AF_INET
+	pt += sizeof(int);
+	*(unsigned int *)pt = sock->type;
 	pt += sizeof(unsigned int);
-	*pt = protocol;
+	*(int *)pt = protocol;
 	pt += sizeof(int);
+
+	printk(KERN_INFO "FINS: buf_len=%d", buf_len);
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, &buf, buf_len, 0);
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	if (ret != 0) {
 		printk(KERN_ERR "%s: nl_send failed\n", __FUNCTION__);
 		rc = -1; // pick an appropriate errno
@@ -217,6 +224,8 @@ static int FINS_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) 
 	// Build the message
 	buf = bind_call; //SYS_BIND;
 	buffer_length = sizeof(int);
+
+	//addrlen
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, &buf, buffer_length, 0);
@@ -550,6 +559,8 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	buf = "FINS_sendmsg() called.";
 	buffer_length = strlen(buf) + 1;
 
+	//datalen
+
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret != 0) {
@@ -587,27 +598,28 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 
 	// Build the message
 	buf_len = sizeof(unsigned long long) + 5 * sizeof(int)
-			+ (controlFlag ? (sizeof(unsigned long long)/*sizeof(socklen_t)*/ + m->msg_controllen) : 0);
+			+ (controlFlag ? (sizeof(unsigned long long)
+			/*sizeof(socklen_t)*/+ m->msg_controllen) : 0);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		//error
+		printk(KERN_ERR "buf allocation failed\n");
 	}
 	pt = buf;
 
-	*pt = uniqueSockID;
+	*(unsigned long long *)pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
-	*pt = recvmsg_call;
+	*(int *)pt = recvmsg_call;
 	pt += sizeof(int);
-	*pt = flags;
+	*(int *)pt = flags;
 	pt += sizeof(int);
-	*pt = symbol;
+	*(int *)pt = symbol;
 	pt += sizeof(int);
-	*pt = m->msg_flags;
+	*(int *)pt = m->msg_flags;
 	pt += sizeof(int);
-	*pt = controlFlag;
+	*(int *)pt = controlFlag;
 	pt += sizeof(int);
 	if (controlFlag) {
-		*pt = m->msg_controllen;
+		*(unsigned long long *)pt = m->msg_controllen;
 		//pt += sizeof(socklen_t);
 		pt += sizeof(unsigned long long);
 		memcpy(pt, m->msg_control, m->msg_controllen);
@@ -615,7 +627,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, &buf, buf_len, 0);
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	if (ret != 0) {
 		printk(KERN_ERR "%s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
@@ -738,6 +750,38 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 	struct sk_buff *skb;
 	int ret_val;
 
+	//####################
+	unsigned char *print_buf;
+	unsigned char *print_pt;
+	unsigned char *pt;
+	int i;
+
+	printk(KERN_INFO "FINS: pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
+
+	print_buf = kmalloc(5*len, GFP_KERNEL);
+	if (!print_buf) {
+		printk	(KERN_ERR "FINS: print_buf allocation fail");
+	} else {
+		print_pt = print_buf;
+		pt = buf;
+		for (i = 0; i < len; i++) {
+			if (i == 0) {
+				sprintf(print_pt, "%02x", *(pt+i));
+				print_pt += 2;
+			} else if (i % 4 == 0) {
+				sprintf(print_pt, ":%02x", *(pt+i));
+				print_pt += 3;
+			} else {
+				sprintf(print_pt, " %02x", *(pt+i));
+				print_pt += 3;
+			}
+		}
+		printk(KERN_INFO "FINS: nl_buf:'%s'", print_buf);
+		kfree(print_buf);
+	}
+	//####################
+
+
 	// Allocate a new netlink message
 	skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
 	if (!skb) {
@@ -767,7 +811,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	int ret;
 	void *part_buf;
-	unsigned char *pt;
+	unsigned char *msg_pt;
 	int pos;
 	unsigned int seq;
 	unsigned char *hdr_msg_len;
@@ -779,48 +823,52 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 
 	part_buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
 	if (!part_buf) {
-		//error
+		printk	(KERN_ERR "FINS: part_buf allocation fail");
 	}
 
-	pt = msg_buf;
+	msg_pt = msg_buf;
 	pos = 0;
 	seq = 0;
 
 	hdr_msg_len = part_buf;
-	*hdr_msg_len = msg_len;
-
 	hdr_part_len = hdr_msg_len + sizeof(ssize_t);
 	hdr_pos = hdr_part_len + sizeof(ssize_t);
 	msg_start = hdr_pos + sizeof(int);
 
 	header_size = msg_start - hdr_msg_len;
 	part_len = RECV_BUFFER_SIZE - header_size;
-	*hdr_part_len = part_len;
+
+	*(ssize_t *)hdr_msg_len = msg_len;
+	*(ssize_t *)hdr_part_len = part_len;
 
 	while (msg_len - pos > part_len) {
-		*hdr_pos = pos;
+		printk(KERN_INFO "FINS: pos=%d", pos);
 
-		memcpy(msg_start, pt, part_len);
+		*(int *)hdr_pos = pos;
 
-		ret = nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags
-				| NLM_F_MULTI);
+		memcpy(msg_start, msg_pt, part_len);
+
+		printk(KERN_INFO "FINS: seq=%d", seq);
+
+		ret = nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
 		if (ret < 0) {
 			printk(KERN_ERR "netlink - %s: Error sending seq %d to user\n",
 					__FUNCTION__, seq);
 			return -1;
 		}
 
-		pt += part_len;
+		msg_pt += part_len;
 		pos += part_len;
 		seq++;
 	}
 
-	*hdr_part_len = header_size + msg_len - pos;
-	*hdr_pos = pos;
+	part_len = msg_len - pos;
+	*(ssize_t *)hdr_part_len = part_len;
+	*(int *)hdr_pos = pos;
 
-	memcpy(msg_start, pt, *hdr_part_len);
+	memcpy(msg_start, msg_pt, part_len);
 
-	ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, *hdr_part_len, flags);
+	ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, header_size+part_len, flags);
 	if (ret < 0) {
 		printk(KERN_ERR "netlink - %s: Error sending seq %d to user\n",
 				__FUNCTION__, seq);
@@ -873,6 +921,8 @@ void nl_data_ready(struct sk_buff *skb) {
 
 	int socketDaemonResponseType; // a number corresponding to the type of socketcall this packet is in response to
 
+	printk(KERN_INFO "FINS: Entering %s\n", __FUNCTION__);
+
 	if (skb == NULL) {
 		printk("skb is NULL \n");
 		return;
@@ -894,20 +944,31 @@ printk	(KERN_INFO "Socket Daemon made contact: %s\n", (char *) buf);
 	// demultiplex to the appropriate call handler
 	socketDaemonResponseType = *(int *) buf;
 	switch (socketDaemonResponseType) {
-		case SYS_SOCKET:
+		case daemonconnect_call:
+		FINS_daemon_pid = pid;
+
+		printk(KERN_INFO "FINS: Daemon connected, pid=%d\n",FINS_daemon_pid);
+		/*
+		 char *test = "test string";
+		 int stringlength = strlen(test) + 1;
+		 int ret;
+		 ret = nl_send(FINS_daemon_pid, test, stringlength, 0);
+		 */
+		break;
+		case socket_call:
 		// do whatever you need to here as a handler
 		printk(KERN_INFO "%s: got a daemon reply to a socket() call\n",
 				__FUNCTION__);
 		up(&FINS_socket_sem); // unblock the socket call
 		break;
-		case SYS_BIND:
+		case bind_call:
 		printk(KERN_INFO "%s: got a daemon reply to a bind() call\n",
 				__FUNCTION__);
 		up(&FINS_bind_sem); // unblock the bind call
 		break;
-		case SYS_RECV:
-		case SYS_RECVFROM:
-		case SYS_RECVMSG:
+		case recv_call:
+		case recvfrom_call:
+		case recvmsg_call:
 		printk(KERN_INFO "%s: got a daemon reply to a recv(), recvfrom(), or recvmsg() call\n",
 				__FUNCTION__);
 		up(&FINS_recvmsg_sem); // unblock the recvmsg call
@@ -917,7 +978,6 @@ printk	(KERN_INFO "Socket Daemon made contact: %s\n", (char *) buf);
 	}
 }
 
-FINS_daemon_pid = pid;
 // Ok to process netlink message here if fast, otherwise use another kernel thread and wake it up here
 }
 
@@ -948,8 +1008,8 @@ static void setup_FINS_protocol(void) {
 
 	/* Call sock_register to register the handler with the socket layer */
 	rc = sock_register(&FINS_net_proto);
-printk(KERN_INFO "sock_register returned: %d\n", rc);
-printk(KERN_INFO "Made it through FINS sock_register()\n");
+	printk(KERN_INFO "sock_register returned: %d\n", rc);
+	printk(KERN_INFO "Made it through FINS sock_register()\n");
 }
 
 static void teardown_FINS_protocol(void) {
@@ -959,7 +1019,7 @@ static void teardown_FINS_protocol(void) {
 
 	/* Call proto_unregister and report debugging info */
 	proto_unregister(&FINS_proto);
-printk(KERN_INFO "Made it through FINS proto_unregister()\n");
+	printk(KERN_INFO "Made it through FINS proto_unregister()\n");
 }
 
 /* Functions to initialize and teardown the netlink socket */
@@ -986,6 +1046,7 @@ static void teardown_FINS_netlink(void) {
  * Note: the init and exit functions must be defined (or declared/declared in header file) before the macros are called
  */
 static int __init FINS_stack_wedge_init(void) {
+	printk(KERN_INFO "FINS: #################################");
 	printk(KERN_INFO "Loading the FINS_stack_wedge module\n");
 	setup_FINS_protocol();
 	setup_FINS_netlink();

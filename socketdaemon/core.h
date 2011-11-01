@@ -51,5 +51,36 @@ void Queues_init();
 void print_frame(const u_char *payload, int len);
 void print_hex_ascii_line(const u_char *payload, int len, int offset);
 
+//begin: interceptor merge
+//struct socketUniqueID socketsUniqueIDs[MAX_sockets]; //may merge in
+struct socketIdentifier FinsHistory[MAX_sockets];
+
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+	#define FINS_TMP_ROOT "/data/data/fins"
+#else
+	#define FINS_TMP_ROOT "/tmp/fins"
+#endif
+
+/** The Global socket channel descriptor is used to communicate between the socket
+ * interceptor and the socket jinni until they exchange the socket UNIQUE ID, then a separate
+ * named pipe gets opened for the newly created socket */
+
+int socket_channel_desc;
+sem_t *main_channel_semaphore1;
+sem_t *main_channel_semaphore2;
+
+sem_t FinsHistory_semaphore;
+char main_sem_name1[] = "main_channel1";
+char main_sem_name2[] = "main_channel2";
+#define MAX_parallel_processes 10
+/** Todo document the work on the differences between the use of processes level semaphores
+ * and threads level semaphores! and how each one of them is important and where they were employed
+ * in FINS code
+ */
+//end: interceptor merge
+
+
+
 #endif /* SOCKETGENI_H_ */
 
