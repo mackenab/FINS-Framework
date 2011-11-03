@@ -25,7 +25,9 @@ void tcp_in(struct finsFrame *ff)
 	//Get TCP info from this frame
 	struct tcp_segment* tcp = fins_to_tcp(ff);
 	//Find what connection this belongs to
-	struct tcp_connection* connect = find_tcp_connection(tcp);
+	struct tcp_connection* connect;
+
+	connect = (struct tcp_connection*)find_tcp_connection(tcp);
 
 	/*//See if this has the next expected sequence number.
 	if(tcp->seq_num == next_expected_seq)	//If so, forward to application as-is.

@@ -73,7 +73,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		}
 	} PRINT_DEBUG();
 
-	PRINT_DEBUG("%d",header.destination );
+	PRINT_DEBUG("%lu",header.destination );
 	/* Check the destination address, if not our, forward*/
 	if (IP4_dest_check(header.destination) == 0) {
 		PRINT_DEBUG();

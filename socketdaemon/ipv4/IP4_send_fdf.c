@@ -61,7 +61,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	metadata_writeToElement(ipv4_meta, "ipdst", &dstaddress, META_TYPE_INT);
 	metadata_writeToElement(ipv4_meta, "protocol", &protocol, META_TYPE_INT);
 	fins_frame->dataFrame.metaData = ipv4_meta;
-	PRINT_DEBUG("protocol %d ,srcip %d,dstip %d", protocol,srcaddress,dstaddress);
+	PRINT_DEBUG("protocol %d, srcip %lu, dstip %lu", protocol,srcaddress,dstaddress);
 
 	sendToSwitch_IPv4(fins_frame);
 

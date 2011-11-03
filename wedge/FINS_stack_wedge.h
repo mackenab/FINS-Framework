@@ -35,8 +35,13 @@
  * This range of these functions will start from 30
  */
 #define close_call 19
-#define daemonconnect_call 20
+#define release_call 20
+#define ioctl_call 21
+#define daemonconnect_call 22
 #define write_call 30
+
+#define ACK 	200
+#define NACK 	6666
 
 // Data declarations
 /* Data for netlink sockets */

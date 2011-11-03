@@ -27,12 +27,12 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen);
 void send_udp(); /** UDP DOESN NOT IMPLEMENT SEND without recipient */
 void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
-void write_udp(unsigned long long uniqueSockID, int datalen, u_char *data);
-void send_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags);
-void sendto_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags,
+void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data);
+void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags);
+void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
 		struct sockaddr *addr, socklen_t addrlen);
 
-void recvfrom_udp(unsigned long long uniqueSockID, int datalen, int flags, int symbol);
+void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
 void sendmsg_udp();
 void recvmsg_udp();
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);

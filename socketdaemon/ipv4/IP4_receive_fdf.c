@@ -51,7 +51,7 @@ void IP4_receive_fdf() {
 			 * now it will be set by default to UDP
 			 */
 			metadata_readFromElement(pff->dataFrame.metaData,"protocol",&protocol);
-			PRINT_DEBUG("%d",my_ip_addr);
+			PRINT_DEBUG("%lu",my_ip_addr);
 			PRINT_DEBUG("Transport protocol going out passes to IPv4 is %d",protocol);
 			switch (protocol){
 

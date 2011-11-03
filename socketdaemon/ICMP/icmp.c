@@ -355,7 +355,7 @@ void ICMP_ping_reply(struct finsFrame* ff)
 	//Write the original "src IP" to the data as the destination IP
 	metadata_writeToElement(ffout->dataFrame.metaData, "ipdst", &IP_Src, META_TYPE_INT);
 
-	PRINT_DEBUG("Source IP: %d, Dest IP: %d", IP_Dest, IP_Src);	
+	PRINT_DEBUG("Source IP: %lu, Dest IP: %lu", IP_Dest, IP_Src);
 	//Make sure this goes to the right place. Is this what we have to do to send out an ICMP packet?
 	ffout->destinationID.id = IPV4ID;		//Go to the socket stub (Socket jinni) //vt_mark
 	ffout->destinationID.next = NULL;		//Set this to NULL, since we're only sending one.
@@ -688,10 +688,12 @@ void IMCP_create_unreach(struct finsFrame* ff)
 	ffout->dataFrame.pdu[0] = TYPE_DESTUNREACH; //set to destination unreachable message
 	ffout->dataFrame.pdu[1] = CODE_PORTUNREACH; //MAYBE. TODO: get info about what unreachable code we should here, from the metadata.
 	//Clear the checksum and "unused" fields
-	memset(ffout->dataFrame.pdu[2], 0, ICMP_HEADER_SIZE - 2);
+	//memset(ffout->dataFrame.pdu[2], 0, ICMP_HEADER_SIZE - 2);
+	memset(&ffout->dataFrame.pdu[2], 0, ICMP_HEADER_SIZE - 2);
 
 	//Copy the rest of the data over
-	memcpy(ffout->dataFrame.pdu[ICMP_HEADER_SIZE], ff->dataFrame.pdu, totallen - ICMP_HEADER_SIZE);
+	//memcpy(ffout->dataFrame.pdu[ICMP_HEADER_SIZE], ff->dataFrame.pdu, totallen - ICMP_HEADER_SIZE);
+	memcpy(&ffout->dataFrame.pdu[ICMP_HEADER_SIZE], ff->dataFrame.pdu, totallen - ICMP_HEADER_SIZE);
 
 	//Compute the checksum
 	checksum = ICMP_checksum(ffout);

@@ -270,18 +270,7 @@ void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSoc
 	insertjinniSocket(uniqueSockID, type, protocol);
 
 	PRINT_DEBUG();
-	if ( sprintf(clientName, CLIENT_CHANNEL_RX, uniqueSockID) < 0 ){
-		PRINT_DEBUG("sprintf Failed");
-	}
 
-	/** Crashing at error because there is no way to send a NACK
-	 * application process
-	 */
-	if  (mkfifo(clientName, 0777) == -1 ){
-		PRINT_DEBUG("mkfifo  Failed CRASH");
-		exit(1);
-	}
-	pipe_desc = open(clientName, O_WRONLY);
 	index = findjinniSocket(uniqueSockID);
 
 	if (index < 0) {
@@ -290,19 +279,20 @@ void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSoc
 
 	} PRINT_DEBUG("0000");
 
-	jinniSockets[index].jinniside_pipe_ds = pipe_desc;
+	//jinniSockets[index].jinniside_pipe_ds = pipe_desc;
 	/** Now the client can proceed to next step after openning the pipe */
-	PRINT_DEBUG("0002");
-	sem_getvalue(jinniSockets[index].s, &tester);
-	PRINT_DEBUG("tester = %d", tester);
+	//PRINT_DEBUG("0002");
+	//sem_getvalue(jinniSockets[index].s, &tester);
+	//PRINT_DEBUG("tester = %d", tester);
 
-	PRINT_DEBUG("0001");
+	//PRINT_DEBUG("0001");
 
-	sem_wait(jinniSockets[index].s);
-	ack_write(pipe_desc, uniqueSockID);
-	sem_post(jinniSockets[index].as);
+	//sem_wait(jinniSockets[index].s);
+	ack_send(uniqueSockID, socket_call);
+	//ack_write(pipe_desc, uniqueSockID);
+	//sem_post(jinniSockets[index].as);
 	/** TODO unlock the semaphore */
-	sem_post(jinniSockets[index].s);
+	//sem_post(jinniSockets[index].s);
 	PRINT_DEBUG("0003");
 
 	return;
@@ -330,10 +320,11 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 
 	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, bind_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 	/**TODO lock the jinni sockets */
@@ -351,10 +342,11 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	 * */
 	if (checkjinniports(hostport, host_IP_netformat) == -1) {
 		PRINT_DEBUG("this port is not free");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, bind_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 
 		free(addr);
 		return;
@@ -387,10 +379,11 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	 * sending to the fins core
 	 */
 
-	sem_wait(jinniSockets[index].s);
-	ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	sem_post(jinniSockets[index].as);
-	sem_post(jinniSockets[index].s);
+	//sem_wait(jinniSockets[index].s);
+	ack_send(uniqueSockID, bind_call);
+	//ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+	//sem_post(jinniSockets[index].as);
+	//sem_post(jinniSockets[index].s);
 
 	free(addr);
 	return;
@@ -417,10 +410,11 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, connect_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
@@ -474,17 +468,18 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * sending to the fins core
 	 */
 
-	sem_wait(jinniSockets[index].s);
-	ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	sem_post(jinniSockets[index].as);
-	sem_post(jinniSockets[index].s);
+	//sem_wait(jinniSockets[index].s);
+	ack_send(uniqueSockID, connect_call);
+	//ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+	//sem_post(jinniSockets[index].as);
+	//sem_post(jinniSockets[index].s);
 
 	free(addr);
 	return;
 
 }
 
-void write_udp(unsigned long long uniqueSockID, int datalen, u_char *data) {
+void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -517,10 +512,11 @@ void write_udp(unsigned long long uniqueSockID, int datalen, u_char *data) {
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 
 	}
 
@@ -565,22 +561,24 @@ void write_udp(unsigned long long uniqueSockID, int datalen, u_char *data) {
 	{
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		sem_wait(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		ack_send(uniqueSockID, socketCallType);
+		//ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 
 	}
 
@@ -593,7 +591,7 @@ void write_udp(unsigned long long uniqueSockID, int datalen, u_char *data) {
 } // end of write_udp
 
 
-void send_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags) {
+void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags) {
 
 
 	uint16_t hostport;
@@ -605,7 +603,7 @@ void send_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 
 	if (flags == -1000) {
 
-		return (write_udp(uniqueSockID, datalen, data));
+		return (write_udp(uniqueSockID, socketCallType, datalen, data));
 
 	}
 	/** TODO handle flags cases */
@@ -643,10 +641,11 @@ void send_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 
 	}
 
@@ -691,22 +690,24 @@ void send_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 	{
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		sem_wait(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		ack_send(uniqueSockID, socketCallType);
+		//ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 
 	}
 
@@ -715,7 +716,7 @@ void send_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 }// end of send_udp
 
 
-void sendto_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags,
+void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
 		struct sockaddr *addr, socklen_t addrlen) {
 
 	uint16_t hostport;
@@ -758,13 +759,14 @@ void sendto_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int 
 	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family"); PRINT_DEBUG("");
 
-		sem_wait(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
 	}
@@ -810,22 +812,24 @@ void sendto_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int 
 	{
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		sem_wait(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		ack_send(uniqueSockID, socketCallType);
+		//ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish sendto");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
+		//sem_post(jinniSockets[index].s);
 
 	}
 
@@ -840,7 +844,7 @@ void sendto_udp(unsigned long long uniqueSockID, int datalen, u_char *data, int 
  *
  */
 
-void recvfrom_udp(unsigned long long uniqueSockID, int datalen, int flags, int symbol) {
+void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the
 	 * application to get the sender address or not
@@ -891,6 +895,8 @@ void recvfrom_udp(unsigned long long uniqueSockID, int datalen, int flags, int s
 
 		if (symbol == 0) {
 			sem_wait(jinniSockets[index].s);
+
+			//TODO: change to send_wedge
 
 			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 			buf[buflen] = '\0';
@@ -1078,13 +1084,14 @@ void shutdown_udp(unsigned long long uniqueSockID, int how){
 	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
 
 
-	sem_wait(jinniSockets[index].s);
+	//sem_wait(jinniSockets[index].s);
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+	ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+	//	ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 
 
-	sem_post(jinniSockets[index].as);
-	sem_post(jinniSockets[index].s);
+	//sem_post(jinniSockets[index].as);
+	//sem_post(jinniSockets[index].s);
 
 
 

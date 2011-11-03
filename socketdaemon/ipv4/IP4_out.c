@@ -27,7 +27,8 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
 	struct ip4_packet_header construct_packet;
 	struct ip4_packet *construct_packet_buffer;
 
-	construct_packet_buffer = &construct_packet;
+	//construct_packet_buffer = &construct_packet;
+	construct_packet_buffer = (struct ip4_packet *)&construct_packet;
 	PRINT_DEBUG("");
 
 	metadata_readFromElement(ff->dataFrame.metaData, "dstip", &destination);

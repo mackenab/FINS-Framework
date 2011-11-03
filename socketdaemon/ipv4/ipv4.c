@@ -32,7 +32,7 @@ void ipv4_init() {
 	 *
 	 */
 	my_ip_addr = IP4_ADR_P2N(172,31,53,114);
-	PRINT_DEBUG("%d",my_ip_addr);
+	PRINT_DEBUG("%lu",my_ip_addr);
 	my_mask = IP4_ADR_P2N(255,255,255,0);
 
 	//ADDED mrd015 !!!!!

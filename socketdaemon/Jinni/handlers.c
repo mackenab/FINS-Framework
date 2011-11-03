@@ -23,6 +23,85 @@ extern int socket_channel_desc;
 extern sem_t *meen_channel_semaphore1;
 extern sem_t *meen_channel_semaphore2;
 
+int init_fins_nl() {
+	int sockfd;
+	int ret_val;
+
+	// Get a netlink socket descriptor
+	sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_FINS);
+	if (sockfd == -1) {
+		return -1;
+	}
+
+	// Populate local_sockaddress
+	memset(&local_sockaddress, 0, sizeof(local_sockaddress));
+	local_sockaddress.nl_family = AF_NETLINK;
+	local_sockaddress.nl_pad = 0;
+	local_sockaddress.nl_pid = getpid(); //pthread_self() << 16 | getpid(),	// use second option for multi-threaded process
+	local_sockaddress.nl_groups = 0; // unicast
+
+	// Bind the local netlink socket
+	ret_val = bind(sockfd, (struct sockaddr*) &local_sockaddress,
+			sizeof(local_sockaddress));
+	if (ret_val == -1) {
+		return -1;
+	}
+
+	// Populate kernel_sockaddress
+	memset(&kernel_sockaddress, 0, sizeof(kernel_sockaddress));
+	kernel_sockaddress.nl_family = AF_NETLINK;
+	kernel_sockaddress.nl_pad = 0;
+	kernel_sockaddress.nl_pid = 0; // to kernel
+	kernel_sockaddress.nl_groups = 0; // unicast
+
+	return sockfd;
+}
+
+/*
+ * Sends len bytes from buf on the sockfd.  Returns 0 if successful.  Returns -1 if an error occurred, errno set appropriately.
+ */
+int send_wedge(int sockfd, void *buf, size_t len, int flags) {
+	int ret_val; // Holds system call return values for error checking
+	struct nlmsghdr *nlh = NULL;
+	struct iovec iov;
+	struct msghdr msg;
+
+	// Begin send message section
+	// Build a message to send to the kernel
+	nlh = (struct nlmsghdr *) malloc(NLMSG_LENGTH(len)); // malloc(NLMSG_SPACE(len));	// TODO: Test and remove
+	memset(nlh, 0, NLMSG_LENGTH(len)); // NLMSG_SPACE(len));		// TODO: Test and remove
+
+	nlh->nlmsg_len = NLMSG_LENGTH(len);
+	// following can be used by application to track message, opaque to netlink core
+	nlh->nlmsg_type = 0; // arbitrary value
+	nlh->nlmsg_seq = 0; // sequence number
+	nlh->nlmsg_pid = getpid(); // pthread_self() << 16 | getpid();	// use the second one for multiple threads
+	nlh->nlmsg_flags = flags;
+
+	// Insert payload (memcpy)
+	memcpy(NLMSG_DATA(nlh), buf, len);
+
+	// finish message packing
+	iov.iov_base = (void *) nlh;
+	iov.iov_len = nlh->nlmsg_len;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_name = (void *) &kernel_sockaddress;
+	msg.msg_namelen = sizeof(kernel_sockaddress);
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+	// Send the message
+	PRINT_DEBUG("Sending message to kernel\n");
+	ret_val = sendmsg(sockfd, &msg, 0);
+	if (ret_val == -1) {
+		return -1;
+	}
+
+	free(nlh);
+	return 0;
+}
+
 /**
  * @brief find a jinni socket among the jinni sockets array
  * @param
@@ -193,14 +272,14 @@ int removejinniSocket(unsigned long long targetID) {
 			term_queue(jinniSockets[i].dataQueue);
 			//			sem_close(jinniSockets[i].s);
 			//			sem_unlink(jinniSockets[i].semaphore_name);
-		//			sem_close(jinniSockets[i].as);
-		//			sem_unlink(jinniSockets[i].asemaphore_name);
-		//			sprintf(jinniSockets[i].semaphore_name, "NULL");
-		return (1);
+			//			sem_close(jinniSockets[i].as);
+			//			sem_unlink(jinniSockets[i].asemaphore_name);
+			//			sprintf(jinniSockets[i].semaphore_name, "NULL");
+			return (1);
 
+		}
 	}
-}
-return (-1);
+	return (-1);
 } // end of removejinniSocket
 
 /**
@@ -288,6 +367,63 @@ int nack_write(int pipe_desc, unsigned long long uniqueSockID) {
 
 } // end of nack_write
 
+int nack_send(unsigned long long uniqueSockID, int socketCallType) {
+	int nack = NACK;
+	int ret_val;
+	/** TODO lock the pipe before writing */
+	PRINT_DEBUG("uniqueSockID %llu calltype %d nack %d", uniqueSockID,
+			socketCallType, nack);
+
+	void *buf;
+	unsigned char *pt;
+	int buf_len;
+
+	buf_len = sizeof(unsigned long long) + 2 * sizeof(int);
+
+	buf = malloc(buf_len * sizeof(unsigned char));
+
+	pt = buf;
+	*(int *) pt = socketCallType;
+	pt += sizeof(int);
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+	*(int *) pt = nack;
+	pt += sizeof(int);
+
+	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
+	free(buf);
+
+	return ret_val == 1;
+}
+
+int ack_send(unsigned long long uniqueSockID, int socketCallType) {
+	int ack = ACK;
+	int ret_val;
+	/** TODO lock the pipe before writing */
+	PRINT_DEBUG("uniqueSockID %llu calltype %d ack %d", uniqueSockID,
+			socketCallType, ack);
+
+	void *buf;
+	unsigned char *pt;
+	int buf_len;
+
+	buf_len = sizeof(unsigned long long) + 2 * sizeof(int);
+
+	buf = malloc(buf_len * sizeof(unsigned char));
+
+	pt = buf;
+	*(int *) pt = socketCallType;
+	pt += sizeof(int);
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+	*(int *) pt = ack;
+	pt += sizeof(int);
+
+	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
+	free(buf);
+
+	return ret_val == 1;
+}
 
 int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 	int byteswritten;
@@ -305,38 +441,32 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 
 }
 
-void socket_call_handler(unsigned long long uniqueSockID) {
+void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 	int numOfBytes = -1;
 	int domain;
 	unsigned int type;
 	int protocol;
+	unsigned char *pt;
 
 	PRINT_DEBUG("socket call handler1");
 	PRINT_DEBUG("%llu", uniqueSockID);
 
-	numOfBytes = read(socket_channel_desc, &domain, sizeof(int));
-		if (numOfBytes <= 0) {
+	pt = buf;
 
-			PRINT_DEBUG("READING ERROR! CRASH");
-			exit(1);
-	}
+	domain = *(int *) pt;
+	pt += sizeof(int);
 
-	numOfBytes = read(socket_channel_desc, &type, sizeof(unsigned int));
-	if (numOfBytes <= 0) {
+	type = *(unsigned int *) pt;
+	pt += sizeof(unsigned int);
 
+	protocol = *(int *) pt;
+	pt += sizeof(int);
+
+	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
-
-	numOfBytes = read(socket_channel_desc, &protocol, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-	sem_post(meen_channel_semaphore2);
-
-	/**TODO Unlock the socket main channel previously locked by the main */
 
 	PRINT_DEBUG("socket call handler2");
 
@@ -368,27 +498,31 @@ void socket_call_handler(unsigned long long uniqueSockID) {
  * End of socket_call_handler
  */
 
-void bind_call_handler(unsigned long long uniqueSockID) {
+void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
+	unsigned char *pt;
 
-	numOfBytes = read(socket_channel_desc, &addrlen, sizeof(socklen_t));
+	pt = buf;
 
-	if (numOfBytes <= 0) {
+	addrlen = *(ssize_t *) pt;
+	pt += sizeof(ssize_t);
 
+	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
 
-	numOfBytes = read(socket_channel_desc, addr, addrlen);
-	sem_post(meen_channel_semaphore2);
-	if (numOfBytes <= 0) {
+	memcpy(addr, pt, addrlen);
+	pt += sizeof(addrlen);
 
+	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
@@ -424,7 +558,8 @@ void bind_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of bind_call_handler-----------------
  */
 
-void send_call_handler(unsigned long long uniqueSockID) {
+void send_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -499,7 +634,7 @@ void send_call_handler(unsigned long long uniqueSockID) {
 	}
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
-		send_udp(uniqueSockID, datalen, data, flags);
+		send_udp(uniqueSockID, send_call, datalen, data, flags);
 	else if (jinniSockets[index].type == SOCK_STREAM)
 		send_tcp(uniqueSockID, datalen, data, flags);
 	else {
@@ -518,7 +653,8 @@ void send_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of send_call_handler-----------------
  */
 
-void sendto_call_handler(unsigned long long uniqueSockID) {
+void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -607,7 +743,7 @@ void sendto_call_handler(unsigned long long uniqueSockID) {
 	if (jinniSockets[index].connection_status > 0) {
 
 		if (jinniSockets[index].type == SOCK_DGRAM)
-			send_udp(uniqueSockID, datalen, data, flags);
+			send_udp(uniqueSockID, sendto_call, datalen, data, flags);
 		else if (jinniSockets[index].type == SOCK_STREAM)
 			send_tcp(uniqueSockID, datalen, data, flags);
 		else if (jinniSockets[index].type == SOCK_RAW) {
@@ -626,7 +762,8 @@ void sendto_call_handler(unsigned long long uniqueSockID) {
 		 */
 
 		if (jinniSockets[index].type == SOCK_DGRAM)
-			sendto_udp(uniqueSockID, datalen, data, flags, addr, addrlen);
+			sendto_udp(uniqueSockID, sendto_call, datalen, data, flags, addr,
+					addrlen);
 		else if (jinniSockets[index].type == SOCK_STREAM)
 			sendto_tcp(uniqueSockID, datalen, data, flags, addr, addrlen);
 		else if (jinniSockets[index].type == SOCK_RAW) {
@@ -649,7 +786,8 @@ void sendto_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of sendto_call_handler-----------------
  */
 
-void recv_call_handler(unsigned long long uniqueSockID) {
+void recv_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -711,7 +849,8 @@ void recv_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of recv_call_handler-----------------
  */
 
-void recvfrom_call_handler(unsigned long long uniqueSockID) {
+void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -766,7 +905,7 @@ void recvfrom_call_handler(unsigned long long uniqueSockID) {
 		 * threads. We will call the function below using thread_create
 		 */
 		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
-		recvfrom_udp(uniqueSockID, datalen, flags, symbol);
+		recvfrom_udp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
 
 	} else if (jinniSockets[index].type == SOCK_STREAM) {
 		recvfrom_tcp(uniqueSockID, datalen, flags, symbol);
@@ -785,7 +924,8 @@ void recvfrom_call_handler(unsigned long long uniqueSockID) {
  * ------------------End of recvfrom_call_handler-----------------
  */
 
-void sendmsg_call_handler(unsigned long long uniqueSockID) {
+void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -916,7 +1056,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID) {
 	if (jinniSockets[index].connection_status > 0) {
 
 		if (jinniSockets[index].type == SOCK_DGRAM)
-			send_udp(uniqueSockID, datalen, data, flags);
+			send_udp(uniqueSockID, sendmsg_call, datalen, data, flags);
 		else if (jinniSockets[index].type == SOCK_STREAM)
 			send_tcp(uniqueSockID, datalen, data, flags);
 		else if ((jinniSockets[index].type == SOCK_RAW)
@@ -938,16 +1078,14 @@ void sendmsg_call_handler(unsigned long long uniqueSockID) {
 		 */
 		if (symbol) { // check that the passed address is not NULL
 			if (jinniSockets[index].type == SOCK_DGRAM)
-				sendto_udp(uniqueSockID, datalen, data, flags, addr,
-						addrlen);
+				sendto_udp(uniqueSockID, sendmsg_call, datalen, data, flags,
+						addr, addrlen);
 			else if (jinniSockets[index].type == SOCK_STREAM)
-				sendto_tcp(uniqueSockID, datalen, data, flags, addr,
-						addrlen);
+				sendto_tcp(uniqueSockID, datalen, data, flags, addr, addrlen);
 			else if ((jinniSockets[index].type == SOCK_RAW)
 					&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
 
-				sendto_icmp(uniqueSockID, datalen, data, flags, addr,
-						addrlen);
+				sendto_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
 
 			} else {
 
@@ -975,7 +1113,8 @@ void sendmsg_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void recvmsg_call_handler(unsigned long long uniqueSockID) {
+void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1076,7 +1215,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID) {
 		 * threads. We will call the function below using thread_create
 		 */
 		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
-		recvfrom_udp(uniqueSockID, datalen, flags, symbol);
+		recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 
 	} else if (jinniSockets[index].type == SOCK_STREAM) {
 		recvfrom_tcp(uniqueSockID, datalen, flags, symbol);
@@ -1095,7 +1234,8 @@ void recvmsg_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void getsockopt_call_handler(unsigned long long uniqueSockID) {
+void getsockopt_call_handler(unsigned long long uniqueSockID,
+		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1223,7 +1363,8 @@ void getsockopt_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void setsockopt_call_handler(unsigned long long uniqueSockID) {
+void setsockopt_call_handler(unsigned long long uniqueSockID,
+		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1241,47 +1382,35 @@ void setsockopt_call_handler(unsigned long long uniqueSockID) {
 	int optname;
 	int optlen;
 	void *optval;
+	unsigned char *pt;
 
 	PRINT_DEBUG("");
 
-	numOfBytes = read(socket_channel_desc, &level, sizeof(int));
+	pt = buf;
 
-	if (numOfBytes <= 0) {
+	level = *(int *) pt;
+	pt += sizeof(int);
 
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
+	optname = *(int *) pt;
+	pt += sizeof(int);
 
-	numOfBytes = read(socket_channel_desc, &optname, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &optlen, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
+	optlen = (int)*(unsigned int *) pt;
+	pt += sizeof(unsigned int);
 
 	if (optlen > 0) {
-
 		optval = (u_char *) malloc(optlen);
-		numOfBytes = read(socket_channel_desc, optval, optlen);
-		if (numOfBytes <= 0) {
+		memcpy(optval, pt, optlen);
+		pt += sizeof(optlen);
+	}
 
-			PRINT_DEBUG("READING ERROR! CRASH");
-			exit(1);
-		}
-
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH");
+		exit(1);
 	}
 
 	/** Unlock the main socket channel
 	 *
 	 */
-	sem_post(meen_channel_semaphore2);
 
 	PRINT_DEBUG("");
 
@@ -1312,10 +1441,11 @@ void setsockopt_call_handler(unsigned long long uniqueSockID) {
 		setsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, setsockopt_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 	//		}
@@ -1364,34 +1494,43 @@ void setsockopt_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void listen_call_handler(unsigned long long uniqueSockID) {
+void listen_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 }
-void accept_call_handler(unsigned long long uniqueSockID) {
-
-}
-
-void accept4_call_handler(unsigned long long uniqueSockID) {
+void accept_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 }
 
-void shutdown_call_handler(unsigned long long uniqueSockID) {
+void accept4_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
+
+}
+
+void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
 	int how;
+	unsigned char *pt;
 
 	PRINT_DEBUG();
-	numOfBytes = read(socket_channel_desc, &how, sizeof(int));
-	if (numOfBytes <= 0) {
 
+	pt = buf;
+
+	how = *(int *) pt;
+	pt += sizeof(int);
+
+	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
+
 	/** Unlock the main socket channel
 	 *
 	 */
-	sem_post(meen_channel_semaphore2);
 
 	/** TODO lock access to the jinnisockets */
 	index = findjinniSocket(uniqueSockID);
@@ -1412,15 +1551,17 @@ void shutdown_call_handler(unsigned long long uniqueSockID) {
 
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, shutdown_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 }
 
-void close_call_handler(unsigned long long uniqueSockID) {
+void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes = -1;
 
@@ -1464,7 +1605,8 @@ void close_call_handler(unsigned long long uniqueSockID) {
 
 }
 
-void getsockname_call_handker(unsigned long long uniqueSockID) {
+void getsockname_call_handler(unsigned long long uniqueSockID,
+		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;
@@ -1512,28 +1654,31 @@ void getsockname_call_handker(unsigned long long uniqueSockID) {
 
 }
 
-void connect_call_handler(unsigned long long uniqueSockID) {
+void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
 
 	int numOfBytes;
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
+	unsigned char *pt;
 
-	numOfBytes = read(socket_channel_desc, &addrlen, sizeof(socklen_t));
+	pt = buf;
 
-	if (numOfBytes <= 0) {
+	addrlen = *(ssize_t *) pt;
+	pt += sizeof(ssize_t);
 
+	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
 
-	numOfBytes = read(socket_channel_desc, addr, addrlen);
-	/** Unlock the main socket channel */
-	sem_post(meen_channel_semaphore2);
-	if (numOfBytes <= 0) {
+	memcpy(addr, pt, addrlen);
+	pt += sizeof(addrlen);
 
+	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
@@ -1559,16 +1704,18 @@ void connect_call_handler(unsigned long long uniqueSockID) {
 		connect_tcp(uniqueSockID, addr);
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, shutdown_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 	return;
 
 }
-void getpeername_call_handler(unsigned long long uniqueSockID) {
+void getpeername_call_handler(unsigned long long uniqueSockID,
+		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
 	int index;

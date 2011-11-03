@@ -206,7 +206,7 @@ struct tcp_segment* fins_to_tcp(struct finsFrame* ff)
 
 struct tcp_connection* find_tcp_connection(struct tcp_segment* tcp)
 {
-	return NULL;
+	return (struct tcp_connection *)NULL;
 }
 
 
