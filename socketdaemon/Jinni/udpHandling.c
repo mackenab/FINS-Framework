@@ -13,11 +13,8 @@
 extern struct finssocket jinniSockets[MAX_sockets];
 extern finsQueue Jinni_to_Switch_Queue;
 extern finsQueue Switch_to_Jinni_Queue;
-extern sem_t *meen_channel_semaphore1;
-extern sem_t *meen_channel_semaphore2;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
-//extern struct socketIdentifier FinsHistory[MAX_sockets];
 
 struct finsFrame *get_fake_frame() {
 
@@ -59,8 +56,8 @@ struct finsFrame *get_fake_frame() {
  *
  */
 
-int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
-		int symbol, struct sockaddr_in *address, int block_flag) {
+int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
+		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
@@ -72,7 +69,7 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
 	uint32_t srcip;
 	struct sockaddr_in * addr_in = (struct sockaddr_in *) address;
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("index = %d",index);
+	PRINT_DEBUG("index = %d", index);
 	/**
 	 * It keeps looping as a bad method to implement the blocking feature
 	 * of recvfrom. In case it is not blocking then the while loop should
@@ -117,14 +114,15 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
 		//free(ff);
 		return (0);
 	}
-	PRINT_DEBUG("PDU length %d",ff->dataFrame.pduLength);
+	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
-	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",(uint16_t *) &srcport)
-			== 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
+			(uint16_t *) &srcport) == 0) {
 		addr_in->sin_port = 0;
 
 	}
-	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc",(uint32_t *) &srcip) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc",
+			(uint32_t *) &srcip) == 0) {
 		addr_in->sin_addr.s_addr = 0;
 
 	}
@@ -134,20 +132,17 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
 	 * in case of connection previously done
 	 */
 
-	if (jinniSockets[index].connection_status > 0){
+	if (jinniSockets[index].connection_status > 0) {
 
-		if ( (srcport != jinniSockets[index].dstport) || (srcip != jinniSockets[index].dst_IP ) )
-			{
-				PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
-				return(0);
+		if ((srcport != jinniSockets[index].dstport) || (srcip
+				!= jinniSockets[index].dst_IP)) {
+			PRINT_DEBUG(
+					"Wrong address, the socket is already connected to another destination");
+			return (0);
 
-
-			}
-
+		}
 
 	}
-
-
 
 	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
 	//memcpy(*buf,ff->dataFrame.pdu,ff->dataFrame.pduLength);
@@ -166,11 +161,8 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
 
 	PRINT_DEBUG();
 
-
-
 	addr_in->sin_port = srcport;
 	addr_in->sin_addr.s_addr = srcip;
-
 
 	/**TODO Free the finsFrame
 	 * This is the final consumer
@@ -192,7 +184,8 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -210,12 +203,12 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	/** metadata_writeToElement() set the value of an element if it already exist
 	 * or it creates the element and set its value in case it is new
 	 */
-	PRINT_DEBUG("%d, %d, %d, %d", dstport,dst_IP_netformat,hostport,
+	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport,
 			host_IP_netformat);
 
 	uint32_t dstprt = dstport;
-		uint32_t hostprt = hostport;
-		int protocol = IP4_PT_UDP;
+	uint32_t hostprt = hostport;
+	int protocol = IP4_PT_UDP;
 	metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "srcport", &hostprt, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat,
@@ -223,8 +216,7 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat,
 			META_TYPE_INT);
 
-	metadata_writeToElement(udpout_meta, "protocol", &protocol,
-				META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "protocol", &protocol, META_TYPE_INT);
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
@@ -258,7 +250,8 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 /**
  * End of interfacing socketjinni with FINS core
  * */
-void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSockID) {
+void socket_udp(int domain, int type, int protocol,
+		unsigned long long uniqueSockID) {
 	PRINT_DEBUG("socket_UDP CALL");
 
 	char clientName[200];
@@ -277,7 +270,8 @@ void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSoc
 		PRINT_DEBUG("incorrect index !! Crash");
 		exit(1);
 
-	} PRINT_DEBUG("0000");
+	}
+	PRINT_DEBUG("0000");
 
 	//jinniSockets[index].jinniside_pipe_ds = pipe_desc;
 	/** Now the client can proceed to next step after openning the pipe */
@@ -363,8 +357,8 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d",(address->sin_addr).s_addr, ntohs(address->sin_port),
-			address->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (address->sin_addr).s_addr,
+			ntohs(address->sin_port), address->sin_family);
 	/**
 	 * Binding
 	 */
@@ -438,7 +432,9 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * more than one local socket maybe connected to the same destined address
 	 */
 	if (jinniSockets[index].connection_status > 0) {
-		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP, jinniSockets[index].dstport ); PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport );
+		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP,
+				jinniSockets[index].dstport);
+		PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport);
 
 	}
 
@@ -453,8 +449,8 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d",(address->sin_addr).s_addr, ntohs(address->sin_port),
-			address->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (address->sin_addr).s_addr,
+			ntohs(address->sin_port), address->sin_family);
 
 	jinniSockets[index].dstport = ntohs(address->sin_port);
 	jinniSockets[index].dst_IP = ntohl((address->sin_addr).s_addr);
@@ -479,7 +475,8 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 }
 
-void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data) {
+void write_udp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -487,8 +484,6 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	uint32_t dst_IP;
 	int len = datalen;
 	int index;
-
-
 
 	PRINT_DEBUG("");
 
@@ -548,7 +543,7 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	host_IP = jinniSockets[index].host_IP;
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP,hostport);
+	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -584,15 +579,11 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 	return;
 
-
-
-
-
 } // end of write_udp
 
 
-void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags) {
-
+void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
+		u_char *data, int flags) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -677,7 +668,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, 
 	host_IP = jinniSockets[index].host_IP;
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP,hostport);
+	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -716,8 +707,9 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, 
 }// end of send_udp
 
 
-void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
-		struct sockaddr *addr, socklen_t addrlen) {
+void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, u_char *data, int flags, struct sockaddr *addr,
+		socklen_t addrlen) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -741,7 +733,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 	default:
 		break;
 
-	} PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	struct sockaddr_in *address;
 	address = (struct sockaddr_in *) addr;
@@ -757,7 +750,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 	}
 
 	if (address->sin_family != AF_INET) {
-		PRINT_DEBUG("Wrong address family"); PRINT_DEBUG("");
+		PRINT_DEBUG("Wrong address family");
+		PRINT_DEBUG("");
 
 		//sem_wait(jinniSockets[index].s);
 		PRINT_DEBUG("");
@@ -799,7 +793,7 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP,hostport);
+	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -844,7 +838,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
  *
  */
 
-void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol) {
+void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, int flags, int symbol) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the
 	 * application to get the sender address or not
@@ -861,6 +856,10 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datal
 	int index;
 	int i;
 	int blocking_flag;
+
+	void *msg;
+	unsigned char *pt;
+	int msg_len;
 
 	if (symbol == 1)
 		address = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
@@ -883,7 +882,8 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datal
 		exit(1);
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
 	blocking_flag = jinniSockets[index].blockingFlag;
 
 	/** the meta-data parameters are all passed by copy starting from this point
@@ -894,17 +894,37 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datal
 			blocking_flag) == 1) {
 
 		if (symbol == 0) {
-			sem_wait(jinniSockets[index].s);
-
-			//TODO: change to send_wedge
-
-			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+			//sem_wait(jinniSockets[index].s);
 			buf[buflen] = '\0';
-			PRINT_DEBUG("%d",buflen ); PRINT_DEBUG("%s",buf);
-			write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
-			write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
-			sem_post(jinniSockets[index].as);
-			sem_post(jinniSockets[index].s);
+
+			msg_len = sizeof(unsigned long long) + 2 * sizeof(int);
+			msg = malloc(msg_len * sizeof(unsigned char));
+			pt = msg;
+
+			*(int *) pt = socketCallType;
+			pt += sizeof(int);
+			*(unsigned long long *) pt = uniqueSockID;
+			pt += sizeof(unsigned long long);
+			*(int *) pt = ACK;
+			pt += sizeof(int);
+
+			//TODO: finish this
+
+
+			//write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
+			//write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
+
+
+			ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
+			free(buf);
+
+			//ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+			PRINT_DEBUG("%d", buflen);
+			PRINT_DEBUG("%s", buf);
+			//write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
+			//write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
+			//sem_post(jinniSockets[index].as);
+			//sem_post(jinniSockets[index].s);
 			PRINT_DEBUG();
 
 			//	free(buf);
@@ -912,7 +932,7 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datal
 
 		} else if (symbol == 1) {
 
-			sem_wait(jinniSockets[index].s);
+			//sem_wait(jinniSockets[index].s);
 
 			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 			PRINT_DEBUG();
@@ -921,22 +941,24 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType, int datal
 			write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
 			write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
 
-			sem_post(jinniSockets[index].as);
+			//sem_post(jinniSockets[index].as);
 
-			sem_post(jinniSockets[index].s);
+			//sem_post(jinniSockets[index].s);
 		} else {
 
 		}
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, socketCallType);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 
-		sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].as);
 
-		sem_post(jinniSockets[index].s);
-	} PRINT_DEBUG();
+		//sem_post(jinniSockets[index].s);
+	}
+	PRINT_DEBUG();
 
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
@@ -980,8 +1002,8 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 		exit(1);
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
-
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
 
 	/** the meta-data parameters are all passed by copy starting from this point
 	 *
@@ -995,11 +1017,12 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 		sem_wait(jinniSockets[index].s);
 
-			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			buf[buflen] = '\0';
-			PRINT_DEBUG("%d",buflen ); PRINT_DEBUG("%s",buf);
-			write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
-			write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
+		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		buf[buflen] = '\0';
+		PRINT_DEBUG("%d", buflen);
+		PRINT_DEBUG("%s", buf);
+		write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
+		write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
 
 		sem_post(jinniSockets[index].as);
 		sem_post(jinniSockets[index].s);
@@ -1011,7 +1034,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recv_udp");
 		sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
 
 		sem_post(jinniSockets[index].as);
 
@@ -1061,8 +1084,7 @@ void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
 
 }
 
-
-void shutdown_udp(unsigned long long uniqueSockID, int how){
+void shutdown_udp(unsigned long long uniqueSockID, int how) {
 
 	/**
 	 *
@@ -1072,8 +1094,6 @@ void shutdown_udp(unsigned long long uniqueSockID, int how){
 
 	int index;
 
-
-
 	index = findjinniSocket(uniqueSockID);
 	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
@@ -1081,8 +1101,8 @@ void shutdown_udp(unsigned long long uniqueSockID, int how){
 		exit(1);
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
-
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
 
 	//sem_wait(jinniSockets[index].s);
 
@@ -1094,41 +1114,14 @@ void shutdown_udp(unsigned long long uniqueSockID, int how){
 	//sem_post(jinniSockets[index].s);
 
 
+}
 
-
-
+void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
+		int optlen, void *optval) {
 
 }
 
-
-
-void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval){
-
-
-
-
-
-
-
-
-
-
-
-
-}
-
-
-void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval){
-
-
-
-
-
-
-
-
-
-
-
+void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
+		int optlen, void *optval) {
 
 }

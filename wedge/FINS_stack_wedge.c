@@ -21,6 +21,7 @@
 /* Includes for the netlink socket part */
 #include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
 #include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
+#include <asm/uaccess.h>
 
 //#include <sys/socket.h> /* may need to be removed */
 #include "FINS_stack_wedge.h"	/* Defs for this module */
@@ -40,6 +41,8 @@ struct semaphore FINS_recvmsg_sem;
 
 unsigned char *shared_buf;
 ssize_t shared_len;
+unsigned int shared_call;
+unsigned long long shared_sockID;
 
 /* Wedge core functions (Protocol Registration) */
 /*
@@ -70,7 +73,6 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	void *buf;
 	unsigned char *pt;
 	int ret;
-	unsigned long long confirm;
 
 	uniqueSockID = getUniqueSockID(sock);
 
@@ -109,7 +111,6 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 		rc = -1;
 		goto out;
 	}
-
 	pt = buf;
 
 	*(unsigned long long *)pt = uniqueSockID;
@@ -124,7 +125,6 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	pt += sizeof(int);
 
 	printk(KERN_INFO "FINS: %s: uniqueSockID=%llu socket_call=%d buf_len=%d", __FUNCTION__, uniqueSockID, socket_call, buf_len);
-
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
@@ -137,23 +137,19 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 
 	// ONLY FOR BLOCKING CALLS: must get a semaphore and go to sleep until daemon sends response and netlink handler unlocks semaphore
 	// get semaphore before continuing - unlocked by netlink handler
-	if (down_interruptible(&FINS_socket_sem)) {
-		;
-	} // Should be locked at start
+	if (down_interruptible(&FINS_socket_sem)) {;} // Should be locked at start
 	// relock the semaphore so it is locked next time around
 	sema_init(&FINS_socket_sem, 0);
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if (shared_buf != NULL && shared_len == sizeof(unsigned long long)+sizeof(int)) {
-		pt = shared_buf;
-		confirm = *(unsigned long long *)pt;
-		pt += sizeof(unsigned long long);
-
-		if (confirm != uniqueSockID) {
-			printk(KERN_ERR "FINS: %s: socket %llu received msg for socket %llu\n", __FUNCTION__, uniqueSockID, confirm);
+	if ((shared_buf != NULL) && (shared_len == sizeof(int))) {
+		if ((uniqueSockID != shared_sockID) || (socket_call != shared_call)) {
+			printk(KERN_ERR "FINS: %s: msg for (%llu, %d) recv by (%llu, %d)\n", __FUNCTION__, uniqueSockID, socket_call, shared_sockID, shared_call);
 			rc = -1;
 		} else {
+			pt = shared_buf;
+
 			ret = *(int *)pt;
 			pt += sizeof(int);
 
@@ -166,12 +162,12 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
 				rc = -1;
 			}
+			shared_buf = NULL;
+			shared_len = 0;
 		}
-
-		shared_buf = NULL;
-		shared_len = 0;
 	} else {
 		printk(KERN_INFO "FINS: %s: shared_buf error\n", __FUNCTION__);
+		rc = -1;
 	}
 
 	out: printk(KERN_INFO "FINS %s: Exited\n", __FUNCTION__);
@@ -309,15 +305,13 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if (shared_buf != NULL && shared_len == sizeof(unsigned long long)+sizeof(int)) {
-		pt = shared_buf;
-		confirm = *(unsigned long long *)pt;
-		pt += sizeof(unsigned long long);
-
-		if (ret != uniqueSockID) {
-			printk(KERN_ERR "FINS: %s: socket %llu received msg for socket %llu\n", __FUNCTION__, uniqueSockID, confirm);
+	if ((shared_buf != NULL) && (shared_len == sizeof(int))) {
+		if ((uniqueSockID != shared_sockID) || (bind_call != shared_call)) {
+			printk(KERN_ERR "FINS: %s: msg for (%llu, %d) recv by (%llu, %d)\n", __FUNCTION__, uniqueSockID, socket_call, shared_sockID, shared_call);
 			rc = -1;
 		} else {
+			pt = shared_buf;
+
 			ret = *(int *)pt;
 			pt += sizeof(int);
 
@@ -330,12 +324,12 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
 				rc = -1;
 			}
+			shared_buf = NULL;
+			shared_len = 0;
 		}
-
-		shared_buf = NULL;
-		shared_len = 0;
 	} else {
 		printk(KERN_INFO "FINS: %s: shared_buf error\n", __FUNCTION__);
+		rc = -1;
 	}
 
 	out: printk(KERN_INFO "FINS: %s: Exited\n", __FUNCTION__);
@@ -660,7 +654,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	}
 
 	// Build the message
-	buf_len = sizeof(unsigned long long) + 2*sizeof(int);
+	buf_len = sizeof(unsigned long long) + 3*sizeof(int) + sizeof(unsigned int) + optlen;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
@@ -678,8 +672,13 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 		pt += sizeof(int);
 		*(unsigned int *)pt = optlen;
 		pt += sizeof(unsigned int);
-		memcpy(pt, optval, optlen);
+		ret = copy_from_user(pt, optval, optlen);
 		pt += optlen;
+
+		if (ret != 0) {
+			kfree(buf);
+			return -1;
+		}
 
 		printk(KERN_INFO "FINS: %s: uniqueSockID=%llu socket_call=%d buf_len=%d", __FUNCTION__, uniqueSockID, setsockopt_call, buf_len);
 
@@ -699,9 +698,10 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 static int FINS_getsockopt(struct socket *sock, int level, int optname,
 		char __user *optval, int __user *optlen) {
 	unsigned long long uniqueSockID;
+	ssize_t buf_len;
+	void *buf;
+	unsigned char *pt;
 	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
 
 	uniqueSockID = getUniqueSockID(sock);
 
@@ -714,16 +714,43 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 	}
 
 	// Build the message
-	buf = "FINS_getsockopt() called.";
-	buffer_length = strlen(buf) + 1;
+	buf_len = sizeof(unsigned long long) + 4*sizeof(int);
+	buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		return -1;
+	} else {
+		pt = buf;
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
-		return -1; // pick an appropriate errno
+		*(unsigned long long *)pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+		*(int *)pt = getsockopt_call;
+		pt += sizeof(int);
+		*(int *)pt = level;
+		pt += sizeof(int);
+		*(int *)pt = optname;
+		pt += sizeof(int);
+
+		*(int *)pt = optlen; //this function isn't actually implemented but this should be a pointer
+		pt += sizeof(int);
+		//could pass pointer of optlen & optval, have daemon trasnfer the info, would still need to block
+
+		printk(KERN_INFO "FINS: %s: uniqueSockID=%llu socket_call=%d buf_len=%d", __FUNCTION__, uniqueSockID, getsockopt_call, buf_len);
+
+		// Send message to FINS_daemon
+		ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+		kfree(buf);
+
+		if (ret != 0) {
+			printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+			return -1; // pick an appropriate errno
+		}
+
+		//seems like this should be binding as well
+		//use copy_from_user(pt, buf, len) to get from daemon
+		//use copy_to_user(pt, buf, len) to get back to user space app
+
 	}
-
 	return 0;
 }
 
@@ -765,11 +792,11 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	unsigned long long uniqueSockID;
 	int symbol = 1; //default value unless passes msg->msg_name equal NULL
 	int controlFlag = 0;
-
-	int ret;
+	int rc = 0;
+	ssize_t buf_len;
 	void *buf;
 	unsigned char *pt;
-	ssize_t buf_len;
+	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
 
@@ -778,7 +805,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
-		return -1; // pick an appropriate errno
+		rc = -1; // pick an appropriate errno
+		goto out;
 	}
 
 	if ((m->msg_controllen != 0) && (m->msg_control != NULL))
@@ -792,8 +820,9 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		printk(KERN_ERR "FINS: %s: buf allocation failed\n", __FUNCTION__);
+		rc = -1;
+		goto out;
 	}
-
 	pt = buf;
 
 	*(unsigned long long *)pt = uniqueSockID;
@@ -817,21 +846,54 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
 	printk(KERN_INFO "FINS: %s: uniqueSockID=%llu socket_call=%d buf_len=%d", __FUNCTION__, uniqueSockID, recvmsg_call, buf_len);
-
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	kfree(buf);
 	if (ret != 0) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
-		return -1; // pick an appropriate errno
+		rc = -1;
+		goto out; // pick an appropriate errno
 	}
 
-	if (down_interruptible(&FINS_recvmsg_sem)) {
-		;
-	} // block until daemon replies
+	if (down_interruptible(&FINS_recvmsg_sem)) {;} // block until daemon replies
 	sema_init(&FINS_recvmsg_sem, 0); // relock semaphore
+	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//do stuff? to return values?
+	//exract msg from shared_buf
+	if ((shared_buf != NULL) && (shared_len >= sizeof(int))) {
+		if ((uniqueSockID != shared_sockID) || (recvmsg_call != shared_call)) {
+			printk(KERN_ERR "FINS: %s: msg for (%llu, %d) recv by (%llu, %d)\n", __FUNCTION__, uniqueSockID, socket_call, shared_sockID, shared_call);
+			rc = -1;
+		} else {
+			pt = shared_buf;
 
+			ret = *(int *)pt;
+			pt += sizeof(int);
+
+			if (ret == ACK) {
+				printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
+
+				//extract msg
+				buf_len = *(int *)pt;
+				pt += sizeof(int);
+
+
+			} else if (ret == NACK) {
+				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
+				rc = -1;
+			} else {
+				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
+				rc = -1;
+			}
+			shared_buf = NULL;
+			shared_len = 0;
+		}
+	} else {
+		printk(KERN_INFO "FINS: %s: shared_buf error\n", __FUNCTION__);
+		rc = -1;
+	}
+
+	out: printk(KERN_INFO "FINS: %s: Exited\n", __FUNCTION__);
 	return 0;
 }
 
@@ -1192,7 +1254,14 @@ void nl_data_ready(struct sk_buff *skb) {
 						__FUNCTION__);
 				/*
 				 * extract msg or pass to shared buffer
+				 * shared_call & shared_sockID, are to verify buf goes to the write sock & call
+				 * This is preemptive as with multithreading we may have to add a shared queue
 				 */
+				shared_call = socketDaemonResponseType;
+				shared_sockID = *(unsigned int *) pt;
+				pt += sizeof(unsigned int);
+				len -= sizeof(unsigned int);
+
 				shared_buf = pt;
 				shared_len = len;
 
@@ -1201,6 +1270,10 @@ void nl_data_ready(struct sk_buff *skb) {
 			case bind_call:
 				printk(KERN_INFO "FINS: %s: got a daemon reply to a bind() call\n",
 						__FUNCTION__);
+				shared_call = socketDaemonResponseType;
+				shared_sockID = *(unsigned int *) pt;
+				pt += sizeof(unsigned int);
+				len -= sizeof(unsigned int);
 
 				shared_buf = pt;
 				shared_len = len;
@@ -1213,9 +1286,13 @@ void nl_data_ready(struct sk_buff *skb) {
 				printk(KERN_INFO "FINS: %s: got a daemon reply to a recv(), recvfrom(), or recvmsg() call\n",
 					__FUNCTION__);
 
+				shared_call = socketDaemonResponseType;
+				shared_sockID = *(unsigned int *) pt;
+				pt += sizeof(unsigned int);
+				len -= sizeof(unsigned int);
+
 				shared_buf = pt;
 				shared_len = len;
-
 
 				up(&FINS_recvmsg_sem); // unblock the recvmsg call
 				break;

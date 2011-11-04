@@ -349,24 +349,6 @@ int randoming(int min, int max) {
 
 }
 
-int nack_write(int pipe_desc, unsigned long long uniqueSockID) {
-	int byteswritten;
-	int nack = NACK;
-	int index;
-
-	/** TODO lock the pipe before writing */
-
-	write(pipe_desc, &uniqueSockID, sizeof(unsigned long long));
-	write(pipe_desc, &nack, sizeof(int));
-	/**TODO unlock the pipe
-	 * check for failure of writing
-	 * return 1 on success -1 on failure
-	 * */
-
-	return (1);
-
-} // end of nack_write
-
 int nack_send(unsigned long long uniqueSockID, int socketCallType) {
 	int nack = NACK;
 	int ret_val;
@@ -379,10 +361,9 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType) {
 	int buf_len;
 
 	buf_len = sizeof(unsigned long long) + 2 * sizeof(int);
-
 	buf = malloc(buf_len * sizeof(unsigned char));
-
 	pt = buf;
+
 	*(int *) pt = socketCallType;
 	pt += sizeof(int);
 	*(unsigned long long *) pt = uniqueSockID;
@@ -408,10 +389,9 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType) {
 	int buf_len;
 
 	buf_len = sizeof(unsigned long long) + 2 * sizeof(int);
-
 	buf = malloc(buf_len * sizeof(unsigned char));
-
 	pt = buf;
+
 	*(int *) pt = socketCallType;
 	pt += sizeof(int);
 	*(unsigned long long *) pt = uniqueSockID;
@@ -424,6 +404,24 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType) {
 
 	return ret_val == 1;
 }
+
+int nack_write(int pipe_desc, unsigned long long uniqueSockID) {
+	int byteswritten;
+	int nack = NACK;
+	int index;
+
+	/** TODO lock the pipe before writing */
+
+	write(pipe_desc, &uniqueSockID, sizeof(unsigned long long));
+	write(pipe_desc, &nack, sizeof(int));
+	/**TODO unlock the pipe
+	 * check for failure of writing
+	 * return 1 on success -1 on failure
+	 * */
+
+	return (1);
+
+} // end of nack_write
 
 int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 	int byteswritten;
@@ -509,8 +507,8 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	pt = buf;
 
-	addrlen = *(ssize_t *) pt;
-	pt += sizeof(ssize_t);
+	addrlen = *(int *) pt;
+	pt += sizeof(int);
 
 	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH");
@@ -1253,36 +1251,26 @@ void getsockopt_call_handler(unsigned long long uniqueSockID,
 	int optname;
 	int optlen;
 	void *optval;
-
-	/** Unlock the main socket channel
-	 *
-	 */
+	unsigned char *pt;
 
 	PRINT_DEBUG("");
 
-	numOfBytes = read(socket_channel_desc, &level, sizeof(int));
+	pt = buf;
 
-	if (numOfBytes <= 0) {
+	level = *(int *) pt;
+	pt += sizeof(int);
 
+	optname = *(int *) pt;
+	pt += sizeof(int);
+
+	optlen = *(int *) pt;
+	pt += sizeof(int);
+
+	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH");
 		exit(1);
 	}
 
-	numOfBytes = read(socket_channel_desc, &optname, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &optlen, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	sem_post(meen_channel_semaphore2);
 	PRINT_DEBUG("");
 
 	/** TODO lock access to the jinnisockets */
@@ -1305,10 +1293,11 @@ void getsockopt_call_handler(unsigned long long uniqueSockID,
 		getsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, getsockopt_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 	//		}
@@ -1394,7 +1383,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID,
 	optname = *(int *) pt;
 	pt += sizeof(int);
 
-	optlen = (int)*(unsigned int *) pt;
+	optlen = (int) *(unsigned int *) pt;
 	pt += sizeof(unsigned int);
 
 	if (optlen > 0) {
@@ -1665,8 +1654,8 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	pt = buf;
 
-	addrlen = *(ssize_t *) pt;
-	pt += sizeof(ssize_t);
+	addrlen = *(int *) pt;
+	pt += sizeof(int);
 
 	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH");
