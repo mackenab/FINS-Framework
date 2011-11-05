@@ -360,14 +360,16 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType) {
 	unsigned char *pt;
 	int buf_len;
 
-	buf_len = sizeof(unsigned long long) + 2 * sizeof(int);
+	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + sizeof(int);
 	buf = malloc(buf_len * sizeof(unsigned char));
 	pt = buf;
 
-	*(int *) pt = socketCallType;
-	pt += sizeof(int);
+	*(unsigned int *) pt = socketCallType;
+	pt += sizeof(unsigned int);
+
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
+
 	*(int *) pt = nack;
 	pt += sizeof(int);
 
@@ -388,14 +390,16 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType) {
 	unsigned char *pt;
 	int buf_len;
 
-	buf_len = sizeof(unsigned long long) + 2 * sizeof(int);
+	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + sizeof(int);
 	buf = malloc(buf_len * sizeof(unsigned char));
 	pt = buf;
 
-	*(int *) pt = socketCallType;
-	pt += sizeof(int);
+	*(unsigned int *) pt = socketCallType;
+	pt += sizeof(unsigned int);
+
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
+
 	*(int *) pt = ack;
 	pt += sizeof(int);
 
@@ -462,7 +466,7 @@ void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
 		exit(1);
 	}
 
@@ -511,7 +515,7 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(int);
 
 	if (addrlen <= 0) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, addrlen=%d", addrlen);
 		exit(1);
 	}
 
@@ -521,7 +525,7 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(addrlen);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
 		exit(1);
 	}
 
@@ -1121,79 +1125,45 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	int symbol;
 	int msgFlags;
 	int controlFlag;
-	int msgControl_Length;
+	ssize_t msgControl_Length;
 	void *msgControl;
 	u_char *data;
 	socklen_t addrlen;
 	struct sockaddr *addr;
+	unsigned char *pt;
 
 	PRINT_DEBUG();
-	numOfBytes = read(socket_channel_desc, &datalen, sizeof(size_t));
-	if (numOfBytes <= 0) {
 
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
+	pt = buf;
 
-	numOfBytes = read(socket_channel_desc, &flags, sizeof(int));
+	datalen = *(ssize_t *) pt; //check on not in original socket_interceptor: recvmsg
+	pt += sizeof(ssize_t);
+	flags = *(int *) pt;
+	pt += sizeof(int);
+	symbol = *(int *) pt;
+	pt += sizeof(int);
+	msgFlags = *(int *) pt;
+	pt += sizeof(int);
+	controlFlag = *(int *) pt;
+	pt += sizeof(int);
 
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &symbol, sizeof(int));
-	sem_post(meen_channel_semaphore2);
-
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &msgFlags, sizeof(int));
-	sem_post(meen_channel_semaphore2);
-
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &controlFlag, sizeof(int));
-	sem_post(meen_channel_semaphore2);
-
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
 	if (controlFlag) {
-		numOfBytes = read(socket_channel_desc, &msgControl_Length, sizeof(int));
-		sem_post(meen_channel_semaphore2);
+		msgControl_Length = *(ssize_t *) pt;
+		pt += sizeof(ssize_t);
 
-		if (numOfBytes != sizeof(int)) {
-
-			PRINT_DEBUG("READING ERROR! CRASH");
+		if (msgControl_Length <= 0) {
+			PRINT_DEBUG("READING ERROR! CRASH, msgControl_Length=%d", msgControl_Length);
 			exit(1);
 		}
 		msgControl = (u_char *) malloc(msgControl_Length);
-		numOfBytes = read(socket_channel_desc, &msgControl, msgControl_Length);
-		sem_post(meen_channel_semaphore2);
-
-		if (numOfBytes != msgControl_Length) {
-
-			PRINT_DEBUG("READING ERROR! CRASH");
-			exit(1);
-		}
-
+		memcpy(msgControl, pt, msgControl_Length); //??? originally had &msgControl
+		pt += msgControl_Length;
 	}
 
-	/** Unlock the main socket channel
-	 *
-	 */
-	sem_post(meen_channel_semaphore2);
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		exit(1);
+	}
 
 	PRINT_DEBUG("");
 
@@ -1224,10 +1194,11 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		//sem_wait(jinniSockets[index].s);
+		nack_send(uniqueSockID, recvmsg_call);
+		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
+		//sem_post(jinniSockets[index].as);
+		//sem_post(jinniSockets[index].s);
 	}
 
 }
@@ -1267,7 +1238,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID,
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
 		exit(1);
 	}
 
@@ -1393,7 +1364,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID,
 	}
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
 		exit(1);
 	}
 
@@ -1513,7 +1484,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
 		exit(1);
 	}
 
@@ -1658,7 +1629,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(int);
 
 	if (addrlen <= 0) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, addrlen=%d", addrlen);
 		exit(1);
 	}
 
@@ -1668,7 +1639,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(addrlen);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH");
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
 		exit(1);
 	}
 

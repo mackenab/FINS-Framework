@@ -559,22 +559,21 @@ void *interceptor_to_jinni() {
 
 		if (doneFlag) {
 			msg_pt = msg_buf;
-			uniqueSockID = *(unsigned long long *) msg_pt;
-			msg_pt += sizeof(unsigned long long);
+
 			socketCallType = *(int *) msg_pt;
 			msg_pt += sizeof(int);
 
-			msg_len -= sizeof(unsigned long long) + sizeof(int);
+			uniqueSockID = *(unsigned long long *) msg_pt;
+			msg_pt += sizeof(unsigned long long);
 
-			PRINT_DEBUG("uniqueSockID=%llu socketCallType=%d", uniqueSockID,
-					socketCallType);
+			msg_len -= sizeof(int) + sizeof(unsigned long long);
+
+			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType, uniqueSockID);
 			PRINT_DEBUG("msg_len=%d", msg_len);
 			PRINT_DEBUG("msg='%s'", msg_pt);
 			//###############################
 			unsigned char *temp, *pt;
-			temp
-					= (unsigned char *) malloc(msg_len * 3
-							* sizeof(unsigned char));
+			temp = (unsigned char *) malloc(3*msg_len*sizeof(unsigned char));
 			pt = temp;
 			int i;
 			for (i = 0; i < msg_len; i++) {
