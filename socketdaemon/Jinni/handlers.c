@@ -93,7 +93,7 @@ int send_wedge(int sockfd, void *buf, size_t len, int flags) {
 
 	// Send the message
 	PRINT_DEBUG("Sending message to kernel\n");
-	ret_val = sendmsg(sockfd, &msg, 0);
+	//	ret_val = sendmsg(sockfd, &msg, 0);
 	if (ret_val == -1) {
 		return -1;
 	}
@@ -466,7 +466,7 @@ void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -525,7 +525,7 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(addrlen);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -941,102 +941,60 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	void *msg_control;
 	int msg_controlLength;
 	struct sockaddr *addr;
+	unsigned char *pt;
 
 	PRINT_DEBUG("");
 
-	numOfBytes = read(socket_channel_desc, &flags, sizeof(int));
+	pt = buf;
 
-	if (numOfBytes <= 0) {
+	flags = *(int *) pt;
+	pt += sizeof(int);
 
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &addrlen, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &symbol, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
+	symbol = *(int *) pt;
+	pt += sizeof(int);
 
 	if (symbol) {
+		addrlen = *(u_int *) pt;
+		pt += sizeof(u_int);
 
 		addr = (struct sockaddr *) malloc(addrlen);
-		numOfBytes = read(socket_channel_desc, addr, addrlen);
-		if (numOfBytes <= 0) {
-
-			PRINT_DEBUG("READING ERROR! CRASH");
-			exit(1);
-		}
-
+		memcpy(addr, pt, addrlen);
+		pt += addrlen;
 	}
 
-	numOfBytes = read(socket_channel_desc, &msg_flags, sizeof(int));
-	if (numOfBytes <= 0) {
+	msg_flags = *(int *) pt;
+	pt += sizeof(int);
 
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
-
-	numOfBytes = read(socket_channel_desc, &controlFlag, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
+	controlFlag = *(int *) pt;
+	pt += sizeof(int);
 
 	if (controlFlag) {
+		msg_controlLength = *(u_int *) pt;
+		pt += sizeof(u_int);
 
-		numOfBytes = read(socket_channel_desc, &msg_controlLength, sizeof(int));
-		if (numOfBytes <= 0) {
-
-			PRINT_DEBUG("READING ERROR! CRASH");
-			exit(1);
-		}
-		numOfBytes = read(socket_channel_desc, msg_control, msg_controlLength);
-		if (numOfBytes <= 0) {
-
-			PRINT_DEBUG("READING ERROR! CRASH");
-			exit(1);
-		}
-
+		msg_control = malloc(msg_controlLength);
+		memcpy(msg_control, pt, msg_controlLength);
+		pt += msg_controlLength;
 	}
 
-	numOfBytes = read(socket_channel_desc, &datalen, sizeof(int));
-	if (numOfBytes <= 0) {
-
-		PRINT_DEBUG("READING ERROR! CRASH");
-		exit(1);
-	}
+	datalen = *(u_int *) pt;
+	pt += sizeof(u_int);
 
 	if (datalen <= 0) {
 		PRINT_DEBUG("DATA Field is empty!!");
 		exit(1);
-
 	}
 
 	data = (u_char *) malloc(datalen);
 	PRINT_DEBUG("");
 
-	numOfBytes = read(socket_channel_desc, data, datalen);
-	if (numOfBytes <= 0) {
+	memcpy(data, pt, datalen);
+	pt += datalen;
 
-		PRINT_DEBUG("READING ERROR! CRASH");
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
-	PRINT_DEBUG("");
-
-	/** Unlock the main socket channel
-	 *
-	 */
-	sem_post(meen_channel_semaphore2);
 
 	PRINT_DEBUG("");
 
@@ -1066,10 +1024,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 		} else {
 			PRINT_DEBUG("unknown socket type has been read !!!");
-			sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			sem_post(jinniSockets[index].as);
-			sem_post(jinniSockets[index].s);
+			nack_send(uniqueSockID, sendmsg_call);
 		}
 
 	} else {
@@ -1092,20 +1047,14 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 			} else {
 
 				PRINT_DEBUG("unknown target address !!!");
-				sem_wait(jinniSockets[index].s);
-				nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-				sem_post(jinniSockets[index].as);
-				sem_post(jinniSockets[index].s);
+				nack_send(uniqueSockID, sendmsg_call);
 			}
 
 		}
 
 		else {
 			PRINT_DEBUG("unknown target address !!!");
-			sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			sem_post(jinniSockets[index].as);
-			sem_post(jinniSockets[index].s);
+			nack_send(uniqueSockID, sendmsg_call);
 		}
 
 	}
@@ -1138,30 +1087,40 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	datalen = *(ssize_t *) pt; //check on not in original socket_interceptor: recvmsg
 	pt += sizeof(ssize_t);
+
 	flags = *(int *) pt;
 	pt += sizeof(int);
+
 	symbol = *(int *) pt;
 	pt += sizeof(int);
+
 	msgFlags = *(int *) pt;
 	pt += sizeof(int);
+
 	controlFlag = *(int *) pt;
 	pt += sizeof(int);
 
 	if (controlFlag) {
-		msgControl_Length = *(ssize_t *) pt;
-		pt += sizeof(ssize_t);
+		msgControl_Length = *(u_int *) pt;
+		pt += sizeof(u_int);
 
 		if (msgControl_Length <= 0) {
-			PRINT_DEBUG("READING ERROR! CRASH, msgControl_Length=%d", msgControl_Length);
+			PRINT_DEBUG("READING ERROR! CRASH, msgControl_Length=%d",
+					msgControl_Length);
 			exit(1);
 		}
 		msgControl = (u_char *) malloc(msgControl_Length);
-		memcpy(msgControl, pt, msgControl_Length); //??? originally had &msgControl
-		pt += msgControl_Length;
+		if (msgControl) {
+			memcpy(msgControl, pt, msgControl_Length); //??? originally had &msgControl
+			pt += msgControl_Length;
+		} else {
+			PRINT_DEBUG("allocation error");
+			exit(1);
+		}
 	}
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -1194,11 +1153,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		//sem_wait(jinniSockets[index].s);
 		nack_send(uniqueSockID, recvmsg_call);
-		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		//sem_post(jinniSockets[index].as);
-		//sem_post(jinniSockets[index].s);
 	}
 
 }
@@ -1238,7 +1193,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID,
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -1264,11 +1219,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID,
 		getsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		//sem_wait(jinniSockets[index].s);
 		nack_send(uniqueSockID, getsockopt_call);
-		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		//sem_post(jinniSockets[index].as);
-		//sem_post(jinniSockets[index].s);
 	}
 
 	//		}
@@ -1364,7 +1315,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID,
 	}
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -1401,11 +1352,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID,
 		setsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		//sem_wait(jinniSockets[index].s);
 		nack_send(uniqueSockID, setsockopt_call);
-		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		//sem_post(jinniSockets[index].as);
-		//sem_post(jinniSockets[index].s);
 	}
 
 	//		}
@@ -1484,7 +1431,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -1511,11 +1458,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		//sem_wait(jinniSockets[index].s);
 		nack_send(uniqueSockID, shutdown_call);
-		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		//sem_post(jinniSockets[index].as);
-		//sem_post(jinniSockets[index].s);
 	}
 
 }
@@ -1639,7 +1582,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	pt += sizeof(addrlen);
 
 	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt-buf, len);
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		exit(1);
 	}
 
@@ -1664,11 +1607,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		connect_tcp(uniqueSockID, addr);
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		//sem_wait(jinniSockets[index].s);
 		nack_send(uniqueSockID, shutdown_call);
-		//nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		//sem_post(jinniSockets[index].as);
-		//sem_post(jinniSockets[index].s);
 	}
 
 	return;

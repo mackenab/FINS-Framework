@@ -321,10 +321,10 @@ void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs){
 	/**register shifting is used to extract individual bytes in the code below*/
 			char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FF)));//least sig.
 			char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00))>>8);
-			char_addrs[3] =  (unsigned char) ((int_addrs & (0x0000000000FF0000))>>16);
+			char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000))>>16);
 			char_addrs[2] = (unsigned char) ((int_addrs & (0x00000000FF000000))>>24);
-			char_addrs[1] = (unsigned char) ((int_addrs & (0x00000000FF00000000))>>32);
-			char_addrs[0] = (unsigned char) ((int_addrs & (0x00FF0000000000))>>40);//most sig.
+			char_addrs[1] = (unsigned char) ((int_addrs & (0x000000FF00000000))>>32);
+			char_addrs[0] = (unsigned char) ((int_addrs & (0x0000FF0000000000))>>40);//most sig.
 }
 
 /**
@@ -337,7 +337,7 @@ void IP_addrs_conversion(uint32_t int_addrs, unsigned char *char_addrs){
 	/**register shifting is used to extract individual bytes in the code below*/
 			char_addrs[3] = (unsigned char) ((int_addrs & (0x000000FF)));//least significant
 			char_addrs[2] = (unsigned char) ((int_addrs & (0x0000FF00))>>8);
-			char_addrs[1] =  (unsigned char) ((int_addrs & (0x00FF0000))>>16);
+			char_addrs[1] = (unsigned char) ((int_addrs & (0x00FF0000))>>16);
 			char_addrs[0] = (unsigned char) ((int_addrs & (0xFF000000))>>24);//most significant
 }
 
