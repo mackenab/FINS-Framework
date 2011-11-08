@@ -39,7 +39,7 @@ struct semaphore FINS_recvmsg_sem;
 #define NETLINK_FINS 20 //for compiling in non mod kernel
 #endif
 
-unsigned char *shared_buf;
+u_char *shared_buf;
 ssize_t shared_len;
 unsigned int shared_call;
 unsigned long long shared_sockID;
@@ -71,7 +71,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	struct sock *sk;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -197,7 +197,7 @@ static int FINS_release(struct socket *sock) {
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
 	void *buf; // used for test
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 	struct sock *sk = sock->sk;
 
@@ -259,7 +259,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	int rc;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -351,7 +351,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -529,7 +529,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
 	void *buf; // used for test
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -608,7 +608,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -658,7 +658,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -722,7 +722,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -821,7 +821,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	int rc = 0;
 	ssize_t buf_len;
 	void *buf;
-	unsigned char *pt;
+	u_char *pt;
 	int ret;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -831,7 +831,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
-		rc = -1; // pick an appropriate errno
+		rc = -1;
 		goto out;
 	}
 
@@ -843,7 +843,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	// Build the message
 	buf_len = sizeof(unsigned int) + sizeof(unsigned long long)
 			+ sizeof(ssize_t) + 4 * sizeof(int)
-			+ (controlFlag ? (sizeof(ssize_t) + m->msg_controllen) : 0);
+			+ (controlFlag ? sizeof(ssize_t) + m->msg_controllen : 0);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		printk(KERN_ERR "FINS: %s: buf allocation failed\n", __FUNCTION__);
@@ -892,18 +892,13 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		// pick an appropriate errno
 	}
 
-	if (down_interruptible(&FINS_recvmsg_sem)) {
-		;
-	} // block until daemon replies
+	if (down_interruptible(&FINS_recvmsg_sem)) {;} // block until daemon replies
 	sema_init(&FINS_recvmsg_sem, 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
 	if ((shared_buf != NULL) && (shared_len >= sizeof(int))) {
-		if ((recvmsg_call != shared_call) || (uniqueSockID != shared_sockID)) {
-			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
-			rc = -1;
-		} else {
+		if ((recvmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			pt = shared_buf;
 
 			ret = *(int *) pt;
@@ -912,61 +907,53 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 			if (ret == ACK) {
 				printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
 
-				//extract msg
-
 				if (symbol == 1) {
+					//TODO: find out if this is right! udpHandling writes sockaddr_in here
+					m->msg_namelen = *(unsigned int *)pt;
+					pt += sizeof(unsigned int);
 
-					/*
-					numOfBytes = read(sockfd, &(msg->msg_namelen),
-							sizeof(socklen_t));
-					if (numOfBytes > sizeof(struct sockaddr_in)) {
-						sem_post(FinsHistory[index].s);
-						PRINT_DEBUG("address length is incorrect");
-						return (-1);
+					printk(KERN_INFO "FINS: %s: msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
 
+					if (m->msg_namelen > 0) {
+						memcpy(m->msg_name, pt, m->msg_namelen);
+						pt += m->msg_namelen;
+					} else {
+						printk(KERN_ERR "FINS: %s: address problem, msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
+						rc = -1;
 					}
-					numOfBytes = read(sockfd, msg->msg_name, msg->msg_namelen);
-					if (numOfBytes != msg->msg_namelen) {
-						sem_post(FinsHistory[index].s);
-						PRINT_DEBUG("address length is incorrect");
-						return (-1);
-
-					}*/
-
 				} else if (symbol != 0) {
+					printk(KERN_ERR "FINS: %s: symbol error, symbol=%d\n", __FUNCTION__, symbol); //will remove
 					rc = -1;
-					goto out;
 				}
 
-				buf_len = *(int *) pt;
+				buf_len = *(int *) pt;	//reuse var since not needed anymore
 				pt += sizeof(int);
-				//TODO: finish this
 
+				if (buf_len >= 0) {
+					m->msg_iov->iov_len = buf_len;
+					//TODO: possible memory leak? find out
+					m->msg_iov->iov_base = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+					if (m->msg_iov->iov_base) {
+						memcpy(m->msg_iov->iov_base, pt, buf_len);
+						pt += buf_len;
 
-				/** The socket jinni sent us, the number of bytes to be received
-				 * we have to check that our buffer size is enough to read
-				 * */
-				/*
-				m->msg_iov->iov_len = dataToReadLength;
-				m->msg_iov->iov_base = (u_char *) malloc(dataToReadLength);
-				bytesread = read(sockfd, m->msg_iov->iov_base,
-						dataToReadLength);
-				//sem_post(FinsHistory[index].s);
-				if (bytesread < 0) {
-
-					m->msg_iov->iov_len = 0;
-					free(m->msg_iov->iov_base);
-					m->msg_iov->iov_base = NULL;
-					m->msg_iovlen = 0;
-					PRINT_DEBUG();
-					return (-1);
-
+						m->msg_iovlen = 1;
+						if (rc != -1) {
+							rc = buf_len;
+						}
+					} else {
+						printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
+						rc = -1;
+					}
 				} else {
-					m->msg_iovlen = 1;
-					PRINT_DEBUG();
-					return (bytesread);
+					printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
+					rc = -1;
 				}
-				 */
+
+				if (pt - shared_buf != shared_len) {
+					printk(KERN_ERR "FINS: %s: READING ERROR! diff=%d len=%d\n", __FUNCTION__, pt - shared_buf, shared_len);
+					rc = -1;
+				}
 			} else if (ret == NACK) {
 				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 				rc = -1;
@@ -976,14 +963,17 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 			}
 			shared_buf = NULL;
 			shared_len = 0;
+		} else {
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
+			rc = -1;
 		}
 	} else {
-		printk(KERN_INFO "FINS: %s: shared_buf error\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: shared_buf error\n", __FUNCTION__);
 		rc = -1;
 	}
 
 	out: printk(KERN_INFO "FINS: %s: Exited\n", __FUNCTION__);
-	return 0;
+	return rc;
 }
 
 static int FINS_mmap(struct file *file, struct socket *sock,
@@ -1096,9 +1086,9 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 	int ret_val;
 
 	//####################
-	unsigned char *print_buf;
-	unsigned char *print_pt;
-	unsigned char *pt;
+	u_char *print_buf;
+	u_char *print_pt;
+	u_char *pt;
 	int i;
 
 	printk(KERN_INFO "FINS: %s: pid=%d, seq=%d, type=%d, len=%d", __FUNCTION__, pid, seq, type, len);
@@ -1156,20 +1146,20 @@ return 0;
 int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	int ret;
 	void *part_buf;
-	unsigned char *msg_pt;
+	u_char *msg_pt;
 	int pos;
 	unsigned int seq;
-	unsigned char *hdr_msg_len;
-	unsigned char *hdr_part_len;
-	unsigned char *hdr_pos;
-	unsigned char *msg_start;
+	u_char *hdr_msg_len;
+	u_char *hdr_part_len;
+	u_char *hdr_pos;
+	u_char *msg_start;
 	ssize_t header_size;
 	ssize_t part_len;
 
 	//####################
-	unsigned char *print_buf;
-	unsigned char *print_pt;
-	unsigned char *pt;
+	u_char *print_buf;
+	u_char *print_pt;
+	u_char *pt;
 	int i;
 
 	print_buf = kmalloc(5 * msg_len, GFP_KERNEL);
@@ -1291,7 +1281,7 @@ int nl_send_old(int pid, void *buf, ssize_t msg_len, int flags) {
 void nl_data_ready(struct sk_buff *skb) {
 	struct nlmsghdr *nlh = NULL;
 	void *buf; // Pointer to data in payload
-	unsigned char *pt;
+	u_char *pt;
 	ssize_t len; // Payload length
 	int pid; // pid of sending process
 

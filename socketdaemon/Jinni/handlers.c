@@ -361,7 +361,7 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType) {
 	int buf_len;
 
 	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + sizeof(int);
-	buf = malloc(buf_len * sizeof(unsigned char));
+	buf = malloc(buf_len);
 	pt = buf;
 
 	*(unsigned int *) pt = socketCallType;
@@ -391,7 +391,7 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType) {
 	int buf_len;
 
 	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + sizeof(int);
-	buf = malloc(buf_len * sizeof(unsigned char));
+	buf = malloc(buf_len);
 	pt = buf;
 
 	*(unsigned int *) pt = socketCallType;

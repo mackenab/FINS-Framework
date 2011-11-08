@@ -573,7 +573,7 @@ void *interceptor_to_jinni() {
 			PRINT_DEBUG("msg='%s'", msg_pt);
 			//###############################
 			unsigned char *temp, *pt;
-			temp = (unsigned char *) malloc(3*msg_len*sizeof(unsigned char));
+			temp = (unsigned char *) malloc(3*msg_len);
 			pt = temp;
 			int i;
 			for (i = 0; i < msg_len; i++) {

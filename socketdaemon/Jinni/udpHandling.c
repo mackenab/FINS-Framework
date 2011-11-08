@@ -777,7 +777,7 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType,
 	int blocking_flag;
 
 	void *msg;
-	unsigned char *pt;
+	u_char *pt;
 	int msg_len;
 	int ret_val;
 
@@ -813,72 +813,42 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType,
 	if (UDPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
 			blocking_flag) == 1) {
 
-		if (symbol == 0) {
-			buf[buflen] = '\0';
+		buf[buflen] = '\0'; //may be specific to symbol==0
 
-			msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen;
-			msg = malloc(msg_len * sizeof(unsigned char));
-			pt = msg;
+		PRINT_DEBUG("%d", buflen);
+		PRINT_DEBUG("%s", buf);
 
-			*(int *) pt = socketCallType;
-			pt += sizeof(int);
+		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen
+				+ (symbol ? sizeof(struct sockaddr_in) : 0);
+		msg = malloc(msg_len);
+		pt = msg;
 
-			*(unsigned long long *) pt = uniqueSockID;
-			pt += sizeof(unsigned long long);
+		*(int *) pt = socketCallType;
+		pt += sizeof(int);
 
-			*(int *) pt = ACK;
-			pt += sizeof(int);
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
 
-			*(int *) pt = buflen;
-			pt += sizeof(int);
+		*(int *) pt = ACK;
+		pt += sizeof(int);
 
-			memcpy(pt, buf, buflen);
-			pt += buflen;
-
-			PRINT_DEBUG("%d", buflen);
-			PRINT_DEBUG("%s", buf);
-			ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
-			free(msg);
-
-			PRINT_DEBUG();
-
-			//free(buf);
-			PRINT_DEBUG();
-
-		} else if (symbol == 1) {
-			msg_len = 3 * sizeof(int) + sizeof(unsigned long long)
-					+ sizeof(struct sockaddr_in) + buflen;
-			msg = malloc(msg_len * sizeof(unsigned char));
-			pt = msg;
-
-			*(int *) pt = socketCallType;
-			pt += sizeof(int);
-
-			*(unsigned long long *) pt = uniqueSockID;
-			pt += sizeof(unsigned long long);
-
-			*(int *) pt = ACK;
-			pt += sizeof(int);
-
+		if (symbol) {
 			memcpy(pt, address, sizeof(struct sockaddr_in));
 			pt += sizeof(struct sockaddr_in);
-
-			*(int *) pt = buflen;
-			pt += sizeof(int);
-
-			memcpy(pt, buf, buflen);
-			pt += buflen;
-
-			PRINT_DEBUG("%d", buflen);
-			PRINT_DEBUG("%s", buf);
-			ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
-			free(msg);
-
-			PRINT_DEBUG();
-		} else {
-
 		}
 
+		*(int *) pt = buflen;
+		pt += sizeof(int);
+
+		memcpy(pt, buf, buflen);
+		pt += buflen;
+
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *)msg);
+		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+		free(msg);
+
+		//free(buf);
+		PRINT_DEBUG();
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
 		nack_send(uniqueSockID, socketCallType);
