@@ -11,11 +11,8 @@
 extern struct finssocket jinniSockets[MAX_sockets];
 extern finsQueue Jinni_to_Switch_Queue;
 extern finsQueue Switch_to_Jinni_Queue;
-extern sem_t *meen_channel_semaphore1;
-extern sem_t *meen_channel_semaphore2;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
-//extern struct socketIdentifier FinsHistory[MAX_sockets];
 
 static struct finsFrame *get_fake_frame() {
 
@@ -57,129 +54,130 @@ static struct finsFrame *get_fake_frame() {
  *
  */
 
-int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
-		int symbol, struct sockaddr_in *address, int block_flag) {
+int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
+		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
-		 * force symbol to become zero
-		 */
-		//symbol = 0;
-		struct finsFrame *ff = NULL;
-		int index;
-		uint16_t srcport;
-		uint32_t srcip;
-		struct sockaddr_in * addr_in = (struct sockaddr_in *) address;
-		index = findjinniSocket(uniqueSockID);
-		PRINT_DEBUG("index = %d",index);
-		/**
-		 * It keeps looping as a bad method to implement the blocking feature
-		 * of recvfrom. In case it is not blocking then the while loop should
-		 * be replaced with only a single trial !
-		 *
-		 */
+	 * force symbol to become zero
+	 */
+	//symbol = 0;
+	struct finsFrame *ff = NULL;
+	int index;
+	uint16_t srcport;
+	uint32_t srcip;
+	struct sockaddr_in * addr_in = (struct sockaddr_in *) address;
+	index = findjinniSocket(uniqueSockID);
+	PRINT_DEBUG("index = %d", index);
+	/**
+	 * It keeps looping as a bad method to implement the blocking feature
+	 * of recvfrom. In case it is not blocking then the while loop should
+	 * be replaced with only a single trial !
+	 *
+	 */
 
+	PRINT_DEBUG();
+	if (block_flag == 1) {
 		PRINT_DEBUG();
-		if (block_flag == 1) {
-			PRINT_DEBUG();
 		/**
 		 * WE Must FINS another way to emulate the blocking.
 		 * The best suggestion is to use a pipeline to push the data in
 		 * instead of the data queue
 		 */
-			do {
-
-				sem_wait(&(jinniSockets[index].Qs));
-				//		PRINT_DEBUG();
-
-
-				ff = read_queue(jinniSockets[index].dataQueue);
-				//	ff = get_fake_frame();
-				//					PRINT_DEBUG();
-
-				sem_post(&(jinniSockets[index].Qs));
-			} while (ff == NULL);
-			PRINT_DEBUG();
-
-		} else {
-			PRINT_DEBUG();
+		do {
 
 			sem_wait(&(jinniSockets[index].Qs));
-			//ff= read_queue(jinniSockets[index].dataQueue);
-			/**	ff = get_fake_frame();
-			 print_finsFrame(ff); */
+			//		PRINT_DEBUG();
+
+
 			ff = read_queue(jinniSockets[index].dataQueue);
+			//	ff = get_fake_frame();
+			//					PRINT_DEBUG();
 
 			sem_post(&(jinniSockets[index].Qs));
+		} while (ff == NULL);
+		PRINT_DEBUG();
 
-		}
+	} else {
+		PRINT_DEBUG();
 
-		if (ff == NULL) {
-			//free(ff);
+		sem_wait(&(jinniSockets[index].Qs));
+		//ff= read_queue(jinniSockets[index].dataQueue);
+		/**	ff = get_fake_frame();
+		 print_finsFrame(ff); */
+		ff = read_queue(jinniSockets[index].dataQueue);
+
+		sem_post(&(jinniSockets[index].Qs));
+
+	}
+
+	if (ff == NULL) {
+		//free(ff);
+		return (0);
+	}
+
+	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
+
+	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
+			(uint16_t *) &srcport) == 0) {
+		addr_in->sin_port = 0;
+
+	}
+	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc",
+			(uint32_t *) &srcip) == 0) {
+		addr_in->sin_addr.s_addr = 0;
+
+	}
+
+	if (jinniSockets[index].connection_status > 0) {
+
+		if ((srcport != jinniSockets[index].dstport) || (srcip
+				!= jinniSockets[index].dst_IP)) {
+
+			PRINT_DEBUG(
+					"Wrong address, the socket is already connected to another destination");
 			return (0);
-		}
-
-		PRINT_DEBUG("PDU length %d",ff->dataFrame.pduLength);
-
-		if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",(uint16_t *) &srcport)
-				== 0) {
-			addr_in->sin_port = 0;
 
 		}
-		if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc",(uint32_t *) &srcip) == 0) {
-			addr_in->sin_addr.s_addr = 0;
+	}
 
-		}
+	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
+	//memcpy(*buf,ff->dataFrame.pdu,ff->dataFrame.pduLength);
+	memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	*buflen = ff->dataFrame.pduLength;
 
-		if (jinniSockets[index].connection_status > 0){
+	PRINT_DEBUG();
 
-			if ( (srcport != jinniSockets[index].dstport) || (srcip != jinniSockets[index].dst_IP ) )
-				{
-
-					PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
-					return(0);
-
-				}
-		}
-
-		//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
-		//memcpy(*buf,ff->dataFrame.pdu,ff->dataFrame.pduLength);
-		memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-		*buflen = ff->dataFrame.pduLength;
-
+	if (symbol == 0) {
+		//		address = NULL;
 		PRINT_DEBUG();
+		//	freeFinsFrame(ff);
 
-		if (symbol == 0) {
-			//		address = NULL;
-			PRINT_DEBUG();
-			//	freeFinsFrame(ff);
-
-			return (1);
-		} PRINT_DEBUG();
-
-
-
-		addr_in->sin_port = srcport;
-		addr_in->sin_addr.s_addr = srcip;
-
-
-		/**TODO Free the finsFrame
-		 * This is the final consumer
-		 * call finsFrame_free(Struct finsFrame** ff)
-		 */
-		PRINT_DEBUG();
-
-		//freeFinsFrame(ff);
-
-		/** Finally succeeded
-		 *
-		 */
 		return (1);
+	}
+	PRINT_DEBUG();
+
+	addr_in->sin_port = srcport;
+	addr_in->sin_addr.s_addr = srcip;
+
+	/**TODO Free the finsFrame
+	 * This is the final consumer
+	 * call finsFrame_free(Struct finsFrame** ff)
+	 */
+	PRINT_DEBUG();
+
+	//freeFinsFrame(ff);
+
+	/** Finally succeeded
+	 *
+	 */
+	return (1);
 
 } //end of readFrom_fins
 
 
-int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat,
-		uint16_t hostport, uint32_t host_IP_netformat) {
+int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
+		uint32_t dst_IP_netformat, uint16_t hostport,
+		uint32_t host_IP_netformat) {
 
 	struct finsFrame *ff =
 			(struct finsFrame *) malloc(sizeof(struct finsFrame));
@@ -200,17 +198,18 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst
 	/** metadata_writeToElement() set the value of an element if it already exist
 	 * or it creates the element and set its value in case it is new
 	 */
-	PRINT_DEBUG("%d, %d, %d, %d", dstport,dst_IP_netformat,hostport,host_IP_netformat);
+	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport,
+			host_IP_netformat);
 
 	uint32_t dstprt = dstport;
 	uint32_t hostprt = hostport;
 
-		metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
-		metadata_writeToElement(udpout_meta, "srcport", &hostprt, META_TYPE_INT);
-		metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat,
-				META_TYPE_INT);
-		metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat,
-				META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "srcport", &hostprt, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat,
+			META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat,
+			META_TYPE_INT);
 
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
@@ -242,154 +241,104 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst
 
 }
 
-
-
-
-
-
-
-
-
-
-void socket_tcp (int domain, int type, int protocol, unsigned long long uniqueSockID) {
+void socket_tcp(int domain, int type, int protocol,
+		unsigned long long uniqueSockID) {
 
 	PRINT_DEBUG("socket_UDP CALL");
 
-		char clientName[200];
-		int index;
-		int pipe_desc;
-		int tester;
-		/** TODO lock the pipe semaphore then open the pipe*/
+	char clientName[200];
+	int index;
+	int pipe_desc;
+	int tester;
+	/** TODO lock the pipe semaphore then open the pipe*/
 
-		insertjinniSocket(uniqueSockID, type, protocol);
+	insertjinniSocket(uniqueSockID, type, protocol);
 
-		PRINT_DEBUG();
-		if ( sprintf(clientName, CLIENT_CHANNEL_RX, uniqueSockID) < 0 ){
-			PRINT_DEBUG("sprintf Failed");
-		}
+	PRINT_DEBUG();
 
-		/** Crashing at error because there is no way to send a NACK
-		 * application process
-		 */
-		if  (mkfifo(clientName, 0777) == -1 ){
-			PRINT_DEBUG("mkfifo  Failed CRASH");
-			exit(1);
-		}
-		pipe_desc = open(clientName, O_WRONLY);
-		index = findjinniSocket(uniqueSockID);
+	index = findjinniSocket(uniqueSockID);
+	if (index < 0) {
+		PRINT_DEBUG("incorrect index !! Crash");
+		exit(1);
 
-		if (index < 0) {
-			PRINT_DEBUG("incorrect index !! Crash");
-			exit(1);
+	}
+	PRINT_DEBUG("0000");
 
-		} PRINT_DEBUG("0000");
+	ack_send(uniqueSockID, socket_call);
+	PRINT_DEBUG("0003");
 
-		jinniSockets[index].jinniside_pipe_ds = pipe_desc;
-		/** Now the client can proceed to next step after openning the pipe */
-		PRINT_DEBUG("0002");
-		sem_getvalue(jinniSockets[index].s, &tester);
-		PRINT_DEBUG("tester = %d", tester);
-
-		PRINT_DEBUG("0001");
-
-		sem_wait(jinniSockets[index].s);
-		ack_write(pipe_desc, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		/** TODO unlock the semaphore */
-		sem_post(jinniSockets[index].s);
-		PRINT_DEBUG("0003");
-
-		return;
-
+	return;
 
 }
 
 void bind_tcp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 
+	uint16_t hostport;
+	uint16_t dstport;
+	uint32_t host_IP_netformat;
+	uint32_t dst_IP_netformat;
+	int index;
 
-		uint16_t hostport;
-		uint16_t dstport;
-		uint32_t host_IP_netformat;
-		uint32_t dst_IP_netformat;
-		int index;
+	struct sockaddr_in *address;
+	address = (struct sockaddr_in *) addr;
 
-		struct sockaddr_in *address;
-		address = (struct sockaddr_in *) addr;
-
-		/** TODO lock access to the jinnisockets */
-		if (address->sin_family != AF_INET) {
+	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		nack_send(uniqueSockID, bind_call);
 		return;
-		}
+	}
 
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		exit(1);
+	}
 
-
-		index = findjinniSocket(uniqueSockID);
-		/** TODO unlock access to the jinnisockets */
-		if (index == -1) {
-			PRINT_DEBUG("socket descriptor not found into jinni sockets");
-			exit(1);
-		}
-
-
-		/** TODO fix host port below, it is not initialized with any variable !!! */
-		/** the check below is to make sure that the port is not previously allocated */
-		hostport = ntohs(address->sin_port);
-		host_IP_netformat = (address->sin_addr).s_addr;
-		/** check if the same port and address have been both used earlier or not
-		 * it returns (-1) in case they already exist, so that we should not reuse them
-		 * */
-		if (checkjinniports(hostport, host_IP_netformat) == -1) {
-			PRINT_DEBUG("this port is not free");
-			sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			sem_post(jinniSockets[index].as);
-			sem_post(jinniSockets[index].s);
-
-			free(addr);
-			return;
-		}
-
-
-
-
-		/** TODO lock and unlock the protecting semaphores before making
-		 * any modifications to the contents of the jinniSockets database
-		 */
-		PRINT_DEBUG("%d,%d,%d",(address->sin_addr).s_addr, ntohs(address->sin_port),
-				address->sin_family);
-
-		jinniSockets[index].hostport = ntohs(address->sin_port);
-		jinniSockets[index].host_IP = (address->sin_addr).s_addr;
-
-		/** Reverse again because it was reversed by the application itself
-		 * In our example it is not reversed */
-		//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
-
-		/** TODO convert back to the network endian form before
-		 * sending to the fins core
-		 */
-
-		sem_wait(jinniSockets[index].s);
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+	/** TODO fix host port below, it is not initialized with any variable !!! */
+	/** the check below is to make sure that the port is not previously allocated */
+	hostport = ntohs(address->sin_port);
+	host_IP_netformat = (address->sin_addr).s_addr;
+	/** check if the same port and address have been both used earlier or not
+	 * it returns (-1) in case they already exist, so that we should not reuse them
+	 * */
+	if (checkjinniports(hostport, host_IP_netformat) == -1) {
+		PRINT_DEBUG("this port is not free");
+		nack_send(uniqueSockID, bind_call);
 
 		free(addr);
 		return;
+	}
 
+	/** TODO lock and unlock the protecting semaphores before making
+	 * any modifications to the contents of the jinniSockets database
+	 */
+	PRINT_DEBUG("%d,%d,%d", (address->sin_addr).s_addr,
+			ntohs(address->sin_port), address->sin_family);
+
+	jinniSockets[index].hostport = ntohs(address->sin_port);
+	jinniSockets[index].host_IP = (address->sin_addr).s_addr;
+
+	/** Reverse again because it was reversed by the application itself
+	 * In our example it is not reversed */
+	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
+
+	/** TODO convert back to the network endian form before
+	 * sending to the fins core
+	 */
+
+	ack_send(uniqueSockID, bind_call);
+
+	free(addr);
+	return;
 
 }
 
-void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags) {
+void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
+		u_char *data, int flags) {
 
-//	sendto_tcp(senderid, sockfd, datalen, data, flags, NULL, 0);
+	//	sendto_tcp(senderid, sockfd, datalen, data, flags, NULL, 0);
 
-//	return;
+	//	return;
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -400,7 +349,7 @@ void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 
 	if (flags == -1000) {
 
-		return (write_tcp(uniqueSockID, datalen, data));
+		return (write_tcp(uniqueSockID, send_call, datalen, data));
 
 	}
 	/** TODO handle flags cases */
@@ -418,12 +367,7 @@ void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 
 	PRINT_DEBUG("");
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		exit(1);
@@ -437,11 +381,9 @@ void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 	if (jinniSockets[index].connection_status == 0) {
 		/** socket is not connected to an address. Send call will fail */
 
-		PRINT_DEBUG("socketjinni failed to accomplish send, socket found unconnected !!!");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		PRINT_DEBUG(
+				"socketjinni failed to accomplish send, socket found unconnected !!!");
+		nack_send(uniqueSockID, send_call);
 
 	}
 
@@ -471,7 +413,7 @@ void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 	host_IP = jinniSockets[index].host_IP;
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP,hostport);
+	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -484,36 +426,20 @@ void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int fl
 	{
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		sem_wait(jinniSockets[index].s);
-		PRINT_DEBUG("");
-
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
+		ack_send(uniqueSockID, send_call);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
-
+		nack_send(uniqueSockID, send_call);
 	}
 
 	return;
 
-
-
-
-
 }
 
-void write_tcp(unsigned long long uniqueSockID, int datalen, u_char *data){
-
-
+void write_tcp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -522,16 +448,9 @@ void write_tcp(unsigned long long uniqueSockID, int datalen, u_char *data){
 	int len = datalen;
 	int index;
 
-
-
 	PRINT_DEBUG("");
-
-	/** TODO lock access to the jinnisockets */
 
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		exit(1);
@@ -546,11 +465,7 @@ void write_tcp(unsigned long long uniqueSockID, int datalen, u_char *data){
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
-
+		nack_send(uniqueSockID, socketCallType);
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
@@ -581,7 +496,7 @@ void write_tcp(unsigned long long uniqueSockID, int datalen, u_char *data){
 	host_IP = jinniSockets[index].host_IP;
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP,hostport);
+	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -594,249 +509,200 @@ void write_tcp(unsigned long long uniqueSockID, int datalen, u_char *data){
 	{
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		sem_wait(jinniSockets[index].s);
-		PRINT_DEBUG("");
-
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
+		ack_send(uniqueSockID, socketCallType);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
-
+		nack_send(uniqueSockID, socketCallType);
 	}
 
 	return;
 
-
-
 }
-
-
-
-
-
-
-
-
 
 void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
-		uint16_t dstport;
-		uint32_t dst_IP;
-		int index;
+	uint16_t dstport;
+	uint32_t dst_IP;
+	int index;
 
-		struct sockaddr_in *address;
-		address = (struct sockaddr_in *) addr;
-		/** TODO lock access to the jinnisockets */
+	struct sockaddr_in *address;
+	address = (struct sockaddr_in *) addr;
 
-		if (address->sin_family != AF_INET) {
-				PRINT_DEBUG("Wrong address family");
-				sem_wait(jinniSockets[index].s);
-				nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-				sem_post(jinniSockets[index].as);
-				sem_post(jinniSockets[index].s);
-			}
+	if (address->sin_family != AF_INET) {
+		PRINT_DEBUG("Wrong address family");
+		nack_send(uniqueSockID, connect_call);
+	}
 
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		exit(1);
+	}
 
-		index = findjinniSocket(uniqueSockID);
-		/** TODO unlock access to the jinnisockets */
-		if (index == -1) {
-			PRINT_DEBUG("socket descriptor not found into jinni sockets");
-			exit(1);
-		}
+	/** TODO fix host port below, it is not initialized with any variable !!! */
+	/** the check below is to make sure that the port is not previously allocated */
+	dstport = ntohs(address->sin_port);
+	dst_IP = ntohl((address->sin_addr).s_addr);
+	/** check if the same port and address have been both used earlier or not
+	 * it returns (-1) in case they already exist, so that we should not reuse them
+	 * according to the RFC document and man pages: Application can call connect more than
+	 * once over the same UDP socket changing the address from one to another. SO the assigning
+	 * will take place even if the check functions returns (-1) !!!
+	 * */
 
+	/** TODO connect for UDP means that this address will be the default address to send
+	 * to. BUT IT WILL BE ALSO THE ONLY ADDRESS TO RECEIVER FROM
+	 * */
 
+	/**
+	 * NOTICE THAT the relation between the host and the destined address is many to one.
+	 * more than one local socket maybe connected to the same destined address
+	 */
+	if (jinniSockets[index].connection_status > 0) {
+		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP,
+				jinniSockets[index].dstport);
+		PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport);
 
-		/** TODO fix host port below, it is not initialized with any variable !!! */
-		/** the check below is to make sure that the port is not previously allocated */
-		dstport = ntohs(address->sin_port);
-		dst_IP = ntohl((address->sin_addr).s_addr);
-		/** check if the same port and address have been both used earlier or not
-		 * it returns (-1) in case they already exist, so that we should not reuse them
-		 * according to the RFC document and man pages: Application can call connect more than
-		 * once over the same UDP socket changing the address from one to another. SO the assigning
-		 * will take place even if the check functions returns (-1) !!!
-		 * */
+	}
 
-		/** TODO connect for UDP means that this address will be the default address to send
-		 * to. BUT IT WILL BE ALSO THE ONLY ADDRESS TO RECEIVER FROM
-		 * */
-
-		/**
-		 * NOTICE THAT the relation between the host and the destined address is many to one.
-		 * more than one local socket maybe connected to the same destined address
-		 */
-		if (jinniSockets[index].connection_status > 0) {
-			PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP, jinniSockets[index].dstport ); PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport );
-
-		}
-
-		/**TODO check if the port is free for binding or previously allocated
-		 * Current code assume that the port is authorized to be accessed
-		 * and also available
-		 * */
-		/** Reverse again because it was reversed by the application itself */
-		//hostport = ntohs(address->sin_port);
+	/**TODO check if the port is free for binding or previously allocated
+	 * Current code assume that the port is authorized to be accessed
+	 * and also available
+	 * */
+	/** Reverse again because it was reversed by the application itself */
+	//hostport = ntohs(address->sin_port);
 
 
-		/** TODO lock and unlock the protecting semaphores before making
-		 * any modifications to the contents of the jinniSockets database
-		 */
-		PRINT_DEBUG("%d,%d,%d",(address->sin_addr).s_addr, ntohs(address->sin_port),
-				address->sin_family);
+	/** TODO lock and unlock the protecting semaphores before making
+	 * any modifications to the contents of the jinniSockets database
+	 */
+	PRINT_DEBUG("%d,%d,%d", (address->sin_addr).s_addr,
+			ntohs(address->sin_port), address->sin_family);
 
-		jinniSockets[index].dstport = ntohs(address->sin_port);
-		jinniSockets[index].dst_IP = ntohl((address->sin_addr).s_addr);
-		jinniSockets[index].connection_status++;
+	jinniSockets[index].dstport = ntohs(address->sin_port);
+	jinniSockets[index].dst_IP = ntohl((address->sin_addr).s_addr);
+	jinniSockets[index].connection_status++;
 
-		/** Reverse again because it was reversed by the application itself
-		 * In our example it is not reversed */
-		//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
+	/** Reverse again because it was reversed by the application itself
+	 * In our example it is not reversed */
+	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
 
-		/** TODO convert back to the network endian form before
-		 * sending to the fins core
-		 */
+	/** TODO convert back to the network endian form before
+	 * sending to the fins core
+	 */
 
-		sem_wait(jinniSockets[index].s);
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+	ack_send(uniqueSockID, connect_call);
 
-		free(addr);
-		return;
+	free(addr);
+	return;
 
 }
 
-void sendto_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags,
-		struct sockaddr *dest_addr, socklen_t addrlen) {
+void sendto_tcp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, u_char *data, int flags, struct sockaddr *dest_addr,
+		socklen_t addrlen) {
 
 	uint16_t hostport;
-		uint16_t dstport;
-		uint32_t host_IP;
-		uint32_t dst_IP;
+	uint16_t dstport;
+	uint32_t host_IP;
+	uint32_t dst_IP;
 
-		int len = datalen;
-		int index;
+	int len = datalen;
+	int index;
 
-		PRINT_DEBUG();
+	PRINT_DEBUG();
 
-		/** TODO handle flags cases */
-		switch (flags) {
-		case MSG_CONFIRM:
-		case MSG_DONTROUTE:
-		case MSG_DONTWAIT:
-		case MSG_EOR:
-		case MSG_MORE:
-		case MSG_NOSIGNAL:
-		case MSG_OOB: /** case of recieving a (write call)*/
-		default:
-			break;
+	/** TODO handle flags cases */
+	switch (flags) {
+	case MSG_CONFIRM:
+	case MSG_DONTROUTE:
+	case MSG_DONTWAIT:
+	case MSG_EOR:
+	case MSG_MORE:
+	case MSG_NOSIGNAL:
+	case MSG_OOB: /** case of recieving a (write call)*/
+	default:
+		break;
 
-		} PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
-		struct sockaddr_in *address;
-		address = (struct sockaddr_in *) dest_addr;
-		/** TODO lock access to the jinnisockets */
+	struct sockaddr_in *address;
+	address = (struct sockaddr_in *) dest_addr;
 
-		index = findjinniSocket(uniqueSockID);
+	index = findjinniSocket(uniqueSockID);
+	PRINT_DEBUG("");
+
+	if (index == -1) {
+		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
+		exit(1);
+	}
+
+	if (address->sin_family != AF_INET) {
+		PRINT_DEBUG("Wrong address family");
+		nack_send(uniqueSockID, socketCallType);
+	}
+
+	/** copying the data passed to be able to free the old memory location
+	 * the new created location is the one to be included into the newly created finsFrame*/
+	PRINT_DEBUG("");
+
+	/** Keep all ports and addresses in host order until later  action taken */
+	dstport = ntohs(address->sin_port); /** reverse it since it is in network order after application used htons */
+
+	dst_IP = ntohl(address-> sin_addr.s_addr);/** it is in network format since application used htonl */
+	/** addresses are in host format given that there are by default already filled
+	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
+
+	/**
+	 * Default current host port to be assigned is 58088
+	 * It is supposed to be randomly selected from the range found in
+	 * /proc/sys/net/ipv4/ip_local_port_range
+	 * default range in Ubuntu is 32768 - 61000
+	 * The value has been chosen randomly when the socket firstly inserted into the jinnisockets
+	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
+	 */
+	hostport = jinniSockets[index].hostport;
+	/**
+	 * the current value of host_IP is zero but to be filled later with
+	 * the current IP using the IPv4 modules unless a binding has occured earlier
+	 */
+	host_IP = jinniSockets[index].host_IP;
+
+	PRINT_DEBUG("");
+
+	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
+	//free(data);
+	//free(addr);
+	PRINT_DEBUG("");
+
+	/** the meta-data paraters are all passes by copy starting from this point
+	 *
+	 */
+	if (jinni_TCP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)
+
+	{
+		PRINT_DEBUG("");
+		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
+		ack_send(uniqueSockID, socketCallType);
 		PRINT_DEBUG("");
 
-		/** TODO unlock access to the jinnisockets */
-		if (index == -1) {
-			PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-			exit(1);
-		}
+	} else {
+		PRINT_DEBUG("socketjinni failed to accomplish sendto");
+		nack_send(uniqueSockID, socketCallType);
+	}
 
-		if (address->sin_family != AF_INET) {
-			PRINT_DEBUG("Wrong address family"); PRINT_DEBUG("");
-
-			sem_wait(jinniSockets[index].s);
-			PRINT_DEBUG("");
-
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			sem_post(jinniSockets[index].as);
-
-			sem_post(jinniSockets[index].s);
-			PRINT_DEBUG("");
-
-		}
-
-		/** copying the data passed to be able to free the old memory location
-		 * the new created location is the one to be included into the newly created finsFrame*/
-		PRINT_DEBUG("");
-
-		/** Keep all ports and addresses in host order until later  action taken */
-		dstport = ntohs(address->sin_port); /** reverse it since it is in network order after application used htons */
-
-		dst_IP = ntohl(address-> sin_addr.s_addr);/** it is in network format since application used htonl */
-		/** addresses are in host format given that there are by default already filled
-		 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
-
-		/**
-		 * Default current host port to be assigned is 58088
-		 * It is supposed to be randomly selected from the range found in
-		 * /proc/sys/net/ipv4/ip_local_port_range
-		 * default range in Ubuntu is 32768 - 61000
-		 * The value has been chosen randomly when the socket firstly inserted into the jinnisockets
-		 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
-		 */
-		hostport = jinniSockets[index].hostport;
-		/**
-		 * the current value of host_IP is zero but to be filled later with
-		 * the current IP using the IPv4 modules unless a binding has occured earlier
-		 */
-		host_IP = jinniSockets[index].host_IP;
-
-		PRINT_DEBUG("");
-
-		PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP,hostport);
-		//free(data);
-		//free(addr);
-		PRINT_DEBUG("");
-
-		/** the meta-data paraters are all passes by copy starting from this point
-		 *
-		 */
-		if (jinni_TCP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)
-
-		{
-			PRINT_DEBUG("");
-			/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-			sem_wait(jinniSockets[index].s);
-			PRINT_DEBUG("");
-
-			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			sem_post(jinniSockets[index].as);
-
-			sem_post(jinniSockets[index].s);
-			PRINT_DEBUG("");
-
-		} else {
-			PRINT_DEBUG("socketjinni failed to accomplish sendto");
-			sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			sem_post(jinniSockets[index].as);
-
-			sem_post(jinniSockets[index].s);
-
-		}
-
-		return;
+	return;
 }
 
-void recvfrom_tcp(unsigned long long uniqueSockID, int datalen, int flags, int symbol) {
+void recvfrom_tcp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, int flags, int symbol) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the
-		 * application to get the sender address or not
-		 */
+	 * application to get the sender address or not
+	 */
 
 	u_char buf[MAX_DATA_PER_TCP];
 
@@ -847,6 +713,11 @@ void recvfrom_tcp(unsigned long long uniqueSockID, int datalen, int flags, int s
 	int index;
 	int i;
 	int blocking_flag;
+
+	void *msg;
+	u_char *pt;
+	int msg_len;
+	int ret_val;
 
 	if (symbol == 1)
 		address = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
@@ -859,16 +730,15 @@ void recvfrom_tcp(unsigned long long uniqueSockID, int datalen, int flags, int s
 
 	}
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
+
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
 	blocking_flag = jinniSockets[index].blockingFlag;
 
 	/** the meta-data parameters are all passed by copy starting from this point
@@ -878,48 +748,54 @@ void recvfrom_tcp(unsigned long long uniqueSockID, int datalen, int flags, int s
 	if (TCPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
 			blocking_flag) == 1) {
 
-		if (symbol == 0) {
-			sem_wait(jinniSockets[index].s);
+		buf[buflen] = '\0'; //may be specific to symbol==0
 
-			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			buf[buflen] = '\0';
-			PRINT_DEBUG("%d",buflen ); PRINT_DEBUG("%s",buf);
-			write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
-			write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
-			sem_post(jinniSockets[index].as);
-			sem_post(jinniSockets[index].s);
-			PRINT_DEBUG();
+		PRINT_DEBUG("%d", buflen);
+		PRINT_DEBUG("%s", buf);
 
-			//	free(buf);
-			PRINT_DEBUG();
+		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen
+				+ (symbol ? sizeof(struct sockaddr_in) : 0);
+		msg = malloc(msg_len);
+		pt = msg;
 
-		} else if (symbol == 1) {
+		*(int *) pt = socketCallType;
+		pt += sizeof(int);
 
-			sem_wait(jinniSockets[index].s);
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
 
-			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			PRINT_DEBUG();
-			write(jinniSockets[index].jinniside_pipe_ds, address,
-					sizeof(struct sockaddr_in));
-			write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
-			write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
+		*(int *) pt = ACK;
+		pt += sizeof(int);
 
-			sem_post(jinniSockets[index].as);
-
-			sem_post(jinniSockets[index].s);
-		} else {
-
+		if (symbol) {
+			memcpy(pt, address, sizeof(struct sockaddr_in));
+			pt += sizeof(struct sockaddr_in);
 		}
 
+		*(int *) pt = buflen;
+		pt += sizeof(int);
+
+		memcpy(pt, buf, buflen);
+		pt += buflen;
+
+		if (pt - (u_char *) msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
+					msg_len);
+			free(msg);
+			exit(1);
+		}
+
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+		free(msg);
+
+		//free(buf);
+		PRINT_DEBUG();
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
-	} PRINT_DEBUG();
+		nack_send(uniqueSockID, socketCallType);
+	}
+	PRINT_DEBUG();
 
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
@@ -928,8 +804,6 @@ void recvfrom_tcp(unsigned long long uniqueSockID, int datalen, int flags, int s
 	//free(buf);
 
 	return;
-
-
 
 }
 
@@ -945,6 +819,12 @@ void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 	int blocking_flag;
 	blocking_flag = 1;
+
+	void *msg;
+	u_char *pt;
+	int msg_len;
+	int ret_val;
+
 	/** TODO handle flags cases */
 	switch (flags) {
 
@@ -953,17 +833,15 @@ void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 	}
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
+
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
-
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
 
 	/** the meta-data parameters are all passed by copy starting from this point
 	 *
@@ -975,29 +853,49 @@ void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags) {
 	if (TCPreadFrom_fins(uniqueSockID, &buf, &buflen, 0, NULL, blocking_flag)
 			== 1) {
 
-		sem_wait(jinniSockets[index].s);
+		buf[buflen] = '\0'; //may be specific to symbol==0
 
-			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-			buf[buflen] = '\0';
-			PRINT_DEBUG("%d",buflen ); PRINT_DEBUG("%s",buf);
-			write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
-			write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
+		PRINT_DEBUG("%d", buflen);
+		PRINT_DEBUG("%s", buf);
 
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int)
+				+ buflen;
+		msg = malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = recv_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(int *) pt = ACK;
+		pt += sizeof(int);
+
+		*(int *) pt = buflen;
+		pt += sizeof(int);
+
+		memcpy(pt, buf, buflen);
+		pt += buflen;
+
+		if (pt - (u_char *) msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
+					msg_len);
+			free(msg);
+			exit(1);
+		}
+
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+		free(msg);
+
 		PRINT_DEBUG();
 
 		//	free(buf);
 		PRINT_DEBUG();
-
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recv_udp");
-		sem_wait(jinniSockets[index].s);
-			nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
+		nack_send(uniqueSockID, recv_call);
 	}
 
 	PRINT_DEBUG();
@@ -1017,9 +915,7 @@ void getpeername_tcp(unsigned long long uniqueSockID, int addrlen) {
 
 }
 
-
-
-void shutdown_tcp(unsigned long long uniqueSockID,int  how){
+void shutdown_tcp(unsigned long long uniqueSockID, int how) {
 
 	/**
 	 *
@@ -1029,61 +925,25 @@ void shutdown_tcp(unsigned long long uniqueSockID,int  how){
 
 	int index;
 
-
-
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG();
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
 
+	ack_send(uniqueSockID, shutdown_call);
+}
 
-	sem_wait(jinniSockets[index].s);
-
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-
-
-	sem_post(jinniSockets[index].as);
-	sem_post(jinniSockets[index].s);
-
-
-
-
+void setsockopt_tcp(unsigned long long uniqueSockID, int level, int optname,
+		int optlen, void *optval) {
 
 }
 
-
-
-void setsockopt_tcp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval){
-
-
-
-
-
-
-
-
-
-
-
-
-}
-
-void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval){
-
-
-
-
-
-
-
-
-
-
-
+void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname,
+		int optlen, void *optval) {
 
 }
 

@@ -290,10 +290,8 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 
 	struct sockaddr_in *address;
 	address = (struct sockaddr_in *) addr;
-	/** TODO lock access to the jinnisockets */
 
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
@@ -304,12 +302,6 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 		nack_send(uniqueSockID, bind_call);
 	}
 
-	/**TODO lock the jinni sockets */
-
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
-	}
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
 	hostport = ntohs(address->sin_port);
@@ -368,10 +360,8 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	struct sockaddr_in *address;
 	address = (struct sockaddr_in *) addr;
-	/** TODO lock access to the jinnisockets */
 
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
@@ -454,12 +444,7 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	PRINT_DEBUG("");
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		exit(1);
@@ -563,12 +548,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 	PRINT_DEBUG("");
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		exit(1);
@@ -673,12 +653,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	struct sockaddr_in *address;
 	address = (struct sockaddr_in *) addr;
-	/** TODO lock access to the jinnisockets */
 
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		exit(1);
@@ -734,7 +710,6 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	if (jinni_UDP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)
 
 	{
-		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
 		PRINT_DEBUG("");
 
@@ -793,10 +768,7 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	}
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
@@ -843,7 +815,14 @@ void recvfrom_udp(unsigned long long uniqueSockID, int socketCallType,
 		memcpy(pt, buf, buflen);
 		pt += buflen;
 
-		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *)msg);
+		if (pt - (u_char *) msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
+					msg_len);
+			free(msg);
+			exit(1);
+		}
+
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
 		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 		free(msg);
 
@@ -878,6 +857,11 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	int index;
 	int i;
 
+	void *msg;
+	u_char *pt;
+	int msg_len;
+	int ret_val;
+
 	int blocking_flag;
 	blocking_flag = 1;
 	/** TODO handle flags cases */
@@ -888,10 +872,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 	}
 
-	/** TODO lock access to the jinnisockets */
-
 	index = findjinniSocket(uniqueSockID);
-	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
@@ -910,17 +891,42 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	if (UDPreadFrom_fins(uniqueSockID, &buf, &buflen, 0, NULL, blocking_flag)
 			== 1) {
 
-		sem_wait(jinniSockets[index].s);
+		buf[buflen] = '\0'; //may be specific to symbol==0
 
-		ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-		buf[buflen] = '\0';
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
-		write(jinniSockets[index].jinniside_pipe_ds, &buflen, sizeof(int));
-		write(jinniSockets[index].jinniside_pipe_ds, buf, buflen);
 
-		sem_post(jinniSockets[index].as);
-		sem_post(jinniSockets[index].s);
+		msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int)
+				+ buflen;
+		msg = malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = recv_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(int *) pt = ACK;
+		pt += sizeof(int);
+
+		*(int *) pt = buflen;
+		pt += sizeof(int);
+
+		memcpy(pt, buf, buflen);
+		pt += buflen;
+
+		if (pt - (u_char *) msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
+					msg_len);
+			free(msg);
+			exit(1);
+		}
+
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+		free(msg);
+
 		PRINT_DEBUG();
 
 		//	free(buf);
@@ -928,12 +934,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recv_udp");
-		sem_wait(jinniSockets[index].s);
-		nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-
-		sem_post(jinniSockets[index].as);
-
-		sem_post(jinniSockets[index].s);
+		nack_send(uniqueSockID, recv_call);
 	}
 
 	PRINT_DEBUG();
@@ -955,6 +956,10 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
  */
 
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
+	void *msg;
+	u_char *pt;
+	int msg_len;
+	int ret_val;
 
 	int index;
 	struct sockaddr_in address;
@@ -967,16 +972,36 @@ void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
 	memset(address.sin_zero, 0, 8);
 
 	PRINT_DEBUG("*****%d*********%d , %d*************",address_length,address.sin_addr.s_addr,address.sin_port )
-	sem_wait(jinniSockets[index].s);
 
-	ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	PRINT_DEBUG();
-	write(jinniSockets[index].jinniside_pipe_ds, &address_length, sizeof(int));
-	write(jinniSockets[index].jinniside_pipe_ds, &address, address_length);
-	sem_post(jinniSockets[index].as);
+	msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + address_length;
+	msg = malloc(msg_len);
+	pt = msg;
 
-	sem_post(jinniSockets[index].s);
+	*(u_int *) pt = getpeername_call;
+	pt += sizeof(u_int);
 
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(int *) pt = ACK;
+	pt += sizeof(int);
+
+	*(int *) pt = address_length;
+	pt += sizeof(int);
+
+	memcpy(pt, &address, address_length);
+	pt += address_length;
+
+	if (pt - (u_char *) msg != msg_len) {
+		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
+				msg_len);
+		free(msg);
+		exit(1);
+	}
+
+	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+	ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+	free(msg);
 }
 
 void shutdown_udp(unsigned long long uniqueSockID, int how) {

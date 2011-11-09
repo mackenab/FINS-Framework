@@ -124,11 +124,8 @@ char meen_sem_name2[] = "main_channel2";
 #endif
 
 //bu_mark kernel stuff
-#define RECV_BUFFER_SIZE	32// Pick an appropriate value here
+#define RECV_BUFFER_SIZE	1024// Pick an appropriate value here
 //end kernel stuff
-//begin: interceptor merge
-int numberOfSockets = -1;
-//end: interceptor merge
 
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
@@ -1065,6 +1062,7 @@ int main() {
 		perror("sendfins() caused an error");
 		exit(-1);
 	}
+	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
 	if (open(MAIN_SOCKET_CHANNEL, O_RDWR | O_EXCL | O_CREAT) == -1) {

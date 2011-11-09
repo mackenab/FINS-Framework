@@ -29,14 +29,14 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr *addr);
 void getsockname_tcp();
 void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void getpeername_tcp(unsigned long long uniqueSockID, int addrlen);
-void send_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags);
-void write_tcp(unsigned long long uniqueSockID, int datalen, u_char *data);
+void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags);
+void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data);
 
 
 void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags);
-void sendto_tcp(unsigned long long uniqueSockID, int datalen, u_char *data, int flags,
+void sendto_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
 		struct sockaddr *dest_addr, socklen_t addrlen);
-void recvfrom_tcp(unsigned long long uniqueSockID, int datalen, int flags, int symbol);
+void recvfrom_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
 void sendmsg_tcp();
 void recvmsg_tcp();
 void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);

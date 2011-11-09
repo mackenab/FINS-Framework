@@ -31,16 +31,17 @@ struct semaphore FINS_socket_sem;
 struct semaphore FINS_bind_sem;
 struct semaphore FINS_recvmsg_sem;
 
-#define RECV_BUFFER_SIZE	32	// Same as userspace, Pick an appropriate value here
+#define RECV_BUFFER_SIZE	1024	// Same as userspace, Pick an appropriate value here
 
 //for compiling in non mod kernel
 #ifndef PF_FINS
-#define AF_FINS AF_INET
+#define AF_FINS 2
 #define PF_FINS AF_FINS
 #endif
 #ifndef NETLINK_FINS
 #define NETLINK_FINS 20
 #endif
+
 
 u_char *shared_buf;
 ssize_t shared_len;
@@ -181,7 +182,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 			shared_len = 0;
 		}
 	} else {
-		printk(KERN_INFO "FINS: %s: shared_buf error, shared_len=%d null?%d\n", __FUNCTION__, shared_len, shared_buf == NULL);
+		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
 
@@ -358,7 +359,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 			shared_len = 0;
 		}
 	} else {
-		printk(KERN_INFO "FINS: %s: shared_buf error\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
 
@@ -1109,7 +1110,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 			rc = -1;
 		}
 	} else {
-		printk(KERN_ERR "FINS: %s: shared_buf error\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
 
@@ -1354,7 +1355,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 
 		memcpy(msg_start, msg_pt, part_len);
 
-		printk(KERN_INFO "FINS: %s; seq=%d", __FUNCTION__, seq);
+		printk(KERN_INFO "FINS: %s: seq=%d", __FUNCTION__, seq);
 
 		ret
 				= nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
@@ -1520,7 +1521,7 @@ void nl_data_ready(struct sk_buff *skb) {
 			up(&FINS_recvmsg_sem); // unblock the recvmsg call
 			break;
 		default:
-			printk(KERN_INFO "FINS: %s: got an unknown daemon reply (%d)\n", __FUNCTION__, socketDaemonResponseType);
+			printk(KERN_INFO "FINS: %s: got an unsupported/binding daemon reply (%d)\n", __FUNCTION__, socketDaemonResponseType);
 			break;
 		}
 	}

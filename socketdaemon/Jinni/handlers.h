@@ -147,7 +147,6 @@ struct finssocket {
 	int connection_status;
 	unsigned long long uniqueSockID;
 	pid_t childrenList[MaxChildrenNumSharingSocket];
-	int jinniside_pipe_ds; /**  the descriptor to access the pipe from the jinni side */
 	int type;
 	int protocol;
 
@@ -172,11 +171,6 @@ struct finssocket {
 	int data_pipe[2];
 	finsQueue dataQueue;
 	sem_t Qs; /** The data Queue Semaphore Pointer*/
-
-	char semaphore_name[30]; /** The client channel semaphore name */
-	char asemaphore_name[30];
-	sem_t *s; /** The client channel semaphore pointer*/
-	sem_t *as;
 };
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
