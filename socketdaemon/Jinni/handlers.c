@@ -1359,7 +1359,7 @@ void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 //TODO: dummy function, need to implement this
 void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		ssize_t len) {
-	ack_send(uniqueSockID, release_call);
+	ack_send(uniqueSockID, ioctl_call);
 }
 
 void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
