@@ -1342,6 +1342,26 @@ void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 }
 
+//TODO: dummy function, need to implement this
+void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
+	u_char *pt;
+	pt = buf;
+
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		exit(1);
+	}
+
+	ack_send(uniqueSockID, release_call);
+}
+
+//TODO: dummy function, need to implement this
+void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+		ssize_t len) {
+	ack_send(uniqueSockID, release_call);
+}
+
 void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		ssize_t len) {
 
@@ -1490,7 +1510,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		connect_tcp(uniqueSockID, addr);
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		nack_send(uniqueSockID, shutdown_call);
+		nack_send(uniqueSockID, connect_call);
 	}
 
 	return;

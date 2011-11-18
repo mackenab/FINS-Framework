@@ -507,7 +507,7 @@ void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname,
 	case SOL_SOCKET:
 		switch (optname) {
 		case SO_RCVBUF:
-			/** This is just a dummy value taken from strace but this will change to actu
+			/** This is just a dummy value taken from strace but this will change to actual
 			 * value once the socket options get fully implemented
 			 */
 

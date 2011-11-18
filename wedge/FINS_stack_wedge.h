@@ -38,6 +38,9 @@
 #define release_call 20
 #define ioctl_call 21
 #define daemonconnect_call 22
+
+#define MAX_calls 23
+
 #define write_call 30
 
 #define ACK 	200

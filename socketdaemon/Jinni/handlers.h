@@ -79,6 +79,8 @@
 #define ioctl_call 21
 #define daemonconnect_call 22
 
+#define MAX_calls 23
+
 //fins netlink stuff
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
 struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
@@ -224,6 +226,8 @@ void listen_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ss
 void accept_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
 void accept4_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
 void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
+void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
+void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
 
 void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
 

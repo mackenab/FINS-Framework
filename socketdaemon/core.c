@@ -657,12 +657,10 @@ void *interceptor_to_jinni() {
 				close_call_handler(uniqueSockID, msg_pt, msg_len);
 				break;
 			case release_call:
-				//do something?
-				//TODO: implement/find out if should implement
+				release_call_handler(uniqueSockID, msg_pt, msg_len);
 				break;
 			case ioctl_call:
-				//do something?
-				//TODO: implement/find out if should implement
+				ioctl_call_handler(uniqueSockID, msg_pt, msg_len);
 				break;
 			default:
 				PRINT_DEBUG(
