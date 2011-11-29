@@ -13,8 +13,6 @@
 extern struct finssocket jinniSockets[MAX_sockets];
 extern finsQueue Jinni_to_Switch_Queue;
 extern finsQueue Switch_to_Jinni_Queue;
-extern sem_t *meen_channel_semaphore1;
-extern sem_t *meen_channel_semaphore2;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
 

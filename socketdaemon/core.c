@@ -98,18 +98,10 @@ sem_t *IO_queues_sem[MAX_modules];
 
 /** ----------------------------------------------------------*/
 
-int socket_channel_desc = -1;
-
 int capture_pipe_fd; /** capture file descriptor to read from capturer */
 int inject_pipe_fd; /** inject file descriptor to read from capturer */
 int rtm_in_fd;
 int rtm_out_fd;
-
-//named semaphore !!!!!
-sem_t *meen_channel_semaphore1;
-sem_t *meen_channel_semaphore2;
-char meen_sem_name1[] = "main_channel1";
-char meen_sem_name2[] = "main_channel2";
 
 /** Ethernet Stub Variables  */
 #ifdef BUILD_FOR_ANDROID
@@ -240,63 +232,6 @@ void Queues_init() {
 	IO_queues_sem[14] = &RTM_to_Switch_Qsem;
 	IO_queues_sem[15] = &Switch_to_RTM_Qsem;
 
-}
-
-void commChannel_init() {
-
-	PRINT_DEBUG("entering: commChannel_init()");
-	//changed mrd015 !!!!! bionic  does NOT support named semaphores
-#ifndef BUILD_FOR_ANDROID
-	/** the semaphore is initially locked */
-	//meen_channel_semaphore1 = sem_open(meen_sem_name1,O_CREAT|O_EXCL,0644,0);
-	meen_channel_semaphore1 = sem_open(meen_sem_name1, O_CREAT, 0644, 0); //named semaphore !!!!!
-
-	/**	if (meen_channel_semaphore1 == SEM_FAILED)
-	 {
-	 meen_channel_semaphore1 = sem_open(meen_sem_name1,0);
-
-
-	 } */
-
-	if (meen_channel_semaphore1 == SEM_FAILED) { //named semaphore !!!!!
-		PRINT_DEBUG("meen_channel_semaphore1 failed to launch");
-		sem_unlink(meen_sem_name1);
-		exit(1);
-	}
-
-	//meen_channel_semaphore2 = sem_open(meen_sem_name2,O_CREAT|O_EXCL,0644,0);
-	meen_channel_semaphore2 = sem_open(meen_sem_name2, O_CREAT, 0644, 0); //named semaphore !!!!!
-
-
-	/**	if (meen_channel_semaphore2 == SEM_FAILED)
-	 {
-
-	 meen_channel_semaphore2 = sem_open(meen_sem_name2,0);
-
-
-	 } */
-
-	if (meen_channel_semaphore2 == SEM_FAILED) { //named semaphore !!!!!
-		PRINT_DEBUG("meen_channel_semaphore2 failed to launch");
-		sem_unlink(meen_sem_name2);
-		exit(1);
-	}
-#endif
-	PRINT_DEBUG("Jinni was blocked waiting at mkfifo, it had just cross it");
-	socket_channel_desc = open(MAIN_SOCKET_CHANNEL, O_RDONLY);
-	PRINT_DEBUG("after opening");
-
-	if (socket_channel_desc == -1) {
-		PRINT_DEBUG("socket GENIE failed to open the socket channel \n");
-		exit(EXIT_FAILURE);
-	}
-
-	/** Notice that the meen_channel_semaphore is a semaphore shared among processes
-	 * (It is processes level semaphore, NOT threads level)
-	 */
-	/** Needs NPTL because LinuxThreads does not support sharing semaphores between processes */
-
-	PRINT_DEBUG("exiting: commChannel_init()");
 }
 
 void *Switch_to_Jinni() {
@@ -664,7 +599,7 @@ void *interceptor_to_jinni() {
 				break;
 			default:
 				PRINT_DEBUG(
-						"unknown opcode read from the socket main channel ! Dropping");
+						"unknown opcode received (%d), dropping", socketCallType);
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */
@@ -684,134 +619,6 @@ void *interceptor_to_jinni() {
 	exit(0);
 }
 
-//##end: kernel stuff
-
-void *interceptor_to_jinni_old() {
-
-	static int numberOfSockets = 0;
-	//int socket_channel_desc;
-	struct socketUniqueID socketID;
-	char client_pipe[256];
-	int numOfBytes = 0;
-	u_int opcode;
-	pid_t sender;
-
-	commChannel_init();
-
-	int counter = 0;
-#ifndef BUILD_FOR_ANDROID
-	sem_post(meen_channel_semaphore2); //named semaphore !!!!!
-#endif
-	while (1) {
-
-		/**TODO lock the pipe before reading
-		 *	to make sure no other thread read at the same time
-		 * */
-
-		PRINT_DEBUG("COUNTER = %d", counter);
-		int tester;
-		/**	sem_getvalue(meen_channel_semaphore1,&tester);
-		 PRINT_DEBUG ("errno %d", errno);
-		 PRINT_DEBUG("tester = %d",tester);
-		 */
-#ifndef BUILD_FOR_ANDROID
-		sem_wait(meen_channel_semaphore1); //named semaphore !!!!!
-		sem_wait(meen_channel_semaphore2); //named semaphore !!!!!
-#endif
-		numOfBytes = read(socket_channel_desc, &sender, sizeof(pid_t));
-		numOfBytes = read(socket_channel_desc, &opcode, sizeof(u_int));
-		PRINT_DEBUG("%d", sender);
-
-		if (numOfBytes <= 0) {
-			PRINT_DEBUG("READING ERROR");
-			counter++;
-			continue;
-
-		}
-
-		switch (opcode) {
-
-		case socket_call:
-			//socket_call_handler(sender); //DONE
-			break;
-		case socketpair_call:
-			//socketpair_call_handler(sender);
-			break;
-		case bind_call:
-			//bind_call_handler(sender); //DONE
-			break;
-		case getsockname_call:
-			//getsockname_call_handler(sender); //DONE
-			break;
-		case connect_call:
-			//connect_call_handler(sender); //DONE
-			break;
-		case getpeername_call:
-			//getpeername_call_handler(sender); //DONE
-			break;
-			/**
-			 * the write call is encapuslated as a send call with the
-			 * parameter flags = -1000  			//DONE
-			 */
-		case send_call:
-			//send_call_handler(sender); //DONE
-			break;
-		case recv_call:
-			//recv_call_handler(sender); //DONE
-			break;
-		case sendto_call:
-			//sendto_call_handler(sender); //DONE
-			break;
-		case recvfrom_call:
-			//recvfrom_call_handler(sender); //DONE
-			break;
-		case sendmsg_call:
-			//sendmsg_call_handler(sender); //DONE
-			break;
-		case recvmsg_call:
-			//recvmsg_call_handler(sender);
-			break;
-		case getsockopt_call:
-			//getsockopt_call_handler(sender); //Dummy response
-			break;
-		case setsockopt_call:
-			//setsockopt_call_handler(sender); // Dummy response
-			break;
-		case listen_call:
-			//listen_call_handler(sender);
-			break;
-		case accept_call:
-			//accept_call_handler(sender);
-			break;
-		case accept4_call:
-			//accept4_call_handler(sender);
-			break;
-		case shutdown_call:
-			//shutdown_call_handler(sender); //DONE
-			break;
-		case close_call:
-			/**
-			 * TODO fix the problem into remove jinnisockets
-			 * the Queue Terminate function has a bug as explained into it
-			 */
-			//close_call_handler(sender);
-			break;
-		default: {
-			PRINT_DEBUG(
-					"unknown opcode read from the socket main channel ! CRASHING");
-			/** a function must be called to clean and reset the pipe
-			 * to original conditions before crashing
-			 */
-			exit(1);
-		}
-
-		} /** end of switch */
-
-		counter++;
-	}/**end of while */
-
-} /** end of main function */
-
 void *Capture() {
 
 	char *data;
@@ -827,7 +634,7 @@ void *Capture() {
 	u_char etherdst[ETHER_ADDR_LEN];
 	u_short protocol_type;
 
-	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY);
+	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
 	if (capture_pipe_fd == -1) {
 		PRINT_DEBUG("opening capture_pipe did not work");
 		exit(EXIT_FAILURE);
@@ -1063,14 +870,6 @@ int main() {
 	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
-	if (open(MAIN_SOCKET_CHANNEL, O_RDWR | O_EXCL | O_CREAT) == -1) {
-		if (errno == EEXIST) {
-			PRINT_DEBUG("open(" MAIN_SOCKET_CHANNEL ", 0777) already exists.");
-		} else {
-			PRINT_DEBUG("open(" MAIN_SOCKET_CHANNEL ", 0777) failed.");
-			exit(1);
-		}
-	}
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");

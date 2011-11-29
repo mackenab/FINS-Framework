@@ -19,10 +19,6 @@ extern finsQueue Switch_to_Jinni_Queue;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
 
-extern int socket_channel_desc;
-extern sem_t *meen_channel_semaphore1;
-extern sem_t *meen_channel_semaphore2;
-
 int init_fins_nl() {
 	int sockfd;
 	int ret_val;
@@ -481,12 +477,14 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH, addrlen=%d", addrlen);
 		exit(1);
+	} else {
+		PRINT_DEBUG("addrlen=%d", addrlen);
 	}
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
 
 	memcpy(addr, pt, addrlen);
-	pt += sizeof(addrlen);
+	pt += addrlen;
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
@@ -1200,7 +1198,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID,
 	if (optlen > 0) {
 		optval = (u_char *) malloc(optlen);
 		memcpy(optval, pt, optlen);
-		pt += sizeof(optlen);
+		pt += optlen;
 	}
 
 	if (pt - buf != len) {
@@ -1359,6 +1357,48 @@ void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 //TODO: dummy function, need to implement this
 void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		ssize_t len) {
+	int index;
+	u_int cmd;
+	u_long arg;
+	u_char *pt;
+
+	PRINT_DEBUG("");
+
+	pt = buf;
+
+	cmd = *(u_int *) pt;
+	pt += sizeof(u_int);
+
+	arg = *(u_long *) pt;
+	pt += sizeof(u_long);
+
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		exit(1);
+	}
+
+	PRINT_DEBUG("");
+
+	index = findjinniSocket(uniqueSockID);
+	PRINT_DEBUG("");
+
+	if (index == -1) {
+		PRINT_DEBUG(
+				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		exit(1);
+	}
+	PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
+
+	/*if (jinniSockets[index].type == SOCK_DGRAM)
+		setsockopt_udp(uniqueSockID, level, optname, optlen, optval);
+	else if (jinniSockets[index].type == SOCK_STREAM)
+		setsockopt_tcp(uniqueSockID, level, optname, optlen, optval);
+	else if (jinniSockets[index].type == SOCK_RAW) {
+		setsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
+	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, setsockopt_call);
+	}*/
 	ack_send(uniqueSockID, ioctl_call);
 }
 
@@ -1484,7 +1524,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	addr = (struct sockaddr_in *) malloc(addrlen);
 
 	memcpy(addr, pt, addrlen);
-	pt += sizeof(addrlen);
+	pt += addrlen;
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);

@@ -42,8 +42,8 @@ struct semaphore FINS_semaphores[MAX_calls];
 u_char *shared_buf;
 int shared_len;
 u_int shared_call;
-int shared_ret;
 unsigned long long shared_sockID;
+int shared_ret;
 
 static int print_exit(const char *func, int rc) {
 	printk(KERN_INFO "FINS %s: Exited\n", func);
@@ -80,8 +80,6 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	u_char *pt;
 	int ret;
 
-	uniqueSockID = getUniqueSockID(sock);
-
 	printk(KERN_INFO "FINS: %s: Entered\n", __FUNCTION__);
 
 	// Required stuff for kernel side	
@@ -100,6 +98,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	sock->ops = &FINS_proto_ops;
 
 	rc = 0;
+	uniqueSockID = getUniqueSockID(sock);
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -306,6 +305,8 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	printk(KERN_INFO "FINS: %s: Entered.\n", __FUNCTION__);
 
+	printk(KERN_INFO "FINS: %s: addr_len=%d.\n", __FUNCTION__, addr_len);
+
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
@@ -396,6 +397,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	uniqueSockID = getUniqueSockID(sock);
 
 	printk(KERN_INFO "FINS: %s: called.\n", __FUNCTION__);
+	printk(KERN_INFO "FINS: %s: addr_len=%d\n", __FUNCTION__, addr_len);
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -492,6 +494,8 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 		return -1; // pick an appropriate errno
 	}
 
+	//TODO: finish this & daemon side
+
 	// Build the message
 	buf = "FINS_socketpair() called.";
 	buffer_length = strlen(buf) + 1;
@@ -523,6 +527,8 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return -1; // pick an appropriate errno
 	}
 
+	//TODO: finish this & daemon side
+
 	// Build the message
 	buf = "FINS_accept() called.";
 	buffer_length = strlen(buf) + 1;
@@ -539,33 +545,93 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 		int peer) {
+	int rc = 0;
 	unsigned long long uniqueSockID;
+	ssize_t buf_len;
+	void *buf;
+	u_char *pt;
 	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
+
+	int calltype;
 
 	uniqueSockID = getUniqueSockID(sock);
 
 	printk(KERN_INFO "FINS: %s: called.\n", __FUNCTION__);
 
-	// Notify FINS daemon
-	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
-		return -1; // pick an appropriate errno
+	// Build the message
+	buf_len = sizeof(u_int) + sizeof(unsigned long long);
+	buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		return print_exit(__FUNCTION__, -1);
+	}
+	pt = buf;
+
+	if (peer == 0) {
+		calltype = getsockname_call;
+	} else if (peer == 1) {
+		calltype = getpeername_call;
+	} else {
+		printk(KERN_ERR "FINS: %s: unhanlded type: %d", __FUNCTION__, peer);
+		calltype = getsockname_call; //???
 	}
 
-	// Build the message
-	buf = "FINS_getname() called.";
-	buffer_length = strlen(buf) + 1;
+	*(u_int *) pt = calltype;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	//todo: finish, incorporate peers
+
+	if (pt - (u_char *) buf != buf_len) {
+		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		kfree(buf);
+		return print_exit(__FUNCTION__, -1);
+	}
+
+	printk(KERN_INFO "FINS: %s: socket_call=%d uniqueSockID=%llu buf_len=%d", __FUNCTION__, getsockname_call, uniqueSockID, buf_len);
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	kfree(buf);
+
 	if (ret != 0) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
-		return -1; // pick an appropriate errno
+		return print_exit(__FUNCTION__, -1);
 	}
 
-	return 0;
+	if (down_interruptible(&FINS_semaphores[calltype])) {
+		;
+	} // block until daemon replies
+	sema_init(&FINS_semaphores[calltype], 0); // relock semaphore
+
+	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
+
+	//exract msg from shared_buf
+	if ((shared_buf != NULL) && (shared_len == 0)) {
+		if ((calltype != shared_call) || (uniqueSockID != shared_sockID)) {
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, calltype, uniqueSockID);
+			rc = -1;
+		} else {
+			if (shared_ret == ACK) {
+				printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
+			} else if (shared_ret == NACK) {
+				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
+				rc = -1;
+			} else {
+				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
+				rc = -1;
+			}
+			shared_buf = NULL;
+			shared_len = -1;
+		}
+	} else {
+		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
+		rc = -1;
+	}
+
+	return print_exit(__FUNCTION__, rc);
 }
 
 static unsigned int FINS_poll(struct file *file, struct socket *sock,
@@ -584,6 +650,8 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock,
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
 	}
+
+	//TODO: finish this & daemon side
 
 	// Build the message
 	buf = "FINS_poll() called.";
@@ -617,7 +685,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, -1);
 	}
 	// Build the message
-	buf_len = sizeof(u_int) + sizeof(unsigned long long);
+	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(u_long);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
@@ -631,8 +699,15 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
+	*(u_int *) pt = cmd;
+	pt += sizeof(u_int);
+
+	*(u_long *) pt = arg;
+	pt += sizeof(u_long);
+
 	//we have not supported this before
 	//TODO: find out what else needs to be sent/done
+	//http://lxr.linux.no/#linux+v2.6.39.4/net/ipx/af_ipx.c#L1858
 
 	if (pt - (u_char *) buf != buf_len) {
 		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
@@ -666,6 +741,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		} else {
 			if (shared_ret == ACK) {
 				printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
+				// do some stuff....
 			} else if (shared_ret == NACK) {
 				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 				rc = -1;
@@ -700,6 +776,8 @@ static int FINS_listen(struct socket *sock, int backlog) {
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
+
+	//TODO: finish this & daemon side
 
 	// Build the message
 	buf = "FINS_listen() called.";
@@ -888,7 +966,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 				rc = -1;
 			}
 			shared_buf = NULL;
-			shared_len = 0;
+			shared_len = -1;
 		}
 	} else {
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
@@ -1195,7 +1273,9 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		// pick an appropriate errno
 	}
 
-	if (down_interruptible(&FINS_semaphores[recvmsg_call])) {;} // block until daemon replies
+	if (down_interruptible(&FINS_semaphores[recvmsg_call])) {
+		;
+	} // block until daemon replies
 	sema_init(&FINS_semaphores[recvmsg_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
@@ -1263,7 +1343,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 				rc = -1;
 			}
 			shared_buf = NULL;
-			shared_len = 0;
+			shared_len = -1;
 		} else {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
 			rc = -1;
@@ -1293,6 +1373,8 @@ static int FINS_mmap(struct file *file, struct socket *sock,
 		return -1; // pick an appropriate errno
 	}
 
+	//TODO: finish this & daemon side
+
 	// Build the message
 	buf = "FINS_mmap() called.";
 	buffer_length = strlen(buf) + 1;
@@ -1318,6 +1400,8 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page,
 	uniqueSockID = getUniqueSockID(sock);
 
 	printk(KERN_INFO "FINS: %s: called.\n", __FUNCTION__);
+
+	//TODO: finish this & daemon side
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -1420,8 +1504,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 	// Allocate a new netlink message
 	skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
 	if (!skb) {
-		printk(KERN_ERR "FINS: %s: netlink Failed to allocate new skb\n",
-		__FUNCTION__);
+		printk(KERN_ERR "FINS: %s: netlink Failed to allocate new skb\n", __FUNCTION__);
 		return -1;
 	}
 
@@ -1518,8 +1601,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 		ret
 				= nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
 		if (ret < 0) {
-			printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n",
-			__FUNCTION__, seq);
+			printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n", __FUNCTION__, seq);
 			return -1;
 		}
 
@@ -1537,42 +1619,11 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, header_size + part_len,
 			flags);
 	if (ret < 0) {
-		printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n",
-		__FUNCTION__, seq);
+		printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n",__FUNCTION__, seq);
 		return -1;
 	}
 
 	kfree(part_buf);
-
-	return 0;
-}
-
-//assumes that the msg (buf) has a first value of msg_len, does not append header
-int nl_send_old(int pid, void *buf, ssize_t msg_len, int flags) {
-	ssize_t len = msg_len;
-	u_int seq = 0;
-	int ret;
-
-	while (len > RECV_BUFFER_SIZE) {
-		ret = nl_send_msg(pid, seq, 0x0, buf, RECV_BUFFER_SIZE, flags
-				| NLM_F_MULTI);
-		if (ret < 0) {
-			printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n",
-			__FUNCTION__, seq);
-			return -1;
-		}
-
-		buf += RECV_BUFFER_SIZE;
-		len -= RECV_BUFFER_SIZE;
-		seq++;
-	}
-
-	ret = nl_send_msg(pid, seq, NLMSG_DONE, buf, len, flags);
-	if (ret < 0) {
-		printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n",
-		__FUNCTION__, seq);
-		return -1;
-	}
 
 	return 0;
 }
@@ -1618,21 +1669,11 @@ void nl_data_ready(struct sk_buff *skb) {
 		pt += sizeof(u_int);
 		len -= sizeof(u_int);
 
-		switch (socketDaemonResponseType) {
-		case daemonconnect_call:
+		if (socketDaemonResponseType == daemonconnect_call) {
 			FINS_daemon_pid = pid;
 			printk(KERN_INFO "FINS: %s: Daemon connected, pid=%d\n", __FUNCTION__,FINS_daemon_pid);
-			break;
-		case socket_call:
-		case bind_call:
-		case release_call:
-		case connect_call:
-		case ioctl_call:
-		case shutdown_call:
-		case setsockopt_call:
-		case getsockopt_call:
-			printk(KERN_INFO "FINS: %s: got a daemon reply to a call (%d).\n",
-			__FUNCTION__, socketDaemonResponseType);
+		} else if (socketDaemonResponseType < MAX_calls) {
+			printk(KERN_INFO "FINS: %s: got a daemon reply to a call (%d).\n", __FUNCTION__, socketDaemonResponseType);
 			/*
 			 * extract msg or pass to shared buffer
 			 * shared_call & shared_sockID, are to verify buf goes to the write sock & call
@@ -1652,31 +1693,8 @@ void nl_data_ready(struct sk_buff *skb) {
 			shared_len = len;
 
 			up(&FINS_semaphores[socketDaemonResponseType]);
-			break;
-		case recv_call:
-		case recvfrom_call:
-		case recvmsg_call:
-			printk(KERN_INFO "FINS: %s: got a daemon reply to a recv(), recvfrom(), or recvmsg() call\n",
-			__FUNCTION__);
-
-			shared_call = recvmsg_call; //socketDaemonResponseType;
-
-			shared_sockID = *(unsigned long long *) pt;
-			pt += sizeof(unsigned long long);
-
-			shared_ret = *(int *) pt;
-			pt += sizeof(int);
-
-			len -= sizeof(unsigned long long) + sizeof(int);
-
-			shared_buf = pt;
-			shared_len = len;
-
-			up(&FINS_semaphores[recvmsg_call]);
-			break;
-		default:
+		} else {
 			printk(KERN_INFO "FINS: %s: got an unsupported/binding daemon reply (%d)\n", __FUNCTION__, socketDaemonResponseType);
-			break;
 		}
 	}
 
