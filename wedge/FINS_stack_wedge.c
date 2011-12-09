@@ -22,6 +22,9 @@
 #include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
 #include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
 #include <asm/uaccess.h>
+#include <asm/ioctls.h>
+#include <linux/sockios.h>
+#include <linux/ipx.h>
 
 //#include <sys/socket.h> /* may need to be removed */
 #include "FINS_stack_wedge.h"	/* Defs for this module */
@@ -679,6 +682,63 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	printk(KERN_INFO "FINS: %s: called.\n", __FUNCTION__);
 
+	switch (cmd) {
+	case TIOCOUTQ:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==TIOCOUTQ", __FUNCTION__, cmd);
+		break;
+	case TIOCINQ:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==TIOCINQ", __FUNCTION__, cmd);
+		break;
+	case SIOCADDRT:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCADDRT", __FUNCTION__, cmd);
+		break;
+	case SIOCDELRT:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCDELRT", __FUNCTION__, cmd);
+		break;
+	case SIOCSIFADDR:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCSIFADDR", __FUNCTION__, cmd);
+		break;
+	case SIOCAIPXITFCRT:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCAIPXITFCRT", __FUNCTION__, cmd);
+		break;
+	case SIOCAIPXPRISLT:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCAIPXPRISLT", __FUNCTION__, cmd);
+		break;
+	case SIOCGIFADDR:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCGIFADDR", __FUNCTION__, cmd);
+		break;
+	case SIOCIPXCFGDATA:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCIPXCFGDATA", __FUNCTION__, cmd);
+		break;
+	case SIOCIPXNCPCONN:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCIPXNCPCONN", __FUNCTION__, cmd);
+		break;
+	case SIOCGSTAMP:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCGSTAMP", __FUNCTION__, cmd);
+		break;
+	case SIOCGIFDSTADDR:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCGIFDSTADDR", __FUNCTION__, cmd);
+		break;
+	case SIOCSIFDSTADDR:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCSIFDSTADDR", __FUNCTION__, cmd);
+		break;
+	case SIOCGIFBRDADDR:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCGIFBRDADDR", __FUNCTION__, cmd);
+		break;
+	case SIOCSIFBRDADDR:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCSIFBRDADDR", __FUNCTION__, cmd);
+		break;
+	case SIOCGIFNETMASK:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCGIFNETMASK", __FUNCTION__, cmd);
+		break;
+	case SIOCSIFNETMASK:
+		printk(KERN_INFO "FINS: %s: cmd=%d ==SIOCSIFNETMASK", __FUNCTION__, cmd);
+		break;
+	default:
+		printk(KERN_INFO "FINS: %s: cmd=%d default", __FUNCTION__, cmd);
+		break;
+	}
+
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
@@ -1084,6 +1144,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 
 static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *m, size_t len) {
+	int rc = 0;
 	unsigned long long uniqueSockID;
 	int controlFlag = 0;
 	int i = 0;
@@ -1103,7 +1164,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
-		return -1; // pick an appropriate errno
+		return print_exit(__FUNCTION__, -1);
 	}
 
 	if (m->msg_controllen != 0)
@@ -1123,7 +1184,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		printk(KERN_ERR "FINS: %s: buf allocation failed\n", __FUNCTION__);
-		return -1;
+		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
 
@@ -1175,7 +1236,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	if (pt - (u_char *) buf != buf_len) {
 		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
-		return -1;
+		return print_exit(__FUNCTION__, -1);
 	}
 
 	printk(KERN_INFO "FINS: %s: socket_call=%d uniqueSockID=%llu buf_len=%d", __FUNCTION__, sendmsg_call, uniqueSockID, buf_len);
@@ -1184,11 +1245,40 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	kfree(buf);
 	if (ret != 0) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
-		return -1;
+		return print_exit(__FUNCTION__, -1);
 		// pick an appropriate errno
 	}
 
-	return 0;
+	if (down_interruptible(&FINS_semaphores[sendmsg_call])) {;} // Should be locked at start
+	// relock the semaphore so it is locked next time around
+	sema_init(&FINS_semaphores[sendmsg_call], 0);
+	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
+
+	//exract msg from shared_buf
+	if ((shared_buf != NULL) && (shared_len == 0)) {
+		if ((sendmsg_call != shared_call) || (uniqueSockID != shared_sockID)) {
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, sendmsg_call, uniqueSockID);
+			rc = -1;
+		} else {
+			if (shared_ret == ACK) {
+				printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
+				rc = data_len;
+			} else if (shared_ret == NACK) {
+				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
+				rc = -1;
+			} else {
+				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
+				rc = -1;
+			}
+			shared_buf = NULL;
+			shared_len = -1;
+		}
+	} else {
+		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
+		rc = -1;
+	}
+
+	return print_exit(__FUNCTION__, rc);
 }
 
 static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,

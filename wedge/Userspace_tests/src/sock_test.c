@@ -103,7 +103,7 @@ int main() {
 
 	// Calling send:  Maps to FINS_send_msg
 	ssize_t num_sent;
-	num_sent = send(sockfd, NULL, 0, 0);
+	num_sent = send(sockfd, "test send", 9, 0);
 	if (num_sent != -1) {
 		printf("The number of characters sent (send) was: %d\n", num_sent);
 	} else {
@@ -111,7 +111,7 @@ int main() {
 	}
 
 	// Calling sendto:  Maps to FINS_send_msg
-	num_sent = sendto(sockfd, NULL, 0, 0, NULL, 0);
+	num_sent = sendto(sockfd, "test sendto", 11, 0, (struct sockaddr *) &name, sizeof(name));
 	if (num_sent != -1) {
 		printf("The number of characters sent (sendto) was: %d\n", num_sent);
 	} else {
@@ -119,7 +119,7 @@ int main() {
 	}
 
 	// Calling sendmsg:  Maps to FINS_send_msg
-	num_sent = sendmsg(sockfd, NULL, 0);
+	num_sent = sendmsg(sockfd, "test sendmsg", 12);
 	if (num_sent != -1) {
 		printf("The number of characters sent (sendmsg) was: %d\n", num_sent);
 	} else {
@@ -128,13 +128,18 @@ int main() {
 
 	// Calling recv:  Maps to FINS_recv_msg
 	ssize_t num_received;
-	num_received = recv(sockfd, NULL, 0, 0);
+
+	char *buff[20];
+
+	num_received = recv(sockfd, buff, 20, 0);
 	if (num_received != -1) {
 		printf("The number of characters received (recv) was: %d\n",
 				num_received);
 	} else {
 		perror("The recv() call returned with an error ");
 	}
+
+	while(1);
 
 	// Calling recvfrom:  Maps to FINS_recv_msg
 	num_received = recvfrom(sockfd, NULL, 0, 0, NULL, 0);

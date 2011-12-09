@@ -2,7 +2,7 @@
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-	#include <sys/socket.h>
+#include <sys/socket.h>
 #endif
 
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
@@ -77,7 +77,8 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	switch (msg->nlmsg_type) {
 	case NLMSG_ERROR: {
 		struct nlmsgerr* errorMsg = (struct nlmsgerr*) NLMSG_DATA(msg);
-		PRINT_DEBUG("\nrecvd NLMSG_ERROR error seq:%d code:%d...", msg->nlmsg_seq, errorMsg->error);
+		PRINT_DEBUG("\nrecvd NLMSG_ERROR error seq:%d code:%d...",
+				msg->nlmsg_seq, errorMsg->error);
 		break;
 	}
 	case RTM_NEWROUTE: {
@@ -94,28 +95,33 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 				case RTA_DST: //destination
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(dst_temp, RTA_DATA(rta), IP4_ALEN);
-					PRINT_DEBUG("received RTA_DST");
-					PRINT_DEBUG("dst_str = %u.%u.%u.%u", dst_temp[0]&0xFF, dst_temp[1]&0xFF, dst_temp[2]&0xFF, dst_temp[3]&0xFF);
+					//PRINT_DEBUG("received RTA_DST");
+					PRINT_DEBUG("parse_nlmsg: dst_str = %u.%u.%u.%u",
+							dst_temp[0] & 0xFF, dst_temp[1] & 0xFF, dst_temp[2]
+									& 0xFF, dst_temp[3] & 0xFF);
 					table_pointer->dst
 							= IP4_ADR_P2N(dst_temp[0]&0xFF, dst_temp[1]&0xFF, dst_temp[2]&0xFF, dst_temp[3]&0xFF);
 					break;
 				case RTA_GATEWAY: //next hop
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(gw_temp, RTA_DATA(rta), IP4_ALEN);
-					PRINT_DEBUG("received RTA_GATEWAY");
-					PRINT_DEBUG("gw_str = %u.%u.%u.%u",gw_temp[0]&0xFF, gw_temp[1]&0xFF, gw_temp[2]&0xFF, gw_temp[3]&0xFF);
+					//PRINT_DEBUG("received RTA_GATEWAY");
+					PRINT_DEBUG("parse_nlmsg: gw_str = %u.%u.%u.%u", gw_temp[0]
+							& 0xFF, gw_temp[1] & 0xFF, gw_temp[2] & 0xFF,
+							gw_temp[3] & 0xFF);
 					table_pointer->gw
 							= IP4_ADR_P2N(gw_temp[0]&0xFF, gw_temp[1]&0xFF, gw_temp[2]&0xFF, gw_temp[3]&0xFF);
 					break;
 				case RTA_OIF: //interface
 					memcpy(&table_pointer->interface, RTA_DATA(rta),
 							sizeof(interface));
-					PRINT_DEBUG("interface:%u",table_pointer->interface);
+					PRINT_DEBUG("parse_nlmsg: interface:%u",
+							table_pointer->interface);
 					break;
 				case RTA_PRIORITY: //metric
 					memcpy(&table_pointer->metric, RTA_DATA(rta),
 							sizeof(priority));
-					PRINT_DEBUG("metric:%u",table_pointer->metric);
+					PRINT_DEBUG("parse_nlmsg: metric:%u", table_pointer->metric);
 					break;
 				} //switch(rta->)
 			}// for()
@@ -126,7 +132,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	return (NULL);
 }
 
-struct ip4_routing_table * IP4_get_routing_table() {
+struct ip4_routing_table * IP4_get_routing_table_old() {
 	int nlmsg_len;
 	struct nlmsghdr* msg;
 	char receive_buffer[IP4_NETLINK_BUFF_SIZE];
@@ -157,14 +163,14 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	route_req.rt.rtm_scope = RT_SCOPE_UNIVERSE;
 	route_req.rt.rtm_type = RTN_UNSPEC;
 	route_req.rt.rtm_flags = 0;
-	
+
 	// write the message to our netlink socket
 	int result = send(sock, &route_req, sizeof(route_req), 0);
 	if (result < 0) {
 		PRINT_ERROR("Routing table request send error.");
 		return NULL;
 	}
-	
+
 	memset(receive_buffer, 0, IP4_NETLINK_BUFF_SIZE);
 	receive_ptr = receive_buffer;
 	nlmsg_len = 0;
@@ -193,5 +199,41 @@ struct ip4_routing_table * IP4_get_routing_table() {
 			nlmsg_len = nlmsg_len + msg_len;
 		}
 	}
+	return routing_table;
+}
+
+struct ip4_routing_table * IP4_get_routing_table() {
+	struct ip4_routing_table * routing_table;
+	struct ip4_routing_table * row0;
+	struct ip4_routing_table * row1;
+	struct ip4_routing_table * row2;
+
+	row0 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+
+	row0->dst = IP4_ADR_P2N(10,0,2,0);
+	row0->gw = IP4_ADR_P2N(0,0,0,0);
+	row0->mask = 24;
+	row0->metric = 1;
+	row0->interface = 3;
+	row0->next_entry = row1;
+
+	row1->dst = IP4_ADR_P2N(169,254,0,0);
+	row1->gw = IP4_ADR_P2N(0,0,0,0);
+	row1->mask = 16;
+	row1->metric = 1000;
+	row1->interface = 3;
+	row1->next_entry = row2;
+
+	row2->dst = IP4_ADR_P2N(0,0,0,0);
+	row2->gw = IP4_ADR_P2N(10,0,2,2);
+	row2->mask = 0;
+	row2->metric = 0;
+	row2->interface = 3;
+	row2->next_entry = NULL;
+
+	routing_table = row0;
+
 	return routing_table;
 }
