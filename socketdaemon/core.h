@@ -30,17 +30,6 @@
 #define MAX_modules	16
 #define SNAP_LEN 		4096
 
-struct socketUniqueID {
-	int processID;
-	int socketDesc;
-};
-
-struct bind_call_msg {
-	int sockfd;
-	socklen_t addrlen;
-	struct sockaddr addr;
-
-};
 int read_configurations();
 void commChannel_init();
 void Queues_init();

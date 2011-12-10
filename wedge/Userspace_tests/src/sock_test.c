@@ -119,7 +119,7 @@ int main() {
 	}
 
 	// Calling sendmsg:  Maps to FINS_send_msg
-	num_sent = sendmsg(sockfd, "test sendmsg", 12);
+	num_sent = sendmsg(sockfd, NULL, 0);
 	if (num_sent != -1) {
 		printf("The number of characters sent (sendmsg) was: %d\n", num_sent);
 	} else {

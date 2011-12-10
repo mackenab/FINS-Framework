@@ -175,6 +175,20 @@ struct finssocket {
 	sem_t Qs; /** The data Queue Semaphore Pointer*/
 };
 
+struct recvfrom_data {
+	unsigned long long uniqueSockID;
+	int socketCallType;
+	int datalen;
+	int flags;
+	int symbol;
+};
+#ifndef THREAD_INDEX
+#define THREAD_INDEX
+int thread_index = 0;
+int thread_count = 0;
+#define MAX_threads 100
+#endif
+
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
 #ifdef BUILD_FOR_ANDROID
 	#define FINS_TMP_ROOT "/data/data/fins"
@@ -208,27 +222,27 @@ int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
 /** calls handling functions */
-void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
+void socket_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
 void socketpair_call_handler();
-void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void getsockname_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void getpeername_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void send_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void recv_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void getsockopt_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void setsockopt_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void listen_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void accept_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void accept4_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
-void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
+void bind_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void getsockname_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void connect_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void getpeername_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void send_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void recv_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void sendto_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void recvfrom_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void sendmsg_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void recvmsg_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void getsockopt_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void setsockopt_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void listen_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void accept_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void accept4_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void shutdown_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void release_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void ioctl_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
 
-void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf, ssize_t len);
+void close_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
 
 #endif /* HANDLERS_H_ */

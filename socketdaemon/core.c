@@ -37,6 +37,12 @@
  *
  */
 
+/*
+ * Semaphore for recvfrom_udp/tcp/icmp threads created b/c of blocking
+ * in UDPreadFrom_fins. Only lock/unlock when changing jinniSockets,
+ * since recvfrom_udp just reads data.
+ */
+sem_t jinniSockets_sem;
 struct finssocket jinniSockets[MAX_sockets];
 
 /** The list of major Queues which connect the modules to each other
@@ -151,6 +157,8 @@ int read_configurations() {
  */
 void init_jinnisockets() {
 	int i;
+
+	sem_init(&jinniSockets_sem, 0, 1);
 	for (i = 0; i < MAX_sockets; i++) {
 		jinniSockets[i].uniqueSockID = -1;
 		jinniSockets[i].connection_status = 0;
@@ -291,11 +299,13 @@ void *Switch_to_Jinni() {
 							"Wrong address, the socket is already connected to another destination");
 
 					freeFinsFrame(ff);
+					sem_post(&jinniSockets_sem);
 					continue;
 
 				}
 
 			}
+
 			/**
 			 * check if this received datagram destIP and destport matching which socket hostIP
 			 * and hostport insidee our sockets database
@@ -364,11 +374,11 @@ void *interceptor_to_jinni() {
 	struct nlmsghdr *nlh;
 	void *nl_buf; // Pointer to your actual data payload
 	ssize_t nl_len, part_len; // Size of your actual data payload
-	unsigned char *part_pt;
+	u_char *part_pt;
 
 	void *msg_buf = NULL;
 	ssize_t msg_len = -1;
-	unsigned char *msg_pt = NULL;
+	u_char *msg_pt = NULL;
 
 	int okFlag, doneFlag = 0;
 	ssize_t test_msg_len;

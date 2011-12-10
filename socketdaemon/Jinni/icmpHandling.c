@@ -10,6 +10,7 @@
 
 #define	IP4_PT_ICMP		1
 
+extern sem_t jinniSockets_sem;
 extern struct finssocket jinniSockets[MAX_sockets];
 extern finsQueue Jinni_to_Switch_Queue;
 extern finsQueue Switch_to_Jinni_Queue;
