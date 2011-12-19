@@ -45,6 +45,10 @@
 sem_t jinniSockets_sem;
 struct finssocket jinniSockets[MAX_sockets];
 
+int recv_thread_index;
+int recv_thread_count;
+sem_t recv_thread_sem;
+
 /** The list of major Queues which connect the modules to each other
  * including the switch module
  * The list of Semaphores which protect the Queues
@@ -164,6 +168,9 @@ void init_jinnisockets() {
 		jinniSockets[i].connection_status = 0;
 	}
 
+	sem_init(&recv_thread_sem, 0, 1);
+	recv_thread_index = 0;
+	recv_thread_count = 0;
 }
 
 void Queues_init() {

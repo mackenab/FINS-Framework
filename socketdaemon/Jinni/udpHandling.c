@@ -16,6 +16,7 @@ extern finsQueue Jinni_to_Switch_Queue;
 extern finsQueue Switch_to_Jinni_Queue;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
+extern int recv_thread_count;
 
 struct finsFrame *get_fake_frame() {
 
@@ -897,7 +898,7 @@ void recvfrom_udp(void *threadData) {
 	int ret_val;
 
 	struct recvfrom_data *thread_data;
-	thread_data = (struct recvfrom_data *)threadData;
+	thread_data = (struct recvfrom_data *) threadData;
 
 	unsigned long long uniqueSockID = thread_data->uniqueSockID;
 	int socketCallType = thread_data->socketCallType;
@@ -917,17 +918,20 @@ void recvfrom_udp(void *threadData) {
 
 	}
 
+	PRINT_DEBUG("Entered recv thread:%d", thread_data->id);
+
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
-	sem_post(&jinniSockets_sem);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		//exit(1);
+		recv_thread_count--;
+		PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
+		pthread_exit(NULL);
 	}
 
 	PRINT_DEBUG("index = %d", index);
 	PRINT_DEBUG();
-	sem_wait(&jinniSockets_sem);
 	blocking_flag = jinniSockets[index].blockingFlag;
 	sem_post(&jinniSockets_sem);
 	/** the meta-data parameters are all passed by copy starting from this point
@@ -974,7 +978,10 @@ void recvfrom_udp(void *threadData) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
 					msg_len);
 			free(msg);
-			exit(1);
+			//exit(1);
+			recv_thread_count--;
+			PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
+			pthread_exit(NULL);
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
@@ -995,9 +1002,12 @@ void recvfrom_udp(void *threadData) {
 	//free(address);
 	//free(buf);
 
-	return;
-}
+	free(thread_data);
+	recv_thread_count--;
+	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
 
+	pthread_exit(NULL);
+}
 
 /** .......................................................................*/
 /**

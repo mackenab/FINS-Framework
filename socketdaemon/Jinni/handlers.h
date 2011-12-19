@@ -176,18 +176,14 @@ struct finssocket {
 };
 
 struct recvfrom_data {
+	int id;
 	unsigned long long uniqueSockID;
 	int socketCallType;
 	int datalen;
 	int flags;
 	int symbol;
 };
-#ifndef THREAD_INDEX
-#define THREAD_INDEX
-int thread_index = 0;
-int thread_count = 0;
-#define MAX_threads 100
-#endif
+#define MAX_recv_threads 100
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
 #ifdef BUILD_FOR_ANDROID

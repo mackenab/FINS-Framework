@@ -13,6 +13,11 @@
 
 extern sem_t jinniSockets_sem;
 extern struct finssocket jinniSockets[MAX_sockets];
+
+extern int recv_thread_index;
+extern int recv_thread_count;
+extern sem_t recv_thread_sem;
+
 /** The queues might be moved later to another Master file */
 
 extern finsQueue Jinni_to_Switch_Queue;
@@ -966,7 +971,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		ssize_t len) {
 
-	struct handler_msg *call_data;
 	int numOfBytes;
 	int index;
 	int datalen;
@@ -980,6 +984,10 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	socklen_t addrlen;
 	struct sockaddr *addr;
 	u_char *pt;
+
+	struct recvfrom_data *thread_data;
+	pthread_t *recvmsg_thread;
+	int rc;
 
 	PRINT_DEBUG();
 
@@ -1041,25 +1049,27 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		 */
 		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
 
-		struct recvfrom_data *thread_data;
-		pthread_t *recvmsg_thread;
-		int rc;
+		if (recv_thread_count < MAX_recv_threads) {
+			recv_thread_count++;
 
-		recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
+			recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
 
-		thread_data = (struct recvfrom_data *) malloc(sizeof(struct recvfrom_data));
-		thread_data->uniqueSockID = uniqueSockID;
-		thread_data->socketCallType = recvmsg_call;
-		thread_data->datalen = datalen;
-		thread_data->flags = flags;
-		thread_data->symbol = symbol;
+			thread_data = (struct recvfrom_data *) malloc(
+					sizeof(struct recvfrom_data));
+			thread_data->id = recv_thread_index++;
+			thread_data->uniqueSockID = uniqueSockID;
+			thread_data->socketCallType = recvmsg_call;
+			thread_data->datalen = datalen;
+			thread_data->flags = flags;
+			thread_data->symbol = symbol;
 
-		rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp, (void *) call_data);
-		if (rc) {
-			PRINT_DEBUG("Problem starting recvmsg thread: %d", rc);
+			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
+					(void *) thread_data);
+			if (rc) {
+				PRINT_DEBUG("Problem starting recvmsg thread: %d", rc);
+			}
+			free(recvmsg_thread);
 		}
-		free(recvmsg_thread);
-
 		//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 
 	} else if (jinniSockets[index].type == SOCK_STREAM) {
@@ -1073,9 +1083,6 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		PRINT_DEBUG("This socket is of unknown type");
 		nack_send(uniqueSockID, recvmsg_call);
 	}
-
-	free(call_data);
-	pthread_exit(NULL);
 }
 
 void getsockopt_call_handler(unsigned long long uniqueSockID,
