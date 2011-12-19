@@ -814,7 +814,7 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		 */
 		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
 
-		recvfrom_udp2(uniqueSockID, recvfrom_call, datalen, flags, symbol);
+		recvfrom_udp_orig(uniqueSockID, recvfrom_call, datalen, flags, symbol);
 
 	} else if (jinniSockets[index].type == SOCK_STREAM) {
 		recvfrom_tcp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
@@ -1050,8 +1050,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
 
 		if (recv_thread_count < MAX_recv_threads) {
-			recv_thread_count++;
-
+			PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);
 			recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
 
 			thread_data = (struct recvfrom_data *) malloc(
@@ -1066,10 +1065,18 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
 					(void *) thread_data);
 			if (rc) {
-				PRINT_DEBUG("Problem starting recvmsg thread: %d", rc);
+				PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d", thread_data->id, rc);
+			} else {
+				sem_wait(&recv_thread_sem);
+				recv_thread_count++;
+				sem_post(&recv_thread_sem);
 			}
 			free(recvmsg_thread);
+		} else {
+			PRINT_DEBUG("Hit max allowed recv thread, count=%d",
+					recv_thread_count);
 		}
+
 		//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 
 	} else if (jinniSockets[index].type == SOCK_STREAM) {

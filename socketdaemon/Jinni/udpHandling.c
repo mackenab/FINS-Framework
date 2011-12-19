@@ -12,11 +12,14 @@
 
 extern sem_t jinniSockets_sem;
 extern struct finssocket jinniSockets[MAX_sockets];
+
+extern int recv_thread_count;
+extern sem_t recv_thread_sem;
+
 extern finsQueue Jinni_to_Switch_Queue;
 extern finsQueue Switch_to_Jinni_Queue;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
-extern int recv_thread_count;
 
 struct finsFrame *get_fake_frame() {
 
@@ -761,7 +764,7 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
  *
  */
 
-void recvfrom_udp2(unsigned long long uniqueSockID, int socketCallType,
+void recvfrom_udp_orig(unsigned long long uniqueSockID, int socketCallType,
 		int datalen, int flags, int symbol) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the
@@ -797,7 +800,6 @@ void recvfrom_udp2(unsigned long long uniqueSockID, int socketCallType,
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
-	sem_post(&jinniSockets_sem);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		exit(1);
@@ -805,7 +807,6 @@ void recvfrom_udp2(unsigned long long uniqueSockID, int socketCallType,
 
 	PRINT_DEBUG("index = %d", index);
 	PRINT_DEBUG();
-	sem_wait(&jinniSockets_sem);
 	blocking_flag = jinniSockets[index].blockingFlag;
 	sem_post(&jinniSockets_sem);
 	/** the meta-data parameters are all passed by copy starting from this point
@@ -925,7 +926,9 @@ void recvfrom_udp(void *threadData) {
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		//exit(1);
+		sem_wait(&recv_thread_sem);
 		recv_thread_count--;
+		sem_post(&recv_thread_sem);
 		PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
 		pthread_exit(NULL);
 	}
@@ -979,7 +982,9 @@ void recvfrom_udp(void *threadData) {
 					msg_len);
 			free(msg);
 			//exit(1);
+			sem_wait(&recv_thread_sem);
 			recv_thread_count--;
+			sem_post(&recv_thread_sem);
 			PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
 			pthread_exit(NULL);
 		}
@@ -1003,7 +1008,9 @@ void recvfrom_udp(void *threadData) {
 	//free(buf);
 
 	free(thread_data);
+	sem_wait(&recv_thread_sem);
 	recv_thread_count--;
+	sem_post(&recv_thread_sem);
 	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
 
 	pthread_exit(NULL);
