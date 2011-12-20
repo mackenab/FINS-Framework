@@ -91,6 +91,10 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
 	if (block_flag == 1) {
 		PRINT_DEBUG();
 
+		int value;
+		sem_getvalue(&(jinniSockets[index].Qs), &value);
+		PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
+
 		do {
 			sem_wait(&jinniSockets_sem);
 			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
@@ -292,16 +296,12 @@ void socket_udp(int domain, int type, int protocol,
 	PRINT_DEBUG();
 
 	index = findjinniSocket(uniqueSockID);
-
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
 		exit(1);
-
 	}
-	PRINT_DEBUG("0000");
 
 	ack_send(uniqueSockID, socket_call);
-	PRINT_DEBUG("0003");
 
 	return;
 
@@ -373,6 +373,7 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	 * sending to the fins core
 	 */
 
+	PRINT_DEBUG("bind: index:%d, host:%d/%d, dst:%d/%d", index, jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport);
 	ack_send(uniqueSockID, bind_call);
 
 	free(addr);
@@ -952,7 +953,7 @@ void recvfrom_udp(void *threadData) {
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen
+		msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + buflen
 				+ (symbol ? sizeof(struct sockaddr_in) : 0);
 		msg = malloc(msg_len);
 		pt = msg;
@@ -967,6 +968,9 @@ void recvfrom_udp(void *threadData) {
 		pt += sizeof(int);
 
 		if (symbol) {
+			*(int *) pt = sizeof(struct sockaddr_in);
+			pt += sizeof(int);
+
 			memcpy(pt, address, sizeof(struct sockaddr_in));
 			pt += sizeof(struct sockaddr_in);
 		}

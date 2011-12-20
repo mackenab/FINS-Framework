@@ -328,6 +328,9 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1) {
+				int value;
+				sem_getvalue(&(jinniSockets[index].Qs), &value);
+				PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
 				sem_wait(&(jinniSockets[index].Qs));
 				/**
 				 * TODO Replace The data Queue with a pipeLine at least for

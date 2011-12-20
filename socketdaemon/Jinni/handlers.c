@@ -122,52 +122,54 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 	int i;
 
-	for (i = 0; i < MAX_sockets; i++) {
+	PRINT_DEBUG("matchjinniSocket: %d/%d: %d, ", dstip, dstport, protocol);
 
-		if (protocol == IPPROTO_ICMP) {
-			if ((jinniSockets[i].protocol == protocol)
-					&& (jinniSockets[i].dst_IP == dstip)) {
-				PRINT_DEBUG("ICMP");
-				return (i);
-			}
-		} else {
-			if (jinniSockets[i].host_IP == INADDR_ANY) {
-				if (jinniSockets[i].hostport == dstport) {
-					PRINT_DEBUG("hostport == dstport");
+	for (i = 0; i < MAX_sockets; i++) {
+		if (jinniSockets[i].uniqueSockID != -1) {
+			if (protocol == IPPROTO_ICMP) {
+				if ((jinniSockets[i].protocol == protocol)
+						&& (jinniSockets[i].dst_IP == dstip)) {
+					PRINT_DEBUG("ICMP");
 					return (i);
 				}
-			} else if ((jinniSockets[i].hostport == dstport)
-					&& (jinniSockets[i].host_IP == dstip)/** && (jinniSockets[i].protocol == protocol)*/) {
-				PRINT_DEBUG("host_IP == dstip");
-				return (i);
 			} else {
-				PRINT_DEBUG("default");
-			}
-		}
-
-		if (0) {
-			if (jinniSockets[i].host_IP == INADDR_ANY && (protocol
-					!= IPPROTO_ICMP)) {
-				if ((jinniSockets[i].hostport == dstport))
+				if (jinniSockets[i].host_IP == INADDR_ANY) {
+					if (jinniSockets[i].hostport == dstport) {
+						PRINT_DEBUG("hostport == dstport");
+						return (i);
+					}
+				} else if ((jinniSockets[i].hostport == dstport)
+						&& (jinniSockets[i].host_IP == dstip)/** && (jinniSockets[i].protocol == protocol)*/) {
+					PRINT_DEBUG("host_IP == dstip");
 					return (i);
-			} else if ((jinniSockets[i].hostport == dstport)
-					&& (jinniSockets[i].host_IP == dstip) && ((protocol
-					!= IPPROTO_ICMP))
-			/** && (jinniSockets[i].protocol == protocol)*/) {
-				return (i);
+				} else {
+					PRINT_DEBUG("default");
+				}
 			}
 
-			/** Matching for ICMP incoming datagrams
-			 * In this case the IP passes is actually the source IP of that incoming message (Or called the host)
-			 */
-			else if ((jinniSockets[i].protocol == protocol) && (protocol
-					== IPPROTO_ICMP) && (jinniSockets[i].dst_IP == dstip)) {
-				return (i);
+			if (0) {
+				if (jinniSockets[i].host_IP == INADDR_ANY && (protocol
+						!= IPPROTO_ICMP)) {
+					if ((jinniSockets[i].hostport == dstport))
+						return (i);
+				} else if ((jinniSockets[i].hostport == dstport)
+						&& (jinniSockets[i].host_IP == dstip) && ((protocol
+						!= IPPROTO_ICMP))
+				/** && (jinniSockets[i].protocol == protocol)*/) {
+					return (i);
+				}
 
-			} else {
+				/** Matching for ICMP incoming datagrams
+				 * In this case the IP passes is actually the source IP of that incoming message (Or called the host)
+				 */
+				else if ((jinniSockets[i].protocol == protocol) && (protocol
+						== IPPROTO_ICMP) && (jinniSockets[i].dst_IP == dstip)) {
+					return (i);
+
+				} else {
+				}
 			}
 		}
-
 	} // end of for loop
 
 	return (-1);
@@ -1065,7 +1067,8 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
 					(void *) thread_data);
 			if (rc) {
-				PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d", thread_data->id, rc);
+				PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d",
+						thread_data->id, rc);
 			} else {
 				sem_wait(&recv_thread_sem);
 				recv_thread_count++;

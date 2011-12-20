@@ -49,7 +49,7 @@ unsigned long long shared_sockID;
 int shared_ret;
 
 static int print_exit(const char *func, int rc) {
-	printk(KERN_INFO "FINS %s: Exited\n", func);
+	printk(KERN_INFO "FINS %s: Exited: %d\n", func, rc);
 	return rc;
 }
 
@@ -1171,7 +1171,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		controlFlag = 1;
 
 	for (i = 0; i < (m->msg_iovlen); i++) {
-		data_len += (m->msg_iov[i]).iov_len;
+		data_len += m->msg_iov[i].iov_len;
 	}
 
 	if (m->msg_name == NULL)
@@ -1227,9 +1227,9 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	pt += sizeof(u_int);
 
 	i = 0;
-	for (i = 0; i < (m->msg_iovlen); i++) {
-		memcpy(pt, (m->msg_iov[i]).iov_base, (m->msg_iov[i]).iov_len);
-		pt += (m->msg_iov[i]).iov_len;
+	for (i = 0; i < m->msg_iovlen; i++) {
+		memcpy(pt, m->msg_iov[i].iov_base, m->msg_iov[i].iov_len);
+		pt += m->msg_iov[i].iov_len;
 		//PRINT_DEBUG("current element %d , element length = %d", i ,(msg->msg_iov[i]).iov_len );
 	}
 
@@ -1291,6 +1291,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	void *buf;
 	u_char *pt;
 	int ret;
+	int i;
 
 	uniqueSockID = getUniqueSockID(sock);
 
@@ -1385,8 +1386,14 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 					printk(KERN_INFO "FINS: %s: msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
 
 					if (m->msg_namelen > 0) {
-						memcpy(m->msg_name, pt, m->msg_namelen);
-						pt += m->msg_namelen;
+						m->msg_name = kmalloc(m->msg_namelen, GFP_KERNEL);
+						if (m->msg_name != NULL) {
+							memcpy(m->msg_name, pt, m->msg_namelen);
+							pt += m->msg_namelen;
+						} else {
+							printk(KERN_ERR "FINS: %s: m->msg_name alloc failure\n", __FUNCTION__);
+							rc = -1;
+						}
 					} else {
 						printk(KERN_ERR "FINS: %s: address problem, msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
 						rc = -1;
@@ -1400,22 +1407,26 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 				pt += sizeof(int);
 
 				if (buf_len >= 0) {
-					m->msg_iov->iov_len = buf_len;
-					//TODO: possible memory leak? find out
-					m->msg_iov->iov_base = (u_char *) kmalloc(buf_len,
-							GFP_KERNEL);
-					if (m->msg_iov->iov_base) {
-						memcpy(m->msg_iov->iov_base, pt, buf_len);
-						pt += buf_len;
-
-						m->msg_iovlen = 1;
-						if (rc != -1) {
-							rc = buf_len;
+					ret = buf_len; //reuse as counter
+					i = 0;
+					while (ret > 0 && i < m->msg_iovlen) {
+						if (ret > m->msg_iov[i].iov_len) {
+							copy_to_user(m->msg_iov[i].iov_base, pt, m->msg_iov[i].iov_len);
+							pt += m->msg_iov[i].iov_len;
+							ret -= m->msg_iov[i].iov_len;
+							i++;
+						} else {
+							copy_to_user(m->msg_iov[i].iov_base, pt, ret);
+							pt += ret;
+							ret = 0;
+							break;
 						}
-					} else {
-						printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
-						rc = -1;
 					}
+					if (ret != 0) {
+						//throw buffer overflow error?
+						printk(KERN_ERR "FINS: %s: user buffer overflow error, overflow=%d\n", __FUNCTION__, ret);
+					}
+					rc = buf_len;
 				} else {
 					printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
 					rc = -1;
@@ -1429,7 +1440,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 				rc = -1;
 			} else {
-				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
+				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, shared_ret);
 				rc = -1;
 			}
 			shared_buf = NULL;
