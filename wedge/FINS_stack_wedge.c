@@ -42,12 +42,13 @@ struct semaphore FINS_semaphores[MAX_calls];
 #define NETLINK_FINS 20
 #endif
 
-struct semaphore shared_sem;
-u_char *shared_buf;
-int shared_len;
+struct semaphore shared_sem_w;
+struct semaphore shared_sem_r;	//reassuring, but might not be necessary
 u_int shared_call;
 unsigned long long shared_sockID;
 int shared_ret;
+u_char *shared_buf;
+int shared_len;
 
 static int print_exit(const char *func, int rc) {
 	printk(KERN_INFO "FINS %s: Exited: %d\n", func, rc);
@@ -157,12 +158,16 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((socket_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, socket_call, uniqueSockID);
 			up(&FINS_semaphores[socket_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[socket_call], 0); // relock semaphore
@@ -183,7 +188,9 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -257,12 +264,16 @@ static int FINS_release(struct socket *sock) {
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((release_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, release_call, uniqueSockID);
 			up(&FINS_semaphores[release_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[release_call], 0); // relock semaphore
@@ -283,7 +294,9 @@ static int FINS_release(struct socket *sock) {
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	if (!sk)
 		return print_exit(__FUNCTION__, rc);
@@ -367,12 +380,16 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((bind_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, bind_call, uniqueSockID);
 			up(&FINS_semaphores[bind_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[bind_call], 0); // relock semaphore
@@ -393,7 +410,9 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -462,12 +481,16 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((connect_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, connect_call, uniqueSockID);
 			up(&FINS_semaphores[connect_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[connect_call], 0); // relock semaphore
@@ -488,7 +511,9 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -622,12 +647,16 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((calltype == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, calltype, uniqueSockID);
 			up(&FINS_semaphores[calltype]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[calltype], 0); // relock semaphore
@@ -648,7 +677,9 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -807,12 +838,16 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((ioctl_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, ioctl_call, uniqueSockID);
 			up(&FINS_semaphores[ioctl_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[ioctl_call], 0); // relock semaphore
@@ -834,7 +869,9 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -930,12 +967,16 @@ static int FINS_shutdown(struct socket *sock, int how) {
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((shutdown_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, shutdown_call, uniqueSockID);
 			up(&FINS_semaphores[shutdown_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[shutdown_call], 0); // relock semaphore
@@ -956,7 +997,9 @@ static int FINS_shutdown(struct socket *sock, int how) {
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1032,12 +1075,16 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((setsockopt_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, setsockopt_call, uniqueSockID);
 			up(&FINS_semaphores[setsockopt_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[setsockopt_call], 0); // relock semaphore
@@ -1058,7 +1105,9 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1135,12 +1184,16 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((getsockopt_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, getsockopt_call, uniqueSockID);
 			up(&FINS_semaphores[getsockopt_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[getsockopt_call], 0); // relock semaphore
@@ -1165,13 +1218,13 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
 			rc = -1;
 		}
-		shared_buf = NULL;
-		shared_len = -1;
 	} else {
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1294,12 +1347,16 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((sendmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, sendmsg_call, uniqueSockID);
 			up(&FINS_semaphores[sendmsg_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[sendmsg_call], 0); // relock semaphore
@@ -1321,7 +1378,9 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1414,12 +1473,16 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 			;
 		} // block until daemon replies
 
+		if (down_interruptible(&shared_sem_r)) {
+			;
+		}
 		if ((recvmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
 			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
 			up(&FINS_semaphores[recvmsg_call]);
 		}
+		up(&shared_sem_r);
 	}
 
 	//sema_init(&FINS_semaphores[recvmsg_call], 0); // relock semaphore
@@ -1501,7 +1564,9 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
 	}
-	up(&shared_sem);
+	up(&shared_sem_r);
+
+	up(&shared_sem_w);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1831,7 +1896,11 @@ void nl_data_ready(struct sk_buff *skb) {
 			 */
 
 			//lock the semaphore so shared data can't be changed until it's consumed
-			if (down_interruptible(&shared_sem)) {
+			if (down_interruptible(&shared_sem_w)) {
+				;
+			}
+
+			if (down_interruptible(&shared_sem_r)) {
 				;
 			}
 			shared_call = socketDaemonResponseType;
@@ -1847,14 +1916,14 @@ void nl_data_ready(struct sk_buff *skb) {
 			shared_buf = pt;
 			shared_len = len;
 
+			printk(KERN_INFO "FINS: %s: shared: call=%d, sockID=%d, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
+			up(&shared_sem_r);
+
 			up(&FINS_semaphores[socketDaemonResponseType]);
 		} else {
 			printk(KERN_INFO "FINS: %s: got an unsupported/binding daemon reply (%d)\n", __FUNCTION__, socketDaemonResponseType);
 		}
 	}
-
-	// Ok to process netlink message here if fast, otherwise use another kernel thread and wake it up here
-	printk(KERN_INFO "FINS: %s: shared_len=%d\n", __FUNCTION__, shared_len);
 }
 
 /* Helper function to extract a unique socket ID from a given struct sock */
@@ -1868,7 +1937,8 @@ static void setup_FINS_blocking_semaphores(void) {
 	for (i = 0; i < MAX_calls; i++) {
 		sema_init(&FINS_semaphores[i], 0);
 	}
-	sema_init(&shared_sem, 1);
+	sema_init(&shared_sem_w, 1);
+	sema_init(&shared_sem_r, 1);
 }
 
 /* Functions to initialize and teardown the protocol */
