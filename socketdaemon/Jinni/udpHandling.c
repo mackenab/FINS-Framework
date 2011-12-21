@@ -93,7 +93,7 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
 
 		int value;
 		sem_getvalue(&(jinniSockets[index].Qs), &value);
-		PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
+		PRINT_DEBUG("uniqID=%llu sem: ind=%d, val=%d", uniqueSockID,index, value);
 
 		do {
 			sem_wait(&jinniSockets_sem);
@@ -104,7 +104,6 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
 			}
 			sem_wait(&(jinniSockets[index].Qs));
 			//		PRINT_DEBUG();
-
 			ff = read_queue(jinniSockets[index].dataQueue);
 			//	ff = get_fake_frame();
 			//					PRINT_DEBUG();
@@ -138,6 +137,7 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
 		//free(ff);
 		return (0);
 	}
+	PRINT_DEBUG("recv'd uniqID=%llu ind=%d", uniqueSockID, index);
 	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
 	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
@@ -373,7 +373,9 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	 * sending to the fins core
 	 */
 
-	PRINT_DEBUG("bind: index:%d, host:%d/%d, dst:%d/%d", index, jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport);
+	PRINT_DEBUG("bind: index:%d, host:%d/%d, dst:%d/%d", index,
+			jinniSockets[index].host_IP, jinniSockets[index].hostport,
+			jinniSockets[index].dst_IP, jinniSockets[index].dstport);
 	ack_send(uniqueSockID, bind_call);
 
 	free(addr);
@@ -757,127 +759,12 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 
 } //end of sendto_udp
 
-
 /**
  * @function recvfrom_udp
  * @param symbol tells if an address has been passed from the application to get the sender address or not
  *	Note this method is coded to be thread safe since UDPreadFrom_fins mimics blocking and needs to be threaded.
  *
  */
-
-void recvfrom_udp_orig(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, int flags, int symbol) {
-
-	/** symbol parameter is the one to tell if an address has been passed from the
-	 * application to get the sender address or not
-	 */
-
-	u_char *buf = NULL;
-	//u_char buf[MAX_DATA_PER_UDP];
-
-	u_char *bufptr;
-	struct sockaddr_in *address;
-	int buflen = 0;
-	int index;
-	int i;
-	int blocking_flag;
-
-	void *msg;
-	u_char *pt;
-	int msg_len;
-	int ret_val;
-
-	if (symbol == 1)
-		address = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	else
-		address = NULL;
-	/** TODO handle flags cases */
-	switch (flags) {
-
-	default:
-		break;
-
-	}
-
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
-	}
-
-	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
-	blocking_flag = jinniSockets[index].blockingFlag;
-	sem_post(&jinniSockets_sem);
-	/** the meta-data parameters are all passed by copy starting from this point
-	 *
-	 */
-
-	buf = (u_char *) malloc(MAX_DATA_PER_UDP + 1);
-	bufptr = buf;
-
-	if (UDPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
-			blocking_flag) == 1) {
-
-		buf[buflen] = '\0'; //may be specific to symbol==0
-
-		PRINT_DEBUG("%d", buflen);
-		PRINT_DEBUG("%s", buf);
-
-		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen
-				+ (symbol ? sizeof(struct sockaddr_in) : 0);
-		msg = malloc(msg_len);
-		pt = msg;
-
-		*(int *) pt = socketCallType;
-		pt += sizeof(int);
-
-		*(unsigned long long *) pt = uniqueSockID;
-		pt += sizeof(unsigned long long);
-
-		*(int *) pt = ACK;
-		pt += sizeof(int);
-
-		if (symbol) {
-			memcpy(pt, address, sizeof(struct sockaddr_in));
-			pt += sizeof(struct sockaddr_in);
-		}
-
-		*(int *) pt = buflen;
-		pt += sizeof(int);
-
-		memcpy(pt, buf, buflen);
-		pt += buflen;
-
-		if (pt - (u_char *) msg != msg_len) {
-			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
-					msg_len);
-			free(msg);
-			exit(1);
-		}
-
-		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
-		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
-		free(msg);
-
-		//free(buf);
-		PRINT_DEBUG();
-	} else {
-		PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
-		nack_send(uniqueSockID, socketCallType);
-	}
-	PRINT_DEBUG();
-
-	/** TODO find a way to release these buffers later
-	 * using free here causing a segmentation fault
-	 */
-	//free(address);
-	//free(buf);
-
-	return;
-}
-
 void recvfrom_udp(void *threadData) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the
@@ -908,6 +795,20 @@ void recvfrom_udp(void *threadData) {
 	int flags = thread_data->flags;
 	int symbol = thread_data->symbol;
 
+	PRINT_DEBUG("Entered recv thread:%d", thread_data->id);
+
+	sem_wait(&jinniSockets_sem);
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+		recvthread_exit(thread_data);
+	}
+
+	PRINT_DEBUG("index = %d", index);
+	blocking_flag = jinniSockets[index].blockingFlag;
+	sem_post(&jinniSockets_sem);
+
 	if (symbol == 1)
 		address = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	else
@@ -920,24 +821,6 @@ void recvfrom_udp(void *threadData) {
 
 	}
 
-	PRINT_DEBUG("Entered recv thread:%d", thread_data->id);
-
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		//exit(1);
-		sem_wait(&recv_thread_sem);
-		recv_thread_count--;
-		sem_post(&recv_thread_sem);
-		PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
-		pthread_exit(NULL);
-	}
-
-	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
-	blocking_flag = jinniSockets[index].blockingFlag;
-	sem_post(&jinniSockets_sem);
 	/** the meta-data parameters are all passed by copy starting from this point
 	 *
 	 */
@@ -947,6 +830,7 @@ void recvfrom_udp(void *threadData) {
 
 	if (UDPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
 			blocking_flag) == 1) {
+		PRINT_DEBUG("after UDPreadFrom_fins uniqID=%llu ind=%d", uniqueSockID, index);
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 
@@ -985,39 +869,36 @@ void recvfrom_udp(void *threadData) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
 					msg_len);
 			free(msg);
-			//exit(1);
-			sem_wait(&recv_thread_sem);
-			recv_thread_count--;
-			sem_post(&recv_thread_sem);
-			PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
-			pthread_exit(NULL);
+			free(buf);
+			if (address)
+				free(address);
+			recvthread_exit(thread_data);
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
 		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 		free(msg);
 
-		//free(buf);
 		PRINT_DEBUG();
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
-		nack_send(uniqueSockID, socketCallType);
+		//sem_wait(&jinniSockets_sem);
+		//index = findjinniSocket(uniqueSockID);
+		//sem_post(&jinniSockets_sem);
+
+		//if (index == -1) {
+		//	PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		//} else {
+			nack_send(uniqueSockID, socketCallType);
+		//}
 	}
 	PRINT_DEBUG();
 
-	/** TODO find a way to release these buffers later
-	 * using free here causing a segmentation fault
-	 */
-	//free(address);
-	//free(buf);
+	if (address)
+		free(address);
+	free(buf);
 
-	free(thread_data);
-	sem_wait(&recv_thread_sem);
-	recv_thread_count--;
-	sem_post(&recv_thread_sem);
-	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
-
-	pthread_exit(NULL);
+	recvthread_exit(thread_data);
 }
 
 /** .......................................................................*/

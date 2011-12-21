@@ -24,14 +24,14 @@ return ((16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d)));
 
 */
 
-int main()
+int main(int argc, char *argv[])
 {
 int sock;
 struct sockaddr_in server_addr;
 int numbytes;
 struct hostent *host;
 char send_data[1024];
-
+int port;
 
 
 
@@ -46,10 +46,16 @@ if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 perror("socket");
 exit(1);
 }
-int port =5000;
+
+if (argc > 1)
+
+		port = atoi(argv[1]);
+	else
+		port = 5000;
+
 printf("MY DEST PORT BEFORE AND AFTER\n%d, %d",port, htons(port));
 server_addr.sin_family = AF_INET;
-server_addr.sin_port = htons(5000);
+server_addr.sin_port = htons(port);
 
 //server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 

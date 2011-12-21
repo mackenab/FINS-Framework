@@ -42,6 +42,7 @@ struct semaphore FINS_semaphores[MAX_calls];
 #define NETLINK_FINS 20
 #endif
 
+struct semaphore shared_sem;
 u_char *shared_buf;
 int shared_len;
 u_int shared_call;
@@ -144,7 +145,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -159,7 +160,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((socket_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, socket_call, uniqueSockID);
 			rc = -1;
@@ -243,7 +244,7 @@ static int FINS_release(struct socket *sock) {
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -256,7 +257,7 @@ static int FINS_release(struct socket *sock) {
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((release_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, release_call, uniqueSockID);
 			rc = -1;
@@ -350,7 +351,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -363,7 +364,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((bind_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, bind_call, uniqueSockID);
 			rc = -1;
@@ -442,7 +443,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -455,7 +456,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((connect_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, connect_call, uniqueSockID);
 			rc = -1;
@@ -505,7 +506,7 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
 	}
@@ -538,7 +539,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
 	}
@@ -599,7 +600,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -612,7 +613,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((calltype != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, calltype, uniqueSockID);
 			rc = -1;
@@ -662,7 +663,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock,
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
 	}
@@ -781,7 +782,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -794,7 +795,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((ioctl_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, ioctl_call, uniqueSockID);
 			rc = -1;
@@ -845,7 +846,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -901,7 +902,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -914,7 +915,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((shutdown_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, shutdown_call, uniqueSockID);
 			rc = -1;
@@ -983,7 +984,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	ret = copy_from_user(pt, optval, optlen);
 	pt += optlen;
-	if (ret != 0) {
+	if (ret) {
 		kfree(buf);
 		return -1;
 	}
@@ -1000,7 +1001,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1011,7 +1012,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((setsockopt_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, setsockopt_call, uniqueSockID);
 			rc = -1;
@@ -1098,7 +1099,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1109,7 +1110,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((getsockopt_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, getsockopt_call, uniqueSockID);
 			rc = -1;
@@ -1225,6 +1226,8 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 	*(u_int *) pt = data_len;
 	pt += sizeof(u_int);
+	char *temp;
+	temp = pt;
 
 	i = 0;
 	for (i = 0; i < m->msg_iovlen; i++) {
@@ -1239,23 +1242,28 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		return print_exit(__FUNCTION__, -1);
 	}
 
+	printk(KERN_INFO "FINS: %s: data_len=%d", __FUNCTION__, data_len);
+	printk(KERN_INFO "FINS: %s: data='%s'", __FUNCTION__, temp);
+
 	printk(KERN_INFO "FINS: %s: socket_call=%d uniqueSockID=%llu buf_len=%d", __FUNCTION__, sendmsg_call, uniqueSockID, buf_len);
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 		// pick an appropriate errno
 	}
 
-	if (down_interruptible(&FINS_semaphores[sendmsg_call])) {;} // Should be locked at start
+	if (down_interruptible(&FINS_semaphores[sendmsg_call])) {
+		;
+	} // Should be locked at start
 	// relock the semaphore so it is locked next time around
 	sema_init(&FINS_semaphores[sendmsg_call], 0);
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len == 0)) {
+	if (shared_buf && (shared_len == 0)) {
 		if ((sendmsg_call != shared_call) || (uniqueSockID != shared_sockID)) {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, sendmsg_call, uniqueSockID);
 			rc = -1;
@@ -1303,7 +1311,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	if ((m->msg_controllen != 0) && (m->msg_control != NULL))
+	if ((m->msg_controllen != 0) && m->msg_control)
 		controlFlag = 1;
 	if (m->msg_name == NULL)
 		symbol = 0;
@@ -1358,97 +1366,109 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 		// pick an appropriate errno
 	}
 
-	if (down_interruptible(&FINS_semaphores[recvmsg_call])) {
-		;
-	} // block until daemon replies
-	sema_init(&FINS_semaphores[recvmsg_call], 0); // relock semaphore
-	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
+	int count;
+	count = 0;
+	while (count < 10) {
+		if (down_interruptible(&FINS_semaphores[recvmsg_call])) {
+			;
+		} // block until daemon replies
+		sema_init(&FINS_semaphores[recvmsg_call], 0); // relock semaphore
+		printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from shared_buf
-	if ((shared_buf != NULL) && (shared_len >= sizeof(int))) {
+		//exract msg from shared_buf
 		if ((recvmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
-			pt = shared_buf;
-
-			if (shared_ret == ACK) {
-				printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-
-				if (symbol == 1) {
-					//TODO: find out if this is right! udpHandling writes sockaddr_in here
-					m->msg_namelen = *(u_int *) pt;
-					pt += sizeof(u_int);
-
-					printk(KERN_INFO "FINS: %s: msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
-
-					if (m->msg_namelen > 0) {
-						m->msg_name = kmalloc(m->msg_namelen, GFP_KERNEL);
-						if (m->msg_name != NULL) {
-							memcpy(m->msg_name, pt, m->msg_namelen);
-							pt += m->msg_namelen;
-						} else {
-							printk(KERN_ERR "FINS: %s: m->msg_name alloc failure\n", __FUNCTION__);
-							rc = -1;
-						}
-					} else {
-						printk(KERN_ERR "FINS: %s: address problem, msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
-						rc = -1;
-					}
-				} else if (symbol != 0) {
-					printk(KERN_ERR "FINS: %s: symbol error, symbol=%d\n", __FUNCTION__, symbol); //will remove
-					rc = -1;
-				}
-
-				buf_len = *(int *) pt; //reuse var since not needed anymore
-				pt += sizeof(int);
-
-				if (buf_len >= 0) {
-					ret = buf_len; //reuse as counter
-					i = 0;
-					while (ret > 0 && i < m->msg_iovlen) {
-						if (ret > m->msg_iov[i].iov_len) {
-							copy_to_user(m->msg_iov[i].iov_base, pt, m->msg_iov[i].iov_len);
-							pt += m->msg_iov[i].iov_len;
-							ret -= m->msg_iov[i].iov_len;
-							i++;
-						} else {
-							copy_to_user(m->msg_iov[i].iov_base, pt, ret);
-							pt += ret;
-							ret = 0;
-							break;
-						}
-					}
-					if (ret != 0) {
-						//throw buffer overflow error?
-						printk(KERN_ERR "FINS: %s: user buffer overflow error, overflow=%d\n", __FUNCTION__, ret);
-					}
-					rc = buf_len;
-				} else {
-					printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
-					rc = -1;
-				}
-
-				if (pt - shared_buf != shared_len) {
-					printk(KERN_ERR "FINS: %s: READING ERROR! diff=%d len=%d\n", __FUNCTION__, pt - shared_buf, shared_len);
-					rc = -1;
-				}
-			} else if (shared_ret == NACK) {
-				printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-				rc = -1;
-			} else {
-				printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, shared_ret);
-				rc = -1;
-			}
-			shared_buf = NULL;
-			shared_len = -1;
+			break;
 		} else {
 			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
+			//rc = -1;
+			up(&FINS_semaphores[recvmsg_call]);
+			count++;
+		}
+	}
+	if (count == 10) {
+		print_exit(__FUNCTION__, -1);
+	}
+
+	if (shared_buf && (shared_len >= sizeof(int))) {
+		pt = shared_buf;
+
+		if (shared_ret == ACK) {
+			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
+
+			if (symbol == 1) {
+				//TODO: find out if this is right! udpHandling writes sockaddr_in here
+				m->msg_namelen = *(u_int *) pt;
+				pt += sizeof(u_int);
+
+				printk(KERN_INFO "FINS: %s: msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
+
+				if (m->msg_namelen > 0) {
+					m->msg_name = kmalloc(m->msg_namelen, GFP_KERNEL);
+					if (m->msg_name) {
+						memcpy(m->msg_name, pt, m->msg_namelen);
+						pt += m->msg_namelen;
+					} else {
+						printk(KERN_ERR "FINS: %s: m->msg_name alloc failure\n", __FUNCTION__);
+						rc = -1;
+					}
+				} else {
+					printk(KERN_ERR "FINS: %s: address problem, msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
+					rc = -1;
+				}
+			} else if (symbol) {
+				printk(KERN_ERR "FINS: %s: symbol error, symbol=%d\n", __FUNCTION__, symbol); //will remove
+				rc = -1;
+			}
+
+			buf_len = *(int *) pt; //reuse var since not needed anymore
+			pt += sizeof(int);
+
+			if (buf_len >= 0) {
+				ret = buf_len; //reuse as counter
+				i = 0;
+				while (ret > 0 && i < m->msg_iovlen) {
+					if (ret > m->msg_iov[i].iov_len) {
+						copy_to_user(m->msg_iov[i].iov_base, pt,
+								m->msg_iov[i].iov_len);
+						pt += m->msg_iov[i].iov_len;
+						ret -= m->msg_iov[i].iov_len;
+						i++;
+					} else {
+						copy_to_user(m->msg_iov[i].iov_base, pt, ret);
+						pt += ret;
+						ret = 0;
+						break;
+					}
+				}
+				if (ret) {
+					//throw buffer overflow error?
+					printk(KERN_ERR "FINS: %s: user buffer overflow error, overflow=%d\n", __FUNCTION__, ret);
+				}
+				rc = buf_len;
+			} else {
+				printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
+				rc = -1;
+			}
+
+			if (pt - shared_buf != shared_len) {
+				printk(KERN_ERR "FINS: %s: READING ERROR! diff=%d len=%d\n", __FUNCTION__, pt - shared_buf, shared_len);
+				rc = -1;
+			}
+		} else if (shared_ret == NACK) {
+			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
+			rc = -1;
+		} else {
+			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, shared_ret);
 			rc = -1;
 		}
+		shared_buf = NULL;
+		shared_len = -1;
 	} else {
 		printk(KERN_ERR "FINS: %s: shared_buf error, shared_len=%d shared_buf=%p\n", __FUNCTION__, shared_len, shared_buf);
 		rc = -1;
@@ -1482,7 +1502,7 @@ static int FINS_mmap(struct file *file, struct socket *sock,
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
 	}
@@ -1516,7 +1536,7 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page,
 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
 		return -1; // pick an appropriate errno
 	}
@@ -1780,6 +1800,11 @@ void nl_data_ready(struct sk_buff *skb) {
 			 * shared_call & shared_sockID, are to verify buf goes to the write sock & call
 			 * This is preemptive as with multithreading we may have to add a shared queue
 			 */
+
+			//lock the semaphore so shared data can't be changed until it's consumed
+			//if (down_interruptible(&shared_sem)) {
+			//	;
+			//}
 			shared_call = socketDaemonResponseType;
 
 			shared_sockID = *(unsigned long long *) pt;
@@ -1792,6 +1817,7 @@ void nl_data_ready(struct sk_buff *skb) {
 
 			shared_buf = pt;
 			shared_len = len;
+			//up(&shared_sem); //move this to when the shared data gets consumed so that have to wait to change
 
 			up(&FINS_semaphores[socketDaemonResponseType]);
 		} else {
@@ -1814,6 +1840,7 @@ static void setup_FINS_blocking_semaphores(void) {
 	for (i = 0; i < MAX_calls; i++) {
 		sema_init(&FINS_semaphores[i], 0);
 	}
+	sema_init(&shared_sem, 1);
 }
 
 /* Functions to initialize and teardown the protocol */

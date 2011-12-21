@@ -241,4 +241,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t le
 
 void close_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
 
+void recvthread_exit(struct recvfrom_data *thread_data);
+
 #endif /* HANDLERS_H_ */

@@ -32,7 +32,6 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, 
 void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
 		struct sockaddr *addr, socklen_t addrlen);
 
-void recvfrom_udp_orig(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
 void recvfrom_udp(void *threadData);
 void sendmsg_udp();
 void recvmsg_udp();

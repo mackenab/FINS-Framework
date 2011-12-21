@@ -30,7 +30,7 @@ void write_icmp(unsigned long long uniqueSockID, int datalen, u_char *data);
 void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags);
 void sendto_icmp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
 		struct sockaddr *dest_addr, socklen_t addrlen);
-void recvfrom_icmp(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
+void recvfrom_icmp(void *threadData);
 void sendmsg_icmp();
 void recvmsg_icmp();
 void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);

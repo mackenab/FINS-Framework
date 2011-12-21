@@ -328,6 +328,8 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1) {
+				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d", jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport, jinniSockets[index].protocol);
+
 				int value;
 				sem_getvalue(&(jinniSockets[index].Qs), &value);
 				PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
@@ -344,7 +346,7 @@ void *Switch_to_Jinni() {
 			}
 
 			else {
-				PRINT_DEBUG();
+				PRINT_DEBUG("No match, freeing ff");
 
 				freeFinsFrame(ff);
 			}

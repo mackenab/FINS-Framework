@@ -36,7 +36,7 @@ void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags);
 void sendto_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
 		struct sockaddr *dest_addr, socklen_t addrlen);
-void recvfrom_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
+void recvfrom_tcp(void *threadData);
 void sendmsg_tcp();
 void recvmsg_tcp();
 void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);

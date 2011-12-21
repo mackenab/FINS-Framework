@@ -27,20 +27,25 @@ finsQueue init_queue(const char* name, int size) {
 int TerminateFinsQueue(finsQueue Q) {
 	PRINT_DEBUG("222");
 	int counter = 0;
+	int empty = 0;
 	int size = Q->Size;
 	int i;
 	//ElementType X = (ElementType)malloc (sizeof(ElementType));
 	int min;
 	int max;
+
+	PRINT_DEBUG("Front=%d, Rear=%d Cap=%d", Q->Front, Q->Rear, Q->Capacity);
+
 	if (Q->Front <= Q->Rear) {
 		min = Q->Front;
 		max = Q->Rear;
 
 		for (i = min; i <= max; i++) {
 			if (freeFinsFrame(Q->Array[i]) == 0) {
-				PRINT_DEBUG("333");
+				//PRINT_DEBUG("333");
 
-				PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+				//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+				empty++;
 
 			} else {
 
@@ -56,9 +61,10 @@ int TerminateFinsQueue(finsQueue Q) {
 
 		for (i = max; i < Q->Capacity; i++) {
 			if (freeFinsFrame(Q->Array[i]) == 0) {
-				PRINT_DEBUG("333");
+				//PRINT_DEBUG("333");
 
-				PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+				//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+				empty++;
 
 			} else {
 
@@ -69,9 +75,10 @@ int TerminateFinsQueue(finsQueue Q) {
 
 		for (i = 0; i <= min; i++) {
 			if (freeFinsFrame(Q->Array[i]) == 0) {
-				PRINT_DEBUG("333");
+				//PRINT_DEBUG("333");
 
-				PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+				//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+				empty++;
 
 			} else {
 
@@ -83,6 +90,8 @@ int TerminateFinsQueue(finsQueue Q) {
 	}
 
 	//while (checkEmpty(Q))
+
+	PRINT_DEBUG("Empty cleared=%d/%d", empty, Q->Capacity);
 
 	Q->Size = 0;
 
@@ -244,7 +253,7 @@ struct finsFrame * buildFinsFrame(void) {
 }
 
 int freeFinsFrame(struct finsFrame *f) {
-	PRINT_DEBUG("4444");
+	//PRINT_DEBUG("4444");
 
 	if (f == NULL)
 		return (0);

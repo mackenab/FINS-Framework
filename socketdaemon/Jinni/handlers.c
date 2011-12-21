@@ -783,6 +783,10 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	struct sockaddr *addr;
 	u_char *pt;
 
+	struct recvfrom_data *thread_data;
+	pthread_t *recvmsg_thread;
+	int rc;
+
 	PRINT_DEBUG();
 
 	pt = buf;
@@ -810,22 +814,54 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		exit(1);
 	}
 
-	if (jinniSockets[index].type == SOCK_DGRAM) {
-		/** Whenever we need to implement non_blocking mode using
-		 * threads. We will call the function below using thread_create
-		 */
-		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
+	if (recv_thread_count < MAX_recv_threads) {
+		PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);
+		recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
 
-		recvfrom_udp_orig(uniqueSockID, recvfrom_call, datalen, flags, symbol);
+		thread_data = (struct recvfrom_data *) malloc(
+				sizeof(struct recvfrom_data));
+		thread_data->id = recv_thread_index++;
+		thread_data->uniqueSockID = uniqueSockID;
+		thread_data->socketCallType = recvfrom_call;
+		thread_data->datalen = datalen;
+		thread_data->flags = flags;
+		thread_data->symbol = symbol;
 
-	} else if (jinniSockets[index].type == SOCK_STREAM) {
-		recvfrom_tcp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
+		if (jinniSockets[index].type == SOCK_DGRAM) {
+			/** Whenever we need to implement non_blocking mode using
+			 * threads. We will call the function below using thread_create
+			 */
+			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
+					(void *) thread_data);
+			//recvfrom_udp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
+		} else if (jinniSockets[index].type == SOCK_STREAM) {
+			rc = pthread_create(recvmsg_thread, NULL, recvfrom_tcp,
+					(void *) thread_data);
+			//recvfrom_tcp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
+		} else if ((jinniSockets[index].type == SOCK_RAW)
+				&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
+			rc = pthread_create(recvmsg_thread, NULL, recvfrom_icmp,
+					(void *) thread_data);
+			//recvfrom_icmp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
+		} else {
+			PRINT_DEBUG("This socket is of unknown type");
+			nack_send(uniqueSockID, recvfrom_call);
+			rc = 1;
+		}
 
+		if (rc) {
+			PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d",
+					thread_data->id, rc);
+		} else {
+			sem_wait(&recv_thread_sem);
+			recv_thread_count++;
+			sem_post(&recv_thread_sem);
+		}
+		free(recvmsg_thread);
 	} else {
-		PRINT_DEBUG("This socket is of unknown type");
+		PRINT_DEBUG("Hit max allowed recv thread, count=%d", recv_thread_count);
 		nack_send(uniqueSockID, recvfrom_call);
 	}
-
 } // end of recvfrom_call_handler()
 
 /** ----------------------------------------------------------
@@ -1045,52 +1081,52 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		exit(1);
 	}
 
-	if (jinniSockets[index].type == SOCK_DGRAM) {
-		/** Whenever we need to implement non_blocking mode using
-		 * threads. We will call the function below using thread_create
-		 */
-		PRINT_DEBUG("recvfrom Address Symbol = %d", symbol);
+	if (recv_thread_count < MAX_recv_threads) {
+		PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);
+		recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
 
-		if (recv_thread_count < MAX_recv_threads) {
-			PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);
-			recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
+		thread_data = (struct recvfrom_data *) malloc(
+				sizeof(struct recvfrom_data));
+		thread_data->id = recv_thread_index++;
+		thread_data->uniqueSockID = uniqueSockID;
+		thread_data->socketCallType = recvmsg_call;
+		thread_data->datalen = datalen;
+		thread_data->flags = flags;
+		thread_data->symbol = symbol;
 
-			thread_data = (struct recvfrom_data *) malloc(
-					sizeof(struct recvfrom_data));
-			thread_data->id = recv_thread_index++;
-			thread_data->uniqueSockID = uniqueSockID;
-			thread_data->socketCallType = recvmsg_call;
-			thread_data->datalen = datalen;
-			thread_data->flags = flags;
-			thread_data->symbol = symbol;
-
+		if (jinniSockets[index].type == SOCK_DGRAM) {
+			/** Whenever we need to implement non_blocking mode using
+			 * threads. We will call the function below using thread_create
+			 */
 			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
 					(void *) thread_data);
-			if (rc) {
-				PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d",
-						thread_data->id, rc);
-			} else {
-				sem_wait(&recv_thread_sem);
-				recv_thread_count++;
-				sem_post(&recv_thread_sem);
-			}
-			free(recvmsg_thread);
+			//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
+		} else if (jinniSockets[index].type == SOCK_STREAM) {
+			rc = pthread_create(recvmsg_thread, NULL, recvfrom_tcp,
+					(void *) thread_data);
+			//recvfrom_tcp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
+		} else if ((jinniSockets[index].type == SOCK_RAW)
+				&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
+			rc = pthread_create(recvmsg_thread, NULL, recvfrom_icmp,
+					(void *) thread_data);
+			//recvfrom_icmp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 		} else {
-			PRINT_DEBUG("Hit max allowed recv thread, count=%d",
-					recv_thread_count);
+			PRINT_DEBUG("This socket is of unknown type");
+			nack_send(uniqueSockID, recvmsg_call);
+			rc = 1;
 		}
 
-		//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
-
-	} else if (jinniSockets[index].type == SOCK_STREAM) {
-		recvfrom_tcp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
-
-	} else if ((jinniSockets[index].type == SOCK_RAW)
-			&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
-		recvfrom_icmp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
-
+		if (rc) {
+			PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d",
+					thread_data->id, rc);
+		} else {
+			sem_wait(&recv_thread_sem);
+			recv_thread_count++;
+			sem_post(&recv_thread_sem);
+		}
+		free(recvmsg_thread);
 	} else {
-		PRINT_DEBUG("This socket is of unknown type");
+		PRINT_DEBUG("Hit max allowed recv thread, count=%d", recv_thread_count);
 		nack_send(uniqueSockID, recvmsg_call);
 	}
 }
@@ -1399,7 +1435,11 @@ void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		exit(1);
 	}
 
-	ack_send(uniqueSockID, release_call);
+	if (removejinniSocket(uniqueSockID)) {
+		ack_send(uniqueSockID, release_call);
+	} else {
+		nack_send(uniqueSockID, release_call);
+	}
 }
 
 //TODO: dummy function, need to implement this
@@ -1680,4 +1720,15 @@ void getpeername_call_handler(unsigned long long uniqueSockID,
 
 void socketpair_call_handler() {
 
+}
+
+void recvthread_exit(struct recvfrom_data *thread_data) {
+	sem_wait(&recv_thread_sem);
+	recv_thread_count--;
+	sem_post(&recv_thread_sem);
+
+	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
+	free(thread_data);
+
+	pthread_exit(NULL);
 }
