@@ -271,11 +271,6 @@ int removejinniSocket(unsigned long long targetID) {
 			jinniSockets[i].uniqueSockID = -1;
 			jinniSockets[i].connection_status = 0;
 			term_queue(jinniSockets[i].dataQueue);
-			//			sem_close(jinniSockets[i].s);
-			//			sem_unlink(jinniSockets[i].semaphore_name);
-			//			sem_close(jinniSockets[i].as);
-			//			sem_unlink(jinniSockets[i].asemaphore_name);
-			//			sprintf(jinniSockets[i].semaphore_name, "NULL");
 			sem_post(&jinniSockets_sem);
 			return (1);
 

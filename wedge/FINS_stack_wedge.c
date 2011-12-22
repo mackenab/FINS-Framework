@@ -153,9 +153,10 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 
 	// ONLY FOR BLOCKING CALLS: must get a semaphore and go to sleep until daemon sends response and netlink handler unlocks semaphore
 	// get semaphore before continuing - unlocked by netlink handler
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[socket_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, socket_call, FINS_semaphores[socket_call].count);
+			down(&FINS_semaphores[socket_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -164,13 +165,12 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 		if ((socket_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, socket_call, uniqueSockID);
-			up(&FINS_semaphores[socket_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, socket_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[socket_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -190,7 +190,9 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -259,24 +261,23 @@ static int FINS_release(struct socket *sock) {
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>0){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[release_call])) {
-			;
-		} // block until daemon replies
-
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, release_call, FINS_semaphores[release_call].count);
+			down(&FINS_semaphores[release_call]);
+		} // block until daemon replies*/
 		if (down_interruptible(&shared_sem_r)) {
 			;
 		}
 		if ((release_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, release_call, uniqueSockID);
-			up(&FINS_semaphores[release_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, release_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[release_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -296,7 +297,9 @@ static int FINS_release(struct socket *sock) {
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	if (!sk)
 		return print_exit(__FUNCTION__, rc);
@@ -375,9 +378,10 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[bind_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, bind_call, FINS_semaphores[bind_call].count);
+			down(&FINS_semaphores[bind_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -386,13 +390,12 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		if ((bind_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, bind_call, uniqueSockID);
-			up(&FINS_semaphores[bind_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, bind_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[bind_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -412,7 +415,9 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -476,9 +481,10 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[connect_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, connect_call, FINS_semaphores[connect_call].count);
+			down(&FINS_semaphores[connect_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -487,13 +493,12 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 		if ((connect_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, connect_call, uniqueSockID);
-			up(&FINS_semaphores[connect_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, connect_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[connect_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -513,7 +518,9 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -642,9 +649,10 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[calltype])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, calltype, FINS_semaphores[calltype].count);
+			down(&FINS_semaphores[calltype]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -653,13 +661,12 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 		if ((calltype == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, calltype, uniqueSockID);
-			up(&FINS_semaphores[calltype]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, calltype, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[calltype], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -679,7 +686,9 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -833,9 +842,10 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[ioctl_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, ioctl_call, FINS_semaphores[ioctl_call].count);
+			down(&FINS_semaphores[ioctl_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -844,13 +854,12 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		if ((ioctl_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, ioctl_call, uniqueSockID);
-			up(&FINS_semaphores[ioctl_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, ioctl_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[ioctl_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -871,7 +880,9 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -962,9 +973,10 @@ static int FINS_shutdown(struct socket *sock, int how) {
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[shutdown_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, shutdown_call, FINS_semaphores[shutdown_call].count);
+			down(&FINS_semaphores[shutdown_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -973,13 +985,12 @@ static int FINS_shutdown(struct socket *sock, int how) {
 		if ((shutdown_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, shutdown_call, uniqueSockID);
-			up(&FINS_semaphores[shutdown_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, shutdown_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[shutdown_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -999,7 +1010,9 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1070,9 +1083,10 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[setsockopt_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, setsockopt_call, FINS_semaphores[setsockopt_call].count);
+			down(&FINS_semaphores[setsockopt_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -1081,13 +1095,12 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 		if ((setsockopt_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, setsockopt_call, uniqueSockID);
-			up(&FINS_semaphores[setsockopt_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, setsockopt_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[setsockopt_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -1107,7 +1120,9 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1179,9 +1194,10 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[getsockopt_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, getsockopt_call, FINS_semaphores[getsockopt_call].count);
+			down(&FINS_semaphores[getsockopt_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -1190,13 +1206,12 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 		if ((getsockopt_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, getsockopt_call, uniqueSockID);
-			up(&FINS_semaphores[getsockopt_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, getsockopt_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[getsockopt_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -1224,7 +1239,9 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1342,9 +1359,10 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		// pick an appropriate errno
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[sendmsg_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, sendmsg_call, FINS_semaphores[sendmsg_call].count);
+			down(&FINS_semaphores[sendmsg_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -1353,13 +1371,12 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		if ((sendmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, sendmsg_call, uniqueSockID);
-			up(&FINS_semaphores[sendmsg_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, sendmsg_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[sendmsg_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from shared_buf
@@ -1380,7 +1397,9 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1468,9 +1487,10 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		// pick an appropriate errno
 	}
 
-	while (1) {
+	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[recvmsg_call])) {
-			;
+			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, recvmsg_call, FINS_semaphores[recvmsg_call].count);
+			down(&FINS_semaphores[recvmsg_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
@@ -1479,13 +1499,12 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		if ((recvmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
 		} else {
-			//printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
-			up(&FINS_semaphores[recvmsg_call]);
+			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, shared_call, shared_sockID, recvmsg_call, uniqueSockID);
+			up(&FINS_semaphores[shared_call]);
 		}
 		up(&shared_sem_r);
 	}
 
-	//sema_init(&FINS_semaphores[recvmsg_call], 0); // relock semaphore
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	if (shared_buf && (shared_len >= sizeof(int))) {
@@ -1566,7 +1585,9 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 	up(&shared_sem_r);
 
+	printk(KERN_INFO "FINS: %s: shared consumed: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 	up(&shared_sem_w);
+	printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 
 	return print_exit(__FUNCTION__, rc);
 }
@@ -1896,10 +1917,12 @@ void nl_data_ready(struct sk_buff *skb) {
 			 */
 
 			//lock the semaphore so shared data can't be changed until it's consumed
+			printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 			if (down_interruptible(&shared_sem_w)) {
 				;
 			}
 
+			printk(KERN_INFO "FINS: %s: shared_sem_r=%d\n", __FUNCTION__, shared_sem_r.count);
 			if (down_interruptible(&shared_sem_r)) {
 				;
 			}
@@ -1916,7 +1939,7 @@ void nl_data_ready(struct sk_buff *skb) {
 			shared_buf = pt;
 			shared_len = len;
 
-			printk(KERN_INFO "FINS: %s: shared: call=%d, sockID=%d, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
+			printk(KERN_INFO "FINS: %s: shared created: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, shared_call, shared_sockID, shared_ret, shared_len);
 			up(&shared_sem_r);
 
 			up(&FINS_semaphores[socketDaemonResponseType]);
