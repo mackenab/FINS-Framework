@@ -155,12 +155,12 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	// get semaphore before continuing - unlocked by netlink handler
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[socket_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, socket_call, FINS_semaphores[socket_call].count);
-			down(&FINS_semaphores[socket_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, socket_call, FINS_semaphores[socket_call].count);
+			//down(&FINS_semaphores[socket_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((socket_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -263,11 +263,11 @@ static int FINS_release(struct socket *sock) {
 
 	int count=0;while (1){ if(count++>0){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[release_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, release_call, FINS_semaphores[release_call].count);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, release_call, FINS_semaphores[release_call].count);
 			down(&FINS_semaphores[release_call]);
 		} // block until daemon replies*/
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((release_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -380,12 +380,12 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[bind_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, bind_call, FINS_semaphores[bind_call].count);
-			down(&FINS_semaphores[bind_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, bind_call, FINS_semaphores[bind_call].count);
+			//down(&FINS_semaphores[bind_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((bind_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -483,12 +483,12 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[connect_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, connect_call, FINS_semaphores[connect_call].count);
-			down(&FINS_semaphores[connect_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, connect_call, FINS_semaphores[connect_call].count);
+			//down(&FINS_semaphores[connect_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((connect_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -651,12 +651,12 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[calltype])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, calltype, FINS_semaphores[calltype].count);
-			down(&FINS_semaphores[calltype]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, calltype, FINS_semaphores[calltype].count);
+			//down(&FINS_semaphores[calltype]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((calltype == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -844,12 +844,12 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[ioctl_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, ioctl_call, FINS_semaphores[ioctl_call].count);
-			down(&FINS_semaphores[ioctl_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, ioctl_call, FINS_semaphores[ioctl_call].count);
+			//down(&FINS_semaphores[ioctl_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((ioctl_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -975,12 +975,12 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[shutdown_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, shutdown_call, FINS_semaphores[shutdown_call].count);
-			down(&FINS_semaphores[shutdown_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, shutdown_call, FINS_semaphores[shutdown_call].count);
+			//down(&FINS_semaphores[shutdown_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((shutdown_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -1085,12 +1085,12 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[setsockopt_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, setsockopt_call, FINS_semaphores[setsockopt_call].count);
-			down(&FINS_semaphores[setsockopt_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, setsockopt_call, FINS_semaphores[setsockopt_call].count);
+			//down(&FINS_semaphores[setsockopt_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((setsockopt_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -1196,12 +1196,12 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[getsockopt_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, getsockopt_call, FINS_semaphores[getsockopt_call].count);
-			down(&FINS_semaphores[getsockopt_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, getsockopt_call, FINS_semaphores[getsockopt_call].count);
+			//down(&FINS_semaphores[getsockopt_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((getsockopt_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -1361,12 +1361,12 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[sendmsg_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, sendmsg_call, FINS_semaphores[sendmsg_call].count);
-			down(&FINS_semaphores[sendmsg_call]);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, sendmsg_call, FINS_semaphores[sendmsg_call].count);
+			//down(&FINS_semaphores[sendmsg_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((sendmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -1489,12 +1489,12 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 
 	int count=0;while (1){ if(count++>5){return print_exit(__FUNCTION__, -1);}
 		if (down_interruptible(&FINS_semaphores[recvmsg_call])) {
-			printk(KERN_INFO "FINS: %s: sem aquire fail, using hard down sem[%d]=%d", __FUNCTION__, recvmsg_call, FINS_semaphores[recvmsg_call].count);
+			printk(KERN_INFO "FINS: %s: call aquire fail, using hard down sem[%d]=%d", __FUNCTION__, recvmsg_call, FINS_semaphores[recvmsg_call].count);
 			down(&FINS_semaphores[recvmsg_call]);
 		} // block until daemon replies
 
 		if (down_interruptible(&shared_sem_r)) {
-			;
+			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 		}
 		if ((recvmsg_call == shared_call) && (uniqueSockID == shared_sockID)) {
 			break;
@@ -1919,12 +1919,12 @@ void nl_data_ready(struct sk_buff *skb) {
 			//lock the semaphore so shared data can't be changed until it's consumed
 			printk(KERN_INFO "FINS: %s: shared_sem_w=%d\n", __FUNCTION__, shared_sem_w.count);
 			if (down_interruptible(&shared_sem_w)) {
-				;
+				printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down w=%d", __FUNCTION__, shared_sem_w.count);
 			}
 
 			printk(KERN_INFO "FINS: %s: shared_sem_r=%d\n", __FUNCTION__, shared_sem_r.count);
 			if (down_interruptible(&shared_sem_r)) {
-				;
+				printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, shared_sem_r.count);
 			}
 			shared_call = socketDaemonResponseType;
 
