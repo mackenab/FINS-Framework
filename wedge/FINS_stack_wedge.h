@@ -74,6 +74,34 @@ void nl_data_ready(struct sk_buff *skb);
 // This function extracts a unique ID from the kernel-space perspective for each socket
 inline unsigned long long getUniqueSockID(struct socket *sock);
 
+#define MAX_sockets 100
+#define MAX_calls 23
+
+struct finssocket {
+	unsigned long long uniqueSockID;
+	int type;
+	int protocol;
+
+	struct semaphore call_sems[MAX_calls];
+
+	int threads;
+	struct semaphore threads_sem;
+
+	int replies;
+	struct semaphore replies_sem;
+
+	struct semaphore reply_sem_w;
+	struct semaphore reply_sem_r;	//reassuring, but might not be necessary
+	int reply_ret;
+	u_char *reply_buf;
+	int reply_len;
+};
+
+void init_jinnisockets();
+int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
+int findjinniSocket(unsigned long long uniqueSockID);
+int removejinniSocket(unsigned long long uniqueSockID);
+
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */
 //struct FINS_nl_dgram {
