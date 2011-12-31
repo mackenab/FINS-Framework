@@ -5,7 +5,7 @@
 /* License and signing info */
 #define M_LICENSE	"GPL"	// READ ABOUT THIS BEFORE CHANGING! Must be some form of GPL.
 #define M_DESCRIPTION	"Registers the FINS protocol with the kernel"
-#define M_AUTHOR	"Mark Horvath <bisondeveloper@gmail.com>"
+#define M_AUTHOR	"Jonathan Reed <jonathanreed07@gmail.com>"
 
 /* Includes needed for LKM overhead */
 #include <linux/module.h>	/* Needed by all modules */
@@ -2466,6 +2466,8 @@ void nl_data_ready(struct sk_buff *skb) {
 				return print_exit(__FUNCTION__, -1); //TODO: change to correct?
 			}
 
+			write_lock(&jinnisockets_rwlock);
+
 			jinniSockets[index].reply_call = reply_call;
 
 			jinniSockets[index].reply_ret = *(int *) pt;
@@ -2489,6 +2491,8 @@ void nl_data_ready(struct sk_buff *skb) {
 				up(&jinniSockets[index].threads_sem);
 			}
 			up(&jinniSockets[index].replies_sem);
+
+			write_unlock(&jinnisockets_rwlock);
 
 			printk(KERN_INFO "FINS: %s: shared created: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, shared_sockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 			up(&jinniSockets[index].reply_sem_r);
