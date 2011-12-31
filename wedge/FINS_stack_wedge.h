@@ -92,6 +92,7 @@ struct finssocket {
 
 	struct semaphore reply_sem_w;
 	struct semaphore reply_sem_r;	//reassuring, but might not be necessary
+	unsigned long long reply_call;
 	int reply_ret;
 	u_char *reply_buf;
 	int reply_len;
