@@ -92,17 +92,18 @@ struct finssocket {
 
 	struct semaphore reply_sem_w;
 	struct semaphore reply_sem_r;	//reassuring, but might not be necessary
-	unsigned long long reply_call;
+	u_int reply_call;
 	int reply_ret;
 	u_char *reply_buf;
 	int reply_len;
 };
 
+/*
 void init_jinnisockets();
 int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
 int findjinniSocket(unsigned long long uniqueSockID);
 int removejinniSocket(unsigned long long uniqueSockID);
-
+*/
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */
 //struct FINS_nl_dgram {
