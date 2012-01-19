@@ -145,6 +145,7 @@ int findjinniSocket(unsigned long long uniqueSockID) {
 int removejinniSocket(unsigned long long uniqueSockID) {
 	int i;
 	int j;
+	int threads;
 
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
 
@@ -154,13 +155,15 @@ int removejinniSocket(unsigned long long uniqueSockID) {
 			jinniSockets[i].uniqueSockID = -1;
 			jinniSockets[i].type = -1;
 			jinniSockets[i].protocol = -1;
+
+			threads = jinniSockets[i].threads;
 			write_unlock(&jinnisockets_rwlock);
 
 			//clear semaphores?
-			for (j = 0; j < jinniSockets[i].threads; j++) {
+			for (j = 0; j < threads; j++) {
 				up(&jinniSockets[i].reply_sem_w);
 			}
-			msleep(500);
+			msleep(500);	//may need to change
 
 			return (1);
 		}
