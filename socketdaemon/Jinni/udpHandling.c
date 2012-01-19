@@ -93,7 +93,8 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
 
 		int value;
 		sem_getvalue(&(jinniSockets[index].Qs), &value);
-		PRINT_DEBUG("uniqID=%llu sem: ind=%d, val=%d", uniqueSockID,index, value);
+		PRINT_DEBUG("uniqID=%llu sem: ind=%d, val=%d", uniqueSockID, index,
+				value);
 
 		do {
 			sem_wait(&jinniSockets_sem);
@@ -830,7 +831,8 @@ void recvfrom_udp(void *threadData) {
 
 	if (UDPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
 			blocking_flag) == 1) {
-		PRINT_DEBUG("after UDPreadFrom_fins uniqID=%llu ind=%d", uniqueSockID, index);
+		PRINT_DEBUG("after UDPreadFrom_fins uniqID=%llu ind=%d", uniqueSockID,
+				index);
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 
@@ -857,6 +859,11 @@ void recvfrom_udp(void *threadData) {
 
 			memcpy(pt, address, sizeof(struct sockaddr_in));
 			pt += sizeof(struct sockaddr_in);
+
+			//#######
+			struct sockaddr_in *addr_in = (struct sockaddr_in *) address;
+			PRINT_DEBUG("address: %d/%d", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
+			//#######
 		}
 
 		*(int *) pt = buflen;
@@ -889,7 +896,7 @@ void recvfrom_udp(void *threadData) {
 		//if (index == -1) {
 		//	PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		//} else {
-			nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, socketCallType);
 		//}
 	}
 	PRINT_DEBUG();

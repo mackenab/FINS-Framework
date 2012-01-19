@@ -53,7 +53,8 @@ if (argc > 1)
 	else
 		port = 5000;
 
-printf("MY DEST PORT BEFORE AND AFTER\n%d, %d",port, htons(port));
+printf("MY DEST PORT BEFORE AND AFTER\n");
+printf("%d, %d\n",port, htons(port));
 server_addr.sin_family = AF_INET;
 server_addr.sin_port = htons(port);
 

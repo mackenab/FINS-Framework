@@ -8,7 +8,6 @@
  */
 //#define NETLINK_FINS    20	// must match userspace definition
 #define KERNEL_PID      0	// This is used to identify netlink traffic into and out of the kernel
-
 /** Socket related calls and their codes */
 #define socket_call 1
 #define socketpair_call 2
@@ -30,7 +29,7 @@
 #define shutdown_call 18
 /** Additional calls
  * To hande special cases
-* overwriting the generic functions which write to a socket descriptor
+ * overwriting the generic functions which write to a socket descriptor
  * in order to make sure that we cover as many applications as possible
  * This range of these functions will start from 30
  */
@@ -46,10 +45,12 @@
 #define ACK 	200
 #define NACK 	6666
 
+#define LOOP_LIMIT 10
+
 // Data declarations
 /* Data for netlink sockets */
 struct sock *FINS_nl_sk = NULL;
-int FINS_daemon_pid = -1;	// holds the pid of the FINS daemon so we know who to send back to
+int FINS_daemon_pid = -1; // holds the pid of the FINS daemon so we know who to send back to
 
 /* Data for protocol registration */
 static struct proto_ops FINS_proto_ops;
@@ -57,18 +58,20 @@ static struct proto FINS_proto;
 static struct net_proto_family FINS_net_proto;
 /* Protocol specific socket structure */
 struct FINS_sock {
-        /* struct sock MUST be the first member of FINS_sock */
-        struct sock sk;
-        /* Add the protocol implementation specific members per socket here from here on */
-	// Other stuff might go here, maybe look at IPX or IPv4 registration process
+	/* struct sock MUST be the first member of FINS_sock */
+	struct sock sk;
+/* Add the protocol implementation specific members per socket here from here on */
+// Other stuff might go here, maybe look at IPX or IPv4 registration process
 };
 
 // Function prototypes:
-static int FINS_create_socket(struct net *net, struct socket *sock, int protocol, int kern);
+static int FINS_create_socket(struct net *net, struct socket *sock,
+		int protocol, int kern);
 
-/* FINS netlink functions*/ 
+/* FINS netlink functions*/
 int nl_send(int pid, void *buf, ssize_t len, int flags);
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags);
+int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
+		int flags);
 void nl_data_ready(struct sk_buff *skb);
 
 // This function extracts a unique ID from the kernel-space perspective for each socket
@@ -91,7 +94,7 @@ struct finssocket {
 	struct semaphore replies_sem;
 
 	struct semaphore reply_sem_w;
-	struct semaphore reply_sem_r;	//reassuring, but might not be necessary
+	struct semaphore reply_sem_r; //reassuring, but might not be necessary
 	u_int reply_call;
 	int reply_ret;
 	u_char *reply_buf;
@@ -99,11 +102,11 @@ struct finssocket {
 };
 
 /*
-void init_jinnisockets();
-int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
-int findjinniSocket(unsigned long long uniqueSockID);
-int removejinniSocket(unsigned long long uniqueSockID);
-*/
+ void init_jinnisockets();
+ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
+ int findjinniSocket(unsigned long long uniqueSockID);
+ int removejinniSocket(unsigned long long uniqueSockID);
+ */
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */
 //struct FINS_nl_dgram {
@@ -123,4 +126,4 @@ int removejinniSocket(unsigned long long uniqueSockID);
 
 /* This is a flag to enable or disable the FINS stack passthrough */
 int FINS_stack_passthrough_enabled;
-EXPORT_SYMBOL(FINS_stack_passthrough_enabled);
+EXPORT_SYMBOL( FINS_stack_passthrough_enabled);
