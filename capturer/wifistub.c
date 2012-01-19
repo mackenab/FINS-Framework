@@ -26,53 +26,6 @@ extern int capture_count;
 
 
 /**
- * print a captured frame
- */
-
-void print_frame(const u_char *payload, int len) {
-
-	PRINT_DEBUG("passed len = %d", len);
-	int len_rem = len;
-	int line_width = 16; /* number of bytes per line */
-	int line_len;
-	int offset = 0; /* zero-based offset counter */
-	const u_char *ch = payload;
-
-	if (len <= 0)
-		return;
-
-	/* data fits on one line */
-	if (len <= line_width) {
-		PRINT_DEBUG("calling hex_ascii_line");
-		print_hex_ascii_line(ch, len, offset);
-		return;
-	}
-
-	/* data spans multiple lines */
-	for (;;) {
-		/* compute current line length */
-		line_len = line_width % len_rem;
-		/* print line */
-		print_hex_ascii_line(ch, line_len, offset);
-		/* compute total remaining */
-		len_rem = len_rem - line_len;
-		/* shift pointer to remaining bytes to print */
-		ch = ch + line_len;
-		/* add offset */
-		offset = offset + line_width;
-		/* check if we have line width chars or less */
-		if (len_rem <= line_width) {
-			/* print last line and get out */
-			print_hex_ascii_line(ch, len_rem, offset);
-			break;
-		}
-	}
-
-	return;
-} // end of print_frame
-
-
-/**
  * print data in rows of 16 bytes: offset   hex   ascii
  *
  * 00000  sniff_udp 47 45 54 20 2f 20 48 54  54 50 2f 31 2e 31 0d 0a   GET / HTTP/1.1..
@@ -123,10 +76,55 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 	return;
 } //end of print_hex_ascii_line()
 
+/**
+ * print a captured frame
+ */
+
+void print_frame(const u_char *payload, int len) {
+
+	PRINT_DEBUG("passed len = %d", len);
+	int len_rem = len;
+	int line_width = 16; /* number of bytes per line */
+	int line_len;
+	int offset = 0; /* zero-based offset counter */
+	const u_char *ch = payload;
+
+	if (len <= 0)
+		return;
+
+	/* data fits on one line */
+	if (len <= line_width) {
+		PRINT_DEBUG("calling hex_ascii_line");
+		print_hex_ascii_line(ch, len, offset);
+		return;
+	}
+
+	/* data spans multiple lines */
+	for (;;) {
+		/* compute current line length */
+		line_len = line_width % len_rem;
+		/* print line */
+		print_hex_ascii_line(ch, line_len, offset);
+		/* compute total remaining */
+		len_rem = len_rem - line_len;
+		/* shift pointer to remaining bytes to print */
+		ch = ch + line_len;
+		/* add offset */
+		offset = offset + line_width;
+		/* check if we have line width chars or less */
+		if (len_rem <= line_width) {
+			/* print last line and get out */
+			print_hex_ascii_line(ch, len_rem, offset);
+			break;
+		}
+	}
+
+	return;
+} // end of print_frame
 
 /** ----------------------------------------------------------------------------------*/
-int got_packet(u_char *args, const struct pcap_pkthdr *header,
-		const u_char *packetReceived) {
+/*int*/void got_packet(u_char *args, const struct pcap_pkthdr *header,
+		const u_char *packetReceived) { //TODO: pcap_handlers must be of void type. This method of returning data will have to be amended
 	static int count = 1; /* packet counter */
 	u_char *packet; /* Packet Pointer */
 	struct data_to_pass data;
@@ -152,19 +150,22 @@ int got_packet(u_char *args, const struct pcap_pkthdr *header,
 	numBytes = write(income_pipe_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
 		PRINT_DEBUG("numBytes written %d\n", numBytes);
-		return (0);
+		//return (0);
+		return;
 	}
 
 	numBytes = write(income_pipe_fd, packetReceived, dataLength);
 
 	if (numBytes <= 0) {
 		PRINT_DEBUG("numBytes written %d\n", numBytes);
-		return (0);
+		//return (0);
+		return;
 	}
 	PRINT_DEBUG("A frame of length %d has been captured \n", numBytes);
 
 	capture_count++;
-	return (1);
+	//return (1);
+	return;
 
 } // end of the function got_packet
 
@@ -334,7 +335,7 @@ void inject_init(char *interface) {
 		}
 
 		//frame = (char *) malloc (framelen);
-		numBytes = read(inject_pipe_fd, &frame, framelen);
+		numBytes = read(inject_pipe_fd, frame, framelen);
 
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
@@ -343,12 +344,12 @@ void inject_init(char *interface) {
 
 		PRINT_DEBUG("A frame of length %d will be injected-----", framelen);
 
-		print_frame(&frame, framelen);
+		print_frame(frame, framelen);
 		/**
 		 * Inject the Ethernet Frame into the Device
 		 */
 
-		numBytes = pcap_inject(inject_handle, &frame, framelen);
+		numBytes = pcap_inject(inject_handle, frame, framelen);
 		if (numBytes == -1){
 			PRINT_DEBUG("Failed to inject the packet");
 		}

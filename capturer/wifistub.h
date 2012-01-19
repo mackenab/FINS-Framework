@@ -66,7 +66,7 @@ void capture_init(char *device);
 void inject_init(char *device);
 void wifi_terminate();
 void close_pipes();
-int got_packet(u_char *args, const struct pcap_pkthdr *header,
+void /*int*/ got_packet(u_char *args, const struct pcap_pkthdr *header,
 		const u_char *packetReceived);
 int wifi_inject(char *frameToSend, int frameLength);
 

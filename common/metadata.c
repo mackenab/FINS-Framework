@@ -84,7 +84,7 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
 			status = config_setting_lookup_int(root, target, (int *) value);
 			break;
 		case CONFIG_TYPE_STRING:
-			status = config_setting_lookup_string(root, target, (char *) value);
+			status = config_setting_lookup_string(root, target, (const char **) value); //unsure of credibility, check strings?
 			break;
 		default:
 			PRINT_DEBUG(" Asking for wrong type \n");
@@ -205,7 +205,7 @@ int metadata_print(metadata *cfgptr) {
 			PRINT_DEBUG("%d",value);
 			break;
 		case CONFIG_TYPE_STRING:
-			stringValue = config_setting_get_string(handle);
+			stringValue = (char *)config_setting_get_string(handle);
 			PRINT_DEBUG("%s",stringValue);
 			break;
 
