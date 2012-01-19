@@ -86,7 +86,7 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	return (0);
 
 }
-int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
+int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
@@ -266,7 +266,7 @@ void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags) {
 }
 
 void sendto_icmp(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data, int flags, struct sockaddr *addr,
+		int datalen, u_char *data, int flags, struct sockaddr_in *addr,
 		socklen_t addrlen) {
 
 	//	int index;

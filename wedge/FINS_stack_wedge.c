@@ -159,12 +159,10 @@ int removejinniSocket(unsigned long long uniqueSockID) {
 			threads = jinniSockets[i].threads;
 			write_unlock(&jinnisockets_rwlock);
 
-			//clear semaphores?
 			for (j = 0; j < threads; j++) {
 				up(&jinniSockets[i].reply_sem_w);
+				msleep(50);	//may need to change
 			}
-			msleep(500);	//may need to change
-
 			return (1);
 		}
 	}

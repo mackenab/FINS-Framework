@@ -500,7 +500,7 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		exit(1);
 	}
 
-	PRINT_DEBUG("%d,%d,%d", addr->sin_addr, ntohs(addr->sin_port),
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
 			addr->sin_family);
 
 	index = findjinniSocket(uniqueSockID);
@@ -610,7 +610,7 @@ void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	int flags;
 	u_char *data;
 	socklen_t addrlen;
-	struct sockaddr *addr;
+	struct sockaddr_in *addr;
 	u_char *pt;
 
 	PRINT_DEBUG("");
@@ -644,7 +644,7 @@ void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 	PRINT_DEBUG("");
 
-	addr = (struct sockaddr *) malloc(addrlen);
+	addr = (struct sockaddr_in *) malloc(addrlen);
 
 	memcpy(addr, pt, addrlen);
 	pt += addrlen;
@@ -826,16 +826,16 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 			/** Whenever we need to implement non_blocking mode using
 			 * threads. We will call the function below using thread_create
 			 */
-			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
+			rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_udp,
 					(void *) thread_data);
 			//recvfrom_udp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
 		} else if (jinniSockets[index].type == SOCK_STREAM) {
-			rc = pthread_create(recvmsg_thread, NULL, recvfrom_tcp,
+			rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_tcp,
 					(void *) thread_data);
 			//recvfrom_tcp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
 		} else if ((jinniSockets[index].type == SOCK_RAW)
 				&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
-			rc = pthread_create(recvmsg_thread, NULL, recvfrom_icmp,
+			rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_icmp,
 					(void *) thread_data);
 			//recvfrom_icmp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
 		} else {
@@ -877,7 +877,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	socklen_t addrlen;
 	void *msg_control;
 	int msg_controlLength;
-	struct sockaddr *addr;
+	struct sockaddr_in *addr;
 	u_char *pt;
 
 	PRINT_DEBUG("");
@@ -894,7 +894,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		addrlen = *(u_int *) pt;
 		pt += sizeof(u_int);
 
-		addr = (struct sockaddr *) malloc(addrlen);
+		addr = (struct sockaddr_in *) malloc(addrlen);
 		memcpy(addr, pt, addrlen);
 		pt += addrlen;
 	}
@@ -1093,16 +1093,16 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 			/** Whenever we need to implement non_blocking mode using
 			 * threads. We will call the function below using thread_create
 			 */
-			rc = pthread_create(recvmsg_thread, NULL, recvfrom_udp,
+			rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_udp,
 					(void *) thread_data);
 			//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 		} else if (jinniSockets[index].type == SOCK_STREAM) {
-			rc = pthread_create(recvmsg_thread, NULL, recvfrom_tcp,
+			rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_tcp,
 					(void *) thread_data);
 			//recvfrom_tcp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 		} else if ((jinniSockets[index].type == SOCK_RAW)
 				&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
-			rc = pthread_create(recvmsg_thread, NULL, recvfrom_icmp,
+			rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_icmp,
 					(void *) thread_data);
 			//recvfrom_icmp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 		} else {
@@ -1615,7 +1615,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		exit(1);
 	}
 
-	PRINT_DEBUG("%d,%d,%d", addr->sin_addr, ntohs(addr->sin_port),
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
 			addr->sin_family);
 
 	index = findjinniSocket(uniqueSockID);

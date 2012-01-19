@@ -16,12 +16,12 @@
 int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat);
-int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf, int *buflen,
+int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 		int symbol, struct sockaddr_in *address, int block_flag);
 
 void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSockID);
 void socketpair_udp();
-void bind_udp(unsigned long long uniqueSockID, struct sockaddr *addr);
+void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void getsockname_udp();
 void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen);
@@ -30,7 +30,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP 
 void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data);
 void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags);
 void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
-		struct sockaddr *addr, socklen_t addrlen);
+		struct sockaddr_in *addr, socklen_t addrlen);
 
 void recvfrom_udp(void *threadData);
 void sendmsg_udp();

@@ -59,7 +59,7 @@ static struct finsFrame *get_fake_frame() {
  *
  */
 
-int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char **buf,
+int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
@@ -300,7 +300,7 @@ void socket_tcp(int domain, int type, int protocol,
 
 }
 
-void bind_tcp(unsigned long long uniqueSockID, struct sockaddr *addr) {
+void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -308,10 +308,7 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	uint32_t dst_IP_netformat;
 	int index;
 
-	struct sockaddr_in *address;
-	address = (struct sockaddr_in *) addr;
-
-	if (address->sin_family != AF_INET) {
+	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, bind_call);
 		return;
@@ -325,8 +322,8 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	hostport = ntohs(address->sin_port);
-	host_IP_netformat = (address->sin_addr).s_addr;
+	hostport = ntohs(addr->sin_port);
+	host_IP_netformat = (addr->sin_addr).s_addr;
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
@@ -341,12 +338,12 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (address->sin_addr).s_addr,
-			ntohs(address->sin_port), address->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr,
+			ntohs(addr->sin_port), addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].hostport = ntohs(address->sin_port);
-	jinniSockets[index].host_IP = (address->sin_addr).s_addr;
+	jinniSockets[index].hostport = ntohs(addr->sin_port);
+	jinniSockets[index].host_IP = (addr->sin_addr).s_addr;
 	sem_post(&jinniSockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
@@ -558,10 +555,7 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	uint32_t dst_IP;
 	int index;
 
-	struct sockaddr_in *address;
-	address = (struct sockaddr_in *) addr;
-
-	if (address->sin_family != AF_INET) {
+	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, connect_call);
 	}
@@ -574,8 +568,8 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	dstport = ntohs(address->sin_port);
-	dst_IP = ntohl((address->sin_addr).s_addr);
+	dstport = ntohs(addr->sin_port);
+	dst_IP = ntohl((addr->sin_addr).s_addr);
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * according to the RFC document and man pages: Application can call connect more than
@@ -603,18 +597,18 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * and also available
 	 * */
 	/** Reverse again because it was reversed by the application itself */
-	//hostport = ntohs(address->sin_port);
+	//hostport = ntohs(addr->sin_port);
 
 
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (address->sin_addr).s_addr,
-			ntohs(address->sin_port), address->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr,
+			ntohs(addr->sin_port), addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].dstport = ntohs(address->sin_port);
-	jinniSockets[index].dst_IP = ntohl((address->sin_addr).s_addr);
+	jinniSockets[index].dstport = ntohs(addr->sin_port);
+	jinniSockets[index].dst_IP = ntohl((addr->sin_addr).s_addr);
 	jinniSockets[index].connection_status++;
 	sem_post(&jinniSockets_sem);
 
@@ -634,7 +628,7 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 }
 
 void sendto_tcp(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data, int flags, struct sockaddr *dest_addr,
+		int datalen, u_char *data, int flags, struct sockaddr_in *dest_addr,
 		socklen_t addrlen) {
 
 	uint16_t hostport;
@@ -662,9 +656,6 @@ void sendto_tcp(unsigned long long uniqueSockID, int socketCallType,
 	}
 	PRINT_DEBUG("");
 
-	struct sockaddr_in *address;
-	address = (struct sockaddr_in *) dest_addr;
-
 	index = findjinniSocket(uniqueSockID);
 	PRINT_DEBUG("");
 
@@ -673,7 +664,7 @@ void sendto_tcp(unsigned long long uniqueSockID, int socketCallType,
 		exit(1);
 	}
 
-	if (address->sin_family != AF_INET) {
+	if (dest_addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, socketCallType);
 	}
@@ -683,9 +674,9 @@ void sendto_tcp(unsigned long long uniqueSockID, int socketCallType,
 	PRINT_DEBUG("");
 
 	/** Keep all ports and addresses in host order until later  action taken */
-	dstport = ntohs(address->sin_port); /** reverse it since it is in network order after application used htons */
+	dstport = ntohs(dest_addr->sin_port); /** reverse it since it is in network order after application used htons */
 
-	dst_IP = ntohl(address-> sin_addr.s_addr);/** it is in network format since application used htonl */
+	dst_IP = ntohl(dest_addr-> sin_addr.s_addr);/** it is in network format since application used htonl */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
@@ -740,7 +731,7 @@ void recvfrom_tcp(void *threadData) {
 
 	u_char *bufptr;
 	bufptr = buf;
-	struct sockaddr_in *address;
+	struct sockaddr_in *addr;
 	int buflen = 0;
 	int index;
 	int i;
@@ -761,8 +752,8 @@ void recvfrom_tcp(void *threadData) {
 	int symbol = thread_data->symbol;
 
 	if (symbol == 1)
-		address = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	address = NULL;
+		addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
+	addr = NULL;
 	/** TODO handle flags cases */
 	switch (flags) {
 
@@ -790,7 +781,7 @@ void recvfrom_tcp(void *threadData) {
 	 *
 	 */
 
-	if (TCPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
+	if (TCPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, addr,
 			blocking_flag) == 1) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
@@ -816,7 +807,7 @@ void recvfrom_tcp(void *threadData) {
 			*(int *) pt = sizeof(struct sockaddr_in);
 			pt += sizeof(int);
 
-			memcpy(pt, address, sizeof(struct sockaddr_in));
+			memcpy(pt, addr, sizeof(struct sockaddr_in));
 			pt += sizeof(struct sockaddr_in);
 		}
 
@@ -857,7 +848,7 @@ void recvfrom_tcp(void *threadData) {
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
 	 */
-	//free(address);
+	//free(addr);
 	//free(buf);
 
 	recvthread_exit(thread_data);
@@ -906,7 +897,7 @@ void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags) {
 	 * this the difference between the call from here, and the call in case of
 	 * the function recvfrom_udp
 	 * */
-	if (TCPreadFrom_fins(uniqueSockID, &buf, &buflen, 0, NULL, blocking_flag)
+	if (TCPreadFrom_fins(uniqueSockID, buf, &buflen, 0, NULL, blocking_flag)
 			== 1) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
@@ -958,7 +949,7 @@ void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags) {
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
 	 */
-	//free(address);
+	//free(addr);
 	//free(buf);
 
 	return;
