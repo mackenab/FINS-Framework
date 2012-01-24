@@ -86,6 +86,15 @@ static int Succ(int Value, Queue Q) {
 	 return Value;*/
 }
 
+static int Prev(int Value, Queue Q) {
+	Value--;
+	return (Value % Q->Capacity);
+
+	/* if( --Value == Q->Capacity )
+	 Value = 0;
+	 return Value;*/
+}
+
 int Enqueue(ElementType X, Queue Q) {
 	if (IsFull(Q)) {
 		Error( "Full queue" );
@@ -94,6 +103,18 @@ int Enqueue(ElementType X, Queue Q) {
 		Q->Size++;
 		Q->Rear = Succ(Q->Rear, Q);
 		Q->Array[Q->Rear] = X;
+		return (1);
+	}
+}
+
+int EnqueueFront(ElementType X, Queue Q) {
+	if (IsFull(Q)) {
+		Error( "Full queue" );
+		return (0);
+	} else {
+		Q->Size++;
+		Q->Front = Prev(Q->Front, Q);
+		Q->Array[Q->Front] = X;
 		return (1);
 	}
 }

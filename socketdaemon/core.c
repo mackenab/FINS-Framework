@@ -396,8 +396,9 @@ void *interceptor_to_jinni() {
 	ssize_t test_msg_len;
 
 	int pos;
-	unsigned long long uniqueSockID;
 	int socketCallType; // Integer representing what socketcall type was placed (for testing purposes)
+	unsigned long long uniqueSockID;
+	int threads;
 
 	PRINT_DEBUG("Waiting for message from kernel\n");
 
@@ -520,7 +521,10 @@ void *interceptor_to_jinni() {
 			uniqueSockID = *(unsigned long long *) msg_pt;
 			msg_pt += sizeof(unsigned long long);
 
-			msg_len -= sizeof(int) + sizeof(unsigned long long);
+			threads = *(int *) msg_pt;
+			msg_pt += sizeof(int);
+
+			msg_len -= 2*sizeof(int) + sizeof(unsigned long long);
 
 			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType, uniqueSockID);
 			PRINT_DEBUG("msg_len=%d", msg_len);
@@ -546,78 +550,80 @@ void *interceptor_to_jinni() {
 			free(temp);
 			//###############################
 
+			PRINT_DEBUG("uniqueSockID=%llu, calltype=%d, threads=%d", uniqueSockID, socketCallType, threads);
+
 			switch (socketCallType) {
 
 			case socket_call:
-				socket_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				socket_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case socketpair_call:
-				socketpair_call_handler(uniqueSockID, msg_pt, msg_len);
+				socketpair_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case bind_call:
-				bind_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				bind_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case getsockname_call:
-				getsockname_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case connect_call:
-				connect_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				connect_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case getpeername_call:
-				getpeername_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 				/**
 				 * the write call is encapuslated as a send call with the
 				 * parameter flags = -1000  			//DONE
 				 */
 			case send_call:
-				send_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				send_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case recv_call:
-				recv_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				recv_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case sendto_call:
-				sendto_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				sendto_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case recvfrom_call:
-				recvfrom_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				recvfrom_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case sendmsg_call:
-				sendmsg_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				sendmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case recvmsg_call:
-				recvmsg_call_handler(uniqueSockID, msg_pt, msg_len);
+				recvmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case getsockopt_call:
-				getsockopt_call_handler(uniqueSockID, msg_pt, msg_len); //Dummy response
+				getsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); //Dummy response
 				break;
 			case setsockopt_call:
-				setsockopt_call_handler(uniqueSockID, msg_pt, msg_len); // Dummy response
+				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
 				break;
 			case listen_call:
-				listen_call_handler(uniqueSockID, msg_pt, msg_len);
+				listen_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case accept_call:
-				accept_call_handler(uniqueSockID, msg_pt, msg_len);
+				accept_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case accept4_call:
-				accept4_call_handler(uniqueSockID, msg_pt, msg_len);
+				accept4_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case shutdown_call:
-				shutdown_call_handler(uniqueSockID, msg_pt, msg_len); //DONE
+				shutdown_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case close_call:
 				/**
 				 * TODO fix the problem into remove jinnisockets
 				 * the Queue Terminate function has a bug as explained into it
 				 */
-				close_call_handler(uniqueSockID, msg_pt, msg_len);
+				close_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case release_call:
-				release_call_handler(uniqueSockID, msg_pt, msg_len);
+				release_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case ioctl_call:
-				ioctl_call_handler(uniqueSockID, msg_pt, msg_len);
+				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			default:
 				PRINT_DEBUG(

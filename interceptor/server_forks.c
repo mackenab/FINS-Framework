@@ -108,10 +108,11 @@ int main(int argc, char *argv[]) {
 		i = i + 1;
 		recv_data[bytes_read] = '\0';
 		printf("\n (%d) frame number", i);
-		printf("\n(%s/%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(
+		printf("\n(%s/%d) : ", inet_ntoa(client_addr->sin_addr), ntohs(
 				client_addr->sin_port));
-		printf("(%d , %d) said : ", (client_addr->sin_addr).s_addr, ntohs(
+		printf("(%d , %d) : ", (client_addr->sin_addr).s_addr, ntohs(
 				client_addr->sin_port));
+		printf("(%d , %d) : ", processes, pID);
 		printf(" (%s) to the Server\n", recv_data);
 
 		fflush(stdout);

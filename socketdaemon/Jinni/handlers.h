@@ -173,6 +173,9 @@ struct finssocket {
 	int data_pipe[2];
 	finsQueue dataQueue;
 	sem_t Qs; /** The data Queue Semaphore Pointer*/
+
+	int threads;
+	int replies;
 };
 
 struct recvfrom_data {
@@ -218,28 +221,28 @@ int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
 /** calls handling functions */
-void socket_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void socketpair_call_handler();
-void bind_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void getsockname_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void connect_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void getpeername_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void send_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void recv_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void sendto_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void recvfrom_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void sendmsg_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void recvmsg_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void getsockopt_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void setsockopt_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void listen_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void accept_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void accept4_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void shutdown_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void release_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
-void ioctl_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void bind_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void getsockname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void connect_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void getpeername_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void send_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void recv_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void sendto_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void recvfrom_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void listen_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void accept_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void accept4_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void shutdown_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
-void close_call_handler(unsigned long long uniqueSockID, u_char *buf, ssize_t len);
+void close_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
 void recvthread_exit(struct recvfrom_data *thread_data);
 

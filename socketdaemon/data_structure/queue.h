@@ -34,6 +34,7 @@ Queue CreateQueue(const char* name, int MaxElements);
 int DisposeQueue(Queue Q);
 void MakeEmpty(Queue Q);
 int Enqueue(ElementType X, Queue Q);
+int EnqueueFront(ElementType X, Queue Q);
 ElementType Front(Queue Q);
 void Dequeue(Queue Q);
 ElementType FrontAndDequeue(Queue Q);

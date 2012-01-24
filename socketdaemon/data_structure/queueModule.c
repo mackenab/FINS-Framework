@@ -134,6 +134,19 @@ int write_queue(struct finsFrame *ff, finsQueue q) {
 
 } // end of read_queue
 
+/**@brief insert a finsFrame at the front of queue q
+ * @param ff the pointer to the fins frame being written into the queue
+ * @param q points to this queue being accessed
+ * @return 1 on success, 0 on failure (most probably due to insufficient memory)
+ * @version 2  FIXED BY Abdallah
+ * @version 3 Cancel all the previous work and use GDSL , Now we just wrapper the GDSL
+ *
+ * */
+int write_queue_front(struct finsFrame *ff, finsQueue q) {
+	return (EnqueueFront(ff, q));
+
+} // end of read_queue
+
 /**@brief allows a finsFrame to be dequeued; there is a need to preserve integrity and hence we need to lock in the duration
  * @param ff the pointer to received the fins frame being read from the queue
  * @param q points to the queue being accessed

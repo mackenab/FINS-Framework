@@ -61,18 +61,20 @@ struct finsFrame *get_fake_frame() {
  *
  */
 
-int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
-		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
+int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
+		int symbol, struct sockaddr_in *address, int block_flag, int multi_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
 	 */
 	//symbol = 0;
 	struct finsFrame *ff = NULL;
+	struct finsFrame *ff_copy = NULL;
 	int index;
 	uint16_t srcport;
 	uint32_t srcip;
 	struct sockaddr_in * addr_in = (struct sockaddr_in *) address;
+	int i;
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
@@ -95,6 +97,8 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 		sem_getvalue(&(jinniSockets[index].Qs), &value);
 		PRINT_DEBUG("uniqID=%llu sem: ind=%d, val=%d", uniqueSockID, index,
 				value);
+		PRINT_DEBUG("block=%d, multi=%d, threads=%d", block_flag, multi_flag,
+				jinniSockets[index].threads);
 
 		do {
 			sem_wait(&jinniSockets_sem);
@@ -108,6 +112,23 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 			ff = read_queue(jinniSockets[index].dataQueue);
 			//	ff = get_fake_frame();
 			//					PRINT_DEBUG();
+
+			if (ff && multi_flag) {
+				PRINT_DEBUG("index=%d threads=%d replies=%d", index, jinniSockets[index].threads, jinniSockets[index].replies);
+				if (jinniSockets[index].replies) {
+					jinniSockets[index].replies--;
+				} else {
+					jinniSockets[index].replies = jinniSockets[index].threads - 1;
+					for (i = 0; i < jinniSockets[index].replies; i++) {
+						PRINT_DEBUG("adding frame copy, threads=%d", jinniSockets[index].threads);
+						ff_copy = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+						cpy_fins_to_fins(ff_copy, ff); //copies pointers, freeFinsFrame doesn't free pointers
+						if (!write_queue_front(ff_copy, jinniSockets[index].dataQueue)) {
+							; //error
+						}
+					}
+				}
+			}
 
 			sem_post(&(jinniSockets[index].Qs));
 			sem_post(&jinniSockets_sem);
@@ -129,6 +150,23 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 		/**	ff = get_fake_frame();
 		 print_finsFrame(ff); */
 		ff = read_queue(jinniSockets[index].dataQueue);
+
+		if (ff && multi_flag) {
+			PRINT_DEBUG("index=%d threads=%d replies=%d", index, jinniSockets[index].threads, jinniSockets[index].replies);
+			if (jinniSockets[index].replies) {
+				jinniSockets[index].replies--;
+			} else {
+				jinniSockets[index].replies = jinniSockets[index].threads - 1;
+				for (i = 0; i < jinniSockets[index].replies; i++) {
+					PRINT_DEBUG("adding frame copy, threads=%d", jinniSockets[index].threads);
+					ff_copy = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+					cpy_fins_to_fins(ff_copy, ff); //copies pointers, freeFinsFrame doesn't free pointers
+					if (!write_queue_front(ff_copy, jinniSockets[index].dataQueue)) {
+						; //error
+					}
+				}
+			}
+		}
 
 		sem_post(&(jinniSockets[index].Qs));
 		sem_post(&jinniSockets_sem);
@@ -162,17 +200,16 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 		sem_post(&jinniSockets_sem);
 		return (0);
 	}
-	if (jinniSockets[index].connection_status > 0) {
+	PRINT_DEBUG("Rest of read for index=%d.", index);
 
+	if (jinniSockets[index].connection_status > 0) {
 		if ((srcport != jinniSockets[index].dstport) || (srcip
 				!= jinniSockets[index].dst_IP)) {
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
 			sem_post(&jinniSockets_sem);
 			return (0);
-
 		}
-
 	}
 	sem_post(&jinniSockets_sem);
 
@@ -353,8 +390,8 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr,
-			ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
+			addr->sin_family);
 	/**
 	 * Binding
 	 */
@@ -437,8 +474,8 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr,
-			ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
+			addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
 	jinniSockets[index].dstport = ntohs(addr->sin_port);
@@ -772,6 +809,7 @@ void recvfrom_udp(void *threadData) {
 	int index;
 	int i;
 	int blocking_flag;
+	int multi_flag;
 
 	void *msg;
 	u_char *pt;
@@ -787,7 +825,7 @@ void recvfrom_udp(void *threadData) {
 	int flags = thread_data->flags;
 	int symbol = thread_data->symbol;
 
-	PRINT_DEBUG("Entered recv thread:%d", thread_data->id);
+	PRINT_DEBUG("Entered recv thread=%d", thread_data->id);
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
@@ -799,6 +837,7 @@ void recvfrom_udp(void *threadData) {
 
 	PRINT_DEBUG("index = %d", index);
 	blocking_flag = jinniSockets[index].blockingFlag;
+	multi_flag = 1;
 	sem_post(&jinniSockets_sem);
 
 	if (symbol == 1)
@@ -821,7 +860,7 @@ void recvfrom_udp(void *threadData) {
 	bufptr = buf;
 
 	if (UDPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, addr,
-			blocking_flag) == 1) {
+			blocking_flag, multi_flag) == 1) {
 		PRINT_DEBUG("after UDPreadFrom_fins uniqID=%llu ind=%d", uniqueSockID,
 				index);
 
@@ -852,7 +891,8 @@ void recvfrom_udp(void *threadData) {
 			pt += sizeof(struct sockaddr_in);
 
 			//#######
-			PRINT_DEBUG("address: %d/%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port));
+			PRINT_DEBUG("address: %d/%d", (addr->sin_addr).s_addr, ntohs(
+					addr->sin_port));
 			//#######
 		}
 
@@ -918,7 +958,10 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	int ret_val;
 
 	int blocking_flag;
+	int multi_flag;
+
 	blocking_flag = 1;
+	multi_flag = 0;
 	/** TODO handle flags cases */
 	switch (flags) {
 
@@ -943,8 +986,8 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	 * this the difference between the call from here, and the call in case of
 	 * the function recvfrom_udp
 	 * */
-	if (UDPreadFrom_fins(uniqueSockID, buf, &buflen, 0, NULL, blocking_flag)
-			== 1) {
+	if (UDPreadFrom_fins(uniqueSockID, buf, &buflen, 0, NULL, blocking_flag,
+			multi_flag) == 1) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 

@@ -65,9 +65,25 @@ struct FINS_sock {
 };
 
 // Function prototypes:
-static int FINS_create_socket(struct net *net, struct socket *sock,
-		int protocol, int kern);
-
+static int FINS_create_socket(struct net *net, struct socket *sock, int protocol, int kern);
+/*
+static int FINS_release(struct socket *sock);
+static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len)
+static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
+static int FINS_socketpair(struct socket *sock1, struct socket *sock2);
+static int FINS_accept(struct socket *sock, struct socket *newsock, int flags);
+static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len, int peer);
+static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *pt);
+static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
+static int FINS_listen(struct socket *sock, int backlog);
+static int FINS_shutdown(struct socket *sock, int how);
+static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
+static int FINS_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
+static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len);
+static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len, int flags);
+static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma);
+static ssize_t FINS_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags);
+*/
 /* FINS netlink functions*/
 int nl_send(int pid, void *buf, ssize_t len, int flags);
 int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,

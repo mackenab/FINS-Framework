@@ -245,6 +245,10 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			 exit(1);
 
 			 }*/
+
+			jinniSockets[i].threads = 0;
+			jinniSockets[i].replies = 0;
+
 			sem_post(&jinniSockets_sem);
 			return (1);
 		}
@@ -412,7 +416,7 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 	return (1);
 }
 
-void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 	int numOfBytes = -1;
 	int domain;
@@ -469,7 +473,7 @@ void socket_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
  * End of socket_call_handler
  */
 
-void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -513,6 +517,7 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 		exit(1);
 	}
+
 	if (jinniSockets[index].type == SOCK_DGRAM)
 		bind_udp(uniqueSockID, addr);
 	else if (jinniSockets[index].type == SOCK_STREAM)
@@ -527,7 +532,7 @@ void bind_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
  * ------------------End of bind_call_handler-----------------
  */
 
-void send_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void send_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -601,7 +606,7 @@ void send_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
  * ------------------End of send_call_handler-----------------
  */
 
-void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void sendto_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -711,7 +716,7 @@ void sendto_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
  * ------------------End of sendto_call_handler-----------------
  */
 
-void recv_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void recv_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -765,7 +770,7 @@ void recv_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
  * ------------------End of recv_call_handler-----------------
  */
 
-void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void recvfrom_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -863,7 +868,7 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
  * ------------------End of recvfrom_call_handler-----------------
  */
 
-void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -1001,7 +1006,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 }
 
-void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -1075,6 +1080,9 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 		PRINT_DEBUG("CRASH !!socket descriptor not found into jinni sockets");
 		exit(1);
 	}
+	sem_wait(&jinniSockets_sem);
+	jinniSockets[index].threads = threads;
+	sem_post(&jinniSockets_sem);
 
 	if (recv_thread_count < MAX_recv_threads) {
 		PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);
@@ -1126,7 +1134,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	}
 }
 
-void getsockopt_call_handler(unsigned long long uniqueSockID,
+void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
@@ -1240,7 +1248,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID,
 
 }
 
-void setsockopt_call_handler(unsigned long long uniqueSockID,
+void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
@@ -1363,21 +1371,21 @@ void setsockopt_call_handler(unsigned long long uniqueSockID,
 
 }
 
-void listen_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 }
-void accept_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
-		ssize_t len) {
-
-}
-
-void accept4_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 }
 
-void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void accept4_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
+		ssize_t len) {
+
+}
+
+void shutdown_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -1420,7 +1428,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 }
 
 //TODO: dummy function, need to implement this
-void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 	u_char *pt;
 	pt = buf;
@@ -1438,7 +1446,7 @@ void release_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 }
 
 //TODO: dummy function, need to implement this
-void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 	int index;
 	u_int cmd;
@@ -1486,7 +1494,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	ack_send(uniqueSockID, ioctl_call);
 }
 
-void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void close_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes = -1;
@@ -1513,7 +1521,7 @@ void close_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 
 }
 
-void getsockname_call_handler(unsigned long long uniqueSockID,
+void getsockname_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;
@@ -1586,7 +1594,7 @@ void getsockname_call_handler(unsigned long long uniqueSockID,
 
 }
 
-void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
+void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf,
 		ssize_t len) {
 
 	int numOfBytes;
@@ -1640,7 +1648,7 @@ void connect_call_handler(unsigned long long uniqueSockID, unsigned char *buf,
 	return;
 
 }
-void getpeername_call_handler(unsigned long long uniqueSockID,
+void getpeername_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
 	int numOfBytes;

@@ -34,13 +34,15 @@ int term_queue(finsQueue q);
 
 int write_queue(struct finsFrame *ff, finsQueue q);
 
+int write_queue_front(struct finsFrame *ff, finsQueue q);
+
 struct finsFrame * read_queue(finsQueue q);
 
 struct finsFrame * buildFinsFrame(void);
 
 int freeFinsFrame(struct finsFrame *f);
 
-void cpy_fins_to_fins(struct finsFrame *src, struct finsFrame *dst);
+void cpy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
 
 void print_finsFrame(struct finsFrame *fins_in);
 
