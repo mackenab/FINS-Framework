@@ -102,10 +102,10 @@ struct finssocket {
 	int protocol;
 
 	struct semaphore call_sems[MAX_calls];
+	int release_flag;
 
 	int threads;
 	struct semaphore threads_sem;
-
 	int replies;
 	struct semaphore replies_sem;
 

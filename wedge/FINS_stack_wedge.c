@@ -91,13 +91,12 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			for (j = 0; j < MAX_calls; j++) {
 				sema_init(&jinniSockets[i].call_sems[j], 0);
 			}
+			jinniSockets[i].release_flag = 0;
 
 			jinniSockets[i].threads = 0;
 			sema_init(&jinniSockets[i].threads_sem, 1);
 			jinniSockets[i].replies = 0;
 			sema_init(&jinniSockets[i].replies_sem, 1);
-
-			//jinniSockets[i].blockingFlag = 1;
 
 			sema_init(&jinniSockets[i].reply_sem_w, 1);
 			sema_init(&jinniSockets[i].reply_sem_r, 1);
@@ -154,10 +153,11 @@ int removejinniSocket(unsigned long long uniqueSockID) {
 			jinniSockets[i].type = -1;
 			jinniSockets[i].protocol = -1;
 
-			threads = jinniSockets[i].threads;
+			threads = jinniSockets[i].threads+1;
 			write_unlock(&jinnisockets_rwlock);
-			printk(KERN_INFO "FINS: %s: jinniSOcket[%d] removed.\n", __FUNCTION__, i);
+			printk(KERN_INFO "FINS: %s: jinniSocket[%d] removed.\n", __FUNCTION__, i);
 
+			printk(KERN_INFO "FINS: %s: jinniSocket[%d].threads=%d\n", __FUNCTION__, i, threads);
 			for (j = 0; j < threads; j++) {
 				up(&jinniSockets[i].reply_sem_w);
 				msleep(50);	//may need to change
@@ -247,6 +247,26 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 	return print_exit(__FUNCTION__, index);
 }
 
+int checkConfirmation(int index) {
+	//exract msg from jinniSockets[index].reply_buf
+	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
+		if (jinniSockets[index].reply_ret == ACK) {
+			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
+			return 0;
+		} else if (jinniSockets[index].reply_ret == NACK) {
+			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
+			return -1;
+		} else {
+			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
+			return -1;
+		}
+	} else {
+		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		return -1;
+	}
+}
+
 /* This function is called from within FINS_release and is modeled after ipx_destroy_socket() */
 static void FINS_destroy_socket(struct sock *sk) {
 	printk(KERN_INFO "FINS: %s: called.\n", __FUNCTION__);
@@ -307,7 +327,6 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 
 	sk->sk_no_check = 1;
 	sock->ops = &FINS_proto_ops;
-	rc = -1;
 
 	uniqueSockID = getUniqueSockID(sock);
 
@@ -373,20 +392,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-			rc = 0;
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -401,7 +407,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	printk(KERN_INFO "FINS: %s: jinniSockets[%d].reply_sem_w=%d\n", __FUNCTION__, index, jinniSockets[index].reply_sem_w.count);
 
 	if (rc != 0) {
-		removeSocket:
+	removeSocket:
 		ret = removejinniSocket(uniqueSockID);
 
 		if (sk) {
@@ -427,7 +433,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
  * Modeled after ipx_release().
  */
 static int FINS_release(struct socket *sock) {
-	int rc = -1;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
 	void *buf; // used for test
@@ -491,6 +497,8 @@ static int FINS_release(struct socket *sock) {
 		return print_exit(__FUNCTION__, -1);
 	}
 
+	jinniSockets[index].release_flag = 1;
+
 	index = waitjinniSocket(uniqueSockID, index, release_call);
 	printk(KERN_INFO "FINS: %s: after index=%d", __FUNCTION__, index);
 	if (index == -1) {
@@ -499,20 +507,7 @@ static int FINS_release(struct socket *sock) {
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-			rc = 0;
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -550,7 +545,7 @@ static int FINS_release(struct socket *sock) {
 }
 
 static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
@@ -630,22 +625,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -664,7 +644,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 		int addr_len, int flags) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
@@ -744,22 +724,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -844,7 +809,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 		int peer) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
@@ -927,22 +892,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -993,7 +943,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock,
 }
 
 static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
 	void *buf; // used for test
@@ -1131,23 +1081,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-			// do some stuff....
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -1165,7 +1099,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 }
 
 static int FINS_listen(struct socket *sock, int backlog) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	int ret;
 	char *buf; // used for test
@@ -1194,11 +1128,14 @@ static int FINS_listen(struct socket *sock, int backlog) {
 		return print_exit(__FUNCTION__, -1);
 	}
 
+	//rc = checkConfirmation(index);
+	rc = 0;
+
 	return print_exit(__FUNCTION__, rc);
 }
 
 static int FINS_shutdown(struct socket *sock, int how) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
@@ -1272,22 +1209,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -1305,7 +1227,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 }
 
 static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
@@ -1392,22 +1314,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
-	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	rc = checkConfirmation(index);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -1425,7 +1332,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 static int FINS_getsockopt(struct socket *sock, int level, int optname,
 		char __user *optval, int __user *optlen) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
 	void *buf;
@@ -1521,12 +1428,12 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 			//seems like this should be binding as well
 			//use copy_from_user(pt, buf, len) to get from daemon
 			//use copy_to_user(pt, buf, len) to get back to user space app
-
+			rc = 0;
 		} else if (jinniSockets[index].reply_ret == NACK) {
 			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 			rc = -1;
 		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
+			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
 			rc = -1;
 		}
 	} else {
@@ -1551,7 +1458,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 
 static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *m, size_t len) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	int controlFlag = 0;
 	int i = 0;
@@ -1693,7 +1600,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 			rc = -1;
 		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, ret);
+			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
 			rc = -1;
 		}
 	} else {
@@ -1719,7 +1626,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *m, size_t len, int flags) {
-	int rc = 0;
+	int rc;
 	unsigned long long uniqueSockID;
 	int symbol = 1; //default value unless passes msg->msg_name equal NULL
 	int controlFlag = 0;
@@ -2241,53 +2148,57 @@ void nl_data_ready(struct sk_buff *skb) {
 		// Print what we received
 		printk	(KERN_INFO "FINS: %s: Socket Daemon made contact: %s\n", __FUNCTION__, (char *) buf);
 	} else {
-	// demultiplex to the appropriate call handler
-	pt = buf;
+		// demultiplex to the appropriate call handler
+		pt = buf;
 
-	reply_call = *(u_int *) pt;
-	pt += sizeof(u_int);
-	len -= sizeof(u_int);
+		reply_call = *(u_int *) pt;
+		pt += sizeof(u_int);
+		len -= sizeof(u_int);
 
-	if (reply_call == daemonconnect_call) {
-		FINS_daemon_pid = pid;
-		printk(KERN_INFO "FINS: %s: Daemon connected, pid=%d\n", __FUNCTION__,FINS_daemon_pid);
-	} else if (reply_call < MAX_calls) {
-		printk(KERN_INFO "FINS: %s: got a daemon reply to a call (%d).\n", __FUNCTION__, reply_call);
-		/*
-		 * extract msg or pass to shared buffer
-		 * jinniSockets[index].reply_call & shared_sockID, are to verify buf goes to the write sock & call
-		 * This is preemptive as with multithreading we may have to add a shared queue
-		 */
+		if (reply_call == daemonconnect_call) {
+			FINS_daemon_pid = pid;
+			printk(KERN_INFO "FINS: %s: Daemon connected, pid=%d\n", __FUNCTION__,FINS_daemon_pid);
+		} else if (reply_call < MAX_calls) {
+			printk(KERN_INFO "FINS: %s: got a daemon reply to a call (%d).\n", __FUNCTION__, reply_call);
+			/*
+			 * extract msg or pass to shared buffer
+			 * jinniSockets[index].reply_call & shared_sockID, are to verify buf goes to the write sock & call
+			 * This is preemptive as with multithreading we may have to add a shared queue
+			 */
 
-		uniqueSockID = *(unsigned long long *) pt;
-		pt += sizeof(unsigned long long);
+			uniqueSockID = *(unsigned long long *) pt;
+			pt += sizeof(unsigned long long);
 
-		printk(KERN_ERR "FINS: %s: reply for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
+			printk(KERN_ERR "FINS: %s: reply for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
 
-		index = findjinniSocket(uniqueSockID);
-		printk(KERN_INFO "FINS: %s: index=%d", __FUNCTION__, index);
-		if (index == -1) {
-			printk(KERN_ERR "FINS: %s: socket not found for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
-			printk(KERN_INFO "FINS: %s: exited", __FUNCTION__);
-			return;
-		}
+			index = findjinniSocket(uniqueSockID);
+			printk(KERN_INFO "FINS: %s: index=%d", __FUNCTION__, index);
+			if (index == -1) {
+				printk(KERN_ERR "FINS: %s: socket not found for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
+				goto end;
+			}
 
-		//lock the semaphore so shared data can't be changed until it's consumed
-		printk(KERN_INFO "FINS: %s: jinniSockets[%d].reply_sem_w=%d\n", __FUNCTION__, index, jinniSockets[index].reply_sem_w.count);
-		if (down_interruptible(&jinniSockets[index].reply_sem_w)) {
-			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down w=%d", __FUNCTION__, jinniSockets[index].reply_sem_w.count);
-		}
+			if (jinniSockets[index].release_flag && (reply_call != release_call)) {	//TODO: may be unnecessary & can be removed (flag, etc)
+				printk(KERN_INFO "FINS: %s: socket released, dropping for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
+				goto end;
+			}
 
-		printk(KERN_INFO "FINS: %s: jinniSockets[%d].reply_sem_r=%d\n", __FUNCTION__, index, jinniSockets[index].reply_sem_r.count);
-		if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
-			printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, jinniSockets[index].reply_sem_r.count);
-		}
+			//lock the semaphore so shared data can't be changed until it's consumed
+			printk(KERN_INFO "FINS: %s: jinniSockets[%d].reply_sem_w=%d\n", __FUNCTION__, index, jinniSockets[index].reply_sem_w.count);
+			if (down_interruptible(&jinniSockets[index].reply_sem_w)) {
+				printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down w=%d", __FUNCTION__, jinniSockets[index].reply_sem_w.count);
+			}
 
-		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-			printk(KERN_INFO "FINS: %s: exited", __FUNCTION__);
-			printk(KERN_ERR "FINS: %s: jinniSocket removed for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
-			return;
-		}
+			printk(KERN_INFO "FINS: %s: jinniSockets[%d].reply_sem_r=%d\n", __FUNCTION__, index, jinniSockets[index].reply_sem_r.count);
+			if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
+				printk(KERN_INFO "FINS: %s: shared aquire fail, using hard down r=%d", __FUNCTION__, jinniSockets[index].reply_sem_r.count);
+			}
+
+			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+				printk(KERN_ERR "FINS: %s: jinniSocket removed for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
+				up(&jinniSockets[index].reply_sem_r);
+				goto end;
+			}
 
 			write_lock(&jinnisockets_rwlock);
 
@@ -2301,12 +2212,11 @@ void nl_data_ready(struct sk_buff *skb) {
 			len -= sizeof(unsigned long long) + sizeof(int);
 			jinniSockets[index].reply_len = len;
 
-			if (isFakeReply(pt, len)) {
+			if (isFakeReply(pt, len)) { //TODO: fix or remove
 				write_unlock(&jinnisockets_rwlock);
-
 				printk(KERN_INFO "FINS: %s: shared dropped (fake): call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 				up(&jinniSockets[index].reply_sem_r);
-				return;
+				goto end;
 			}
 
 			if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -2324,7 +2234,6 @@ void nl_data_ready(struct sk_buff *skb) {
 			up(&jinniSockets[index].replies_sem);
 
 			write_unlock(&jinnisockets_rwlock);
-
 			printk(KERN_INFO "FINS: %s: shared created: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 			up(&jinniSockets[index].reply_sem_r);
 
@@ -2333,6 +2242,8 @@ void nl_data_ready(struct sk_buff *skb) {
 			printk(KERN_INFO "FINS: %s: got an unsupported/binding daemon reply (%d)\n", __FUNCTION__, reply_call);
 		}
 	}
+
+end:
 	printk(KERN_INFO "FINS: %s: exited", __FUNCTION__);
 }
 
