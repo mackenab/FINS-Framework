@@ -1746,14 +1746,15 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 				printk(KERN_INFO "FINS: %s: msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
 
 				if (m->msg_namelen > 0) {
-					m->msg_name = kmalloc(m->msg_namelen, GFP_KERNEL);
 					if (m->msg_name) {
 						memcpy(m->msg_name, pt, m->msg_namelen);
 						pt += m->msg_namelen;
 
 						//########
 						addr_in = (struct sockaddr_in *) m->msg_name;
+						//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
 						printk(KERN_INFO "FINS: %s: address: %d/%d", __FUNCTION__, (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
+						printk(KERN_INFO "FINS: %s: address: %d/%d", __FUNCTION__, (addr_in->sin_addr).s_addr, (addr_in->sin_port));
 						//########
 					} else {
 						printk(KERN_ERR "FINS: %s: m->msg_name alloc failure\n", __FUNCTION__);

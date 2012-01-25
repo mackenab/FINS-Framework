@@ -390,8 +390,8 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
-			addr->sin_family);
+	PRINT_DEBUG("bind address: %d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("bind address: %d, %s/%d", addr->sin_family, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
 	/**
 	 * Binding
 	 */
@@ -700,6 +700,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	int len = datalen;
 	int index;
 
+	struct in_addr *temp;
+
 	PRINT_DEBUG();
 
 	/** TODO handle flags cases */
@@ -741,7 +743,7 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	/** Keep all ports and addresses in host order until later  action taken */
 	dstport = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
 
-	dst_IP = ntohl(addr-> sin_addr.s_addr);/** it is in network format since application used htonl */
+	dst_IP = ntohl(addr->sin_addr.s_addr);/** it is in network format since application used htonl */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
@@ -762,12 +764,16 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
+	PRINT_DEBUG("dst=%d/%d, host=%d/%d", dst_IP, dstport, host_IP, hostport);
+
+	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+	temp->s_addr = host_IP;
+	PRINT_DEBUG("dst=%s/%d, host=%s/%d", inet_ntoa(addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
 
-	/** the meta-data paraters are all passes by copy starting from this point
+	/** the meta-data parameters are all passes by copy starting from this point
 	 *
 	 */
 	if (jinni_UDP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)

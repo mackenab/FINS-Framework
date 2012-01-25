@@ -292,6 +292,13 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
 					hostport, dstport);
+			//65535
+			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+			temp->s_addr = hostip;
+			struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
+			temp2->s_addr = dstip;
+			PRINT_DEBUG("NETFORMAT %d, %s/%d, %s/%d,", protocol,inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			PRINT_DEBUG("NETFORMAT %d, %d/%d, %d/%d,", protocol,(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 
 			/**
 			 * check if this datagram comes from the address this socket has been previously

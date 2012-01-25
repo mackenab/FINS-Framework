@@ -902,6 +902,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		addr = (struct sockaddr_in *) malloc(addrlen);
 		memcpy(addr, pt, addrlen);
 		pt += addrlen;
+		PRINT_DEBUG("addr=%s/%d", inet_ntoa(addr->sin_addr), addr->sin_port);
 	}
 
 	msg_flags = *(int *) pt;
