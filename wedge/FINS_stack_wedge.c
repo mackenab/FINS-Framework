@@ -91,13 +91,13 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			for (j = 0; j < MAX_calls; j++) {
 				sema_init(&jinniSockets[i].call_sems[j], 0);
 			}
-			jinniSockets[i].release_flag = 0;
 
+			jinniSockets[i].release_flag = 0;
 			jinniSockets[i].threads = 0;
 			sema_init(&jinniSockets[i].threads_sem, 1);
+
 			jinniSockets[i].replies = 0;
 			sema_init(&jinniSockets[i].replies_sem, 1);
-
 			sema_init(&jinniSockets[i].reply_sem_w, 1);
 			sema_init(&jinniSockets[i].reply_sem_r, 1);
 			jinniSockets[i].reply_call = 0;

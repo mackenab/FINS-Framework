@@ -660,7 +660,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	host_IP = jinniSockets[index].host_IP;
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
+	PRINT_DEBUG("addr %d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -756,6 +756,11 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 	hostport = jinniSockets[index].hostport;
+	if (hostport == -1) {
+		hostport = randoming(3000, ()(-1));
+
+		//jinniSockets[index].hostport = hostport;
+	}
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
@@ -764,11 +769,11 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("dst=%d/%d, host=%d/%d", dst_IP, dstport, host_IP, hostport);
+	PRINT_DEBUG("index=%d, dst=%d/%d, host=%d/%d", index, dst_IP, dstport, host_IP, hostport);
 
 	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 	temp->s_addr = host_IP;
-	PRINT_DEBUG("dst=%s/%d, host=%s/%d", inet_ntoa(addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
+	PRINT_DEBUG("index=%d, dst=%s/%d, host=%s/%d", index, inet_ntoa(addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
