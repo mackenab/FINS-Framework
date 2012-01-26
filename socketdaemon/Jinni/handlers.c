@@ -298,12 +298,12 @@ int checkjinniports(uint16_t hostport, uint32_t hostip) {
 	for (i = 0; i < MAX_sockets; i++) {
 		if (jinniSockets[i].host_IP == INADDR_ANY) {
 			if (jinniSockets[i].hostport == hostport)
-				return (-1);
+				return (0);
 
 		} else {
 			if ((jinniSockets[i].hostport == hostport)
 					&& (jinniSockets[i].host_IP == hostip))
-				return (-1);
+				return (0);
 
 		}
 	}

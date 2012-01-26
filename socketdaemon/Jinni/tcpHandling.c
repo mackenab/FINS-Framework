@@ -327,7 +327,7 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (checkjinniports(hostport, host_IP_netformat) == -1) {
+	if (!checkjinniports(hostport, host_IP_netformat)) {
 		PRINT_DEBUG("this port is not free");
 		nack_send(uniqueSockID, bind_call);
 

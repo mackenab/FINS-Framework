@@ -51,6 +51,8 @@
 #define MAX_parallel_processes 10
 #define ACK 	200
 #define NACK 	6666
+#define MIN_port 32768
+#define MAX_port 61000
 
 /** Socket related calls and their codes */
 #define socket_call 1

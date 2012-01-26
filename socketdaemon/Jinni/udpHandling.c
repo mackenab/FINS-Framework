@@ -114,16 +114,22 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 			//					PRINT_DEBUG();
 
 			if (ff && multi_flag) {
-				PRINT_DEBUG("index=%d threads=%d replies=%d", index, jinniSockets[index].threads, jinniSockets[index].replies);
+				PRINT_DEBUG("index=%d threads=%d replies=%d", index,
+						jinniSockets[index].threads,
+						jinniSockets[index].replies);
 				if (jinniSockets[index].replies) {
 					jinniSockets[index].replies--;
 				} else {
-					jinniSockets[index].replies = jinniSockets[index].threads - 1;
+					jinniSockets[index].replies = jinniSockets[index].threads
+							- 1;
 					for (i = 0; i < jinniSockets[index].replies; i++) {
-						PRINT_DEBUG("adding frame copy, threads=%d", jinniSockets[index].threads);
-						ff_copy = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+						PRINT_DEBUG("adding frame copy, threads=%d",
+								jinniSockets[index].threads);
+						ff_copy = (struct finsFrame *) malloc(
+								sizeof(struct finsFrame));
 						cpy_fins_to_fins(ff_copy, ff); //copies pointers, freeFinsFrame doesn't free pointers
-						if (!write_queue_front(ff_copy, jinniSockets[index].dataQueue)) {
+						if (!write_queue_front(ff_copy,
+								jinniSockets[index].dataQueue)) {
 							; //error
 						}
 					}
@@ -152,16 +158,20 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 		ff = read_queue(jinniSockets[index].dataQueue);
 
 		if (ff && multi_flag) {
-			PRINT_DEBUG("index=%d threads=%d replies=%d", index, jinniSockets[index].threads, jinniSockets[index].replies);
+			PRINT_DEBUG("index=%d threads=%d replies=%d", index,
+					jinniSockets[index].threads, jinniSockets[index].replies);
 			if (jinniSockets[index].replies) {
 				jinniSockets[index].replies--;
 			} else {
 				jinniSockets[index].replies = jinniSockets[index].threads - 1;
 				for (i = 0; i < jinniSockets[index].replies; i++) {
-					PRINT_DEBUG("adding frame copy, threads=%d", jinniSockets[index].threads);
-					ff_copy = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+					PRINT_DEBUG("adding frame copy, threads=%d",
+							jinniSockets[index].threads);
+					ff_copy = (struct finsFrame *) malloc(
+							sizeof(struct finsFrame));
 					cpy_fins_to_fins(ff_copy, ff); //copies pointers, freeFinsFrame doesn't free pointers
-					if (!write_queue_front(ff_copy, jinniSockets[index].dataQueue)) {
+					if (!write_queue_front(ff_copy,
+							jinniSockets[index].dataQueue)) {
 						; //error
 					}
 				}
@@ -371,7 +381,7 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (checkjinniports(hostport, host_IP_netformat) == -1) {
+	if (!checkjinniports(hostport, host_IP_netformat)) {
 		PRINT_DEBUG("this port is not free");
 		nack_send(uniqueSockID, bind_call);
 
@@ -390,8 +400,10 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("bind address: %d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
-	PRINT_DEBUG("bind address: %d, %s/%d", addr->sin_family, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+	PRINT_DEBUG("bind address: %d,%d,%d", (addr->sin_addr).s_addr, ntohs(
+			addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("bind address: %d, %s/%d", addr->sin_family, inet_ntoa(
+			addr->sin_addr), ntohs(addr->sin_port));
 	/**
 	 * Binding
 	 */
@@ -643,21 +655,31 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
-	//hostport = jinniSockets[index].hostport;
-	/**
-	 * Default current host port to be assigned is 58088
-	 * It is supposed to be randomly selected from the range found in
-	 * /proc/sys/net/ipv4/ip_local_port_range
-	 * default range in Ubuntu is 32768 - 61000
-	 * The value has been chosen randomly when the socket firsly inserted into the jinnisockets
-	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
-	 */
-	hostport = jinniSockets[index].hostport;
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
 	host_IP = jinniSockets[index].host_IP;
+
+	/**
+	 * Default current host port to be assigned is 58088
+	 * It is supposed to be randomly selected from the range found in
+	 * /proc/sys/net/ipv4/ip_local_port_range
+	 * default range in Ubuntu is 32768 - 61000
+	 * The value has been chosen randomly when the socket firstly inserted into the jinnisockets
+	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
+	 */
+	hostport = jinniSockets[index].hostport;
+	if (hostport == (uint16_t)(-1)) {
+		while (1) {
+			hostport = randoming(MIN_port, MAX_port);
+			if (checkjinniports(hostport, host_IP)) {
+				break;
+			}
+		}
+		jinniSockets[index].hostport = hostport;
+	}
+
 	PRINT_DEBUG("");
 
 	PRINT_DEBUG("addr %d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
@@ -699,6 +721,7 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	int len = datalen;
 	int index;
+	int i;
 
 	struct in_addr *temp;
 
@@ -740,12 +763,18 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	 * the new created location is the one to be included into the newly created finsFrame*/
 	PRINT_DEBUG("");
 
-	/** Keep all ports and addresses in host order until later  action taken */
-	dstport = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
-
 	dst_IP = ntohl(addr->sin_addr.s_addr);/** it is in network format since application used htonl */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
+
+	/** Keep all ports and addresses in host order until later  action taken */
+	dstport = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
+
+	/**
+	 * the current value of host_IP is zero but to be filled later with
+	 * the current IP using the IPv4 modules unless a binding has occured earlier
+	 */
+	host_IP = jinniSockets[index].host_IP;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -756,24 +785,25 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 	hostport = jinniSockets[index].hostport;
-	if (hostport == -1) {
-		hostport = randoming(3000, ()(-1));
-
-		//jinniSockets[index].hostport = hostport;
+	if (hostport == (uint16_t)(-1)) {
+		while (1) {
+			hostport = randoming(MIN_port, MAX_port);
+			if (checkjinniports(hostport, host_IP)) {
+				break;
+			}
+		}
+		jinniSockets[index].hostport = hostport;
 	}
-	/**
-	 * the current value of host_IP is zero but to be filled later with
-	 * the current IP using the IPv4 modules unless a binding has occured earlier
-	 */
-	host_IP = jinniSockets[index].host_IP;
 
 	PRINT_DEBUG("");
 
-	PRINT_DEBUG("index=%d, dst=%d/%d, host=%d/%d", index, dst_IP, dstport, host_IP, hostport);
+	PRINT_DEBUG("index=%d, dst=%d/%d, host=%d/%d", index, dst_IP, dstport,
+			host_IP, hostport);
 
 	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 	temp->s_addr = host_IP;
-	PRINT_DEBUG("index=%d, dst=%s/%d, host=%s/%d", index, inet_ntoa(addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
+	PRINT_DEBUG("index=%d, dst=%s/%d, host=%s/%d", index, inet_ntoa(
+			addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
