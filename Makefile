@@ -27,6 +27,10 @@ socketdaemon:
 interceptor:
 	@cd $@; $(MAKE) all
 
+.PHONY:examples
+examples:
+	@cd $@; $(MAKE) all
+
 .PHONY:clean
 clean:
 	@$(foreach project,$(PROJECT_LIST), cd $(project); $(MAKE) clean; cd ../;)
