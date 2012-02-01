@@ -59,7 +59,7 @@ void udp_out(struct finsFrame* ff) {
 
 	packet_length = (ff->dataFrame).pduLength + U_HEADER_LEN;
 	/** constructs the UDP packet from the FDF and the meta data */
-	PRINT_DEBUG("%d", ff->dataFrame.pduLength);
+	PRINT_DEBUG("ff->dataFrame.pduLength=%d", ff->dataFrame.pduLength);
 
 	uint16_t dstbuf16;
 	uint16_t srcbuf16;

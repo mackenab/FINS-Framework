@@ -204,6 +204,7 @@ void cpy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
  * */
 void print_finsFrame(struct finsFrame *fins_in) {
 
+	char *temp;
 	struct destinationList *dest;
 
 	PRINT_DEBUG("Printing FINS frame: \n");
@@ -225,6 +226,11 @@ void print_finsFrame(struct finsFrame *fins_in) {
 			i++;
 
 		}
+		temp = (char *)malloc(fins_in->dataFrame.pduLength+1);
+		memcpy(temp, fins_in->dataFrame.pdu, fins_in->dataFrame.pduLength);
+		temp[fins_in->dataFrame.pduLength] = '\0';
+		PRINT_DEBUG("pdu=%s", temp);
+		free(temp);
 
 	} else if (fins_in->dataOrCtrl == CONTROL) {
 		PRINT_DEBUG("\nControl fins %d\n", fins_in->dataOrCtrl); PRINT_DEBUG("\nOpcode %d\n", fins_in->ctrlFrame.opcode); PRINT_DEBUG("\nParameter ID %d\n", fins_in->ctrlFrame.paramterID); PRINT_DEBUG("\nParameter Value %d\n", *(int *)(fins_in->ctrlFrame.paramterValue));

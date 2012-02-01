@@ -9,7 +9,7 @@
 #include <finstypes.h>
 #include <metadata.h>
 #include <queueModule.h>
-
+#include <arpa/inet.h>
 
 #define MAX_modules 16
 extern finsQueue Jinni_to_Switch_Queue;
@@ -68,6 +68,11 @@ void init_switch() {
 	PRINT_DEBUG("SWITCH Module started");
 	int i;
 	struct finsFrame *ff = NULL;
+	int protocol;
+	int index;
+	int status;
+	uint16_t dstport, hostport;
+	uint32_t dstip, hostip;
 
 	int counter = 0;
 
@@ -83,6 +88,43 @@ void init_switch() {
 
 			if (ff != NULL) {
 				counter++;
+				PRINT_DEBUG("Counter %d", counter);
+				/*
+				//###################################
+				dstport = -1;
+				hostport = -1;
+				dstip = -1;
+				hostip = -1;
+				protocol = -1;
+
+				metadata_readFromElement(ff->dataFrame.metaData, "portdst",
+						&dstport);
+				metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
+						&hostport);
+				metadata_readFromElement(ff->dataFrame.metaData, "ipdst", &dstip);
+				metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", &hostip);
+
+				metadata_readFromElement(ff->dataFrame.metaData, "protocol",
+						&protocol);
+				PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, hostip, hostport, dstip, dstport);
+
+				protocol = ntohs(protocol);
+				dstport = ntohs(dstport);
+				hostport = ntohs(hostport);
+				dstip = ntohl(dstip);
+				hostip = ntohl(hostip);
+
+				PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, hostip, hostport, dstip, dstport);
+				struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+				temp->s_addr = hostip;
+				struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
+				temp2->s_addr = dstip;
+				PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol,inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+				//PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol,(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
+
+				PRINT_DEBUG("ff->dataFrame.pduLength=%d", ff->dataFrame.pduLength);
+				//###################################
+				*/
 
 				switch (ff->destinationID.id) {
 
@@ -164,8 +206,6 @@ void init_switch() {
 				}
 
 				} // end of Switch statement
-				PRINT_DEBUG("Counter %d", counter);
-
 			} // end of if (ff != NULL )
 			else { //PRINT_DEBUG("No frame read from Queue # %d", i);
 

@@ -272,6 +272,12 @@ void *Switch_to_Jinni() {
 		if (ff->dataOrCtrl == CONTROL) {
 			PRINT_DEBUG("control ff");
 		} else if (ff->dataOrCtrl == DATA) {
+			dstport = -1;
+			hostport = -1;
+			dstip = -1;
+			hostip = -1;
+			protocol = -1;
+
 			metadata_readFromElement(ff->dataFrame.metaData, "portdst",
 					&dstport);
 			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
@@ -292,13 +298,12 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
 					hostport, dstport);
-			//65535
 			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 			temp->s_addr = hostip;
 			struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
 			temp2->s_addr = dstip;
-			PRINT_DEBUG("NETFORMAT %d, %s/%d, %s/%d,", protocol,inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
-			PRINT_DEBUG("NETFORMAT %d, %d/%d, %d/%d,", protocol,(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
+			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol,inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol,(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 
 			/**
 			 * check if this datagram comes from the address this socket has been previously
@@ -348,7 +353,15 @@ void *Switch_to_Jinni() {
 				 */
 				write_queue(ff, jinniSockets[index].dataQueue);
 				sem_post(&(jinniSockets[index].Qs));
-				PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
+				//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
+
+				char *buf;
+				buf = (char *)malloc(ff->dataFrame.pduLength+1);
+				memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+				buf[ff->dataFrame.pduLength] = '\0';
+				PRINT_DEBUG("pdu='%s'", buf);
+				free(buf);
+
 				PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
 			}
 
@@ -535,9 +548,16 @@ void *interceptor_to_jinni() {
 
 			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType, uniqueSockID);
 			PRINT_DEBUG("msg_len=%d", msg_len);
-			PRINT_DEBUG("msg='%s'", msg_pt);
+
 			//###############################
-			unsigned char *temp, *pt;
+			unsigned char *temp;
+			temp = (char *)malloc(msg_len+1);
+			memcpy(temp, msg_pt, msg_len);
+			temp[msg_len] = '\0';
+			PRINT_DEBUG("msg='%s'", temp);
+			free(temp);
+
+			unsigned char *pt;
 			temp = (unsigned char *) malloc(3*msg_len);
 			pt = temp;
 			int i;

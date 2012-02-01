@@ -878,7 +878,8 @@ void recvfrom_udp(void *threadData) {
 
 	PRINT_DEBUG("index = %d", index);
 	blocking_flag = jinniSockets[index].blockingFlag;
-	multi_flag = 1;
+	multi_flag = 1; //for udp, if SO_REUSEADDR==1
+	//int one = 1; setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 	sem_post(&jinniSockets_sem);
 
 	if (symbol == 1)
@@ -907,8 +908,12 @@ void recvfrom_udp(void *threadData) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 
-		PRINT_DEBUG("%d", buflen);
-		PRINT_DEBUG("%s", buf);
+		PRINT_DEBUG("buflen=%d", buflen);
+
+		for (i=0; i<buflen; i++) {
+			PRINT_DEBUG("%d", buf[i]);
+		}
+		PRINT_DEBUG("buf=%s", buf);
 
 		msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + buflen
 				+ (symbol ? sizeof(struct sockaddr_in) : 0);
@@ -1002,7 +1007,8 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	int multi_flag;
 
 	blocking_flag = 1;
-	multi_flag = 0;
+	multi_flag = 1; //for udp, if SO_REUSEADDR==1
+	//int one = 1; setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 	/** TODO handle flags cases */
 	switch (flags) {
 
@@ -1168,10 +1174,44 @@ void shutdown_udp(unsigned long long uniqueSockID, int how) {
 
 void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 		int optlen, void *optval) {
+	int index;
 
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		//exit(1);
+	}
+
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
+
+	ack_send(uniqueSockID, setsockopt_call);
+
+	/*
+	 metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
+	 metadata_create(udpout_meta);
+	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
+	 */
 }
 
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 		int optlen, void *optval) {
+	int index;
 
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		//exit(1);
+	}
+
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
+
+	ack_send(uniqueSockID, getsockopt_call);
+
+	/*
+	 metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
+	 metadata_create(udpout_meta);
+	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
+	 */
 }
