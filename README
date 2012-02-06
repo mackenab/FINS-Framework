@@ -1,9 +1,9 @@
-This is a README file for the FINS checkout.  Needs to be filled out.
+This is a README file for the FINS checkout.
 
 ########################
 Introduction
 ########################
-asdf.
+Flexible Internetwork Stack (FINS) Framework v0.9.0 is a platform made to move the traditional TCP/IP stack to the user-space and enable easier research and development of new protocols. More detail on FINS can be found at the wiki: http://finsframework.org/mediawiki/index.php/Documentation_-_FINS_v0.9.0.
 
 ########################
 Dependencies
@@ -18,14 +18,32 @@ The FINS Framework requires the following libraries:
 ########################
 Build steps
 ########################
-Provided in the root directory of FINS is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" command.
+Provided in the root directory of FINS (FINS_ROOT) is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command.
 
 ########################
 Run steps
 ########################
-Single application mode:
-1) sudo capturer/capturer
 
-2) sudo socketdaemon/socketdaemon
+From FINS_ROOT directory:
 
-3) sudo LD_PRELOAD="./socket_interceptor.so" application
+1) insmod wedge/FINS_stack_wedge.ko
+
+2) sudo capturer/capturer
+
+3) sudo socketdaemon/socketdaemon
+
+4) Run applications
+
+########################
+Shutdown steps
+########################
+
+From FINS_ROOT directory:
+
+1) Close all applications
+
+2) Close socketdaemon
+
+3) Close capturer
+
+4) rmmod -f FINS_stack_wedge

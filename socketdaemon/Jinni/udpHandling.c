@@ -878,8 +878,7 @@ void recvfrom_udp(void *threadData) {
 
 	PRINT_DEBUG("index = %d", index);
 	blocking_flag = jinniSockets[index].blockingFlag;
-	multi_flag = 1; //for udp, if SO_REUSEADDR==1
-	//int one = 1; setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+	multi_flag = 0; //for udp, if SOL_SOCKET/SO_REUSEADDR
 	sem_post(&jinniSockets_sem);
 
 	if (symbol == 1)
@@ -1007,8 +1006,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	int multi_flag;
 
 	blocking_flag = 1;
-	multi_flag = 1; //for udp, if SO_REUSEADDR==1
-	//int one = 1; setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+	multi_flag = 0; //for udp, if SOL_SOCKET/SO_REUSEADDR
 	/** TODO handle flags cases */
 	switch (flags) {
 
@@ -1192,6 +1190,19 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	 metadata_create(udpout_meta);
 	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	 */
+
+
+	/** check the opt_name to find which bit to access in the options variable then use
+	 * the following code to handle the bits individually
+	 * setting a bit   number |= 1 << x;  That will set bit x.
+	 * Clearing a bit number &= ~(1 << x); That will clear bit x.
+	 * The XOR operator (^) can be used to toggle a bit. number ^= 1 << x; That will toggle bit x.
+	 * Checking a bit      value = number & (1 << x);
+	 */
+	//uint32_t socketoptions;
+
+
+
 }
 
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,

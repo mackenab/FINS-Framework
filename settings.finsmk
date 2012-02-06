@@ -50,7 +50,7 @@ endif
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
 
-PROJECT_LIST = common capturer socketdaemon wedge examples
+PROJECT_LIST = common capturer socketdaemon wedge examples interceptor
 
 TARGET_PLATFORM = "Linux x86"
 

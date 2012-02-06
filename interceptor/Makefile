@@ -66,6 +66,10 @@ server:server.c $(INCLUDES)
 	@$(CC) $(CFLAGS) $(INTERCEPTOR_INC) -c $< 
 	@$(LD) $(LDFLAGS) $@.o -o $@
 
+server_forks:server_forks.c $(INCLUDES)
+	@$(CC) $(CFLAGS) $(INTERCEPTOR_INC) -c $< 
+	@$(LD) $(LDFLAGS) $@.o -o $@
+
 
 .PHONY:clean
 clean:

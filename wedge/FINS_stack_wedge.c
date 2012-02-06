@@ -555,7 +555,6 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	uniqueSockID = getUniqueSockID(sock);
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
-
 	printk(KERN_INFO "FINS: %s: addr_len=%d.\n", __FUNCTION__, addr_len);
 
 	// Notify FINS daemon
@@ -653,7 +652,6 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	int index;
 
 	uniqueSockID = getUniqueSockID(sock);
-
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
 	printk(KERN_INFO "FINS: %s: addr_len=%d\n", __FUNCTION__, addr_len);
 
@@ -917,7 +915,6 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock,
 	ssize_t buffer_length; // used for test
 
 	uniqueSockID = getUniqueSockID(sock);
-
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
 
 	// Notify FINS daemon
@@ -1106,7 +1103,6 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	ssize_t buffer_length; // used for test
 
 	uniqueSockID = getUniqueSockID(sock);
-
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
 
 	// Notify FINS daemon
@@ -1330,8 +1326,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	return print_exit(__FUNCTION__, rc);
 }
 
-static int FINS_getsockopt(struct socket *sock, int level, int optname,
-		char __user *optval, int __user *optlen) {
+static int FINS_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
@@ -1384,15 +1379,14 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname,
 	*(int *)pt = optname;
 	pt += sizeof(int);
 
-	//TODO: finish this part
-	*(int *)pt = *optlen;//this function isn't actually implemented but this should be a pointer
+	ret = copy_from_user(pt, optlen, sizeof(int));
 	pt += sizeof(int);
+	if (ret) {
+		return print_exit(__FUNCTION__, -1);
+	}
 
-	/*
-	 *(char **)pt = optval;
-	 *pt += sizeof (optval); //would this work?
-	 */
-	//could pass pointer of optlen & optval, have daemon trasnfer the info, would still need to block
+	printk(KERN_ERR "FINS: %s: len=%d\n", __FUNCTION__, *optlen);
+
 	if (pt - (u_char *)buf != buf_len) {
 		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
@@ -1884,7 +1878,6 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page,
 	ssize_t buffer_length; // used for test
 
 	uniqueSockID = getUniqueSockID(sock);
-
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
 
 	//TODO: finish this & daemon side
@@ -1909,35 +1902,6 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page,
 	/* See sock_no_sendpage() in /net/core/sock.c for more information of what maybe should go here? */
 	return 0;
 }
-
-/* Data structures needed for protocol registration */
-/* A proto struct for the dummy protocol */
-static struct proto FINS_proto = { .name = "FINS_PROTO", .owner = THIS_MODULE,
-		.obj_size = sizeof(struct FINS_sock), };
-
-/* see IPX struct net_proto_family ipx_family_ops for comparison */
-static struct net_proto_family FINS_net_proto = { .family = PF_FINS, .create =
-FINS_wedge_create_socket, // This function gets called when socket() is called from userspace
-		.owner = THIS_MODULE, };
-
-/* Defines which functions get called when corresponding calls are made from userspace */
-static struct proto_ops FINS_proto_ops = { .family = PF_FINS, .owner =
-THIS_MODULE, .release = FINS_release, .bind = FINS_bind, //sock_no_bind,
-		.connect = FINS_connect, //sock_no_connect,
-		.socketpair = FINS_socketpair, //sock_no_socketpair,
-		.accept = FINS_accept, //sock_no_accept,
-		.getname = FINS_getname, //sock_no_getname,
-		.poll = FINS_poll, //sock_no_poll,
-		.ioctl = FINS_ioctl, //sock_no_ioctl,
-		.listen = FINS_listen, //sock_no_listen,
-		.shutdown = FINS_shutdown, //sock_no_shutdown,
-		.setsockopt = FINS_setsockopt, //sock_no_setsockopt,
-		.getsockopt = FINS_getsockopt, //sock_no_getsockopt,
-		.sendmsg = FINS_sendmsg, //sock_no_sendmsg,
-		.recvmsg = FINS_recvmsg, //sock_no_recvmsg,
-		.mmap = FINS_mmap, //sock_no mmap,
-		.sendpage = FINS_sendpage, //sock_no_sendpage,
-		};
 
 /* FINS Netlink functions  */
 /*
@@ -1965,50 +1929,50 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 
 	print_buf = kmalloc(5 * len, GFP_KERNEL);
 	if (!print_buf) {
-printk	(KERN_ERR "FINS: %s: print_buf allocation fail", __FUNCTION__);
-} else {
-	print_pt = print_buf;
-	pt = buf;
-	for (i = 0; i < len; i++) {
-		if (i == 0) {
-			sprintf(print_pt, "%02x", *(pt + i));
-			print_pt += 2;
-		} else if (i % 4 == 0) {
-			sprintf(print_pt, ":%02x", *(pt + i));
-			print_pt += 3;
-		} else {
-			sprintf(print_pt, " %02x", *(pt + i));
-			print_pt += 3;
+		printk	(KERN_ERR "FINS: %s: print_buf allocation fail", __FUNCTION__);
+	} else {
+		print_pt = print_buf;
+		pt = buf;
+		for (i = 0; i < len; i++) {
+			if (i == 0) {
+				sprintf(print_pt, "%02x", *(pt + i));
+				print_pt += 2;
+			} else if (i % 4 == 0) {
+				sprintf(print_pt, ":%02x", *(pt + i));
+				print_pt += 3;
+			} else {
+				sprintf(print_pt, " %02x", *(pt + i));
+				print_pt += 3;
+			}
 		}
+		printk(KERN_INFO "FINS: %s: buf='%s'", __FUNCTION__, print_buf);
+		kfree(print_buf);
 	}
-	printk(KERN_INFO "FINS: %s: buf='%s'", __FUNCTION__, print_buf);
-	kfree(print_buf);
-}
-//####################
+	//####################
 
-// Allocate a new netlink message
-skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
-if (!skb) {
-	printk(KERN_ERR "FINS: %s: netlink Failed to allocate new skb\n", __FUNCTION__);
-	return -1;
-}
+	// Allocate a new netlink message
+	skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
+	if (!skb) {
+		printk(KERN_ERR "FINS: %s: netlink Failed to allocate new skb\n", __FUNCTION__);
+		return -1;
+	}
 
-// Load nlmsg header
-// nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int payload, int flags)
-nlh = nlmsg_put(skb, KERNEL_PID, seq, type, len, flags);
-NETLINK_CB(skb).dst_group = 0; // not in a multicast group
+	// Load nlmsg header
+	// nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int payload, int flags)
+	nlh = nlmsg_put(skb, KERNEL_PID, seq, type, len, flags);
+	NETLINK_CB(skb).dst_group = 0; // not in a multicast group
 
-// Copy data into buffer
-memcpy(NLMSG_DATA(nlh), buf, len);
+	// Copy data into buffer
+	memcpy(NLMSG_DATA(nlh), buf, len);
 
-// Send the message
-ret_val = nlmsg_unicast(FINS_nl_sk, skb, pid);
-if (ret_val < 0) {
-	printk(KERN_ERR "FINS: %s: netlink error sending to user\n", __FUNCTION__);
-	return -1;
-}
+	// Send the message
+	ret_val = nlmsg_unicast(FINS_nl_sk, skb, pid);
+	if (ret_val < 0) {
+		printk(KERN_ERR "FINS: %s: netlink error sending to user\n", __FUNCTION__);
+		return -1;
+	}
 
-return 0;
+	return 0;
 }
 
 int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
@@ -2113,7 +2077,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 }
 
 /*
- * This function is automatically called when the kernel receives a datagram on the corresponding netlink socket. 
+ * This function is automatically called when the kernel receives a datagram on the corresponding netlink socket.
  */
 void nl_data_ready(struct sk_buff *skb) {
 	struct nlmsghdr *nlh = NULL;
@@ -2142,7 +2106,7 @@ void nl_data_ready(struct sk_buff *skb) {
 
 	printk(KERN_INFO "FINS: %s, nl_len=%d\n", __FUNCTION__, len);
 
-	// **** Remember the LKM must be up first, then the daemon, 
+	// **** Remember the LKM must be up first, then the daemon,
 	// but the daemon must make contact before any applications try to use socket()
 
 	if (pid == -1) { // if the socket daemon hasn't made contact before
@@ -2247,6 +2211,43 @@ void nl_data_ready(struct sk_buff *skb) {
 end:
 	printk(KERN_INFO "FINS: %s: exited", __FUNCTION__);
 }
+
+/* Data structures needed for protocol registration */
+/* A proto struct for the dummy protocol */
+static struct proto FINS_proto = {
+		.name = "FINS_PROTO",
+		.owner = THIS_MODULE,
+		.obj_size = sizeof(struct FINS_sock),
+};
+
+/* see IPX struct net_proto_family ipx_family_ops for comparison */
+static struct net_proto_family FINS_net_proto = {
+		.family = PF_FINS,
+		.create = FINS_wedge_create_socket, // This function gets called when socket() is called from userspace
+		.owner = THIS_MODULE,
+};
+
+/* Defines which functions get called when corresponding calls are made from userspace */
+static struct proto_ops FINS_proto_ops = {
+		.family = PF_FINS,
+		.owner = THIS_MODULE,
+		.release = FINS_release,
+		.bind = FINS_bind, //sock_no_bind,
+		.connect = FINS_connect, //sock_no_connect,
+		.socketpair = FINS_socketpair, //sock_no_socketpair,
+		.accept = FINS_accept, //sock_no_accept,
+		.getname = FINS_getname, //sock_no_getname,
+		.poll = FINS_poll, //sock_no_poll,
+		.ioctl = FINS_ioctl, //sock_no_ioctl,
+		.listen = FINS_listen, //sock_no_listen,
+		.shutdown = FINS_shutdown, //sock_no_shutdown,
+		.setsockopt = FINS_setsockopt, //sock_no_setsockopt,
+		.getsockopt = FINS_getsockopt, //sock_no_getsockopt,
+		.sendmsg = FINS_sendmsg, //sock_no_sendmsg,
+		.recvmsg = FINS_recvmsg, //sock_no_recvmsg,
+		.mmap = FINS_mmap, //sock_no mmap,
+		.sendpage = FINS_sendpage, //sock_no_sendpage,
+};
 
 /* Helper function to extract a unique socket ID from a given struct sock */
 inline unsigned long long getUniqueSockID(struct socket *sock) {
