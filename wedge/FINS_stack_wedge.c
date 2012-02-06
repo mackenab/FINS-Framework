@@ -552,6 +552,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	u_char *pt;
 	int ret;
 	int index;
+	struct sock *sk = sock->sk;
 
 	uniqueSockID = getUniqueSockID(sock);
 	printk(KERN_INFO "FINS: %s: Entered for %llu.\n", __FUNCTION__, uniqueSockID);
@@ -570,7 +571,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	}
 
 	// Build the message
-	buf_len = 2*sizeof(u_int) + sizeof(unsigned long long) + sizeof(int)
+	buf_len = 3*sizeof(u_int) + sizeof(unsigned long long) + sizeof(int)
 			+ addr_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -598,6 +599,9 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	memcpy(pt, addr, addr_len);
 	pt += addr_len;
+
+	*(u_int *) pt = sk->sk_reuse;
+	pt += sizeof(u_int);
 
 	if (pt - (u_char *) buf != buf_len) {
 		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);

@@ -95,8 +95,8 @@ struct sockaddr_in *client_addr;
 		i=i+1;
 		recv_data[bytes_read] = '\0';
 		printf("\n (%d) frame number", i);
-		printf("\n(%s/%d) said : ",inet_ntoa(client_addr->sin_addr),ntohs(client_addr->sin_port));
-		printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
+		printf("\n(%s:%d) said : ",inet_ntoa(client_addr->sin_addr),ntohs(client_addr->sin_port));
+		//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
 		printf(" (%s) to the Server\n", recv_data);
 
 		fflush(stdout);

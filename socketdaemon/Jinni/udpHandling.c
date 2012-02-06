@@ -355,7 +355,7 @@ void socket_udp(int domain, int type, int protocol,
 
 }
 
-void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
+void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr, int reuseaddr) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -381,7 +381,7 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!checkjinniports(hostport, host_IP_netformat)) {
+	if (!checkjinniports(hostport, host_IP_netformat) && !reuseaddr) {
 		PRINT_DEBUG("this port is not free");
 		nack_send(uniqueSockID, bind_call);
 

@@ -483,6 +483,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
 	u_char *pt;
+	int reuseaddr;
 
 	pt = buf;
 
@@ -501,6 +502,9 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 
 	memcpy(addr, pt, addrlen);
 	pt += addrlen;
+
+	reuseaddr = *(int *) pt;
+	pt += sizeof(int);
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
@@ -523,7 +527,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
-		bind_udp(uniqueSockID, addr);
+		bind_udp(uniqueSockID, addr, reuseaddr);
 	else if (jinniSockets[index].type == SOCK_STREAM)
 		bind_tcp(uniqueSockID, addr);
 	else

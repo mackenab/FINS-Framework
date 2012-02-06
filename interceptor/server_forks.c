@@ -32,6 +32,8 @@ int main(int argc, char *argv[]) {
 	int addr_len = sizeof(struct sockaddr);
 	int bytes_read;
 	char recv_data[4000];
+	int opt;
+	int ret;
 
 	struct sockaddr_in server_addr;
 	struct sockaddr_in *client_addr;
@@ -59,6 +61,14 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
+
+	opt = 1;
+	ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	if (ret) {
+		printf("Sockopt fail ret=%d\n", ret);
+	} else {
+		printf("Sockopt opt=%d\n", opt);
+	}
 
 	//	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//          server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -108,11 +118,9 @@ int main(int argc, char *argv[]) {
 		i = i + 1;
 		recv_data[bytes_read] = '\0';
 		printf("\n (%d) frame number", i);
-		printf("\n(%s/%d) : ", inet_ntoa(client_addr->sin_addr), ntohs(
-				client_addr->sin_port));
-		printf("(%d , %d) : ", (client_addr->sin_addr).s_addr, ntohs(
-				client_addr->sin_port));
-		printf("(%d , %d) : ", processes, pID);
+		printf("\n(%d, %s:%d) : ", pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
+		//printf("(%d , %d) : ", (client_addr->sin_addr).s_addr, ntohs(client_addr->sin_port));
+		//printf("(%d , %d) : ", processes, pID);
 		printf(" (%s) to the Server\n", recv_data);
 
 		fflush(stdout);
