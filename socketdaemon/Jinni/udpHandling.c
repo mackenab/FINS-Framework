@@ -1181,7 +1181,7 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	PRINT_DEBUG("level=%d, optname=%d, optlen=%d, optval", level, optname, optlen);
 
 	ack_send(uniqueSockID, setsockopt_call);
 
@@ -1191,7 +1191,6 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	 */
 
-
 	/** check the opt_name to find which bit to access in the options variable then use
 	 * the following code to handle the bits individually
 	 * setting a bit   number |= 1 << x;  That will set bit x.
@@ -1200,9 +1199,6 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	 * Checking a bit      value = number & (1 << x);
 	 */
 	//uint32_t socketoptions;
-
-
-
 }
 
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
@@ -1216,7 +1212,7 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	PRINT_DEBUG("level=%d, optname=%d, optlen=%d, optval", level, optname, optlen);
 
 	ack_send(uniqueSockID, getsockopt_call);
 

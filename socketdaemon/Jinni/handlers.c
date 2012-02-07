@@ -1222,57 +1222,6 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, getsockopt_call);
 	}
-
-	//		}
-	//		else{
-	//
-	//			/**
-	//			 * In case of NON-connected sockets, WE USE THE ADDRESS GIVEN BY the APPlication
-	//			 * Process. Check if an address has been passed or not is required
-	//			 */
-	//			if(symbol){ // check that the passed address is not NULL
-	//				if (jinniSockets[index].type == SOCK_DGRAM)
-	//					sendto_udp(uniqueSockID, datalen, data, flags, addr, addrlen);
-	//				else if (jinniSockets[index].type == SOCK_STREAM)
-	//					sendto_tcp(uniqueSockID, datalen, data, flags, addr, addrlen);
-	//				else if (jinniSockets[index].type == SOCK_RAW)
-	//				{
-	//
-	//				}
-	//				else{
-	//
-	//					PRINT_DEBUG("unknown target address !!!");
-	//					sem_wait(jinniSockets[index].s);
-	//					nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	//					sem_post(jinniSockets[index].as);
-	//					sem_post(jinniSockets[index].s);
-	//				}
-	//
-	//			}
-	//
-	//			else {
-	//				PRINT_DEBUG("unknown target address !!!");
-	//				sem_wait(jinniSockets[index].s);
-	//				nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	//				sem_post(jinniSockets[index].as);
-	//				sem_post(jinniSockets[index].s);
-	//			}
-	//
-	//
-	//
-	//
-	//		}
-
-	/**
-	 * In case of connected sockets
-	 */
-	//		if (jinniSockets[index].connection_status > 0){
-	//
-
-
-	PRINT_DEBUG();
-	return;
-
 }
 
 void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
@@ -1321,10 +1270,6 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		return;
 	}
 
-	/** Unlock the main socket channel
-	 *
-	 */
-
 	PRINT_DEBUG("");
 
 	index = findjinniSocket(uniqueSockID);
@@ -1336,13 +1281,6 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 	PRINT_DEBUG("");
 
-	/**
-	 * In case of connected sockets
-	 */
-	//		if (jinniSockets[index].connection_status > 0){
-	//
-
-
 	if (jinniSockets[index].type == SOCK_DGRAM)
 		setsockopt_udp(uniqueSockID, level, optname, optlen, optval);
 	else if (jinniSockets[index].type == SOCK_STREAM)
@@ -1353,51 +1291,6 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, setsockopt_call);
 	}
-
-	//		}
-	//		else{
-	//
-	//			/**
-	//			 * In case of NON-connected sockets, WE USE THE ADDRESS GIVEN BY the APPlication
-	//			 * Process. Check if an address has been passed or not is required
-	//			 */
-	//			if(symbol){ // check that the passed address is not NULL
-	//				if (jinniSockets[index].type == SOCK_DGRAM)
-	//					sendto_udp(uniqueSockID, datalen, data, flags, addr, addrlen);
-	//				else if (jinniSockets[index].type == SOCK_STREAM)
-	//					sendto_tcp(uniqueSockID, datalen, data, flags, addr, addrlen);
-	//				else if (jinniSockets[index].type == SOCK_RAW)
-	//				{
-	//
-	//				}
-	//				else{
-	//
-	//					PRINT_DEBUG("unknown target address !!!");
-	//					sem_wait(jinniSockets[index].s);
-	//					nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	//					sem_post(jinniSockets[index].as);
-	//					sem_post(jinniSockets[index].s);
-	//				}
-	//
-	//			}
-	//
-	//			else {
-	//				PRINT_DEBUG("unknown target address !!!");
-	//				sem_wait(jinniSockets[index].s);
-	//				nack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	//				sem_post(jinniSockets[index].as);
-	//				sem_post(jinniSockets[index].s);
-	//			}
-	//
-	//
-	//
-	//
-	//		}
-
-
-	PRINT_DEBUG();
-	return;
-
 }
 
 void listen_call_handler(unsigned long long uniqueSockID, int threads,
@@ -1516,11 +1409,11 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads,
 			index, cmd, arg);
 
 	/*if (jinniSockets[index].type == SOCK_DGRAM)
-	 setsockopt_udp(uniqueSockID, level, optname, optlen, optval);
+	 ioctl_udp(uniqueSockID, cmd, arg);
 	 else if (jinniSockets[index].type == SOCK_STREAM)
-	 setsockopt_tcp(uniqueSockID, level, optname, optlen, optval);
+	 ioctl_tcp(uniqueSockID, cmd, arg);
 	 else if (jinniSockets[index].type == SOCK_RAW) {
-	 setsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
+	 ioctl_icmp(uniqueSockID, cmd, arg);
 	 } else {
 	 PRINT_DEBUG("unknown socket type has been read !!!");
 	 nack_send(uniqueSockID, setsockopt_call);

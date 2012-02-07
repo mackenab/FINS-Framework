@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 
-	opt = 1;
+	opt = 1;//IPPROTO_IP
 	ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 	if (ret) {
 		printf("Sockopt fail ret=%d\n", ret);
