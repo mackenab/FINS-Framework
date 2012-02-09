@@ -203,7 +203,6 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			jinniSockets[i].hostport = -1;
 			jinniSockets[i].dst_IP = 0;
 			jinniSockets[i].dstport = 0;
-			//	jinniSockets[i].jinniside_pipe_ds = jinnipd;
 			/** Transport protocol SUBTYPE SOCK_DGRAM , SOCK_RAW, SOCK_STREAM
 			 * it has nothing to do with layer 4 protocols like TCP, UDP , etc
 			 */
@@ -216,38 +215,15 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 
 			sprintf(jinniSockets[i].name, "socket# %llu",
 					jinniSockets[i].uniqueSockID);
-			//sprintf(jinniSockets[i].semaphore_name, "socket%llu", jinniSockets[i].uniqueSockID);
-			//sprintf(jinniSockets[i].asemaphore_name, "socket%llua", jinniSockets[i].uniqueSockID);
 
 			errno = 0;
-			/** the semaphore is initially unlocked */
-			//jinniSockets[i].s = sem_open(jinniSockets[i].semaphore_name, O_CREAT | O_EXCL, 0644, 1);
-			//jinniSockets[i].as = sem_open(jinniSockets[i].asemaphore_name, O_CREAT | O_EXCL, 0644, 0);
-			//	jinniSockets[i].s  = sem_open(jinniSockets[i].semaphore_name,O_CREAT,0644,1);
-			//	jinniSockets[i].as = sem_open(jinniSockets[i].asemaphore_name,O_CREAT,0644,0);
-			//PRINT_DEBUG("%s, %s", jinniSockets[i].semaphore_name, jinniSockets[i].asemaphore_name);
 			PRINT_DEBUG("errno is %d", errno);
-
-			/*
-			 if (jinniSockets[i].s == SEM_FAILED || jinniSockets[i].as
-			 == SEM_FAILED) {
-			 jinniSockets[i].s = sem_open(jinniSockets[i].semaphore_name, 0);
-			 jinniSockets[i].as = sem_open(jinniSockets[i].asemaphore_name,
-			 0);
-			 PRINT_DEBUG("Crash Semaphores Failure");
-
-			 }
-			 PRINT_DEBUG("errno is %d", errno);
-			 if (jinniSockets[i].s == SEM_FAILED || jinniSockets[i].as
-			 == SEM_FAILED) {
-			 PRINT_DEBUG("Crash Semaphores Failure");
-			 sem_unlink(jinniSockets[i].semaphore_name);
-			 exit(1);
-
-			 }*/
 
 			jinniSockets[i].threads = 0;
 			jinniSockets[i].replies = 0;
+
+
+			jinniSockets[i].sockopts.FSO_REUSEADDR = 0;
 
 			sem_post(&jinniSockets_sem);
 			return (1);
@@ -526,8 +502,10 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 		return;
 	}
 
+	jinniSockets[index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
+
 	if (jinniSockets[index].type == SOCK_DGRAM)
-		bind_udp(uniqueSockID, addr, reuseaddr);
+		bind_udp(uniqueSockID, addr);
 	else if (jinniSockets[index].type == SOCK_STREAM)
 		bind_tcp(uniqueSockID, addr);
 	else
@@ -1177,7 +1155,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 	int level;
 	int optname;
 	int optlen;
-	void *optval;
+	u_char *optval;
 	u_char *pt;
 
 	PRINT_DEBUG("");
@@ -1192,6 +1170,12 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 
 	optlen = *(int *) pt;
 	pt += sizeof(int);
+
+	if (optlen > 0) {
+		optval = (u_char *) malloc(optlen);
+		memcpy(optval, pt, optlen);
+		pt += optlen;
+	}
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
@@ -1242,7 +1226,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 	int level;
 	int optname;
 	int optlen;
-	void *optval;
+	u_char *optval;
 	u_char *pt;
 
 	PRINT_DEBUG("");

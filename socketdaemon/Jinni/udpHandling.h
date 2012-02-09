@@ -21,7 +21,7 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 
 void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSockID);
 void socketpair_udp();
-void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr, int reuseaddr);
+void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void getsockname_udp();
 void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen);
@@ -35,8 +35,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 void recvfrom_udp(void *threadData);
 void sendmsg_udp();
 void recvmsg_udp();
-void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
-void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
+void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
+void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void listen_udp();
 void accept_udp();
 void accept4_udp();

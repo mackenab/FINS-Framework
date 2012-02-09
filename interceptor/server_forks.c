@@ -32,7 +32,10 @@ int main(int argc, char *argv[]) {
 	int addr_len = sizeof(struct sockaddr);
 	int bytes_read;
 	char recv_data[4000];
-	int opt;
+	int level;
+	int optname;
+	int optval;
+	int optlen;
 	int ret;
 
 	struct sockaddr_in server_addr;
@@ -62,12 +65,35 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 
-	opt = 1;//IPPROTO_IP
-	ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	level = IPPROTO_IP; //SOL_SOCKET;
+	optname = SO_REUSEADDR;
+	printf("Sockopt: level=%d optname=%d\n", level, optname);
+
+	optval = -1;
+	optlen = -1;
+	ret = getsockopt(sock, level, optname, &optval, &optlen);
 	if (ret) {
 		printf("Sockopt fail ret=%d\n", ret);
 	} else {
-		printf("Sockopt opt=%d\n", opt);
+		printf("Sockopt: get optval=%d optlen=%d\n", optval, optlen);
+	}
+
+	optval = 1;
+	optlen = sizeof(int);
+	ret = setsockopt(sock, level, optname, &optval, optlen);
+	if (ret) {
+		printf("Sockopt fail ret=%d\n", ret);
+	} else {
+		printf("Sockopt: set optval=%d optlen=%d\n", optval, optlen);
+	}
+
+	optval = -1;
+	optlen = -1;
+	ret = getsockopt(sock, level, optname, &optval, &optlen);
+	if (ret) {
+		printf("Sockopt fail ret=%d\n", ret);
+	} else {
+		printf("Sockopt: get optval=%d optlen=%d\n", optval, optlen);
 	}
 
 	//	server_addr.sin_addr.s_addr = xxx(127,0,0,1);

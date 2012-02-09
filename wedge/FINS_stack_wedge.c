@@ -206,7 +206,7 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 		}
 		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 			up(&jinniSockets[index].reply_sem_r);
-			printk(KERN_ERR "FINS: %s: jinniSocket removed for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
+			printk(KERN_ERR "FINS: %s: ERR: jinniSocket removed for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
 			return print_exit(__FUNCTION__, -1);
 		}
 
@@ -226,7 +226,7 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 				up(&jinniSockets[index].replies_sem);
 			}
 		} else {
-			printk(KERN_ERR "FINS: %s: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, calltype, uniqueSockID);
+			printk(KERN_ERR "FINS: %s: ERR: msg for (%d, %llu) recv by (%d, %llu)\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, calltype, uniqueSockID);
 			//up(&jinniSockets[index].call_sems[calltype]); //unneeded when optimal
 		}
 		up(&jinniSockets[index].reply_sem_r);
@@ -241,6 +241,7 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 	up(&jinniSockets[index].threads_sem);
 
 	if (count >= LOOP_LIMIT) {
+		printk(KERN_ERR "FINS: %s: ERR: hit loop limit=%d: %d\n", __FUNCTION__, count);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -258,11 +259,11 @@ int checkConfirmation(int index) {
 			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 			return -1;
 		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
+			printk(KERN_ERR "FINS: %s: ERR: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
 			return -1;
 		}
 	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		printk(KERN_ERR "FINS: %s: ERR: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
 		return -1;
 	}
 }
@@ -309,7 +310,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -318,7 +319,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &FINS_proto);
 
 	if (!sk) {
-		printk(KERN_ERR "FINS: %s: allocation failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: allocation failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, rc);
 		// if allocation failed
 	}
@@ -340,7 +341,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		goto removeSocket;
 	}
 	pt = buf;
@@ -369,7 +370,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	pt += sizeof(int);
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		goto removeSocket;
 	}
@@ -378,9 +379,8 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		goto removeSocket;
 	}
 
@@ -447,7 +447,7 @@ static int FINS_release(struct socket *sock) {
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -481,7 +481,7 @@ static int FINS_release(struct socket *sock) {
 	up(&jinniSockets[index].threads_sem);
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -491,9 +491,8 @@ static int FINS_release(struct socket *sock) {
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -523,11 +522,14 @@ static int FINS_release(struct socket *sock) {
 
 	ret = removejinniSocket(uniqueSockID);
 	if (ret == -1) {
+		printk(KERN_ERR "FINS: %s: ERR: removejinniSocket fail\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
-	if (!sk)
+	if (!sk) {
+		printk(KERN_ERR "FINS: %s: ERR: sk null\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, rc);
+	}
 
 	printk(KERN_INFO "FINS: %s: FINS_release -- sk was set.\n", __FUNCTION__);
 
@@ -560,7 +562,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -575,7 +577,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 			+ addr_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -604,7 +606,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	pt += sizeof(u_int);
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -614,9 +616,8 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -661,7 +662,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -676,7 +677,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 			+ addr_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -702,7 +703,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	pt += addr_len;
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -712,9 +713,8 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -756,7 +756,7 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -769,7 +769,7 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -789,7 +789,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -802,7 +802,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -825,7 +825,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -839,7 +839,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	buf_len = 2*sizeof(u_int) + sizeof(unsigned long long);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -849,7 +849,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	} else if (peer == 1) {
 		calltype = getpeername_call;
 	} else {
-		printk(KERN_ERR "FINS: %s: unhanlded type: %d", __FUNCTION__, peer);
+		printk(KERN_ERR "FINS: %s: ERR: unhanlded type: %d", __FUNCTION__, peer);
 		calltype = getsockname_call; //???
 	}
 
@@ -870,7 +870,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	//todo: finish, incorporate peers
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -880,9 +880,8 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -923,7 +922,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -936,7 +935,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1014,7 +1013,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1028,7 +1027,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(u_long);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -1058,7 +1057,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	//http://lxr.linux.no/#linux+v2.6.39.4/net/ipx/af_ipx.c#L1858
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1068,9 +1067,8 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1111,7 +1109,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1124,7 +1122,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1148,7 +1146,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1162,7 +1160,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	buf_len = 2*sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -1185,7 +1183,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	pt += sizeof(int);
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1195,9 +1193,8 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1240,7 +1237,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1254,7 +1251,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	buf_len = 3*sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + optlen;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -1290,7 +1287,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	}
 
 	if (pt - (u_char *)buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1300,9 +1297,8 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1337,6 +1333,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	void *buf;
 	u_char *pt;
 	int ret;
+	int len;
 	int index;
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -1344,7 +1341,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1354,11 +1351,18 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 		return print_exit(__FUNCTION__, -1);
 	}
 
+	ret = copy_from_user(&len, optlen, sizeof(int));
+	if (ret) {
+		printk(KERN_ERR "FINS: %s: ERR: copy_from_user fail ret=%d", __FUNCTION__, ret);
+		return print_exit(__FUNCTION__, -1);
+	}
+	printk(KERN_INFO "FINS: %s: len=%d\n", __FUNCTION__, len);
+
 	// Build the message
-	buf_len = 2*sizeof(u_int) + sizeof(unsigned long long) + 3*sizeof(int);
+	buf_len = 2*sizeof(u_int) + sizeof(unsigned long long) + 3*sizeof(int) + (len>0?len:0);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buffer allocation error", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buffer allocation error", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -1383,16 +1387,21 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	*(int *)pt = optname;
 	pt += sizeof(int);
 
-	ret = copy_from_user(pt, optlen, sizeof(int));
+	*(int *)pt = len;
 	pt += sizeof(int);
-	if (ret) {
-		return print_exit(__FUNCTION__, -1);
+
+	if (len > 0) {
+		ret = copy_from_user(pt, optval, len);
+		pt += len;
+		if (ret) {
+			printk(KERN_ERR "FINS: %s: ERR: copy_from_user fail ret=%d", __FUNCTION__, ret);
+			kfree(buf);
+			return print_exit(__FUNCTION__, -1);
+		}
 	}
 
-	printk(KERN_ERR "FINS: %s: len=%d\n", __FUNCTION__, *optlen);
-
 	if (pt - (u_char *)buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1402,9 +1411,8 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
-
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1417,25 +1425,37 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
 	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
+	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len >= sizeof(int))) {
 		if (jinniSockets[index].reply_ret == ACK) {
 			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-
 			pt = jinniSockets[index].reply_buf;
-
-			//seems like this should be binding as well
-			//use copy_from_user(pt, buf, len) to get from daemon
-			//use copy_to_user(pt, buf, len) to get back to user space app
 			rc = 0;
+
+			//re-using len var
+			len = *(int *)pt;
+			pt += sizeof(int);
+			ret = copy_to_user(optlen, &len, sizeof(int));
+			if (ret) {
+				printk(KERN_ERR "FINS: %s: ERR: copy_from_user fail ret=%d", __FUNCTION__, ret);
+				rc = -1;
+			}
+
+			if (len > 0) {
+				ret = copy_to_user(optval, pt, len);
+				if (ret) {
+					printk(KERN_ERR "FINS: %s: ERR: copy_from_user fail ret=%d", __FUNCTION__, ret);
+					rc = -1;
+				}
+			}
 		} else if (jinniSockets[index].reply_ret == NACK) {
 			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 			rc = -1;
 		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
+			printk(KERN_ERR "FINS: %s: ERR: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
 			rc = -1;
 		}
 	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		printk(KERN_ERR "FINS: %s: ERR: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
 		rc = -1;
 	}
 	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
@@ -1476,7 +1496,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1502,7 +1522,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 			+ (controlFlag ? sizeof(u_int) + m->msg_controllen : 0) + data_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buf allocation failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buf allocation failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -1563,7 +1583,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1576,7 +1596,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 		// pick an appropriate errno
 	}
@@ -1589,23 +1609,10 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 	printk(KERN_INFO "FINS: %s: relocked my semaphore\n", __FUNCTION__);
 
-	//exract msg from jinniSockets[index].reply_buf
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
-			printk(KERN_INFO "FINS: %s: recv ACK\n", __FUNCTION__);
-			rc = data_len;
-		} else if (jinniSockets[index].reply_ret == NACK) {
-			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
-			rc = -1;
-		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
-			rc = -1;
-		}
-	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
-		rc = -1;
+	rc = checkConfirmation(index);
+	if (rc == 0) {
+		rc = data_len;
 	}
-	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 	up(&jinniSockets[index].reply_sem_r);
 
 	if (down_interruptible(&jinniSockets[index].replies_sem)) {
@@ -1642,7 +1649,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1663,7 +1670,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 			: 0);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
-		printk(KERN_ERR "FINS: %s: buf allocation failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: buf allocation failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 	pt = buf;
@@ -1706,7 +1713,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
 	if (pt - (u_char *) buf != buf_len) {
-		printk(KERN_ERR "FINS: %s: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
+		printk(KERN_ERR "FINS: %s: ERR: write error: diff=%d len=%d\n", __FUNCTION__, pt-(u_char *)buf, buf_len);
 		kfree(buf);
 		return print_exit(__FUNCTION__, -1);
 	}
@@ -1716,7 +1723,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 		// pick an appropriate errno
 	}
@@ -1755,15 +1762,15 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 						printk(KERN_INFO "FINS: %s: address: %d/%d", __FUNCTION__, (addr_in->sin_addr).s_addr, (addr_in->sin_port));
 						//########
 					} else {
-						printk(KERN_ERR "FINS: %s: m->msg_name alloc failure\n", __FUNCTION__);
+						printk(KERN_ERR "FINS: %s: ERR: m->msg_name alloc failure\n", __FUNCTION__);
 						rc = -1;
 					}
 				} else {
-					printk(KERN_ERR "FINS: %s: address problem, msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
+					printk(KERN_ERR "FINS: %s: ERR: address problem, msg_namelen=%d\n", __FUNCTION__, m->msg_namelen);
 					rc = -1;
 				}
 			} else if (symbol) {
-				printk(KERN_ERR "FINS: %s: symbol error, symbol=%d\n", __FUNCTION__, symbol); //will remove
+				printk(KERN_ERR "FINS: %s: ERR: symbol error, symbol=%d\n", __FUNCTION__, symbol); //will remove
 				rc = -1;
 			}
 
@@ -1774,7 +1781,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 				u_char *temp = (u_char *)kmalloc(buf_len+1, GFP_KERNEL);
 				memcpy(temp, pt, buf_len);
 				temp[buf_len] = '\0';
-				printk(KERN_ERR "FINS: %s: msg='%s'\n", __FUNCTION__, temp);
+				printk(KERN_INFO "FINS: %s: msg='%s'\n", __FUNCTION__, temp);
 
 				ret = buf_len; //reuse as counter
 				i = 0;
@@ -1793,28 +1800,28 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 				}
 				if (ret) {
 					//throw buffer overflow error?
-					printk(KERN_ERR "FINS: %s: user buffer overflow error, overflow=%d\n", __FUNCTION__, ret);
+					printk(KERN_ERR "FINS: %s: ERR: user buffer overflow error, overflow=%d\n", __FUNCTION__, ret);
 				}
 				rc = buf_len;
 			} else {
-				printk(KERN_ERR "FINS: %s: iov_base alloc failure\n", __FUNCTION__);
+				printk(KERN_ERR "FINS: %s: ERR: iov_base alloc failure\n", __FUNCTION__);
 				rc = -1;
 			}
 
 			if (pt - jinniSockets[index].reply_buf
 					!= jinniSockets[index].reply_len) {
-				printk(KERN_ERR "FINS: %s: READING ERROR! diff=%d len=%d\n", __FUNCTION__, pt - jinniSockets[index].reply_buf, jinniSockets[index].reply_len);
+				printk(KERN_ERR "FINS: %s: ERR: READING ERROR! diff=%d len=%d\n", __FUNCTION__, pt - jinniSockets[index].reply_buf, jinniSockets[index].reply_len);
 				rc = -1;
 			}
 		} else if (jinniSockets[index].reply_ret == NACK) {
 			printk(KERN_INFO "FINS: %s: recv NACK\n", __FUNCTION__);
 			rc = -1;
 		} else {
-			printk(KERN_ERR "FINS: %s: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
+			printk(KERN_ERR "FINS: %s: ERR: error, acknowledgement: %d\n", __FUNCTION__, jinniSockets[index].reply_ret);
 			rc = -1;
 		}
 	} else {
-		printk(KERN_ERR "FINS: %s: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		printk(KERN_ERR "FINS: %s: ERR: jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p\n", __FUNCTION__, jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
 		rc = -1;
 	}
 	printk(KERN_INFO "FINS: %s: shared used: call=%d, sockID=%llu, ret=%d, len=%d\n", __FUNCTION__, jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
@@ -1847,7 +1854,7 @@ static int FINS_mmap(struct file *file, struct socket *sock,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1866,7 +1873,7 @@ static int FINS_mmap(struct file *file, struct socket *sock,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1888,7 +1895,7 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page,
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		printk(KERN_ERR "FINS: %s: daemon not connected\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: daemon not connected\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1899,7 +1906,7 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page,
 	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
-		printk(KERN_ERR "FINS: %s: nl_send failed\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: nl_send failed\n", __FUNCTION__);
 		return print_exit(__FUNCTION__, -1);
 	}
 
@@ -1957,7 +1964,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 	// Allocate a new netlink message
 	skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
 	if (!skb) {
-		printk(KERN_ERR "FINS: %s: netlink Failed to allocate new skb\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: netlink Failed to allocate new skb\n", __FUNCTION__);
 		return -1;
 	}
 
@@ -1972,7 +1979,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
 	// Send the message
 	ret_val = nlmsg_unicast(FINS_nl_sk, skb, pid);
 	if (ret_val < 0) {
-		printk(KERN_ERR "FINS: %s: netlink error sending to user\n", __FUNCTION__);
+		printk(KERN_ERR "FINS: %s: ERR: netlink error sending to user\n", __FUNCTION__);
 		return -1;
 	}
 
@@ -2053,7 +2060,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 		ret
 		= nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
 		if (ret < 0) {
-			printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n", __FUNCTION__, seq);
+			printk(KERN_ERR "FINS: %s: ERR: netlink error sending seq %d to user\n", __FUNCTION__, seq);
 			return -1;
 		}
 
@@ -2071,7 +2078,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, header_size + part_len,
 			flags);
 	if (ret < 0) {
-		printk(KERN_ERR "FINS: %s: netlink error sending seq %d to user\n",__FUNCTION__, seq);
+		printk(KERN_ERR "FINS: %s: ERR: netlink error sending seq %d to user\n",__FUNCTION__, seq);
 		return -1;
 	}
 
@@ -2138,12 +2145,12 @@ void nl_data_ready(struct sk_buff *skb) {
 			uniqueSockID = *(unsigned long long *) pt;
 			pt += sizeof(unsigned long long);
 
-			printk(KERN_ERR "FINS: %s: reply for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
+			printk(KERN_ERR "FINS: %s: ERR: reply for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
 
 			index = findjinniSocket(uniqueSockID);
 			printk(KERN_INFO "FINS: %s: index=%d", __FUNCTION__, index);
 			if (index == -1) {
-				printk(KERN_ERR "FINS: %s: socket not found for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
+				printk(KERN_ERR "FINS: %s: ERR: socket not found for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
 				goto end;
 			}
 
@@ -2164,7 +2171,7 @@ void nl_data_ready(struct sk_buff *skb) {
 			}
 
 			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-				printk(KERN_ERR "FINS: %s: jinniSocket removed for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
+				printk(KERN_ERR "FINS: %s: ERR: jinniSocket removed for uniqueSockID=%llu", __FUNCTION__, uniqueSockID);
 				up(&jinniSockets[index].reply_sem_r);
 				goto end;
 			}

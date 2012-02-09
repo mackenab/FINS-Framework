@@ -92,56 +92,82 @@ int nl_sockfd; //temp for now
 
 enum sockOptions {
 
-
-
-
-
 	FSO_DEBUG = 1,
 	FSO_REUSEADDR,
-	FSO_TYPE	,
-	FSO_ERROR	,
-	FSO_DONTROUTE	,
-	FSO_BROADCAST	,
-	FSO_SNDBUF	,
-	FSO_RCVBUF	,
-	FSO_KEEPALIVE	,
-	FSO_OOBINLINE	,
-	FSO_NO_CHECK	,
+	FSO_TYPE,
+	FSO_ERROR,
+	FSO_DONTROUTE,
+	FSO_BROADCAST,
+	FSO_SNDBUF,
+	FSO_RCVBUF,
+	FSO_KEEPALIVE,
+	FSO_OOBINLINE,
+	FSO_NO_CHECK,
 	FSO_PRIORITY,
-	FSO_LINGER	,
-	FSO_BSDCOMPAT	,  		/** 14 */
-	FSO_REUSEPORT = 15 ,  /** FSO_REUSEPORT = 15 */
-	FSO_PASSCRED= 16,
-	FSO_PEERCRED ,
+	FSO_LINGER,
+	FSO_BSDCOMPAT, /** 14 */
+	FSO_REUSEPORT = 15, /** FSO_REUSEPORT = 15 */
+	FSO_PASSCRED = 16,
+	FSO_PEERCRED,
 	FSO_RCVLOWAT,
 	FSO_SNDLOWAT,
 	FSO_RCVTIMEO,
-	FSO_SNDTIMEO,   /** SO_SNDTIMEO	21 */
+	FSO_SNDTIMEO, /** SO_SNDTIMEO	21 */
 
 	FSO_BINDTODEVICE = 25,
-	FSO_TIMESTAMP= 29,
+	FSO_TIMESTAMP = 29,
 	FSO_ACCEPTCONN = 30,
-	 FSO_PEERSEC = 31,
-	FSO_SNDBUFFORCE	=32,
-	FSO_RCVBUFFORCE=	33,
-
-
-
-} ;
-
-
-struct tcp_Parameters
-{
-
-	 int SHUT_RD;
-	 int SHUT_WR ;
-
-
-
-
+	FSO_PEERSEC = 31,
+	FSO_SNDBUFFORCE = 32,
+	FSO_RCVBUFFORCE = 33,
 
 };
 
+struct socket_Options {
+
+	int FSO_DEBUG;
+	int FSO_REUSEADDR;
+	int FSO_TYPE;
+	int FSO_PROTOCOL;
+	int FSO_DOMAIN;
+	int FSO_ERROR;
+	int FSO_DONTROUTE;
+	int FSO_BROADCAST;
+	int FSO_SNDBUF;
+	int FSO_SNDBUFFORCE;
+	int FSO_RCVBUF;
+	int FSO_RCVBUFFORCE;
+	int FSO_KEEPALIVE;
+	int FSO_OOBINLINE;
+	int FSO_NO_CHECK;
+	int FSO_PRIORITY;
+	int FSO_LINGER;
+	int FSO_BSDCOMPAT;
+	int FSO_TIMESTAMP;
+	int FSO_TIMESTAMPNS;
+	int FSO_TIMESTAMPING;
+	int FSO_RCVTIMEO;
+	int FSO_SNDTIMEO;
+	int FSO_RCVLOWAT;
+	int FSO_SNDLOWAT;
+	int FSO_PASSCRED;
+	int FSO_PEERCRED;
+	char FSO_PEERNAME[128];
+	int FSO_ACCEPTCONN;
+	int FSO_PASSSEC;
+	int FSO_PEERSEC;
+	int FSO_MARK;
+	int FSO_RXQ_OVFL;
+	int FSO_ATTACH_FILTER;
+	int FSO_DETACH_FILTER;
+};
+
+struct tcp_Parameters {
+
+	int SHUT_RD;
+	int SHUT_WR;
+
+};
 
 struct finssocket {
 	/** variables tells a connect call has been called over this socket or not in order to
@@ -161,7 +187,8 @@ struct finssocket {
 	 * The XOR operator (^) can be used to toggle a bit. number ^= 1 << x; That will toggle bit x.
 	 * Checking a bit      value = number & (1 << x);
 	 */
-	uint32_t socketoptions;
+	//uint32_t socketoptions;
+	struct socket_Options sockopts;
 	int blockingFlag;
 	struct tcp_Parameters tcpParameters;
 
@@ -192,9 +219,9 @@ struct recvfrom_data {
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
 #ifdef BUILD_FOR_ANDROID
-	#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/fins"
 #else
-	#define FINS_TMP_ROOT "/tmp/fins"
+#define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
 #define MAIN_SOCKET_CHANNEL FINS_TMP_ROOT "/mainsocket_channel"
@@ -214,8 +241,7 @@ int randoming(int min, int max);
 int checkjinniSocket(unsigned long long uniqueSockID);
 int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol);
 int findjinniSocket(unsigned long long uniqueSockID);
-int insertjinniSocket(unsigned long long uniqueSockID, int type,
-		int protocol);
+int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
 int removejinniSocket(unsigned long long uniqueSockID);
 int checkjinniports(uint16_t hostport, uint32_t hostip);
 
@@ -223,28 +249,48 @@ int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
 /** calls handling functions */
-void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void socket_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
 void socketpair_call_handler();
-void bind_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void getsockname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void connect_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void getpeername_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void send_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void recv_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void sendto_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void recvfrom_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void listen_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void accept_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void accept4_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void shutdown_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void bind_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void getsockname_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void connect_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void getpeername_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void send_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void recv_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void sendto_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void recvfrom_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void sendmsg_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void recvmsg_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void listen_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void accept_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void accept4_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void shutdown_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void release_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
+void ioctl_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
 
-void close_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void close_call_handler(unsigned long long uniqueSockID, int threads,
+		u_char *buf, ssize_t len);
 
 void recvthread_exit(struct recvfrom_data *thread_data);
 

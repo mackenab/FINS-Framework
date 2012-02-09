@@ -275,8 +275,7 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	if (udpout_meta == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 		free(ff);
-		exit(1);
-
+		return 0;
 	}
 
 	/** metadata_writeToElement() set the value of an element if it already exist
@@ -323,7 +322,6 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	PRINT_DEBUG("");
 
 	return (0);
-
 }
 
 /**
@@ -346,16 +344,13 @@ void socket_udp(int domain, int type, int protocol,
 	index = findjinniSocket(uniqueSockID);
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
-		exit(1);
+		return;
 	}
 
 	ack_send(uniqueSockID, socket_call);
-
-	return;
-
 }
 
-void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr, int reuseaddr) {
+void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -366,12 +361,13 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr, int reu
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, bind_call);
+		return;
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
@@ -381,7 +377,7 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr, int reu
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!checkjinniports(hostport, host_IP_netformat) && !reuseaddr) {
+	if (!checkjinniports(hostport, host_IP_netformat) && !jinniSockets[index].sockopts.FSO_REUSEADDR) {
 		PRINT_DEBUG("this port is not free");
 		nack_send(uniqueSockID, bind_call);
 
@@ -440,12 +436,13 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, connect_call);
+		return;
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
@@ -525,7 +522,7 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType,
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	/** copying the data passed to be able to free the old memory location
@@ -538,6 +535,7 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType,
 
 		PRINT_DEBUG("socketjinni failed to accomplish send");
 		nack_send(uniqueSockID, socketCallType);
+		return;
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
@@ -591,8 +589,6 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType,
 		nack_send(uniqueSockID, socketCallType);
 	}
 
-	return;
-
 } // end of write_udp
 
 
@@ -629,7 +625,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	/** copying the data passed to be able to free the old memory location
@@ -642,6 +638,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 		PRINT_DEBUG("socketjinni failed to accomplish send");
 		nack_send(uniqueSockID, socketCallType);
+		return;
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
@@ -704,9 +701,6 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 		PRINT_DEBUG("socketjinni failed to accomplish send");
 		nack_send(uniqueSockID, socketCallType);
 	}
-
-	return;
-
 }// end of send_udp
 
 
@@ -745,18 +739,13 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		PRINT_DEBUG("");
-
-		PRINT_DEBUG("");
-
 		nack_send(uniqueSockID, socketCallType);
-		PRINT_DEBUG("");
-
+		return;
 	}
 
 	/** copying the data passed to be able to free the old memory location
@@ -909,7 +898,7 @@ void recvfrom_udp(void *threadData) {
 
 		PRINT_DEBUG("buflen=%d", buflen);
 
-		for (i=0; i<buflen; i++) {
+		for (i = 0; i < buflen; i++) {
 			PRINT_DEBUG("%d", buf[i]);
 		}
 		PRINT_DEBUG("buf=%s", buf);
@@ -954,25 +943,21 @@ void recvfrom_udp(void *threadData) {
 			free(buf);
 			if (addr)
 				free(addr);
+			nack_send(uniqueSockID, socketCallType);
 			recvthread_exit(thread_data);
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
 		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 		free(msg);
+		if (ret_val) {
+			nack_send(uniqueSockID, socketCallType);
+		}
 
 		PRINT_DEBUG();
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish recvfrom");
-		//sem_wait(&jinniSockets_sem);
-		//index = findjinniSocket(uniqueSockID);
-		//sem_post(&jinniSockets_sem);
-
-		//if (index == -1) {
-		//	PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		//} else {
 		nack_send(uniqueSockID, socketCallType);
-		//}
 	}
 	PRINT_DEBUG();
 
@@ -1018,7 +1003,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	PRINT_DEBUG("index = %d", index);
@@ -1063,12 +1048,16 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
 					msg_len);
 			free(msg);
-			exit(1);
+			nack_send(uniqueSockID, recv_call);
+			return;
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
 		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 		free(msg);
+		if (ret_val) {
+			nack_send(uniqueSockID, recv_call);
+		}
 
 		PRINT_DEBUG();
 
@@ -1086,8 +1075,6 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	 */
 	//free(address);
 	//free(buf);
-
-	return;
 
 } // end of recv_udp
 
@@ -1116,7 +1103,7 @@ void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
 
 	PRINT_DEBUG("*****%d*********%d , %d*************",address_length,address.sin_addr.s_addr,address.sin_port )
 
-	msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + address_length;
+	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + address_length;
 	msg = malloc(msg_len);
 	pt = msg;
 
@@ -1139,12 +1126,16 @@ void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
 				msg_len);
 		free(msg);
-		exit(1);
+		nack_send(uniqueSockID, getpeername_call);
+		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
 	ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 	free(msg);
+	if (ret_val) {
+		nack_send(uniqueSockID, getpeername_call);
+	}
 }
 
 void shutdown_udp(unsigned long long uniqueSockID, int how) {
@@ -1161,27 +1152,86 @@ void shutdown_udp(unsigned long long uniqueSockID, int how) {
 	/** TODO unlock access to the jinnisockets */
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		return;
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
 
 	ack_send(uniqueSockID, shutdown_call);
 }
 
 void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
-		int optlen, void *optval) {
+		int optlen, u_char *optval) {
 	int index;
 
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		//exit(1);
+		return;
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG("level=%d, optname=%d, optlen=%d, optval", level, optname, optlen);
+	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname,
+			optlen);
+
+	/*
+	 * 7 levels+:
+	 * IPPPROTO_IP
+	 * IPPPROTO_IPv6
+	 * IPPPROTO_ICMP
+	 * IPPPROTO_RAW
+	 * IPPPROTO_TCP
+	 * IPPPROTO_UDP
+	 * SOL_SOCKET
+	 */
+
+	switch (optname) {
+	case SO_DEBUG:
+		jinniSockets[index].sockopts.FSO_DEBUG = *(int *)optval;
+		PRINT_DEBUG("FSO_DEBUG=%d", jinniSockets[index].sockopts.FSO_DEBUG);
+		break;
+	case SO_REUSEADDR:
+		jinniSockets[index].sockopts.FSO_REUSEADDR = *(int *)optval;
+		PRINT_DEBUG("FSO_REUSEADDR=%d", jinniSockets[index].sockopts.FSO_REUSEADDR);
+		break;
+	case SO_TYPE:
+	case SO_PROTOCOL:
+	case SO_DOMAIN:
+	case SO_ERROR:
+	case SO_DONTROUTE:
+	case SO_BROADCAST:
+	case SO_SNDBUF:
+	case SO_SNDBUFFORCE:
+	case SO_RCVBUF:
+	case SO_RCVBUFFORCE:
+	case SO_KEEPALIVE:
+	case SO_OOBINLINE:
+	case SO_NO_CHECK:
+	case SO_PRIORITY:
+	case SO_LINGER:
+	case SO_BSDCOMPAT:
+	case SO_TIMESTAMP:
+	case SO_TIMESTAMPNS:
+	case SO_TIMESTAMPING:
+	case SO_RCVTIMEO:
+	case SO_SNDTIMEO:
+	case SO_RCVLOWAT:
+	case SO_SNDLOWAT:
+	case SO_PASSCRED:
+	case SO_PEERCRED:
+	case SO_PEERNAME:
+	case SO_ACCEPTCONN:
+	case SO_PASSSEC:
+	case SO_PEERSEC:
+	case SO_MARK:
+	case SO_RXQ_OVFL:
+	case SO_ATTACH_FILTER:
+	case SO_DETACH_FILTER:
+	default:
+		PRINT_DEBUG("default=%d", optname);
+		break;
+	}
+
 
 	ack_send(uniqueSockID, setsockopt_call);
 
@@ -1202,23 +1252,111 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 }
 
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
-		int optlen, void *optval) {
+		int optlen, u_char *optval) {
 	int index;
+	int len;
+	char *val;
+	void *msg;
+	u_char *pt;
+	int msg_len;
+	int ret_val;
 
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		//exit(1);
+		return;
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG("level=%d, optname=%d, optlen=%d, optval", level, optname, optlen);
-
-	ack_send(uniqueSockID, getsockopt_call);
+	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname,
+			optlen);
 
 	/*
 	 metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 	 metadata_create(udpout_meta);
 	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	 */
+
+
+	switch (optname) {
+	case SO_DEBUG:
+		//jinniSockets[index].sockopts.FSO_DEBUG = *(int *)optval;
+		break;
+	case SO_REUSEADDR:
+		len = sizeof(int);
+		val = (char *)&(jinniSockets[index].sockopts.FSO_REUSEADDR);
+		break;
+	case SO_TYPE:
+	case SO_PROTOCOL:
+	case SO_DOMAIN:
+	case SO_ERROR:
+	case SO_DONTROUTE:
+	case SO_BROADCAST:
+	case SO_SNDBUF:
+	case SO_SNDBUFFORCE:
+	case SO_RCVBUF:
+	case SO_RCVBUFFORCE:
+	case SO_KEEPALIVE:
+	case SO_OOBINLINE:
+	case SO_NO_CHECK:
+	case SO_PRIORITY:
+	case SO_LINGER:
+	case SO_BSDCOMPAT:
+	case SO_TIMESTAMP:
+	case SO_TIMESTAMPNS:
+	case SO_TIMESTAMPING:
+	case SO_RCVTIMEO:
+	case SO_SNDTIMEO:
+	case SO_RCVLOWAT:
+	case SO_SNDLOWAT:
+	case SO_PASSCRED:
+	case SO_PEERCRED:
+	case SO_PEERNAME:
+	case SO_ACCEPTCONN:
+	case SO_PASSSEC:
+	case SO_PEERSEC:
+	case SO_MARK:
+	case SO_RXQ_OVFL:
+	case SO_ATTACH_FILTER:
+	case SO_DETACH_FILTER:
+	default:
+		//nack?
+		break;
+	}
+
+
+
+	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + len;
+	msg = malloc(msg_len);
+	pt = msg;
+
+	*(u_int *) pt = getsockopt_call;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(int *) pt = ACK;
+	pt += sizeof(int);
+
+	*(int *) pt = len;
+	pt += sizeof(int);
+
+	memcpy(pt, val, len);
+	pt += len;
+
+	if (pt - (u_char *) msg != msg_len) {
+		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
+				msg_len);
+		free(msg);
+		nack_send(uniqueSockID, getsockopt_call);
+		return;
+	}
+
+	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+	ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+	free(msg);
+	if (ret_val) {
+		nack_send(uniqueSockID, getsockopt_call);
+	}
 }
