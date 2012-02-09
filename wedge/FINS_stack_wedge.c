@@ -2145,7 +2145,7 @@ void nl_data_ready(struct sk_buff *skb) {
 			uniqueSockID = *(unsigned long long *) pt;
 			pt += sizeof(unsigned long long);
 
-			printk(KERN_ERR "FINS: %s: ERR: reply for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
+			printk(KERN_INFO "FINS: %s: reply for uniqueSockID=%llu call=%d", __FUNCTION__, uniqueSockID, reply_call);
 
 			index = findjinniSocket(uniqueSockID);
 			printk(KERN_INFO "FINS: %s: index=%d", __FUNCTION__, index);
