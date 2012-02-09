@@ -429,7 +429,7 @@ void *interceptor_to_jinni() {
 		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0,
 				&sockaddr_sender, &sockaddr_senderlen);
 		if (ret_val == -1) {
-			perror("recvf	rom() caused an error");
+			perror("recvfrom() caused an error");
 			exit(-1);
 		}
 		//PRINT_DEBUG("%d", sockaddr_sender);

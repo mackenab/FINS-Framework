@@ -241,7 +241,7 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 	up(&jinniSockets[index].threads_sem);
 
 	if (count >= LOOP_LIMIT) {
-		printk(KERN_ERR "FINS: %s: ERR: hit loop limit=%d: %d\n", __FUNCTION__, count);
+		printk(KERN_ERR "FINS: %s: ERR: hit loop limit=%d\n", __FUNCTION__, count);
 		return print_exit(__FUNCTION__, -1);
 	}
 
