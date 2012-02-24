@@ -2208,12 +2208,14 @@ void nl_data_ready(struct sk_buff *skb) {
 			len -= sizeof(unsigned long long) + sizeof(int);
 			jinniSockets[index].reply_len = len;
 
-			if (isFakeReply(pt, len)) { //TODO: fix or remove
+			/*
+			if (isFakeReply(pt, len)) { //TODO: fix or remove //commented b/c problem fixed
 				write_unlock(&jinnisockets_rwlock);
 				PRINT_DEBUG("shared dropped (fake): call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 				up(&jinniSockets[index].reply_sem_r);
 				goto end;
 			}
+			*/
 
 			if (down_interruptible(&jinniSockets[index].replies_sem)) {
 				;
