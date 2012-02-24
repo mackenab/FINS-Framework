@@ -16,6 +16,7 @@
 
 void tcp_out(struct finsFrame *ff)
 {
+	//receiving straight data from the APP layer, process/package into segment
 
 
 
