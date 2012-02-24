@@ -47,17 +47,17 @@ struct finssocket jinniSockets[MAX_sockets];
 #endif
 
 //commenting stops debug printout
-//#define DEBUG
+#define DEBUG
 #define ERROR
 
 #ifdef DEBUG
+//#define PRINT_ERROR(format, args...) printk(KERN_DEBUG "FINS: DEBUG: %s, %s,  %d: "format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);
 #define PRINT_DEBUG(format, args...) printk(KERN_DEBUG "FINS: DEBUG: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #else
 #define PRINT_DEBUG(format, args...)
 #endif
 
 #ifdef ERROR
-//#define PRINT_ERROR(format, args...) printk(KERN_CRIT "FINS: ERROR(%s, %s,  %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);
 #define PRINT_ERROR(format, args...) printk(KERN_CRIT "FINS: ERROR: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #else
 #define PRINT_ERROR(format, args...)
@@ -74,7 +74,7 @@ int isFakeReply(char *msg, int msg_len) {
 int print_exit(const char *func, int line, int rc) {
 #ifdef DEBUG
 	printk(KERN_DEBUG "FINS: DEBUG: %s, %d: Exited: %d\n", func, line, rc);
-#endif DEBUG
+#endif
 	return rc;
 }
 
