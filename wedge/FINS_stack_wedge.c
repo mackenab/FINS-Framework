@@ -179,66 +179,62 @@ int removejinniSocket(unsigned long long uniqueSockID) {
 	return (-1);
 }
 
+int threads_incr(int index) {
+	int ret;
+
+	if (down_interruptible(&jinniSockets[index].threads_sem)) {
+		PRINT_ERROR("threads aquire fail");
+	}
+	ret = ++jinniSockets[index].threads;
+	PRINT_DEBUG("jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
+	up(&jinniSockets[index].threads_sem);
+
+	return ret;
+}
+
+int threads_decr(int index) {
+	int ret;
+
+	if (down_interruptible(&jinniSockets[index].threads_sem)) {
+		PRINT_ERROR("threads aquire fail");
+	}
+	ret = --jinniSockets[index].threads;
+	PRINT_DEBUG("jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
+	up(&jinniSockets[index].threads_sem);
+
+	return ret;
+}
 
 int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) {
-	int count;
+	int error = 0;
 
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	/*
 	index = findjinniSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
+	if (down_interruptible(&jinniSockets[index].call_sems[calltype])) {// block until daemon replies
+		PRINT_ERROR("call aquire fail, throwing error: sem[%d]=%d", calltype, jinniSockets[index].call_sems[calltype].count);
+		error = 1;
 	}
-	jinniSockets[index].threads++;
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
-	*/
 
-	count = 0;
-	while (count < LOOP_LIMIT) {
-		PRINT_DEBUG("index=%d, count=%d", index, count);
-		// ONLY FOR BLOCKING CALLS: must get a semaphore and go to sleep until daemon sends response and netlink handler unlocks semaphore
-		// get semaphore before continuing - unlocked by netlink handler
-		if (down_interruptible(&jinniSockets[index].call_sems[calltype])) {// block until daemon replies
-			PRINT_DEBUG("call aquire fail, using hard down sem[%d]=%d", calltype, jinniSockets[index].call_sems[calltype].count);
-			//down(&jinniSockets[index].call_sems[calltype]); //causes perm sleep
-		}
-		count++;
-
-		if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
-			PRINT_DEBUG("shared aquire fail, using hard down r=%d", jinniSockets[index].reply_sem_r.count);
-		}
-		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-			up(&jinniSockets[index].reply_sem_r);
-			PRINT_ERROR("jinniSocket removed for uniqueSockID=%llu", uniqueSockID);
-			return print_exit(__FUNCTION__, __LINE__, -1);
-		}
-
-		if (jinniSockets[index].reply_call == calltype) {
-			break;
-		} else {
-			PRINT_ERROR("msg for (%d, %llu) recv by (%d, %llu).", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, calltype, uniqueSockID);
-			//up(&jinniSockets[index].call_sems[calltype]); //unneeded when optimal
-		}
+	if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
+		PRINT_ERROR("shared aquire fail, r=%d", jinniSockets[index].reply_sem_r.count);
+	}
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		up(&jinniSockets[index].reply_sem_r);
-		//msleep(1);
+		PRINT_ERROR("jinniSocket removed for uniqueSockID=%llu", uniqueSockID);
+		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	jinniSockets[index].threads--;
-	PRINT_DEBUG("after jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
+	threads_decr(index);
 
-	if (count >= LOOP_LIMIT) {
-		PRINT_ERROR("hit loop limit=%d", count);
+	if (error) {
+		PRINT_ERROR("wait fail");
+		up(&jinniSockets[index].reply_sem_r);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -349,13 +345,8 @@ static int FINS_create_socket(struct net *net, struct socket *sock,
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *) pt = AF_FINS; //~2, since this overrides AF_INET (39)
 	pt += sizeof(int);
@@ -463,13 +454,8 @@ static int FINS_release(struct socket *sock) {
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	if (pt - (u_char *) buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
@@ -573,13 +559,8 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *) pt = addr_len;
 	pt += sizeof(int);
@@ -667,13 +648,8 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr,
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *) pt = addr_len;
 	pt += sizeof(int);
@@ -832,13 +808,8 @@ static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	//todo: finish, incorporate peers
 
@@ -1005,13 +976,8 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(u_int *) pt = cmd;
 	pt += sizeof(u_int);
@@ -1097,13 +1063,8 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *) pt = backlog;
 	pt += sizeof(int);
@@ -1182,13 +1143,8 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *) pt = how;
 	pt += sizeof(int);
@@ -1267,13 +1223,8 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	*(unsigned long long *)pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *)pt = level;
 	pt += sizeof(int);
@@ -1373,13 +1324,8 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	*(unsigned long long *)pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *)pt = level;
 	pt += sizeof(int);
@@ -1528,13 +1474,8 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock,
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(int *) pt = flags; //TODO: fill in correct value
 	pt += sizeof(int);
@@ -1670,13 +1611,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
-		;
-	}
-	*(u_int *) pt = ++jinniSockets[index].threads;
+	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-	PRINT_DEBUG("before jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
 
 	*(ssize_t *) pt = len;
 	pt += sizeof(ssize_t);
@@ -1992,7 +1928,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	//####################
 
 	if (down_interruptible(&link_sem)) {
-		PRINT_DEBUG("link_sem aquire fail");
+		PRINT_ERROR("link_sem aquire fail");
 	}
 
 	//####################
@@ -2157,12 +2093,12 @@ void nl_data_ready(struct sk_buff *skb) {
 			//lock the semaphore so shared data can't be changed until it's consumed
 			PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
 			if (down_interruptible(&jinniSockets[index].reply_sem_w)) {
-				PRINT_DEBUG("shared aquire fail, using hard down w=%d", jinniSockets[index].reply_sem_w.count);
+				PRINT_ERROR("shared aquire fail, using hard down w=%d", jinniSockets[index].reply_sem_w.count);
 			}
 
 			PRINT_DEBUG("jinniSockets[%d].reply_sem_r=%d", index, jinniSockets[index].reply_sem_r.count);
 			if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
-				PRINT_DEBUG("shared aquire fail, using hard down r=%d", jinniSockets[index].reply_sem_r.count);
+				PRINT_ERROR("shared aquire fail, using hard down r=%d", jinniSockets[index].reply_sem_r.count);
 			}
 
 			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
