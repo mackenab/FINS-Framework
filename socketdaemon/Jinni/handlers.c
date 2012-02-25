@@ -222,7 +222,6 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			jinniSockets[i].threads = 0;
 			jinniSockets[i].replies = 0;
 
-
 			jinniSockets[i].sockopts.FSO_REUSEADDR = 0;
 
 			sem_post(&jinniSockets_sem);
@@ -394,7 +393,7 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 
 void socket_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
-	int numOfBytes = -1;
+
 	int domain;
 	unsigned int type;
 	int protocol;
@@ -454,7 +453,6 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads,
 void bind_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
@@ -521,7 +519,6 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 void send_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int datalen;
 	int flags;
@@ -597,7 +594,6 @@ void send_call_handler(unsigned long long uniqueSockID, int threads,
 void sendto_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int datalen;
 	int flags;
@@ -710,7 +706,6 @@ void sendto_call_handler(unsigned long long uniqueSockID, int threads,
 void recv_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int datalen;
 	int flags;
@@ -766,7 +761,6 @@ void recv_call_handler(unsigned long long uniqueSockID, int threads,
 void recvfrom_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int datalen;
 	int flags;
@@ -866,7 +860,6 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, int threads,
 void sendmsg_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int datalen;
 	int flags;
@@ -1008,7 +1001,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads,
 void recvmsg_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int datalen;
 	int flags;
@@ -1018,8 +1010,6 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads,
 	ssize_t msgControl_Length;
 	void *msgControl;
 	u_char *data;
-	socklen_t addrlen;
-	struct sockaddr *addr;
 	u_char *pt;
 
 	struct recvfrom_data *thread_data;
@@ -1140,18 +1130,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads,
 void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
-	int datalen;
-	int flags;
-	int msg_flags;
-	int symbol;
-	int controlFlag = 0;
-	u_char *data;
-	socklen_t addrlen;
-	void *msg_control;
-	int msg_controlLength;
-	struct sockaddr *addr;
 	int level;
 	int optname;
 	int optlen;
@@ -1211,18 +1190,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
-	int datalen;
-	int flags;
-	int msg_flags;
-	int symbol;
-	int controlFlag = 0;
-	u_char *data;
-	socklen_t addrlen;
-	void *msg_control;
-	int msg_controlLength;
-	struct sockaddr *addr;
 	int level;
 	int optname;
 	int optlen;
@@ -1280,7 +1248,48 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 void listen_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
+	int index;
+	int backlog;
+	u_char *pt;
+
+	PRINT_DEBUG("");
+
+	pt = buf;
+
+	backlog = *(int *) pt;
+	pt += sizeof(int);
+
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		nack_send(uniqueSockID, listen_call);
+		return;
+	}
+
+	PRINT_DEBUG("");
+
+	index = findjinniSocket(uniqueSockID);
+	PRINT_DEBUG("");
+
+	if (index == -1) {
+		PRINT_DEBUG(
+				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		nack_send(uniqueSockID, listen_call);
+		return;
+	}
+	PRINT_DEBUG("");
+
+	if (jinniSockets[index].type == SOCK_DGRAM)
+		listen_udp(uniqueSockID, backlog);
+	else if (jinniSockets[index].type == SOCK_STREAM)
+		listen_tcp(uniqueSockID, backlog);
+	else if (jinniSockets[index].type == SOCK_RAW) {
+		listen_icmp(uniqueSockID, backlog);
+	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, listen_call);
+	}
 }
+
 void accept_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
@@ -1294,7 +1303,6 @@ void accept4_call_handler(unsigned long long uniqueSockID, int threads,
 void shutdown_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	int how;
 	u_char *pt;
@@ -1408,8 +1416,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads,
 void close_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes = -1;
-
 	int index;
 	PRINT_DEBUG("socket call handler1");
 	PRINT_DEBUG("%llu", uniqueSockID);
@@ -1436,7 +1442,6 @@ void close_call_handler(unsigned long long uniqueSockID, int threads,
 void getsockname_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
@@ -1510,7 +1515,6 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads,
 void connect_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
@@ -1566,7 +1570,6 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads,
 void getpeername_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 
-	int numOfBytes;
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;

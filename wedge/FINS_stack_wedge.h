@@ -91,8 +91,6 @@ struct finssocket {
 	int threads;
 	struct semaphore threads_sem;
 
-	int replies;
-	struct semaphore replies_sem;
 	struct semaphore reply_sem_w;
 	struct semaphore reply_sem_r; //reassuring, but might not be necessary
 	u_int reply_call;

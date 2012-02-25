@@ -41,7 +41,7 @@ void sendmsg_tcp();
 void recvmsg_tcp();
 void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void setsockopt_tcp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
-void listen_tcp();
+void listen_tcp(unsigned long long uniqueSockID, int len);
 void accept_tcp();
 void accept4_tcp();
 void shutdown_tcp(unsigned long long uniqueSockID, int  how);

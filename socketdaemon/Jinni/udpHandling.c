@@ -377,7 +377,8 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!checkjinniports(hostport, host_IP_netformat) && !jinniSockets[index].sockopts.FSO_REUSEADDR) {
+	if (!checkjinniports(hostport, host_IP_netformat)
+			&& !jinniSockets[index].sockopts.FSO_REUSEADDR) {
 		PRINT_DEBUG("this port is not free");
 		nack_send(uniqueSockID, bind_call);
 
@@ -1171,8 +1172,7 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname,
-			optlen);
+	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname, optlen);
 
 	/*
 	 * 7 levels+:
@@ -1187,12 +1187,13 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 
 	switch (optname) {
 	case SO_DEBUG:
-		jinniSockets[index].sockopts.FSO_DEBUG = *(int *)optval;
+		jinniSockets[index].sockopts.FSO_DEBUG = *(int *) optval;
 		PRINT_DEBUG("FSO_DEBUG=%d", jinniSockets[index].sockopts.FSO_DEBUG);
 		break;
 	case SO_REUSEADDR:
-		jinniSockets[index].sockopts.FSO_REUSEADDR = *(int *)optval;
-		PRINT_DEBUG("FSO_REUSEADDR=%d", jinniSockets[index].sockopts.FSO_REUSEADDR);
+		jinniSockets[index].sockopts.FSO_REUSEADDR = *(int *) optval;
+		PRINT_DEBUG("FSO_REUSEADDR=%d",
+				jinniSockets[index].sockopts.FSO_REUSEADDR);
 		break;
 	case SO_TYPE:
 	case SO_PROTOCOL:
@@ -1232,7 +1233,6 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 		break;
 	}
 
-
 	ack_send(uniqueSockID, setsockopt_call);
 
 	/*
@@ -1268,8 +1268,7 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname,
-			optlen);
+	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname, optlen);
 
 	/*
 	 metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
@@ -1277,14 +1276,13 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	 */
 
-
 	switch (optname) {
 	case SO_DEBUG:
 		//jinniSockets[index].sockopts.FSO_DEBUG = *(int *)optval;
 		break;
 	case SO_REUSEADDR:
 		len = sizeof(int);
-		val = (char *)&(jinniSockets[index].sockopts.FSO_REUSEADDR);
+		val = (char *) &(jinniSockets[index].sockopts.FSO_REUSEADDR);
 		break;
 	case SO_TYPE:
 	case SO_PROTOCOL:
@@ -1324,9 +1322,8 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 		break;
 	}
 
-
-
-	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + len;
+	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int)
+			+ len;
 	msg = malloc(msg_len);
 	pt = msg;
 
@@ -1359,4 +1356,20 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 	if (ret_val) {
 		nack_send(uniqueSockID, getsockopt_call);
 	}
+}
+
+void listen_udp(unsigned long long uniqueSockID, int backlog) {
+
+	int index;
+
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+
+	ack_send(uniqueSockID, listen_call);
 }

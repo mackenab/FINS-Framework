@@ -594,3 +594,18 @@ void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname,
 void shutdown_icmp(unsigned long long uniqueSockID, int how) {
 
 }
+
+
+void listen_icmp(unsigned long long uniqueSockID, int backlog) {
+	int index;
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+
+	ack_send(uniqueSockID, listen_call);
+}

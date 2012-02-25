@@ -59,8 +59,8 @@ static struct finsFrame *get_fake_frame() {
  *
  */
 
-int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
-		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
+int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
+		int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
@@ -275,11 +275,7 @@ void socket_tcp(int domain, int type, int protocol,
 
 	PRINT_DEBUG("socket_UDP CALL");
 
-	char clientName[200];
 	int index;
-	int pipe_desc;
-	int tester;
-	/** TODO lock the pipe semaphore then open the pipe*/
 
 	insertjinniSocket(uniqueSockID, type, protocol);
 
@@ -288,16 +284,13 @@ void socket_tcp(int domain, int type, int protocol,
 	index = findjinniSocket(uniqueSockID);
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
-		exit(1);
-
+		nack_send(uniqueSockID, socket_call);
+		return;
 	}
 	PRINT_DEBUG("0000");
 
 	ack_send(uniqueSockID, socket_call);
 	PRINT_DEBUG("0003");
-
-	return;
-
 }
 
 void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
@@ -317,7 +310,8 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		nack_send(uniqueSockID, bind_call);
+		return;
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
@@ -327,7 +321,8 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!checkjinniports(hostport, host_IP_netformat)) {
+	if (!checkjinniports(hostport, host_IP_netformat)
+			&& !jinniSockets[index].sockopts.FSO_REUSEADDR) {
 		PRINT_DEBUG("this port is not free");
 		nack_send(uniqueSockID, bind_call);
 
@@ -338,8 +333,8 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr,
-			ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
+			addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
 	jinniSockets[index].hostport = ntohs(addr->sin_port);
@@ -558,12 +553,14 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, connect_call);
+		return;
 	}
 
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+		nack_send(uniqueSockID, connect_call);
+		return;
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
@@ -603,8 +600,8 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr,
-			ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
+			addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
 	jinniSockets[index].dstport = ntohs(addr->sin_port);
@@ -994,3 +991,17 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname,
 
 }
 
+void listen_tcp(unsigned long long uniqueSockID, int backlog) {
+
+	int index;
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+
+	ack_send(uniqueSockID, listen_call);
+}
