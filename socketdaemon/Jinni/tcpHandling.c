@@ -30,7 +30,6 @@ static struct finsFrame *get_fake_frame() {
 	strncpy(fakeData, "loloa7aa7a", 10);
 	//fakeData = "loloa7aa7a";
 
-
 	metadata *metaptr = (metadata *) malloc(sizeof(metadata));
 
 	PRINT_DEBUG("2.2");
@@ -102,7 +101,6 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 			sem_wait(&(jinniSockets[index].Qs));
 			//		PRINT_DEBUG();
 
-
 			ff = read_queue(jinniSockets[index].dataQueue);
 			//	ff = get_fake_frame();
 			//					PRINT_DEBUG();
@@ -157,8 +155,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport) || (srcip
-				!= jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport)
+				|| (srcip != jinniSockets[index].dst_IP)) {
 
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
@@ -203,13 +201,12 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 
 } //end of readFrom_fins
 
-
 int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff =
-			(struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(
+			sizeof(struct finsFrame));
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -344,7 +341,6 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** Reverse again because it was reversed by the application itself
 	 * In our example it is not reversed */
 	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
-
 	/** TODO convert back to the network endian form before
 	 * sending to the fins core
 	 */
@@ -461,8 +457,8 @@ void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 }
 
-void write_tcp(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data) {
+void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
+		u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -596,7 +592,6 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** Reverse again because it was reversed by the application itself */
 	//hostport = ntohs(addr->sin_port);
 
-
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
@@ -612,7 +607,6 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** Reverse again because it was reversed by the application itself
 	 * In our example it is not reversed */
 	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
-
 	/** TODO convert back to the network endian form before
 	 * sending to the fins core
 	 */
@@ -673,7 +667,7 @@ void sendto_tcp(unsigned long long uniqueSockID, int socketCallType,
 	/** Keep all ports and addresses in host order until later  action taken */
 	dstport = ntohs(dest_addr->sin_port); /** reverse it since it is in network order after application used htons */
 
-	dst_IP = ntohl(dest_addr-> sin_addr.s_addr);/** it is in network format since application used htonl */
+	dst_IP = ntohl(dest_addr->sin_addr.s_addr);/** it is in network format since application used htonl */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
@@ -847,7 +841,6 @@ void recvfrom_tcp(void *threadData) {
 	 */
 	//free(addr);
 	//free(buf);
-
 	recvthread_exit(thread_data);
 }
 
@@ -948,7 +941,6 @@ void recv_tcp(unsigned long long uniqueSockID, int datalen, int flags) {
 	 */
 	//free(addr);
 	//free(buf);
-
 	return;
 
 }
@@ -1002,6 +994,31 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 	}
 	PRINT_DEBUG("index = %d", index);
 
+	sem_wait(&jinniSockets_sem);
+	jinniSockets[index].backlog = backlog;
+	sem_post(&jinniSockets_sem);
+
+	//start listen queue?
 
 	ack_send(uniqueSockID, listen_call);
+}
+
+void accept_tcp(unsigned long long uniqueSockID,
+		unsigned long long uniqueSockID_new) {
+
+	int index;
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+	insertjinniSocket(uniqueSockID_new, jinniSockets[index].type, jinniSockets[index].protocol);
+
+
+
+
+	ack_send(uniqueSockID, accept_call);
 }

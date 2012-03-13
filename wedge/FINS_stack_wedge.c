@@ -726,15 +726,18 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 }
 
 static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
-	unsigned long long uniqueSockIDoriginal, uniqueSockIDnew;
+
+	int rc = -ESOCKTNOSUPPORT;
+	unsigned long long uniqueSockID, uniqueSockID_new;
+	struct sock *sk;
+	int index, index_new;
+	ssize_t buf_len;
+	void *buf;
+	u_char *pt;
 	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
 
-	uniqueSockIDoriginal = getUniqueSockID(sock);
-	uniqueSockIDnew = getUniqueSockID(newsock);
-
-	PRINT_DEBUG("Entered for %llu.", uniqueSockIDoriginal);
+	uniqueSockID = getUniqueSockID(sock);
+	PRINT_DEBUG("Entered for %llu", uniqueSockID);
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -742,20 +745,107 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	//TODO: finish this & daemon side
+	index = findjinniSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	// Required stuff for kernel side
+	rc = -ENOMEM;
+	sk = sk_alloc(sock_net(sock->sk), PF_FINS, GFP_KERNEL, &FINS_proto);
+
+	if (!sk) {
+		PRINT_ERROR("allocation failed");
+		return print_exit(__FUNCTION__, __LINE__, rc);
+		// if allocation failed
+	}
+	sk_refcnt_debug_inc(sk);
+	sock_init_data(newsock, sk);
+
+	sk->sk_no_check = 1;
+	newsock->ops = &FINS_proto_ops;
+
+	uniqueSockID_new = getUniqueSockID(newsock);
+	PRINT_DEBUG("Entered for new=%llu", uniqueSockID_new);
+
+	index_new = insertjinniSocket(uniqueSockID_new, newsock->type, jinniSockets[index].protocol);
+	PRINT_DEBUG("insert index_new=%d", index_new);
+	if (index == -1) {
+		goto removeSocket;
+	}
 
 	// Build the message
-	buf = "FINS_accept() called.";
-	buffer_length = strlen(buf) + 1;
+	buf_len = 2*sizeof(u_int) + 2*sizeof(unsigned long long);
+	buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		PRINT_ERROR("buffer allocation error");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	pt = buf;
+
+	*(u_int *) pt = accept_call;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(u_int *) pt = threads_incr(index);
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID_new;
+	pt += sizeof(unsigned long long);
+
+	if (pt - (u_char *) buf != buf_len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+		kfree(buf);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", listen_call, uniqueSockID, buf_len);
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	return 0;
+	index = waitjinniSocket(uniqueSockID, index, accept_call);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("relocked my semaphore");
+
+	rc = checkConfirmation(index);
+	up(&jinniSockets[index].reply_sem_r);
+
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	jinniSockets[index].reply_call = 0;
+	up(&jinniSockets[index].reply_sem_w);
+	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+
+	if (rc != 0) {
+		removeSocket:
+		ret = removejinniSocket(uniqueSockID_new);
+
+		if (sk) {
+			lock_sock(sk);
+			if (!sock_flag(sk, SOCK_DEAD))
+				sk->sk_state_change(sk);
+
+			sock_set_flag(sk, SOCK_DEAD);
+			newsock->sk = NULL;
+			sk_refcnt_debug_release(sk);
+			FINS_destroy_socket(sk);
+			sock_put(sk);
+		}
+	}
+
+	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
 static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
