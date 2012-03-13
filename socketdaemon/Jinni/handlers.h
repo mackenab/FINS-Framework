@@ -179,6 +179,7 @@ struct finssocket {
 	pid_t childrenList[MaxChildrenNumSharingSocket];
 	int type;
 	int protocol;
+	int backlog;
 
 	/** check the opt_name to find which bit to access in the options variable then use
 	 * the following code to handle the bits individually

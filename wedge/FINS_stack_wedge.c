@@ -725,18 +725,19 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	return 0;
 }
 
-static int FINS_accept(struct socket *sock_orig, struct socket *sock_new, int flags) {
-	int rc;
-	unsigned long long uniqueSockID_orig, uniqueSockID_new;
+static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
+
+	int rc = -ESOCKTNOSUPPORT;
+	unsigned long long uniqueSockID, uniqueSockID_new;
+	struct sock *sk;
+	int index, index_new;
 	ssize_t buf_len;
 	void *buf;
 	u_char *pt;
 	int ret;
-	int index;
 
-	uniqueSockID_orig = getUniqueSockID(sock_orig);
-	uniqueSockID_new = getUniqueSockID(sock_new);
-	PRINT_DEBUG("Entered for orig=%llu, new=%llu.", uniqueSockID_orig, uniqueSockID_new);
+	uniqueSockID = getUniqueSockID(sock);
+	PRINT_DEBUG("Entered for %llu", uniqueSockID);
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -744,11 +745,34 @@ static int FINS_accept(struct socket *sock_orig, struct socket *sock_new, int fl
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index_orig = findjinniSocket(uniqueSockID_orig);
-	index_new = findjinniSocket(uniqueSockID_new);
-	PRINT_DEBUG("index_orig=%d index_new=%d", index_new);
-	if (index_orig == -1 || index_new == -1) {
+	index = findjinniSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	// Required stuff for kernel side
+	rc = -ENOMEM;
+	sk = sk_alloc(sock_net(sock->sk), PF_FINS, GFP_KERNEL, &FINS_proto);
+
+	if (!sk) {
+		PRINT_ERROR("allocation failed");
+		return print_exit(__FUNCTION__, __LINE__, rc);
+		// if allocation failed
+	}
+	sk_refcnt_debug_inc(sk);
+	sock_init_data(newsock, sk);
+
+	sk->sk_no_check = 1;
+	newsock->ops = &FINS_proto_ops;
+
+	uniqueSockID_new = getUniqueSockID(newsock);
+	PRINT_DEBUG("Entered for new=%llu", uniqueSockID_new);
+
+	index_new = insertjinniSocket(uniqueSockID_new, newsock->type, jinniSockets[index].protocol);
+	PRINT_DEBUG("insert index_new=%d", index_new);
+	if (index == -1) {
+		goto removeSocket;
 	}
 
 	// Build the message
@@ -763,7 +787,7 @@ static int FINS_accept(struct socket *sock_orig, struct socket *sock_new, int fl
 	*(u_int *) pt = accept_call;
 	pt += sizeof(u_int);
 
-	*(unsigned long long *) pt = uniqueSockID_orig;
+	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
 	*(u_int *) pt = threads_incr(index);
@@ -808,6 +832,23 @@ static int FINS_accept(struct socket *sock_orig, struct socket *sock_new, int fl
 	jinniSockets[index].reply_call = 0;
 	up(&jinniSockets[index].reply_sem_w);
 	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+
+	if (rc != 0) {
+		removeSocket:
+		ret = removejinniSocket(uniqueSockID_new);
+
+		if (sk) {
+			lock_sock(sk);
+			if (!sock_flag(sk, SOCK_DEAD))
+				sk->sk_state_change(sk);
+
+			sock_set_flag(sk, SOCK_DEAD);
+			newsock->sk = NULL;
+			sk_refcnt_debug_release(sk);
+			FINS_destroy_socket(sk);
+			sock_put(sk);
+		}
+	}
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }

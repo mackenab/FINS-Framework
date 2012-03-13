@@ -25,8 +25,8 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff =
-			(struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(
+			sizeof(struct finsFrame));
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -86,8 +86,8 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	return (0);
 
 }
-int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
-		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
+int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
+		int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
@@ -126,7 +126,6 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 			}
 			sem_wait(&(jinniSockets[index].Qs));
 			//		PRINT_DEBUG();
-
 
 			ff = read_queue(jinniSockets[index].dataQueue);
 			//	ff = get_fake_frame();
@@ -184,8 +183,8 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport) || (srcip
-				!= jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport)
+				|| (srcip != jinniSockets[index].dst_IP)) {
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
 			sem_post(&jinniSockets_sem);
@@ -339,7 +338,7 @@ void sendto_icmp(unsigned long long uniqueSockID, int socketCallType,
 	/** Keep all ports and addresses in host order until later  action taken */
 	dstport = ntohs(address->sin_port); /** reverse it since it is in network order after application used htons */
 
-	dst_IP = ntohl(address-> sin_addr.s_addr);/** it is in network format since application used htonl */
+	dst_IP = ntohl(address->sin_addr.s_addr);/** it is in network format since application used htonl */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
@@ -520,7 +519,6 @@ void recvfrom_icmp(void *threadData) {
 	 */
 	//free(address);
 	//free(buf);
-
 	recvthread_exit(thread_data);
 }
 void sendmsg_icmp() {
@@ -595,7 +593,6 @@ void shutdown_icmp(unsigned long long uniqueSockID, int how) {
 
 }
 
-
 void listen_icmp(unsigned long long uniqueSockID, int backlog) {
 	int index;
 
@@ -606,16 +603,15 @@ void listen_icmp(unsigned long long uniqueSockID, int backlog) {
 	}
 	PRINT_DEBUG("index = %d", index);
 
-
 	ack_send(uniqueSockID, listen_call);
 }
 
-void accept_icmp(unsigned long long uniqueSockID_orig, unsigned long long uniqueSockID_new, int flags) {
+void accept_icmp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
 
 	int index;
 
 	//TODO: finish this
-	index = findjinniSocket(uniqueSockID_orig);
+	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		return;
@@ -623,5 +619,5 @@ void accept_icmp(unsigned long long uniqueSockID_orig, unsigned long long unique
 	PRINT_DEBUG("index = %d", index);
 
 
-	ack_send(uniqueSockID_orig, accept_call);
+	ack_send(uniqueSockID, accept_call);
 }

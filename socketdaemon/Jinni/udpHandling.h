@@ -38,7 +38,7 @@ void recvmsg_udp();
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void listen_udp(unsigned long long uniqueSockID, int backlog);
-void accept_udp(unsigned long long uniqueSockID_orig, unsigned long long uniqueSockID_new, int flags);
+void accept_udp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void accept4_udp();
 void shutdown_udp(unsigned long long uniqueSockID, int how);
 
