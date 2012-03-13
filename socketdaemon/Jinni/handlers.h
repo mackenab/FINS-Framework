@@ -205,6 +205,8 @@ struct finssocket {
 
 	int threads;
 	int replies;
+
+	int state;
 };
 
 struct recvfrom_data {

@@ -609,3 +609,19 @@ void listen_icmp(unsigned long long uniqueSockID, int backlog) {
 
 	ack_send(uniqueSockID, listen_call);
 }
+
+void accept_icmp(unsigned long long uniqueSockID_orig, unsigned long long uniqueSockID_new, int flags) {
+
+	int index;
+
+	//TODO: finish this
+	index = findjinniSocket(uniqueSockID_orig);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+
+	ack_send(uniqueSockID_orig, accept_call);
+}

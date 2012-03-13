@@ -1290,9 +1290,53 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 }
 
-void accept_call_handler(unsigned long long uniqueSockID, int threads,
+void accept_call_handler(unsigned long long uniqueSockID_orig, int threads,
 		unsigned char *buf, ssize_t len) {
+		int index;
+		unsigned long long uniqueSockID_new;
+		int flags;
+		u_char *pt;
 
+		PRINT_DEBUG("");
+
+		pt = buf;
+
+		uniqueSockID_new = *(unsigned long long *) pt;
+		pt += sizeof(unsigned long long);
+
+		flags = *(int *) pt;
+		pt += sizeof(int);
+
+		if (pt - buf != len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+			nack_send(uniqueSockID_orig, accept_call);
+			return;
+		}
+
+		PRINT_DEBUG("");
+
+		index = findjinniSocket(uniqueSockID_orig);
+		//insert new socket?
+		PRINT_DEBUG("");
+
+		if (index == -1) {
+			PRINT_DEBUG(
+					"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+			nack_send(uniqueSockID_orig, accept_call);
+			return;
+		}
+		PRINT_DEBUG("");
+
+		if (jinniSockets[index].type == SOCK_DGRAM)
+			accept_udp(uniqueSockID_orig, uniqueSockID_new, flags);
+		else if (jinniSockets[index].type == SOCK_STREAM)
+			accept_tcp(uniqueSockID_orig, uniqueSockID_new, flags);
+		else if (jinniSockets[index].type == SOCK_RAW) {
+			accept_icmp(uniqueSockID_orig, uniqueSockID_new, flags);
+		} else {
+			PRINT_DEBUG("unknown socket type has been read !!!");
+			nack_send(uniqueSockID_orig, accept_call);
+		}
 }
 
 void accept4_call_handler(unsigned long long uniqueSockID, int threads,

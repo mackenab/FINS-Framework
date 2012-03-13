@@ -36,6 +36,7 @@ void recvmsg_icmp();
 void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void listen_icmp(unsigned long long uniqueSockID, int backlog);
+void accept_icmp(unsigned long long uniqueSockID_orig, unsigned long long uniqueSockID_new, int flags);
 void shutdown_icmp(unsigned long long uniqueSockID, int  how);
 
 

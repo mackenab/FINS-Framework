@@ -725,16 +725,18 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	return 0;
 }
 
-static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
-	unsigned long long uniqueSockIDoriginal, uniqueSockIDnew;
+static int FINS_accept(struct socket *sock_orig, struct socket *sock_new, int flags) {
+	int rc;
+	unsigned long long uniqueSockID_orig, uniqueSockID_new;
+	ssize_t buf_len;
+	void *buf;
+	u_char *pt;
 	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
+	int index;
 
-	uniqueSockIDoriginal = getUniqueSockID(sock);
-	uniqueSockIDnew = getUniqueSockID(newsock);
-
-	PRINT_DEBUG("Entered for %llu.", uniqueSockIDoriginal);
+	uniqueSockID_orig = getUniqueSockID(sock_orig);
+	uniqueSockID_new = getUniqueSockID(sock_new);
+	PRINT_DEBUG("Entered for orig=%llu, new=%llu.", uniqueSockID_orig, uniqueSockID_new);
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -742,20 +744,72 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	//TODO: finish this & daemon side
+	index_orig = findjinniSocket(uniqueSockID_orig);
+	index_new = findjinniSocket(uniqueSockID_new);
+	PRINT_DEBUG("index_orig=%d index_new=%d", index_new);
+	if (index_orig == -1 || index_new == -1) {
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
 
 	// Build the message
-	buf = "FINS_accept() called.";
-	buffer_length = strlen(buf) + 1;
+	buf_len = 2*sizeof(u_int) + 2*sizeof(unsigned long long) + sizeof(int);
+	buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		PRINT_ERROR("buffer allocation error");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	pt = buf;
+
+	*(u_int *) pt = accept_call;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID_orig;
+	pt += sizeof(unsigned long long);
+
+	*(u_int *) pt = threads_incr(index);
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID_new;
+	pt += sizeof(unsigned long long);
+
+	*(int *) pt = flags;
+	pt += sizeof(int);
+
+	//sock->type //need?
+
+	if (pt - (u_char *) buf != buf_len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+		kfree(buf);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", listen_call, uniqueSockID, buf_len);
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	return 0;
+	index = waitjinniSocket(uniqueSockID, index, accept_call);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("relocked my semaphore");
+
+	rc = checkConfirmation(index);
+	up(&jinniSockets[index].reply_sem_r);
+
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	jinniSockets[index].reply_call = 0;
+	up(&jinniSockets[index].reply_sem_w);
+	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+
+	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
 static int FINS_getname(struct socket *sock, struct sockaddr *saddr, int *len,
@@ -1752,11 +1806,9 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock,
 	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 	up(&jinniSockets[index].reply_sem_r);
 
-	//if (jinniSockets[index].reply_sem_w.count == 0) {
 	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 	jinniSockets[index].reply_call = 0;
 	up(&jinniSockets[index].reply_sem_w);
-	//}
 	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);

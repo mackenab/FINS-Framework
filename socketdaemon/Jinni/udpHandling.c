@@ -1362,7 +1362,7 @@ void listen_udp(unsigned long long uniqueSockID, int backlog) {
 
 	int index;
 
-
+	//TODO: finish this
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
@@ -1370,6 +1370,25 @@ void listen_udp(unsigned long long uniqueSockID, int backlog) {
 	}
 	PRINT_DEBUG("index = %d", index);
 
+	sem_wait(&jinniSockets_sem);
+	//jinniSockets[index].state = SS_LISTENING;
+	sem_post(&jinniSockets_sem);
 
 	ack_send(uniqueSockID, listen_call);
+}
+
+void accept_udp(unsigned long long uniqueSockID_orig, unsigned long long uniqueSockID_new, int flags) {
+
+	int index;
+
+	//TODO: finish this
+	index = findjinniSocket(uniqueSockID_orig);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+
+	ack_send(uniqueSockID_orig, accept_call);
 }
