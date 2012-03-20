@@ -208,13 +208,13 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	struct finsFrame *ff = (struct finsFrame *) malloc(
 			sizeof(struct finsFrame));
 
-	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
+	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
 
 	PRINT_DEBUG();
 
-	metadata_create(udpout_meta);
+	metadata_create(tcpout_meta);
 
-	if (udpout_meta == NULL) {
+	if (tcpout_meta == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 		free(ff);
 		exit(1);
@@ -230,23 +230,23 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	uint32_t dstprt = dstport;
 	uint32_t hostprt = hostport;
 
-	metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "srcport", &hostprt, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat,
+	metadata_writeToElement(tcpout_meta, "dstport", &dstprt, META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "srcport", &hostprt, META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "dstip", &dst_IP_netformat,
 			META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat,
+	metadata_writeToElement(tcpout_meta, "srcip", &host_IP_netformat,
 			META_TYPE_INT);
 
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = UDPID;
+	ff->destinationID.id = TCPID;
 	ff->destinationID.next = NULL;
 	(ff->dataFrame).directionFlag = DOWN;
 	(ff->dataFrame).pduLength = len;
 	(ff->dataFrame).pdu = dataLocal;
-	(ff->dataFrame).metaData = udpout_meta;
+	(ff->dataFrame).metaData = tcpout_meta;
 
 	/**TODO insert the frame into jinni_to_switch queue
 	 * check if insertion succeeded or not then
@@ -346,6 +346,125 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 */
 
 	ack_send(uniqueSockID, bind_call);
+
+	free(addr);
+	return;
+
+}
+
+void listen_tcp(unsigned long long uniqueSockID, int backlog) {
+
+	int index;
+
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+	sem_wait(&jinniSockets_sem);
+	jinniSockets[index].backlog = backlog;
+	sem_post(&jinniSockets_sem);
+
+	//start listen queue?
+
+	ack_send(uniqueSockID, listen_call);
+}
+
+void accept_tcp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
+
+	int index;
+
+	//TODO: finish this
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		return;
+	}
+	PRINT_DEBUG("index = %d", index);
+
+	insertjinniSocket(uniqueSockID_new, jinniSockets[index].type, jinniSockets[index].protocol);
+
+
+
+
+	ack_send(uniqueSockID, accept_call);
+}
+
+void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
+
+	uint16_t dstport;
+	uint32_t dst_IP;
+	int index;
+
+	if (addr->sin_family != AF_INET) {
+		PRINT_DEBUG("Wrong address family");
+		nack_send(uniqueSockID, connect_call);
+		return;
+	}
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		nack_send(uniqueSockID, connect_call);
+		return;
+	}
+
+	/** TODO fix host port below, it is not initialized with any variable !!! */
+	/** the check below is to make sure that the port is not previously allocated */
+	dstport = ntohs(addr->sin_port);
+	dst_IP = ntohl((addr->sin_addr).s_addr);
+	/** check if the same port and address have been both used earlier or not
+	 * it returns (-1) in case they already exist, so that we should not reuse them
+	 * according to the RFC document and man pages: Application can call connect more than
+	 * once over the same UDP socket changing the address from one to another. SO the assigning
+	 * will take place even if the check functions returns (-1) !!!
+	 * */
+
+	/** TODO connect for UDP means that this address will be the default address to send
+	 * to. BUT IT WILL BE ALSO THE ONLY ADDRESS TO RECEIVER FROM
+	 * */
+
+	/**
+	 * NOTICE THAT the relation between the host and the destined address is many to one.
+	 * more than one local socket maybe connected to the same destined address
+	 */
+	if (jinniSockets[index].connection_status > 0) {
+		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP,
+				jinniSockets[index].dstport);
+		PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport);
+
+	}
+
+	/**TODO check if the port is free for binding or previously allocated
+	 * Current code assume that the port is authorized to be accessed
+	 * and also available
+	 * */
+	/** Reverse again because it was reversed by the application itself */
+	//hostport = ntohs(addr->sin_port);
+
+	/** TODO lock and unlock the protecting semaphores before making
+	 * any modifications to the contents of the jinniSockets database
+	 */
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
+			addr->sin_family);
+
+	sem_wait(&jinniSockets_sem);
+	jinniSockets[index].dstport = ntohs(addr->sin_port);
+	jinniSockets[index].dst_IP = ntohl((addr->sin_addr).s_addr);
+	jinniSockets[index].connection_status++;
+	sem_post(&jinniSockets_sem);
+
+	/** Reverse again because it was reversed by the application itself
+	 * In our example it is not reversed */
+	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
+	/** TODO convert back to the network endian form before
+	 * sending to the fins core
+	 */
+
+	ack_send(uniqueSockID, connect_call);
 
 	free(addr);
 	return;
@@ -536,84 +655,6 @@ void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 		nack_send(uniqueSockID, socketCallType);
 	}
 
-	return;
-
-}
-
-void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
-
-	uint16_t dstport;
-	uint32_t dst_IP;
-	int index;
-
-	if (addr->sin_family != AF_INET) {
-		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, connect_call);
-		return;
-	}
-
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		nack_send(uniqueSockID, connect_call);
-		return;
-	}
-
-	/** TODO fix host port below, it is not initialized with any variable !!! */
-	/** the check below is to make sure that the port is not previously allocated */
-	dstport = ntohs(addr->sin_port);
-	dst_IP = ntohl((addr->sin_addr).s_addr);
-	/** check if the same port and address have been both used earlier or not
-	 * it returns (-1) in case they already exist, so that we should not reuse them
-	 * according to the RFC document and man pages: Application can call connect more than
-	 * once over the same UDP socket changing the address from one to another. SO the assigning
-	 * will take place even if the check functions returns (-1) !!!
-	 * */
-
-	/** TODO connect for UDP means that this address will be the default address to send
-	 * to. BUT IT WILL BE ALSO THE ONLY ADDRESS TO RECEIVER FROM
-	 * */
-
-	/**
-	 * NOTICE THAT the relation between the host and the destined address is many to one.
-	 * more than one local socket maybe connected to the same destined address
-	 */
-	if (jinniSockets[index].connection_status > 0) {
-		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP,
-				jinniSockets[index].dstport);
-		PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport);
-
-	}
-
-	/**TODO check if the port is free for binding or previously allocated
-	 * Current code assume that the port is authorized to be accessed
-	 * and also available
-	 * */
-	/** Reverse again because it was reversed by the application itself */
-	//hostport = ntohs(addr->sin_port);
-
-	/** TODO lock and unlock the protecting semaphores before making
-	 * any modifications to the contents of the jinniSockets database
-	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
-			addr->sin_family);
-
-	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].dstport = ntohs(addr->sin_port);
-	jinniSockets[index].dst_IP = ntohl((addr->sin_addr).s_addr);
-	jinniSockets[index].connection_status++;
-	sem_post(&jinniSockets_sem);
-
-	/** Reverse again because it was reversed by the application itself
-	 * In our example it is not reversed */
-	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
-	/** TODO convert back to the network endian form before
-	 * sending to the fins core
-	 */
-
-	ack_send(uniqueSockID, connect_call);
-
-	free(addr);
 	return;
 
 }
@@ -981,45 +1022,4 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int level, int optname,
 void getsockopt_tcp(unsigned long long uniqueSockID, int level, int optname,
 		int optlen, void *optval) {
 
-}
-
-void listen_tcp(unsigned long long uniqueSockID, int backlog) {
-
-	int index;
-
-
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		return;
-	}
-	PRINT_DEBUG("index = %d", index);
-
-	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].backlog = backlog;
-	sem_post(&jinniSockets_sem);
-
-	//start listen queue?
-
-	ack_send(uniqueSockID, listen_call);
-}
-
-void accept_tcp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
-
-	int index;
-
-	//TODO: finish this
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		return;
-	}
-	PRINT_DEBUG("index = %d", index);
-
-	insertjinniSocket(uniqueSockID_new, jinniSockets[index].type, jinniSockets[index].protocol);
-
-
-
-
-	ack_send(uniqueSockID, accept_call);
 }
