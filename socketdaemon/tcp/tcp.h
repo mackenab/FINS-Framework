@@ -79,7 +79,7 @@ void 	tcp_get_FF();
 void 	tcp_init();
 struct 	finsFrame* tcp_to_fins(struct tcp_segment* tcp);
 struct 	tcp_segment* fins_to_tcp(struct finsFrame* ff);
-int		tcp_getheadersize(uint16_t flags);					//Get the size of the TCP header in bytes from the flags field
+//int		tcp_getheadersize(uint16_t flags);					//Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
 

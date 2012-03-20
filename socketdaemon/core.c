@@ -616,10 +616,10 @@ void *interceptor_to_jinni() {
 				recvfrom_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case sendmsg_call:
-				sendmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				sendmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only send call from wedge
 				break;
 			case recvmsg_call:
-				recvmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				recvmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only recv call from wedge
 				break;
 			case getsockopt_call:
 				getsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); //Dummy response

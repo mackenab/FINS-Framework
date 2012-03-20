@@ -148,23 +148,22 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 			}
 
 			if (0) {
-				if (jinniSockets[i].host_IP == INADDR_ANY
-						&& (protocol != IPPROTO_ICMP)) {
+				if (jinniSockets[i].host_IP == INADDR_ANY && (protocol
+						!= IPPROTO_ICMP)) {
 					if ((jinniSockets[i].hostport == dstport))
 						return (i);
 				} else if ((jinniSockets[i].hostport == dstport)
-						&& (jinniSockets[i].host_IP == dstip)
-						&& ((protocol != IPPROTO_ICMP))
-						/** && (jinniSockets[i].protocol == protocol)*/) {
+						&& (jinniSockets[i].host_IP == dstip) && ((protocol
+						!= IPPROTO_ICMP))
+				/** && (jinniSockets[i].protocol == protocol)*/) {
 					return (i);
 				}
 
 				/** Matching for ICMP incoming datagrams
 				 * In this case the IP passes is actually the source IP of that incoming message (Or called the host)
 				 */
-				else if ((jinniSockets[i].protocol == protocol)
-						&& (protocol == IPPROTO_ICMP)
-						&& (jinniSockets[i].dst_IP == dstip)) {
+				else if ((jinniSockets[i].protocol == protocol) && (protocol
+						== IPPROTO_ICMP) && (jinniSockets[i].dst_IP == dstip)) {
 					return (i);
 
 				} else {
@@ -301,8 +300,8 @@ int checkjinnidstports(uint16_t dstport, uint32_t dstip) {
 	int i = 0;
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if ((jinniSockets[i].dstport == dstport)
-				&& (jinniSockets[i].dst_IP == dstip))
+		if ((jinniSockets[i].dstport == dstport) && (jinniSockets[i].dst_IP
+				== dstip))
 			return (-1);
 
 	}
@@ -561,7 +560,6 @@ void send_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
-
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG(
@@ -932,10 +930,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
 	if (index == -1) {
 		PRINT_DEBUG(
 				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is notfound too ");
@@ -1165,10 +1160,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
 	if (index == -1) {
 		PRINT_DEBUG(
 				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
@@ -1225,7 +1217,6 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
-
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG(
@@ -1268,10 +1259,7 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
 	if (index == -1) {
 		PRINT_DEBUG(
 				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
@@ -1294,51 +1282,47 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads,
 
 void accept_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
-		int index;
-		unsigned long long uniqueSockID_new;
-		int flags;
-		u_char *pt;
+	int index;
+	unsigned long long uniqueSockID_new;
+	int flags;
+	u_char *pt;
 
-		PRINT_DEBUG("");
+	PRINT_DEBUG("");
 
-		pt = buf;
+	pt = buf;
 
-		uniqueSockID_new = *(unsigned long long *) pt;
-		pt += sizeof(unsigned long long);
+	uniqueSockID_new = *(unsigned long long *) pt;
+	pt += sizeof(unsigned long long);
 
-		flags = *(int *) pt;
-		pt += sizeof(int);
+	flags = *(int *) pt;
+	pt += sizeof(int);
 
-		if (pt - buf != len) {
-			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-			nack_send(uniqueSockID, accept_call);
-			return;
-		}
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		nack_send(uniqueSockID, accept_call);
+		return;
+	}
 
-		PRINT_DEBUG("");
+	PRINT_DEBUG("");
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG(
+				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		nack_send(uniqueSockID, accept_call);
+		return;
+	}
+	PRINT_DEBUG("");
 
-		index = findjinniSocket(uniqueSockID);
-		//insert new socket?
-		PRINT_DEBUG("");
-
-		if (index == -1) {
-			PRINT_DEBUG(
-					"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
-			nack_send(uniqueSockID, accept_call);
-			return;
-		}
-		PRINT_DEBUG("");
-
-		if (jinniSockets[index].type == SOCK_DGRAM)
-			accept_udp(uniqueSockID, uniqueSockID_new, flags);
-		else if (jinniSockets[index].type == SOCK_STREAM)
-			accept_tcp(uniqueSockID, uniqueSockID_new, flags);
-		else if (jinniSockets[index].type == SOCK_RAW) {
-			accept_icmp(uniqueSockID, uniqueSockID_new, flags);
-		} else {
-			PRINT_DEBUG("unknown socket type has been read !!!");
-			nack_send(uniqueSockID, accept_call);
-		}
+	if (jinniSockets[index].type == SOCK_DGRAM)
+		accept_udp(uniqueSockID, uniqueSockID_new, flags);
+	else if (jinniSockets[index].type == SOCK_STREAM)
+		accept_tcp(uniqueSockID, uniqueSockID_new, flags);
+	else if (jinniSockets[index].type == SOCK_RAW) {
+		accept_icmp(uniqueSockID, uniqueSockID_new, flags);
+	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, accept_call);
+	}
 }
 
 void accept4_call_handler(unsigned long long uniqueSockID, int threads,
@@ -1433,10 +1417,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
-
 	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
 	if (index == -1) {
 		PRINT_DEBUG(
 				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
