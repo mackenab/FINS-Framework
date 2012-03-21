@@ -238,11 +238,43 @@ uint16_t TCP_checksum(struct finsFrame * ff) {
 	return ~((uint16_t)(sum)); //Return one's complement of the sum
 }
 
+uint8_t* push_uint8(uint8_t *ptr, uint8_t val) {
+	*ptr++ = (uint8_t) val;
+	return ptr;
+}
+
+uint8_t* push_uint16(uint8_t *ptr, uint16_t val) {
+	*ptr++ = (uint8_t) val >> 8;
+	*ptr++ = (uint8_t)(val << 8) >> 8;
+	return ptr;
+}
+
+uint8_t* push_uint32(uint8_t *ptr, uint32_t val) {
+	*ptr++ = (uint8_t) val >> 24;
+	*ptr++ = (uint8_t)(val << 8) >> 24;
+	*ptr++ = (uint8_t)(val << 16) >> 24;
+	*ptr++ = (uint8_t)(val << 24) >> 24;
+	return ptr;
+}
+
+uint8_t* push_uint64(uint8_t *ptr, uint64_t val) {
+	*ptr++ = (uint8_t) val >> 56;
+	*ptr++ = (uint8_t)(val << 8) >> 56;
+	*ptr++ = (uint8_t)(val << 16) >> 56;
+	*ptr++ = (uint8_t)(val << 24) >> 56;
+	*ptr++ = (uint8_t)(val << 32) >> 56;
+	*ptr++ = (uint8_t)(val << 40) >> 56;
+	*ptr++ = (uint8_t)(val << 48) >> 56;
+	*ptr++ = (uint8_t)(val << 56) >> 56;
+	*ptr++ = (uint8_t)(val << 64) >> 56;
+	return ptr;
+}
+
 struct finsFrame* tcp_to_fins(struct tcp_segment* tcp) {
 	struct finsFrame* ffreturn = NULL;
 
 	ffreturn = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-	//ffreturn->dataOrCtrl = DATA; //leave unset?
+	//ffreturn->dataOrCtrl; //leave unset?
 	//ffreturn->destinationID;	// destination module ID
 	//ffreturn->directionFlag;// ingress or egress network data; see above
 
@@ -260,14 +292,20 @@ struct finsFrame* tcp_to_fins(struct tcp_segment* tcp) {
 	//For big-vs-little endian issues, I shall shift everything and deal with it manually here
 	//Source port
 
-	*(uint16_t *)ptr = htons(tcp->src_port);
+	ptr = push_uint16(ptr, tcp->src_port);
+	ptr = push_uint16(ptr, tcp->dst_port);
+	ptr = push_uint32(ptr, tcp->seq_num);
+
+	/*
+	*(uint16_t *) ptr = htons(tcp->src_port);
 	ptr += 2;
 
-	*(uint16_t *)ptr = htons(tcp->dst_port);
+	*(uint16_t *) ptr = htons(tcp->dst_port);
 	ptr += 2;
 
-	*(uint32_t *)ptr = htonl(tcp->seq_num);
+	*(uint32_t *) ptr = htonl(tcp->seq_num);
 	ptr += 4;
+	*/
 
 	/*
 	 //Sequence number
