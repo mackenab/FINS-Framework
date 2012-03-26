@@ -11,6 +11,17 @@
 #include <string.h>
 #include "tcp.h"
 
+uint8_t thread_count = 0;
+
+void *write_thread(void *local) {
+	struct tcp_connection *conn = (struct tcp_connection *) local;
+
+	//if ACK
+
+	//if data
+
+}
+
 void tcp_out(struct finsFrame *ff) {
 	//receiving straight data from the APP layer, process/package into segment
 	uint32_t srcip;
@@ -32,16 +43,26 @@ void tcp_out(struct finsFrame *ff) {
 	//demultiplex by connection
 	tcp_seg = fins_to_tcp(ff);
 
-	struct tcp_connection *connection = find_tcp_connection(srcip, dstip,
+	struct tcp_connection *conn = find_tcp_connection(srcip, dstip,
 			tcp_seg->src_port, tcp_seg->dst_port); //TODO check if right
 
-	if (connection == NULL) {
+	if (conn == NULL) {
 		//create a new connection
-		connection = create_tcp_connection(srcip, srcbuf16, dstip, dstbuf16); //TODO check if this is right
+		conn = create_tcp_connection(srcip, srcbuf16, dstip, dstbuf16); //TODO check if this is right
 		//initialize it
 
 		//setup threads - may push to later
 	}
+
+	pthread_t thread;
+
+	//spin off thread to handle
+	if (pthread_create(&thread, NULL, write_thread, (void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+		exit(-1);
+	}
+
+	thread_count++;
 
 	//detect which call it is: connect, listen/accept, read, write, close?
 

@@ -298,13 +298,18 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
 					hostport, dstport);
-			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+			///*
+			struct in_addr *temp = (struct in_addr *) malloc(
+					sizeof(struct in_addr));
 			temp->s_addr = hostip;
-			struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
+			struct in_addr *temp2 = (struct in_addr *) malloc(
+					sizeof(struct in_addr));
 			temp2->s_addr = dstip;
-			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol,inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
-			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol,(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
-
+			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol,
+					inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol,
+					(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
+			//*/
 			/**
 			 * check if this datagram comes from the address this socket has been previously
 			 * connected to it (Only if the socket is already connected to certain address)
@@ -340,7 +345,12 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1) {
-				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d", jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport, jinniSockets[index].protocol);
+				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d",
+						jinniSockets[index].host_IP,
+						jinniSockets[index].hostport,
+						jinniSockets[index].dst_IP,
+						jinniSockets[index].dstport,
+						jinniSockets[index].protocol);
 
 				int value;
 				sem_getvalue(&(jinniSockets[index].Qs), &value);
@@ -356,7 +366,7 @@ void *Switch_to_Jinni() {
 				//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
 
 				char *buf;
-				buf = (char *)malloc(ff->dataFrame.pduLength+1);
+				buf = (char *) malloc(ff->dataFrame.pduLength + 1);
 				memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 				buf[ff->dataFrame.pduLength] = '\0';
 				PRINT_DEBUG("pdu='%s'", buf);
@@ -544,21 +554,21 @@ void *interceptor_to_jinni() {
 			threads = *(int *) msg_pt;
 			msg_pt += sizeof(int);
 
-			msg_len -= 2*sizeof(int) + sizeof(unsigned long long);
+			msg_len -= 2 * sizeof(int) + sizeof(unsigned long long);
 
 			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType, uniqueSockID);
 			PRINT_DEBUG("msg_len=%d", msg_len);
 
 			//###############################
 			unsigned char *temp;
-			temp = (char *)malloc(msg_len+1);
+			temp = (char *) malloc(msg_len + 1);
 			memcpy(temp, msg_pt, msg_len);
 			temp[msg_len] = '\0';
 			PRINT_DEBUG("msg='%s'", temp);
 			free(temp);
 
 			unsigned char *pt;
-			temp = (unsigned char *) malloc(3*msg_len);
+			temp = (unsigned char *) malloc(3 * msg_len);
 			pt = temp;
 			int i;
 			for (i = 0; i < msg_len; i++) {
@@ -577,7 +587,8 @@ void *interceptor_to_jinni() {
 			free(temp);
 			//###############################
 
-			PRINT_DEBUG("uniqueSockID=%llu, calltype=%d, threads=%d", uniqueSockID, socketCallType, threads);
+			PRINT_DEBUG("uniqueSockID=%llu, calltype=%d, threads=%d",
+					uniqueSockID, socketCallType, threads);
 
 			switch (socketCallType) {
 
@@ -653,8 +664,8 @@ void *interceptor_to_jinni() {
 				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			default:
-				PRINT_DEBUG(
-						"unknown opcode received (%d), dropping", socketCallType);
+				PRINT_DEBUG("unknown opcode received (%d), dropping",
+						socketCallType);
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */

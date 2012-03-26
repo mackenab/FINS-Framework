@@ -14,6 +14,18 @@
 
 extern struct tcp_connection* connections; //The list of current connections we have
 
+void *recv_thread(void *local) {
+	struct tcp_connection *conn = (struct tcp_connection *) local;
+
+
+
+	//if ACK
+
+
+	//if data
+
+}
+
 void tcp_in(struct finsFrame *ff) {
 	//First things first. Check the checksum, and discard if it's bad.
 	if (TCP_checksum(ff)) //check if this function works correctly
@@ -44,31 +56,34 @@ void tcp_in(struct finsFrame *ff) {
 	//demultiplex by connection
 	tcp_seg = fins_to_tcp(ff);
 	if (tcp_seg) {
-		conn = find_tcp_connection(srcip, dstip, tcp_seg->src_port,
-				tcp_seg->dst_port); //TODO check if right
+		conn = find_tcp_connection(dstip, srcip, tcp_seg->dst_port,
+				tcp_seg->src_port); //TODO check if right, is reversed
 		if (conn) {
+			//spin off another thread
 
-			while ((ret = sem_wait(&conn->recv_queue->sem)) == -1
-					&& errno == EINTR)
-				;
-			if (ret == -1 && errno != EINTR) {
-				PRINT_ERROR("sem_wait prob");
-				exit(-1);
-			}
+			/*
+			 while ((ret = sem_wait(&conn->recv_queue->sem)) == -1
+			 && errno == EINTR)
+			 ;
+			 if (ret == -1 && errno != EINTR) {
+			 PRINT_ERROR("sem_wait prob");
+			 exit(-1);
+			 }
 
-			if (has_space(conn->recv_queue, tcp_seg->datalen)) {
-				if (insert_FF(conn->recv_queue, ff, tcp_seg->seq_num,
-						tcp_seg->datalen)) {
-					PRINT_DEBUG("Duplicate or overlapping. Dropping...");
-				} else {
-					//fine
-				}
+			 if (has_space(conn->recv_queue, tcp_seg->datalen)) {
+			 if (insert_FF(conn->recv_queue, ff, tcp_seg->seq_num,
+			 tcp_seg->datalen)) {
+			 PRINT_DEBUG("Duplicate or overlapping. Dropping...");
+			 } else {
+			 //fine
+			 }
 
-			} else {
-				PRINT_DEBUG("Recv queue overflow. Dropping...");
-			}
+			 } else {
+			 PRINT_DEBUG("Recv queue overflow. Dropping...");
+			 }
 
-			sem_post(&conn->recv_queue->sem);
+			 sem_post(&conn->recv_queue->sem);
+			 */
 		} else {
 			PRINT_DEBUG("Found no connection. Dropping...");
 		}
