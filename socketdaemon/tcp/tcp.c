@@ -290,62 +290,37 @@ struct finsFrame* tcp_to_fins(struct tcp_segment* tcp) {
 
 	uint8_t* ptr = ff->dataFrame.pdu; //Start pointing at the beginning of the pdu data
 	//For big-vs-little endian issues, I shall shift everything and deal with it manually here
-	//Source port
-
 	ptr = push_uint16(ptr, tcp->src_port);
 	ptr = push_uint16(ptr, tcp->dst_port);
 	ptr = push_uint32(ptr, tcp->seq_num);
+	ptr = push_uint32(ptr, tcp->ack_num);
+	ptr = push_uint16(ptr, tcp->flags);
+	ptr = push_uint16(ptr, tcp->win_size);
+	ptr = push_uint16(ptr, tcp->checksum);
+	ptr = push_uint16(ptr, tcp->urg_pointer);
+
+	int optionssize = HEADERSIZE(tcpreturn->flags) - MIN_TCP_HEADER_LEN;
+	int i;
+	for (i = 0; i < optionssize; i++) {
+		ptr = push_uint8(ptr, tcp->options[i]);
+	}
+
+	if (tcp->datalen > 0) {
+		memcpy(ptr, tcp->data, tcp->datalen);
+	}
 
 	/*
-	*(uint16_t *) ptr = htons(tcp->src_port);
-	ptr += 2;
+	 *(uint16_t *) ptr = htons(tcp->src_port);
+	 ptr += 2;
 
-	*(uint16_t *) ptr = htons(tcp->dst_port);
-	ptr += 2;
+	 *(uint16_t *) ptr = htons(tcp->dst_port);
+	 ptr += 2;
 
-	*(uint32_t *) ptr = htonl(tcp->seq_num);
-	ptr += 4;
-	*/
+	 *(uint32_t *) ptr = htonl(tcp->seq_num);
+	 ptr += 4;
+	 */
 
 	/*
-	 //Sequence number
-	 tcpreturn->seq_num = (uint32_t)(*ptr++) << 24;
-	 tcpreturn->seq_num += (uint32_t)(*ptr++) << 16;
-	 tcpreturn->seq_num += (uint32_t)(*ptr++) << 8;
-	 tcpreturn->seq_num += *ptr++;
-	 //Acknowledgment number
-	 tcpreturn->ack_num = (uint32_t)(*ptr++) << 24;
-	 tcpreturn->ack_num += (uint32_t)(*ptr++) << 16;
-	 tcpreturn->ack_num += (uint32_t)(*ptr++) << 8;
-	 tcpreturn->ack_num += *ptr++;
-	 //Flags and data offset
-	 tcpreturn->flags = (uint16_t)(*ptr++) << 8;
-	 tcpreturn->flags += *ptr++;
-	 //Window size
-	 tcpreturn->win_size = (uint16_t)(*ptr++) << 8;
-	 tcpreturn->win_size += *ptr++;
-	 //Checksum
-	 tcpreturn->checksum = (uint16_t)(*ptr++) << 8;
-	 tcpreturn->checksum += *ptr++;
-	 //Urgent pointer
-	 tcpreturn->urg_pointer = (uint16_t)(*ptr++) << 8;
-	 tcpreturn->urg_pointer += *ptr++;
-
-	 //Now copy the rest of the data, starting with the options
-	 int optionssize = HEADERSIZE(tcpreturn->flags) - MIN_TCP_HEADER_LEN;
-	 if (optionssize > 0) {
-	 tcpreturn->options = (uint8_t*) malloc(optionssize);
-	 int i;
-	 for (i = 0; i < optionssize; i++) {
-	 tcpreturn->options[i] = *ptr++;
-	 }
-	 }
-
-	 //And fill in the data length and the data, also
-	 tcpreturn->datalen = ff->dataFrame.pduLength - HEADERSIZE(tcpreturn->flags);
-	 if (tcpreturn->datalen > 0) {
-	 tcpreturn->data = (uint8_t*) malloc(tcpreturn->datalen);
-	 int i;
 	 for (i = 0; i < tcpreturn->datalen; i++) {
 	 tcpreturn->data[i] = *ptr++;
 	 }
