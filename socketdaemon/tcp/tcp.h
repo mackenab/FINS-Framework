@@ -49,10 +49,21 @@ struct tcp_segment {
 	uint16_t checksum; //TCP checksum
 	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
 	uint8_t *options; //Options for the TCP segment (If Data Offset > 5)
+	int optlen; //length of the options
 	uint8_t *data; //Actual TCP segment data
 	int datalen; //Length of the data. This, of course, is not in the original TCP header.
 //We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
+
+struct finsFrame* tcp_to_fins(struct tcp_segment* tcp);
+struct tcp_segment* fins_to_tcp(struct finsFrame* ff);
+int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
+//int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
+
+//More specific, internal functions for dealing with the data and all that
+uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
+void tcp_srand(); //Seed the random number generator
+int tcp_rand(); //Get a random number
 
 //structure for a record of a tcp_queue
 struct tcp_node {
@@ -94,14 +105,23 @@ struct tcp_connection {
 	struct tcp_queue *recv_queue; //buffer for recv UDP FDF that are unACKed
 	struct tcp_queue *read_queue; //buffer for raw FDF that have been transfered
 
-	pthread_t write_thread;
-	pthread_t send_thread;
-	pthread_t recv_thread;
-	pthread_t read_thread;
+	pthread_t main_thread;
+	uint8_t main_wait_flag;
+	sem_t main_wait_sem;
 
-	sem_t wait_sem;
-	sem_t send_wait_sem;
-	sem_t recv_wait_sem;
+	uint8_t running_flag;
+	uint8_t first_flag;
+	uint8_t delayed_flag;
+	uint8_t fast_flag;
+	uint8_t gbn_flag;
+
+	int to_gbn_fd; //send timeouts
+	pthread_t to_gbn_thread;
+	uint8_t to_gbn_flag;
+
+	int to_delayed_fd; //delayed ACKs
+	pthread_t to_delayed_thread;
+	uint8_t to_delayed_flag;
 
 	unsigned int MSS;
 	unsigned short recvWindow;
@@ -119,13 +139,18 @@ struct tcp_connection {
 	double estRTT;
 	double devRTT;
 	double timeout;
-//timer_t to_timer;
 };
+
+//connection states //TODO: figure out
+#define CONN_SETUP 0
+#define CONN_CONNECTED 1
 
 struct tcp_connection* create_tcp_connection(uint32_t host_addr,
 		uint16_t host_port, uint32_t rem_addr, uint16_t rem_port);
 struct tcp_connection* find_tcp_connection(uint32_t host_addr,
 		uint16_t host_port, uint32_t rem_addr, uint16_t rem_port);
+void startTimer(int fd, double millis);
+void stopTimer(int fd);
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
@@ -134,15 +159,6 @@ void tcp_out(struct finsFrame *ff);
 void tcp_in(struct finsFrame *ff);
 void tcp_to_switch(struct finsFrame * ff); //Send a finsFrame to the switch's queue
 
-struct finsFrame* tcp_to_fins(struct tcp_segment* tcp);
-struct tcp_segment* fins_to_tcp(struct finsFrame* ff);
-int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
-//int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
-
-//More specific, internal functions for dealing with the data and all that
-uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
-void tcp_srand(); //Seed the random number generator
-int tcp_rand(); //Get a random number
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application
 
