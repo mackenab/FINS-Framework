@@ -15,10 +15,10 @@ extern finsQueue TCP_to_Switch_Queue;
 extern sem_t Switch_to_TCP_Qsem;
 extern finsQueue Switch_to_TCP_Queue;
 
-struct tcp_connection* connections; //The list of current connections we have
-sem_t connections_sem;
+struct tcp_connection* conn_list; //The list of current connections we have
+int conn_num;
 
-struct tcp_queue* create_queue(uint32_t max) {
+struct tcp_queue* queue_create(uint32_t max) {
 	struct tcp_queue *queue = NULL;
 	queue = (struct tcp_queue *) malloc(sizeof(struct tcp_queue));
 
@@ -33,21 +33,40 @@ struct tcp_queue* create_queue(uint32_t max) {
 	return queue;
 }
 
-int insert_FF(struct tcp_queue *queue, struct finsFrame* ffsegment,
-		uint32_t seq_num, uint32_t len) {
+void queue_append(struct tcp_queue *queue, uint8_t* data, uint32_t len) {
+	struct tcp_node *node = NULL;
+	struct tcp_node *comp = NULL;
+
+	node = (struct tcp_node *) malloc(sizeof(struct tcp_node));
+	node->data = data;
+	node->len = len;
+	node->next = NULL;
+
+	if (queue_is_empty(queue)) {
+		//queue empty
+		queue->front = node;
+	} else {
+		//node after end
+		queue->end->next = node;
+	}
+
+	queue->end = node;
+	queue->len += len;
+}
+
+int queue_insert(struct tcp_queue *queue, uint8_t* data, uint32_t len,
+		uint32_t seq_num, uint32_t seq_end) {
 
 	struct tcp_node *node = NULL;
 	struct tcp_node *comp = NULL;
-	uint32_t seq_end;
-
-	seq_end = seq_num + len - 1;
 
 	node = (struct tcp_node *) malloc(sizeof(struct tcp_node));
-	node->ffsegment = ffsegment;
+	node->data = data;
+	node->len = len;
 	node->seq_num = seq_num;
 	node->seq_end = seq_end;
 
-	if (is_empty(queue)) {
+	if (queue_is_empty(queue)) {
 		//queue empty
 		node->next = NULL;
 		queue->front = node;
@@ -116,29 +135,293 @@ int insert_FF(struct tcp_queue *queue, struct finsFrame* ffsegment,
 	return 0;
 }
 
-struct finsFrame* remove_front(struct tcp_queue *queue) {
+void queue_remove_front(struct tcp_queue *queue) {
 	struct tcp_node * old;
-	uint32_t len;
 
 	old = queue->front;
 	if (old) {
-		queue->front = queue->front->next;
-
-		len = old->seq_end - old->seq_num + 1;
-		queue->len -= len;
-
-		return old->ffsegment;
-	} else {
-		return NULL;
+		queue->front = old->next;
+		queue->len -= old->len;
 	}
 }
 
-int is_empty(struct tcp_queue *queue) {
+int queue_is_empty(struct tcp_queue *queue) {
 	return queue->front == NULL;
 }
 
-int has_space(struct tcp_queue *queue, uint32_t len) {
+int queue_has_space(struct tcp_queue *queue, uint32_t len) {
 	return queue->len + len <= queue->max;
+}
+
+void *to_gbn_thread(void *local) {
+	struct tcp_connection *conn = (struct tcp_connection *) local;
+	int ret;
+	uint64_t exp;
+
+	PRINT_DEBUG("to_gbn_thread thread started");
+
+	while (conn->running_flag) {
+		ret = read(conn->to_gbn_fd, &exp, sizeof(uint64_t)); //blocking read
+		if (ret != sizeof(uint64_t)) {
+			//read error
+		}
+		conn->to_gbn_flag = 1;
+		if (conn->main_wait_flag) {
+			PRINT_DEBUG("posting to main_wait_sem");
+			sem_post(&conn->main_wait_sem);
+		}
+	}
+}
+
+void *to_delayed_thread(void *local) {
+	struct tcp_connection *conn = (struct tcp_connection *) local;
+	int ret;
+	uint64_t exp;
+
+	PRINT_DEBUG("to_delayed_thread thread started");
+
+	while (conn->running_flag) {
+		ret = read(conn->to_delayed_fd, &exp, sizeof(uint64_t)); //blocking read
+		if (ret != sizeof(uint64_t)) {
+			//read error
+		}
+		conn->to_delayed_flag = 1;
+		if (conn->main_wait_flag) {
+			PRINT_DEBUG("posting to main_wait_sem");
+			sem_post(&conn->main_wait_sem);
+		}
+	}
+}
+
+void *main_thread(void *local) {
+	struct tcp_connection *conn = (struct tcp_connection *) local;
+
+	while (conn->running_flag) {
+		if (conn->to_gbn_fd) {
+			//gbn timeout
+			//set flags
+		}
+
+		if (conn->fast_flag) {
+			//fast retransmit
+			if (conn->delayed_flag) {
+				//add ACK
+				conn->delayed_flag = 0;
+				conn->to_delayed_flag = 0;
+			} else {
+				//normal
+			}
+		} else if (conn->gbn_flag) {
+			//GBN
+			if (conn->delayed_flag) {
+				//add ACK
+				conn->delayed_flag = 0;
+				conn->to_delayed_flag = 0;
+			} else {
+				//normal
+			}
+		} else {
+			//normal
+			if (conn->delayed_flag) {
+				//add ACK
+				conn->delayed_flag = 0;
+				conn->to_delayed_flag = 0;
+			} else {
+				//normal
+			}
+		}
+
+		if (conn->to_delayed_flag) {
+			//delayed ACK timeout
+			//send act
+			conn->delayed_flag = 0;
+			conn->to_delayed_flag = 0;
+		}
+
+		if (0/*if finished*/) {
+			//exit
+		}
+
+		if (conn->main_wait_flag && !conn->to_gbn_flag && !conn->to_delayed_flag
+				&& !conn->fast_flag) {
+			//wait
+			//sem_wait(&wait_sem)
+			//waitFlag = 0;
+			//sem_init(&wait_sem, 0, 0);
+		}
+	}
+}
+
+void stopTimer(int fd) {
+	PRINT_DEBUG("stopping timer=%d", fd);
+
+	struct itimerspec its;
+	its.it_value.tv_sec = 0;
+	its.it_value.tv_nsec = 0;
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
+}
+
+void startTimer(int fd, double millis) {
+	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
+
+	struct itimerspec its;
+	//its.it_value.tv_sec = static_cast<long int> (millis / 1000); //TODO
+	//its.it_value.tv_nsec = static_cast<long int> (fmod(millis, 1000) * 1000000);
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
+}
+
+struct tcp_connection* conn_create(uint32_t host_addr, uint16_t host_port,
+		uint32_t rem_addr, uint16_t rem_port) {
+
+	struct tcp_connection *conn = NULL;
+	conn = (struct tcp_connection *) malloc(sizeof(struct tcp_connection));
+
+	sem_init(&conn->conn_sem, 0, 1);
+	conn->state = CONN_SETUP; //TODO: here?
+	conn->running_flag = 1;
+
+	conn->host_addr = host_addr;
+	conn->host_port = host_port;
+	conn->rem_addr = rem_addr;
+	conn->rem_port = rem_port;
+
+	sem_init(&conn->write_sem, 0, 1);
+
+	conn->write_queue = queue_create(DEFAULT_MAX_QUEUE); //TODO: could wait on this
+	conn->send_queue = queue_create(DEFAULT_MAX_QUEUE);
+	conn->recv_queue = queue_create(DEFAULT_MAX_QUEUE);
+	conn->read_queue = queue_create(DEFAULT_MAX_QUEUE);
+
+	//setup threads
+	if (pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create main_thread thread.");
+		exit(-1);
+	}
+
+	//setup timers
+	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
+	if (conn->to_gbn_fd == -1) {
+		PRINT_ERROR("ERROR: unable to create to_fd.");
+		exit(-1);
+	}
+	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread,
+			(void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+		exit(-1);
+	}
+
+	conn->to_delayed_fd = timerfd_create(CLOCK_REALTIME, 0);
+	if (conn->to_delayed_fd == -1) {
+		PRINT_ERROR("ERROR: unable to create delayed_fd.");
+		exit(-1);
+	}
+	if (pthread_create(&conn->to_delayed_thread, NULL, to_delayed_thread,
+			(void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+		exit(-1);
+	}
+
+	return conn;
+}
+
+void conn_append(struct tcp_connection *conn) {
+	struct tcp_connection* temp = NULL;
+
+	if (conn_list == NULL) {
+		conn_list = conn;
+	} else {
+		temp = conn_list;
+		while (temp->next != NULL) {
+			temp = temp->next;
+		}
+
+		temp->next = conn;
+		conn->next = NULL;
+	}
+
+	conn_num++;
+}
+
+//find a TCP connection with given host addr/port and remote addr/port
+//NOTE: this means for incoming IP FF call with (dst_ip, src_ip, dst_p, src_p)
+struct tcp_connection* conn_find(uint32_t host_addr, uint16_t host_port,
+		uint32_t rem_addr, uint16_t rem_port) {
+	struct tcp_connection* temp = NULL;
+
+	temp = conn_list;
+	while (temp != NULL) {
+		if (temp->host_addr == host_addr && temp->host_port == host_port
+				&& temp->rem_addr == rem_addr && temp->rem_port == rem_port) {
+			return temp;
+		}
+		temp = temp->next;
+	}
+
+	return NULL;
+}
+
+void conn_remove(struct tcp_connection *conn) {
+	struct tcp_connection* temp = NULL;
+
+	temp = conn_list;
+	if (temp == NULL) {
+		return;
+	}
+
+	if (temp == conn) {
+		conn_list = conn_list->next;
+		conn_num--;
+		return;
+	}
+
+	while (temp->next != NULL) {
+		if (temp->next == conn) {
+			temp->next = conn->next;
+			conn_num--;
+			break;
+		}
+		temp = temp->next;
+	}
+}
+
+int conn_is_empty(void) {
+	return conn_num == 0;
+}
+
+int conn_has_space(uint32_t len) {
+	return conn_num + len <= MAX_CONNECTIONS;
+}
+
+void conn_free(struct tcp_connection* conn) {
+	//free the memory
+}
+
+void tcp_init() {
+
+	PRINT_DEBUG("TCP started");
+
+	conn_list = NULL;
+	conn_num = 0;
+	sem_init(&conn_list_sem, 0, 1);
+
+	tcp_srand();
+	while (1) {
+		tcp_get_FF();
+		PRINT_DEBUG();
+		//	free(pff);
+	}
 }
 
 void tcp_get_FF() {
@@ -173,22 +456,6 @@ void tcp_to_switch(struct finsFrame * ff) {
 
 }
 
-void tcp_init() {
-
-	PRINT_DEBUG("TCP started");
-	connections = NULL;
-	sem_init(&connections_sem, 0, 1);
-
-	tcp_srand();
-	while (1) {
-
-		tcp_get_FF();
-		PRINT_DEBUG();
-		//	free(pff);
-	}
-
-}
-
 //Get a random number to use as a starting sequence number
 int tcp_rand() {
 	return rand(); //Just use the standard C random number generator for now
@@ -203,7 +470,7 @@ void tcp_srand() {
 // Calculate the checksum of this TCP segment.
 // (basically identical to ICMP_checksum().)
 //--------------------------------------------
-uint16_t TCP_checksum(struct finsFrame * ff) {
+uint16_t TCP_checksum(struct finsFrame * ff) { //TODO: redo/check
 	int sum = 0;
 	unsigned char *w = ff->dataFrame.pdu;
 	int nleft = ff->dataFrame.pduLength;
@@ -320,6 +587,15 @@ struct finsFrame* tcp_to_fins(struct tcp_segment* tcp) {
 struct tcp_segment* fins_to_tcp(struct finsFrame* ff) {
 	struct tcp_segment* tcpreturn = NULL;
 	tcpreturn = (struct tcp_segment*) malloc(sizeof(struct tcp_segment));
+	if (!tcpreturn) {
+		PRINT_ERROR("tcpreturn malloc error");
+		return NULL;
+	}
+
+	if (ff->dataFrame.pduLength < MIN_TCP_HEADER_LEN) {
+		return NULL;
+	}
+
 	uint8_t* ptr = ff->dataFrame.pdu; //Start pointing at the beginning of the pdu data
 	//For big-vs-little endian issues, I shall shift everything and deal with it manually here
 	//Source port
@@ -372,215 +648,4 @@ struct tcp_segment* fins_to_tcp(struct finsFrame* ff) {
 	}
 
 	return tcpreturn; //Done
-}
-
-void *to_gbn_thread(void *local) {
-	struct tcp_connection *conn = (struct tcp_connection *) local;
-	int ret;
-	uint64_t exp;
-
-	PRINT_DEBUG("to_gbn_thread thread started");
-
-	while (conn->running_flag) {
-		ret = read(conn->to_gbn_fd, &exp, sizeof(uint64_t)); //blocking read
-		if (ret != sizeof(uint64_t)) {
-			//read error
-		}
-		conn->to_gbn_flag = 1;
-		if (conn->main_wait_flag) {
-			PRINT_DEBUG("posting to main_wait_sem");
-			sem_post(&conn->main_wait_sem);
-		}
-	}
-}
-
-void *to_delayed_thread(void *local) {
-	struct tcp_connection *conn = (struct tcp_connection *) local;
-	int ret;
-	uint64_t exp;
-
-	PRINT_DEBUG("to_delayed_thread thread started");
-
-	while (conn->running_flag) {
-		ret = read(conn->to_delayed_fd, &exp, sizeof(uint64_t)); //blocking read
-		if (ret != sizeof(uint64_t)) {
-			//read error
-		}
-		conn->to_delayed_flag = 1;
-		if (conn->main_wait_flag) {
-			PRINT_DEBUG("posting to main_wait_sem");
-			sem_post(&conn->main_wait_sem);
-		}
-	}
-}
-
-void *main_thread(void *local) {
-	struct tcp_connection *conn = (struct tcp_connection *) local;
-
-	while (conn->running_flag) {
-		if (conn->to_gbn_fd) {
-			//gbn timeout
-			//set flags
-		}
-
-		if (conn->fast_flag) {
-			//fast retransmit
-			if (conn->delayed_flag) {
-				//add ACK
-				conn->delayed_flag = 0;
-				conn->to_delayed_flag = 0;
-			} else {
-				//normal
-			}
-		} else if (conn->gbn_flag) {
-			//GBN
-			if (conn->delayed_flag) {
-				//add ACK
-				conn->delayed_flag = 0;
-				conn->to_delayed_flag = 0;
-			} else {
-				//normal
-			}
-		} else {
-			//normal
-			if (conn->delayed_flag) {
-				//add ACK
-				conn->delayed_flag = 0;
-				conn->to_delayed_flag = 0;
-			} else {
-				//normal
-			}
-		}
-
-		if (conn->to_delayed_flag) {
-			//delayed ACK timeout
-			//send act
-			conn->delayed_flag = 0;
-			conn->to_delayed_flag = 0;
-		}
-
-		if (0/*if finished*/) {
-			//exit
-		}
-
-		if (conn->main_wait_flag && !conn->to_gbn_flag
-				&& !conn->to_delayed_flag && !conn->fast_flag) {
-			//wait
-			//sem_wait(&wait_sem)
-			//waitFlag = 0;
-			//sem_init(&wait_sem, 0, 0);
-		}
-	}
-}
-
-void stopTimer(int fd) {
-	PRINT_DEBUG("stopping timer=%d", fd);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = 0;
-	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-
-void startTimer(int fd, double millis) {
-	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
-
-	struct itimerspec its;
-	//its.it_value.tv_sec = static_cast<long int> (millis / 1000); //TODO
-	//its.it_value.tv_nsec = static_cast<long int> (fmod(millis, 1000) * 1000000);
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-
-struct tcp_connection* create_tcp_connection(uint32_t host_addr,
-		uint16_t host_port, uint32_t rem_addr, uint16_t rem_port) {
-
-	struct tcp_connection *conn = NULL;
-	conn = (struct tcp_connection *) malloc(sizeof(struct tcp_connection));
-	conn->state = CONN_SETUP; //TODO: here?
-
-	conn->host_addr = host_addr;
-	conn->host_port = host_port;
-	conn->rem_addr = rem_addr;
-	conn->rem_port = rem_port;
-
-	conn->write_queue = create_queue(DEFAULT_MAX_QUEUE);
-	conn->send_queue = create_queue(DEFAULT_MAX_QUEUE);
-	conn->recv_queue = create_queue(DEFAULT_MAX_QUEUE);
-	conn->read_queue = create_queue(DEFAULT_MAX_QUEUE);
-
-	//setup threads
-	if (pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create main_thread thread.");
-		exit(-1);
-	}
-
-	//setup timers
-	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (conn->to_gbn_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create to_fd.");
-		exit(-1);
-	}
-	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread, (void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-		exit(-1);
-	}
-
-	conn->to_delayed_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (conn->to_delayed_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create delayed_fd.");
-		exit(-1);
-	}
-	if (pthread_create(&conn->to_delayed_thread, NULL, to_delayed_thread,
-			(void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-		exit(-1);
-	}
-
-	return conn;
-}
-
-void append_tcp_connection(struct tcp_connection *conn) {
-	struct tcp_connection* temp = NULL;
-
-	if (connections == NULL) {
-		connections = conn;
-	} else {
-		temp = connections;
-		while (temp->next != NULL) {
-			temp = temp->next;
-		}
-
-		temp->next = conn;
-		conn->next = NULL;
-	}
-}
-
-//find a TCP connection with given host addr/port and remote addr/port
-//NOTE: this means for incoming IP FF call with (dst_ip, src_ip, dst_p, src_p)
-struct tcp_connection* find_tcp_connection(uint32_t host_addr,
-		uint16_t host_port, uint32_t rem_addr, uint16_t rem_port) {
-	struct tcp_connection* temp = NULL;
-
-	temp = connections;
-	while (temp != NULL) {
-		if (temp->host_addr == host_addr && temp->host_port == host_port
-				&& temp->rem_addr == rem_addr && temp->rem_port == rem_port) {
-			return temp;
-		}
-		temp = temp->next;
-	}
-
-	return NULL;
 }
