@@ -12,7 +12,8 @@
 #include <metadata.h>
 #include <finsdebug.h>
 #include <stdint.h>
-//#include <sys/time.h>
+#include <sys/time.h> //TODO might not need
+#include <sys/timerfd.h>
 #include <semaphore.h>
 
 //Macros for the TCP header
@@ -36,8 +37,6 @@
 #define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_DATA_OFFSET_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
 
-#define DEFAULT_MAX_QUEUE 65535
-
 //Structure for TCP segments (Straight from the RFC, just in struct form)
 struct tcp_segment {
 	uint16_t src_port; //Source port
@@ -55,23 +54,13 @@ struct tcp_segment {
 //We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
-struct finsFrame* tcp_to_fins(struct tcp_segment* tcp);
-struct tcp_segment* fins_to_tcp(struct finsFrame* ff);
-int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
-//int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
-
-//More specific, internal functions for dealing with the data and all that
-uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
-void tcp_srand(); //Seed the random number generator
-int tcp_rand(); //Get a random number
-
 //structure for a record of a tcp_queue
 struct tcp_node {
 	struct tcp_node* next; //Next item in the list
-
+	uint8_t *data; //Actual data
+	uint32_t len;
 	uint32_t seq_num;
 	uint32_t seq_end;
-	struct finsFrame* ffsegment; //Actual data
 };
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
@@ -83,17 +72,26 @@ struct tcp_queue {
 	sem_t sem;
 };
 
-struct tcp_queue* create_queue(uint32_t max);
-int insert_FF(struct tcp_queue *queue, struct finsFrame* ffsegment,
-		uint32_t seq_num, uint32_t len);
-struct finsFrame* remove_front(struct tcp_queue *queue);
-int is_empty(struct tcp_queue *queue);
-int has_space(struct tcp_queue *queue, uint32_t len);
+struct tcp_queue* queue_create(uint32_t max);
+void queue_append(struct tcp_queue *queue, uint8_t* data, uint32_t len);
+int queue_insert(struct tcp_queue *queue, uint8_t* data, uint32_t len,
+		uint32_t seq_num, uint32_t seq_end);
+void queue_remove_front(struct tcp_queue *queue);
+int queue_is_empty(struct tcp_queue *queue);
+int queue_has_space(struct tcp_queue *queue, uint32_t len);
+//TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
 
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
 	struct tcp_connection * next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
 	int state;
+	sem_t conn_sem; //for next, state, write_threads
+
+	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
+	int recv_threads;
+
+	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
+	//sem_t read_sem; //TODO: prob don't need
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
@@ -103,7 +101,7 @@ struct tcp_connection {
 	struct tcp_queue *write_queue; //buffer for raw FDF to be transfered
 	struct tcp_queue *send_queue; //buffer for sent UDP FDF that are unACKed
 	struct tcp_queue *recv_queue; //buffer for recv UDP FDF that are unACKed
-	struct tcp_queue *read_queue; //buffer for raw FDF that have been transfered
+	struct tcp_queue *read_queue; //buffer for raw FDF that have been transfered //TODO might not need
 
 	pthread_t main_thread;
 	uint8_t main_wait_flag;
@@ -115,11 +113,11 @@ struct tcp_connection {
 	uint8_t fast_flag;
 	uint8_t gbn_flag;
 
-	int to_gbn_fd; //send timeouts
+	int to_gbn_fd; //GBN timeout occurred
 	pthread_t to_gbn_thread;
 	uint8_t to_gbn_flag;
 
-	int to_delayed_fd; //delayed ACKs
+	int to_delayed_fd; //delayed ACK TO occurred
 	pthread_t to_delayed_thread;
 	uint8_t to_delayed_flag;
 
@@ -141,23 +139,50 @@ struct tcp_connection {
 	double timeout;
 };
 
+//TODO raise any of these?
+#define DEFAULT_MAX_QUEUE 65535
+#define MAX_RECV_THREADS 1
+#define MAX_WRITE_THREADS 1
+#define MAX_CONNECTIONS 512
+
 //connection states //TODO: figure out
 #define CONN_SETUP 0
 #define CONN_CONNECTED 1
 
-struct tcp_connection* create_tcp_connection(uint32_t host_addr,
-		uint16_t host_port, uint32_t rem_addr, uint16_t rem_port);
-struct tcp_connection* find_tcp_connection(uint32_t host_addr,
-		uint16_t host_port, uint32_t rem_addr, uint16_t rem_port);
+sem_t conn_list_sem;
+struct tcp_connection* conn_create(uint32_t host_addr, uint16_t host_port,
+		uint32_t rem_addr, uint16_t rem_port);
+void conn_append(struct tcp_connection *conn);
+struct tcp_connection* conn_find(uint32_t host_addr, uint16_t host_port,
+		uint32_t rem_addr, uint16_t rem_port);
+void conn_remove(struct tcp_connection *conn);
+int conn_is_empty(void);
+int conn_has_space(uint32_t len);
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
+
+struct tcp_thread_data {
+	struct tcp_connection* conn;
+	struct tcp_segment* tcp_seg;
+};
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
 void tcp_get_FF();
+void tcp_to_switch(struct finsFrame * ff); //Send a finsFrame to the switch's queue
+
+//More specific, internal functions for dealing with the data and all that
+uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
+void tcp_srand(); //Seed the random number generator
+int tcp_rand(); //Get a random number
+
+struct finsFrame* tcp_to_fins(struct tcp_segment* tcp);
+struct tcp_segment* fins_to_tcp(struct finsFrame* ff);
+int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
+//int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
+
 void tcp_out(struct finsFrame *ff);
 void tcp_in(struct finsFrame *ff);
-void tcp_to_switch(struct finsFrame * ff); //Send a finsFrame to the switch's queue
 
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application

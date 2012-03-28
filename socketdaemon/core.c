@@ -314,7 +314,7 @@ void *Switch_to_Jinni() {
 			 * check if this datagram comes from the address this socket has been previously
 			 * connected to it (Only if the socket is already connected to certain address)
 			 */
-			if (jinniSockets[index].connection_status > 0) {
+			if (index >= 0 && jinniSockets[index].connection_status > 0) {
 
 				PRINT_DEBUG("ICMP should not enter here at all");
 				if ((hostport != jinniSockets[index].dstport) || (hostip
