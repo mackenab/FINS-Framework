@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
 	}
 	int pID_p = getpid();
 
-	printf("\n UDPServer (%d: %d/%d) Waiting for client on port %d", processes,
+	printf("UDPServer (%d: %d/%d) Waiting for client on port %d\n ", processes,
 			pID, pID_p, ntohs(server_addr.sin_port));
 	fflush(stdout);
 
@@ -144,8 +144,8 @@ int main(int argc, char *argv[]) {
 		//	bytes_read = recv(sock,recv_data,1024,0);
 		i = i + 1;
 		recv_data[bytes_read] = '\0';
-		printf("\n (%d) frame number", i);
-		printf("\n(%d/%d, %s:%d) : ", pID, pID_p, inet_ntoa(
+		printf("(%d) frame number\n", i);
+		printf("(%d/%d, %s:%d) : ", pID, pID_p, inet_ntoa(
 				client_addr->sin_addr), ntohs(client_addr->sin_port));
 		//printf("(%d , %d) : ", (client_addr->sin_addr).s_addr, ntohs(client_addr->sin_port));
 		//printf("(%d , %d) : ", processes, pID);
@@ -153,13 +153,18 @@ int main(int argc, char *argv[]) {
 
 		fflush(stdout);
 
-		if (pID != 0) {
+		//if (pID != 0) {
+			printf("closing(%d/%d)\n", pID, pID_p);
 			close(sock);
+			printf("waiting...\n");
 			while (1)
 				;
-			//break;
-		}
+			break;
+
+		//}
 	}
+
+	printf("Program end (%d/%d).\n", pID, pID_p);
+
 	return 0;
 }
-
