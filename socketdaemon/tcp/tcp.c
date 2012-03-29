@@ -200,9 +200,9 @@ void *main_thread(void *local) {
 	struct tcp_node *front;
 	struct tcp_node *end;
 
-	int on_wire = 0;
-	uint8_t * packet;
+	uint32_t on_wire = 0;
 	struct tcp_segment *tcp_seg;
+	int offset;
 
 	while (conn->running_flag) {
 		PRINT_DEBUG(
@@ -246,25 +246,17 @@ void *main_thread(void *local) {
 			//normal
 			PRINT_DEBUG("Normal");
 
-			if (sem_wait(&conn->send_queue->sem)) {
-				PRINT_ERROR("conn->send_queue->sem wait prob");
-				exit(-1);
+			//send sem?
+
+			if (conn->host_seq_num <= conn->host_seq_end) {
+				on_wire = conn->host_seq_end - conn->host_seq_num;
+			} else { //TODO check if this works
+				on_wire = conn->host_seq_end - conn->host_seq_num + 0xFFFFFFFF;
 			}
 
-			end = conn->send_queue->end;
-			if (queue_is_empty(conn->send_queue)) {
-				on_wire = 0;
-			} else {
-				on_wire = conn->send_queue->end->seq_end - conn->host_seq_num;
-			}
-
-			if (sem_wait(&conn->write_queue->sem)) {
-				PRINT_ERROR("conn->write_queue wait prob");
-				exit(-1);
-			}
-
-			if (conn->write_queue->len && conn->window
-					&& on_wire < conn->recvWindow /* && cong stuff*/) {
+			//write sem?
+			if (conn->write_queue->len && conn->rem_window
+					&& on_wire < conn->rem_max_window /* && cong stuff*/) {
 				PRINT_DEBUG("sending packet");
 
 				tcp_seg = (struct tcp_segment *) malloc(
@@ -274,6 +266,7 @@ void *main_thread(void *local) {
 				tcp_seg->seq_num = conn->host_seq_num;
 				tcp_seg->flags = 0;
 
+				//recv sem?
 				if (conn->delayed_flag) {
 					//add ACK
 					conn->delayed_flag = 0;
@@ -284,21 +277,18 @@ void *main_thread(void *local) {
 					tcp_seg->flags |= FLAG_ACK;
 				}
 
-				tcp_seg->win_size = conn->host_window;
-				//checksum
+				tcp_seg->win_size = conn->host_window; //recv sem?
+
 				tcp_seg->urg_pointer = 0;
 
-				//add options
-				//TODO implement options system
+				//add options //TODO implement options system
 				tcp_seg->options = NULL;
 				tcp_seg->optlen = 0;
 
-				//add options 5 = no options //TODO add options
-				tcp_seg->flags |= (5) << 12;
+				offset = tcp_seg->optlen / 32; //TODO improve logic, use ceil?
+				tcp_seg->flags |= (MIN_DATA_OFFSET_LEN + offset) << 12;
 
 				/*
-				 uint8_t *options; //Options for the TCP segment (If Data Offset > 5)
-				 int optlen; //length of the options
 				 uint8_t *data; //Actual TCP segment data
 				 int datalen;
 				 */
@@ -416,10 +406,14 @@ struct tcp_connection* conn_create(uint32_t host_addr, uint16_t host_port,
 
 	//TODO agree on these values during setup
 	conn->MSS = 1024;
+
 	conn->host_seq_num = 1;
+	conn->host_seq_end = 1;
 	conn->host_max_window = 65535;
 	conn->host_window = 65535;
+
 	conn->rem_seq_num = 1;
+	conn->rem_seq_end = 1;
 	conn->rem_max_window = 65535;
 	conn->rem_window = 65535;
 

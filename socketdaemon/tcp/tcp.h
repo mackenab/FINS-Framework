@@ -125,12 +125,16 @@ struct tcp_connection {
 
 	//values agreed upon during setup
 	uint16_t MSS; //max segment size
-	uint32_t host_seq_num; //seq num rand gen by client expected by server
-	uint16_t host_max_window; //
-	uint16_t host_window;
-	uint32_t rem_seq_num; //seq num rand gen by server expected by client
+
+	uint32_t host_seq_num; //seq of host sendbase
+	uint32_t host_seq_end; //seq of host last sent
+	uint16_t host_max_window; //avail bytes in host recv buffer
+	uint16_t host_window; //avail bytes in host recv buffer
+
+	uint32_t rem_seq_num; //seq of rem sendbase
+	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window;
-	uint16_t rem_window;
+	uint16_t rem_window; //avail bytes in rem recv buffer
 
 	unsigned int congState;
 	double congWindow;
