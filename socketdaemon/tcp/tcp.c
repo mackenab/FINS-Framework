@@ -137,7 +137,7 @@ int queue_insert(struct tcp_queue *queue, uint8_t* data, uint32_t len,
 	return 0;
 }
 
-void queue_remove_front(struct tcp_queue *queue) {
+struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
 	struct tcp_node * old;
 
 	old = queue->front;
@@ -145,6 +145,8 @@ void queue_remove_front(struct tcp_queue *queue) {
 		queue->front = old->next;
 		queue->len -= old->len;
 	}
+
+	return old;
 }
 
 int queue_is_empty(struct tcp_queue *queue) {
@@ -203,12 +205,20 @@ void *main_thread(void *local) {
 	uint32_t on_wire = 0;
 	struct tcp_segment *tcp_seg;
 	int offset;
+	uint8_t *ptr;
+	int temp;
+	int avail;
+	struct tcp_node *node;
+	int index = 0;
+	struct finsFrame *ff;
+	int ret;
 
 	while (conn->running_flag) {
 		PRINT_DEBUG(
 				"flags: to=%d fast=%d gbn=%d delayed=%d delay_to=%d first=%d wait=%d ",
-				conn->to_gbn_flag, conn->gbn_flag, conn->delayed_flag,
-				conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
+				conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag,
+				conn->delayed_flag, conn->to_delayed_flag, conn->first_flag,
+				conn->main_wait_flag);
 
 		if (conn->to_gbn_flag) {
 			//gbn timeout
@@ -255,43 +265,128 @@ void *main_thread(void *local) {
 			}
 
 			//write sem?
-			if (conn->write_queue->len && conn->rem_window
-					&& on_wire < conn->rem_max_window /* && cong stuff*/) {
+			if (conn->write_queue->len && conn->rem_window && on_wire
+					< conn->rem_max_window /* && cong stuff*/) {
 				PRINT_DEBUG("sending packet");
 
 				tcp_seg = (struct tcp_segment *) malloc(
 						sizeof(struct tcp_segment));
 				tcp_seg->src_port = conn->host_port;
 				tcp_seg->dst_port = conn->rem_port;
-				tcp_seg->seq_num = conn->host_seq_num;
+				tcp_seg->seq_num = conn->host_seq_end;
 				tcp_seg->flags = 0;
 
 				//recv sem?
+				if (sem_wait(&conn->recv_queue->sem)) {
+					PRINT_ERROR("conn->recv_queue->sem wait prob");
+					exit(-1);
+				}
 				if (conn->delayed_flag) {
 					//add ACK
+					stopTimer(conn->to_delayed_fd);
 					conn->delayed_flag = 0;
 					conn->to_delayed_flag = 0;
-					stopTimer(conn->to_delayed_fd);
 
 					tcp_seg->ack_num = conn->rem_seq_num;
 					tcp_seg->flags |= FLAG_ACK;
 				}
+				sem_post(&conn->recv_queue - sem);
 
 				tcp_seg->win_size = conn->host_window; //recv sem?
-
+				tcp_seg->checksum = 0;
 				tcp_seg->urg_pointer = 0;
 
 				//add options //TODO implement options system
 				tcp_seg->options = NULL;
-				tcp_seg->optlen = 0;
+				tcp_seg->opt_len = 0;
 
-				offset = tcp_seg->optlen / 32; //TODO improve logic, use ceil?
+				offset = tcp_seg->opt_len / 32; //TODO improve logic, use ceil?
 				tcp_seg->flags |= (MIN_DATA_OFFSET_LEN + offset) << 12;
 
+				if (sem_wait(&conn->write_queue->sem)) {
+					PRINT_ERROR("conn->write_queue->sem wait prob");
+					exit(-1);
+				}
+
+				if (conn->write_queue->len > conn->MSS) {
+					data_len = conn->MSS;
+				} else {
+					data_len = conn->write_queue->len;
+				}
+				if (data_len > conn->rem_window) { //leave for now, move to outside if for Nagle
+					data_len = conn->rem_window;
+				}
+				//TODO cong stuff
+
+				tcp_seg->data = (uint8_t *) malloc(data_len);
+				ptr = tcp_seg->data;
+
+				temp = data_len;
+				while (temp && !queue_is_empty(conn->write_queue)) {
+					avail = conn->write_queue->front->len - index;
+					if (temp < avail) {
+						memcpy(ptr, conn->write_queue->front->data + index,
+								temp);
+						ptr += temp;
+						index += temp;
+						temp -= temp;
+					} else {
+						memcpy(ptr, conn->write_queue->front->data + index,
+								avail);
+						ptr += avail;
+						index = 0;
+						temp -= avail;
+
+						node = queue_remove_front(conn->write_queue);
+						free(node->data);
+						free(node);
+					}
+				}
+				sem_post(&conn->write_queue->sem);
+
+				conn->host_seq_end += data_len;
+
+				tcp_seg->checksum = tcp_checksum(conn->host_addr,
+						conn->rem_addr, tcp_seg);
+
+				ff = tcp_to_fins(tcp_seg);
+				metadata_writeToElement(ff->dataFrame.metaData, "srcip",
+						&(conn->host_addr), META_TYPE_INT);
+				metadata_writeToElement(ff->dataFrame.metaData, "dstip",
+						&(conn->rem_addr), META_TYPE_INT);
+
+				if (sem_wait(&conn->send_queue->sem)) {
+					PRINT_ERROR("conn->write_queue->sem wait prob");
+					exit(-1);
+				}
+
+				if (queue_insert(conn->send_queue, ff, tcp_seg->data_len,
+						tcp_seg->seq_num, tcp_seg->seq_num + tcp_seg->data_len
+								- 1)) {
+					//problem
+				}
+
 				/*
-				 uint8_t *data; //Actual TCP segment data
-				 int datalen;
+				 myTCP->window -= dataLen;
+				 send(myTCP->sock, packet, packetLen, 0);
+				 PRINT_DEBUG(
+				 "cont: sending seqnum=%d seqend=%d size=%d dataLen=%d\n",
+				 header->seqNum, header->seqNum + dataLen - 1, dataLen
+				 + 20, dataLen);
+
+				 if (myTCP->seqEndRTT == 0) {
+				 gettimeofday(&myTCP->stampRTT, 0);
+				 myTCP->seqEndRTT = myTCP->clientSeq;
+				 PRINT_DEBUG("setting seqEndRTT=%d stampRTT=(%d, %d)\n", myTCP->seqEndRTT, myTCP->stampRTT.tv_sec, myTCP->stampRTT.tv_usec);
+				 }
+
+				 if (firstFlag) {
+				 firstFlag = 0;
+				 myTCP->startTimer(myTCP->to_timer, myTCP->timeout);
+				 }
 				 */
+
+				sem_post(&conn->send_queue->sem);
 
 			} else {
 				PRINT_DEBUG("Normal: flagging waitFlag");
@@ -313,8 +408,8 @@ void *main_thread(void *local) {
 			//exit
 		}
 
-		if (conn->main_wait_flag && !conn->to_gbn_flag && !conn->to_delayed_flag
-				&& !conn->fast_flag) {
+		if (conn->main_wait_flag && !conn->to_gbn_flag
+				&& !conn->to_delayed_flag && !conn->fast_flag) {
 			//wait
 			//sem_wait(&wait_sem)
 			//waitFlag = 0;
@@ -387,8 +482,7 @@ struct tcp_connection* conn_create(uint32_t host_addr, uint16_t host_port,
 		PRINT_ERROR("ERROR: unable to create to_fd.");
 		exit(-1);
 	}
-	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread,
-			(void *) conn)) {
+	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread, (void *) conn)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
 	}
@@ -408,12 +502,12 @@ struct tcp_connection* conn_create(uint32_t host_addr, uint16_t host_port,
 	conn->MSS = 1024;
 
 	conn->host_seq_num = 1;
-	conn->host_seq_end = 1;
+	conn->host_seq_end = 2;
 	conn->host_max_window = 65535;
 	conn->host_window = 65535;
 
 	conn->rem_seq_num = 1;
-	conn->rem_seq_end = 1;
+	conn->rem_seq_end = 2;
 	conn->rem_max_window = 65535;
 	conn->rem_window = 65535;
 
@@ -585,6 +679,53 @@ uint16_t TCP_checksum(struct finsFrame * ff) { //TODO: redo/check
 	return ~((uint16_t)(sum)); //Return one's complement of the sum
 }
 
+uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
+		struct tcp_segment *tcp_seg) { //TODO check if checksum works
+	uint32_t sum = 0;
+	uint16_t *ptr;
+	uint32_t i;
+
+	//fake IP header
+	sum += ((uint16_t)(src_addr >> 16)) + ((uint16_t)(src_addr & 0xFFFF));
+	sum += ((uint16_t)(dst_addr >> 16)) + ((uint16_t)(dst_addr & 0xFFFF));
+	sum += (uint16_t) TCP_PROTOCOL;
+	sum += (uint16_t)(IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags)
+			+ tcp_seg->data_len);
+
+	//fake TCP header
+	sum += tcp_seg->src_port;
+	sum += tcp_seg->dst_port; //Destination port
+	sum += ((uint16_t)(tcp_seg->seq_num >> 16)) + ((uint16_t)(tcp_seg->seq_num
+			& 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->ack_num >> 16)) + ((uint16_t)(tcp_seg->ack_num
+			& 0xFFFF));
+	sum += tcp_seg->flags; //Destination port
+	sum += tcp_seg->win_size; //Destination port
+	sum += tcp_seg->checksum; //Destination port
+	sum += tcp_seg->urg_pointer; //Destination port
+
+	//options, opt_len always has to be a factor of 2
+	ptr = (uint16_t *) tcp_seg->options;
+	for (i = 0; i < tcp_seg->opt_len; i += 2) {
+		sum += ((uint16_t)(*ptr << 8)) + ((uint16_t)(*ptr));
+		ptr += 2;
+	}
+
+	//data
+	ptr = (uint16_t *) tcp_seg->data;
+	for (i = 0; i < tcp_seg->data_len - 1; i += 2) {
+		sum += ((uint16_t)(*ptr << 8)) + ((uint16_t)(*ptr));
+		ptr += 2;
+	}
+	if (tcp_seg->data_len & 0x1 == 1) {
+		sum += ((uint16_t)(*ptr << 8)) + ((uint16_t) 0);
+	}
+
+	sum = ~sum;
+
+	return ((uint16_t) sum);
+}
+
 uint8_t* copy_uint8(uint8_t *ptr, uint8_t val) {
 	*ptr++ = val;
 	return ptr;
@@ -592,27 +733,27 @@ uint8_t* copy_uint8(uint8_t *ptr, uint8_t val) {
 
 uint8_t* copy_uint16(uint8_t *ptr, uint16_t val) {
 	*ptr++ = (uint8_t)(val >> 8);
-	*ptr++ = (uint8_t)((val << 8) >> 8);
+	*ptr++ = (uint8_t)(val & 0x00FF);
 	return ptr;
 }
 
 uint8_t* copy_uint32(uint8_t *ptr, uint32_t val) {
 	*ptr++ = (uint8_t)(val >> 24);
-	*ptr++ = (uint8_t)((val << 8) >> 24);
-	*ptr++ = (uint8_t)((val << 16) >> 24);
-	*ptr++ = (uint8_t)((val << 24) >> 24);
+	*ptr++ = (uint8_t)((val & 0x00FF0000) >> 16);
+	*ptr++ = (uint8_t)((val & 0x0000FF00) >> 8);
+	*ptr++ = (uint8_t)(val & 0x000000FF);
 	return ptr;
 }
 
 uint8_t* copy_uint64(uint8_t *ptr, uint64_t val) {
 	*ptr++ = (uint8_t)(val >> 56);
-	*ptr++ = (uint8_t)((val << 8) >> 56);
-	*ptr++ = (uint8_t)((val << 16) >> 56);
-	*ptr++ = (uint8_t)((val << 24) >> 56);
-	*ptr++ = (uint8_t)((val << 32) >> 56);
-	*ptr++ = (uint8_t)((val << 40) >> 56);
-	*ptr++ = (uint8_t)((val << 48) >> 56);
-	*ptr++ = (uint8_t)((val << 56) >> 56);
+	*ptr++ = (uint8_t)((val & 0x00FF000000000000) >> 48);
+	*ptr++ = (uint8_t)((val & 0x0000FF0000000000) >> 40);
+	*ptr++ = (uint8_t)((val & 0x000000FF00000000) >> 32);
+	*ptr++ = (uint8_t)((val & 0x00000000FF000000) >> 24);
+	*ptr++ = (uint8_t)((val & 0x0000000000FF0000) >> 16);
+	*ptr++ = (uint8_t)((val & 0x000000000000FF00) >> 8);
+	*ptr++ = (uint8_t)(val & 0x00000000000000FF);
 	return ptr;
 }
 
@@ -630,7 +771,7 @@ struct finsFrame* tcp_to_fins(struct tcp_segment* tcp) {
 	metadata_writeToElement(ffreturn->dataFrame.metaData, "dstport",
 			&(tcp->dst_port), META_TYPE_INT); //And the destination port
 
-	ffreturn->dataFrame.pduLength = tcp->datalen + HEADERSIZE(tcp->flags); //Add in the header size for this, too
+	ffreturn->dataFrame.pduLength = tcp->data_len + HEADERSIZE(tcp->flags); //Add in the header size for this, too
 	ffreturn->dataFrame.pdu = (unsigned char*) malloc(
 			ffreturn->dataFrame.pduLength);
 
@@ -654,14 +795,14 @@ struct finsFrame* tcp_to_fins(struct tcp_segment* tcp) {
 	ptr = copy_uint16(ptr, tcp->checksum);
 	ptr = copy_uint16(ptr, tcp->urg_pointer);
 
-	if (tcp->optlen > 0) {
-		memcpy(ptr, tcp->options, tcp->optlen);
-		ptr += tcp->optlen;
+	if (tcp->opt_len > 0) {
+		memcpy(ptr, tcp->options, tcp->opt_len);
+		ptr += tcp->opt_len;
 	}
 
-	if (tcp->datalen > 0) {
-		memcpy(ptr, tcp->data, tcp->datalen);
-		ptr += tcp->datalen;
+	if (tcp->data_len > 0) {
+		memcpy(ptr, tcp->data, tcp->data_len);
+		ptr += tcp->data_len;
 	}
 
 	return ffreturn;
@@ -714,27 +855,25 @@ struct tcp_segment* fins_to_tcp(struct finsFrame* ff) {
 	tcpreturn->urg_pointer += *ptr++;
 
 	//Now copy the rest of the data, starting with the options
-	tcpreturn->optlen = HEADERSIZE(tcpreturn->flags) - MIN_TCP_HEADER_LEN;
-	if (tcpreturn->optlen > 0) {
-		tcpreturn->options = (uint8_t*) malloc(tcpreturn->optlen);
+	tcpreturn->opt_len = HEADERSIZE(tcpreturn->flags) - MIN_TCP_HEADER_LEN;
+	if (tcpreturn->opt_len > 0) {
+		tcpreturn->options = (uint8_t*) malloc(tcpreturn->opt_len);
 		int i;
-		for (i = 0; i < tcpreturn->optlen; i++) {
+		for (i = 0; i < tcpreturn->opt_len; i++) {
 			tcpreturn->options[i] = *ptr++;
 		}
 	}
 
 	//And fill in the data length and the data, also
-	tcpreturn->datalen = ff->dataFrame.pduLength - HEADERSIZE(tcpreturn->flags);
-	if (tcpreturn->datalen > 0) {
-		tcpreturn->data = (uint8_t*) malloc(tcpreturn->datalen);
+	tcpreturn->data_len = ff->dataFrame.pduLength
+			- HEADERSIZE(tcpreturn->flags);
+	if (tcpreturn->data_len > 0) {
+		tcpreturn->data = (uint8_t*) malloc(tcpreturn->data_len);
 		int i;
-		for (i = 0; i < tcpreturn->datalen; i++) {
+		for (i = 0; i < tcpreturn->data_len; i++) {
 			tcpreturn->data[i] = *ptr++;
 		}
 	}
 
 	return tcpreturn; //Done
 }
-
-struct tcp_segment* fins_to_tcp(struct finsFrame* ff) {
-
