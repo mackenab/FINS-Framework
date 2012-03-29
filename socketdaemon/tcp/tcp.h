@@ -48,7 +48,7 @@ struct tcp_segment {
 	uint16_t checksum; //TCP checksum
 	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
 	uint8_t *options; //Options for the TCP segment (If Data Offset > 5)
-	int optlen; //length of the options
+	int optlen; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int datalen; //Length of the data. This, of course, is not in the original TCP header.
 //We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
@@ -73,7 +73,8 @@ struct tcp_queue {
 };
 
 struct tcp_queue* queue_create(uint32_t max);
-void queue_append(struct tcp_queue *queue, uint8_t* data, uint32_t len);
+void queue_append(struct tcp_queue *queue, uint8_t* data, uint32_t len,
+		uint32_t seq_num, uint32_t seq_end);
 int queue_insert(struct tcp_queue *queue, uint8_t* data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
 void queue_remove_front(struct tcp_queue *queue);
@@ -86,6 +87,7 @@ struct tcp_connection {
 	struct tcp_connection * next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
 	int state;
 	sem_t conn_sem; //for next, state, write_threads
+	//some type of option state
 
 	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
 	int recv_threads;
@@ -121,15 +123,18 @@ struct tcp_connection {
 	pthread_t to_delayed_thread;
 	uint8_t to_delayed_flag;
 
-	unsigned int MSS;
-	unsigned short recvWindow;
-	unsigned short window;
+	//values agreed upon during setup
+	uint16_t MSS; //max segment size
+	uint32_t host_seq_num; //seq num rand gen by client expected by server
+	uint16_t host_max_window; //
+	uint16_t host_window;
+	uint32_t rem_seq_num; //seq num rand gen by server expected by client
+	uint16_t rem_max_window;
+	uint16_t rem_window;
+
 	unsigned int congState;
 	double congWindow;
 	unsigned int threshhold;
-
-	unsigned int hostSeq; //seq num rand gen by client expected by server
-	unsigned int remoteSeq; //seq num rand gen by server expected by client
 
 	unsigned int firstRTT;
 	unsigned int seqEndRTT;

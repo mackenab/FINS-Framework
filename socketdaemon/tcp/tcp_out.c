@@ -58,7 +58,7 @@ void *write_thread(void *local) {
 			ptr += len;
 			index += len;
 
-			queue_append(conn->write_queue, buf, len);
+			queue_append(conn->write_queue, buf, len, 0, 0);
 
 			if (conn->main_wait_flag) {
 				PRINT_DEBUG("posting to wait_sem\n");
