@@ -150,8 +150,8 @@ struct tcp_connection {
 
 //TODO raise any of these?
 #define DEFAULT_MAX_QUEUE 65535
-#define MAX_RECV_THREADS 1
-#define MAX_WRITE_THREADS 1
+#define MAX_RECV_THREADS 2
+#define MAX_WRITE_THREADS 2
 #define MAX_CONNECTIONS 512
 
 //connection states //TODO: figure out
