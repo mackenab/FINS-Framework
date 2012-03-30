@@ -36,6 +36,8 @@
 #define MIN_TCP_HEADER_LEN		MIN_DATA_OFFSET_LEN * 4	//Therefore, the minimum TCP header length is 4*5=20 bytes
 #define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_DATA_OFFSET_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
+#define TCP_PROTOCOL 6
+#define IP_HEADERSIZE 12
 
 //Structure for TCP segments (Straight from the RFC, just in struct form)
 struct tcp_segment {
@@ -47,10 +49,10 @@ struct tcp_segment {
 	uint16_t win_size; //Window size
 	uint16_t checksum; //TCP checksum
 	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
-	uint8_t *options; //Options for the TCP segment (If Data Offset > 5)
-	int optlen; //length of the options in bytes
+	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
-	int datalen; //Length of the data. This, of course, is not in the original TCP header.
+	int data_len; //Length of the data. This, of course, is not in the original TCP header.
 //We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
@@ -77,7 +79,7 @@ void queue_append(struct tcp_queue *queue, uint8_t* data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
 int queue_insert(struct tcp_queue *queue, uint8_t* data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
-void queue_remove_front(struct tcp_queue *queue);
+struct tcp_node *queue_remove_front(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 //TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
@@ -181,7 +183,9 @@ void tcp_get_FF();
 void tcp_to_switch(struct finsFrame * ff); //Send a finsFrame to the switch's queue
 
 //More specific, internal functions for dealing with the data and all that
-uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
+//uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
+uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
+		struct tcp_segment *tcp_seg);
 void tcp_srand(); //Seed the random number generator
 int tcp_rand(); //Get a random number
 

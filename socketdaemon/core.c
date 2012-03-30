@@ -301,10 +301,18 @@ void *Switch_to_Jinni() {
 			///*
 			struct in_addr *temp = (struct in_addr *) malloc(
 					sizeof(struct in_addr));
-			temp->s_addr = hostip;
+			if (hostip) {
+				temp->s_addr = hostip;
+			} else {
+				temp->s_addr = 0;
+			}
 			struct in_addr *temp2 = (struct in_addr *) malloc(
 					sizeof(struct in_addr));
-			temp2->s_addr = dstip;
+			if (dstip) {
+				temp2->s_addr = dstip;
+			} else {
+				temp2->s_addr = 0;
+			}
 			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol,
 					inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol,
@@ -356,6 +364,7 @@ void *Switch_to_Jinni() {
 				sem_getvalue(&(jinniSockets[index].Qs), &value);
 				PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
 				sem_wait(&(jinniSockets[index].Qs));
+
 				/**
 				 * TODO Replace The data Queue with a pipeLine at least for
 				 * the RAW DATA in order to find a natural way to support

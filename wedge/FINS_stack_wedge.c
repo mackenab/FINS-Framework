@@ -2324,7 +2324,7 @@ static void teardown_FINS_netlink(void) {
  * Note: the init and exit functions must be defined (or declared/declared in header file) before the macros are called
  */
 static int __init FINS_stack_wedge_init(void) {
-	PRINT_DEBUG("#################################");
+	PRINT_DEBUG("############################################");
 	PRINT_DEBUG("Loading the FINS_stack_wedge module");
 	setup_FINS_protocol();
 	setup_FINS_netlink();
