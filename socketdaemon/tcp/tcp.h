@@ -12,7 +12,7 @@
 #include <metadata.h>
 #include <finsdebug.h>
 #include <stdint.h>
-#include <sys/time.h> //TODO might not need
+#include <sys/time.h>
 #include <sys/timerfd.h>
 #include <semaphore.h>
 
@@ -58,7 +58,7 @@ struct tcp_segment {
 
 //structure for a record of a tcp_queue
 struct tcp_node {
-	struct tcp_node* next; //Next item in the list
+	struct tcp_node *next; //Next item in the list
 	uint8_t *data; //Actual data
 	uint32_t len;
 	uint32_t seq_num;
@@ -74,11 +74,12 @@ struct tcp_queue {
 	sem_t sem;
 };
 
-struct tcp_queue* queue_create(uint32_t max);
-void queue_append(struct tcp_queue *queue, uint8_t* data, uint32_t len,
+struct tcp_queue *queue_create(uint32_t max);
+void queue_append(struct tcp_queue *queue, uint8_t *data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
-int queue_insert(struct tcp_queue *queue, uint8_t* data, uint32_t len,
+int queue_insert(struct tcp_queue *queue, uint8_t *data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
+struct tcp_node *queue_find_next(struct tcp_queue *queue, uint32_t seq_end);
 struct tcp_node *queue_remove_front(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
@@ -86,7 +87,7 @@ int queue_has_space(struct tcp_queue *queue, uint32_t len);
 
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
-	struct tcp_connection * next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
+	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
 	int state;
 	sem_t conn_sem; //for next, state, write_threads
 	//some type of option state
@@ -95,6 +96,7 @@ struct tcp_connection {
 	int recv_threads;
 
 	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
+	sem_t write_wait_sem;
 	//sem_t read_sem; //TODO: prob don't need
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
@@ -111,6 +113,7 @@ struct tcp_connection {
 	uint8_t main_wait_flag;
 	sem_t main_wait_sem;
 
+	//TODO flag sem?
 	uint8_t running_flag;
 	uint8_t first_flag;
 	uint8_t delayed_flag;
@@ -130,20 +133,22 @@ struct tcp_connection {
 
 	uint32_t host_seq_num; //seq of host sendbase
 	uint32_t host_seq_end; //seq of host last sent
-	uint16_t host_max_window; //avail bytes in host recv buffer
+	uint16_t host_max_window; //max bytes in host recv buffer
 	uint16_t host_window; //avail bytes in host recv buffer
 
 	uint32_t rem_seq_num; //seq of rem sendbase
 	uint32_t rem_seq_end; //seq of rem last sent
-	uint16_t rem_max_window;
+	uint16_t rem_max_window; //max bytes in rem recv buffer
 	uint16_t rem_window; //avail bytes in rem recv buffer
 
-	unsigned int congState;
-	double congWindow;
-	unsigned int threshhold;
+	sem_t cong_sem;
+	uint32_t cong_state;
+	double cong_window;
+	double threshhold;
 
-	unsigned int firstRTT;
-	unsigned int seqEndRTT;
+	//TODO rtt sem?
+	uint32_t firstRTT;
+	uint32_t seqEndRTT;
 	struct timeval stampRTT;
 	double estRTT;
 	double devRTT;
@@ -152,8 +157,8 @@ struct tcp_connection {
 
 //TODO raise any of these?
 #define DEFAULT_MAX_QUEUE 65535
-#define MAX_RECV_THREADS 2
-#define MAX_WRITE_THREADS 2
+#define MAX_RECV_THREADS 10
+#define MAX_WRITE_THREADS 10
 #define MAX_CONNECTIONS 512
 
 //connection states //TODO: figure out
@@ -161,10 +166,10 @@ struct tcp_connection {
 #define CONN_CONNECTED 1
 
 sem_t conn_list_sem;
-struct tcp_connection* conn_create(uint32_t host_addr, uint16_t host_port,
+struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 		uint32_t rem_addr, uint16_t rem_port);
 void conn_append(struct tcp_connection *conn);
-struct tcp_connection* conn_find(uint32_t host_addr, uint16_t host_port,
+struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 		uint32_t rem_addr, uint16_t rem_port);
 void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
@@ -173,24 +178,24 @@ void startTimer(int fd, double millis);
 void stopTimer(int fd);
 
 struct tcp_thread_data {
-	struct tcp_connection* conn;
-	struct tcp_segment* tcp_seg;
+	struct tcp_connection *conn;
+	struct tcp_segment *tcp_seg;
 };
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
 void tcp_get_FF();
-void tcp_to_switch(struct finsFrame * ff); //Send a finsFrame to the switch's queue
+void tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 
 //More specific, internal functions for dealing with the data and all that
-//uint16_t TCP_checksum(struct finsFrame * ff); //Calculate the checksum of this TCP segment
+//uint16_t TCP_checksum(struct finsFrame *ff); //Calculate the checksum of this TCP segment
 uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
 		struct tcp_segment *tcp_seg);
 void tcp_srand(); //Seed the random number generator
 int tcp_rand(); //Get a random number
 
-struct finsFrame* tcp_to_fins(struct tcp_segment* tcp);
-struct tcp_segment* fins_to_tcp(struct finsFrame* ff);
+struct finsFrame *tcp_to_fins(struct tcp_segment *tcp);
+struct tcp_segment *fins_to_tcp(struct finsFrame *ff);
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 

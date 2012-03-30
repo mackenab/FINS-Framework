@@ -19,44 +19,89 @@ void *recv_thread(void *local) {
 	struct tcp_connection *conn = data->conn;
 	struct tcp_segment *tcp_seg = data->tcp_seg;
 
-	//PRINT_DEBUG("thread for conn=%d", conn);
+	uint16_t calc;
+	struct tcp_node *node;
+	struct tcp_node *temp;
 
-	/*
-	 //First things first. Check the checksum, and discard if it's bad.
-	 if (TCP_checksum(ff)) //check if this function works correctly
-	 {
-	 //Packet is bad if checksum != 0
-	 PRINT_DEBUG("Bad checksum in TCP packet. Dropping...");
-	 return;
-	 }
-	 */
+	calc = tcp_checksum(conn->rem_addr, conn->host_addr, tcp_seg);
 
-	//if ACK
-	//if data
-	/*
-	 while ((ret = sem_wait(&conn->recv_queue->sem)) == -1
-	 && errno == EINTR)
-	 ;
-	 if (ret == -1 && errno != EINTR) {
-	 PRINT_ERROR("sem_wait prob");
-	 exit(-1);
-	 }
+	if (tcp_seg->checksum != calc) {
+		PRINT_ERROR("Checksum: recv=%u calc=%u\n", tcp_seg->checksum, calc);
+	} else {
+		if (tcp_seg->flags & FLAG_ACK) {
+			//check if valid ACK
+			if (conn->host_seq_num <= tcp_seg->ack_num
+					&& tcp_seg->ack_num <= conn->host_seq_end) {
+				if (sem_wait(&conn->send_queue->sem)) {
+					PRINT_ERROR("conn->send_queue wait prob");
+					exit(-1);
+				}
 
-	 if (has_space(conn->recv_queue, tcp_seg->datalen)) {
-	 if (insert_FF(conn->recv_queue, ff, tcp_seg->seq_num,
-	 tcp_seg->datalen)) {
-	 PRINT_DEBUG("Duplicate or overlapping. Dropping...");
-	 } else {
-	 //fine
-	 }
+				if (tcp_seg->ack_num == conn->host_seq_num) {
+					//check for FR
+					if (conn->gbn_flag) {
+						conn->first_flag = 1;
+					}
 
-	 } else {
-	 PRINT_DEBUG("Recv queue overflow. Dropping...");
-	 }
+					//Cong
 
-	 sem_post(&conn->recv_queue->sem);
-	 */
+					//dup++
+				} else if (tcp_seg->ack_num == conn->host_seq_end) {
+					//remove all
+					while (!queue_is_empty(conn->send_queue)) {
+						temp = queue_remove_front(conn->send_queue);
+						free(temp->data);
+						free(temp);
+					}
 
+					conn->host_seq_num = tcp_seg->ack_num;
+					if (conn->gbn_flag) {
+						conn->first_flag = 1;
+					}
+
+					//RTT
+
+					//Cong
+
+					//dup = 0
+				} else {
+					node = conn->send_queue->front;
+					while (node != NULL) {
+						if (tcp_seg->ack_num == node->seq_num) {
+							break;
+						}
+						node = node->next;
+					}
+					if (node != NULL) {
+						while (!queue_is_empty(conn->send_queue)
+								&& conn->send_queue->front != node) {
+							temp = queue_remove_front(conn->send_queue);
+
+							free(temp->data);
+							free(temp);
+						}
+
+						//valid ACK
+						conn->host_seq_num = tcp_seg->ack_num;
+						if (conn->gbn_flag) {
+							conn->first_flag = 1;
+						}
+
+						//RTT
+
+						//Cong
+
+						//dup = 0
+					} else {
+						PRINT_DEBUG("Invalid ACK: was not sent.");
+					}
+				}
+				sem_post(&conn->send_queue->sem);
+			} else {
+				PRINT_DEBUG("Invalid ACK: out of sent window.");
+			}
+		}
+	}
 }
 
 void tcp_in(struct finsFrame *ff) {
@@ -84,26 +129,30 @@ void tcp_in(struct finsFrame *ff) {
 		sem_post(&conn_list_sem);
 
 		if (conn) {
-			if (sem_wait(&conn->conn_sem)) {
-				PRINT_ERROR("conn->conn_sem wait prob");
-				exit(-1);
-			}
-			if (conn->recv_threads < MAX_RECV_THREADS) {
-				data = (struct tcp_thread_data *) malloc(
-						sizeof(struct tcp_thread_data));
-				data->conn = conn;
-				data->tcp_seg = tcp_seg;
-
-				if (pthread_create(&thread, NULL, recv_thread, (void *) conn)) {
-					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+			if (conn->running_flag) {
+				if (sem_wait(&conn->conn_sem)) {
+					PRINT_ERROR("conn->conn_sem wait prob");
 					exit(-1);
 				}
-				conn->recv_threads++;
-			} else {
-				PRINT_DEBUG("Too many recv threads=%d. Dropping...",
-						conn->recv_threads);
+				if (conn->recv_threads < MAX_RECV_THREADS) {
+					data = (struct tcp_thread_data *) malloc(
+							sizeof(struct tcp_thread_data));
+					data->conn = conn;
+					data->tcp_seg = tcp_seg;
+
+					if (pthread_create(&thread, NULL, recv_thread,
+							(void *) conn)) {
+						PRINT_ERROR(
+								"ERROR: unable to create recv_thread thread.");
+						exit(-1);
+					}
+					conn->recv_threads++;
+				} else {
+					PRINT_DEBUG("Too many recv threads=%d. Dropping...",
+							conn->recv_threads);
+				}
+				sem_post(&conn->conn_sem);
 			}
-			sem_post(&conn->conn_sem);
 		} else {
 			PRINT_DEBUG("Found no connection. Dropping...");
 		}

@@ -64,6 +64,15 @@ void *write_thread(void *local) {
 				PRINT_DEBUG("posting to wait_sem\n");
 				sem_post(&conn->main_wait_sem);
 			}
+		} else {
+			PRINT_DEBUG("waiting on send_wait_sem len=%d\n",
+					conn->write_queue->len);
+			if (sem_wait(&conn->write_wait_sem)) {
+				PRINT_ERROR("conn->send_wait_sem prod");
+				exit(-1);
+			}
+			sem_init(&conn->write_wait_sem, 0, 0);
+			PRINT_DEBUG("left conn->send_wait_sem\n");
 		}
 
 		sem_post(&conn->write_queue->sem);
@@ -108,27 +117,30 @@ void tcp_out(struct finsFrame *ff) {
 		}
 		sem_post(&conn_list_sem);
 
-		if (sem_wait(&conn->conn_sem)) {
-			PRINT_ERROR("conn->conn_sem wait prob");
-			exit(-1);
-		}
-		if (conn->write_threads < MAX_WRITE_THREADS) {
-			data = (struct tcp_thread_data *) malloc(
-					sizeof(struct tcp_thread_data));
-			data->conn = conn;
-			data->tcp_seg = tcp_seg;
-
-			//spin off thread to handle
-			if (pthread_create(&thread, NULL, write_thread, (void *) data)) {
-				PRINT_ERROR("ERROR: unable to create write_thread thread.");
+		if (conn->running_flag) { //TODO: check if need
+			if (sem_wait(&conn->conn_sem)) {
+				PRINT_ERROR("conn->conn_sem wait prob");
 				exit(-1);
 			}
-			conn->write_threads++;
-		} else {
-			PRINT_DEBUG("Too many write threads=%d. Dropping...",
-					conn->write_threads);
+			if (conn->write_threads < MAX_WRITE_THREADS) {
+				data = (struct tcp_thread_data *) malloc(
+						sizeof(struct tcp_thread_data));
+				data->conn = conn;
+				data->tcp_seg = tcp_seg;
+
+				//spin off thread to handle
+				if (pthread_create(&thread, NULL, write_thread,
+						(void *) data)) {
+					PRINT_ERROR("ERROR: unable to create write_thread thread.");
+					exit(-1);
+				}
+				conn->write_threads++;
+			} else {
+				PRINT_DEBUG("Too many write threads=%d. Dropping...",
+						conn->write_threads);
+			}
+			sem_post(&conn->conn_sem);
 		}
-		sem_post(&conn->conn_sem);
 	} else {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");
 	}
