@@ -79,6 +79,9 @@ void *write_thread(void *local) {
 	}
 
 	sem_post(&conn->write_sem);
+
+	free(tcp_seg->data);
+	free(tcp_seg);
 }
 
 void tcp_out(struct finsFrame *ff) {
@@ -129,8 +132,7 @@ void tcp_out(struct finsFrame *ff) {
 				data->tcp_seg = tcp_seg;
 
 				//spin off thread to handle
-				if (pthread_create(&thread, NULL, write_thread,
-						(void *) data)) {
+				if (pthread_create(&thread, NULL, write_thread, (void *) data)) {
 					PRINT_ERROR("ERROR: unable to create write_thread thread.");
 					exit(-1);
 				}
@@ -144,4 +146,7 @@ void tcp_out(struct finsFrame *ff) {
 	} else {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");
 	}
+
+	free(ff->dataFrame.pdu);
+	free(ff);
 }

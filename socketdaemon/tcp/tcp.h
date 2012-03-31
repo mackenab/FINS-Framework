@@ -15,6 +15,7 @@
 #include <sys/time.h>
 #include <sys/timerfd.h>
 #include <semaphore.h>
+#include <math.h>
 
 //Macros for the TCP header
 
@@ -38,23 +39,6 @@
 //typedef unsigned long IP4addr; /*  internet address			*/
 #define TCP_PROTOCOL 6
 #define IP_HEADERSIZE 12
-
-//Structure for TCP segments (Straight from the RFC, just in struct form)
-struct tcp_segment {
-	uint16_t src_port; //Source port
-	uint16_t dst_port; //Destination port
-	uint32_t seq_num; //Sequence number
-	uint32_t ack_num; //Acknowledgment number
-	uint16_t flags; //Flags and data offset
-	uint16_t win_size; //Window size
-	uint16_t checksum; //TCP checksum
-	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
-	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
-	int opt_len; //length of the options in bytes
-	uint8_t *data; //Actual TCP segment data
-	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
-};
 
 //structure for a record of a tcp_queue
 struct tcp_node {
@@ -85,6 +69,11 @@ int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 //TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
 
+enum CONG_STATE /* Defines an enumeration type    */
+{
+	SLOWSTART, AVOIDANCE, RECOVERY, INITIAL
+};
+
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
 	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
@@ -92,22 +81,22 @@ struct tcp_connection {
 	sem_t conn_sem; //for next, state, write_threads
 	//some type of option state
 
-	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
-	int recv_threads;
-
-	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
-	sem_t write_wait_sem;
-	//sem_t read_sem; //TODO: prob don't need
-
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
 	uint32_t rem_addr; //IP address of remote machine
 	uint16_t rem_port; //Port on remote machine
 
-	struct tcp_queue *write_queue; //buffer for raw FDF to be transfered
-	struct tcp_queue *send_queue; //buffer for sent UDP FDF that are unACKed
-	struct tcp_queue *recv_queue; //buffer for recv UDP FDF that are unACKed
-	struct tcp_queue *read_queue; //buffer for raw FDF that have been transfered //TODO might not need
+	struct tcp_queue *write_queue; //buffer for raw data to be transfered
+	struct tcp_queue *send_queue; //buffer for sent FDF cont. tcp_seg that are unACKed
+	struct tcp_queue *recv_queue; //buffer for recv tcp_seg that are unACKed
+	struct tcp_queue *read_queue; //buffer for raw data that have been transfered //TODO push straight to daemon?
+
+	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
+	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
+	sem_t write_wait_sem;
+
+	int recv_threads;
+	//sem_t read_sem; //TODO: prob don't need
 
 	pthread_t main_thread;
 	uint8_t main_wait_flag;
@@ -115,20 +104,23 @@ struct tcp_connection {
 
 	//TODO flag sem?
 	uint8_t running_flag;
-	uint8_t first_flag;
-	uint8_t delayed_flag;
 	uint8_t fast_flag;
 	uint8_t gbn_flag;
+	uint8_t first_flag;
+	uint8_t delayed_flag;
+
+	uint32_t duplicate;
 
 	int to_gbn_fd; //GBN timeout occurred
 	pthread_t to_gbn_thread;
 	uint8_t to_gbn_flag;
 
+	//TODO do need sem?
 	int to_delayed_fd; //delayed ACK TO occurred
 	pthread_t to_delayed_thread;
 	uint8_t to_delayed_flag;
 
-	//values agreed upon during setup
+	//-----values agreed upon during setup
 	uint16_t MSS; //max segment size
 
 	uint32_t host_seq_num; //seq of host sendbase
@@ -140,18 +132,21 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer
 	uint16_t rem_window; //avail bytes in rem recv buffer
+	//-----
 
 	sem_t cong_sem;
-	uint32_t cong_state;
+	enum CONG_STATE cong_state;
 	double cong_window;
 	double threshhold;
 
-	//TODO rtt sem?
-	uint32_t firstRTT;
-	uint32_t seqEndRTT;
-	struct timeval stampRTT;
-	double estRTT;
-	double devRTT;
+	sem_t rtt_sem;
+	uint8_t rtt_flag;
+	uint32_t rtt_first;
+	uint32_t rtt_seq_end;
+	struct timeval rtt_stamp;
+	double rtt_est;
+	double rtt_dev;
+
 	double timeout;
 };
 
@@ -160,6 +155,9 @@ struct tcp_connection {
 #define MAX_RECV_THREADS 10
 #define MAX_WRITE_THREADS 10
 #define MAX_CONNECTIONS 512
+#define MIN_GBN_TIMEOUT 1
+#define MAX_GBN_TIMEOUT 10000
+#define DELAYED_TIMEOUT 500
 
 //connection states //TODO: figure out
 #define CONN_SETUP 0
@@ -174,8 +172,30 @@ struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
 int conn_has_space(uint32_t len);
+
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
+void tcp_send_ack(struct tcp_connection *conn);
+
+//Structure for TCP segments (Straight from the RFC, just in struct form)
+struct tcp_segment {
+	uint16_t src_port; //Source port
+	uint16_t dst_port; //Destination port
+	uint32_t seq_num; //Sequence number
+	uint32_t ack_num; //Acknowledgment number
+	uint16_t flags; //Flags and data offset
+	uint16_t win_size; //Window size
+	uint16_t checksum; //TCP checksum
+	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
+	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+	int opt_len; //length of the options in bytes
+	uint8_t *data; //Actual TCP segment data
+	int data_len; //Length of the data. This, of course, is not in the original TCP header.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+};
+
+struct finsFrame *tcp_to_fins(struct tcp_segment *tcp);
+struct tcp_segment *fins_to_tcp(struct finsFrame *ff);
 
 struct tcp_thread_data {
 	struct tcp_connection *conn;
@@ -194,8 +214,6 @@ uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
 void tcp_srand(); //Seed the random number generator
 int tcp_rand(); //Get a random number
 
-struct finsFrame *tcp_to_fins(struct tcp_segment *tcp);
-struct tcp_segment *fins_to_tcp(struct finsFrame *ff);
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
