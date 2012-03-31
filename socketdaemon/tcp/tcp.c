@@ -1,8 +1,7 @@
 /*
- * tcp.c
- *
- *  Created on: Mar 14, 2011
- *      Author: Abdallah Abdallah
+ * @file tcp.c
+ * @date Feb 22, 2012
+ * @author Jonathan Reed
  */
 
 //#include <arpa/inet.h>
@@ -207,6 +206,7 @@ void *main_thread(void *local) {
 	struct tcp_node *front;
 	struct tcp_node *end;
 
+	double cong_space;
 	uint32_t on_wire = 0;
 	struct tcp_segment *tcp_seg;
 	int offset;
@@ -232,7 +232,7 @@ void *main_thread(void *local) {
 			conn->to_gbn_flag = 0;
 			conn->first_flag = 1;
 			conn->gbn_flag = 1;
-			//conn->fast_flag = 0;
+			conn->fast_flag = 0;
 
 			conn->main_wait_flag = 0; //handle cases where TO after set waitFlag
 			sem_init(&conn->main_wait_sem, 0, 0);
@@ -267,9 +267,11 @@ void *main_thread(void *local) {
 			} else { //TODO check if this works
 				on_wire = conn->host_seq_end - conn->host_seq_num + 0xFFFFFFFF;
 			}
+			cong_space = conn->cong_window - on_wire;
 
 			if (!queue_is_empty(conn->write_queue) && conn->rem_window
-					&& on_wire < conn->rem_max_window /* && cong stuff*/) {
+					&& on_wire < conn->rem_max_window
+					&& cong_space >= conn->MSS) {
 				PRINT_DEBUG("sending packet");
 
 				tcp_seg = (struct tcp_segment *) malloc(
@@ -318,7 +320,9 @@ void *main_thread(void *local) {
 				if (data_len > conn->rem_window) { //leave for now, move to outside if for Nagle
 					data_len = conn->rem_window;
 				}
-				//TODO cong stuff
+				if (data_len > cong_space) { //TODO unneeded if (cong_space >= MSS) kept, keep if change to (cong_space > 0)
+					data_len = (int) cong_space;
+				}
 
 				tcp_seg->data_len = data_len;
 				tcp_seg->data = (uint8_t *) malloc(data_len);
@@ -350,18 +354,13 @@ void *main_thread(void *local) {
 				tcp_seg->checksum = tcp_checksum(conn->host_addr,
 						conn->rem_addr, tcp_seg);
 
-				ff = tcp_to_fins(tcp_seg);
-				metadata_writeToElement(ff->dataFrame.metaData, "srcip",
-						&(conn->host_addr), META_TYPE_INT);
-				metadata_writeToElement(ff->dataFrame.metaData, "dstip",
-						&(conn->rem_addr), META_TYPE_INT);
-
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->write_queue->sem wait prob");
 					exit(-1);
 				}
-				if (queue_insert(conn->send_queue, (uint8_t *) ff, data_len,
-						tcp_seg->seq_num, tcp_seg->seq_num + data_len - 1)) { //TODO: change to tcp_seg so flags/options can be changed?
+				if (queue_insert(conn->send_queue, (uint8_t *) tcp_seg,
+						data_len, tcp_seg->seq_num,
+						tcp_seg->seq_num + data_len - 1)) { //TODO: change to tcp_seg so flags/options can be changed?
 					//problem
 					PRINT_DEBUG("send_queue insert error");
 					exit(-1);
@@ -370,11 +369,18 @@ void *main_thread(void *local) {
 				conn->host_seq_end += data_len;
 				sem_post(&conn->send_queue->sem);
 
+				ff = tcp_to_fins(tcp_seg);
+				metadata_writeToElement(ff->dataFrame.metaData, "srcip",
+						&(conn->host_addr), META_TYPE_INT);
+				metadata_writeToElement(ff->dataFrame.metaData, "dstip",
+						&(conn->rem_addr), META_TYPE_INT);
+
 				tcp_to_switch(ff); //send segment
 
 				//TODO: add rtt_sem?
-				if (conn->rtt_seq_end == 0) {
+				if (conn->rtt_flag == 0) {
 					gettimeofday(&conn->rtt_stamp, 0);
+					conn->rtt_flag = 1;
 					conn->rtt_seq_end = conn->host_seq_end;
 					PRINT_DEBUG("setting seqEndRTT=%d stampRTT=(%d, %d)\n",
 							conn->rtt_seq_end, conn->rtt_stamp.tv_sec,
@@ -459,6 +465,7 @@ void startTimer(int fd, double millis) {
 void tcp_send_ack(struct tcp_connection *conn) {
 	struct tcp_segment *tcp_seg;
 	struct finsFrame *ff;
+	int offset;
 
 	//ack code
 	tcp_seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
@@ -483,8 +490,8 @@ void tcp_send_ack(struct tcp_connection *conn) {
 	tcp_seg->checksum = tcp_checksum(conn->host_addr, conn->rem_addr, tcp_seg);
 
 	ff = tcp_to_fins(tcp_seg);
-	metadata_writeToElement(ff->dataFrame.metaData, "srcip",
-			&(conn->host_addr), META_TYPE_INT);
+	metadata_writeToElement(ff->dataFrame.metaData, "srcip", &(conn->host_addr),
+			META_TYPE_INT);
 	metadata_writeToElement(ff->dataFrame.metaData, "dstip", &(conn->rem_addr),
 			META_TYPE_INT);
 
@@ -502,54 +509,48 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 
 	sem_init(&conn->conn_sem, 0, 1);
 	conn->state = CONN_SETUP; //TODO: here?
-	conn->running_flag = 1;
 
 	conn->host_addr = host_addr;
 	conn->host_port = host_port;
 	conn->rem_addr = rem_addr;
 	conn->rem_port = rem_port;
 
-	sem_init(&conn->write_sem, 0, 1);
-	sem_init(&conn->write_wait_sem, 0, 0);
-
-	sem_init(&conn->cong_sem, 0, 1);
-	sem_init(&conn->rtt_sem, 0, 1);
-
 	conn->write_queue = queue_create(DEFAULT_MAX_QUEUE); //TODO: could wait on this
 	conn->send_queue = queue_create(DEFAULT_MAX_QUEUE);
 	conn->recv_queue = queue_create(DEFAULT_MAX_QUEUE);
-	conn->read_queue = queue_create(DEFAULT_MAX_QUEUE);
+	conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //TODO might not need
 
-	//initial values
+	conn->main_wait_flag = 0;
+	sem_init(&conn->main_wait_sem, 0, 0);
+
+	conn->write_threads = 0;
+	sem_init(&conn->write_sem, 0, 1);
+	sem_init(&conn->write_wait_sem, 0, 0);
+
+	conn->recv_threads = 0;
+
+	sem_init(&conn->flag_sem, 0, 1); //TODO remove if not used
+	conn->running_flag = 1;
+	conn->first_flag = 1;
+
 	conn->duplicate = 0;
+	conn->fast_flag = 0;
 
-	//setup threads
-	if (pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create main_thread thread.");
-		exit(-1);
-	}
+	conn->to_gbn_flag = 0;
+	conn->gbn_flag = 0;
 
-	//setup timers
-	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (conn->to_gbn_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create to_fd.");
-		exit(-1);
-	}
-	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread, (void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-		exit(-1);
-	}
+	conn->delayed_flag = 0;
+	conn->to_delayed_flag = 0;
 
-	conn->to_delayed_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (conn->to_delayed_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create delayed_fd.");
-		exit(-1);
-	}
-	if (pthread_create(&conn->to_delayed_thread, NULL, to_delayed_thread,
-			(void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-		exit(-1);
-	}
+	sem_init(&conn->cong_sem, 0, 1);
+	conn->cong_state = INITIAL;
+	conn->cong_window = conn->MSS;
+
+	sem_init(&conn->rtt_sem, 0, 1); //TODO remove if not used
+	conn->rtt_flag = 0;
+	conn->rtt_first = 1;
+
+	conn->timeout = DEFAULT_GBN_TIMEOUT;
 
 	//TODO ---agree on these values during setup
 	conn->MSS = 1024;
@@ -565,10 +566,40 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	conn->rem_window = 65535;
 	//---
 
-	//TODO after setup set!
+	//TODO ----set after setup
 	conn->cong_state = SLOWSTART;
 	conn->cong_window = conn->MSS;
-	conn->threshhold = conn->rem_max_window/2.0;
+	conn->threshhold = conn->rem_max_window / 2.0;
+	//----
+
+	//setup timers
+	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
+	if (conn->to_gbn_fd == -1) {
+		PRINT_ERROR("ERROR: unable to create to_fd.");
+		exit(-1);
+	}
+	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread,
+			(void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+		exit(-1);
+	}
+
+	conn->to_delayed_fd = timerfd_create(CLOCK_REALTIME, 0);
+	if (conn->to_delayed_fd == -1) {
+		PRINT_ERROR("ERROR: unable to create delayed_fd.");
+		exit(-1);
+	}
+	if (pthread_create(&conn->to_delayed_thread, NULL, to_delayed_thread,
+			(void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+		exit(-1);
+	}
+
+	//start main thread
+	if (pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn)) {
+		PRINT_ERROR("ERROR: unable to create main_thread thread.");
+		exit(-1);
+	}
 
 	return conn;
 }
@@ -784,8 +815,7 @@ struct tcp_segment *fins_to_tcp(struct finsFrame *ff) {
 	}
 
 	//And fill in the data length and the data, also
-	tcpreturn->data_len = ff->dataFrame.pduLength
-			- HEADERSIZE(tcpreturn->flags);
+	tcpreturn->data_len = ff->dataFrame.pduLength - HEADERSIZE(tcpreturn->flags);
 	if (tcpreturn->data_len > 0) {
 		tcpreturn->data = (uint8_t*) malloc(tcpreturn->data_len);
 		int i;
@@ -900,16 +930,16 @@ uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
 	sum += ((uint16_t)(src_addr >> 16)) + ((uint16_t)(src_addr & 0xFFFF));
 	sum += ((uint16_t)(dst_addr >> 16)) + ((uint16_t)(dst_addr & 0xFFFF));
 	sum += (uint16_t) TCP_PROTOCOL;
-	sum += (uint16_t)(IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags)
-			+ tcp_seg->data_len);
+	sum += (uint16_t)(
+			IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags) + tcp_seg->data_len);
 
 	//fake TCP header
 	sum += tcp_seg->src_port;
 	sum += tcp_seg->dst_port;
-	sum += ((uint16_t)(tcp_seg->seq_num >> 16)) + ((uint16_t)(tcp_seg->seq_num
-			& 0xFFFF));
-	sum += ((uint16_t)(tcp_seg->ack_num >> 16)) + ((uint16_t)(tcp_seg->ack_num
-			& 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->seq_num >> 16))
+			+ ((uint16_t)(tcp_seg->seq_num & 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->ack_num >> 16))
+			+ ((uint16_t)(tcp_seg->ack_num & 0xFFFF));
 	sum += tcp_seg->flags;
 	sum += tcp_seg->win_size;
 	//sum += tcp_seg->checksum;

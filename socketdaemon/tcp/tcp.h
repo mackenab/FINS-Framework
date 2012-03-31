@@ -1,8 +1,7 @@
 /*
- * tcp.h
- *
- *  Created on: Mar 12, 2011
- *      Author: Abdallah Abdallah
+ * @file tcp.h
+ * @date Feb 22, 2012
+ * @author Jonathan Reed
  */
 
 #ifndef TCP_H_
@@ -71,14 +70,14 @@ int queue_has_space(struct tcp_queue *queue, uint32_t len);
 
 enum CONG_STATE /* Defines an enumeration type    */
 {
-	SLOWSTART, AVOIDANCE, RECOVERY, INITIAL
+	INITIAL, SLOWSTART, AVOIDANCE, RECOVERY
 };
 
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
 	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
-	int state;
 	sem_t conn_sem; //for next, state, write_threads
+	int state;
 	//some type of option state
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
@@ -87,9 +86,13 @@ struct tcp_connection {
 	uint16_t rem_port; //Port on remote machine
 
 	struct tcp_queue *write_queue; //buffer for raw data to be transfered
-	struct tcp_queue *send_queue; //buffer for sent FDF cont. tcp_seg that are unACKed
+	struct tcp_queue *send_queue; //buffer for sent tcp_seg that are unACKed
 	struct tcp_queue *recv_queue; //buffer for recv tcp_seg that are unACKed
 	struct tcp_queue *read_queue; //buffer for raw data that have been transfered //TODO push straight to daemon?
+
+	pthread_t main_thread;
+	uint8_t main_wait_flag;
+	sem_t main_wait_sem;
 
 	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
 	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
@@ -98,41 +101,23 @@ struct tcp_connection {
 	int recv_threads;
 	//sem_t read_sem; //TODO: prob don't need
 
-	pthread_t main_thread;
-	uint8_t main_wait_flag;
-	sem_t main_wait_sem;
-
-	//TODO flag sem?
+	sem_t flag_sem; //TODO: remove if not used
 	uint8_t running_flag;
-	uint8_t fast_flag;
-	uint8_t gbn_flag;
 	uint8_t first_flag;
-	uint8_t delayed_flag;
 
 	uint32_t duplicate;
+	uint8_t fast_flag;
 
 	int to_gbn_fd; //GBN timeout occurred
 	pthread_t to_gbn_thread;
-	uint8_t to_gbn_flag;
+	uint8_t to_gbn_flag; //1 GBN timeout occurred
+	uint8_t gbn_flag; //1 performing GBN
 
 	//TODO do need sem?
 	int to_delayed_fd; //delayed ACK TO occurred
 	pthread_t to_delayed_thread;
-	uint8_t to_delayed_flag;
-
-	//-----values agreed upon during setup
-	uint16_t MSS; //max segment size
-
-	uint32_t host_seq_num; //seq of host sendbase
-	uint32_t host_seq_end; //seq of host last sent
-	uint16_t host_max_window; //max bytes in host recv buffer
-	uint16_t host_window; //avail bytes in host recv buffer
-
-	uint32_t rem_seq_num; //seq of rem sendbase
-	uint32_t rem_seq_end; //seq of rem last sent
-	uint16_t rem_max_window; //max bytes in rem recv buffer
-	uint16_t rem_window; //avail bytes in rem recv buffer
-	//-----
+	uint8_t to_delayed_flag; //1 delayed ack timeout occured
+	uint8_t delayed_flag; //0 no delayed ack, 1 delayed ack
 
 	sem_t cong_sem;
 	enum CONG_STATE cong_state;
@@ -148,6 +133,20 @@ struct tcp_connection {
 	double rtt_dev;
 
 	double timeout;
+
+	//-----values agreed upon during setup
+	uint16_t MSS; //max segment size
+
+	uint32_t host_seq_num; //seq of host sendbase
+	uint32_t host_seq_end; //seq of host last sent
+	uint16_t host_max_window; //max bytes in host recv buffer
+	uint16_t host_window; //avail bytes in host recv buffer
+
+	uint32_t rem_seq_num; //seq of rem sendbase
+	uint32_t rem_seq_end; //seq of rem last sent
+	uint16_t rem_max_window; //max bytes in rem recv buffer
+	uint16_t rem_window; //avail bytes in rem recv buffer
+//-----
 };
 
 //TODO raise any of these?
@@ -157,6 +156,7 @@ struct tcp_connection {
 #define MAX_CONNECTIONS 512
 #define MIN_GBN_TIMEOUT 1
 #define MAX_GBN_TIMEOUT 10000
+#define DEFAULT_GBN_TIMEOUT 50
 #define DELAYED_TIMEOUT 500
 
 //connection states //TODO: figure out
@@ -191,7 +191,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 struct finsFrame *tcp_to_fins(struct tcp_segment *tcp);

@@ -1,8 +1,7 @@
 /*
  * @file tcp_out.c
- *
- *  @date Jun 21, 2011
- *      @author Abdallah Abdallah
+ * @date Feb 22, 2012
+ * @author Jonathan Reed
  */
 
 #include <stdio.h>
@@ -132,7 +131,8 @@ void tcp_out(struct finsFrame *ff) {
 				data->tcp_seg = tcp_seg;
 
 				//spin off thread to handle
-				if (pthread_create(&thread, NULL, write_thread, (void *) data)) {
+				if (pthread_create(&thread, NULL, write_thread,
+						(void *) data)) {
 					PRINT_ERROR("ERROR: unable to create write_thread thread.");
 					exit(-1);
 				}

@@ -1,8 +1,7 @@
 /*
  * @file tcp_in.c
- *
- *  @date Jun 21, 2011
- *      @author Abdallah Abdallah
+ * @date Feb 22, 2012
+ * @author Jonathan Reed
  */
 
 #include <stdio.h>
@@ -11,8 +10,6 @@
 #include <string.h>
 #include <errno.h>
 #include "tcp.h"
-
-extern struct tcp_connection* conn_list; //The list of current connections we have
 
 void calcRTT(struct tcp_connection *conn) {
 	struct timeval current;
@@ -29,7 +26,7 @@ void calcRTT(struct tcp_connection *conn) {
 	PRINT_DEBUG("old sampleRTT=%f estRTT=%f devRTT=%f timout=%f\n", sampRTT,
 			conn->rtt_est, conn->rtt_dev, conn->timeout);
 
-	conn->rtt_seq_end = 0;
+	conn->rtt_flag = 0;
 
 	if (conn->rtt_stamp.tv_usec > current.tv_usec) {
 		decimal = (1000000.0 + current.tv_usec - conn->rtt_stamp.tv_usec)
@@ -49,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
-				- conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev
+				+ beta * fabs(sampRTT - conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -72,7 +69,8 @@ void *recv_thread(void *local) {
 
 	uint16_t calc;
 	struct tcp_node *node;
-	struct tcp_node *temp;
+	struct tcp_node *temp_node;
+	struct tcp_segment *temp_seg;
 
 	uint32_t seq_end;
 
@@ -82,8 +80,8 @@ void *recv_thread(void *local) {
 	} else {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (conn->host_seq_num <= tcp_seg->ack_num && tcp_seg->ack_num
-					<= conn->host_seq_end) {
+			if (conn->host_seq_num <= tcp_seg->ack_num
+					&& tcp_seg->ack_num <= conn->host_seq_end) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
@@ -103,7 +101,7 @@ void *recv_thread(void *local) {
 
 						//RTT
 						//TODO rtt sem?
-						conn->rtt_seq_end = 0;
+						conn->rtt_flag = 0;
 						startTimer(conn->to_gbn_fd, conn->timeout);
 
 						//Cong
@@ -122,8 +120,8 @@ void *recv_thread(void *local) {
 							if (conn->threshhold < conn->MSS) {
 								conn->threshhold = conn->MSS;
 							}
-							conn->cong_window = conn->threshhold + 3
-									* conn->MSS;
+							conn->cong_window = conn->threshhold
+									+ 3 * conn->MSS;
 							break;
 						case RECOVERY:
 							//conn->fast_flag = 0;
@@ -139,11 +137,11 @@ void *recv_thread(void *local) {
 				} else if (tcp_seg->ack_num == conn->host_seq_end) {
 					//remove all
 					while (!queue_is_empty(conn->send_queue)) {
-						temp = queue_remove_front(conn->send_queue);
-						ff = (struct finsFrame *) temp->data;
-						free(ff->dataFrame.pdu);
-						free(ff);
-						free(temp);
+						temp_node = queue_remove_front(conn->send_queue);
+						temp_seg = (struct tcp_segment *) temp_node->data;
+						free(temp_seg->data);
+						free(temp_seg);
+						free(temp_node);
 					}
 
 					conn->host_seq_num = tcp_seg->ack_num;
@@ -156,7 +154,8 @@ void *recv_thread(void *local) {
 					conn->gbn_flag = 0;
 
 					//RTT
-					if (conn->rtt_flag && tcp_seg->ack_num == conn->rtt_seq_end) {
+					if (conn->rtt_flag
+							&& tcp_seg->ack_num == conn->rtt_seq_end) {
 						calcRTT(conn);
 					}
 					stopTimer(conn->to_gbn_fd);
@@ -199,11 +198,11 @@ void *recv_thread(void *local) {
 					if (node != NULL) {
 						while (!queue_is_empty(conn->send_queue)
 								&& conn->send_queue->front != node) {
-							temp = queue_remove_front(conn->send_queue);
-							ff = (struct finsFrame *) temp->data;
-							free(ff->dataFrame.pdu);
-							free(ff);
-							free(temp);
+							temp_node = queue_remove_front(conn->send_queue);
+							temp_seg = (struct tcp_segment *) temp_node->data;
+							free(temp_seg->data);
+							free(temp_seg);
+							free(temp_node);
 						}
 
 						//valid ACK
@@ -218,8 +217,8 @@ void *recv_thread(void *local) {
 						}
 
 						//RTT
-						if (conn->rtt_flag && tcp_seg->ack_num
-								== conn->rtt_seq_end) {
+						if (conn->rtt_flag
+								&& tcp_seg->ack_num == conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						if (!conn->gbn_flag) {
@@ -289,15 +288,15 @@ void *recv_thread(void *local) {
 			//remove /transfer
 			while (!queue_is_empty(conn->recv_queue) && conn->host_window) {
 				if (conn->recv_queue->front->seq_num < conn->rem_seq_num) {
-					temp = queue_remove_front(conn->recv_queue);
-					tcp_seg = (struct tcp_segment *) temp->data;
+					temp_node = queue_remove_front(conn->recv_queue);
+					tcp_seg = (struct tcp_segment *) temp_node->data;
 					free(tcp_seg->data);
 					free(tcp_seg);
-					free(temp);
+					free(temp_node);
 				} else if (conn->recv_queue->front->seq_num
 						== conn->rem_seq_num) {
-					tcp_seg
-							= (struct tcp_segment *) conn->recv_queue->front->data;
+					tcp_seg =
+							(struct tcp_segment *) conn->recv_queue->front->data;
 
 					//TODO: Process Flags
 
@@ -308,11 +307,11 @@ void *recv_thread(void *local) {
 
 					conn->rem_seq_num += tcp_seg->data_len;
 
-					temp = queue_remove_front(conn->recv_queue);
-					tcp_seg = (struct tcp_segment *) temp->data;
+					temp_node = queue_remove_front(conn->recv_queue);
+					//tcp_seg = (struct tcp_segment *) temp_node->data;
 					free(tcp_seg->data);
 					free(tcp_seg);
-					free(temp);
+					free(temp_node);
 				} else {
 					break;
 				}
@@ -336,8 +335,8 @@ void *recv_thread(void *local) {
 			//re-ordered segment
 			seq_end = tcp_seg->seq_num + tcp_seg->data_len;
 
-			if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
-					<= conn->rem_seq_num + conn->host_max_window) {
+			if (conn->rem_seq_num < tcp_seg->seq_num
+					&& seq_end <= conn->rem_seq_num + conn->host_max_window) {
 				int ret = queue_insert(conn->recv_queue, (uint8_t *) tcp_seg,
 						tcp_seg->data_len, tcp_seg->seq_num, seq_end);
 				if (ret) {
