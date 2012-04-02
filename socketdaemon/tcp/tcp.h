@@ -62,7 +62,7 @@ void queue_append(struct tcp_queue *queue, uint8_t *data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
 int queue_insert(struct tcp_queue *queue, uint8_t *data, uint32_t len,
 		uint32_t seq_num, uint32_t seq_end);
-struct tcp_node *queue_find_next(struct tcp_queue *queue, uint32_t seq_end);
+struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num);
 struct tcp_node *queue_remove_front(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
@@ -113,7 +113,6 @@ struct tcp_connection {
 	uint8_t to_gbn_flag; //1 GBN timeout occurred
 	uint8_t gbn_flag; //1 performing GBN
 
-	//TODO do need sem?
 	int to_delayed_fd; //delayed ACK TO occurred
 	pthread_t to_delayed_thread;
 	uint8_t to_delayed_flag; //1 delayed ack timeout occured
@@ -124,7 +123,7 @@ struct tcp_connection {
 	double cong_window;
 	double threshhold;
 
-	sem_t rtt_sem;
+	sem_t rtt_sem; //TODO remove if not used
 	uint8_t rtt_flag;
 	uint32_t rtt_first;
 	uint32_t rtt_seq_end;
@@ -137,16 +136,16 @@ struct tcp_connection {
 	//-----values agreed upon during setup
 	uint16_t MSS; //max segment size
 
-	uint32_t host_seq_num; //seq of host sendbase
+	uint32_t host_seq_num; //seq of host sendbase, tied with send_queue
 	uint32_t host_seq_end; //seq of host last sent
-	uint16_t host_max_window; //max bytes in host recv buffer
+	uint16_t host_max_window; //max bytes in host recv buffer, tied with rem_seq_num/recv_queue
 	uint16_t host_window; //avail bytes in host recv buffer
 
-	uint32_t rem_seq_num; //seq of rem sendbase
+	uint32_t rem_seq_num; //seq of rem sendbase, tied with recv_queue
 	uint32_t rem_seq_end; //seq of rem last sent
-	uint16_t rem_max_window; //max bytes in rem recv buffer
+	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-//-----
+	//-----
 };
 
 //TODO raise any of these?
@@ -158,6 +157,7 @@ struct tcp_connection {
 #define MAX_GBN_TIMEOUT 10000
 #define DEFAULT_GBN_TIMEOUT 50
 #define DELAYED_TIMEOUT 500
+#define MAX_SEQ_NUM 4294967295.0
 
 //connection states //TODO: figure out
 #define CONN_SETUP 0
@@ -175,7 +175,6 @@ int conn_has_space(uint32_t len);
 
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
-void tcp_send_ack(struct tcp_connection *conn);
 
 //Structure for TCP segments (Straight from the RFC, just in struct form)
 struct tcp_segment {
@@ -191,8 +190,12 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
+
+void conn_send_ack(struct tcp_connection *conn);
+void conn_update_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
+void conn_send_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
 
 struct finsFrame *tcp_to_fins(struct tcp_segment *tcp);
 struct tcp_segment *fins_to_tcp(struct finsFrame *ff);

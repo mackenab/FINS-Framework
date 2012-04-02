@@ -107,7 +107,7 @@ void tcp_out(struct finsFrame *ff) {
 		}
 		conn = conn_find(srcip, dstip, tcp_seg->src_port, tcp_seg->dst_port); //TODO check if right
 		if (conn == NULL) {
-			//create a new connection
+			//create a new connection //TODO move to Control Setup
 			if (conn_has_space(1)) {
 				conn = conn_create(srcip, tcp_seg->src_port, dstip,
 						tcp_seg->dst_port);
@@ -148,5 +148,5 @@ void tcp_out(struct finsFrame *ff) {
 	}
 
 	free(ff->dataFrame.pdu);
-	free(ff);
+	freeFinsFrame(ff);
 }

@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
+				- conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -73,6 +73,7 @@ void *recv_thread(void *local) {
 	struct tcp_segment *temp_seg;
 
 	uint32_t seq_end;
+	//uint32_t rem_seq_end;
 
 	calc = tcp_checksum(conn->rem_addr, conn->host_addr, tcp_seg);
 	if (tcp_seg->checksum != calc) {
@@ -80,8 +81,8 @@ void *recv_thread(void *local) {
 	} else {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (conn->host_seq_num <= tcp_seg->ack_num
-					&& tcp_seg->ack_num <= conn->host_seq_end) {
+			if (conn->host_seq_num <= tcp_seg->ack_num && tcp_seg->ack_num
+					<= conn->host_seq_end) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
@@ -120,8 +121,8 @@ void *recv_thread(void *local) {
 							if (conn->threshhold < conn->MSS) {
 								conn->threshhold = conn->MSS;
 							}
-							conn->cong_window = conn->threshhold
-									+ 3 * conn->MSS;
+							conn->cong_window = conn->threshhold + 3
+									* conn->MSS;
 							break;
 						case RECOVERY:
 							//conn->fast_flag = 0;
@@ -154,8 +155,7 @@ void *recv_thread(void *local) {
 					conn->gbn_flag = 0;
 
 					//RTT
-					if (conn->rtt_flag
-							&& tcp_seg->ack_num == conn->rtt_seq_end) {
+					if (conn->rtt_flag && tcp_seg->ack_num == conn->rtt_seq_end) {
 						calcRTT(conn);
 					}
 					stopTimer(conn->to_gbn_fd);
@@ -188,13 +188,7 @@ void *recv_thread(void *local) {
 					}
 					sem_post(&conn->cong_sem);
 				} else {
-					node = conn->send_queue->front;
-					while (node != NULL) {
-						if (tcp_seg->ack_num == node->seq_num) {
-							break;
-						}
-						node = node->next;
-					}
+					node = queue_find(conn->send_queue, tcp_seg->ack_num);
 					if (node != NULL) {
 						while (!queue_is_empty(conn->send_queue)
 								&& conn->send_queue->front != node) {
@@ -217,8 +211,8 @@ void *recv_thread(void *local) {
 						}
 
 						//RTT
-						if (conn->rtt_flag
-								&& tcp_seg->ack_num == conn->rtt_seq_end) {
+						if (conn->rtt_flag && tcp_seg->ack_num
+								== conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						if (!conn->gbn_flag) {
@@ -281,22 +275,38 @@ void *recv_thread(void *local) {
 
 			conn->host_window -= tcp_seg->data_len;
 			conn->rem_seq_num += tcp_seg->data_len;
+			conn->rem_seq_end = conn->rem_seq_num + conn->host_max_window;
 
 			free(tcp_seg->data);
 			free(tcp_seg);
 
 			//remove /transfer
-			while (!queue_is_empty(conn->recv_queue) && conn->host_window) {
+			while (!queue_is_empty(conn->recv_queue)) {
 				if (conn->recv_queue->front->seq_num < conn->rem_seq_num) {
-					temp_node = queue_remove_front(conn->recv_queue);
-					tcp_seg = (struct tcp_segment *) temp_node->data;
-					free(tcp_seg->data);
-					free(tcp_seg);
-					free(temp_node);
+					if (conn->rem_seq_num <= conn->rem_seq_end) {
+						temp_node = queue_remove_front(conn->recv_queue);
+						tcp_seg = (struct tcp_segment *) temp_node->data;
+						conn->host_window += tcp_seg->data_len;
+						free(tcp_seg->data);
+						free(tcp_seg);
+						free(temp_node);
+					} else {
+						if (conn->recv_queue->front->seq_num
+								< conn->rem_seq_end) {
+							break;
+						} else {
+							temp_node = queue_remove_front(conn->recv_queue);
+							tcp_seg = (struct tcp_segment *) temp_node->data;
+							conn->host_window += tcp_seg->data_len;
+							free(tcp_seg->data);
+							free(tcp_seg);
+							free(temp_node);
+						}
+					}
 				} else if (conn->recv_queue->front->seq_num
 						== conn->rem_seq_num) {
-					tcp_seg =
-							(struct tcp_segment *) conn->recv_queue->front->data;
+					tcp_seg
+							= (struct tcp_segment *) conn->recv_queue->front->data;
 
 					//TODO: Process Flags
 
@@ -306,14 +316,30 @@ void *recv_thread(void *local) {
 					//TODO: insert to read_queue/send to daemon
 
 					conn->rem_seq_num += tcp_seg->data_len;
+					conn->rem_seq_end = conn->rem_seq_num
+							+ conn->host_max_window;
 
 					temp_node = queue_remove_front(conn->recv_queue);
-					//tcp_seg = (struct tcp_segment *) temp_node->data;
+					tcp_seg = (struct tcp_segment *) temp_node->data;
 					free(tcp_seg->data);
 					free(tcp_seg);
 					free(temp_node);
 				} else {
-					break;
+					if (conn->rem_seq_num <= conn->rem_seq_end) {
+						if (conn->recv_queue->front->seq_num
+								< conn->rem_seq_end) {
+							break;
+						} else {
+							temp_node = queue_remove_front(conn->recv_queue);
+							tcp_seg = (struct tcp_segment *) temp_node->data;
+							conn->host_window += tcp_seg->data_len;
+							free(tcp_seg->data);
+							free(tcp_seg);
+							free(temp_node);
+						}
+					} else {
+						break;
+					}
 				}
 			}
 
@@ -325,7 +351,7 @@ void *recv_thread(void *local) {
 				conn->delayed_flag = 0;
 				conn->to_delayed_flag = 0;
 
-				tcp_send_ack(conn);
+				conn_send_ack(conn);
 			} else {
 				conn->delayed_flag = 1;
 				conn->to_delayed_flag = 0;
@@ -335,34 +361,78 @@ void *recv_thread(void *local) {
 			//re-ordered segment
 			seq_end = tcp_seg->seq_num + tcp_seg->data_len;
 
-			if (conn->rem_seq_num < tcp_seg->seq_num
-					&& seq_end <= conn->rem_seq_num + conn->host_max_window) {
-				int ret = queue_insert(conn->recv_queue, (uint8_t *) tcp_seg,
-						tcp_seg->data_len, tcp_seg->seq_num, seq_end);
-				if (ret) {
-					//is duplicate / colliding
-					PRINT_DEBUG("Dropping duplicate exp=%d got=%d\n",
-							conn->rem_seq_num, tcp_seg->seq_num);
-				} else {
-					conn->host_window -= tcp_seg->data_len;
-
-					//TODO send ack here? doesn't ACK on duplicates
+			if (conn->rem_seq_num < conn->rem_seq_end) {
+				if (tcp_seg->seq_num < seq_end) {
+					if (rem_seq_num < tcp_seg->seq_num && seq_end
+							<= conn->rem_seq_end) {
+						//insert normally: [ S-E ] | ([=r_seq_#, ]=r_seq_e, S=t_seq_#, E=t_seq_e, |=max/wrap around)
+						int ret = queue_insert(conn->recv_queue,
+								(uint8_t *) tcp_seg, tcp_seg->data_len,
+								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+					} else {
+						PRINT_DEBUG("Invalid data: out of window.");
+						sem_post(&conn->recv_queue->sem);
+						return;
+					}
+				} else { //pkt seq # roll over
+					PRINT_DEBUG("Invalid data: out of window.");
+					sem_post(&conn->recv_queue->sem);
+					return;
 				}
-
-				//send ack
-				if (conn->delayed_flag) {
-					stopTimer(conn->to_delayed_fd);
-					conn->delayed_flag = 0;
-					conn->to_delayed_flag = 0;
-
-					tcp_send_ack(conn);
-				} else {
-					conn->delayed_flag = 1;
-					conn->to_delayed_flag = 0;
-					startTimer(conn->to_delayed_fd, DELAYED_TIMEOUT);
+			} else { //rem seq # roll over
+				if (tcp_seg->seq_num < seq_end) {
+					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
+							<= MAX_SEQ_NUM) {
+						//insert normally: [ S-E | ]
+						int ret = queue_insert(conn->recv_queue,
+								(uint8_t *) tcp_seg, tcp_seg->data_len,
+								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+					} else if (seq_end <= conn->rem_seq_end) {
+						//insert in wrap around, so at end of queue: [ | S-E ]
+						int ret = queue_insert(conn->recv_queue,
+								(uint8_t *) tcp_seg, tcp_seg->data_len,
+								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+					} else {//drop
+						PRINT_DEBUG("Invalid data: out of window.");
+						sem_post(&conn->recv_queue->sem);
+						return;
+					}
+				} else { //pkt seq # roll over
+					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
+							<= conn->rem_seq_end) {
+						//insert before wrap around, kinda normal?:  [ S-|-E ]
+						int ret = queue_insert(conn->recv_queue,
+								(uint8_t *) tcp_seg, tcp_seg->data_len,
+								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+					} else { //drop
+						PRINT_DEBUG("Invalid data: out of window.");
+						sem_post(&conn->recv_queue->sem);
+						return;
+					}
 				}
+			}
+
+			if (ret) {
+				//is duplicate / colliding
+				PRINT_DEBUG("Dropping duplicate exp=%d got=%d\n",
+						conn->rem_seq_num, tcp_seg->seq_num);
 			} else {
-				PRINT_DEBUG("Invalid data: out of window.");
+				conn->host_window -= tcp_seg->data_len;
+
+				//TODO send ack here? doesn't ACK on duplicates
+			}
+
+			//send ack
+			if (conn->delayed_flag) {
+				stopTimer(conn->to_delayed_fd);
+				conn->delayed_flag = 0;
+				conn->to_delayed_flag = 0;
+
+				conn_send_ack(conn);
+			} else {
+				conn->delayed_flag = 1;
+				conn->to_delayed_flag = 0;
+				startTimer(conn->to_delayed_fd, DELAYED_TIMEOUT);
 			}
 		}
 		sem_post(&conn->recv_queue->sem);
@@ -424,4 +494,7 @@ void tcp_in(struct finsFrame *ff) {
 	} else {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");
 	}
+
+	free(ff->dataFrame.pdu);
+	freeFinsFrame(ff);
 }
