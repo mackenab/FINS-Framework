@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
-				- conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev
+				+ beta * fabs(sampRTT - conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -74,6 +74,7 @@ void *recv_thread(void *local) {
 
 	uint32_t seq_end;
 	//uint32_t rem_seq_end;
+	int ret;
 
 	calc = tcp_checksum(conn->rem_addr, conn->host_addr, tcp_seg);
 	if (tcp_seg->checksum != calc) {
@@ -81,8 +82,8 @@ void *recv_thread(void *local) {
 	} else {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (conn->host_seq_num <= tcp_seg->ack_num && tcp_seg->ack_num
-					<= conn->host_seq_end) {
+			if (conn->host_seq_num <= tcp_seg->ack_num
+					&& tcp_seg->ack_num <= conn->host_seq_end) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
@@ -121,8 +122,8 @@ void *recv_thread(void *local) {
 							if (conn->threshhold < conn->MSS) {
 								conn->threshhold = conn->MSS;
 							}
-							conn->cong_window = conn->threshhold + 3
-									* conn->MSS;
+							conn->cong_window = conn->threshhold
+									+ 3 * conn->MSS;
 							break;
 						case RECOVERY:
 							//conn->fast_flag = 0;
@@ -155,7 +156,8 @@ void *recv_thread(void *local) {
 					conn->gbn_flag = 0;
 
 					//RTT
-					if (conn->rtt_flag && tcp_seg->ack_num == conn->rtt_seq_end) {
+					if (conn->rtt_flag
+							&& tcp_seg->ack_num == conn->rtt_seq_end) {
 						calcRTT(conn);
 					}
 					stopTimer(conn->to_gbn_fd);
@@ -189,7 +191,7 @@ void *recv_thread(void *local) {
 					sem_post(&conn->cong_sem);
 				} else {
 					node = queue_find(conn->send_queue, tcp_seg->ack_num);
-					if (node != NULL) {
+					if (node) {
 						while (!queue_is_empty(conn->send_queue)
 								&& conn->send_queue->front != node) {
 							temp_node = queue_remove_front(conn->send_queue);
@@ -211,8 +213,8 @@ void *recv_thread(void *local) {
 						}
 
 						//RTT
-						if (conn->rtt_flag && tcp_seg->ack_num
-								== conn->rtt_seq_end) {
+						if (conn->rtt_flag
+								&& tcp_seg->ack_num == conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						if (!conn->gbn_flag) {
@@ -305,8 +307,8 @@ void *recv_thread(void *local) {
 					}
 				} else if (conn->recv_queue->front->seq_num
 						== conn->rem_seq_num) {
-					tcp_seg
-							= (struct tcp_segment *) conn->recv_queue->front->data;
+					tcp_seg =
+							(struct tcp_segment *) conn->recv_queue->front->data;
 
 					//TODO: Process Flags
 
@@ -363,50 +365,148 @@ void *recv_thread(void *local) {
 
 			if (conn->rem_seq_num < conn->rem_seq_end) {
 				if (tcp_seg->seq_num < seq_end) {
-					if (rem_seq_num < tcp_seg->seq_num && seq_end
-							<= conn->rem_seq_end) {
+					if (conn->rem_seq_num < tcp_seg->seq_num
+							&& seq_end <= conn->rem_seq_end) {
+						//[ S-E ] |
+						node = node_create((uint8_t *) tcp_seg,
+								tcp_seg->data_len, tcp_seg->seq_num, seq_end);
+
+						if (queue_is_empty(conn->recv_queue)) { //[ ] |
+							queue_prepend(conn->recv_queue, node);
+						} else if (tcp_seg->seq_num
+								< conn->recv_queue->front->seq_num) {
+							if (seq_end < conn->recv_queue->front->seq_num) { //[ S-E Fr] |
+								queue_prepend(conn->recv_queue, node);
+							} else {
+								//problem
+								sem_post(&conn->recv_queue->sem);
+								free(tcp_seg->data);
+								free(tcp_seg);
+								free(node);
+								return;
+							}
+						} else if (conn->recv_queue->end->seq_num
+								< tcp_seg->seq_num) {
+							if (conn->recv_queue->end->seq_end
+									< tcp_seg->seq_num) { //[ En S-E ] |
+								queue_append(conn->recv_queue, node);
+							} else {
+								//problem
+								sem_post(&conn->recv_queue->sem);
+								free(tcp_seg->data);
+								free(tcp_seg);
+								free(node);
+								return;
+							}
+						} else {
+							temp_node = conn->recv_queue->front;
+							while (temp_node->next != NULL) {
+								if (node->seq_num <= temp_node->seq_end
+										|| node->seq_num
+												== temp_node->next->seq_num) { //TODO fix
+									sem_post(&conn->recv_queue->sem);
+									free(tcp_seg->data);
+									free(tcp_seg);
+									free(node);
+									return;
+								}
+								if (temp_node->seq_end < node->seq_num
+										&& node->seq_num
+												< temp_node->next->seq_num
+										&& seq_end < temp_node->next->seq_num) { //TODO fix
+
+									queue_insert_after(conn->recv_queue, node,
+											temp_node);
+									break;
+								}
+
+								temp_node = temp_node->next;
+							}
+
+						}
+
 						//insert normally: [ S-E ] | ([=r_seq_#, ]=r_seq_e, S=t_seq_#, E=t_seq_e, |=max/wrap around)
-						int ret = queue_insert(conn->recv_queue,
-								(uint8_t *) tcp_seg, tcp_seg->data_len,
-								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+						/*
+						 int ret = queue_insert_old(conn->recv_queue,
+						 (uint8_t *) tcp_seg, tcp_seg->data_len,
+						 tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+						 */
 					} else {
 						PRINT_DEBUG("Invalid data: out of window.");
 						sem_post(&conn->recv_queue->sem);
+						free(tcp_seg->data);
+						free(tcp_seg);
 						return;
 					}
 				} else { //pkt seq # roll over
 					PRINT_DEBUG("Invalid data: out of window.");
 					sem_post(&conn->recv_queue->sem);
+					free(tcp_seg->data);
+					free(tcp_seg);
 					return;
 				}
 			} else { //rem seq # roll over
 				if (tcp_seg->seq_num < seq_end) {
 					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
-							<= MAX_SEQ_NUM) {
-						//insert normally: [ S-E | ]
-						int ret = queue_insert(conn->recv_queue,
-								(uint8_t *) tcp_seg, tcp_seg->data_len,
-								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+					<= MAX_SEQ_NUM) {
+					//insert normally: [ S-E | ]
+
+						node = node_create((uint8_t *) tcp_seg,
+								tcp_seg->data_len, tcp_seg->seq_num, seq_end);
+
+						if (queue_is_empty(conn->recv_queue)) { //empty
+							queue_prepend(conn->recv_queue, node);
+						} else if (conn->rem_seq_num
+								< conn->recv_queue->front->seq_num) { // [ Fr | ]
+
+							if (node->seq_num
+									< conn->recv_queue->front->seq_num) {
+
+							}
+
+							if (node->seq_num
+									< conn->recv_queue->front->seq_num) { // [ S-E Fr | ]
+								queue_prepend(conn->recv_queue, node);
+							} else {
+								//problem
+								sem_post(&conn->recv_queue->sem);
+								free(tcp_seg->data);
+								free(tcp_seg);
+								free(node);
+								return;
+							}
+						} else { // [ | Fr ]
+
+						}
+						/*
+						 int ret = queue_insert_old(conn->recv_queue,
+						 (uint8_t *) tcp_seg, tcp_seg->data_len,
+						 tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+						 */
 					} else if (seq_end <= conn->rem_seq_end) {
 						//insert in wrap around, so at end of queue: [ | S-E ]
-						int ret = queue_insert(conn->recv_queue,
-								(uint8_t *) tcp_seg, tcp_seg->data_len,
-								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
-					} else {//drop
-						PRINT_DEBUG("Invalid data: out of window.");
-						sem_post(&conn->recv_queue->sem);
-						return;
-					}
-				} else { //pkt seq # roll over
-					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
-							<= conn->rem_seq_end) {
-						//insert before wrap around, kinda normal?:  [ S-|-E ]
-						int ret = queue_insert(conn->recv_queue,
+						int ret = queue_insert_old(conn->recv_queue,
 								(uint8_t *) tcp_seg, tcp_seg->data_len,
 								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
 					} else { //drop
 						PRINT_DEBUG("Invalid data: out of window.");
 						sem_post(&conn->recv_queue->sem);
+						free(tcp_seg->data);
+						free(tcp_seg);
+						return;
+					}
+				} else { //pkt seq # roll over
+					if (conn->rem_seq_num < tcp_seg->seq_num
+							&& seq_end <= conn->rem_seq_end) {
+						//insert before wrap around, kinda normal?:  [ S-|-E ]
+						int ret = queue_insert_old(conn->recv_queue,
+								(uint8_t *) tcp_seg, tcp_seg->data_len,
+								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+					} else { //drop
+						PRINT_DEBUG("Invalid data: out of window.");
+						sem_post(&conn->recv_queue->sem);
+						free(tcp_seg->data);
+						free(tcp_seg);
 						return;
 					}
 				}
