@@ -32,6 +32,100 @@ struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num,
 	return node;
 }
 
+int node_in_window(struct tcp_node *node, uint32_t win_seq_num,
+		uint32_t win_seq_end) {
+
+}
+// -1=less than, 0=problem/equal, 1=greater
+int node_compare(struct tcp_node *node, struct tcp_node *cmp,
+		uint32_t win_seq_num, uint32_t win_seq_end) {
+	// []=window, |=wrap around , ()=node, {}=cmp, ,=is in that region
+
+	//TODO add time stamps to comparison
+
+	if (win_seq_num <= node->seq_num) { // [ ( | ]
+		if (win_seq_num <= node->seq_end) { // [ () | ]
+			if (win_seq_num <= cmp->seq_num) { // [ (),{ | ]
+				if (win_seq_num <= cmp->seq_end) { // [ (),{} | ]
+					if (node->seq_num < cmp->seq_num) { // [ ( { | ]
+						if (node->seq_end < cmp->seq_num) { // [ () { | ]
+							return -1;
+						} else { // [ ( { ) | ]
+							return 0;
+						}
+					} else if (node->seq_num == cmp->seq_num) {
+						return 0;
+					} else { // [ { ( | ]
+						if (cmp->seq_end < node->seq_num) { // [ {} ( | ]
+							return 1;
+						} else { // [ { ( } | ]
+							return 0;
+						}
+					}
+				} else { // [ (),{ | } ]
+					if (node->seq_num < cmp->seq_num) { // [ ( { | } ]
+						if (node->seq_end < cmp->seq_num) { // [ () { | } ]
+							return -1;
+						} else { // [ ( { ) | } ]
+							return 0;
+						}
+					} else { // [ { () | } ]
+						return 0;
+					}
+				}
+			} else { // [ () | {} ]
+				return -1;
+			}
+		} else { // [ ( | ) ]
+			if (win_seq_num <= cmp->seq_num) { // [ (,{ | ) ]
+				if (node->seq_num < cmp->seq_num) { // [ ( { | ) ]
+					return 0;
+				} else { // [ { ( | ) ]
+					if (cmp->seq_end < node->seq_num) { // [ {} ( | ) ]
+						return 1;
+					} else { // [ { ( } | ) ]
+						return 0;
+					}
+				}
+			} else { // [ ( | {},) ]
+				if (node->seq_end < cmp->seq_num) { // [ ( | ) {} ]
+					return -1;
+				} else { // [ ( | { ) ]
+					return 0;
+				}
+			}
+		}
+	} else { // [ | () ]
+		if (win_seq_num <= cmp->seq_num) { // [ { | () ]
+			if (win_seq_num <= cmp->seq_end) { // [ {} | () ]
+				return 1;
+			} else { // [ { | },() ]
+				if (cmp->seq_end < node->seq_num) { // [ { | } () ]
+					return 1;
+				} else { // [ { | ( } ]
+					return 0;
+				}
+			}
+		} else { // [ | {},() ]
+			if (node->seq_num < cmp->seq_num) { // [ | ( {} ]
+				if (node->seq_end < cmp->seq_num) { // [ | () {} ]
+					return -1;
+				} else { // [ | ( { ) ]
+					return 0;
+				}
+			} else if (node->seq_num == cmp->seq_num) {
+				return 0;
+			} else { // [ | { () ]
+				if (cmp->seq_end < node->seq_num) { // [ | {} () ]
+					return 1;
+				} else { // [ | { ( } ]
+					return 0;
+				}
+			}
+		}
+	}
+}
+
 struct tcp_queue *queue_create(uint32_t max) {
 	struct tcp_queue *queue = NULL;
 	queue = (struct tcp_queue *) malloc(sizeof(struct tcp_queue));
@@ -137,8 +231,8 @@ int queue_insert_old(struct tcp_queue *queue, uint8_t *data, uint32_t len,
 					return -1;
 				}
 			} else { //new node seq_end rollover
-				if (seq_num <= queue->end->seq_end
-						|| queue->front->seq_num <= seq_end) {
+				if (seq_num <= queue->end->seq_end || queue->front->seq_num
+						<= seq_end) {
 					free(node);
 					return -1;
 				}
@@ -340,8 +434,8 @@ void *main_thread(void *local) {
 					exit(-1);
 				}
 				if (!queue_is_empty(conn->send_queue)) {
-					tcp_seg =
-							(struct tcp_segment *) conn->send_queue->front->data; //TODO change for PAWS
+					tcp_seg
+							= (struct tcp_segment *) conn->send_queue->front->data; //TODO change for PAWS
 					if (conn->rem_window > tcp_seg->data_len) {
 						conn->rem_window -= tcp_seg->data_len;
 					} else {
@@ -445,8 +539,8 @@ void *main_thread(void *local) {
 			cong_space = conn->cong_window - on_wire;
 
 			if (!queue_is_empty(conn->write_queue) && conn->rem_window
-					&& on_wire < conn->rem_max_window
-					&& cong_space >= conn->MSS) {
+					&& on_wire < conn->rem_max_window && cong_space
+					>= conn->MSS) {
 				PRINT_DEBUG("sending packet");
 
 				tcp_seg = (struct tcp_segment *) malloc(
@@ -508,8 +602,8 @@ void *main_thread(void *local) {
 					exit(-1);
 				}
 				queue_append_old(conn->send_queue, (uint8_t *) tcp_seg,
-						data_len, tcp_seg->seq_num,
-						tcp_seg->seq_num + data_len - 1);
+						data_len, tcp_seg->seq_num, tcp_seg->seq_num + data_len
+								- 1);
 				conn->host_seq_end += data_len;
 				if (conn->rem_window > data_len) {
 					conn->rem_window -= data_len;
@@ -679,8 +773,7 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 		PRINT_ERROR("ERROR: unable to create to_fd.");
 		exit(-1);
 	}
-	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread,
-			(void *) conn)) {
+	if (pthread_create(&conn->to_gbn_thread, NULL, to_gbn_thread, (void *) conn)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
 	}
@@ -805,8 +898,8 @@ void conn_send_ack(struct tcp_connection *conn) {
 	tcp_seg->checksum = tcp_checksum(conn->host_addr, conn->rem_addr, tcp_seg);
 
 	ff = tcp_to_fins(tcp_seg);
-	metadata_writeToElement(ff->dataFrame.metaData, "srcip", &(conn->host_addr),
-			META_TYPE_INT);
+	metadata_writeToElement(ff->dataFrame.metaData, "srcip",
+			&(conn->host_addr), META_TYPE_INT);
 	metadata_writeToElement(ff->dataFrame.metaData, "dstip", &(conn->rem_addr),
 			META_TYPE_INT);
 
@@ -854,8 +947,8 @@ void conn_send_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg) {
 	struct finsFrame *ff;
 
 	ff = tcp_to_fins(tcp_seg);
-	metadata_writeToElement(ff->dataFrame.metaData, "srcip", &(conn->host_addr),
-			META_TYPE_INT);
+	metadata_writeToElement(ff->dataFrame.metaData, "srcip",
+			&(conn->host_addr), META_TYPE_INT);
 	metadata_writeToElement(ff->dataFrame.metaData, "dstip", &(conn->rem_addr),
 			META_TYPE_INT);
 
@@ -1001,7 +1094,8 @@ struct tcp_segment *fins_to_tcp(struct finsFrame *ff) {
 	}
 
 	//And fill in the data length and the data, also
-	tcpreturn->data_len = ff->dataFrame.pduLength - HEADERSIZE(tcpreturn->flags);
+	tcpreturn->data_len = ff->dataFrame.pduLength
+			- HEADERSIZE(tcpreturn->flags);
 	if (tcpreturn->data_len > 0) {
 		tcpreturn->data = (uint8_t*) malloc(tcpreturn->data_len);
 		int i;
@@ -1116,16 +1210,16 @@ uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
 	sum += ((uint16_t)(src_addr >> 16)) + ((uint16_t)(src_addr & 0xFFFF));
 	sum += ((uint16_t)(dst_addr >> 16)) + ((uint16_t)(dst_addr & 0xFFFF));
 	sum += (uint16_t) TCP_PROTOCOL;
-	sum += (uint16_t)(
-			IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags) + tcp_seg->data_len);
+	sum += (uint16_t)(IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags)
+			+ tcp_seg->data_len);
 
 	//fake TCP header
 	sum += tcp_seg->src_port;
 	sum += tcp_seg->dst_port;
-	sum += ((uint16_t)(tcp_seg->seq_num >> 16))
-			+ ((uint16_t)(tcp_seg->seq_num & 0xFFFF));
-	sum += ((uint16_t)(tcp_seg->ack_num >> 16))
-			+ ((uint16_t)(tcp_seg->ack_num & 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->seq_num >> 16)) + ((uint16_t)(tcp_seg->seq_num
+			& 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->ack_num >> 16)) + ((uint16_t)(tcp_seg->ack_num
+			& 0xFFFF));
 	sum += tcp_seg->flags;
 	sum += tcp_seg->win_size;
 	//sum += tcp_seg->checksum; //dummy checksum=0

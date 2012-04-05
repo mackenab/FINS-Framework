@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
+				- conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -82,8 +82,8 @@ void *recv_thread(void *local) {
 	} else {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (conn->host_seq_num <= tcp_seg->ack_num
-					&& tcp_seg->ack_num <= conn->host_seq_end) {
+			if (conn->host_seq_num <= tcp_seg->ack_num && tcp_seg->ack_num
+					<= conn->host_seq_end) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
@@ -122,8 +122,8 @@ void *recv_thread(void *local) {
 							if (conn->threshhold < conn->MSS) {
 								conn->threshhold = conn->MSS;
 							}
-							conn->cong_window = conn->threshhold
-									+ 3 * conn->MSS;
+							conn->cong_window = conn->threshhold + 3
+									* conn->MSS;
 							break;
 						case RECOVERY:
 							//conn->fast_flag = 0;
@@ -156,8 +156,7 @@ void *recv_thread(void *local) {
 					conn->gbn_flag = 0;
 
 					//RTT
-					if (conn->rtt_flag
-							&& tcp_seg->ack_num == conn->rtt_seq_end) {
+					if (conn->rtt_flag && tcp_seg->ack_num == conn->rtt_seq_end) {
 						calcRTT(conn);
 					}
 					stopTimer(conn->to_gbn_fd);
@@ -213,8 +212,8 @@ void *recv_thread(void *local) {
 						}
 
 						//RTT
-						if (conn->rtt_flag
-								&& tcp_seg->ack_num == conn->rtt_seq_end) {
+						if (conn->rtt_flag && tcp_seg->ack_num
+								== conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						if (!conn->gbn_flag) {
@@ -307,8 +306,8 @@ void *recv_thread(void *local) {
 					}
 				} else if (conn->recv_queue->front->seq_num
 						== conn->rem_seq_num) {
-					tcp_seg =
-							(struct tcp_segment *) conn->recv_queue->front->data;
+					tcp_seg
+							= (struct tcp_segment *) conn->recv_queue->front->data;
 
 					//TODO: Process Flags
 
@@ -363,69 +362,47 @@ void *recv_thread(void *local) {
 			//re-ordered segment
 			seq_end = tcp_seg->seq_num + tcp_seg->data_len;
 
-			if (conn->rem_seq_num < conn->rem_seq_end) {
-				if (tcp_seg->seq_num < seq_end) {
-					if (conn->rem_seq_num < tcp_seg->seq_num
-							&& seq_end <= conn->rem_seq_end) {
-						//[ S-E ] |
+			//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover,
+			// ( )=front, { }=end, T=temp_node->seq_num, N=next->seq_num
+
+			if (conn->rem_seq_num < conn->rem_seq_end) { // [ ] |
+				if (tcp_seg->seq_num < seq_end) { // <> |
+					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
+							<= conn->rem_seq_end) { // [ <> ] |
+						//insert normally
 						node = node_create((uint8_t *) tcp_seg,
 								tcp_seg->data_len, tcp_seg->seq_num, seq_end);
 
-						if (queue_is_empty(conn->recv_queue)) { //[ ] |
+						if (queue_is_empty(conn->recv_queue)) {
 							queue_prepend(conn->recv_queue, node);
-						} else if (tcp_seg->seq_num
-								< conn->recv_queue->front->seq_num) {
-							if (seq_end < conn->recv_queue->front->seq_num) { //[ S-E Fr] |
-								queue_prepend(conn->recv_queue, node);
-							} else {
-								//problem
-								sem_post(&conn->recv_queue->sem);
-								free(tcp_seg->data);
-								free(tcp_seg);
-								free(node);
-								return;
-							}
-						} else if (conn->recv_queue->end->seq_num
-								< tcp_seg->seq_num) {
-							if (conn->recv_queue->end->seq_end
-									< tcp_seg->seq_num) { //[ En S-E ] |
-								queue_append(conn->recv_queue, node);
-							} else {
-								//problem
-								sem_post(&conn->recv_queue->sem);
-								free(tcp_seg->data);
-								free(tcp_seg);
-								free(node);
-								return;
-							}
 						} else {
-							temp_node = conn->recv_queue->front;
-							while (temp_node->next != NULL) {
-								if (node->seq_num <= temp_node->seq_end
-										|| node->seq_num
-												== temp_node->next->seq_num) { //TODO fix
+							ret = node_compare(node, conn->recv_queue->front,
+									conn->rem_seq_num, conn->rem_seq_end);
+							if (ret == -1) {
+								queue_prepend(conn->recv_queue, node);
+							} else if (ret == 0) {
+								sem_post(&conn->recv_queue->sem);
+								free(tcp_seg->data);
+								free(tcp_seg);
+								free(node);
+								return;
+							} else {
+								ret = node_compare(node, conn->recv_queue->end,
+										conn->rem_seq_num, conn->rem_seq_end);
+								if (ret == 1) {
+									queue_append(conn->recv_queue, node);
+								} else if (ret == 0) {
 									sem_post(&conn->recv_queue->sem);
 									free(tcp_seg->data);
 									free(tcp_seg);
 									free(node);
 									return;
+								} else {
+									//iterative
 								}
-								if (temp_node->seq_end < node->seq_num
-										&& node->seq_num
-												< temp_node->next->seq_num
-										&& seq_end < temp_node->next->seq_num) { //TODO fix
-
-									queue_insert_after(conn->recv_queue, node,
-											temp_node);
-									break;
-								}
-
-								temp_node = temp_node->next;
 							}
-
 						}
 
-						//insert normally: [ S-E ] | ([=r_seq_#, ]=r_seq_e, S=t_seq_#, E=t_seq_e, |=max/wrap around)
 						/*
 						 int ret = queue_insert_old(conn->recv_queue,
 						 (uint8_t *) tcp_seg, tcp_seg->data_len,
@@ -438,56 +415,30 @@ void *recv_thread(void *local) {
 						free(tcp_seg);
 						return;
 					}
-				} else { //pkt seq # roll over
+				} else { // [ ] |>
 					PRINT_DEBUG("Invalid data: out of window.");
 					sem_post(&conn->recv_queue->sem);
 					free(tcp_seg->data);
 					free(tcp_seg);
 					return;
 				}
-			} else { //rem seq # roll over
-				if (tcp_seg->seq_num < seq_end) {
+			} else { // [ | ]
+				if (tcp_seg->seq_num < seq_end) { // <> |
 					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
-					<= MAX_SEQ_NUM) {
-					//insert normally: [ S-E | ]
-
-						node = node_create((uint8_t *) tcp_seg,
-								tcp_seg->data_len, tcp_seg->seq_num, seq_end);
-
-						if (queue_is_empty(conn->recv_queue)) { //empty
-							queue_prepend(conn->recv_queue, node);
-						} else if (conn->rem_seq_num
-								< conn->recv_queue->front->seq_num) { // [ Fr | ]
-
-							if (node->seq_num
-									< conn->recv_queue->front->seq_num) {
-
-							}
-
-							if (node->seq_num
-									< conn->recv_queue->front->seq_num) { // [ S-E Fr | ]
-								queue_prepend(conn->recv_queue, node);
-							} else {
-								//problem
-								sem_post(&conn->recv_queue->sem);
-								free(tcp_seg->data);
-								free(tcp_seg);
-								free(node);
-								return;
-							}
-						} else { // [ | Fr ]
-
-						}
+							<= MAX_SEQ_NUM) { // [ <> | ]
+						//insert normally
 						/*
 						 int ret = queue_insert_old(conn->recv_queue,
 						 (uint8_t *) tcp_seg, tcp_seg->data_len,
 						 tcp_seg->seq_num, seq_end); //TODO fix for PAWS
 						 */
 					} else if (seq_end <= conn->rem_seq_end) {
-						//insert in wrap around, so at end of queue: [ | S-E ]
+						//insert in wrap around, so at end of queue: [ | <> ]
+						/*
 						int ret = queue_insert_old(conn->recv_queue,
 								(uint8_t *) tcp_seg, tcp_seg->data_len,
 								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+								*/
 					} else { //drop
 						PRINT_DEBUG("Invalid data: out of window.");
 						sem_post(&conn->recv_queue->sem);
@@ -496,12 +447,14 @@ void *recv_thread(void *local) {
 						return;
 					}
 				} else { //pkt seq # roll over
-					if (conn->rem_seq_num < tcp_seg->seq_num
-							&& seq_end <= conn->rem_seq_end) {
-						//insert before wrap around, kinda normal?:  [ S-|-E ]
+					if (conn->rem_seq_num < tcp_seg->seq_num && seq_end
+							<= conn->rem_seq_end) {
+						//insert before wrap around, kinda normal?:  [ <|> ]
+						/*
 						int ret = queue_insert_old(conn->recv_queue,
 								(uint8_t *) tcp_seg, tcp_seg->data_len,
 								tcp_seg->seq_num, seq_end); //TODO fix for PAWS
+								*/
 					} else { //drop
 						PRINT_DEBUG("Invalid data: out of window.");
 						sem_post(&conn->recv_queue->sem);

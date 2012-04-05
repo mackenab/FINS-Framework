@@ -50,6 +50,8 @@ struct tcp_node {
 
 struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num,
 		uint32_t seq_end);
+int node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num,
+		uint32_t win_seq_end);
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
 struct tcp_queue {
@@ -153,7 +155,7 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-//-----
+	//-----
 };
 
 //TODO raise any of these?
@@ -198,7 +200,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 void conn_send_ack(struct tcp_connection *conn);
