@@ -160,10 +160,10 @@ struct tcp_connection {
 #define MAX_RECV_THREADS 10
 #define MAX_WRITE_THREADS 10
 #define MAX_CONNECTIONS 512
-#define MIN_GBN_TIMEOUT 1
-#define MAX_GBN_TIMEOUT 10000
+#define MIN_GBN_TIMEOUT 1000
+#define MAX_GBN_TIMEOUT 64000
 #define DEFAULT_GBN_TIMEOUT 50
-#define DELAYED_TIMEOUT 500
+#define DELAYED_TIMEOUT 200
 #define MAX_SEQ_NUM 4294967295.0
 
 //connection states //TODO: figure out

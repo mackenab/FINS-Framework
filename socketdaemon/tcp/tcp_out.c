@@ -10,8 +10,6 @@
 #include <string.h>
 #include "tcp.h"
 
-uint8_t thread_count = 0;
-
 void *write_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *data = (struct tcp_thread_data *) local;
@@ -33,6 +31,7 @@ void *write_thread(void *local) {
 	int len;
 	int space;
 	uint8_t *buf;
+	struct tcp_node *node;
 
 	if (sem_wait(&conn->write_sem)) {
 		PRINT_ERROR("conn->write_sem wait prob");
@@ -57,7 +56,8 @@ void *write_thread(void *local) {
 			ptr += len;
 			index += len;
 
-			queue_append_old(conn->write_queue, buf, len, 0, 0);
+			node = node_create(buf, len, 0, 0);
+			queue_append(conn->write_queue, node);
 
 			if (conn->main_wait_flag) {
 				PRINT_DEBUG("posting to wait_sem\n");
@@ -131,8 +131,7 @@ void tcp_out(struct finsFrame *ff) {
 				data->tcp_seg = tcp_seg;
 
 				//spin off thread to handle
-				if (pthread_create(&thread, NULL, write_thread,
-						(void *) data)) {
+				if (pthread_create(&thread, NULL, write_thread, (void *) data)) {
 					PRINT_ERROR("ERROR: unable to create write_thread thread.");
 					exit(-1);
 				}

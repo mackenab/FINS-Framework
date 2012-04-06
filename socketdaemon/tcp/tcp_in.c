@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
+				- conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -82,8 +82,8 @@ void *recv_thread(void *local) {
 	} else {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (conn->host_seq_num <= tcp_seg->ack_num
-					&& tcp_seg->ack_num <= conn->host_seq_end) {
+			if (tcp_in_window(tcp_seg->ack_num, tcp_seg->ack_num,
+					conn->host_seq_num, conn->host_seq_end)) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
@@ -122,8 +122,8 @@ void *recv_thread(void *local) {
 							if (conn->threshhold < conn->MSS) {
 								conn->threshhold = conn->MSS;
 							}
-							conn->cong_window = conn->threshhold
-									+ 3 * conn->MSS;
+							conn->cong_window = conn->threshhold + 3
+									* conn->MSS;
 							break;
 						case RECOVERY:
 							//conn->fast_flag = 0;
@@ -157,8 +157,7 @@ void *recv_thread(void *local) {
 					conn->gbn_flag = 0;
 
 					//RTT
-					if (conn->rtt_flag
-							&& tcp_seg->ack_num == conn->rtt_seq_end) {
+					if (conn->rtt_flag && tcp_seg->ack_num == conn->rtt_seq_end) {
 						calcRTT(conn);
 					}
 					stopTimer(conn->to_gbn_fd);
@@ -215,8 +214,8 @@ void *recv_thread(void *local) {
 						}
 
 						//RTT
-						if (conn->rtt_flag
-								&& tcp_seg->ack_num == conn->rtt_seq_end) {
+						if (conn->rtt_flag && tcp_seg->ack_num
+								== conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						if (!conn->gbn_flag) {
@@ -254,6 +253,7 @@ void *recv_thread(void *local) {
 						sem_post(&conn->cong_sem);
 					} else {
 						PRINT_DEBUG("Invalid ACK: was not sent.");
+						//drop entire tcp_seg?
 					}
 				}
 				sem_post(&conn->send_queue->sem); //TODO remove?
@@ -310,8 +310,8 @@ void *recv_thread(void *local) {
 					}
 				} else if (conn->recv_queue->front->seq_num
 						== conn->rem_seq_num) {
-					tcp_seg =
-							(struct tcp_segment *) conn->recv_queue->front->data;
+					tcp_seg
+							= (struct tcp_segment *) conn->recv_queue->front->data;
 
 					//TODO: Process Flags
 
