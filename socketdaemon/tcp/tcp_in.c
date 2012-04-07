@@ -83,7 +83,7 @@ void *recv_thread(void *local) {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
 			if (conn->host_seq_num <= tcp_seg->ack_num
-					&& tcp_seg->ack_num <= conn->host_seq_end) {
+					&& tcp_seg->ack_num <= conn->host_seq_end) { //TODO fix for PAWS
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
@@ -156,7 +156,7 @@ void *recv_thread(void *local) {
 					conn->fast_flag = 0;
 					conn->gbn_flag = 0;
 
-					//RTT
+					//RTT sem?
 					if (conn->rtt_flag
 							&& tcp_seg->ack_num == conn->rtt_seq_end) {
 						calcRTT(conn);
@@ -256,7 +256,7 @@ void *recv_thread(void *local) {
 						PRINT_DEBUG("Invalid ACK: was not sent.");
 					}
 				}
-				sem_post(&conn->send_queue->sem); //TODO remove?
+				sem_post(&conn->send_queue->sem); //TODO move?
 
 				if (conn->main_wait_flag) {
 					PRINT_DEBUG("posting to main_wait_sem\n");
@@ -274,7 +274,7 @@ void *recv_thread(void *local) {
 		}
 		if (conn->rem_seq_num == tcp_seg->seq_num) {
 			//in order seq num
-			//TODO: process flags
+			//TODO: process flags, ack flag?
 
 			//TODO: insert to read_queue/send to daemon
 
@@ -380,7 +380,7 @@ void *recv_thread(void *local) {
 			}
 		}
 
-		//send ack
+		//send ack //TODO fix logic, can ACK on an ACK, need to ack only on data/data+ACK
 		if (conn->delayed_flag) {
 			stopTimer(conn->to_delayed_fd);
 			conn->delayed_flag = 0;

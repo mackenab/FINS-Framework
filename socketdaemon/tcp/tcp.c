@@ -346,6 +346,7 @@ void *main_thread(void *local) {
 				break;
 			default:
 				PRINT_ERROR("unknown congState=%d\n", conn->cong_state);
+				break;
 			}
 			sem_post(&conn->cong_sem);
 		}
@@ -459,11 +460,7 @@ void *main_thread(void *local) {
 			//normal
 			PRINT_DEBUG("Normal");
 
-			if (conn->host_seq_num <= conn->host_seq_end) {
-				on_wire = conn->host_seq_end - conn->host_seq_num;
-			} else { //TODO check if this works
-				on_wire = conn->host_seq_end - conn->host_seq_num + 0xFFFFFFFF;
-			}
+			on_wire = conn->host_seq_end - conn->host_seq_num; //TODO check if this works even in rollover
 			cong_space = conn->cong_window - on_wire;
 
 			if (!queue_is_empty(conn->write_queue) && conn->rem_window
@@ -529,9 +526,10 @@ void *main_thread(void *local) {
 					PRINT_ERROR("conn->write_queue->sem wait prob");
 					exit(-1);
 				}
-				queue_append_old(conn->send_queue, (uint8_t *) tcp_seg,
-						data_len, tcp_seg->seq_num,
-						tcp_seg->seq_num + data_len - 1);
+				temp_node = node_create((uint8_t *) tcp_seg, data_len,
+						tcp_seg->seq_num, tcp_seg->seq_num + data_len - 1);
+				queue_append(conn->send_queue, temp_node);
+
 				conn->host_seq_end += data_len;
 				if (conn->rem_window > data_len) {
 					conn->rem_window -= data_len;
@@ -558,6 +556,8 @@ void *main_thread(void *local) {
 					conn->first_flag = 0;
 					startTimer(conn->to_gbn_fd, conn->timeout);
 				}
+
+				//TODO move conn->send_queue->sem post to here?
 
 				sem_post(&conn->write_wait_sem); //unstop write_thread if waiting
 			} else {
@@ -678,13 +678,13 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	//TODO ---agree on these values during setup
 	conn->MSS = 1024;
 
-	conn->host_seq_num = 1;
-	conn->host_seq_end = 1;
+	conn->host_seq_num = 0;
+	conn->host_seq_end = 0;
 	conn->host_max_window = 65535;
 	conn->host_window = 65535;
 
-	conn->rem_seq_num = 1;
-	conn->rem_seq_end = 1;
+	conn->rem_seq_num = 0;
+	conn->rem_seq_end = 0;
 	conn->rem_max_window = 65535;
 	conn->rem_window = 65535;
 	//---

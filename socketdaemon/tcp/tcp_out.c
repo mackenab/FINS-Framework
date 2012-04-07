@@ -33,6 +33,7 @@ void *write_thread(void *local) {
 	int len;
 	int space;
 	uint8_t *buf;
+	struct tcp_node *node;
 
 	if (sem_wait(&conn->write_sem)) {
 		PRINT_ERROR("conn->write_sem wait prob");
@@ -57,7 +58,8 @@ void *write_thread(void *local) {
 			ptr += len;
 			index += len;
 
-			queue_append_old(conn->write_queue, buf, len, 0, 0);
+			node = node_create(buf, len, 0, 0);
+			queue_append(conn->write_queue, node);
 
 			if (conn->main_wait_flag) {
 				PRINT_DEBUG("posting to wait_sem\n");
