@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
+				- conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -108,10 +108,6 @@ void *recv_thread(void *local) {
 							startTimer(conn->to_gbn_fd, conn->timeout);
 
 							//Cong
-							if (sem_wait(&conn->cong_sem)) {
-								PRINT_ERROR("conn->cong_sem wait prob");
-								exit(-1);
-							}
 							switch (conn->cong_state) {
 							case INITIAL:
 								//connection setup
@@ -123,8 +119,8 @@ void *recv_thread(void *local) {
 								if (conn->threshhold < conn->MSS) {
 									conn->threshhold = conn->MSS;
 								}
-								conn->cong_window = conn->threshhold
-										+ 3 * conn->MSS;
+								conn->cong_window = conn->threshhold + 3
+										* conn->MSS;
 								break;
 							case RECOVERY:
 								//conn->fast_flag = 0;
@@ -134,7 +130,6 @@ void *recv_thread(void *local) {
 										conn->cong_state);
 								break;
 							}
-							sem_post(&conn->cong_sem);
 						} else {
 							//sem_post(&conn->send_queue->sem); //?
 						}
@@ -160,18 +155,13 @@ void *recv_thread(void *local) {
 						conn->gbn_flag = 0;
 
 						//RTT
-						if (conn->rtt_flag
-								&& tcp_seg->ack_num == conn->rtt_seq_end) {
+						if (conn->rtt_flag && tcp_seg->ack_num
+								== conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						stopTimer(conn->to_gbn_fd);
 
 						//Cong
-						/*
-						 if (sem_wait(&conn->cong_sem)) {
-						 PRINT_ERROR("conn->cong_sem wait prob");
-						 exit(-1);
-						 }*/
 						switch (conn->cong_state) {
 						case INITIAL:
 							//connection setup
@@ -195,7 +185,6 @@ void *recv_thread(void *local) {
 									conn->cong_state);
 							break;
 						}
-						//sem_post(&conn->cong_sem);
 					} else {
 						node = queue_find(conn->send_queue, tcp_seg->ack_num);
 						if (node) {
@@ -203,10 +192,10 @@ void *recv_thread(void *local) {
 
 							while (!queue_is_empty(conn->send_queue)
 									&& conn->send_queue->front != node) {
-								temp_node = queue_remove_front(
-										conn->send_queue);
-								temp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->send_queue);
+								temp_seg
+										= (struct tcp_segment *) temp_node->data;
 								free(temp_seg->data);
 								free(temp_seg);
 								free(temp_node);
@@ -224,8 +213,8 @@ void *recv_thread(void *local) {
 							}
 
 							//RTT
-							if (conn->rtt_flag
-									&& tcp_seg->ack_num == conn->rtt_seq_end) {
+							if (conn->rtt_flag && tcp_seg->ack_num
+									== conn->rtt_seq_end) {
 								calcRTT(conn);
 							}
 							if (!conn->gbn_flag) {
@@ -310,10 +299,10 @@ void *recv_thread(void *local) {
 									< conn->rem_seq_end) { //wrap around
 								break;
 							} else {
-								temp_node = queue_remove_front(
-										conn->recv_queue);
-								tcp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->recv_queue);
+								tcp_seg
+										= (struct tcp_segment *) temp_node->data;
 								conn->host_window += tcp_seg->data_len;
 								free(tcp_seg->data);
 								free(tcp_seg);
@@ -322,8 +311,8 @@ void *recv_thread(void *local) {
 						}
 					} else if (conn->recv_queue->front->seq_num
 							== conn->rem_seq_num) {
-						tcp_seg =
-								(struct tcp_segment *) conn->recv_queue->front->data;
+						tcp_seg
+								= (struct tcp_segment *) conn->recv_queue->front->data;
 
 						//TODO: Process Flags/options
 
@@ -347,10 +336,10 @@ void *recv_thread(void *local) {
 									< conn->rem_seq_end) {
 								break;
 							} else {
-								temp_node = queue_remove_front(
-										conn->recv_queue);
-								tcp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->recv_queue);
+								tcp_seg
+										= (struct tcp_segment *) temp_node->data;
 								conn->host_window += tcp_seg->data_len;
 								free(tcp_seg->data);
 								free(tcp_seg);
@@ -429,6 +418,10 @@ void tcp_in(struct finsFrame *ff) {
 
 	tcp_seg = fdf_to_tcp(ff);
 	if (tcp_seg) {
+		if (tcp_seg->flags && FLAG_SYN) {
+
+		}
+
 		if (sem_wait(&conn_list_sem)) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);

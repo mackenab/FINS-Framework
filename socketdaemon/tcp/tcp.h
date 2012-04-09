@@ -75,6 +75,21 @@ int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 //TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
 
+enum CONN_STATE /* Defines an enumeration type    */
+{
+	CLOSED,
+	LISTEN,
+	SYN_SENT,
+	SYN_RECV,
+	ESTABLISHED,
+	FIN_WAIT_1,
+	FIN_WAIT_2,
+	CLOSING,
+	TIME_WAIT,
+	CLOSE_WAIT,
+	LAST_ACK
+};
+
 enum CONG_STATE /* Defines an enumeration type    */
 {
 	INITIAL, SLOWSTART, AVOIDANCE, RECOVERY
@@ -84,7 +99,7 @@ enum CONG_STATE /* Defines an enumeration type    */
 struct tcp_connection {
 	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
 	sem_t conn_sem; //for next, state, write_threads
-	int state;
+	enum CONN_STATE conn_state;
 	//some type of option state
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
@@ -108,7 +123,6 @@ struct tcp_connection {
 	int recv_threads;
 	//sem_t read_sem; //TODO: prob don't need
 
-	sem_t flag_sem; //TODO: remove if not used
 	uint8_t running_flag;
 	uint8_t first_flag;
 
@@ -125,12 +139,10 @@ struct tcp_connection {
 	uint8_t to_delayed_flag; //1 delayed ack timeout occured
 	uint8_t delayed_flag; //0 no delayed ack, 1 delayed ack
 
-	sem_t cong_sem;
 	enum CONG_STATE cong_state;
 	double cong_window;
 	double threshhold;
 
-	sem_t rtt_sem; //TODO remove if not used
 	uint8_t rtt_flag;
 	uint32_t rtt_first;
 	uint32_t rtt_seq_end;
@@ -165,6 +177,7 @@ struct tcp_connection {
 #define DEFAULT_GBN_TIMEOUT 50
 #define DELAYED_TIMEOUT 200
 #define MAX_SEQ_NUM 4294967295.0
+#define DEFAULT_MAX_WINDOW 65535
 
 //connection states //TODO: figure out
 #define CONN_SETUP 0
