@@ -10,8 +10,6 @@
 #include <string.h>
 #include "tcp.h"
 
-uint8_t thread_count = 0;
-
 void *write_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *data = (struct tcp_thread_data *) local;
@@ -101,7 +99,7 @@ void tcp_out(struct finsFrame *ff) {
 	metadata_readFromElement(meta, "srcip", &srcip); //host
 	metadata_readFromElement(meta, "dstip", &dstip); //remote
 
-	tcp_seg = fins_to_tcp(ff);
+	tcp_seg = fdf_to_tcp(ff);
 	if (tcp_seg) {
 		if (sem_wait(&conn_list_sem)) {
 			PRINT_ERROR("conn_list_sem wait prob");
@@ -109,7 +107,7 @@ void tcp_out(struct finsFrame *ff) {
 		}
 		conn = conn_find(srcip, dstip, tcp_seg->src_port, tcp_seg->dst_port); //TODO check if right
 		if (conn == NULL) {
-			//create a new connection //TODO move to Control Setup
+			//create a new connection //TODO move to Control based Setup
 			if (conn_has_space(1)) {
 				conn = conn_create(srcip, tcp_seg->src_port, dstip,
 						tcp_seg->dst_port);
@@ -121,7 +119,7 @@ void tcp_out(struct finsFrame *ff) {
 		}
 		sem_post(&conn_list_sem);
 
-		if (conn->running_flag) { //TODO: check if need
+		if (conn->running_flag) {
 			if (sem_wait(&conn->conn_sem)) {
 				PRINT_ERROR("conn->conn_sem wait prob");
 				exit(-1);

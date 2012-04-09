@@ -160,10 +160,10 @@ struct tcp_connection {
 #define MAX_RECV_THREADS 10
 #define MAX_WRITE_THREADS 10
 #define MAX_CONNECTIONS 512
-#define MIN_GBN_TIMEOUT 1
-#define MAX_GBN_TIMEOUT 10000
+#define MIN_GBN_TIMEOUT 1000
+#define MAX_GBN_TIMEOUT 64000
 #define DEFAULT_GBN_TIMEOUT 50
-#define DELAYED_TIMEOUT 500
+#define DELAYED_TIMEOUT 200
 #define MAX_SEQ_NUM 4294967295.0
 
 //connection states //TODO: figure out
@@ -204,14 +204,22 @@ void conn_send_ack(struct tcp_connection *conn);
 void conn_update_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
 void conn_send_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
 
-struct finsFrame *tcp_to_fins(struct tcp_segment *tcp);
-struct tcp_segment *fins_to_tcp(struct finsFrame *ff);
+struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
+struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
 int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 		uint32_t win_seq_end);
 
 struct tcp_thread_data {
 	struct tcp_connection *conn;
 	struct tcp_segment *tcp_seg;
+};
+
+struct tcp_to_thread_data {
+	uint8_t *running;
+	uint32_t *fd;
+	uint8_t *flag;
+	uint8_t *waiting;
+	sem_t *sem;
 };
 
 //General functions for dealing with the incoming and outgoing frames

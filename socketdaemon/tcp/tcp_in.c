@@ -82,120 +82,67 @@ void *recv_thread(void *local) {
 	} else {
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (conn->host_seq_num <= tcp_seg->ack_num
-					&& tcp_seg->ack_num <= conn->host_seq_end) { //TODO fix for PAWS
+			if (tcp_in_window(tcp_seg->ack_num, tcp_seg->ack_num,
+					conn->host_seq_num, conn->host_seq_end)) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
 				}
+				if (tcp_in_window(tcp_seg->ack_num, tcp_seg->ack_num,
+						conn->host_seq_num, conn->host_seq_end)) {
+					if (tcp_seg->ack_num == conn->host_seq_num) {
+						//check for FR
+						conn->rem_window = tcp_seg->win_size;
+						conn->duplicate++;
 
-				if (tcp_seg->ack_num == conn->host_seq_num) {
-					//check for FR
-					conn->rem_window = tcp_seg->win_size;
-					conn->duplicate++;
+						//TODO process ACK flags/options
 
-					if (conn->duplicate == 3) {
-						conn->duplicate = 0;
-						//sem_post(&conn->send_queue->sem); //?
+						if (conn->duplicate == 3) {
+							conn->duplicate = 0;
+							//sem_post(&conn->send_queue->sem); //?
 
-						//TODO flag sem?
-						conn->fast_flag = 1;
+							conn->fast_flag = 1;
 
-						//RTT
-						//TODO rtt sem?
-						conn->rtt_flag = 0;
-						startTimer(conn->to_gbn_fd, conn->timeout);
+							//RTT
+							conn->rtt_flag = 0;
+							startTimer(conn->to_gbn_fd, conn->timeout);
 
-						//Cong
-						if (sem_wait(&conn->cong_sem)) {
-							PRINT_ERROR("conn->cong_sem wait prob");
-							exit(-1);
-						}
-						switch (conn->cong_state) {
-						case INITIAL:
-							//connection setup
-							break;
-						case SLOWSTART:
-						case AVOIDANCE:
-							conn->cong_state = RECOVERY;
-							conn->threshhold = conn->cong_window / 2;
-							if (conn->threshhold < conn->MSS) {
-								conn->threshhold = conn->MSS;
+							//Cong
+							if (sem_wait(&conn->cong_sem)) {
+								PRINT_ERROR("conn->cong_sem wait prob");
+								exit(-1);
 							}
-							conn->cong_window = conn->threshhold
-									+ 3 * conn->MSS;
-							break;
-						case RECOVERY:
-							//conn->fast_flag = 0;
-							break;
-						default:
-							PRINT_ERROR("unknown cong_state=%d\n",
-									conn->cong_state);
-							break;
+							switch (conn->cong_state) {
+							case INITIAL:
+								//connection setup
+								break;
+							case SLOWSTART:
+							case AVOIDANCE:
+								conn->cong_state = RECOVERY;
+								conn->threshhold = conn->cong_window / 2;
+								if (conn->threshhold < conn->MSS) {
+									conn->threshhold = conn->MSS;
+								}
+								conn->cong_window = conn->threshhold
+										+ 3 * conn->MSS;
+								break;
+							case RECOVERY:
+								//conn->fast_flag = 0;
+								break;
+							default:
+								PRINT_ERROR("unknown cong_state=%d\n",
+										conn->cong_state);
+								break;
+							}
+							sem_post(&conn->cong_sem);
+						} else {
+							//sem_post(&conn->send_queue->sem); //?
 						}
-						sem_post(&conn->cong_sem);
-					} else {
-						//sem_post(&conn->send_queue->sem); //?
-					}
-				} else if (tcp_seg->ack_num == conn->host_seq_end) {
-					//remove all
-					while (!queue_is_empty(conn->send_queue)) {
-						temp_node = queue_remove_front(conn->send_queue);
-						temp_seg = (struct tcp_segment *) temp_node->data;
-						free(temp_seg->data);
-						free(temp_seg);
-						free(temp_node);
-					}
+					} else if (tcp_seg->ack_num == conn->host_seq_end) {
+						//TODO process ACK flags/options
 
-					conn->host_seq_num = tcp_seg->ack_num;
-					conn->rem_window = tcp_seg->win_size;
-					conn->duplicate = 0;
-					//sem_post(&conn->send_queue->sem); //?
-
-					//TODO flag sem?
-					conn->fast_flag = 0;
-					conn->gbn_flag = 0;
-
-					//RTT sem?
-					if (conn->rtt_flag
-							&& tcp_seg->ack_num == conn->rtt_seq_end) {
-						calcRTT(conn);
-					}
-					stopTimer(conn->to_gbn_fd);
-
-					//Cong
-					if (sem_wait(&conn->cong_sem)) {
-						PRINT_ERROR("conn->cong_sem wait prob");
-						exit(-1);
-					}
-					switch (conn->cong_state) {
-					case INITIAL:
-						//connection setup
-						break;
-					case SLOWSTART:
-						conn->cong_window += conn->MSS;
-						if (conn->cong_window >= conn->threshhold) {
-							conn->cong_state = AVOIDANCE;
-						}
-						break;
-					case AVOIDANCE:
-						conn->cong_window += conn->MSS * conn->MSS
-								/ conn->cong_window;
-						break;
-					case RECOVERY:
-						conn->cong_state = AVOIDANCE;
-						conn->cong_window = conn->threshhold;
-						break;
-					default:
-						PRINT_ERROR("unknown congState=%d\n", conn->cong_state);
-						break;
-					}
-					sem_post(&conn->cong_sem);
-				} else {
-					node = queue_find(conn->send_queue, tcp_seg->ack_num);
-					if (node) {
-						while (!queue_is_empty(conn->send_queue)
-								&& conn->send_queue->front != node) {
+						//remove all
+						while (!queue_is_empty(conn->send_queue)) {
 							temp_node = queue_remove_front(conn->send_queue);
 							temp_seg = (struct tcp_segment *) temp_node->data;
 							free(temp_seg->data);
@@ -203,31 +150,28 @@ void *recv_thread(void *local) {
 							free(temp_node);
 						}
 
-						//valid ACK
 						conn->host_seq_num = tcp_seg->ack_num;
 						conn->rem_window = tcp_seg->win_size;
 						conn->duplicate = 0;
 						//sem_post(&conn->send_queue->sem); //?
 
-						//TODO flag sem?
-						if (conn->gbn_flag) {
-							conn->first_flag = 1;
-						}
+						//flags
+						conn->fast_flag = 0;
+						conn->gbn_flag = 0;
 
 						//RTT
 						if (conn->rtt_flag
 								&& tcp_seg->ack_num == conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
-						if (!conn->gbn_flag) {
-							startTimer(conn->to_gbn_fd, conn->timeout);
-						}
+						stopTimer(conn->to_gbn_fd);
 
 						//Cong
-						if (sem_wait(&conn->cong_sem)) {
-							PRINT_ERROR("conn->cong_sem wait prob");
-							exit(-1);
-						}
+						/*
+						 if (sem_wait(&conn->cong_sem)) {
+						 PRINT_ERROR("conn->cong_sem wait prob");
+						 exit(-1);
+						 }*/
 						switch (conn->cong_state) {
 						case INITIAL:
 							//connection setup
@@ -251,16 +195,81 @@ void *recv_thread(void *local) {
 									conn->cong_state);
 							break;
 						}
-						sem_post(&conn->cong_sem);
+						//sem_post(&conn->cong_sem);
 					} else {
-						PRINT_DEBUG("Invalid ACK: was not sent.");
-					}
-				}
-				sem_post(&conn->send_queue->sem); //TODO move?
+						node = queue_find(conn->send_queue, tcp_seg->ack_num);
+						if (node) {
+							//TODO process ACK flags/options
 
-				if (conn->main_wait_flag) {
-					PRINT_DEBUG("posting to main_wait_sem\n");
-					sem_post(&conn->main_wait_sem);
+							while (!queue_is_empty(conn->send_queue)
+									&& conn->send_queue->front != node) {
+								temp_node = queue_remove_front(
+										conn->send_queue);
+								temp_seg =
+										(struct tcp_segment *) temp_node->data;
+								free(temp_seg->data);
+								free(temp_seg);
+								free(temp_node);
+							}
+
+							//valid ACK
+							conn->host_seq_num = tcp_seg->ack_num;
+							conn->rem_window = tcp_seg->win_size;
+							conn->duplicate = 0;
+							//sem_post(&conn->send_queue->sem); //?
+
+							//flags
+							if (conn->gbn_flag) {
+								conn->first_flag = 1;
+							}
+
+							//RTT
+							if (conn->rtt_flag
+									&& tcp_seg->ack_num == conn->rtt_seq_end) {
+								calcRTT(conn);
+							}
+							if (!conn->gbn_flag) {
+								startTimer(conn->to_gbn_fd, conn->timeout);
+							}
+
+							//Cong
+							switch (conn->cong_state) {
+							case INITIAL:
+								//connection setup
+								break;
+							case SLOWSTART:
+								conn->cong_window += conn->MSS;
+								if (conn->cong_window >= conn->threshhold) {
+									conn->cong_state = AVOIDANCE;
+								}
+								break;
+							case AVOIDANCE:
+								conn->cong_window += conn->MSS * conn->MSS
+										/ conn->cong_window;
+								break;
+							case RECOVERY:
+								conn->cong_state = AVOIDANCE;
+								conn->cong_window = conn->threshhold;
+								break;
+							default:
+								PRINT_ERROR("unknown congState=%d\n",
+										conn->cong_state);
+								break;
+							}
+						} else {
+							PRINT_DEBUG("Invalid ACK: was not sent.");
+							//drop entire tcp_seg?
+						}
+					}
+					sem_post(&conn->send_queue->sem); //TODO move?
+
+					if (conn->main_wait_flag) {
+						PRINT_DEBUG("posting to main_wait_sem\n");
+						sem_post(&conn->main_wait_sem);
+					}
+				} else {
+					PRINT_DEBUG("Invalid ACK: out of sent window.");
+					sem_post(&conn->send_queue->sem); //TODO move?
 				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: out of sent window.");
@@ -268,132 +277,138 @@ void *recv_thread(void *local) {
 		}
 
 		// data handling
-		if (sem_wait(&conn->recv_queue->sem)) {
-			PRINT_ERROR("conn->recv_queue->sem wait prob");
-			exit(-1);
-		}
-		if (conn->rem_seq_num == tcp_seg->seq_num) {
-			//in order seq num
-			//TODO: process flags, ack flag?
+		if (tcp_seg->data_len) { //TODO seg's with no data not processed
+			if (sem_wait(&conn->recv_queue->sem)) {
+				PRINT_ERROR("conn->recv_queue->sem wait prob");
+				exit(-1);
+			}
+			if (conn->rem_seq_num == tcp_seg->seq_num) {
+				//in order seq num
+				//TODO: process flags/options
 
-			//TODO: insert to read_queue/send to daemon
+				//TODO: insert to read_queue/send to daemon
 
-			conn->host_window -= tcp_seg->data_len;
-			conn->rem_seq_num += tcp_seg->data_len;
-			conn->rem_seq_end = conn->rem_seq_num + conn->host_max_window;
+				conn->host_window -= tcp_seg->data_len;
+				conn->rem_seq_num += tcp_seg->data_len;
+				conn->rem_seq_end = conn->rem_seq_num + conn->host_max_window;
 
-			free(tcp_seg->data);
-			free(tcp_seg);
+				free(tcp_seg->data);
+				free(tcp_seg);
 
-			//remove /transfer
-			while (!queue_is_empty(conn->recv_queue)) {
-				if (conn->recv_queue->front->seq_num < conn->rem_seq_num) {
-					if (conn->rem_seq_num <= conn->rem_seq_end) {
+				//remove /transfer
+				while (!queue_is_empty(conn->recv_queue)) {
+					if (conn->recv_queue->front->seq_num < conn->rem_seq_num) {
+						if (conn->rem_seq_num <= conn->rem_seq_end) {
+							temp_node = queue_remove_front(conn->recv_queue);
+							tcp_seg = (struct tcp_segment *) temp_node->data;
+							conn->host_window += tcp_seg->data_len;
+							free(tcp_seg->data);
+							free(tcp_seg);
+							free(temp_node);
+						} else {
+							if (conn->recv_queue->front->seq_num
+									< conn->rem_seq_end) { //wrap around
+								break;
+							} else {
+								temp_node = queue_remove_front(
+										conn->recv_queue);
+								tcp_seg =
+										(struct tcp_segment *) temp_node->data;
+								conn->host_window += tcp_seg->data_len;
+								free(tcp_seg->data);
+								free(tcp_seg);
+								free(temp_node);
+							}
+						}
+					} else if (conn->recv_queue->front->seq_num
+							== conn->rem_seq_num) {
+						tcp_seg =
+								(struct tcp_segment *) conn->recv_queue->front->data;
+
+						//TODO: Process Flags/options
+
+						PRINT_DEBUG("Connected to seq=%d datalen:%d\n",
+								tcp_seg->seq_num, tcp_seg->data_len);
+
+						//TODO: insert to read_queue/send to daemon
+
+						conn->rem_seq_num += tcp_seg->data_len;
+						conn->rem_seq_end = conn->rem_seq_num
+								+ conn->host_max_window;
+
 						temp_node = queue_remove_front(conn->recv_queue);
 						tcp_seg = (struct tcp_segment *) temp_node->data;
-						conn->host_window += tcp_seg->data_len;
 						free(tcp_seg->data);
 						free(tcp_seg);
 						free(temp_node);
 					} else {
-						if (conn->recv_queue->front->seq_num
-								< conn->rem_seq_end) { //wrap around
-							break;
+						if (conn->rem_seq_num <= conn->rem_seq_end) {
+							if (conn->recv_queue->front->seq_num
+									< conn->rem_seq_end) {
+								break;
+							} else {
+								temp_node = queue_remove_front(
+										conn->recv_queue);
+								tcp_seg =
+										(struct tcp_segment *) temp_node->data;
+								conn->host_window += tcp_seg->data_len;
+								free(tcp_seg->data);
+								free(tcp_seg);
+								free(temp_node);
+							}
 						} else {
-							temp_node = queue_remove_front(conn->recv_queue);
-							tcp_seg = (struct tcp_segment *) temp_node->data;
-							conn->host_window += tcp_seg->data_len;
-							free(tcp_seg->data);
-							free(tcp_seg);
-							free(temp_node);
-						}
-					}
-				} else if (conn->recv_queue->front->seq_num
-						== conn->rem_seq_num) {
-					tcp_seg =
-							(struct tcp_segment *) conn->recv_queue->front->data;
-
-					//TODO: Process Flags
-
-					PRINT_DEBUG("Connected to seq=%d datalen:%d\n",
-							tcp_seg->seq_num, tcp_seg->data_len);
-
-					//TODO: insert to read_queue/send to daemon
-
-					conn->rem_seq_num += tcp_seg->data_len;
-					conn->rem_seq_end = conn->rem_seq_num
-							+ conn->host_max_window;
-
-					temp_node = queue_remove_front(conn->recv_queue);
-					tcp_seg = (struct tcp_segment *) temp_node->data;
-					free(tcp_seg->data);
-					free(tcp_seg);
-					free(temp_node);
-				} else {
-					if (conn->rem_seq_num <= conn->rem_seq_end) {
-						if (conn->recv_queue->front->seq_num
-								< conn->rem_seq_end) {
 							break;
-						} else {
-							temp_node = queue_remove_front(conn->recv_queue);
-							tcp_seg = (struct tcp_segment *) temp_node->data;
-							conn->host_window += tcp_seg->data_len;
-							free(tcp_seg->data);
-							free(tcp_seg);
-							free(temp_node);
 						}
-					} else {
-						break;
 					}
 				}
-			}
 
-			sem_post(&conn->main_wait_sem); //signal recv main thread
-		} else {
-			//re-ordered segment
-			seq_end = tcp_seg->seq_num + tcp_seg->data_len;
+				sem_post(&conn->main_wait_sem); //signal recv main thread
+			} else {
+				//re-ordered segment
+				seq_end = tcp_seg->seq_num + tcp_seg->data_len;
 
-			if (tcp_in_window(tcp_seg->seq_num, seq_end, conn->rem_seq_num,
-					conn->rem_seq_end)) { // 0=in window, -1=out of window
-				node = node_create((uint8_t *) tcp_seg, tcp_seg->data_len,
-						tcp_seg->seq_num, seq_end);
-				ret = queue_insert(conn->recv_queue, node, conn->rem_seq_num,
-						conn->rem_seq_end);
-				if (ret) {
+				if (tcp_in_window(tcp_seg->seq_num, seq_end, conn->rem_seq_num,
+						conn->rem_seq_end)) { // 0=in window, -1=out of window
+					node = node_create((uint8_t *) tcp_seg, tcp_seg->data_len,
+							tcp_seg->seq_num, seq_end);
+					ret = queue_insert(conn->recv_queue, node,
+							conn->rem_seq_num, conn->rem_seq_end);
+					if (ret) {
+						PRINT_DEBUG(
+								"Dropping duplicate rem=(%u, %u) got=(%u, %u)\n",
+								conn->rem_seq_num, conn->rem_seq_end,
+								tcp_seg->seq_num, seq_end);
+						free(tcp_seg->data);
+						free(tcp_seg);
+						free(node);
+					} else {
+						conn->host_window -= tcp_seg->data_len;
+					}
+				} else {
 					PRINT_DEBUG(
-							"Dropping duplicate rem=(%u, %u) got=(%u, %u)\n",
+							"Dropping out of window rem=(%u, %u) got=(%u, %u)\n",
 							conn->rem_seq_num, conn->rem_seq_end,
 							tcp_seg->seq_num, seq_end);
 					free(tcp_seg->data);
 					free(tcp_seg);
-					free(node);
-				} else {
-					conn->host_window -= tcp_seg->data_len;
 				}
-			} else {
-				PRINT_DEBUG(
-						"Dropping out of window rem=(%u, %u) got=(%u, %u)\n",
-						conn->rem_seq_num, conn->rem_seq_end, tcp_seg->seq_num,
-						seq_end);
-				free(tcp_seg->data);
-				free(tcp_seg);
 			}
+
+			//send ack
+			if (conn->delayed_flag) {
+				stopTimer(conn->to_delayed_fd);
+				conn->delayed_flag = 0;
+				conn->to_delayed_flag = 0;
+
+				conn_send_ack(conn);
+			} else {
+				conn->delayed_flag = 1;
+				conn->to_delayed_flag = 0;
+				startTimer(conn->to_delayed_fd, DELAYED_TIMEOUT);
+			}
+
+			sem_post(&conn->recv_queue->sem);
 		}
-
-		//send ack //TODO fix logic, can ACK on an ACK, need to ack only on data/data+ACK
-		if (conn->delayed_flag) {
-			stopTimer(conn->to_delayed_fd);
-			conn->delayed_flag = 0;
-			conn->to_delayed_flag = 0;
-
-			conn_send_ack(conn);
-		} else {
-			conn->delayed_flag = 1;
-			conn->to_delayed_flag = 0;
-			startTimer(conn->to_delayed_fd, DELAYED_TIMEOUT);
-		}
-
-		sem_post(&conn->recv_queue->sem);
 	}
 }
 
@@ -412,7 +427,7 @@ void tcp_in(struct finsFrame *ff) {
 	metadata_readFromElement(meta, "srcip", &srcip); //host
 	metadata_readFromElement(meta, "dstip", &dstip); //remote
 
-	tcp_seg = fins_to_tcp(ff);
+	tcp_seg = fdf_to_tcp(ff);
 	if (tcp_seg) {
 		if (sem_wait(&conn_list_sem)) {
 			PRINT_ERROR("conn_list_sem wait prob");

@@ -369,6 +369,7 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 	sem_post(&jinniSockets_sem);
 
 	//start listen queue?
+	//TODO create conn?
 
 	ack_send(uniqueSockID, listen_call);
 }
