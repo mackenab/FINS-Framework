@@ -419,7 +419,7 @@ void tcp_in(struct finsFrame *ff) {
 	tcp_seg = fdf_to_tcp(ff);
 	if (tcp_seg) {
 		if (tcp_seg->flags && FLAG_SYN) {
-
+			//
 		}
 
 		if (sem_wait(&conn_list_sem)) {

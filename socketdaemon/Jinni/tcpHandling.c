@@ -155,8 +155,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport)
-				|| (srcip != jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport) || (srcip
+				!= jinniSockets[index].dst_IP)) {
 
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
@@ -205,8 +205,8 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -247,6 +247,79 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	(ff->dataFrame).pduLength = len;
 	(ff->dataFrame).pdu = dataLocal;
 	(ff->dataFrame).metaData = tcpout_meta;
+
+	/**TODO insert the frame into jinni_to_switch queue
+	 * check if insertion succeeded or not then
+	 * return 1 on success, or -1 on failure
+	 * */
+	PRINT_DEBUG("");
+	sem_wait(&Jinni_to_Switch_Qsem);
+	if (write_queue(ff, Jinni_to_Switch_Queue)) {
+
+		sem_post(&Jinni_to_Switch_Qsem);
+		PRINT_DEBUG("");
+		return (1);
+	}
+	sem_post(&Jinni_to_Switch_Qsem);
+	PRINT_DEBUG("");
+
+	return (0);
+
+}
+
+int jinni_TCP_to_fins_cntrl(u_char *dataLocal, int len, uint16_t dstport,
+		uint32_t dst_IP_netformat, uint16_t hostport,
+		uint32_t host_IP_netformat) {
+
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
+
+	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
+
+	PRINT_DEBUG();
+
+	metadata_create(tcpout_meta);
+
+	if (tcpout_meta == NULL) {
+		PRINT_DEBUG("metadata creation failed");
+		free(ff);
+		exit(1);
+
+	}
+
+	/** metadata_writeToElement() set the value of an element if it already exist
+	 * or it creates the element and set its value in case it is new
+	 */
+	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport,
+			host_IP_netformat);
+
+	uint32_t dstprt = dstport;
+	uint32_t hostprt = hostport;
+
+	metadata_writeToElement(tcpout_meta, "dstport", &dstprt, META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "srcport", &hostprt, META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "dstip", &dst_IP_netformat,
+			META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "srcip", &host_IP_netformat,
+			META_TYPE_INT);
+
+	ff->dataOrCtrl = CONTROL;
+	/**TODO get the address automatically by searching the local copy of the
+	 * switch table
+	 */
+	ff->destinationID.id = TCPID;
+	ff->destinationID.next = NULL;
+	(ff->ctrlFrame).senderID = JINNIID;
+	(ff->ctrlFrame).opcode = CTRL_EXEC;
+
+	unsigned int serialNum;
+	unsigned char * name;
+	void * data;
+	unsigned int paramterID;
+	void *paramterValue;
+	struct tableRecord *replyRecord;
+
+	//MOD_OP
 
 	/**TODO insert the frame into jinni_to_switch queue
 	 * check if insertion succeeded or not then
@@ -356,7 +429,6 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 
 	int index;
 
-
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
@@ -374,7 +446,8 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 	ack_send(uniqueSockID, listen_call);
 }
 
-void accept_tcp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
+void accept_tcp(unsigned long long uniqueSockID,
+		unsigned long long uniqueSockID_new, int flags) {
 
 	int index;
 
@@ -386,10 +459,8 @@ void accept_tcp(unsigned long long uniqueSockID, unsigned long long uniqueSockID
 	}
 	PRINT_DEBUG("index = %d", index);
 
-	insertjinniSocket(uniqueSockID_new, jinniSockets[index].type, jinniSockets[index].protocol);
-
-
-
+	insertjinniSocket(uniqueSockID_new, jinniSockets[index].type,
+			jinniSockets[index].protocol);
 
 	ack_send(uniqueSockID, accept_call);
 }
@@ -577,8 +648,8 @@ void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 }
 
-void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
-		u_char *data) {
+void write_tcp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
