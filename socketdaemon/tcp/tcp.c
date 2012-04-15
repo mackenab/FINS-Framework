@@ -32,7 +32,8 @@ struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num,
 	return node;
 }
 
-// -1=less than, 0=problem/equal, 1=greater
+
+// assumes nodes are in window, -1=less than, 0=problem/equal, 1=greater
 int node_compare(struct tcp_node *node, struct tcp_node *cmp,
 		uint32_t win_seq_num, uint32_t win_seq_end) {
 	// []=window, |=wrap around , ()=node, {}=cmp, ,=is in that region
