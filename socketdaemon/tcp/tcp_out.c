@@ -12,19 +12,15 @@
 
 void *write_thread(void *local) {
 	//this will need to be changed
-	struct tcp_thread_data *data = (struct tcp_thread_data *) local;
-	struct tcp_connection *conn = data->conn;
-	struct tcp_segment *tcp_seg = data->tcp_seg;
+	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	struct tcp_connection *conn = thread_data->conn;
+	uint8_t *called_data = thread_data->data_raw;
+	uint32_t called_len = thread_data->data_len;
 
 	//detect which call it is: connect, listen/accept, read, write, close? atm this will always be FDF
 	//for now treat as write call with the data to write
 
 	//check connection status, if has handshaked
-
-	//-------test data
-	int called_len = 10;
-	uint8_t *called_data = (uint8_t *) malloc(called_len * sizeof(uint8_t));
-	//-------
 
 	uint8_t *ptr = called_data;
 	int index = 0;
@@ -79,74 +75,161 @@ void *write_thread(void *local) {
 
 	sem_post(&conn->write_sem);
 
-	free(tcp_seg->data);
-	free(tcp_seg);
+	free(called_data);
 }
 
-void tcp_out(struct finsFrame *ff) {
+void tcp_out_fdf(struct finsFrame *ff) {
 	//receiving straight data from the APP layer, process/package into segment
-	uint32_t srcip;
-	uint32_t dstip;
-	struct tcp_segment *tcp_seg;
+	uint32_t src_ip;
+	uint32_t dst_ip;
+	uint32_t src_port_buf;
+	uint32_t dst_port_buf;
+	uint16_t src_port;
+	uint16_t dst_port;
 	struct tcp_connection *conn;
 	pthread_t thread;
 	struct tcp_thread_data *data;
 	int ret;
 
-	//this handles if it's a FDF atm
-
 	metadata* meta = (ff->dataFrame).metaData;
-	metadata_readFromElement(meta, "srcip", &srcip); //host
-	metadata_readFromElement(meta, "dstip", &dstip); //remote
+	metadata_readFromElement(meta, "srcip", &src_ip); //host
+	metadata_readFromElement(meta, "dstip", &dst_ip); //remote
+	metadata_readFromElement(meta, "srcport", &src_port_buf);
+	metadata_readFromElement(meta, "dstport", &dst_port_buf);
+	/** fixing the values because of the conflict between uint16 type and
+	 * the 32 bit META_INT_TYPE
+	 */
+	src_port = (uint16_t) src_port_buf;
+	dst_port = (uint16_t) dst_port_buf;
 
-	tcp_seg = fdf_to_tcp(ff);
-	if (tcp_seg) {
-		if (sem_wait(&conn_list_sem)) {
-			PRINT_ERROR("conn_list_sem wait prob");
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	conn = conn_find(src_ip, dst_ip, src_port, dst_port); //TODO check if right
+	if (conn == NULL) {
+		//error
+		sem_post(&conn_list_sem);
+		return;
+	}
+	sem_post(&conn_list_sem);
+
+	if (conn->running_flag) {
+		if (sem_wait(&conn->conn_sem)) {
+			PRINT_ERROR("conn->conn_sem wait prob");
 			exit(-1);
 		}
-		conn = conn_find(srcip, dstip, tcp_seg->src_port, tcp_seg->dst_port); //TODO check if right
-		if (conn == NULL) {
-			//create a new connection //TODO move to Control based Setup
-			if (conn_has_space(1)) {
-				conn = conn_create(srcip, tcp_seg->src_port, dstip,
-						tcp_seg->dst_port);
-				conn_append(conn);
-			} else {
-				sem_post(&conn_list_sem);
-				return;
-			}
-		}
-		sem_post(&conn_list_sem);
+		if (conn->write_threads < MAX_WRITE_THREADS) {
+			data = (struct tcp_thread_data *) malloc(
+					sizeof(struct tcp_thread_data));
+			data->conn = conn;
+			data->data_raw = ff->dataFrame.pdu;
+			data->data_len = ff->dataFrame.pduLength;
 
-		if (conn->running_flag) {
-			if (sem_wait(&conn->conn_sem)) {
-				PRINT_ERROR("conn->conn_sem wait prob");
+			//spin off thread to handle
+			if (pthread_create(&thread, NULL, write_thread, (void *) data)) {
+				PRINT_ERROR("ERROR: unable to create write_thread thread.");
 				exit(-1);
 			}
-			if (conn->write_threads < MAX_WRITE_THREADS) {
-				data = (struct tcp_thread_data *) malloc(
-						sizeof(struct tcp_thread_data));
-				data->conn = conn;
-				data->tcp_seg = tcp_seg;
-
-				//spin off thread to handle
-				if (pthread_create(&thread, NULL, write_thread,
-						(void *) data)) {
-					PRINT_ERROR("ERROR: unable to create write_thread thread.");
-					exit(-1);
-				}
-				conn->write_threads++;
-			} else {
-				PRINT_DEBUG("Too many write threads=%d. Dropping...",
-						conn->write_threads);
-			}
-			sem_post(&conn->conn_sem);
+			conn->write_threads++;
+		} else {
+			PRINT_DEBUG("Too many write threads=%d. Dropping...",
+					conn->write_threads);
 		}
-	} else {
-		PRINT_DEBUG("Bad tcp_seg. Dropping...");
+		sem_post(&conn->conn_sem);
 	}
 
-	free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
+}
+
+void tcp_exec(struct finsFrame *ff) {
+	uint8_t *pt;
+
+	uint32_t backlog;
+	uint32_t src_ip;
+	uint16_t src_port;
+	struct tcp_connection_stub *conn_stub;
+
+	switch (ff->ctrlFrame.paramterID) {
+	case EXEC_LISTEN:
+		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
+			pt = ff->ctrlFrame.paramterValue;
+
+			backlog = *(uint32_t *) pt;
+			pt += sizeof(uint32_t);
+
+			src_ip = *(uint32_t *) pt;
+			pt += sizeof(uint32_t);
+
+			src_port = *(uint16_t *) pt;
+			pt += sizeof(uint16_t);
+
+			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
+					!= ff->ctrlFrame.paramterLen) {
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
+						ff->ctrlFrame.paramterLen);
+				//error
+				return;
+			}
+
+			//create socket //TODO multithread this portion?
+			if (sem_wait(&conn_stub_list_sem)) {
+				PRINT_ERROR("conn_list_sem wait prob");
+				exit(-1);
+			}
+			conn_stub = conn_stub_find(src_ip, src_port); //TODO check if right
+			if (conn_stub == NULL) {
+				if (conn_stub_has_space(1)) {
+					conn_stub = conn_stub_create(src_ip, src_port);
+					if (conn_stub_insert(conn_stub)) {
+						//error
+					}
+				} else {
+					sem_post(&conn_stub_list_sem);
+					return;
+				}
+			} else {
+				//error
+			}
+			sem_post(&conn_stub_list_sem);
+
+		} else {
+			//error
+			return;
+		}
+		break;
+	case EXEC_CONNECT:
+		break;
+	case EXEC_ACCEPT:
+		break;
+	case EXEC_CLOSE:
+		break;
+	default:
+		break;
+	}
+
+}
+
+void tcp_out_fcf(struct finsFrame *ff) {
+
+	switch ((ff->ctrlFrame).opcode) {
+	case CTRL_ALERT:
+		break;
+	case CTRL_READ_PARAM:
+		break;
+	case CTRL_READ_PARAM_REPLY:
+		break;
+	case CTRL_SET_PARAM:
+		break;
+	case CTRL_EXEC:
+		tcp_exec(ff);
+		break;
+	case CTRL_EXEC_REPLY:
+		break;
+	case CTRL_ERROR:
+		break;
+	default:
+		break;
+	}
 }

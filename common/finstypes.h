@@ -95,10 +95,10 @@ struct finsCtrlFrame {
 	void * data ; 				// pointer to relevant data; msg type dependent
 								// if using a struct for this, define elsewhere
 								// such as ICMP data information, define in ICMP
-
 	/* Special fields for control frames depending on the Opcode */
 	unsigned int paramterID;
 	void *paramterValue;
+	unsigned int paramterLen;
 	struct tableRecord *replyRecord;
 
 };

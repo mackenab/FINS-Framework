@@ -14,6 +14,9 @@ extern finsQueue TCP_to_Switch_Queue;
 extern sem_t Switch_to_TCP_Qsem;
 extern finsQueue Switch_to_TCP_Queue;
 
+struct tcp_connection_stub *conn_stub_list; //The list of current connections we have
+int conn_stub_num;
+
 struct tcp_connection *conn_list; //The list of current connections we have
 int conn_num;
 
@@ -31,7 +34,6 @@ struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num,
 
 	return node;
 }
-
 
 // assumes nodes are in window, -1=less than, 0=problem/equal, 1=greater
 int node_compare(struct tcp_node *node, struct tcp_node *cmp,
@@ -249,44 +251,88 @@ int queue_has_space(struct tcp_queue *queue, uint32_t len) {
 	return queue->len + len <= queue->max;
 }
 
-void *to_gbn_thread(void *local) {
-	struct tcp_connection *conn = (struct tcp_connection *) local;
-	int ret;
-	uint64_t exp;
+struct tcp_connection_stub *conn_stub_create(uint32_t host_addr,
+		uint16_t host_port) {
 
-	PRINT_DEBUG("to_gbn_thread thread started");
+	struct tcp_connection_stub *conn_stub = NULL;
+	conn_stub = (struct tcp_connection_stub *) malloc(
+			sizeof(struct tcp_connection_stub));
 
-	while (conn->running_flag) {
-		ret = read(conn->to_gbn_fd, &exp, sizeof(uint64_t)); //blocking read
-		if (ret != sizeof(uint64_t)) {
-			//read error
+	conn_stub->next = NULL;
+	//sem_init(&conn->conn_sem, 0, 1);
+	//conn_stub->state = 0; //TODO: here?
+
+	conn_stub->host_addr = host_addr;
+	conn_stub->host_port = host_port;
+
+	conn_stub->recv_queue = queue_create(DEFAULT_MAX_QUEUE);
+
+	return conn_stub;
+}
+
+int conn_stub_insert(struct tcp_connection_stub *conn_stub) { //TODO change from append to insertion to ordered LL, return -1 if already inserted
+	struct tcp_connection_stub *temp = NULL;
+
+	if (conn_stub_list == NULL) {
+		conn_stub_list = conn_stub;
+	} else {
+		temp = conn_stub_list;
+		while (temp->next != NULL) {
+			temp = temp->next;
 		}
-		conn->to_gbn_flag = 1;
-		if (conn->main_wait_flag) {
-			PRINT_DEBUG("posting to main_wait_sem");
-			sem_post(&conn->main_wait_sem);
+
+		temp->next = conn_stub;
+		conn_stub->next = NULL;
+	}
+
+	conn_stub_num++;
+	return 0;
+}
+struct tcp_connection_stub *conn_stub_find(uint32_t host_addr,
+		uint16_t host_port) {
+	struct tcp_connection_stub *temp = NULL;
+
+	temp = conn_stub_list;
+	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
+		if (temp->host_addr == host_addr && temp->host_port == host_port) {
+			return temp;
 		}
+		temp = temp->next;
+	}
+
+	return NULL;
+}
+
+void conn_stub_remove(struct tcp_connection_stub *conn_stub) {
+	struct tcp_connection_stub *temp = NULL;
+
+	temp = conn_stub_list;
+	if (temp == NULL) {
+		return;
+	}
+
+	if (temp == conn_stub) {
+		conn_stub_list = conn_stub_list->next;
+		conn_stub_num--;
+		return;
+	}
+
+	while (temp->next != NULL) {
+		if (temp->next == conn_stub) {
+			temp->next = conn_stub->next;
+			conn_stub_num--;
+			break;
+		}
+		temp = temp->next;
 	}
 }
 
-void *to_delayed_thread(void *local) {
-	struct tcp_connection *conn = (struct tcp_connection *) local;
-	int ret;
-	uint64_t exp;
+int conn_stub_is_empty(void) {
+	return conn_stub_num == 0;
+}
 
-	PRINT_DEBUG("to_delayed_thread thread started");
-
-	while (conn->running_flag) {
-		ret = read(conn->to_delayed_fd, &exp, sizeof(uint64_t)); //blocking read
-		if (ret != sizeof(uint64_t)) {
-			//read error
-		}
-		conn->to_delayed_flag = 1;
-		if (conn->main_wait_flag) {
-			PRINT_DEBUG("posting to main_wait_sem");
-			sem_post(&conn->main_wait_sem);
-		}
-	}
+int conn_stub_has_space(uint32_t len) {
+	return conn_stub_num + len <= MAX_CONNECTIONS;
 }
 
 void *to_thread(void *local) {
@@ -657,6 +703,7 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	struct tcp_connection *conn = NULL;
 	conn = (struct tcp_connection *) malloc(sizeof(struct tcp_connection));
 
+	conn->next = NULL;
 	sem_init(&conn->conn_sem, 0, 1);
 	conn->conn_state = ESTABLISHED; //TODO: here?
 
@@ -767,7 +814,7 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	return conn;
 }
 
-void conn_append(struct tcp_connection *conn) {
+int conn_insert(struct tcp_connection *conn) { //TODO change from append to insertion to ordered LL, return -1 if already inserted
 	struct tcp_connection *temp = NULL;
 
 	if (conn_list == NULL) {
@@ -783,6 +830,7 @@ void conn_append(struct tcp_connection *conn) {
 	}
 
 	conn_num++;
+	return 0;
 }
 
 //find a TCP connection with given host addr/port and remote addr/port
@@ -792,7 +840,7 @@ struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 	struct tcp_connection *temp = NULL;
 
 	temp = conn_list;
-	while (temp != NULL) {
+	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
 		if (temp->rem_port == rem_port && temp->rem_addr == rem_addr
 				&& temp->host_addr == host_addr
 				&& temp->host_port == host_port) {
@@ -1114,6 +1162,10 @@ void tcp_init() {
 
 	PRINT_DEBUG("TCP started");
 
+	conn_stub_list = NULL;
+	conn_stub_num = 0;
+	sem_init(&conn_stub_list_sem, 0, 1);
+
 	conn_list = NULL;
 	conn_num = 0;
 	sem_init(&conn_list_sem, 0, 1);
@@ -1137,17 +1189,23 @@ void tcp_get_FF() {
 
 	if (ff->dataOrCtrl == CONTROL) {
 		// send to something to deal with FCF
-		PRINT_DEBUG("send to CONTROL HANDLER !");
+		//PRINT_DEBUG("send to CONTROL HANDLER !");
+		if ((ff->dataFrame).directionFlag == UP) {
+			tcp_in_fcf(ff);
+			PRINT_DEBUG();
+		} else { //directionFlag==DOWN
+			tcp_out_fcf(ff);
+			PRINT_DEBUG();
+		}
+	} else if (ff->dataOrCtrl == DATA) {
+		if ((ff->dataFrame).directionFlag == UP) {
+			tcp_in_fdf(ff);
+			PRINT_DEBUG();
+		} else { //directionFlag==DOWN
+			tcp_out_fdf(ff);
+			PRINT_DEBUG();
+		}
 	}
-	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == UP)) {
-		tcp_in(ff);
-		PRINT_DEBUG();
-	}
-	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == DOWN)) {
-		tcp_out(ff);
-		PRINT_DEBUG();
-	}
-
 }
 
 void tcp_to_switch(struct finsFrame *ff) {

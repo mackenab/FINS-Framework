@@ -75,6 +75,29 @@ int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 //TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
 
+struct tcp_connection_stub {
+	struct tcp_connection_stub *next;
+	uint8_t state; //TODO need?
+
+	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
+	uint16_t host_port; //Port on this machine that this connection is taking up
+
+	struct tcp_queue *recv_queue; //buffer for recv tcp_seg SYN requests
+
+//TODO add conn_stub_sem?
+//TODO add backlog?
+};
+
+sem_t conn_stub_list_sem;
+struct tcp_connection_stub *conn_stub_create(uint32_t host_addr,
+		uint16_t host_port);
+int conn_stub_insert(struct tcp_connection_stub *conn_stub);
+struct tcp_connection_stub *conn_stub_find(uint32_t host_addr,
+		uint16_t host_port);
+void conn_stub_remove(struct tcp_connection_stub *conn_stub);
+int conn_stub_is_empty(void);
+int conn_stub_has_space(uint32_t len);
+
 enum CONN_STATE /* Defines an enumeration type    */
 {
 	CLOSED,
@@ -186,7 +209,7 @@ struct tcp_connection {
 sem_t conn_list_sem;
 struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 		uint32_t rem_addr, uint16_t rem_port);
-void conn_append(struct tcp_connection *conn);
+int conn_insert(struct tcp_connection *conn);
 struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 		uint32_t rem_addr, uint16_t rem_port);
 void conn_remove(struct tcp_connection *conn);
@@ -224,7 +247,9 @@ int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 
 struct tcp_thread_data {
 	struct tcp_connection *conn;
-	struct tcp_segment *tcp_seg;
+	struct tcp_segment *tcp_seg; //TODO change seg/raw to union?
+	uint8_t *data_raw;
+	uint32_t data_len;
 };
 
 struct tcp_to_thread_data {
@@ -250,8 +275,15 @@ int tcp_rand(); //Get a random number
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
-void tcp_out(struct finsFrame *ff);
-void tcp_in(struct finsFrame *ff);
+#define EXEC_LISTEN 0
+#define EXEC_CONNECT 1
+#define EXEC_ACCEPT 2
+#define EXEC_CLOSE 3
+
+void tcp_out_fdf(struct finsFrame *ff);
+void tcp_in_fdf(struct finsFrame *ff);
+void tcp_out_fcf(struct finsFrame *ff);
+void tcp_in_fcf(struct finsFrame *ff);
 
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application

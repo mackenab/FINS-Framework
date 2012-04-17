@@ -19,6 +19,8 @@ extern finsQueue Switch_to_Jinni_Queue;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
 
+int serial_num = 0;
+
 static struct finsFrame *get_fake_frame() {
 
 	struct finsFrame *f = (struct finsFrame *) malloc(sizeof(struct finsFrame));
@@ -155,8 +157,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport) || (srcip
-				!= jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport)
+				|| (srcip != jinniSockets[index].dst_IP)) {
 
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
@@ -205,8 +207,8 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff =
-			(struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(
+			sizeof(struct finsFrame));
 
 	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -267,41 +269,10 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 
 }
 
-int jinni_TCP_to_fins_cntrl(u_char *dataLocal, int len, uint16_t dstport,
-		uint32_t dst_IP_netformat, uint16_t hostport,
-		uint32_t host_IP_netformat) {
+int jinni_TCP_to_fins_cntrl(uint32_t command, u_char *data, int len) {
 
-	struct finsFrame *ff =
-			(struct finsFrame *) malloc(sizeof(struct finsFrame));
-
-	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
-
-	PRINT_DEBUG();
-
-	metadata_create(tcpout_meta);
-
-	if (tcpout_meta == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-		free(ff);
-		exit(1);
-
-	}
-
-	/** metadata_writeToElement() set the value of an element if it already exist
-	 * or it creates the element and set its value in case it is new
-	 */
-	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport,
-			host_IP_netformat);
-
-	uint32_t dstprt = dstport;
-	uint32_t hostprt = hostport;
-
-	metadata_writeToElement(tcpout_meta, "dstport", &dstprt, META_TYPE_INT);
-	metadata_writeToElement(tcpout_meta, "srcport", &hostprt, META_TYPE_INT);
-	metadata_writeToElement(tcpout_meta, "dstip", &dst_IP_netformat,
-			META_TYPE_INT);
-	metadata_writeToElement(tcpout_meta, "srcip", &host_IP_netformat,
-			META_TYPE_INT);
+	struct finsFrame *ff = (struct finsFrame *) malloc(
+			sizeof(struct finsFrame));
 
 	ff->dataOrCtrl = CONTROL;
 	/**TODO get the address automatically by searching the local copy of the
@@ -310,16 +281,14 @@ int jinni_TCP_to_fins_cntrl(u_char *dataLocal, int len, uint16_t dstport,
 	ff->destinationID.id = TCPID;
 	ff->destinationID.next = NULL;
 	(ff->ctrlFrame).senderID = JINNIID;
-	(ff->ctrlFrame).opcode = CTRL_EXEC;
+	(ff->ctrlFrame).opcode = CTRL_EXEC; //MOD_OP?
+	(ff->ctrlFrame).serialNum = serial_num++;
 
-	unsigned int serialNum;
-	unsigned char * name;
-	void * data;
-	unsigned int paramterID;
-	void *paramterValue;
-	struct tableRecord *replyRecord;
+	(ff->ctrlFrame).paramterID = command;
+	(ff->ctrlFrame).paramterValue = data;
+	(ff->ctrlFrame).paramterLen = len;
 
-	//MOD_OP
+	struct tableRecord *replyRecord; //prob not needed
 
 	/**TODO insert the frame into jinni_to_switch queue
 	 * check if insertion succeeded or not then
@@ -428,6 +397,11 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 
 	int index;
+	uint32_t host_IP;
+	uint16_t hostport;
+	uint32_t len;
+	uint8_t *buf;
+	uint8_t *pt;
 
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
@@ -440,10 +414,69 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 	jinniSockets[index].backlog = backlog;
 	sem_post(&jinniSockets_sem);
 
-	//start listen queue?
-	//TODO create conn?
+	/** check if this socket already bound to a source address or not */
+	/*
+	 if (jinniSockets[index].connection_status == 0) {
+	 //socket is not connected to an address. Send call will fail
 
-	ack_send(uniqueSockID, listen_call);
+	 PRINT_DEBUG(
+	 "socketjinni failed to accomplish send, socket found unconnected !!!");
+	 nack_send(uniqueSockID, send_call);
+
+	 }
+	 */
+
+	/** Keep all ports and addresses in host order until later  action taken
+	 * in IPv4 module
+	 *  */
+	/** addresses are in host format given that there are by default already filled
+	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
+
+	/**
+	 * the current value of host_IP is zero but to be filled later with
+	 * the current IP using the IPv4 modules unless a binding has occured earlier
+	 */
+	host_IP = jinniSockets[index].host_IP;
+
+	/**
+	 * Default current host port to be assigned is 58088
+	 * It is supposed to be randomly selected from the range found in
+	 * /proc/sys/net/ipv4/ip_local_port_range
+	 * default range in Ubuntu is 32768 - 61000
+	 * The value has been chosen randomly when the socket firstly inserted into the jinnisockets
+	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
+	 */
+	hostport = jinniSockets[index].hostport;
+
+	len = sizeof(int) + sizeof(uint32_t) + sizeof(uint16_t);
+	buf = (uint8_t *) malloc(len);
+	pt = buf;
+
+	*(int *) pt = jinniSockets[index].backlog;
+	pt += sizeof(int);
+
+	*(uint32_t *) pt = host_IP;
+	pt += sizeof(uint32_t);
+
+	*(uint16_t *) pt = hostport;
+	pt += sizeof(uint16_t);
+
+	if (pt - buf != len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt - buf, len);
+		free(buf);
+		return; //?
+	}
+
+	if (jinni_TCP_to_fins_cntrl(EXEC_LISTEN, buf, len) == 1) {
+		PRINT_DEBUG("");
+		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
+		ack_send(uniqueSockID, listen_call);
+		PRINT_DEBUG("");
+
+	} else {
+		PRINT_DEBUG("socketjinni failed to accomplish listen");
+		nack_send(uniqueSockID, listen_call);
+	}
 }
 
 void accept_tcp(unsigned long long uniqueSockID,
@@ -516,7 +549,6 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * */
 	/** Reverse again because it was reversed by the application itself */
 	//hostport = ntohs(addr->sin_port);
-
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
@@ -648,8 +680,8 @@ void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 }
 
-void write_tcp(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data) {
+void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
+		u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
