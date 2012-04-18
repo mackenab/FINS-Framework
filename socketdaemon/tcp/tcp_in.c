@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
+				- conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -61,16 +61,45 @@ void calcRTT(struct tcp_connection *conn) {
 			conn->rtt_est, conn->rtt_dev, conn->timeout);
 }
 
+void *syn_thread(void *local) {
+	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_segment *tcp_seg = thread_data->tcp_seg;
+	uint32_t rem_addr = thread_data->addr;
+
+	uint16_t calc;
+	struct tcp_node *node;
+	int ret;
+
+	calc = tcp_checksum(rem_addr, conn_stub->host_addr, tcp_seg);
+	if (tcp_seg->checksum != calc) {
+		PRINT_ERROR("Checksum: recv=%u calc=%u\n", tcp_seg->checksum, calc);
+	} else {
+		if (queue_has_space(conn_stub->recv_queue, 1)) {
+			if (sem_wait(&conn_stub->recv_queue->sem)) {
+				PRINT_ERROR("conn->send_queue wait prob");
+				exit(-1);
+			}
+			if (queue_has_space(conn_stub->recv_queue, 1)) {
+				node = node_create((uint8_t *) tcp_seg, 1, tcp_seg->seq_num,
+						tcp_seg->seq_num);
+				queue_append(conn_stub->recv_queue, node);
+			}
+			sem_post(&conn_stub->recv_queue->sem);
+		}
+	}
+}
+
 void *recv_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	struct tcp_connection *conn = thread_data->conn;
 	struct tcp_segment *tcp_seg = thread_data->tcp_seg;
-	struct finsFrame *ff;
 
 	uint16_t calc;
 	struct tcp_node *node;
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
+	struct finsFrame *ff;
 
 	uint32_t seq_end;
 	//uint32_t rem_seq_end;
@@ -119,8 +148,8 @@ void *recv_thread(void *local) {
 								if (conn->threshhold < conn->MSS) {
 									conn->threshhold = conn->MSS;
 								}
-								conn->cong_window = conn->threshhold
-										+ 3 * conn->MSS;
+								conn->cong_window = conn->threshhold + 3
+										* conn->MSS;
 								break;
 							case RECOVERY:
 								//conn->fast_flag = 0;
@@ -141,8 +170,7 @@ void *recv_thread(void *local) {
 							temp_node = queue_remove_front(conn->send_queue);
 							temp_seg = (struct tcp_segment *) temp_node->data;
 							free(temp_seg->data);
-							free(temp_seg);
-							free(temp_node);
+							node_free(temp_node);
 						}
 
 						conn->host_seq_num = tcp_seg->ack_num;
@@ -155,8 +183,8 @@ void *recv_thread(void *local) {
 						conn->gbn_flag = 0;
 
 						//RTT
-						if (conn->rtt_flag
-								&& tcp_seg->ack_num == conn->rtt_seq_end) {
+						if (conn->rtt_flag && tcp_seg->ack_num
+								== conn->rtt_seq_end) {
 							calcRTT(conn);
 						}
 						stopTimer(conn->to_gbn_fd);
@@ -192,13 +220,12 @@ void *recv_thread(void *local) {
 
 							while (!queue_is_empty(conn->send_queue)
 									&& conn->send_queue->front != node) {
-								temp_node = queue_remove_front(
-										conn->send_queue);
-								temp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->send_queue);
+								temp_seg
+										= (struct tcp_segment *) temp_node->data;
 								free(temp_seg->data);
-								free(temp_seg);
-								free(temp_node);
+								node_free(temp_node);
 							}
 
 							//valid ACK
@@ -213,8 +240,8 @@ void *recv_thread(void *local) {
 							}
 
 							//RTT
-							if (conn->rtt_flag
-									&& tcp_seg->ack_num == conn->rtt_seq_end) {
+							if (conn->rtt_flag && tcp_seg->ack_num
+									== conn->rtt_seq_end) {
 								calcRTT(conn);
 							}
 							if (!conn->gbn_flag) {
@@ -292,27 +319,25 @@ void *recv_thread(void *local) {
 							tcp_seg = (struct tcp_segment *) temp_node->data;
 							conn->host_window += tcp_seg->data_len;
 							free(tcp_seg->data);
-							free(tcp_seg);
-							free(temp_node);
+							node_free(temp_node);
 						} else {
 							if (conn->recv_queue->front->seq_num
 									< conn->rem_seq_end) { //wrap around
 								break;
 							} else {
-								temp_node = queue_remove_front(
-										conn->recv_queue);
-								tcp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->recv_queue);
+								tcp_seg
+										= (struct tcp_segment *) temp_node->data;
 								conn->host_window += tcp_seg->data_len;
 								free(tcp_seg->data);
-								free(tcp_seg);
-								free(temp_node);
+								node_free(temp_node);
 							}
 						}
 					} else if (conn->recv_queue->front->seq_num
 							== conn->rem_seq_num) {
-						tcp_seg =
-								(struct tcp_segment *) conn->recv_queue->front->data;
+						tcp_seg
+								= (struct tcp_segment *) conn->recv_queue->front->data;
 
 						//TODO: Process Flags/options
 
@@ -328,22 +353,20 @@ void *recv_thread(void *local) {
 						temp_node = queue_remove_front(conn->recv_queue);
 						tcp_seg = (struct tcp_segment *) temp_node->data;
 						free(tcp_seg->data);
-						free(tcp_seg);
-						free(temp_node);
+						node_free(temp_node);
 					} else {
 						if (conn->rem_seq_num <= conn->rem_seq_end) {
 							if (conn->recv_queue->front->seq_num
 									< conn->rem_seq_end) {
 								break;
 							} else {
-								temp_node = queue_remove_front(
-										conn->recv_queue);
-								tcp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->recv_queue);
+								tcp_seg
+										= (struct tcp_segment *) temp_node->data;
 								conn->host_window += tcp_seg->data_len;
 								free(tcp_seg->data);
-								free(tcp_seg);
-								free(temp_node);
+								node_free(temp_node);
 							}
 						} else {
 							break;
@@ -368,8 +391,7 @@ void *recv_thread(void *local) {
 								conn->rem_seq_num, conn->rem_seq_end,
 								tcp_seg->seq_num, seq_end);
 						free(tcp_seg->data);
-						free(tcp_seg);
-						free(node);
+						node_free(node);
 					} else {
 						conn->host_window -= tcp_seg->data_len;
 					}
@@ -399,12 +421,15 @@ void *recv_thread(void *local) {
 			sem_post(&conn->recv_queue->sem);
 		}
 	}
+
+	pthread_exit(NULL);
 }
 
 void tcp_in_fdf(struct finsFrame *ff) {
-	uint32_t srcip;
-	uint32_t dstip;
+	uint32_t src_ip;
+	uint32_t dst_ip;
 	struct tcp_segment *tcp_seg;
+	struct tcp_connection_stub *conn_stub;
 	struct tcp_connection *conn;
 	pthread_t thread;
 	struct tcp_thread_data *data;
@@ -413,49 +438,91 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	//this handles if it's a FDF atm
 
 	metadata* meta = (ff->dataFrame).metaData;
-	metadata_readFromElement(meta, "srcip", &srcip); //host
-	metadata_readFromElement(meta, "dstip", &dstip); //remote
+	metadata_readFromElement(meta, "srcip", &src_ip); //host
+	metadata_readFromElement(meta, "dstip", &dst_ip); //remote
 
 	tcp_seg = fdf_to_tcp(ff);
 	if (tcp_seg) {
-		if (tcp_seg->flags && FLAG_SYN) {
-			//
-		}
-
-		if (sem_wait(&conn_list_sem)) {
-			PRINT_ERROR("conn_list_sem wait prob");
-			exit(-1);
-		}
-		conn = conn_find(dstip, srcip, tcp_seg->dst_port, tcp_seg->src_port); //TODO check if right, is reversed
-		sem_post(&conn_list_sem);
-
-		if (conn) {
-			if (conn->running_flag) {
-				if (sem_wait(&conn->conn_sem)) {
-					PRINT_ERROR("conn->conn_sem wait prob");
+		if (tcp_seg->flags & FLAG_SYN) {
+			//and if not ACK
+			if (!(tcp_seg->flags & FLAG_ACK)) {
+				if (sem_wait(&conn_stub_list_sem)) {
+					PRINT_ERROR("conn_stub_list_sem wait prob");
 					exit(-1);
 				}
-				if (conn->recv_threads < MAX_RECV_THREADS) {
-					data = (struct tcp_thread_data *) malloc(
-							sizeof(struct tcp_thread_data));
-					data->conn = conn;
-					data->tcp_seg = tcp_seg;
+				conn_stub = conn_stub_find(dst_ip, tcp_seg->dst_port); //TODO check if right, is reversed
+				sem_post(&conn_stub_list_sem);
 
-					if (pthread_create(&thread, NULL, recv_thread,
-							(void *) conn)) {
-						PRINT_ERROR(
-								"ERROR: unable to create recv_thread thread.");
-						exit(-1);
+				if (conn_stub) {
+					if (conn_stub->running_flag) {
+						if (sem_wait(&conn_stub->sem)) {
+							PRINT_ERROR("conn_stub->sem wait prob");
+							exit(-1);
+						}
+						if (conn_stub->recv_threads < MAX_RECV_THREADS) {
+							data = (struct tcp_thread_data *) malloc(
+									sizeof(struct tcp_thread_data));
+							data->conn_stub = conn_stub;
+							data->tcp_seg = tcp_seg;
+							data->addr = src_ip;
+							if (pthread_create(&thread, NULL, syn_thread,
+									(void *) data)) {
+								PRINT_ERROR(
+										"ERROR: unable to create recv_thread thread.");
+								exit(-1);
+							}
+							conn_stub->recv_threads++;
+						} else {
+							PRINT_DEBUG(
+									"Too many recv threads=%d. Dropping...",
+									conn_stub->recv_threads);
+						}
+						sem_post(&conn_stub->sem);
 					}
-					conn->recv_threads++;
 				} else {
-					PRINT_DEBUG("Too many recv threads=%d. Dropping...",
-							conn->recv_threads);
+					PRINT_DEBUG("Found no stub. Dropping...");
 				}
-				sem_post(&conn->conn_sem);
+			} else {
+				//TODO do similar thin
 			}
 		} else {
-			PRINT_DEBUG("Found no connection. Dropping...");
+
+			if (sem_wait(&conn_list_sem)) {
+				PRINT_ERROR("conn_list_sem wait prob");
+				exit(-1);
+			}
+			conn = conn_find(dst_ip, tcp_seg->dst_port, src_ip,
+					tcp_seg->src_port); //TODO check if right, is reversed
+			sem_post(&conn_list_sem);
+
+			if (conn) {
+				if (conn->running_flag) {
+					if (sem_wait(&conn->sem)) {
+						PRINT_ERROR("conn->conn_sem wait prob");
+						exit(-1);
+					}
+					if (conn->recv_threads < MAX_RECV_THREADS) {
+						data = (struct tcp_thread_data *) malloc(
+								sizeof(struct tcp_thread_data));
+						data->conn = conn;
+						data->tcp_seg = tcp_seg;
+
+						if (pthread_create(&thread, NULL, recv_thread,
+								(void *) data)) {
+							PRINT_ERROR(
+									"ERROR: unable to create recv_thread thread.");
+							exit(-1);
+						}
+						conn->recv_threads++;
+					} else {
+						PRINT_DEBUG("Too many recv threads=%d. Dropping...",
+								conn->recv_threads);
+					}
+					sem_post(&conn->sem);
+				}
+			} else {
+				PRINT_DEBUG("Found no connection. Dropping...");
+			}
 		}
 	} else {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");
@@ -466,5 +533,6 @@ void tcp_in_fdf(struct finsFrame *ff) {
 }
 
 void tcp_in_fcf(struct finsFrame *ff) {
+	//TODO
 	freeFinsFrame(ff);
 }

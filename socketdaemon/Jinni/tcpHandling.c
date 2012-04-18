@@ -157,8 +157,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport)
-				|| (srcip != jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport) || (srcip
+				!= jinniSockets[index].dst_IP)) {
 
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
@@ -207,8 +207,8 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -271,8 +271,8 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 
 int jinni_TCP_to_fins_cntrl(uint32_t command, u_char *data, int len) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	ff->dataOrCtrl = CONTROL;
 	/**TODO get the address automatically by searching the local copy of the
@@ -397,7 +397,7 @@ void bind_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 
 	int index;
-	uint32_t host_IP;
+	uint32_t host_ip;
 	uint16_t hostport;
 	uint32_t len;
 	uint8_t *buf;
@@ -436,7 +436,7 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = jinniSockets[index].host_IP;
+	host_ip = jinniSockets[index].host_IP;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -455,7 +455,7 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 	*(int *) pt = jinniSockets[index].backlog;
 	pt += sizeof(int);
 
-	*(uint32_t *) pt = host_IP;
+	*(uint32_t *) pt = host_ip;
 	pt += sizeof(uint32_t);
 
 	*(uint16_t *) pt = hostport;
@@ -500,9 +500,14 @@ void accept_tcp(unsigned long long uniqueSockID,
 
 void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
-	uint16_t dstport;
-	uint32_t dst_IP;
 	int index;
+	uint32_t host_ip;
+	uint16_t host_port;
+	uint32_t dst_ip;
+	uint16_t dst_port;
+	uint32_t len;
+	uint8_t *buf;
+	uint8_t *pt;
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -519,8 +524,8 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	dstport = ntohs(addr->sin_port);
-	dst_IP = ntohl((addr->sin_addr).s_addr);
+	dst_port = ntohs(addr->sin_port);
+	dst_ip = ntohl((addr->sin_addr).s_addr);
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * according to the RFC document and man pages: Application can call connect more than
@@ -539,7 +544,7 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	if (jinniSockets[index].connection_status > 0) {
 		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP,
 				jinniSockets[index].dstport);
-		PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport);
+		PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
 
 	}
 
@@ -563,12 +568,47 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	/** Reverse again because it was reversed by the application itself
 	 * In our example it is not reversed */
-	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
+	//jinniSockets[index].host_ip.s_addr = ntohl(jinniSockets[index].host_ip.s_addr);
 	/** TODO convert back to the network endian form before
 	 * sending to the fins core
 	 */
 
-	ack_send(uniqueSockID, connect_call);
+	len = 2 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
+	buf = (uint8_t *) malloc(len);
+	pt = buf;
+
+	*(uint32_t *) pt = host_ip;
+	pt += sizeof(uint32_t);
+
+	*(uint16_t *) pt = host_port;
+	pt += sizeof(uint16_t);
+
+	*(uint32_t *) pt = dst_ip;
+	pt += sizeof(uint32_t);
+
+	*(uint16_t *) pt = dst_port;
+	pt += sizeof(uint16_t);
+
+	if (pt - buf != len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt - buf, len);
+		free(buf);
+		nack_send(uniqueSockID, connect_call);
+		return;
+	}
+
+	if (jinni_TCP_to_fins_cntrl(EXEC_CONNECT, buf, len) == 1) {
+		PRINT_DEBUG("");
+		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
+
+		//TODO wait thread for reply
+
+		//ack_send(uniqueSockID, connect_call);
+		PRINT_DEBUG("");
+
+	} else {
+		PRINT_DEBUG("socketjinni failed to accomplish connection");
+		nack_send(uniqueSockID, connect_call);
+	}
 
 	free(addr);
 	return;
@@ -680,8 +720,8 @@ void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 }
 
-void write_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,
-		u_char *data) {
+void write_tcp(unsigned long long uniqueSockID, int socketCallType,
+		int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;

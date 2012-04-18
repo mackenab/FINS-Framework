@@ -76,6 +76,7 @@ void *write_thread(void *local) {
 	sem_post(&conn->write_sem);
 
 	free(called_data);
+	pthread_exit(NULL);
 }
 
 void tcp_out_fdf(struct finsFrame *ff) {
@@ -115,7 +116,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	sem_post(&conn_list_sem);
 
 	if (conn->running_flag) {
-		if (sem_wait(&conn->conn_sem)) {
+		if (sem_wait(&conn->sem)) {
 			PRINT_ERROR("conn->conn_sem wait prob");
 			exit(-1);
 		}
@@ -136,70 +137,127 @@ void tcp_out_fdf(struct finsFrame *ff) {
 			PRINT_DEBUG("Too many write threads=%d. Dropping...",
 					conn->write_threads);
 		}
-		sem_post(&conn->conn_sem);
+		sem_post(&conn->sem);
 	}
 
 	freeFinsFrame(ff);
 }
 
+void tcp_exec_listen(uint32_t src_ip, uint16_t src_port, uint32_t backlog) {
+	//create socket //TODO multithread this portion?
+	struct tcp_connection_stub *conn_stub;
+
+	if (sem_wait(&conn_stub_list_sem)) {
+		PRINT_ERROR("conn_stub_list_sem wait prob");
+		exit(-1);
+	}
+	conn_stub = conn_stub_find(src_ip, src_port);
+	if (conn_stub == NULL) {
+		if (conn_stub_has_space(1)) {
+			conn_stub = conn_stub_create(src_ip, src_port, backlog);
+			if (conn_stub_insert(conn_stub)) {
+				//error - shouldn't happen
+				conn_stub_free(conn_stub);
+			}
+		} else {
+			//throw minor error
+		}
+	} else {
+		//error
+	}
+	sem_post(&conn_stub_list_sem);
+}
+
+void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
+		uint16_t dst_port) {
+	struct tcp_connection *conn;
+
+	//create socket //TODO multithread this portion?
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	conn = conn_find(src_ip, src_port, dst_ip, dst_port);
+	if (conn == NULL) {
+		if (conn_has_space(1)) {
+			conn = conn_create(src_ip, src_port, dst_ip, dst_port);
+			if (conn_insert(conn)) {
+				//error - shouldn't happen
+				conn_free(conn);
+			}
+		} else {
+			//throw minor error
+		}
+	} else {
+		//error
+	}
+	sem_post(&conn_list_sem);
+}
+
 void tcp_exec(struct finsFrame *ff) {
 	uint8_t *pt;
-
-	uint32_t backlog;
-	uint32_t src_ip;
-	uint16_t src_port;
-	struct tcp_connection_stub *conn_stub;
 
 	switch (ff->ctrlFrame.paramterID) {
 	case EXEC_LISTEN:
 		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
 			pt = ff->ctrlFrame.paramterValue;
 
-			backlog = *(uint32_t *) pt;
+			uint32_t backlog = *(uint32_t *) pt;
 			pt += sizeof(uint32_t);
 
-			src_ip = *(uint32_t *) pt;
+			uint32_t src_ip = *(uint32_t *) pt;
 			pt += sizeof(uint32_t);
 
-			src_port = *(uint16_t *) pt;
+			uint16_t src_port = *(uint16_t *) pt;
 			pt += sizeof(uint16_t);
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
+						- (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//error
-				return;
+				break;
 			}
 
-			//create socket //TODO multithread this portion?
-			if (sem_wait(&conn_stub_list_sem)) {
-				PRINT_ERROR("conn_list_sem wait prob");
-				exit(-1);
-			}
-			conn_stub = conn_stub_find(src_ip, src_port); //TODO check if right
-			if (conn_stub == NULL) {
-				if (conn_stub_has_space(1)) {
-					conn_stub = conn_stub_create(src_ip, src_port);
-					if (conn_stub_insert(conn_stub)) {
-						//error
-					}
-				} else {
-					sem_post(&conn_stub_list_sem);
-					return;
-				}
-			} else {
-				//error
-			}
-			sem_post(&conn_stub_list_sem);
+			tcp_exec_listen(src_ip, src_port, backlog);
 
+			free(ff->ctrlFrame.paramterValue);
 		} else {
 			//error
-			return;
 		}
 		break;
 	case EXEC_CONNECT:
+		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
+			pt = ff->ctrlFrame.paramterValue;
+
+			uint32_t src_ip = *(uint32_t *) pt;
+			pt += sizeof(uint32_t);
+
+			uint16_t src_port = *(uint16_t *) pt;
+			pt += sizeof(uint16_t);
+
+			uint32_t dst_ip = *(uint32_t *) pt;
+			pt += sizeof(uint32_t);
+
+			uint16_t dst_port = *(uint16_t *) pt;
+			pt += sizeof(uint16_t);
+
+			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
+					!= ff->ctrlFrame.paramterLen) {
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
+						- (uint8_t *) ff->ctrlFrame.paramterValue,
+						ff->ctrlFrame.paramterLen);
+				//error
+				break;
+			}
+
+			tcp_exec_connect(src_ip, src_port, dst_ip, dst_port);
+
+			free(ff->ctrlFrame.paramterValue);
+		} else {
+			//error
+		}
 		break;
 	case EXEC_ACCEPT:
 		break;
@@ -209,9 +267,12 @@ void tcp_exec(struct finsFrame *ff) {
 		break;
 	}
 
+	freeFinsFrame(ff);
 }
 
 void tcp_out_fcf(struct finsFrame *ff) {
+
+	//TODO fill out
 
 	switch ((ff->ctrlFrame).opcode) {
 	case CTRL_ALERT:

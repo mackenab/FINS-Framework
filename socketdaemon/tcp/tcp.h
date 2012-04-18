@@ -52,6 +52,7 @@ struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num,
 		uint32_t seq_end);
 int node_compare(struct tcp_node *node, struct tcp_node *cmp,
 		uint32_t win_seq_num, uint32_t win_seq_end);
+void node_free(struct tcp_node *node);
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
 struct tcp_queue {
@@ -73,33 +74,39 @@ struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num);
 struct tcp_node *queue_remove_front(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
+void queue_free(struct tcp_queue *queue);
 //TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
 
 struct tcp_connection_stub {
 	struct tcp_connection_stub *next;
-	uint8_t state; //TODO need?
+	sem_t sem;
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
 	struct tcp_queue *recv_queue; //buffer for recv tcp_seg SYN requests
 
+	int recv_threads;
+
+	uint8_t running_flag;
 //TODO add conn_stub_sem?
 //TODO add backlog?
 };
 
 sem_t conn_stub_list_sem;
 struct tcp_connection_stub *conn_stub_create(uint32_t host_addr,
-		uint16_t host_port);
+		uint16_t host_port, uint32_t backlog);
 int conn_stub_insert(struct tcp_connection_stub *conn_stub);
 struct tcp_connection_stub *conn_stub_find(uint32_t host_addr,
 		uint16_t host_port);
 void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
+void conn_stub_free(struct tcp_connection_stub *conn_stub);
 
 enum CONN_STATE /* Defines an enumeration type    */
 {
+	INIT,
 	CLOSED,
 	LISTEN,
 	SYN_SENT,
@@ -121,8 +128,8 @@ enum CONG_STATE /* Defines an enumeration type    */
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
 	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
-	sem_t conn_sem; //for next, state, write_threads
-	enum CONN_STATE conn_state;
+	sem_t sem; //for next, state, write_threads
+	enum CONN_STATE state;
 	//some type of option state
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
@@ -187,7 +194,7 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-//-----
+	//-----
 };
 
 //TODO raise any of these?
@@ -215,6 +222,7 @@ struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
 int conn_has_space(uint32_t len);
+void conn_free(struct tcp_connection *conn);
 
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
@@ -233,7 +241,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 void conn_send_ack(struct tcp_connection *conn);
@@ -250,6 +258,8 @@ struct tcp_thread_data {
 	struct tcp_segment *tcp_seg; //TODO change seg/raw to union?
 	uint8_t *data_raw;
 	uint32_t data_len;
+	struct tcp_connection_stub *conn_stub;
+	uint32_t addr;
 };
 
 struct tcp_to_thread_data {
