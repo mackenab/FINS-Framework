@@ -106,8 +106,8 @@ void conn_stub_free(struct tcp_connection_stub *conn_stub);
 
 enum CONN_STATE /* Defines an enumeration type    */
 {
-	INIT,
 	CLOSED,
+	INIT,
 	LISTEN,
 	SYN_SENT,
 	SYN_RECV,
@@ -142,6 +142,10 @@ struct tcp_connection {
 	struct tcp_queue *recv_queue; //buffer for recv tcp_seg that are unACKed
 	struct tcp_queue *read_queue; //buffer for raw data that have been transfered //TODO push straight to daemon?
 
+	pthread_t setup_thread;
+	uint8_t setup_wait_flag;
+	sem_t setup_wait_sem;
+
 	pthread_t main_thread;
 	uint8_t main_wait_flag;
 	sem_t main_wait_sem;
@@ -149,6 +153,7 @@ struct tcp_connection {
 	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
 	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
 	sem_t write_wait_sem;
+	int index;
 
 	int recv_threads;
 	//sem_t read_sem; //TODO: prob don't need
@@ -194,7 +199,7 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-	//-----
+//-----
 };
 
 //TODO raise any of these?
@@ -241,7 +246,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 void conn_send_ack(struct tcp_connection *conn);
@@ -270,17 +275,20 @@ struct tcp_to_thread_data {
 	sem_t *sem;
 };
 
+//More specific, internal functions for dealing with the data and all that
+//uint16_t TCP_checksum(struct finsFrame *ff); //Calculate the checksum of this TCP segment
+void tcp_srand(); //Seed the random number generator
+int tcp_rand(); //Get a random number
+struct tcp_segment *tcp_create(struct tcp_connection *conn);
+void tcp_add_data(struct tcp_connection *conn, struct tcp_segment *tcp_seg,
+		int data_len);
+uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
+		struct tcp_segment *tcp_seg);
+
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
 void tcp_get_FF();
 void tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
-
-//More specific, internal functions for dealing with the data and all that
-//uint16_t TCP_checksum(struct finsFrame *ff); //Calculate the checksum of this TCP segment
-uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
-		struct tcp_segment *tcp_seg);
-void tcp_srand(); //Seed the random number generator
-int tcp_rand(); //Get a random number
 
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field

@@ -184,6 +184,9 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 			if (conn_insert(conn)) {
 				//error - shouldn't happen
 				conn_free(conn);
+			} else {
+				conn->state = INIT;
+				sem_post(&conn->main_wait_sem);
 			}
 		} else {
 			//throw minor error

@@ -88,6 +88,8 @@ void *syn_thread(void *local) {
 			sem_post(&conn_stub->recv_queue->sem);
 		}
 	}
+
+	free(thread_data);
 }
 
 void *recv_thread(void *local) {
@@ -422,6 +424,7 @@ void *recv_thread(void *local) {
 		}
 	}
 
+	free(thread_data);
 	pthread_exit(NULL);
 }
 
@@ -432,7 +435,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_connection_stub *conn_stub;
 	struct tcp_connection *conn;
 	pthread_t thread;
-	struct tcp_thread_data *data;
+	struct tcp_thread_data *thread_data;
 	int ret;
 
 	//this handles if it's a FDF atm
@@ -460,13 +463,13 @@ void tcp_in_fdf(struct finsFrame *ff) {
 							exit(-1);
 						}
 						if (conn_stub->recv_threads < MAX_RECV_THREADS) {
-							data = (struct tcp_thread_data *) malloc(
+							thread_data = (struct tcp_thread_data *) malloc(
 									sizeof(struct tcp_thread_data));
-							data->conn_stub = conn_stub;
-							data->tcp_seg = tcp_seg;
-							data->addr = src_ip;
+							thread_data->conn_stub = conn_stub;
+							thread_data->tcp_seg = tcp_seg;
+							thread_data->addr = src_ip;
 							if (pthread_create(&thread, NULL, syn_thread,
-									(void *) data)) {
+									(void *) thread_data)) {
 								PRINT_ERROR(
 										"ERROR: unable to create recv_thread thread.");
 								exit(-1);
@@ -483,7 +486,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 					PRINT_DEBUG("Found no stub. Dropping...");
 				}
 			} else {
-				//TODO do similar thin
+				//TODO do similar thing SYN ACK
 			}
 		} else {
 
@@ -502,13 +505,13 @@ void tcp_in_fdf(struct finsFrame *ff) {
 						exit(-1);
 					}
 					if (conn->recv_threads < MAX_RECV_THREADS) {
-						data = (struct tcp_thread_data *) malloc(
+						thread_data = (struct tcp_thread_data *) malloc(
 								sizeof(struct tcp_thread_data));
-						data->conn = conn;
-						data->tcp_seg = tcp_seg;
+						thread_data->conn = conn;
+						thread_data->tcp_seg = tcp_seg;
 
 						if (pthread_create(&thread, NULL, recv_thread,
-								(void *) data)) {
+								(void *) thread_data)) {
 							PRINT_ERROR(
 									"ERROR: unable to create recv_thread thread.");
 							exit(-1);
