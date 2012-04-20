@@ -335,11 +335,7 @@ void socket_udp(int domain, int type, int protocol,
 	int tester;
 	/** TODO lock the pipe semaphore then open the pipe*/
 
-	insertjinniSocket(uniqueSockID, type, protocol);
-
-	PRINT_DEBUG();
-
-	index = findjinniSocket(uniqueSockID);
+	index = insertjinniSocket(uniqueSockID, type, protocol);
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
 		return;

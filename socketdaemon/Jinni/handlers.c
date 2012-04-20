@@ -226,7 +226,7 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			jinniSockets[i].sockopts.FSO_REUSEADDR = 0;
 
 			sem_post(&jinniSockets_sem);
-			return (1);
+			return i;
 		}
 	}
 	PRINT_DEBUG(

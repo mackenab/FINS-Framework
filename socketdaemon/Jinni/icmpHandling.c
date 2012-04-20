@@ -25,8 +25,8 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff =
+			(struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -86,8 +86,8 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	return (0);
 
 }
-int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
-		int symbol, struct sockaddr_in *address, int block_flag) {
+int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf,
+		int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
@@ -183,8 +183,8 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport)
-				|| (srcip != jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport) || (srcip
+				!= jinniSockets[index].dst_IP)) {
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
 			sem_post(&jinniSockets_sem);
@@ -238,14 +238,10 @@ void socket_icmp(int domain, int type, int protocol,
 	int pipe_desc;
 	int tester;
 
-	insertjinniSocket(uniqueSockID, type, protocol);
-
-	PRINT_DEBUG();
-	index = findjinniSocket(uniqueSockID);
+	index = insertjinniSocket(uniqueSockID, type, protocol);
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
-		exit(1);
-
+		return;
 	}
 	PRINT_DEBUG("0000");
 
@@ -606,7 +602,8 @@ void listen_icmp(unsigned long long uniqueSockID, int backlog) {
 	ack_send(uniqueSockID, listen_call);
 }
 
-void accept_icmp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
+void accept_icmp(unsigned long long uniqueSockID,
+		unsigned long long uniqueSockID_new, int flags) {
 
 	int index;
 
@@ -617,7 +614,6 @@ void accept_icmp(unsigned long long uniqueSockID, unsigned long long uniqueSockI
 		return;
 	}
 	PRINT_DEBUG("index = %d", index);
-
 
 	ack_send(uniqueSockID, accept_call);
 }

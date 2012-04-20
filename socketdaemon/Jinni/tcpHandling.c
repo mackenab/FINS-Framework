@@ -316,11 +316,7 @@ void socket_tcp(int domain, int type, int protocol,
 
 	int index;
 
-	insertjinniSocket(uniqueSockID, type, protocol);
-
-	PRINT_DEBUG();
-
-	index = findjinniSocket(uniqueSockID);
+	index = insertjinniSocket(uniqueSockID, type, protocol);
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
 		nack_send(uniqueSockID, socket_call);
@@ -469,33 +465,79 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 
 	if (jinni_TCP_to_fins_cntrl(EXEC_LISTEN, buf, len) == 1) {
 		PRINT_DEBUG("");
-		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
 		ack_send(uniqueSockID, listen_call);
-		PRINT_DEBUG("");
-
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish listen");
 		nack_send(uniqueSockID, listen_call);
 	}
+
+	free(buf);
 }
 
 void accept_tcp(unsigned long long uniqueSockID,
 		unsigned long long uniqueSockID_new, int flags) {
 
 	int index;
+	int index_new;
+	uint32_t host_ip;
+	uint16_t hostport;
+	uint32_t len;
+	uint8_t *buf;
+	uint8_t *pt;
 
 	//TODO: finish this
 	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+	if (index < 0) {
+		PRINT_DEBUG("incorrect index !! Crash");
 		return;
 	}
 	PRINT_DEBUG("index = %d", index);
 
-	insertjinniSocket(uniqueSockID_new, jinniSockets[index].type,
+	index_new = insertjinniSocket(uniqueSockID_new, jinniSockets[index].type,
 			jinniSockets[index].protocol);
+	if (index < 0) {
+		PRINT_DEBUG("incorrect index !! Crash");
+		return;
+	}
 
-	ack_send(uniqueSockID, accept_call);
+	sem_wait(&jinniSockets_sem);
+	jinniSockets[index_new].hostport = jinniSockets[index].hostport;
+	jinniSockets[index_new].host_IP = jinniSockets[index].host_IP;
+	sem_post(&jinniSockets_sem);
+
+	//TODO process flags?
+
+	len = sizeof(int) + sizeof(uint32_t) + sizeof(uint16_t);
+	buf = (uint8_t *) malloc(len);
+	pt = buf;
+
+	*(int *) pt = flags;
+	pt += sizeof(int);
+
+	*(uint32_t *) pt = host_ip;
+	pt += sizeof(uint32_t);
+
+	*(uint16_t *) pt = hostport;
+	pt += sizeof(uint16_t);
+
+	if (pt - buf != len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt - buf, len);
+		free(buf);
+		return; //?
+	}
+
+	if (jinni_TCP_to_fins_cntrl(EXEC_ACCEPT, buf, len) == 1) {
+		PRINT_DEBUG("");
+
+		//TODO wait thread for reply
+
+		ack_send(uniqueSockID, accept_call);
+	} else {
+		PRINT_DEBUG("socketjinni failed to accomplish listen");
+		nack_send(uniqueSockID, accept_call);
+	}
+
+	free(buf);
 }
 
 void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
@@ -602,17 +644,14 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 		//TODO wait thread for reply
 
-		//ack_send(uniqueSockID, connect_call);
-		PRINT_DEBUG("");
-
+		ack_send(uniqueSockID, connect_call);
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish connection");
 		nack_send(uniqueSockID, connect_call);
 	}
 
+	free(buf);
 	free(addr);
-	return;
-
 }
 
 void send_tcp(unsigned long long uniqueSockID, int socketCallType, int datalen,

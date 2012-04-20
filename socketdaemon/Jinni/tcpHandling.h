@@ -14,11 +14,11 @@
 
 #include "handlers.h"
 
-#define EXEC_LISTEN 0
-#define EXEC_CONNECT 1
+#define EXEC_CONNECT 0
+#define EXEC_LISTEN 1
 #define EXEC_ACCEPT 2
 #define EXEC_CLOSE 3
-
+#define EXEC_CLOSE_STUB 4
 
 int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,

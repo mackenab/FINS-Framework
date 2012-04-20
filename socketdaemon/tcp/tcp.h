@@ -84,9 +84,12 @@ struct tcp_connection_stub {
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
-	struct tcp_queue *recv_queue; //buffer for recv tcp_seg SYN requests
+	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
 
-	int recv_threads;
+	int syn_threads;
+
+	int accept_threads;
+	sem_t accept_wait_sem;
 
 	uint8_t running_flag;
 //TODO add conn_stub_sem?
@@ -103,13 +106,14 @@ void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
+int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 enum CONN_STATE /* Defines an enumeration type    */
 {
 	CLOSED,
 	INIT,
-	LISTEN,
 	SYN_SENT,
+	LISTEN,
 	SYN_RECV,
 	ESTABLISHED,
 	FIN_WAIT_1,
@@ -206,6 +210,8 @@ struct tcp_connection {
 #define DEFAULT_MAX_QUEUE 65535
 #define MAX_RECV_THREADS 10
 #define MAX_WRITE_THREADS 10
+#define MAX_SYN_THREADS 10
+#define MAX_ACCEPT_THREADS 10
 #define MAX_CONNECTIONS 512
 #define MIN_GBN_TIMEOUT 1000
 #define MAX_GBN_TIMEOUT 64000
@@ -234,6 +240,8 @@ void stopTimer(int fd);
 
 //Structure for TCP segments (Straight from the RFC, just in struct form)
 struct tcp_segment {
+	uint32_t src_ip; //Source addr
+	uint32_t dst_ip; //Destination addr
 	uint16_t src_port; //Source port
 	uint16_t dst_port; //Destination port
 	uint32_t seq_num; //Sequence number
@@ -253,18 +261,13 @@ void conn_send_ack(struct tcp_connection *conn);
 void conn_update_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
 void conn_send_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
 
-struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
-struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
-int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
-		uint32_t win_seq_end);
-
 struct tcp_thread_data {
 	struct tcp_connection *conn;
+	struct tcp_connection_stub *conn_stub;
 	struct tcp_segment *tcp_seg; //TODO change seg/raw to union?
 	uint8_t *data_raw;
 	uint32_t data_len;
-	struct tcp_connection_stub *conn_stub;
-	uint32_t addr;
+	uint32_t flags;
 };
 
 struct tcp_to_thread_data {
@@ -282,8 +285,11 @@ int tcp_rand(); //Get a random number
 struct tcp_segment *tcp_create(struct tcp_connection *conn);
 void tcp_add_data(struct tcp_connection *conn, struct tcp_segment *tcp_seg,
 		int data_len);
-uint16_t tcp_checksum(uint32_t src_addr, uint32_t dst_addr,
-		struct tcp_segment *tcp_seg);
+uint16_t tcp_checksum(struct tcp_segment *tcp_seg);
+struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
+struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
+int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
+		uint32_t win_seq_end);
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
@@ -293,10 +299,11 @@ void tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's que
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
-#define EXEC_LISTEN 0
-#define EXEC_CONNECT 1
+#define EXEC_CONNECT 0
+#define EXEC_LISTEN 1
 #define EXEC_ACCEPT 2
 #define EXEC_CLOSE 3
+#define EXEC_CLOSE_STUB 4
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
