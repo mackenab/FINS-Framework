@@ -257,9 +257,23 @@ struct tcp_segment {
 //We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
-void conn_send_ack(struct tcp_connection *conn);
-void conn_update_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
-void conn_send_seg(struct tcp_connection *conn, struct tcp_segment *tcp_seg);
+//More specific, internal functions for dealing with the data and all that
+//uint16_t TCP_checksum(struct finsFrame *ff); //Calculate the checksum of this TCP segment
+void tcp_srand(); //Seed the random number generator
+int tcp_rand(); //Get a random number
+struct tcp_segment *tcp_create(struct tcp_connection *conn);
+struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
+struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
+void tcp_add_data(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
+		int data_len);
+uint16_t tcp_checksum(struct tcp_segment *tcp_seg);
+void tcp_update(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
+		uint32_t flags);
+void tcp_send_seg(struct tcp_segment *tcp_seg);
+void tcp_free(struct tcp_segment *tcp_seg);
+
+int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
+		uint32_t win_seq_end);
 
 struct tcp_thread_data {
 	struct tcp_connection *conn;
@@ -277,19 +291,6 @@ struct tcp_to_thread_data {
 	uint8_t *waiting;
 	sem_t *sem;
 };
-
-//More specific, internal functions for dealing with the data and all that
-//uint16_t TCP_checksum(struct finsFrame *ff); //Calculate the checksum of this TCP segment
-void tcp_srand(); //Seed the random number generator
-int tcp_rand(); //Get a random number
-struct tcp_segment *tcp_create(struct tcp_connection *conn);
-void tcp_add_data(struct tcp_connection *conn, struct tcp_segment *tcp_seg,
-		int data_len);
-uint16_t tcp_checksum(struct tcp_segment *tcp_seg);
-struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
-struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
-int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
-		uint32_t win_seq_end);
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
