@@ -117,6 +117,31 @@ void *recv_thread(void *local) {
 	if (tcp_seg->checksum != calc) {
 		PRINT_ERROR("Checksum: recv=%u calc=%u\n", tcp_seg->checksum, calc);
 	} else {
+		if (tcp_seg->flags & FLAG_SYN) {
+			if (tcp_seg->flags & FLAG_ACK) {
+				//SYN ACK
+			} else {
+				//SYN - drop?
+			}
+		} else if (tcp_seg->flags & FLAG_FIN) {
+			if (tcp_seg->flags & FLAG_ACK) {
+				//FIN ACK
+			} else {
+				//FIN
+			}
+		} else if (tcp_seg->flags & FLAG_RST) {
+
+		}else {
+			if (tcp_seg->flags & FLAG_ACK) {
+				//ACK
+			}
+			if (tcp_seg->data_len) {
+				//data
+			}
+		}
+
+		//TODO handle SYN ACK, FIN, FIN ACK
+
 		//if SYN
 		if (tcp_seg->flags & FLAG_SYN) {
 			//TODO finish
@@ -455,133 +480,80 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 	int ret;
 
-	//this handles if it's a FDF atm
-
 	tcp_seg = fdf_to_tcp(ff);
 	if (tcp_seg) {
-		if (tcp_seg->flags & FLAG_SYN) {
-			if (!(tcp_seg->flags & FLAG_ACK)) {
-				//SYN tcp_seg
+		if (sem_wait(&conn_list_sem)) {
+			PRINT_ERROR("conn_list_sem wait prob");
+			exit(-1);
+		}
+		conn = conn_find(tcp_seg->dst_ip, tcp_seg->dst_port, tcp_seg->src_ip,
+				tcp_seg->src_port);
+		sem_post(&conn_list_sem);
 
-				//search through conn_list first?
-				if (sem_wait(&conn_list_sem)) {
-					PRINT_ERROR("conn_list_sem wait prob");
+		if (conn) {
+			if (conn->running_flag) {
+				if (sem_wait(&conn->sem)) {
+					PRINT_ERROR("conn->conn_sem wait prob");
 					exit(-1);
 				}
-				conn = conn_find(tcp_seg->dst_ip, tcp_seg->dst_port,
-						tcp_seg->src_ip, tcp_seg->src_port);
-				sem_post(&conn_list_sem);
+				if (conn->recv_threads < MAX_RECV_THREADS) {
+					thread_data = (struct tcp_thread_data *) malloc(
+							sizeof(struct tcp_thread_data));
+					thread_data->conn = conn;
+					thread_data->tcp_seg = tcp_seg;
 
-				if (conn) {
-					if (conn->running_flag) {
-						if (sem_wait(&conn->sem)) {
-							PRINT_ERROR("conn->sem wait prob");
-							exit(-1);
-						}
-						if (conn->recv_threads < MAX_RECV_THREADS) {
-							thread_data = (struct tcp_thread_data *) malloc(
-									sizeof(struct tcp_thread_data));
-							thread_data->conn = conn;
-							thread_data->tcp_seg = tcp_seg;
-
-							if (pthread_create(&thread, NULL, recv_thread,
-									(void *) thread_data)) {
-								PRINT_ERROR(
-										"ERROR: unable to create syn_thread thread.");
-								exit(-1);
-							}
-							conn->recv_threads++;
-						} else {
-							PRINT_DEBUG(
-									"Too many recv threads=%d. Dropping...",
-									conn->recv_threads);
-						}
-						sem_post(&conn->sem);
-					}
-				} else {
-					//check if listening sockets
-					if (sem_wait(&conn_stub_list_sem)) {
-						PRINT_ERROR("conn_stub_list_sem wait prob");
+					if (pthread_create(&thread, NULL, recv_thread,
+							(void *) thread_data)) {
+						PRINT_ERROR(
+								"ERROR: unable to create recv_thread thread.");
 						exit(-1);
 					}
-					conn_stub = conn_stub_find(tcp_seg->dst_ip,
-							tcp_seg->dst_port); //TODO check if right, is reversed
-					sem_post(&conn_stub_list_sem);
-
-					if (conn_stub) {
-						if (conn_stub->running_flag) {
-							if (sem_wait(&conn_stub->sem)) {
-								PRINT_ERROR("conn_stub->sem wait prob");
-								exit(-1);
-							}
-							if (conn_stub->syn_threads < MAX_SYN_THREADS) {
-								thread_data
-										= (struct tcp_thread_data *) malloc(
-												sizeof(struct tcp_thread_data));
-								thread_data->conn_stub = conn_stub;
-								thread_data->tcp_seg = tcp_seg;
-								if (pthread_create(&thread, NULL, syn_thread,
-										(void *) thread_data)) {
-									PRINT_ERROR(
-											"ERROR: unable to create recv_thread thread.");
-									exit(-1);
-								}
-								conn_stub->syn_threads++;
-							} else {
-								PRINT_DEBUG(
-										"Too many recv threads=%d. Dropping...",
-										conn_stub->syn_threads);
-							}
-							sem_post(&conn_stub->sem);
-						}
-					} else {
-						PRINT_DEBUG("Found no stub. Dropping...");
-					}
+					conn->recv_threads++;
+				} else {
+					PRINT_DEBUG("Too many recv threads=%d. Dropping...",
+							conn->recv_threads);
 				}
-			} else {
-				// SYN ACK tcp_seg
-
-				//TODO syn ack, add thread?
+				sem_post(&conn->sem);
 			}
-		} else if (tcp_seg->flags & FLAG_FIN) {
-			//TODO finish stuff
-		} else {
-			if (sem_wait(&conn_list_sem)) {
-				PRINT_ERROR("conn_list_sem wait prob");
+
+		} else if ((tcp_seg->flags & FLAG_SYN) && !(tcp_seg->flags & FLAG_ACK)) {
+			//check if listening sockets
+			if (sem_wait(&conn_stub_list_sem)) {
+				PRINT_ERROR("conn_stub_list_sem wait prob");
 				exit(-1);
 			}
-			conn = conn_find(tcp_seg->dst_ip, tcp_seg->dst_port,
-					tcp_seg->src_ip, tcp_seg->src_port); //TODO check if right, is reversed
-			sem_post(&conn_list_sem);
+			conn_stub = conn_stub_find(tcp_seg->dst_ip, tcp_seg->dst_port); //TODO check if right, is reversed
+			sem_post(&conn_stub_list_sem);
 
-			if (conn) {
-				if (conn->running_flag) {
-					if (sem_wait(&conn->sem)) {
-						PRINT_ERROR("conn->conn_sem wait prob");
+			if (conn_stub) {
+				if (conn_stub->running_flag) {
+					if (sem_wait(&conn_stub->sem)) {
+						PRINT_ERROR("conn_stub->sem wait prob");
 						exit(-1);
 					}
-					if (conn->recv_threads < MAX_RECV_THREADS) {
+					if (conn_stub->syn_threads < MAX_SYN_THREADS) {
 						thread_data = (struct tcp_thread_data *) malloc(
 								sizeof(struct tcp_thread_data));
-						thread_data->conn = conn;
+						thread_data->conn_stub = conn_stub;
 						thread_data->tcp_seg = tcp_seg;
-
-						if (pthread_create(&thread, NULL, recv_thread,
+						if (pthread_create(&thread, NULL, syn_thread,
 								(void *) thread_data)) {
 							PRINT_ERROR(
 									"ERROR: unable to create recv_thread thread.");
 							exit(-1);
 						}
-						conn->recv_threads++;
+						conn_stub->syn_threads++;
 					} else {
 						PRINT_DEBUG("Too many recv threads=%d. Dropping...",
-								conn->recv_threads);
+								conn_stub->syn_threads);
 					}
-					sem_post(&conn->sem);
+					sem_post(&conn_stub->sem);
 				}
 			} else {
-				PRINT_DEBUG("Found no connection. Dropping...");
+				PRINT_DEBUG("Found no stub. Dropping...");
 			}
+		} else {
+			PRINT_DEBUG("Found no connection. Dropping...");
 		}
 	} else {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");

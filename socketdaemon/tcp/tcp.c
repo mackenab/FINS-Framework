@@ -687,6 +687,8 @@ void *main_thread(void *local) {
 
 				tcp_seg = (struct tcp_segment *) malloc(
 						sizeof(struct tcp_segment));
+				tcp_seg->src_ip = conn->host_addr;
+				tcp_seg->dst_ip = conn->rem_addr;
 				tcp_seg->src_port = conn->host_port;
 				tcp_seg->dst_port = conn->rem_port;
 				tcp_seg->seq_num = conn->host_seq_end;
@@ -1169,6 +1171,8 @@ struct tcp_segment *tcp_create(struct tcp_connection *conn) {
 	struct tcp_segment *tcp_seg;
 
 	tcp_seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
+	tcp_seg->src_ip = conn->host_addr;
+	tcp_seg->dst_ip = conn->rem_addr;
 	tcp_seg->src_port = conn->host_port;
 	tcp_seg->dst_port = conn->rem_port;
 	tcp_seg->seq_num = conn->host_seq_end;
