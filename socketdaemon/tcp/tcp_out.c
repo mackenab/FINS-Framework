@@ -173,6 +173,7 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		}
 	} else {
 		//error
+		//TODO if listen then go to SYN_SENT/simultaneous?
 	}
 	sem_post(&conn_list_sem);
 }
@@ -356,8 +357,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
-						- (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//error
 				break;
@@ -385,8 +386,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
-						- (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//error
 				break;
@@ -414,8 +415,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
-						- (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//error
 				break;
@@ -427,6 +428,7 @@ void tcp_exec(struct finsFrame *ff) {
 		} else {
 			//error
 		}
+		break;
 	case EXEC_CLOSE:
 		break;
 	case EXEC_CLOSE_STUB:

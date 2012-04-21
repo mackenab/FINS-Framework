@@ -83,6 +83,8 @@ void *syn_thread(void *local) {
 				node = node_create((uint8_t *) tcp_seg, 1, tcp_seg->seq_num,
 						tcp_seg->seq_num);
 				queue_append(conn_stub->syn_queue, node);
+
+				sem_post(&conn_stub->accept_wait_sem);
 			}
 			sem_post(&conn_stub->syn_queue->sem);
 		}
@@ -110,7 +112,6 @@ void *recv_thread(void *local) {
 	struct finsFrame *ff;
 
 	uint32_t seq_end;
-	//uint32_t rem_seq_end;
 	int ret;
 
 	calc = tcp_checksum(tcp_seg);
@@ -120,43 +121,37 @@ void *recv_thread(void *local) {
 		if (tcp_seg->flags & FLAG_SYN) {
 			if (tcp_seg->flags & FLAG_ACK) {
 				//SYN ACK
+				//if SYN_SEN -> established /SYN
 			} else {
-				//SYN - drop?
+				//SYN
+				//if SYN_SEN -> established /SYN
+				//simulatneous open
 			}
 		} else if (tcp_seg->flags & FLAG_FIN) {
 			if (tcp_seg->flags & FLAG_ACK) {
-				//FIN ACK
+				//SYN ACK
 			} else {
-				//FIN
+				//SYN
 			}
-		} else if (tcp_seg->flags & FLAG_RST) {
-
-		}else {
+		} else {
 			if (tcp_seg->flags & FLAG_ACK) {
-				//ACK
+				//SYN ACK
 			}
 			if (tcp_seg->data_len) {
 				//data
 			}
 		}
 
-		//TODO handle SYN ACK, FIN, FIN ACK
-
-		//if SYN
-		if (tcp_seg->flags & FLAG_SYN) {
-			//TODO finish
-		}
-
 		//if ACK
 		if (tcp_seg->flags & FLAG_ACK) {
 			//check if valid ACK
-			if (tcp_in_window(tcp_seg->ack_num, tcp_seg->ack_num,
+			if (in_tcp_window(tcp_seg->ack_num, tcp_seg->ack_num,
 					conn->host_seq_num, conn->host_seq_end)) {
 				if (sem_wait(&conn->send_queue->sem)) {
 					PRINT_ERROR("conn->send_queue wait prob");
 					exit(-1);
 				}
-				if (tcp_in_window(tcp_seg->ack_num, tcp_seg->ack_num,
+				if (in_tcp_window(tcp_seg->ack_num, tcp_seg->ack_num,
 						conn->host_seq_num, conn->host_seq_end)) {
 					if (tcp_seg->ack_num == conn->host_seq_num) {
 						//check for FR
@@ -208,8 +203,9 @@ void *recv_thread(void *local) {
 						while (!queue_is_empty(conn->send_queue)) {
 							temp_node = queue_remove_front(conn->send_queue);
 							temp_seg = (struct tcp_segment *) temp_node->data;
-							free(temp_seg->data);
-							node_free(temp_node);
+							tcp_free(temp_seg);
+							free(temp_node);
+							//node_free(temp_node);
 						}
 
 						conn->host_seq_num = tcp_seg->ack_num;
@@ -263,8 +259,8 @@ void *recv_thread(void *local) {
 										= queue_remove_front(conn->send_queue);
 								temp_seg
 										= (struct tcp_segment *) temp_node->data;
-								free(temp_seg->data);
-								node_free(temp_node);
+								tcp_free(temp_seg);
+								free(temp_node);
 							}
 
 							//valid ACK
@@ -347,8 +343,7 @@ void *recv_thread(void *local) {
 				conn->rem_seq_num += tcp_seg->data_len;
 				conn->rem_seq_end = conn->rem_seq_num + conn->host_max_window;
 
-				free(tcp_seg->data);
-				free(tcp_seg);
+				tcp_free(tcp_seg);
 
 				//remove /transfer
 				while (!queue_is_empty(conn->recv_queue)) {
@@ -357,8 +352,8 @@ void *recv_thread(void *local) {
 							temp_node = queue_remove_front(conn->recv_queue);
 							tcp_seg = (struct tcp_segment *) temp_node->data;
 							conn->host_window += tcp_seg->data_len;
-							free(tcp_seg->data);
-							node_free(temp_node);
+							tcp_free(tcp_seg);
+							free(temp_node);
 						} else {
 							if (conn->recv_queue->front->seq_num
 									< conn->rem_seq_end) { //wrap around
@@ -369,8 +364,8 @@ void *recv_thread(void *local) {
 								tcp_seg
 										= (struct tcp_segment *) temp_node->data;
 								conn->host_window += tcp_seg->data_len;
-								free(tcp_seg->data);
-								node_free(temp_node);
+								tcp_free(tcp_seg);
+								free(temp_node);
 							}
 						}
 					} else if (conn->recv_queue->front->seq_num
@@ -391,8 +386,8 @@ void *recv_thread(void *local) {
 
 						temp_node = queue_remove_front(conn->recv_queue);
 						tcp_seg = (struct tcp_segment *) temp_node->data;
-						free(tcp_seg->data);
-						node_free(temp_node);
+						tcp_free(tcp_seg);
+						free(temp_node);
 					} else {
 						if (conn->rem_seq_num <= conn->rem_seq_end) {
 							if (conn->recv_queue->front->seq_num
@@ -404,8 +399,8 @@ void *recv_thread(void *local) {
 								tcp_seg
 										= (struct tcp_segment *) temp_node->data;
 								conn->host_window += tcp_seg->data_len;
-								free(tcp_seg->data);
-								node_free(temp_node);
+								tcp_free(tcp_seg);
+								free(temp_node);
 							}
 						} else {
 							break;
@@ -418,7 +413,7 @@ void *recv_thread(void *local) {
 				//re-ordered segment
 				seq_end = tcp_seg->seq_num + tcp_seg->data_len;
 
-				if (tcp_in_window(tcp_seg->seq_num, seq_end, conn->rem_seq_num,
+				if (in_tcp_window(tcp_seg->seq_num, seq_end, conn->rem_seq_num,
 						conn->rem_seq_end)) { // 0=in window, -1=out of window
 					node = node_create((uint8_t *) tcp_seg, tcp_seg->data_len,
 							tcp_seg->seq_num, seq_end);
@@ -429,8 +424,8 @@ void *recv_thread(void *local) {
 								"Dropping duplicate rem=(%u, %u) got=(%u, %u)\n",
 								conn->rem_seq_num, conn->rem_seq_end,
 								tcp_seg->seq_num, seq_end);
-						free(tcp_seg->data);
-						node_free(node);
+						tcp_free(tcp_seg);
+						free(node);
 					} else {
 						conn->host_window -= tcp_seg->data_len;
 					}
@@ -439,8 +434,7 @@ void *recv_thread(void *local) {
 							"Dropping out of window rem=(%u, %u) got=(%u, %u)\n",
 							conn->rem_seq_num, conn->rem_seq_end,
 							tcp_seg->seq_num, seq_end);
-					free(tcp_seg->data);
-					free(tcp_seg);
+					tcp_free(tcp_seg);
 				}
 			}
 
@@ -450,7 +444,11 @@ void *recv_thread(void *local) {
 				conn->delayed_flag = 0;
 				conn->to_delayed_flag = 0;
 
-				conn_send_ack(conn);
+				tcp_seg = tcp_create(conn);
+				tcp_update(tcp_seg, conn, FLAG_ACK);
+				tcp_send_seg(tcp_seg);
+
+				tcp_free(tcp_seg);
 			} else {
 				conn->delayed_flag = 1;
 				conn->to_delayed_flag = 0;
@@ -493,7 +491,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 		if (conn) {
 			if (conn->running_flag) {
 				if (sem_wait(&conn->sem)) {
-					PRINT_ERROR("conn->conn_sem wait prob");
+					PRINT_ERROR("conn->sem wait prob");
 					exit(-1);
 				}
 				if (conn->recv_threads < MAX_RECV_THREADS) {
@@ -515,14 +513,13 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				}
 				sem_post(&conn->sem);
 			}
-
 		} else if ((tcp_seg->flags & FLAG_SYN) && !(tcp_seg->flags & FLAG_ACK)) {
 			//check if listening sockets
 			if (sem_wait(&conn_stub_list_sem)) {
 				PRINT_ERROR("conn_stub_list_sem wait prob");
 				exit(-1);
 			}
-			conn_stub = conn_stub_find(tcp_seg->dst_ip, tcp_seg->dst_port); //TODO check if right, is reversed
+			conn_stub = conn_stub_find(tcp_seg->dst_ip, tcp_seg->dst_port);
 			sem_post(&conn_stub_list_sem);
 
 			if (conn_stub) {
@@ -536,6 +533,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 								sizeof(struct tcp_thread_data));
 						thread_data->conn_stub = conn_stub;
 						thread_data->tcp_seg = tcp_seg;
+
 						if (pthread_create(&thread, NULL, syn_thread,
 								(void *) thread_data)) {
 							PRINT_ERROR(
@@ -564,6 +562,6 @@ void tcp_in_fdf(struct finsFrame *ff) {
 }
 
 void tcp_in_fcf(struct finsFrame *ff) {
-	//TODO
+	//TODO control messages from IP/DLL layer, prob just to change params
 	freeFinsFrame(ff);
 }
