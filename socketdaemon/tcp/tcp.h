@@ -219,6 +219,7 @@ struct tcp_connection {
 #define DELAYED_TIMEOUT 200
 #define MAX_SEQ_NUM 4294967295.0
 #define DEFAULT_MAX_WINDOW 65535
+#define DEFAULT_MSS 536
 
 //connection states //TODO: figure out
 #define CONN_SETUP 0

@@ -828,7 +828,7 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	conn->to_delayed_flag = 0;
 
 	conn->cong_state = INITIAL;
-	conn->cong_window = conn->MSS;
+	//conn->cong_window = conn->MSS;
 
 	conn->rtt_flag = 0;
 	conn->rtt_first = 1;
@@ -841,19 +841,13 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	conn->host_window = conn->host_max_window;
 
 	//TODO ---agree on these values during setup
-	conn->MSS = 1024;
+	conn->MSS = DEFAULT_MSS;
 
 	conn->rem_seq_num = 0;
 	conn->rem_seq_end = 0;
 	conn->rem_max_window = DEFAULT_MAX_WINDOW;
 	conn->rem_window = conn->rem_max_window;
 	//---
-
-	//TODO ----set after setup
-	conn->cong_state = SLOWSTART;
-	conn->cong_window = conn->MSS;
-	conn->threshhold = conn->rem_max_window / 2.0;
-	//----
 
 	//setup timers
 	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
@@ -1027,7 +1021,7 @@ struct tcp_segment *tcp_create(struct tcp_connection *conn) {
 	tcp_seg->src_port = conn->host_port;
 	tcp_seg->dst_port = conn->rem_port;
 	tcp_seg->seq_num = conn->host_seq_end;
-	tcp_seg->ack_num = conn->rem_seq_num;
+	tcp_seg->ack_num = conn->rem_seq_num + 1;
 	tcp_seg->flags = 0;
 	tcp_seg->win_size = conn->host_window; //recv sem?
 	tcp_seg->checksum = 0;
@@ -1281,6 +1275,7 @@ void tcp_update(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
 	//TODO update options/flags?
 	if (conn->state == INIT) {
 		tcp_seg->flags |= FLAG_SYN;
+
 	}
 
 	tcp_seg->flags |= flags;

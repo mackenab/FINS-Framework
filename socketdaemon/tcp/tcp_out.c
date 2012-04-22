@@ -151,6 +151,8 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 
 	//create socket //TODO multithread this portion?
 
+	//TODO remove conn_stub w/ (src_ip, src_port)
+
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -173,7 +175,6 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		}
 	} else {
 		//error
-		//TODO if listen then go to SYN_SENT/simultaneous?
 	}
 	sem_post(&conn_list_sem);
 }
@@ -252,6 +253,7 @@ void *accept_thread(void *local) {
 						//TODO add to queue? or just change seq_num
 
 						//TODO change seq num
+						//TODO process options?
 						//TODO send SYN ACK
 
 						sem_post(&conn->recv_queue->sem);
