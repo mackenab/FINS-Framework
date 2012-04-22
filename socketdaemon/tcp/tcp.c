@@ -1188,7 +1188,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 void tcp_add_data(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
 		int data_len) {
-	uint8_t * ptr;
+	uint8_t *ptr;
 	int output;
 	int avail;
 	struct tcp_node *temp_node;
@@ -1321,7 +1321,7 @@ void tcp_free(struct tcp_segment *tcp_seg) {
 		free(tcp_seg->data);
 
 	if (tcp_seg->opt_len)
-		free(tcp_seg->options);
+		free(tcp_seg->options);	//TODO change when have options object
 
 	free(tcp_seg);
 }
