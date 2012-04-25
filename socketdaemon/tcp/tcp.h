@@ -220,7 +220,7 @@ struct tcp_connection {
 #define MAX_SEQ_NUM 4294967295.0
 #define DEFAULT_MAX_WINDOW 65535
 #define DEFAULT_MSS 536
-
+#define MAX_SEG_LIFE 120000
 //connection states //TODO: figure out
 #define CONN_SETUP 0
 #define CONN_CONNECTED 1

@@ -685,23 +685,52 @@ void *recv_thread(void *local) {
 			}
 			break;
 		case FIN_WAIT_1:
-			sem_post(&conn->send_queue->sem);
+			if ((tcp_seg->flags & FLAG_FIN)
+					&& !(tcp_seg->flags & (FLAG_SYN | FLAG_RST))) {
+				if (tcp_seg->flags & FLAG_ACK) {
+					//if FIN ACK, send ACK, TIME_WAIT
 
-			//TODO finish
+					//TODO finish
+				} else {
+					//if FIN, send ACK, CLOSING
+
+					//TODO finish
+				}
+			} else if ((tcp_seg->flags & FLAG_ACK)
+					&& !(tcp_seg->flags & (FLAG_FIN | FLAG_SYN | FLAG_RST))) {
+				//if ACK, send -, FIN_WAIT_2
+
+				//TODO finish
+			} else {
+				PRINT_DEBUG("Invalid Seg: FIN_WAIT_1 & not ACK or FIN.");
+			}
+			sem_post(&conn->send_queue->sem);
 
 			tcp_free(tcp_seg);
 			break;
 		case FIN_WAIT_2:
-			sem_post(&conn->send_queue->sem);
+			if ((tcp_seg->flags & FLAG_FIN)
+					&& !(tcp_seg->flags & (FLAG_SYN | FLAG_RST))) {
+				//if FIN, send ACK, TIME_WAIT
 
-			//TODO finish
+				//TODO finish
+			} else {
+				PRINT_DEBUG("Invalid Seg: FIN_WAIT_2 & not FIN.");
+			}
+			sem_post(&conn->send_queue->sem);
 
 			tcp_free(tcp_seg);
 			break;
 		case CLOSING:
-			sem_post(&conn->send_queue->sem);
+			if ((tcp_seg->flags & FLAG_ACK)
+					&& !(tcp_seg->flags & (FLAG_FIN | FLAG_SYN | FLAG_RST))) {
+				//if ACK, send -, TIME_WAIT
 
-			//TODO finish
+				//TODO finish
+			} else {
+				PRINT_DEBUG("Invalid Seg: FIN_WAIT_2 & not FIN.");
+			}
+			sem_post(&conn->send_queue->sem);
 
 			tcp_free(tcp_seg);
 			break;
