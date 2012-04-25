@@ -111,7 +111,6 @@ int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 enum CONN_STATE /* Defines an enumeration type    */
 {
 	CLOSED,
-	INIT,
 	SYN_SENT,
 	LISTEN,
 	SYN_RECV,
@@ -161,6 +160,7 @@ struct tcp_connection {
 
 	int recv_threads;
 	//sem_t read_sem; //TODO: prob don't need
+	int connect_threads;
 
 	uint8_t running_flag;
 	uint8_t first_flag;
@@ -203,22 +203,25 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-//-----
+	//-----
 };
 
 //TODO raise any of these?
-#define DEFAULT_MAX_QUEUE 65535
 #define MAX_RECV_THREADS 10
 #define MAX_WRITE_THREADS 10
 #define MAX_SYN_THREADS 10
 #define MAX_ACCEPT_THREADS 10
+#define MAX_CONNECT_THREADS 10
+#define MAX_SYS_THREADS 10
+
+#define DEFAULT_MAX_QUEUE 65535
 #define MAX_CONNECTIONS 512
 #define MIN_GBN_TIMEOUT 1000
 #define MAX_GBN_TIMEOUT 64000
-#define DEFAULT_GBN_TIMEOUT 50
+#define DEFAULT_GBN_TIMEOUT 5000
 #define DELAYED_TIMEOUT 200
 #define MAX_SEQ_NUM 4294967295.0
-#define DEFAULT_MAX_WINDOW 65535
+#define DEFAULT_MAX_WINDOW 8191
 #define DEFAULT_MSS 536
 
 //connection states //TODO: figure out
@@ -255,7 +258,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 //More specific, internal functions for dealing with the data and all that
@@ -306,6 +309,7 @@ int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes
 #define EXEC_ACCEPT 2
 #define EXEC_CLOSE 3
 #define EXEC_CLOSE_STUB 4
+#define EXEC_OPT 5
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);

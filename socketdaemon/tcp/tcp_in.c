@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
+				- conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -134,61 +134,25 @@ void *recv_thread(void *local) {
 			//drop
 			tcp_free(tcp_seg);
 			break;
-		case INIT:
-			sem_post(&conn->send_queue->sem);
-
-			//TODO do/remove? //when sends initial SYN create rand ISN
-			tcp_free(tcp_seg);
-			break;
 		case LISTEN:
 			sem_post(&conn->send_queue->sem);
 
-			//TODO ? if change from conn_stub to just conn
-			//shouldn't ever arrive here in this thread
-
-			if ((tcp_seg->flags & FLAG_SYN)
-					&& !(tcp_seg->flags & (FLAG_ACK | FLAG_FIN | FLAG_RST))) {
-				//if SYN, send SYN ACK, SYN_RECV
-
-				//TODO finish/remove?
-
-				conn->state = SYN_RECV;
-				conn->rem_seq_num = tcp_seg->seq_num + 1;
-				conn->rem_window = tcp_seg->win_size;
-
-				//TODO process options, decide: MSS, max window size!!
-
-				temp_seg = tcp_create(conn);
-				tcp_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
-
-				temp_node = node_create((uint8_t *) temp_seg, 1,
-						temp_seg->seq_num, temp_seg->seq_num); //host_seq_num == host_seq_end
-				queue_append(conn->send_queue, temp_node);
-
-				tcp_send_seg(temp_seg);
-				//startTimer(conn->to_gbn_fd, conn->timeout); //TODO should have?
-			} else {
-				PRINT_DEBUG("Invalid Seg: LISTEN & not SYN.");
-			}
-			sem_post(&conn->send_queue->sem);
-
+			//ERROR shouldn't ever arrive here in this thread
 			tcp_free(tcp_seg);
 			break;
 		case SYN_SENT:
-			if ((tcp_seg->flags & FLAG_SYN)
-					&& !(tcp_seg->flags & (FLAG_FIN | FLAG_RST))) {
+			if ((tcp_seg->flags & FLAG_SYN) && !(tcp_seg->flags & (FLAG_FIN
+					| FLAG_RST))) {
 				if (tcp_seg->flags & FLAG_ACK) {
 					//if SYN ACK, send ACK, ESTABLISHED
 					if (tcp_seg->ack_num == conn->host_seq_num + 1) {
 						conn->state = ESTABLISHED;
 						conn->host_seq_num = tcp_seg->ack_num;
 						conn->host_seq_end = conn->host_seq_num;
-						conn->rem_seq_num = tcp_seg->seq_num + 1;
+						conn->rem_seq_num = tcp_seg->seq_num;
 						conn->rem_window = tcp_seg->win_size;
 
 						//TODO process options, MSS, max_window
-
-						//TODO remove SYN packet from send_queue
 
 						//flags
 						conn->first_flag = 1;
@@ -200,22 +164,15 @@ void *recv_thread(void *local) {
 						stopTimer(conn->to_gbn_fd);
 
 						//Cong
-						if (conn->cong_state == INITIAL) {
-							conn->cong_state = SLOWSTART;
-							conn->cong_window = conn->MSS;
-							conn->threshhold = conn->rem_max_window / 2.0;
+						conn->cong_state = SLOWSTART;
+						conn->cong_window = conn->MSS;
+						conn->threshhold = conn->rem_max_window / 2.0;
 
-						} else {
-							PRINT_ERROR("unknown cong_state=%d\n",
-									conn->cong_state);
-						}
-
+						//TODO piggy back data? release to established with delayed TO on
 						//send ACK
 						temp_seg = tcp_create(conn);
-
 						tcp_update(temp_seg, conn, FLAG_ACK);
 						tcp_send_seg(temp_seg);
-
 						tcp_free(temp_seg);
 					} else {
 						PRINT_DEBUG("Invalid ACK: was not sent.");
@@ -229,10 +186,8 @@ void *recv_thread(void *local) {
 						//send RST
 						temp_seg = tcp_create(conn);
 						temp_seg->seq_num = tcp_seg->ack_num;
-
 						tcp_update(temp_seg, conn, FLAG_RST);
 						tcp_send_seg(temp_seg);
-
 						tcp_free(temp_seg);
 
 						//TODO WAIT then send SYN
@@ -240,7 +195,7 @@ void *recv_thread(void *local) {
 				} else {
 					//if SYN, send SYN ACK, SYN_RECV (simultaneous)
 					conn->state = SYN_RECV;
-					conn->rem_seq_num = tcp_seg->seq_num + 1; //TODO change 1 to tcp->data_len? & send 1 byte of data?
+					conn->rem_seq_num = tcp_seg->seq_num; //TODO change 1 to tcp->data_len? & send 1 byte of data?
 					conn->rem_window = tcp_seg->win_size;
 
 					//TODO process options, decide: MSS, max window size!!
@@ -255,7 +210,7 @@ void *recv_thread(void *local) {
 					queue_append(conn->send_queue, temp_node);
 
 					tcp_send_seg(temp_seg);
-					//startTimer(conn->to_gbn_fd, conn->timeout); //TODO should have?
+					startTimer(conn->to_gbn_fd, conn->timeout); //TODO figure out to's
 				}
 			} else {
 				PRINT_DEBUG("Invalid Seg: SYN_SENT & not SYN.");
@@ -265,20 +220,17 @@ void *recv_thread(void *local) {
 			tcp_free(tcp_seg);
 			break;
 		case SYN_RECV:
-			if ((tcp_seg->flags & FLAG_ACK)
-					&& !(tcp_seg->flags & (FLAG_FIN | FLAG_RST | FLAG_SYN))) {
+			if ((tcp_seg->flags & FLAG_ACK) && !(tcp_seg->flags & (FLAG_FIN
+					| FLAG_RST | FLAG_SYN))) {
 				//if ACK, send -, ESTABLISHED
 				if (tcp_seg->ack_num == conn->host_seq_num + 1) {
 					conn->state = ESTABLISHED;
-					conn->rem_seq_num = tcp_seg->seq_num + 1;
+					conn->host_seq_num = tcp_seg->ack_num;
+					conn->host_seq_end = conn->host_seq_num;
+					conn->rem_seq_num = tcp_seg->seq_num;
 					conn->rem_window = tcp_seg->win_size;
 
 					//TODO process options
-
-					conn->host_seq_num = tcp_seg->ack_num;
-					conn->host_seq_end = conn->host_seq_num;
-
-					//TODO remove SYN ACK packet from send_queue
 
 					//flags
 					conn->first_flag = 1;
@@ -289,15 +241,9 @@ void *recv_thread(void *local) {
 					stopTimer(conn->to_gbn_fd);
 
 					//Cong
-					if (conn->cong_state == INITIAL) {
-						conn->cong_state = SLOWSTART;
-						conn->cong_window = conn->MSS;
-						conn->threshhold = conn->rem_max_window / 2.0;
-
-					} else {
-						PRINT_ERROR("unknown cong_state=%d\n",
-								conn->cong_state);
-					}
+					conn->cong_state = SLOWSTART;
+					conn->cong_window = conn->MSS;
+					conn->threshhold = conn->rem_max_window / 2.0;
 				} else {
 					PRINT_DEBUG("Invalid ACK: was not sent.");
 				}
@@ -313,8 +259,8 @@ void *recv_thread(void *local) {
 			tcp_free(tcp_seg);
 			break;
 		case ESTABLISHED:
-			if ((tcp_seg->flags & FLAG_FIN)
-					&& !(tcp_seg->flags & (FLAG_SYN | FLAG_RST))) {
+			if ((tcp_seg->flags & FLAG_FIN) && !(tcp_seg->flags & (FLAG_SYN
+					| FLAG_RST))) {
 
 				if (tcp_seg->flags & FLAG_ACK) {
 					//if FIN ACK, send -, ???
@@ -329,13 +275,12 @@ void *recv_thread(void *local) {
 
 					if (tcp_seg->seq_num == conn->rem_seq_num) {
 						conn->state = ESTABLISHED;
+						conn->host_seq_num = tcp_seg->ack_num;
+						conn->host_seq_end = conn->host_seq_num;
 						conn->rem_seq_num = tcp_seg->seq_num;
 						conn->rem_window = tcp_seg->win_size;
 
 						//TODO process options, MSS, max_window
-
-						conn->host_seq_num = tcp_seg->ack_num;
-						conn->host_seq_end = conn->host_seq_num;
 
 						//flags
 						conn->first_flag = 1;
@@ -358,10 +303,8 @@ void *recv_thread(void *local) {
 
 						//send ACK
 						temp_seg = tcp_create(conn);
-
 						tcp_update(temp_seg, conn, FLAG_ACK);
 						tcp_send_seg(temp_seg);
-
 						tcp_free(temp_seg);
 					} else {
 						PRINT_DEBUG("Invalid ACK: was not sent.");
@@ -370,8 +313,8 @@ void *recv_thread(void *local) {
 				sem_post(&conn->send_queue->sem);
 			} else {
 				//if ACK
-				if ((tcp_seg->flags & FLAG_ACK)
-						&& !(tcp_seg->flags & (FLAG_SYN | FLAG_FIN | FLAG_RST))) { //TODO check if there's ESTABLISHED RST
+				if ((tcp_seg->flags & FLAG_ACK) && !(tcp_seg->flags & (FLAG_SYN
+						| FLAG_FIN | FLAG_RST))) { //TODO check if there's ESTABLISHED RST
 					//check if valid ACK
 					if (in_tcp_window(tcp_seg->ack_num, tcp_seg->ack_num,
 							conn->host_seq_num, conn->host_seq_end)) {
@@ -402,8 +345,8 @@ void *recv_thread(void *local) {
 									if (conn->threshhold < conn->MSS) {
 										conn->threshhold = conn->MSS;
 									}
-									conn->cong_window = conn->threshhold
-											+ 3 * conn->MSS;
+									conn->cong_window = conn->threshhold + 3
+											* conn->MSS;
 									break;
 								case RECOVERY:
 									//conn->fast_flag = 0; //TODO send FR every 3 repeated, check if should do only first
@@ -419,10 +362,10 @@ void *recv_thread(void *local) {
 						} else if (tcp_seg->ack_num == conn->host_seq_end) {
 							//remove all segs
 							while (!queue_is_empty(conn->send_queue)) {
-								temp_node = queue_remove_front(
-										conn->send_queue);
-								temp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->send_queue);
+								temp_seg
+										= (struct tcp_segment *) temp_node->data;
 								tcp_free(temp_seg);
 								free(temp_node);
 							}
@@ -438,8 +381,8 @@ void *recv_thread(void *local) {
 							conn->gbn_flag = 0;
 
 							//RTT
-							if (conn->rtt_flag
-									&& tcp_seg->ack_num == conn->rtt_seq_end) {
+							if (conn->rtt_flag && tcp_seg->ack_num
+									== conn->rtt_seq_end) {
 								calcRTT(conn);
 							}
 							stopTimer(conn->to_gbn_fd);
@@ -477,8 +420,8 @@ void *recv_thread(void *local) {
 										&& conn->send_queue->front != node) {
 									temp_node = queue_remove_front(
 											conn->send_queue);
-									temp_seg =
-											(struct tcp_segment *) temp_node->data;
+									temp_seg
+											= (struct tcp_segment *) temp_node->data;
 									tcp_free(temp_seg);
 									free(temp_node);
 								}
@@ -496,8 +439,8 @@ void *recv_thread(void *local) {
 								}
 
 								//RTT
-								if (conn->rtt_flag
-										&& tcp_seg->ack_num == conn->rtt_seq_end) {
+								if (conn->rtt_flag && tcp_seg->ack_num
+										== conn->rtt_seq_end) {
 									calcRTT(conn);
 								}
 								if (!conn->gbn_flag) {
@@ -570,8 +513,8 @@ void *recv_thread(void *local) {
 								if (conn->rem_seq_num <= conn->rem_seq_end) {
 									temp_node = queue_remove_front(
 											conn->recv_queue);
-									temp_seg =
-											(struct tcp_segment *) temp_node->data;
+									temp_seg
+											= (struct tcp_segment *) temp_node->data;
 									conn->host_window += temp_seg->data_len;
 									tcp_free(temp_seg);
 									free(temp_node);
@@ -582,8 +525,8 @@ void *recv_thread(void *local) {
 									} else {
 										temp_node = queue_remove_front(
 												conn->recv_queue);
-										temp_seg =
-												(struct tcp_segment *) temp_node->data;
+										temp_seg
+												= (struct tcp_segment *) temp_node->data;
 										conn->host_window += temp_seg->data_len;
 										tcp_free(temp_seg);
 										free(temp_node);
@@ -591,10 +534,10 @@ void *recv_thread(void *local) {
 								}
 							} else if (conn->recv_queue->front->seq_num
 									== conn->rem_seq_num) {
-								temp_node = queue_remove_front(
-										conn->recv_queue);
-								temp_seg =
-										(struct tcp_segment *) temp_node->data;
+								temp_node
+										= queue_remove_front(conn->recv_queue);
+								temp_seg
+										= (struct tcp_segment *) temp_node->data;
 
 								//TODO: Process Flags/options
 
@@ -617,8 +560,8 @@ void *recv_thread(void *local) {
 									} else {
 										temp_node = queue_remove_front(
 												conn->recv_queue);
-										temp_seg =
-												(struct tcp_segment *) temp_node->data;
+										temp_seg
+												= (struct tcp_segment *) temp_node->data;
 										conn->host_window += temp_seg->data_len;
 										tcp_free(temp_seg);
 										free(temp_node);
@@ -669,7 +612,6 @@ void *recv_thread(void *local) {
 						temp_seg = tcp_create(conn);
 						tcp_update(temp_seg, conn, FLAG_ACK);
 						tcp_send_seg(temp_seg);
-
 						tcp_free(temp_seg);
 					} else {
 						conn->delayed_flag = 1;
@@ -786,8 +728,9 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				}
 				sem_post(&conn->sem);
 			}
-		} else if ((tcp_seg->flags & FLAG_SYN)
-				&& !(tcp_seg->flags & FLAG_ACK)) {
+
+		} else if ((tcp_seg->flags & FLAG_SYN) && !(tcp_seg->flags & (FLAG_ACK
+				| FLAG_FIN | FLAG_RST))) {
 			//check if listening sockets
 			if (sem_wait(&conn_stub_list_sem)) {
 				PRINT_ERROR("conn_stub_list_sem wait prob");
