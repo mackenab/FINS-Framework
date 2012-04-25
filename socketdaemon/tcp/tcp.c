@@ -412,25 +412,6 @@ void *setup_thread(void *local) {
 		case CLOSED:
 			conn->setup_wait_flag = 1;
 			break;
-		case INIT:
-			PRINT_DEBUG("sending SYN");
-
-			tcp_seg = tcp_create(conn);
-
-			tcp_update(tcp_seg, conn, FLAG_SYN);
-
-			node = node_create((uint8_t *) tcp_seg, 1, tcp_seg->seq_num,
-					tcp_seg->seq_num);
-			queue_append(conn->send_queue, node);
-			conn->state = SYN_SENT;
-			sem_post(&conn->send_queue->sem);
-
-			tcp_send_seg(tcp_seg);
-			startTimer(conn->to_gbn_fd, conn->timeout);
-
-			conn->setup_wait_flag = 1;
-			//TODO move conn->send_queue->sem post to here?
-			break;
 		case SYN_SENT:
 			if (conn->to_gbn_flag) {
 				PRINT_DEBUG("SYN Timeout");
@@ -555,8 +536,8 @@ void *main_thread(void *local) {
 				conn->fast_flag = 0;
 
 				if (!queue_is_empty(conn->send_queue)) {
-					tcp_seg =
-							(struct tcp_segment *) conn->send_queue->front->data;
+					tcp_seg
+							= (struct tcp_segment *) conn->send_queue->front->data;
 					if (conn->rem_window > tcp_seg->data_len) {
 						conn->rem_window -= tcp_seg->data_len;
 					} else {
@@ -650,8 +631,8 @@ void *main_thread(void *local) {
 			cong_space = conn->cong_window - sent_window;
 
 			if (!queue_is_empty(conn->write_queue) && conn->rem_window
-					&& sent_window < conn->rem_max_window
-					&& cong_space >= conn->MSS) {
+					&& sent_window < conn->rem_max_window && cong_space
+					>= conn->MSS) {
 				PRINT_DEBUG("sending packet");
 
 				tcp_seg = tcp_create(conn);
@@ -835,16 +816,16 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 
 	conn->timeout = DEFAULT_GBN_TIMEOUT;
 
-	conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
-	conn->host_seq_end = conn->host_seq_num;
+	//conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
+	//conn->host_seq_end = conn->host_seq_num;
 	conn->host_max_window = DEFAULT_MAX_WINDOW;
 	conn->host_window = conn->host_max_window;
 
 	//TODO ---agree on these values during setup
 	conn->MSS = DEFAULT_MSS;
 
-	conn->rem_seq_num = 0;
-	conn->rem_seq_end = 0;
+	//conn->rem_seq_num = 0;
+	//conn->rem_seq_end = conn->rem_seq_num;
 	conn->rem_max_window = DEFAULT_MAX_WINDOW;
 	conn->rem_window = conn->rem_max_window;
 	//---
@@ -889,8 +870,7 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	//TODO add nagel timer
 
 	//start main thread
-	if (pthread_create(&conn->setup_thread, NULL, setup_thread,
-			(void *) conn)) {
+	if (pthread_create(&conn->setup_thread, NULL, setup_thread, (void *) conn)) {
 		PRINT_ERROR("ERROR: unable to create setup_thread thread.");
 		exit(-1);
 	}
@@ -931,8 +911,7 @@ struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 	temp = conn_list;
 	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
 		if (temp->rem_port == rem_port && temp->rem_addr == rem_addr
-				&& temp->host_addr == host_addr
-				&& temp->host_port == host_port) {
+				&& temp->host_addr == host_addr && temp->host_port == host_port) {
 			return temp;
 		}
 		temp = temp->next;
@@ -1223,21 +1202,21 @@ uint16_t tcp_checksum(struct tcp_segment *tcp_seg) { //TODO check if checksum wo
 	uint32_t i;
 
 	//fake IP header
-	sum += ((uint16_t)(tcp_seg->src_ip >> 16))
-			+ ((uint16_t)(tcp_seg->src_ip & 0xFFFF));
-	sum += ((uint16_t)(tcp_seg->dst_ip >> 16))
-			+ ((uint16_t)(tcp_seg->dst_ip & 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->src_ip >> 16)) + ((uint16_t)(tcp_seg->src_ip
+			& 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->dst_ip >> 16)) + ((uint16_t)(tcp_seg->dst_ip
+			& 0xFFFF));
 	sum += (uint16_t) TCP_PROTOCOL;
-	sum += (uint16_t)(
-			IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags) + tcp_seg->data_len);
+	sum += (uint16_t)(IP_HEADERSIZE + HEADERSIZE(tcp_seg->flags)
+			+ tcp_seg->data_len);
 
 	//fake TCP header
 	sum += tcp_seg->src_port;
 	sum += tcp_seg->dst_port;
-	sum += ((uint16_t)(tcp_seg->seq_num >> 16))
-			+ ((uint16_t)(tcp_seg->seq_num & 0xFFFF));
-	sum += ((uint16_t)(tcp_seg->ack_num >> 16))
-			+ ((uint16_t)(tcp_seg->ack_num & 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->seq_num >> 16)) + ((uint16_t)(tcp_seg->seq_num
+			& 0xFFFF));
+	sum += ((uint16_t)(tcp_seg->ack_num >> 16)) + ((uint16_t)(tcp_seg->ack_num
+			& 0xFFFF));
 	sum += tcp_seg->flags;
 	sum += tcp_seg->win_size;
 	//sum += tcp_seg->checksum; //dummy checksum=0
@@ -1273,11 +1252,6 @@ void tcp_update(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
 	memset(&tcp_seg->flags, 0, sizeof(uint16_t));
 
 	//TODO update options/flags?
-	if (conn->state == INIT) {
-		tcp_seg->flags |= FLAG_SYN;
-
-	}
-
 	tcp_seg->flags |= flags;
 
 	//add options //TODO implement options system, move to conn_send_seg?
@@ -1321,7 +1295,7 @@ void tcp_free(struct tcp_segment *tcp_seg) {
 		free(tcp_seg->data);
 
 	if (tcp_seg->opt_len)
-		free(tcp_seg->options);	//TODO change when have options object
+		free(tcp_seg->options); //TODO change when have options object
 
 	free(tcp_seg);
 }
