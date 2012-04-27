@@ -100,5 +100,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	close(sock);
+
+
+	while (1);
 }
 

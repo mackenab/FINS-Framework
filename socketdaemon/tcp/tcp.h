@@ -203,7 +203,7 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-	//-----
+//-----
 };
 
 //TODO raise any of these?
@@ -224,6 +224,7 @@ struct tcp_connection {
 #define DEFAULT_MAX_WINDOW 8191
 #define DEFAULT_MSS 536
 #define MAX_SEG_LIFE 120000
+
 //connection states //TODO: figure out
 #define CONN_SETUP 0
 #define CONN_CONNECTED 1
@@ -258,7 +259,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 //More specific, internal functions for dealing with the data and all that
@@ -268,13 +269,13 @@ int tcp_rand(); //Get a random number
 struct tcp_segment *tcp_create(struct tcp_connection *conn);
 struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
 struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
-void tcp_add_data(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
+void tcp_add_data(struct tcp_segment *seg, struct tcp_connection *conn,
 		int data_len);
-uint16_t tcp_checksum(struct tcp_segment *tcp_seg);
-void tcp_update(struct tcp_segment *tcp_seg, struct tcp_connection *conn,
+uint16_t tcp_checksum(struct tcp_segment *seg);
+void tcp_update(struct tcp_segment *seg, struct tcp_connection *conn,
 		uint32_t flags);
-void tcp_send_seg(struct tcp_segment *tcp_seg);
-void tcp_free(struct tcp_segment *tcp_seg);
+void tcp_send_seg(struct tcp_segment *seg);
+void tcp_free(struct tcp_segment *seg);
 
 int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 		uint32_t win_seq_end);
@@ -282,7 +283,7 @@ int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 struct tcp_thread_data {
 	struct tcp_connection *conn;
 	struct tcp_connection_stub *conn_stub;
-	struct tcp_segment *tcp_seg; //TODO change seg/raw to union?
+	struct tcp_segment *seg; //TODO change seg/raw to union?
 	uint8_t *data_raw;
 	uint32_t data_len;
 	uint32_t flags;

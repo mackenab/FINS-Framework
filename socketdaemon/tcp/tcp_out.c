@@ -149,7 +149,7 @@ void *connect_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	struct tcp_connection *conn = thread_data->conn;
 
-	struct tcp_segment *tcp_seg;
+	struct tcp_segment *seg;
 
 	if (sem_wait(&conn->send_queue->sem)) {
 		PRINT_ERROR("conn_stub->syn_queue->sem wait prob");
@@ -161,10 +161,10 @@ void *connect_thread(void *local) {
 		conn->host_seq_end = conn->host_seq_num;
 
 		//send SYN
-		tcp_seg = tcp_create(conn);
-		tcp_update(tcp_seg, conn, FLAG_SYN);
-		tcp_send_seg(tcp_seg);
-		tcp_free(tcp_seg);
+		seg = tcp_create(conn);
+		tcp_update(seg, conn, FLAG_SYN);
+		tcp_send_seg(seg);
+		tcp_free(seg);
 
 		startTimer(conn->to_gbn_fd, conn->timeout);
 	} else {
@@ -186,6 +186,9 @@ void *connect_thread(void *local) {
 void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		uint16_t dst_port) {
 	struct tcp_connection *conn;
+	pthread_t thread;
+	struct tcp_thread_data *thread_data;
+	int ret;
 
 	//TODO remove conn_stub w/ (src_ip, src_port)
 
@@ -198,6 +201,8 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		if (conn_has_space(1)) {
 			conn = conn_create(src_ip, src_port, dst_ip, dst_port);
 			if (conn_insert(conn)) {
+				sem_post(&conn_list_sem);
+
 				//error - shouldn't happen
 				PRINT_ERROR("conn_insert fail");
 				conn_free(conn);
@@ -220,12 +225,12 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 									"ERROR: unable to create recv_thread thread.");
 							exit(-1);
 						}
-						conn_stub->connect_threads++;
+						conn->connect_threads++;
 					} else {
 						PRINT_DEBUG("Too many connect_threads=%d. Dropping...",
-								conn_stub->connect_threads);
+								conn->connect_threads);
 					}
-					sem_post(&conn_stub->sem);
+					sem_post(&conn->sem);
 				}
 			}
 		} else {
@@ -234,7 +239,6 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 	} else {
 		//TODO error
 	}
-	sem_post(&conn_list_sem);
 }
 
 void tcp_exec_listen(uint32_t src_ip, uint16_t src_port, uint32_t backlog) {
@@ -270,8 +274,9 @@ void *accept_thread(void *local) {
 	uint32_t flags = thread_data->flags;
 
 	struct tcp_node *node;
-	struct tcp_segment *tcp_seg;
+	struct tcp_segment *seg;
 	struct tcp_connection *conn;
+	struct tcp_segment *temp_seg;
 
 	while (conn_stub->running_flag) {
 		if (sem_wait(&conn_stub->syn_queue->sem)) {
@@ -282,18 +287,18 @@ void *accept_thread(void *local) {
 			node = queue_remove_front(conn_stub->syn_queue);
 			sem_post(&conn_stub->syn_queue->sem);
 
-			tcp_seg = (struct tcp_segment *) node->data;
+			seg = (struct tcp_segment *) node->data;
 
 			if (sem_wait(&conn_list_sem)) {
 				PRINT_ERROR("conn_list_sem wait prob");
 				exit(-1);
 			}
-			conn = conn_find(tcp_seg->dst_ip, tcp_seg->dst_port,
-					tcp_seg->src_ip, tcp_seg->src_port);
+			conn = conn_find(seg->dst_ip, seg->dst_port,
+					seg->src_ip, seg->src_port);
 			if (conn == NULL) {
 				if (conn_has_space(1)) {
-					conn = conn_create(tcp_seg->dst_ip, tcp_seg->dst_port,
-							tcp_seg->src_ip, tcp_seg->src_port);
+					conn = conn_create(seg->dst_ip, seg->dst_port,
+							seg->src_ip, seg->src_port);
 					if (conn_insert(conn)) {
 						//error - shouldn't happen
 						sem_post(&conn_list_sem);
@@ -311,8 +316,8 @@ void *accept_thread(void *local) {
 						conn->state = SYN_RECV;
 						conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
 						conn->host_seq_end = conn->host_seq_num;
-						conn->rem_seq_num = tcp_seg->seq_num;
-						conn->rem_window = tcp_seg->win_size;
+						conn->rem_seq_num = seg->seq_num;
+						conn->rem_window = seg->win_size;
 
 						//TODO process options, decide: MSS, max window size!!
 						//conn_change_options(conn, tcp->options, SYN);
@@ -321,9 +326,11 @@ void *accept_thread(void *local) {
 						temp_seg = tcp_create(conn);
 						tcp_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
 						tcp_send_seg(temp_seg);
-						tcp_free(tcp_seg);
+						tcp_free(temp_seg);
 
 						sem_post(&conn->send_queue->sem);
+
+						tcp_free(seg);
 					}
 				} else {
 					sem_post(&conn_list_sem);
@@ -422,8 +429,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
-						- (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
@@ -451,8 +458,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
-						- (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
@@ -480,8 +487,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
-						- (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
