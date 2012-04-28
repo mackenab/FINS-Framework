@@ -494,9 +494,9 @@ void *recv_thread(void *local) {
 
 			int validACK;
 
-			if (seg->data_len) {
-				validACK = handle_ACK(conn, seg);
+			validACK = handle_ACK(conn, seg);
 
+			if (seg->data_len) {
 				if (conn->rem_seq_num == seg->seq_num) {
 					if (seg->flags & FLAG_SYN) {
 					} else if (seg->flags & FLAG_RST) {
@@ -514,14 +514,16 @@ void *recv_thread(void *local) {
 				} else {
 					//store
 				}
-			} else {
-				validACK = handle_ACK(conn, seg);
+			} else if (validACK) {
+
 
 				if (seg->flags & FLAG_SYN) {
 				} else if (seg->flags & FLAG_RST) {
 				} else if (seg->flags & FLAG_FIN) {
 				} else {
 				}
+			} else {
+				//error
 			}
 
 			if (seg->data_len) {
