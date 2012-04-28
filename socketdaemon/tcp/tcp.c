@@ -1201,6 +1201,10 @@ uint16_t tcp_checksum(struct tcp_segment *seg) { //TODO check if checksum works
 	uint16_t * ptr;
 	uint32_t i;
 
+
+	//TODO add TCP alternate checksum w/data in options (15)
+
+
 	//fake IP header
 	sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip
 			& 0xFFFF));

@@ -293,12 +293,12 @@ void *accept_thread(void *local) {
 				PRINT_ERROR("conn_list_sem wait prob");
 				exit(-1);
 			}
-			conn = conn_find(seg->dst_ip, seg->dst_port,
-					seg->src_ip, seg->src_port);
+			conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip,
+					seg->src_port);
 			if (conn == NULL) {
 				if (conn_has_space(1)) {
-					conn = conn_create(seg->dst_ip, seg->dst_port,
-							seg->src_ip, seg->src_port);
+					conn = conn_create(seg->dst_ip, seg->dst_port, seg->src_ip,
+							seg->src_port);
 					if (conn_insert(conn)) {
 						//error - shouldn't happen
 						sem_post(&conn_list_sem);
@@ -320,6 +320,8 @@ void *accept_thread(void *local) {
 						conn->rem_window = seg->win_size;
 
 						//TODO process options, decide: MSS, max window size!!
+						//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+
 						//conn_change_options(conn, tcp->options, SYN);
 
 						//send SYN ACK
