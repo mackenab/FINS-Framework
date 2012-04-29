@@ -536,8 +536,7 @@ void *main_thread(void *local) {
 				conn->fast_flag = 0;
 
 				if (!queue_is_empty(conn->send_queue)) {
-					seg
-							= (struct tcp_segment *) conn->send_queue->front->data;
+					seg = (struct tcp_segment *) conn->send_queue->front->data;
 					if (conn->rem_window > seg->data_len) {
 						conn->rem_window -= seg->data_len;
 					} else {
@@ -1201,26 +1200,22 @@ uint16_t tcp_checksum(struct tcp_segment *seg) { //TODO check if checksum works
 	uint16_t * ptr;
 	uint32_t i;
 
-
 	//TODO add TCP alternate checksum w/data in options (15)
 
 
 	//fake IP header
-	sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip
-			& 0xFFFF));
-	sum += ((uint16_t)(seg->dst_ip >> 16)) + ((uint16_t)(seg->dst_ip
-			& 0xFFFF));
+	sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip & 0xFFFF));
+	sum += ((uint16_t)(seg->dst_ip >> 16)) + ((uint16_t)(seg->dst_ip & 0xFFFF));
 	sum += (uint16_t) TCP_PROTOCOL;
-	sum += (uint16_t)(IP_HEADERSIZE + HEADERSIZE(seg->flags)
-			+ seg->data_len);
+	sum += (uint16_t)(IP_HEADERSIZE + HEADERSIZE(seg->flags) + seg->data_len);
 
 	//fake TCP header
 	sum += seg->src_port;
 	sum += seg->dst_port;
-	sum += ((uint16_t)(seg->seq_num >> 16)) + ((uint16_t)(seg->seq_num
-			& 0xFFFF));
-	sum += ((uint16_t)(seg->ack_num >> 16)) + ((uint16_t)(seg->ack_num
-			& 0xFFFF));
+	sum += ((uint16_t)(seg->seq_num >> 16))
+			+ ((uint16_t)(seg->seq_num & 0xFFFF));
+	sum += ((uint16_t)(seg->ack_num >> 16))
+			+ ((uint16_t)(seg->ack_num & 0xFFFF));
 	sum += seg->flags;
 	sum += seg->win_size;
 	//sum += seg->checksum; //dummy checksum=0
@@ -1304,6 +1299,7 @@ void tcp_free(struct tcp_segment *seg) {
 	free(seg);
 }
 
+// 0=out of window, 1=in window
 int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 		uint32_t win_seq_end) {
 	//check if tcp_seg is in connection window
