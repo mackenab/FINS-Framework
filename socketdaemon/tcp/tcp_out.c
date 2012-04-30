@@ -431,8 +431,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
+						- (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
@@ -460,8 +460,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
+						- (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
@@ -489,8 +489,8 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
+						- (uint8_t *) ff->ctrlFrame.paramterValue,
 						ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
