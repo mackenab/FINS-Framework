@@ -85,8 +85,12 @@ void *syn_thread(void *local) {
 				queue_append(conn_stub->syn_queue, node);
 
 				sem_post(&conn_stub->accept_wait_sem);
+			} else {
+				//queue full
 			}
 			sem_post(&conn_stub->syn_queue->sem);
+		} else {
+			//queue full
 		}
 	}
 
@@ -295,7 +299,7 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else if (seg->flags & FLAG_RST) {
 		//if RST, send -, LISTEN
 
-		//TODO finish?
+		//TODO finish? verify/add conn_stub, free conn
 	} else {
 		PRINT_DEBUG("Invalid Seg: SYN_RECV & not ACK.");
 	}
@@ -820,7 +824,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 			}
 
 		} else if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_ACK
-				| FLAG_FIN | FLAG_RST))) {
+				| FLAG_FIN | FLAG_RST))) { //TODO check if strange SYN ACK case
 			//check if listening sockets
 			if (sem_wait(&conn_stub_list_sem)) {
 				PRINT_ERROR("conn_stub_list_sem wait prob");

@@ -186,11 +186,10 @@ void *connect_thread(void *local) {
 void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		uint16_t dst_port) {
 	struct tcp_connection *conn;
+	struct tcp_connection_stub *conn_stub;
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 	int ret;
-
-	//TODO remove conn_stub w/ (src_ip, src_port)
 
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
@@ -209,26 +208,50 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 			} else {
 				sem_post(&conn_list_sem);
 
+				if (sem_wait(&conn_stub_list_sem)) {
+					PRINT_ERROR("conn_list_sem wait prob");
+					exit(-1);
+				}
+				conn_stub = conn_stub_find(src_ip, src_port);
+				if (conn_stub) {
+					conn_stub_remove(conn_stub);//TODO finish, sem's?
+					sem_post(&conn_stub_list_sem);
+
+					if (sem_wait(&conn_stub->sem)) {
+						PRINT_ERROR("conn_stub->sem wait prob");
+						exit(-1);
+					}
+					if (conn_stub) {
+						conn_stub_free(conn_stub);
+					}
+					sem_post(&conn_stub->sem);
+				} else {
+					sem_post(&conn_stub_list_sem);
+				}
+
 				if (conn->running_flag) {
-					if (sem_wait(&conn->sem)) {
+					if (sem_wait(&conn->sem)) { //TODO move wait & threads++ to inside thread
 						PRINT_ERROR("conn->sem wait prob");
 						exit(-1);
 					}
-					if (conn->connect_threads < MAX_CONNECT_THREADS) {
-						thread_data = (struct tcp_thread_data *) malloc(
-								sizeof(struct tcp_thread_data));
-						thread_data->conn = conn;
+					if (conn) {
+						if (conn->connect_threads < MAX_CONNECT_THREADS) {
+							thread_data = (struct tcp_thread_data *) malloc(
+									sizeof(struct tcp_thread_data));
+							thread_data->conn = conn;
 
-						if (pthread_create(&thread, NULL, connect_thread,
-								(void *) thread_data)) {
-							PRINT_ERROR(
-									"ERROR: unable to create recv_thread thread.");
-							exit(-1);
+							if (pthread_create(&thread, NULL, connect_thread,
+									(void *) thread_data)) {
+								PRINT_ERROR(
+										"ERROR: unable to create recv_thread thread.");
+								exit(-1);
+							}
+							conn->connect_threads++;
+						} else {
+							PRINT_DEBUG(
+									"Too many connect_threads=%d. Dropping...",
+									conn->connect_threads);
 						}
-						conn->connect_threads++;
-					} else {
-						PRINT_DEBUG("Too many connect_threads=%d. Dropping...",
-								conn->connect_threads);
 					}
 					sem_post(&conn->sem);
 				}
@@ -237,7 +260,7 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 			//TODO throw minor error
 		}
 	} else {
-		//TODO error
+		//TODO error, existing connection already connected there
 	}
 }
 
@@ -385,22 +408,25 @@ void tcp_exec_accept(uint32_t src_ip, uint16_t src_port, uint32_t flags) {
 				PRINT_ERROR("conn_stub->sem wait prob");
 				exit(-1);
 			}
-			if (conn_stub->accept_threads < MAX_ACCEPT_THREADS) {
-				thread_data = (struct tcp_thread_data *) malloc(
-						sizeof(struct tcp_thread_data));
-				thread_data->conn_stub = conn_stub;
-				thread_data->flags = flags;
+			if (conn_stub) {
+				if (conn_stub->accept_threads < MAX_ACCEPT_THREADS) {
+					thread_data = (struct tcp_thread_data *) malloc(
+							sizeof(struct tcp_thread_data));
+					thread_data->conn_stub = conn_stub;
+					thread_data->flags = flags;
 
-				//spin off thread to handle
-				if (pthread_create(&thread, NULL, accept_thread,
-						(void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create write_thread thread.");
-					exit(-1);
+					//spin off thread to handle
+					if (pthread_create(&thread, NULL, accept_thread,
+							(void *) thread_data)) {
+						PRINT_ERROR(
+								"ERROR: unable to create write_thread thread.");
+						exit(-1);
+					}
+					conn_stub->accept_threads++;
+				} else {
+					PRINT_DEBUG("Too many write threads=%d. Dropping...",
+							conn_stub->accept_threads);
 				}
-				conn_stub->accept_threads++;
-			} else {
-				PRINT_DEBUG("Too many write threads=%d. Dropping...",
-						conn_stub->accept_threads);
 			}
 			sem_post(&conn_stub->sem);
 		}
@@ -413,7 +439,7 @@ void tcp_exec(struct finsFrame *ff) {
 	uint8_t *pt;
 
 	switch (ff->ctrlFrame.paramterID) {
-	case EXEC_CONNECT:
+	case EXEC_TCP_CONNECT:
 		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
 			pt = ff->ctrlFrame.paramterValue;
 
@@ -445,7 +471,7 @@ void tcp_exec(struct finsFrame *ff) {
 			//TODO error
 		}
 		break;
-	case EXEC_LISTEN:
+	case EXEC_TCP_LISTEN:
 		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
 			pt = ff->ctrlFrame.paramterValue;
 
@@ -474,7 +500,7 @@ void tcp_exec(struct finsFrame *ff) {
 			//TODO error
 		}
 		break;
-	case EXEC_ACCEPT:
+	case EXEC_TCP_ACCEPT:
 		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
 			pt = ff->ctrlFrame.paramterValue;
 
@@ -503,11 +529,38 @@ void tcp_exec(struct finsFrame *ff) {
 			//TODO error
 		}
 		break;
-	case EXEC_CLOSE:
+	case EXEC_TCP_CLOSE:
+		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
+			pt = ff->ctrlFrame.paramterValue;
+
+			uint32_t flags = *(uint32_t *) pt;
+			pt += sizeof(uint32_t);
+
+			uint32_t src_ip = *(uint32_t *) pt;
+			pt += sizeof(uint32_t);
+
+			uint16_t src_port = *(uint16_t *) pt;
+			pt += sizeof(uint16_t);
+
+			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
+					!= ff->ctrlFrame.paramterLen) {
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt
+						- (uint8_t *) ff->ctrlFrame.paramterValue,
+						ff->ctrlFrame.paramterLen);
+				//TODO error
+				break;
+			}
+
+			tcp_exec_accept(src_ip, src_port, flags);
+
+			free(ff->ctrlFrame.paramterValue);
+		} else {
+			//TODO error
+		}
 		break;
-	case EXEC_CLOSE_STUB:
+	case EXEC_TCP_CLOSE_STUB:
 		break;
-	case EXEC_OPT:
+	case EXEC_TCP_OPT:
 		break;
 	default:
 		break;

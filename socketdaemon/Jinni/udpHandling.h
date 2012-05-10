@@ -41,5 +41,6 @@ void listen_udp(unsigned long long uniqueSockID, int backlog);
 void accept_udp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void accept4_udp();
 void shutdown_udp(unsigned long long uniqueSockID, int how);
+void release_udp(unsigned long long uniqueSockID);
 
 #endif /* UDPHANDLING_H_ */

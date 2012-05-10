@@ -589,6 +589,25 @@ void shutdown_icmp(unsigned long long uniqueSockID, int how) {
 
 }
 
+void release_icmp(unsigned long long uniqueSockID) {
+	int index;
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		exit(1);
+	}
+
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
+
+	if (removejinniSocket(uniqueSockID)) {
+		ack_send(uniqueSockID, release_call);
+	} else {
+		nack_send(uniqueSockID, release_call);
+	}
+}
+
 void listen_icmp(unsigned long long uniqueSockID, int backlog) {
 	int index;
 

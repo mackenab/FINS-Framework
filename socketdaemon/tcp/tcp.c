@@ -362,8 +362,11 @@ int conn_stub_has_space(uint32_t len) {
 }
 
 void conn_stub_free(struct tcp_connection_stub *conn_stub) {
+	conn_stub->running_flag = 0;
+
 	if (conn_stub->syn_queue)
 		queue_free(conn_stub->syn_queue);
+
 	free(conn_stub);
 }
 

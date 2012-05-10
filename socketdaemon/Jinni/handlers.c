@@ -1373,7 +1373,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int threads,
 
 }
 
-//TODO: dummy function, need to implement this
+//TODO: dummy function, need to implement this is used for close call!
 void release_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
 	u_char *pt;
@@ -1385,9 +1385,14 @@ void release_call_handler(unsigned long long uniqueSockID, int threads,
 		return;
 	}
 
-	if (removejinniSocket(uniqueSockID)) {
-		ack_send(uniqueSockID, release_call);
+	if (jinniSockets[index].type == SOCK_DGRAM)
+		release_udp(uniqueSockID);
+	else if (jinniSockets[index].type == SOCK_STREAM)
+		release_tcp(uniqueSockID);
+	else if (jinniSockets[index].type == SOCK_RAW) {
+		release_icmp(uniqueSockID);
 	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, release_call);
 	}
 }

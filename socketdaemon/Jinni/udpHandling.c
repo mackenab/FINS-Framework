@@ -1148,6 +1148,25 @@ void shutdown_udp(unsigned long long uniqueSockID, int how) {
 	ack_send(uniqueSockID, shutdown_call);
 }
 
+void release_udp(unsigned long long uniqueSockID) {
+	int index;
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		exit(1);
+	}
+
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
+
+	if (removejinniSocket(uniqueSockID)) {
+		ack_send(uniqueSockID, release_call);
+	} else {
+		nack_send(uniqueSockID, release_call);
+	}
+}
+
 void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname,
 		int optlen, u_char *optval) {
 	int index;

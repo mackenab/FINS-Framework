@@ -38,7 +38,7 @@ void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, in
 void listen_icmp(unsigned long long uniqueSockID, int backlog);
 void accept_icmp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void shutdown_icmp(unsigned long long uniqueSockID, int  how);
-
+void release_udp(unsigned long long uniqueSockID);
 
 
 

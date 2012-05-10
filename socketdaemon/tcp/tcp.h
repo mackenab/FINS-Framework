@@ -92,8 +92,7 @@ struct tcp_connection_stub {
 	sem_t accept_wait_sem;
 
 	uint8_t running_flag;
-//TODO add conn_stub_sem?
-//TODO add backlog?
+	//uint32_t backlog; //TODO ?
 };
 
 sem_t conn_stub_list_sem;
@@ -305,12 +304,12 @@ void tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's que
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
-#define EXEC_CONNECT 0
-#define EXEC_LISTEN 1
-#define EXEC_ACCEPT 2
-#define EXEC_CLOSE 3
-#define EXEC_CLOSE_STUB 4
-#define EXEC_OPT 5
+#define EXEC_TCP_CONNECT 0
+#define EXEC_TCP_LISTEN 1
+#define EXEC_TCP_ACCEPT 2
+#define EXEC_TCP_CLOSE 3
+#define EXEC_TCP_CLOSE_STUB 4
+#define EXEC_TCP_OPT 5
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);

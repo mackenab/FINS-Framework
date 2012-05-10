@@ -14,12 +14,12 @@
 
 #include "handlers.h"
 
-#define EXEC_CONNECT 0
-#define EXEC_LISTEN 1
-#define EXEC_ACCEPT 2
-#define EXEC_CLOSE 3
-#define EXEC_CLOSE_STUB 4
-#define EXEC_OPT 5
+#define EXEC_TCP_CONNECT 0
+#define EXEC_TCP_LISTEN 1
+#define EXEC_TCP_ACCEPT 2
+#define EXEC_TCP_CLOSE 3
+#define EXEC_TCP_CLOSE_STUB 4
+#define EXEC_TCP_OPT 5
 
 int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
@@ -51,7 +51,7 @@ void listen_tcp(unsigned long long uniqueSockID, int len);
 void accept_tcp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void accept4_tcp();
 void shutdown_tcp(unsigned long long uniqueSockID, int  how);
-
+void release_udp(unsigned long long uniqueSockID);
 
 
 #endif /* TCPHANDLING_H_ */

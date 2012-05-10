@@ -463,7 +463,7 @@ void listen_tcp(unsigned long long uniqueSockID, int backlog) {
 		return; //?
 	}
 
-	if (jinni_TCP_to_fins_cntrl(EXEC_LISTEN, buf, len) == 1) {
+	if (jinni_TCP_to_fins_cntrl(EXEC_TCP_LISTEN, buf, len) == 1) {
 		PRINT_DEBUG("");
 		ack_send(uniqueSockID, listen_call);
 	} else {
@@ -526,7 +526,7 @@ void accept_tcp(unsigned long long uniqueSockID,
 		return; //?
 	}
 
-	if (jinni_TCP_to_fins_cntrl(EXEC_ACCEPT, buf, len) == 1) {
+	if (jinni_TCP_to_fins_cntrl(EXEC_TCP_ACCEPT, buf, len) == 1) {
 		PRINT_DEBUG("");
 
 		//TODO wait thread for reply
@@ -638,7 +638,7 @@ void connect_tcp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 		return;
 	}
 
-	if (jinni_TCP_to_fins_cntrl(EXEC_CONNECT, buf, len) == 1) {
+	if (jinni_TCP_to_fins_cntrl(EXEC_TCP_CONNECT, buf, len) == 1) {
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
 
@@ -1195,6 +1195,27 @@ void shutdown_tcp(unsigned long long uniqueSockID, int how) {
 	PRINT_DEBUG();
 
 	ack_send(uniqueSockID, shutdown_call);
+}
+
+void release_tcp(unsigned long long uniqueSockID) {
+	int index;
+
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		exit(1);
+	}
+
+	PRINT_DEBUG("index = %d", index);
+	PRINT_DEBUG();
+
+	//TODO send msg to switch
+
+	if (removejinniSocket(uniqueSockID)) {
+		ack_send(uniqueSockID, release_call);
+	} else {
+		nack_send(uniqueSockID, release_call);
+	}
 }
 
 void setsockopt_tcp(unsigned long long uniqueSockID, int level, int optname,

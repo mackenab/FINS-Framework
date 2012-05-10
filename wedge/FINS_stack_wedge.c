@@ -1199,6 +1199,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
+//TODO figure out when this is called
 static int FINS_shutdown(struct socket *sock, int how) {
 	int rc;
 	unsigned long long uniqueSockID;
