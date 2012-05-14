@@ -1376,6 +1376,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int threads,
 //TODO: dummy function, need to implement this is used for close call!
 void release_call_handler(unsigned long long uniqueSockID, int threads,
 		unsigned char *buf, ssize_t len) {
+	int index;
 	u_char *pt;
 	pt = buf;
 
@@ -1384,6 +1385,13 @@ void release_call_handler(unsigned long long uniqueSockID, int threads,
 		nack_send(uniqueSockID, release_call);
 		return;
 	}
+
+	index = findjinniSocket(uniqueSockID);
+		if (index == -1) {
+			PRINT_DEBUG("CRASH !!socket descriptor not found into jinni sockets");
+			nack_send(uniqueSockID, shutdown_call);
+			return;
+		}
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
 		release_udp(uniqueSockID);

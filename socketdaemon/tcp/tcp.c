@@ -364,6 +364,17 @@ int conn_stub_has_space(uint32_t len) {
 void conn_stub_free(struct tcp_connection_stub *conn_stub) {
 	conn_stub->running_flag = 0;
 
+	//clear all threads using this conn_stub
+	while (conn_stub->accept_threads > 0) {
+		sem_post(&conn_stub->accept_wait_sem);
+		sem_post(&conn_stub->sem);
+
+		if (sem_wait(&conn_stub->sem)) {
+			PRINT_ERROR("conn_stub->sem wait prob");
+			exit(-1);
+		}
+	}
+
 	if (conn_stub->syn_queue)
 		queue_free(conn_stub->syn_queue);
 
@@ -633,8 +644,8 @@ void *main_thread(void *local) {
 			cong_space = conn->cong_window - sent_window;
 
 			if (!queue_is_empty(conn->write_queue) && conn->rem_window
-					&& sent_window < conn->rem_max_window && cong_space
-					>= conn->MSS) {
+					&& sent_window < conn->rem_max_window
+					&& cong_space >= conn->MSS) {
 				PRINT_DEBUG("sending packet");
 
 				seg = tcp_create(conn);
@@ -662,8 +673,8 @@ void *main_thread(void *local) {
 					PRINT_ERROR("conn->write_queue->sem wait prob");
 					exit(-1);
 				}
-				temp_node = node_create((uint8_t *) seg, data_len,
-						seg->seq_num, seg->seq_num + data_len - 1);
+				temp_node = node_create((uint8_t *) seg, data_len, seg->seq_num,
+						seg->seq_num + data_len - 1);
 				queue_append(conn->send_queue, temp_node);
 
 				conn->host_seq_end += data_len;
@@ -773,6 +784,7 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 
 	conn->next = NULL;
 	sem_init(&conn->sem, 0, 1);
+	conn->running_flag = 1;
 	conn->state = CLOSED;
 
 	conn->host_addr = host_addr;
@@ -798,7 +810,6 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 
 	conn->recv_threads = 0;
 
-	conn->running_flag = 1;
 	conn->first_flag = 1;
 
 	conn->duplicate = 0;
@@ -872,7 +883,8 @@ struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
 	//TODO add nagel timer
 
 	//start main thread
-	if (pthread_create(&conn->setup_thread, NULL, setup_thread, (void *) conn)) {
+	if (pthread_create(&conn->setup_thread, NULL, setup_thread,
+			(void *) conn)) {
 		PRINT_ERROR("ERROR: unable to create setup_thread thread.");
 		exit(-1);
 	}
@@ -913,7 +925,8 @@ struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
 	temp = conn_list;
 	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
 		if (temp->rem_port == rem_port && temp->rem_addr == rem_addr
-				&& temp->host_addr == host_addr && temp->host_port == host_port) {
+				&& temp->host_addr == host_addr
+				&& temp->host_port == host_port) {
 			return temp;
 		}
 		temp = temp->next;
@@ -965,6 +978,19 @@ void conn_free(struct tcp_connection *conn) {
 	//TODO stop nagel timer
 	sem_post(&conn->setup_wait_sem);
 	sem_post(&conn->main_wait_sem);
+
+	//clear all threads using this conn
+	while (conn->write_threads > 0 || conn->recv_threads > 0
+			|| conn->connect_threads > 0) {
+		sem_post(&conn->sem);
+
+		if (sem_wait(&conn->sem)) {
+			PRINT_ERROR("conn->sem wait prob");
+			exit(-1);
+		}
+	}
+
+	//post to read/write/connect/etc threads
 
 	pthread_join(conn->to_gbn_thread, NULL);
 	pthread_join(conn->to_delayed_thread, NULL);
@@ -1204,7 +1230,6 @@ uint16_t tcp_checksum(struct tcp_segment *seg) { //TODO check if checksum works
 	uint32_t i;
 
 	//TODO add TCP alternate checksum w/data in options (15)
-
 
 	//fake IP header
 	sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip & 0xFFFF));
