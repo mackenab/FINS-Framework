@@ -86,13 +86,15 @@ struct tcp_connection_stub {
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
 
+	uint32_t threads;
+
 	int syn_threads;
 
 	int accept_threads;
 	sem_t accept_wait_sem;
 
 	uint8_t running_flag;
-	//uint32_t backlog; //TODO ?
+//uint32_t backlog; //TODO ?
 };
 
 sem_t conn_stub_list_sem;
@@ -131,8 +133,11 @@ enum CONG_STATE /* Defines an enumeration type    */
 struct tcp_connection {
 	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
 	sem_t sem; //for next, state, write_threads
+	uint8_t running_flag;
+	uint32_t threads;
 	enum CONN_STATE state;
-	//some type of option state
+
+	//some type of options state
 
 	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
@@ -161,7 +166,6 @@ struct tcp_connection {
 	//sem_t read_sem; //TODO: prob don't need
 	int connect_threads;
 
-	uint8_t running_flag;
 	uint8_t first_flag;
 
 	uint32_t duplicate;
@@ -212,6 +216,7 @@ struct tcp_connection {
 #define MAX_ACCEPT_THREADS 10
 #define MAX_CONNECT_THREADS 10
 #define MAX_SYS_THREADS 10
+#define MAX_THREADS 50
 
 #define DEFAULT_MAX_QUEUE 65535
 #define MAX_CONNECTIONS 512

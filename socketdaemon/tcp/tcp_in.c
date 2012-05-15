@@ -68,17 +68,14 @@ void *syn_thread(void *local) {
 
 	uint16_t calc;
 	struct tcp_node *node;
-	int ret;
 
-	calc = tcp_checksum(seg);
-	if (seg->checksum != calc) {
-		PRINT_ERROR("Checksum: recv=%u calc=%u\n", seg->checksum, calc);
-	} else {
-		if (queue_has_space(conn_stub->syn_queue, 1)) {
-			if (sem_wait(&conn_stub->syn_queue->sem)) {
-				PRINT_ERROR("conn->send_queue wait prob");
-				exit(-1);
-			}
+	if (sem_wait(&conn_stub->sem)) {
+		PRINT_ERROR("conn->sem wait prob");
+		exit(-1);
+	}
+	if (conn_stub->running_flag) {
+		calc = tcp_checksum(seg); //TODO add alt checksum
+		if (seg->checksum == calc) {
 			if (queue_has_space(conn_stub->syn_queue, 1)) {
 				node = node_create((uint8_t *) seg, 1, seg->seq_num,
 						seg->seq_num);
@@ -87,21 +84,27 @@ void *syn_thread(void *local) {
 				sem_post(&conn_stub->accept_wait_sem);
 			} else {
 				//queue full
+				tcp_free(seg);
 			}
-			sem_post(&conn_stub->syn_queue->sem);
 		} else {
-			//queue full
+			PRINT_ERROR("Checksum: recv=%u calc=%u\n", seg->checksum, calc);
+			tcp_free(seg);
 		}
+	} else {
+		tcp_free(seg);
 	}
 
-	if (sem_wait(&conn_stub->sem)) {
-		PRINT_ERROR("conn_stub->sem wait prob");
+	if (sem_wait(&conn_stub_list_sem)) {
+		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
-	conn_stub->syn_threads--;
+	conn_stub->threads--;
+	sem_post(&conn_stub_list_sem);
+
 	sem_post(&conn_stub->sem);
 
 	free(thread_data);
+	pthread_exit(NULL);
 }
 
 int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -178,6 +181,21 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 			conn->state = CLOSED;
 		}
 		return 0;
+	}
+}
+
+void tcp_recv_syn(struct tcp_connection_stub *conn_stub,
+		struct tcp_segment *seg) {
+	struct tcp_node *node;
+
+	if (queue_has_space(conn_stub->syn_queue, 1)) {
+		node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
+		queue_append(conn_stub->syn_queue, node);
+
+		sem_post(&conn_stub->accept_wait_sem);
+	} else {
+		//queue full
+		//drop
 	}
 }
 
@@ -262,8 +280,6 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else {
 		PRINT_DEBUG("Invalid Seg: SYN_SENT & not SYN.");
 	}
-
-	tcp_free(seg);
 }
 
 void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -292,6 +308,10 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			conn->cong_window = conn->MSS;
 			conn->threshhold = conn->rem_max_window / 2.0;
 
+			if (!(seg->flags & FLAG_ACK)) {
+				//TODO handle data!
+			}
+
 			//TODO send ACK to tcp handlers
 		} else {
 			PRINT_DEBUG("Invalid ACK: was not sent.");
@@ -303,8 +323,6 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else {
 		PRINT_DEBUG("Invalid Seg: SYN_RECV & not ACK.");
 	}
-
-	tcp_free(seg);
 }
 
 void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -479,10 +497,6 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	int send_ack = 0;
 
 	// data handling
-	if (sem_wait(&conn->recv_queue->sem)) {
-		PRINT_ERROR("conn->recv_queue->sem wait prob");
-		exit(-1);
-	}
 	if (conn->rem_seq_num == seg->seq_num) {
 		//in order seq num
 
@@ -611,7 +625,6 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 			startTimer(conn->to_delayed_fd, DELAYED_TIMEOUT);
 		}
 	}
-	sem_post(&conn->recv_queue->sem);
 }
 
 void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -651,10 +664,6 @@ void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 
-		if (sem_wait(&conn->recv_queue->sem)) {
-			PRINT_ERROR("conn->recv_queue->sem wait prob");
-			exit(-1);
-		}
 		if (conn->rem_seq_num == seg->seq_num) {
 			if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 				//drop
@@ -665,10 +674,7 @@ void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			//TODO process seg options //?
 		}
-		sem_post(&conn->recv_queue->sem);
 	}
-
-	tcp_free(seg);
 }
 
 void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -676,8 +682,6 @@ void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
-
-	tcp_free(seg);
 }
 
 void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -700,8 +704,6 @@ void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 		}
 		sem_post(&conn->recv_queue->sem); //TODO optimize
 	}
-
-	tcp_free(seg);
 }
 
 void *recv_thread(void *local) {
@@ -711,67 +713,80 @@ void *recv_thread(void *local) {
 
 	uint16_t calc;
 
-	calc = tcp_checksum(seg);
-	if (seg->checksum != calc) {
-		PRINT_ERROR("Checksum: recv=%u calc=%u\n", seg->checksum, calc);
-	} else {
-
-		if (sem_wait(&conn->send_queue->sem)) {
-			PRINT_ERROR("conn->send_queue wait prob");
-			exit(-1);
-		}
-		switch (conn->state) {
-		case CLOSED:
-			//drop
-			tcp_free(seg);
-			break;
-		case LISTEN:
-			//ERROR shouldn't ever arrive here in this thread
-			PRINT_DEBUG("Shouldn't arrive here state=%d", conn->state);
-			tcp_free(seg);
-			break;
-		case SYN_SENT:
-			tcp_recv_syn_sent(conn, seg);
-			break;
-		case SYN_RECV:
-			tcp_recv_syn_recv(conn, seg);
-			break;
-		case ESTABLISHED:
-			tcp_recv_established(conn, seg);
-			break;
-		case FIN_WAIT_1:
-			tcp_recv_fin_wait_1(conn, seg);
-			break;
-		case FIN_WAIT_2:
-			tcp_recv_fin_wait_2(conn, seg);
-			break;
-		case CLOSING:
-			tcp_recv_closing(conn, seg);
-			break;
-		case CLOSE_WAIT:
-			tcp_recv_close_wait(conn, seg);
-			break;
-		case LAST_ACK:
-			tcp_recv_last_ack(conn, seg);
-			break;
-		case TIME_WAIT:
-			//TODO Does nothing, timesout?? What if get something?
-			//TIMEOUT
-			tcp_free(seg);
-			break;
-		default:
-			PRINT_DEBUG("Unknown or incorrect state=%d", conn->state);
-			tcp_free(seg);
-			break;
-		}
-		sem_post(&conn->send_queue->sem); //TODO optimize
-	}
-
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
 	}
-	conn->recv_threads--;
+	if (conn->running_flag) {
+		calc = tcp_checksum(seg); //TODO add alt checksum
+		if (seg->checksum == calc) {
+			switch (conn->state) {
+			case CLOSED:
+				//drop
+				tcp_free(seg);
+				break;
+			case LISTEN:
+				//ERROR shouldn't ever arrive here in this thread
+				PRINT_DEBUG("Shouldn't arrive here state=%d", conn->state);
+				tcp_free(seg);
+				break;
+			case SYN_SENT:
+				tcp_recv_syn_sent(conn, seg);
+				tcp_free(seg);
+				break;
+			case SYN_RECV:
+				tcp_recv_syn_recv(conn, seg);
+				tcp_free(seg);
+				break;
+			case ESTABLISHED:
+				tcp_recv_established(conn, seg);
+				sem_post(&conn->sem);
+				break;
+			case FIN_WAIT_1:
+				tcp_recv_fin_wait_1(conn, seg);
+				sem_post(&conn->sem);
+				break;
+			case FIN_WAIT_2:
+				tcp_recv_fin_wait_2(conn, seg);
+				sem_post(&conn->sem);
+				break;
+			case CLOSING:
+				tcp_recv_closing(conn, seg);
+				tcp_free(seg);
+				break;
+			case CLOSE_WAIT:
+				tcp_recv_close_wait(conn, seg);
+				tcp_free(seg);
+				break;
+			case LAST_ACK:
+				tcp_recv_last_ack(conn, seg);
+				tcp_free(seg);
+				break;
+			case TIME_WAIT:
+				//TODO Does nothing, timesout?? What if get something?
+				//TIMEOUT
+				tcp_free(seg);
+				break;
+			default:
+				PRINT_DEBUG("Unknown or incorrect state=%d", conn->state);
+				tcp_free(seg);
+				break;
+			}
+		} else {
+			PRINT_ERROR("Checksum: recv=%u calc=%u\n", seg->checksum, calc);
+			tcp_free(seg);
+		}
+	} else {
+		tcp_free(seg);
+	}
+
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	conn->threads--;
+	sem_post(&conn_list_sem);
+
 	sem_post(&conn->sem);
 
 	free(thread_data);
@@ -780,11 +795,11 @@ void *recv_thread(void *local) {
 
 void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_segment *seg;
-	struct tcp_connection_stub *conn_stub;
 	struct tcp_connection *conn;
-	pthread_t thread;
+	int start;
+	struct tcp_connection_stub *conn_stub;
 	struct tcp_thread_data *thread_data;
-	int ret;
+	pthread_t thread;
 
 	seg = fdf_to_tcp(ff);
 	if (seg) {
@@ -795,51 +810,42 @@ void tcp_in_fdf(struct finsFrame *ff) {
 		conn
 				= conn_find(seg->dst_ip, seg->dst_port, seg->src_ip,
 						seg->src_port);
-		sem_post(&conn_list_sem);
-
 		if (conn) {
-			if (conn->running_flag) {
-				if (sem_wait(&conn->sem)) {
-					PRINT_ERROR("conn->sem wait prob");
+			start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+			sem_post(&conn_list_sem);
+
+			if (start) {
+				thread_data = (struct tcp_thread_data *) malloc(
+						sizeof(struct tcp_thread_data));
+				thread_data->conn = conn;
+				thread_data->seg = seg;
+
+				if (pthread_create(&thread, NULL, recv_thread,
+						(void *) thread_data)) {
+					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 					exit(-1);
 				}
-				if (conn->recv_threads < MAX_RECV_THREADS) {
-					thread_data = (struct tcp_thread_data *) malloc(
-							sizeof(struct tcp_thread_data));
-					thread_data->conn = conn;
-					thread_data->seg = seg;
+			} else {
+				PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+			}
+		} else {
+			sem_post(&conn_list_sem);
 
-					if (pthread_create(&thread, NULL, recv_thread,
-							(void *) thread_data)) {
-						PRINT_ERROR(
-								"ERROR: unable to create recv_thread thread.");
-						exit(-1);
-					}
-					conn->recv_threads++;
-				} else {
-					PRINT_DEBUG("Too many recv threads=%d. Dropping...",
-							conn->recv_threads);
+			if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_ACK | FLAG_FIN
+					| FLAG_RST))) {
+				//check if listening sockets
+				if (sem_wait(&conn_stub_list_sem)) {
+					PRINT_ERROR("conn_stub_list_sem wait prob");
+					exit(-1);
 				}
-				sem_post(&conn->sem);
-			}
+				conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
+				if (conn_stub) {
+					start
+							= (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++
+									: 0;
+					sem_post(&conn_stub_list_sem);
 
-		} else if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_ACK
-				| FLAG_FIN | FLAG_RST))) { //TODO check if strange SYN ACK case
-			//check if listening sockets
-			if (sem_wait(&conn_stub_list_sem)) {
-				PRINT_ERROR("conn_stub_list_sem wait prob");
-				exit(-1);
-			}
-			conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
-			sem_post(&conn_stub_list_sem);
-
-			if (conn_stub) {
-				if (conn_stub->running_flag) {
-					if (sem_wait(&conn_stub->sem)) {
-						PRINT_ERROR("conn_stub->sem wait prob");
-						exit(-1);
-					}
-					if (conn_stub->syn_threads < MAX_SYN_THREADS) {
+					if (start) {
 						thread_data = (struct tcp_thread_data *) malloc(
 								sizeof(struct tcp_thread_data));
 						thread_data->conn_stub = conn_stub;
@@ -851,18 +857,19 @@ void tcp_in_fdf(struct finsFrame *ff) {
 									"ERROR: unable to create recv_thread thread.");
 							exit(-1);
 						}
-						conn_stub->syn_threads++;
 					} else {
-						PRINT_DEBUG("Too many recv threads=%d. Dropping...",
-								conn_stub->syn_threads);
+						PRINT_DEBUG("Too many threads=%d. Dropping...",
+								conn->threads);
 					}
-					sem_post(&conn_stub->sem);
+				} else {
+					sem_post(&conn_stub_list_sem);
+					PRINT_DEBUG("Found no stub. Dropping...");
+					tcp_free(seg);
 				}
 			} else {
-				PRINT_DEBUG("Found no stub. Dropping...");
+				PRINT_DEBUG("Found no connection. Dropping...");
+				tcp_free(seg);
 			}
-		} else {
-			PRINT_DEBUG("Found no connection. Dropping...");
 		}
 	} else {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");
