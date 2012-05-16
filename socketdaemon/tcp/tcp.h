@@ -75,7 +75,6 @@ struct tcp_node *queue_remove_front(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 void queue_free(struct tcp_queue *queue);
-//TODO might implement queue_find_seqnum/seqend, findNext, hasEnd if used more than once
 
 struct tcp_connection_stub {
 	struct tcp_connection_stub *next;
@@ -88,9 +87,9 @@ struct tcp_connection_stub {
 
 	uint32_t threads;
 
-	int syn_threads;
+	//int syn_threads;
 
-	int accept_threads;
+	//int accept_threads;
 	sem_t accept_wait_sem;
 
 	uint8_t running_flag;
@@ -147,24 +146,20 @@ struct tcp_connection {
 	struct tcp_queue *write_queue; //buffer for raw data to be transfered
 	struct tcp_queue *send_queue; //buffer for sent tcp_seg that are unACKed
 	struct tcp_queue *recv_queue; //buffer for recv tcp_seg that are unACKed
-	struct tcp_queue *read_queue; //buffer for raw data that have been transfered //TODO push straight to daemon?
-
-	pthread_t setup_thread;
-	uint8_t setup_wait_flag;
-	sem_t setup_wait_sem;
+	//struct tcp_queue *read_queue; //buffer for raw data that have been transfered //TODO push straight to daemon?
 
 	pthread_t main_thread;
 	uint8_t main_wait_flag;
 	sem_t main_wait_sem;
 
-	int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
+	//int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
 	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
 	sem_t write_wait_sem;
 	int index;
 
-	int recv_threads;
+	//int recv_threads;
 	//sem_t read_sem; //TODO: prob don't need
-	int connect_threads;
+	//int connect_threads;
 
 	uint8_t first_flag;
 
@@ -175,6 +170,7 @@ struct tcp_connection {
 	pthread_t to_gbn_thread;
 	uint8_t to_gbn_flag; //1 GBN timeout occurred
 	uint8_t gbn_flag; //1 performing GBN
+	struct tcp_node *gbn_node;
 
 	int to_delayed_fd; //delayed ACK TO occurred
 	pthread_t to_delayed_thread;
@@ -210,12 +206,12 @@ struct tcp_connection {
 };
 
 //TODO raise any of these?
-#define MAX_RECV_THREADS 10
-#define MAX_WRITE_THREADS 10
-#define MAX_SYN_THREADS 10
-#define MAX_ACCEPT_THREADS 10
-#define MAX_CONNECT_THREADS 10
-#define MAX_SYS_THREADS 10
+//#define MAX_RECV_THREADS 10
+//#define MAX_WRITE_THREADS 10
+//#define MAX_SYN_THREADS 10
+//#define MAX_ACCEPT_THREADS 10
+//#define MAX_CONNECT_THREADS 10
+//#define MAX_SYS_THREADS 10
 #define MAX_THREADS 50
 
 #define DEFAULT_MAX_QUEUE 65535
@@ -227,11 +223,7 @@ struct tcp_connection {
 #define MAX_SEQ_NUM 4294967295.0
 #define DEFAULT_MAX_WINDOW 8191
 #define DEFAULT_MSS 536
-#define MAX_SEG_LIFE 120000
-
-//connection states //TODO: figure out
-#define CONN_SETUP 0
-#define CONN_CONNECTED 1
+#define DEFAULT_MSL 120000
 
 sem_t conn_list_sem;
 struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
@@ -285,7 +277,7 @@ int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 		uint32_t win_seq_end);
 
 struct tcp_thread_data {
-	struct tcp_connection *conn;
+	struct tcp_connection *conn; //TODO change conn/conn_stub to union?
 	struct tcp_connection_stub *conn_stub;
 	struct tcp_segment *seg; //TODO change seg/raw to union?
 	uint8_t *data_raw;

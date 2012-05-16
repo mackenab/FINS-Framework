@@ -46,8 +46,8 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT
-				- conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev
+				+ beta * fabs(sampRTT - conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -110,7 +110,7 @@ void *syn_thread(void *local) {
 int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 	switch (conn->state) {
 	case ESTABLISHED:
-		//TODO can get ACKs, send/resend data, receive, send ACKs
+		//can get ACKs, send/resend data, receive, send ACKs
 		if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 			//drop
 			return -1;
@@ -123,60 +123,65 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 		}
 		break;
 	case FIN_WAIT_1:
-		//TODO merge with established, can still get ACKs, receive, send ACKs, & resend data
+		//merge with established, can still get ACKs, receive, send ACKs, & resend data
 		if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 			//drop
 			return -1;
 		} else if (seg->flags & FLAG_FIN) {
-			if ((seg->flags & FLAG_ACK) && conn->host_seq_num
-					== conn->host_seq_end) {
+			if ((seg->flags & FLAG_ACK)
+					&& conn->host_seq_num == conn->host_seq_end) {
 				//if FIN ACK, send ACK, TIME_WAIT
 				conn->state = TIME_WAIT;
+				startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
 				return 1;
 			} else {
 				//if FIN, send ACK, CLOSING
 				conn->state = CLOSING;
 				return 1;
 			}
-		} else if ((seg->flags & FLAG_ACK) && conn->host_seq_num
-				== conn->host_seq_end) {
+		} else if ((seg->flags & FLAG_ACK)
+				&& conn->host_seq_num == conn->host_seq_end) {
 			//if ACK, send -, FIN_WAIT_2
 			conn->state = FIN_WAIT_2;
 			return 0;
 		}
 		break;
 	case FIN_WAIT_2:
-		//TODO merge with established, can still receive, send ACKs
+		//merge with established, can still receive, send ACKs
 		if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 			//drop
 			return -1;
 		} else if (seg->flags & FLAG_FIN) {
 			//if FIN, send ACK, TIME_WAIT
 			conn->state = TIME_WAIT;
+			startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
 			return 1;
 		}
 		break;
 	case CLOSING:
-		//TODO self, can still get ACKs & resend
+		//self, can still get ACKs & resend
 		if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 			//drop
 			return -1;
-		} else if ((seg->flags & FLAG_ACK) && conn->host_seq_num
-				== conn->host_seq_end) {
+		} else if ((seg->flags & FLAG_ACK)
+				&& conn->host_seq_num == conn->host_seq_end) {
 			//if ACK, send -, TIME_WAIT
 			conn->state = TIME_WAIT;
+			startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
 		}
 		return 0;
 	case TIME_WAIT:
-		//TODO Does nothing, timeout?? What if get something?
 		//TIMEOUT
-		return 0;
+		//if FIN, send ACK, -
+		startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
+		return 1;
 	case CLOSE_WAIT:
-		//TODO can still send & get ACKs
+		//can still send & get ACKs
 		return 0;
 	case LAST_ACK:
-		//TODO can still get ACKs & resend data
-		if ((seg->flags & FLAG_ACK) && conn->host_seq_num == conn->host_seq_end) {
+		//can still get ACKs & resend data
+		if ((seg->flags & FLAG_ACK)
+				&& conn->host_seq_num == conn->host_seq_end) {
 			//if ACK, send -, CLOSED
 			conn->state = CLOSED;
 		}
@@ -203,6 +208,9 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
+	//TODO ACK, If SEG.ACK =< ISS, or SEG.ACK > SND.NXT, send a reset <SEQ=SEG.ACK><CTL=RST>
+	//TODO ACK, If SND.UNA =< SEG.ACK =< SND.NXT
+
 	if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_FIN | FLAG_RST))) {
 		if (seg->flags & FLAG_ACK) {
 			//if SYN ACK, send ACK, ESTABLISHED
@@ -215,6 +223,8 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->rem_window = seg->win_size;
 
 				//TODO process options, MSS, max_window
+				//conn->MSS =
+				//conn->rem_max_window =
 
 				//flags
 				conn->first_flag = 1;
@@ -224,6 +234,7 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				//RTT
 				stopTimer(conn->to_gbn_fd);
+				conn->timeout = DEFAULT_GBN_TIMEOUT;
 
 				//Cong
 				conn->cong_state = SLOWSTART;
@@ -237,7 +248,7 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				tcp_send_seg(temp_seg);
 				tcp_free(temp_seg);
 
-				//TODO send ACK to tcp handlers
+				//TODO send ACK to handler, prob connect
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent.");
 
@@ -280,10 +291,21 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else {
 		PRINT_DEBUG("Invalid Seg: SYN_SENT & not SYN.");
 	}
+
+	tcp_free(seg);
 }
 
 void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
-	if ((seg->flags & FLAG_ACK) && !(seg->flags & (FLAG_FIN | FLAG_RST))) {
+	struct tcp_segment *temp_seg;
+
+	if (seg->flags & FLAG_RST) {
+		//TODO handle RSTs back
+		//if RST, send -, LISTEN
+
+		//TODO finish? verify/add conn_stub, free conn
+	} else if (seg->flags & FLAG_FIN) {
+		//drop
+	} else if (seg->flags & FLAG_ACK) {
 		//if ACK/SYN ACK, send -, ESTABLISHED
 		if (seg->ack_num == conn->host_seq_num + 1) {
 			conn->state = ESTABLISHED;
@@ -302,6 +324,7 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			//RTT
 			stopTimer(conn->to_gbn_fd);
+			conn->timeout = DEFAULT_GBN_TIMEOUT;
 
 			//Cong
 			conn->cong_state = SLOWSTART;
@@ -309,20 +332,36 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			conn->threshhold = conn->rem_max_window / 2.0;
 
 			if (!(seg->flags & FLAG_ACK)) {
-				//TODO handle data!
+				handle_data(conn, seg);
 			}
 
-			//TODO send ACK to tcp handlers
+			//TODO send ACK to handler, prob accept
 		} else {
 			PRINT_DEBUG("Invalid ACK: was not sent.");
+			//TODO send RST?
 		}
-	} else if (seg->flags & FLAG_RST) {
-		//if RST, send -, LISTEN
+	} else if (seg->flags & FLAG_SYN) {
+		//if SYN, send SYN ACK, SYN_RECV
+		conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
+		conn->host_seq_end = conn->host_seq_num;
+		conn->rem_seq_num = seg->seq_num;
+		conn->rem_window = seg->win_size;
 
-		//TODO finish? verify/add conn_stub, free conn
+		//TODO process options, decide: MSS, max window size!!
+		//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+
+		//conn_change_options(conn, tcp->options, SYN);
+
+		//send SYN ACK
+		temp_seg = tcp_create(conn);
+		tcp_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
+		tcp_send_seg(temp_seg);
+		tcp_free(temp_seg);
 	} else {
 		PRINT_DEBUG("Invalid Seg: SYN_RECV & not ACK.");
 	}
+
+	tcp_free(seg);
 }
 
 void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -330,7 +369,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
-	//check if valid ACK
+//check if valid ACK
 	if (in_tcp_window(seg->ack_num, seg->ack_num, conn->host_seq_num,
 			conn->host_seq_end)) {
 		if (seg->ack_num == conn->host_seq_num) {
@@ -350,9 +389,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				//Cong
 				switch (conn->cong_state) {
-				case INITIAL:
-					//connection setup
-					break;
 				case SLOWSTART:
 				case AVOIDANCE:
 					conn->cong_state = RECOVERY;
@@ -364,9 +400,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 					break;
 				case RECOVERY:
 					//conn->fast_flag = 0; //TODO send FR every 3 repeated, check if should do only first
-					break;
-				default:
-					PRINT_ERROR("unknown cong_state=%d\n", conn->cong_state);
 					break;
 				}
 			} else {
@@ -399,9 +432,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			//Cong
 			switch (conn->cong_state) {
-			case INITIAL:
-				//connection setup
-				break;
 			case SLOWSTART:
 				conn->cong_window += conn->MSS;
 				if (conn->cong_window >= conn->threshhold) {
@@ -414,9 +444,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 			case RECOVERY:
 				conn->cong_state = AVOIDANCE;
 				conn->cong_window = conn->threshhold;
-				break;
-			default:
-				PRINT_ERROR("unknown congState=%d\n", conn->cong_state);
 				break;
 			}
 		} else {
@@ -453,9 +480,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				//Cong
 				switch (conn->cong_state) {
-				case INITIAL:
-					//connection setup
-					break;
 				case SLOWSTART:
 					conn->cong_window += conn->MSS;
 					if (conn->cong_window >= conn->threshhold) {
@@ -469,9 +493,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				case RECOVERY:
 					conn->cong_state = AVOIDANCE;
 					conn->cong_window = conn->threshhold;
-					break;
-				default:
-					PRINT_ERROR("unknown congState=%d\n", conn->cong_state);
 					break;
 				}
 			} else {
@@ -496,8 +517,8 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	int ret;
 	int send_ack = 0;
 
-	// data handling
-	if (conn->rem_seq_num == seg->seq_num) {
+// data handling
+	if (seg->seq_num == conn->rem_seq_num) {
 		//in order seq num
 
 		ret = process_flags(conn, seg);
@@ -603,12 +624,13 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 			}
 		} else {
 			PRINT_DEBUG("Dropping out of window rem=(%u, %u) got=(%u, %u)\n",
-					conn->rem_seq_num, conn->rem_seq_end, seg->seq_num, seq_end);
+					conn->rem_seq_num, conn->rem_seq_end, seg->seq_num,
+					seq_end);
 			tcp_free(seg);
 		}
 	}
 
-	//send ack
+//send ack
 	if (send_ack) {
 		if (conn->delayed_flag) {
 			stopTimer(conn->to_delayed_fd);
@@ -628,7 +650,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
-	//TODO can receive, send ACKs, send/resend data, & get ACKs
+//TODO can receive, send ACKs, send/resend data, & get ACKs
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
@@ -637,10 +659,10 @@ void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) 
 }
 
 void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
-	//TODO merge with established, can still get ACKs, receive, send ACKs, & resend data
-	//if FIN, send ACK, CLOSING
-	//if FIN ACK, send ACK, TIME_WAIT
-	//if ACK, send -, FIN_WAIT_2
+//TODO merge with established, can still get ACKs, receive, send ACKs, & resend data
+//if FIN, send ACK, CLOSING
+//if FIN ACK, send ACK, TIME_WAIT
+//if ACK, send -, FIN_WAIT_2
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
@@ -649,8 +671,8 @@ void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
-	//TODO merge with established, can still receive, send ACKs
-	//if FIN, send ACK, TIME_WAIT
+//TODO merge with established, can still receive, send ACKs
+//if FIN, send ACK, TIME_WAIT
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
@@ -659,41 +681,42 @@ void tcp_recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
-	//TODO self, can still get ACKs & resend
-	//if ACK, send -, TIME_WAIT
+//TODO self, can still get ACKs & resend
+//if ACK, send -, TIME_WAIT
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 
-		if (conn->rem_seq_num == seg->seq_num) {
+		if (seg->seq_num == conn->rem_seq_num) {
 			if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 				//drop
 			} else if (conn->host_seq_num == conn->host_seq_end) {
 				//if ACK, send -, TIME_WAIT
 				conn->state = TIME_WAIT;
+				startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
 			}
 
 			//TODO process seg options //?
 		}
 	}
+
+	tcp_free(seg);
 }
 
 void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
-	//TODO can still send & get ACKs
+//TODO can still send & get ACKs
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
+
+	tcp_free(seg);
 }
 
 void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
-	//TODO can still get ACKs & resend data
-	//if ACK, send -, CLOSED
+//TODO can still get ACKs & resend data
+//if ACK, send -, CLOSED
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 
-		if (sem_wait(&conn->recv_queue->sem)) {
-			PRINT_ERROR("conn->recv_queue->sem wait prob");
-			exit(-1);
-		}
 		if (conn->rem_seq_num == seg->seq_num) {
 			if (conn->host_seq_num == conn->host_seq_end) {
 				//if ACK, send -, CLOSED
@@ -702,8 +725,9 @@ void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			//TODO process seg options //?
 		}
-		sem_post(&conn->recv_queue->sem); //TODO optimize
 	}
+
+	tcp_free(seg);
 }
 
 void *recv_thread(void *local) {
@@ -722,53 +746,44 @@ void *recv_thread(void *local) {
 		if (seg->checksum == calc) {
 			switch (conn->state) {
 			case CLOSED:
-				//drop
+				//TODO if RST, -, -
+				//TODO if ACK, <SEQ=SEG.ACK><CTL=RST>
+				//TODO else, <SEQ=0><ACK=SEG.SEQ+SEG.LEN><CTL=RST,ACK>
+
 				tcp_free(seg);
 				break;
 			case LISTEN:
-				//ERROR shouldn't ever arrive here in this thread
+				//ERROR shouldn't ever arrive here in this thread, kept if merge stbs
 				PRINT_DEBUG("Shouldn't arrive here state=%d", conn->state);
 				tcp_free(seg);
 				break;
 			case SYN_SENT:
 				tcp_recv_syn_sent(conn, seg);
-				tcp_free(seg);
 				break;
 			case SYN_RECV:
 				tcp_recv_syn_recv(conn, seg);
-				tcp_free(seg);
 				break;
 			case ESTABLISHED:
 				tcp_recv_established(conn, seg);
-				sem_post(&conn->sem);
 				break;
 			case FIN_WAIT_1:
 				tcp_recv_fin_wait_1(conn, seg);
-				sem_post(&conn->sem);
 				break;
 			case FIN_WAIT_2:
 				tcp_recv_fin_wait_2(conn, seg);
-				sem_post(&conn->sem);
 				break;
 			case CLOSING:
 				tcp_recv_closing(conn, seg);
-				tcp_free(seg);
 				break;
 			case CLOSE_WAIT:
 				tcp_recv_close_wait(conn, seg);
-				tcp_free(seg);
 				break;
 			case LAST_ACK:
 				tcp_recv_last_ack(conn, seg);
-				tcp_free(seg);
 				break;
 			case TIME_WAIT:
 				//TODO Does nothing, timesout?? What if get something?
 				//TIMEOUT
-				tcp_free(seg);
-				break;
-			default:
-				PRINT_DEBUG("Unknown or incorrect state=%d", conn->state);
 				tcp_free(seg);
 				break;
 			}
@@ -807,9 +822,8 @@ void tcp_in_fdf(struct finsFrame *ff) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
 		}
-		conn
-				= conn_find(seg->dst_ip, seg->dst_port, seg->src_ip,
-						seg->src_port);
+		conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip,
+				seg->src_port);
 		if (conn) {
 			start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
 			sem_post(&conn_list_sem);
@@ -831,8 +845,12 @@ void tcp_in_fdf(struct finsFrame *ff) {
 		} else {
 			sem_post(&conn_list_sem);
 
-			if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_ACK | FLAG_FIN
-					| FLAG_RST))) {
+			if (seg->flags & FLAG_ACK) {
+				//TODO send <SEQ=SEG.ACK><CTL=RST>
+			} else if ((seg->flags & FLAG_SYN)
+					&& !(seg->flags & (FLAG_FIN | FLAG_RST))) {
+				//TODO check security, send RST if lower, etc
+
 				//check if listening sockets
 				if (sem_wait(&conn_stub_list_sem)) {
 					PRINT_ERROR("conn_stub_list_sem wait prob");
@@ -840,9 +858,8 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				}
 				conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
 				if (conn_stub) {
-					start
-							= (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++
-									: 0;
+					start = (conn_stub->threads < MAX_THREADS) ?
+							conn_stub->threads++ : 0;
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
@@ -880,6 +897,6 @@ void tcp_in_fdf(struct finsFrame *ff) {
 }
 
 void tcp_in_fcf(struct finsFrame *ff) {
-	//TODO control messages from IP/DLL layer, prob just to change params
+//TODO control messages from IP/DLL layer, prob just to change params
 	freeFinsFrame(ff);
 }
