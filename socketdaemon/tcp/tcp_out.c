@@ -210,12 +210,6 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		if (conn_has_space(1)) {
 			conn = conn_create(src_ip, src_port, dst_ip, dst_port);
 			if (conn_insert(conn)) {
-				sem_post(&conn_list_sem);
-
-				//error - shouldn't happen
-				PRINT_ERROR("conn_insert fail");
-				conn_free(conn);
-			} else {
 				conn->threads++;
 				sem_post(&conn_list_sem);
 
@@ -263,6 +257,12 @@ void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 					exit(-1);
 				}
+			} else {
+				sem_post(&conn_list_sem);
+
+				//error - shouldn't happen
+				PRINT_ERROR("conn_insert fail");
+				conn_free(conn);
 			}
 		} else {
 			sem_post(&conn_list_sem);
@@ -289,12 +289,12 @@ void tcp_exec_listen(uint32_t src_ip, uint16_t src_port, uint32_t backlog) {
 			conn_stub = conn_stub_create(src_ip, src_port, backlog);
 			if (conn_stub_insert(conn_stub)) {
 				sem_post(&conn_stub_list_sem);
+			} else {
+				sem_post(&conn_stub_list_sem);
 
 				//error - shouldn't happen
 				PRINT_ERROR("conn_stub_insert fail");
 				conn_stub_free(conn_stub);
-			} else {
-				sem_post(&conn_stub_list_sem);
 			}
 		} else {
 			sem_post(&conn_stub_list_sem);
@@ -342,12 +342,6 @@ void *accept_thread(void *local) {
 					conn = conn_create(seg->dst_ip, seg->dst_port, seg->src_ip,
 							seg->src_port);
 					if (conn_insert(conn)) {
-						sem_post(&conn_list_sem);
-
-						//error - shouldn't happen
-						PRINT_ERROR("conn_insert fail");
-						conn_free(conn);
-					} else {
 						conn->threads++;
 						sem_post(&conn_list_sem);
 
@@ -386,6 +380,12 @@ void *accept_thread(void *local) {
 
 						tcp_free(seg);
 						break;
+					} else {
+						sem_post(&conn_list_sem);
+
+						//error - shouldn't happen
+						PRINT_ERROR("conn_insert fail");
+						conn_free(conn);
 					}
 				} else {
 					sem_post(&conn_list_sem);
@@ -666,8 +666,7 @@ void tcp_exec(struct finsFrame *ff) {
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
 				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue, ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
 			}
@@ -695,8 +694,7 @@ void tcp_exec(struct finsFrame *ff) {
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
 				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue, ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
 			}
@@ -724,8 +722,7 @@ void tcp_exec(struct finsFrame *ff) {
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
 				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue, ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
 			}
@@ -756,8 +753,7 @@ void tcp_exec(struct finsFrame *ff) {
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
 				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue, ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
 			}
@@ -782,8 +778,7 @@ void tcp_exec(struct finsFrame *ff) {
 			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
 					!= ff->ctrlFrame.paramterLen) {
 				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
+						pt - (uint8_t *) ff->ctrlFrame.paramterValue, ff->ctrlFrame.paramterLen);
 				//TODO error
 				break;
 			}

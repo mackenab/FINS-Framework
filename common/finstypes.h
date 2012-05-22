@@ -100,7 +100,7 @@ struct finsCtrlFrame {
 	void *paramterValue;
 	unsigned int paramterLen;
 	struct tableRecord *replyRecord;
-
+	metadata *metaData;			// metadata
 };
 
 struct finsFrame {

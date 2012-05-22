@@ -614,13 +614,13 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 			ret = queue_insert(conn->recv_queue, temp_node, conn->rem_seq_num,
 					conn->rem_seq_end);
 			if (ret) {
+				conn->host_window -= seg->data_len;
+			} else {
 				PRINT_DEBUG("Dropping duplicate rem=(%u, %u) got=(%u, %u)\n",
 						conn->rem_seq_num, conn->rem_seq_end, seg->seq_num,
 						seq_end);
 				tcp_free(seg);
 				free(temp_node);
-			} else {
-				conn->host_window -= seg->data_len;
 			}
 		} else {
 			PRINT_DEBUG("Dropping out of window rem=(%u, %u) got=(%u, %u)\n",
@@ -673,10 +673,6 @@ void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 void tcp_recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
 //TODO merge with established, can still receive, send ACKs
 //if FIN, send ACK, TIME_WAIT
-	if (seg->flags & FLAG_ACK) {
-		handle_ACK(conn, seg);
-	}
-
 	handle_data(conn, seg);
 }
 

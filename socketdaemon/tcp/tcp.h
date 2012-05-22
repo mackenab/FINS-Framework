@@ -106,7 +106,7 @@ void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
-int conn_stub_add(uint32_t src_ip, uint16_t src_port);
+//int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 enum CONN_STATE /* Defines an enumeration type    */
 {
@@ -296,7 +296,7 @@ struct tcp_to_thread_data {
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
 void tcp_get_FF();
-void tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
+int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
