@@ -271,6 +271,23 @@ void *Switch_to_Jinni() {
 
 		if (ff->dataOrCtrl == CONTROL) {
 			PRINT_DEBUG("control ff");
+
+			switch ((ff->ctrlFrame).opcode) {
+			case CTRL_ALERT:
+				break;
+			case CTRL_READ_PARAM:
+				break;
+			case CTRL_READ_PARAM_REPLY:
+				break;
+			case CTRL_SET_PARAM:
+				break;
+			case CTRL_EXEC:
+				break;
+			case CTRL_EXEC_REPLY:
+				break;
+			case CTRL_ERROR:
+				break;
+			}
 		} else if (ff->dataOrCtrl == DATA) {
 			dstport = -1;
 			hostport = -1;
@@ -325,8 +342,8 @@ void *Switch_to_Jinni() {
 			if (index >= 0 && jinniSockets[index].connection_status > 0) {
 
 				PRINT_DEBUG("ICMP should not enter here at all");
-				if ((hostport != jinniSockets[index].dstport) || (hostip
-						!= jinniSockets[index].dst_IP)) {
+				if ((hostport != jinniSockets[index].dstport)
+						|| (hostip != jinniSockets[index].dst_IP)) {
 					PRINT_DEBUG(
 							"Wrong address, the socket is already connected to another destination");
 
@@ -356,8 +373,7 @@ void *Switch_to_Jinni() {
 				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d",
 						jinniSockets[index].host_IP,
 						jinniSockets[index].hostport,
-						jinniSockets[index].dst_IP,
-						jinniSockets[index].dstport,
+						jinniSockets[index].dst_IP, jinniSockets[index].dstport,
 						jinniSockets[index].protocol);
 
 				int value;
@@ -395,7 +411,6 @@ void *Switch_to_Jinni() {
 					"unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
 
 		} // end of if , else if , else statement
-
 
 	} // end of while
 } // end of function
@@ -488,7 +503,7 @@ void *interceptor_to_jinni() {
 					okFlag = 0;
 					PRINT_DEBUG("test_msg_len != msg_len");
 					//could just malloc msg_buff again
-					break; //might comment out or make so start new
+					break;//might comment out or make so start new
 				}
 
 				part_len = *(ssize_t *) part_pt;
@@ -502,7 +517,8 @@ void *interceptor_to_jinni() {
 
 				pos = *(int *) part_pt;
 				part_pt += sizeof(int);
-				if (pos > msg_len || pos != msg_pt - (unsigned char *) msg_buf) {
+				if (pos > msg_len
+						|| pos != msg_pt - (unsigned char *) msg_buf) {
 					if (pos > msg_len) {
 						PRINT_DEBUG("pos > msg_len");
 					} else {
@@ -565,7 +581,8 @@ void *interceptor_to_jinni() {
 
 			msg_len -= 2 * sizeof(int) + sizeof(unsigned long long);
 
-			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType, uniqueSockID);
+			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType,
+					uniqueSockID);
 			PRINT_DEBUG("msg_len=%d", msg_len);
 
 			//###############################
@@ -611,13 +628,15 @@ void *interceptor_to_jinni() {
 				bind_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case getsockname_call:
-				getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				getsockname_call_handler(uniqueSockID, threads, msg_pt,
+						msg_len); //DONE
 				break;
 			case connect_call:
 				connect_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case getpeername_call:
-				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				getpeername_call_handler(uniqueSockID, threads, msg_pt,
+						msg_len); //DONE
 				break;
 				/**
 				 * the write call is encapuslated as a send call with the
@@ -781,7 +800,6 @@ void *Capture() {
 
 	} // end of while loop
 
-
 }
 
 void *Inject() {
@@ -833,10 +851,7 @@ void *Inject() {
 		//		PRINT_DEBUG("NEED MAC ADDRESS");
 		//		freeFinsFrame(ff);
 		//		continue;
-
 		//	}
-
-
 		framelen = ff->dataFrame.pduLength;
 		frame = (char *) malloc(framelen + SIZE_ETHERNET);
 
@@ -845,7 +860,6 @@ void *Inject() {
 		 */
 		//char dest[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		//char src[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
 		char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
 		char src[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd };
 
@@ -876,9 +890,7 @@ void *Inject() {
 		free(frame);
 	} // end of while loop
 
-
 } // end of Inject Function
-
 
 void *UDP() {
 
@@ -972,7 +984,6 @@ int main() {
 #endif
 	// END of added section !!!!!
 
-
 	/** 1. init the Jinni sockets database
 	 * 2. Init the queues connecting Jinnin to thw FINS Switch
 	 * 3.
@@ -1028,9 +1039,10 @@ int main() {
 	pthread_attr_init(&fins_pthread_attr);
 	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr,
 			interceptor_to_jinni, NULL); //this has named pipe input from interceptor
-	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr,
-			Switch_to_Jinni, NULL);
+	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr, Switch_to_Jinni,
+			NULL);
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
+	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
 	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
 	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
 	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
@@ -1048,11 +1060,10 @@ int main() {
 	pthread_join(etherStub_injecting, NULL);
 	pthread_join(switch_thread, NULL);
 	pthread_join(udp_thread, NULL);
-	//	//	pthread_join(tcp_thread, NULL);
+	pthread_join(tcp_thread, NULL);
 	//	//	pthread_join(icmp_thread, NULL);
 	pthread_join(ipv4_thread, NULL);
 	//	//	pthread_join(arp_thread, NULL);
-
 
 	while (1) {
 

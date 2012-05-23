@@ -20,6 +20,7 @@
 #define EXEC_TCP_CLOSE 3
 #define EXEC_TCP_CLOSE_STUB 4
 #define EXEC_TCP_OPT 5
+#define EXEC_TCP_SEND 6
 
 int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
@@ -52,6 +53,5 @@ void accept_tcp(unsigned long long uniqueSockID, unsigned long long uniqueSockID
 void accept4_tcp();
 void shutdown_tcp(unsigned long long uniqueSockID, int  how);
 void release_udp(unsigned long long uniqueSockID);
-
 
 #endif /* TCPHANDLING_H_ */

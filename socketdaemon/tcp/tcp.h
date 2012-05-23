@@ -106,6 +106,7 @@ void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
+void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 enum CONN_STATE /* Defines an enumeration type    */
@@ -235,6 +236,7 @@ void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
 int conn_has_space(uint32_t len);
 void conn_free(struct tcp_connection *conn);
+void conn_shutdown(struct tcp_connection *conn);
 
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
@@ -307,6 +309,7 @@ int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes
 #define EXEC_TCP_CLOSE 3
 #define EXEC_TCP_CLOSE_STUB 4
 #define EXEC_TCP_OPT 5
+#define EXEC_TCP_SEND 6
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
