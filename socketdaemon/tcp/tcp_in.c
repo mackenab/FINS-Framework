@@ -891,8 +891,3 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 }
-
-void tcp_in_fcf(struct finsFrame *ff) {
-//TODO control messages from IP/DLL layer, prob just to change params
-	freeFinsFrame(ff);
-}

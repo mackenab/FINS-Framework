@@ -1454,15 +1454,8 @@ void tcp_get_FF() {
 	} while (ff == NULL);
 
 	if (ff->dataOrCtrl == CONTROL) {
-		// send to something to deal with FCF
-		//PRINT_DEBUG("send to CONTROL HANDLER !");
-		if ((ff->dataFrame).directionFlag == UP) {
-			tcp_in_fcf(ff);
-			PRINT_DEBUG();
-		} else { //directionFlag==DOWN
-			tcp_out_fcf(ff);
-			PRINT_DEBUG();
-		}
+		tcp_fcf(ff);
+		PRINT_DEBUG();
 	} else if (ff->dataOrCtrl == DATA) {
 		if ((ff->dataFrame).directionFlag == UP) {
 			tcp_in_fdf(ff);
@@ -1471,6 +1464,138 @@ void tcp_get_FF() {
 			tcp_out_fdf(ff);
 			PRINT_DEBUG();
 		}
+	}
+}
+
+void tcp_fcf(struct finsFrame *ff) {
+
+//TODO fill out
+
+	switch ((ff->ctrlFrame).opcode) {
+	case CTRL_ALERT:
+		break;
+	case CTRL_READ_PARAM:
+		break;
+	case CTRL_READ_PARAM_REPLY:
+		break;
+	case CTRL_SET_PARAM:
+		break;
+	case CTRL_EXEC:
+		tcp_exec(ff);
+		break;
+	case CTRL_EXEC_REPLY:
+		break;
+	case CTRL_ERROR:
+		break;
+	default:
+		break;
+	}
+
+	freeFinsFrame(ff);
+}
+
+void tcp_exec(struct finsFrame *ff) {
+	uint32_t exec_call;
+	metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call);
+
+	switch (exec_call) {
+	case EXEC_TCP_CONNECT:
+		if (ff->ctrlFrame.metaData) {
+			uint32_t src_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_ip", &src_ip);
+
+			uint32_t src_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_port",
+					&src_port);
+
+			uint32_t dst_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "dst_ip", &dst_ip);
+
+			uint32_t dst_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "dst_port",
+					&dst_port);
+
+			tcp_exec_connect(src_ip, src_port, dst_ip, dst_port); //TODO add ff->ctrlFrame.serialNum?
+		} else {
+			//TODO error
+		}
+		break;
+	case EXEC_TCP_LISTEN:
+		if (ff->ctrlFrame.metaData) {
+			uint32_t backlog;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "backlog",
+					&backlog);
+
+			uint32_t src_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_ip", &src_ip);
+
+			uint32_t src_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_port",
+					&src_port);
+
+			tcp_exec_listen(src_ip, src_port, backlog);
+		} else {
+			//TODO error
+		}
+		break;
+	case EXEC_TCP_ACCEPT:
+		if (ff->ctrlFrame.metaData) {
+			uint32_t flags;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "flags", &flags);
+
+			uint32_t src_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_ip", &src_ip);
+
+			uint32_t src_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_port",
+					&src_port);
+
+			tcp_exec_accept(src_ip, src_port, flags);
+		} else {
+			//TODO error
+		}
+		break;
+	case EXEC_TCP_CLOSE:
+		if (ff->ctrlFrame.metaData) {
+			uint32_t src_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_ip", &src_ip);
+
+			uint32_t src_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_port",
+					&src_port);
+
+			uint32_t dst_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "dst_ip", &dst_ip);
+
+			uint32_t dst_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "dst_port",
+					&dst_port);
+
+			tcp_exec_close(src_ip, src_port, dst_ip, dst_port);
+		} else {
+			//TODO error
+		}
+		break;
+	case EXEC_TCP_CLOSE_STUB:
+		if (ff->ctrlFrame.metaData) {
+			uint32_t src_ip;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_ip", &src_ip);
+
+			uint32_t src_port;
+			metadata_readFromElement(ff->ctrlFrame.metaData, "src_port",
+					&src_port);
+
+			tcp_exec_close_stub(src_ip, src_port);
+		} else {
+			//TODO error
+		}
+		break;
+	case EXEC_TCP_OPT:
+		//TODO finish
+		break;
+	default:
+		//TODO error
+		break;
 	}
 }
 

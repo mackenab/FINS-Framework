@@ -212,8 +212,8 @@ int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	PRINT_DEBUG("Rest of read for index=%d.", index);
 
 	if (jinniSockets[index].connection_status > 0) {
-		if ((srcport != jinniSockets[index].dstport) || (srcip
-				!= jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport)
+				|| (srcip != jinniSockets[index].dst_IP)) {
 			PRINT_DEBUG(
 					"Wrong address, the socket is already connected to another destination");
 			sem_post(&jinniSockets_sem);
@@ -261,8 +261,8 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 		uint32_t dst_IP_netformat, uint16_t hostport,
 		uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff =
-			(struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(
+			sizeof(struct finsFrame));
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -386,14 +386,13 @@ void bind_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * */
 	/** Reverse again because it was reversed by the application itself */
 	//hostport = ntohs(addr->sin_port);
-
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("bind address: %d,%d,%d", (addr->sin_addr).s_addr, ntohs(
-			addr->sin_port), addr->sin_family);
-	PRINT_DEBUG("bind address: %d, %s/%d", addr->sin_family, inet_ntoa(
-			addr->sin_addr), ntohs(addr->sin_port));
+	PRINT_DEBUG("bind address: %d,%d,%d", (addr->sin_addr).s_addr,
+			ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("bind address: %d, %s/%d", addr->sin_family,
+			inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
 	/**
 	 * Binding
 	 */
@@ -470,7 +469,6 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * */
 	/** Reverse again because it was reversed by the application itself */
 	//hostport = ntohs(addr->sin_port);
-
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
@@ -497,8 +495,8 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 }
 
-void write_udp(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data) {
+void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
+		u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -656,7 +654,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 	hostport = jinniSockets[index].hostport;
-	if (hostport == (uint16_t)(-1)) {
+	if (hostport == 0) {
 		while (1) {
 			hostport = randoming(MIN_port, MAX_port);
 			if (checkjinniports(hostport, host_IP)) {
@@ -779,8 +777,8 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType,
 
 	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 	temp->s_addr = host_IP;
-	PRINT_DEBUG("index=%d, dst=%s/%d, host=%s/%d", index, inet_ntoa(
-			addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
+	PRINT_DEBUG("index=%d, dst=%s/%d, host=%s/%d", index,
+			inet_ntoa(addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -913,8 +911,8 @@ void recvfrom_udp(void *threadData) {
 			pt += sizeof(struct sockaddr_in);
 
 			//#######
-			PRINT_DEBUG("address: %d/%d", (addr->sin_addr).s_addr, ntohs(
-					addr->sin_port));
+			PRINT_DEBUG("address: %d/%d", (addr->sin_addr).s_addr,
+					ntohs(addr->sin_port));
 			//#######
 		}
 
@@ -1091,7 +1089,7 @@ void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
 			address.sin_addr.s_addr, address.sin_port)
 
 	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int)
-	+ address_length;
+			+ address_length;
 	msg = malloc(msg_len);
 	pt = msg;
 

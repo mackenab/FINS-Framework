@@ -89,7 +89,6 @@ struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
 struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destination)
 int nl_sockfd; //temp for now
 
-
 enum sockOptions {
 
 	FSO_DEBUG = 1,
@@ -180,6 +179,8 @@ struct finssocket {
 	int type;
 	int protocol;
 	int backlog;
+
+	sem_t sem;
 
 	/** check the opt_name to find which bit to access in the options variable then use
 	 * the following code to handle the bits individually

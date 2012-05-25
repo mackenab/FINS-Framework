@@ -217,7 +217,7 @@ void *close_stub_thread(void *local) {
 		*(uint8_t *) pt = 1;
 		pt += sizeof(uint8_t);
 
-		sem_post(&conn->write_sem);
+		//sem_post(&conn->write_sem);
 
 		if (pt - buf != len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - buf, len);
@@ -648,6 +648,7 @@ void *close_thread(void *local) {
 	free(thread_data);
 	pthread_exit(NULL);
 }
+
 void tcp_exec_close(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		uint16_t dst_port) {
 	struct tcp_connection *conn;
@@ -681,191 +682,4 @@ void tcp_exec_close(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
 		sem_post(&conn_list_sem);
 		//TODO error trying to close closed connection
 	}
-}
-
-void tcp_exec(struct finsFrame *ff) {
-	uint8_t *pt;
-
-	switch (ff->ctrlFrame.paramterID) {
-	case EXEC_TCP_CONNECT:
-		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
-			pt = ff->ctrlFrame.paramterValue;
-
-			uint32_t src_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t src_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			uint32_t dst_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t dst_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
-					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
-				//TODO error
-				break;
-			}
-
-			tcp_exec_connect(src_ip, src_port, dst_ip, dst_port);
-
-			free(ff->ctrlFrame.paramterValue);
-		} else {
-			//TODO error
-		}
-		break;
-	case EXEC_TCP_LISTEN:
-		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
-			pt = ff->ctrlFrame.paramterValue;
-
-			uint32_t backlog = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint32_t src_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t src_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
-					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
-				//TODO error
-				break;
-			}
-
-			tcp_exec_listen(src_ip, src_port, backlog);
-
-			free(ff->ctrlFrame.paramterValue);
-		} else {
-			//TODO error
-		}
-		break;
-	case EXEC_TCP_ACCEPT:
-		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
-			pt = ff->ctrlFrame.paramterValue;
-
-			uint32_t flags = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint32_t src_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t src_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
-					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
-				//TODO error
-				break;
-			}
-
-			tcp_exec_accept(src_ip, src_port, flags);
-
-			free(ff->ctrlFrame.paramterValue);
-		} else {
-			//TODO error
-		}
-		break;
-	case EXEC_TCP_CLOSE:
-		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
-			pt = ff->ctrlFrame.paramterValue;
-
-			uint32_t src_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t src_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			uint32_t dst_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t dst_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
-					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
-				//TODO error
-				break;
-			}
-
-			tcp_exec_close(src_ip, src_port, dst_ip, dst_port);
-
-			free(ff->ctrlFrame.paramterValue);
-		} else {
-			//TODO error
-		}
-		break;
-	case EXEC_TCP_CLOSE_STUB:
-		if (ff->ctrlFrame.paramterValue && ff->ctrlFrame.paramterLen) {
-			pt = ff->ctrlFrame.paramterValue;
-
-			uint32_t src_ip = *(uint32_t *) pt;
-			pt += sizeof(uint32_t);
-
-			uint16_t src_port = *(uint16_t *) pt;
-			pt += sizeof(uint16_t);
-
-			if (pt - (uint8_t *) ff->ctrlFrame.paramterValue
-					!= ff->ctrlFrame.paramterLen) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d",
-						pt - (uint8_t *) ff->ctrlFrame.paramterValue,
-						ff->ctrlFrame.paramterLen);
-				//TODO error
-				break;
-			}
-
-			tcp_exec_close_stub(src_ip, src_port);
-
-			free(ff->ctrlFrame.paramterValue);
-		} else {
-			//TODO error
-		}
-		break;
-	case EXEC_TCP_OPT:
-		//TODO finish
-		break;
-	default:
-		break;
-	}
-}
-
-void tcp_out_fcf(struct finsFrame *ff) {
-
-//TODO fill out
-
-	switch ((ff->ctrlFrame).opcode) {
-	case CTRL_ALERT:
-		break;
-	case CTRL_READ_PARAM:
-		break;
-	case CTRL_READ_PARAM_REPLY:
-		break;
-	case CTRL_SET_PARAM:
-		break;
-	case CTRL_EXEC:
-		tcp_exec(ff);
-		break;
-	case CTRL_EXEC_REPLY:
-		break;
-	case CTRL_ERROR:
-		break;
-	default:
-		break;
-	}
-
-	freeFinsFrame(ff);
 }

@@ -303,18 +303,27 @@ int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queu
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
-#define EXEC_TCP_CONNECT 0
-#define EXEC_TCP_LISTEN 1
-#define EXEC_TCP_ACCEPT 2
-#define EXEC_TCP_CLOSE 3
-#define EXEC_TCP_CLOSE_STUB 4
-#define EXEC_TCP_OPT 5
-#define EXEC_TCP_SEND 6
+#define EXEC_TCP_CONNECT 1
+#define EXEC_TCP_LISTEN 2
+#define EXEC_TCP_ACCEPT 3
+#define EXEC_TCP_SEND 4
+#define EXEC_TCP_RECV 5
+#define EXEC_TCP_CLOSE 6
+#define EXEC_TCP_CLOSE_STUB 7
+#define EXEC_TCP_OPT 8
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
-void tcp_out_fcf(struct finsFrame *ff);
-void tcp_in_fcf(struct finsFrame *ff);
+void tcp_fcf(struct finsFrame *ff);
+void tcp_exec(struct finsFrame *ff);
+
+void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
+		uint16_t dst_port);
+void tcp_exec_listen(uint32_t src_ip, uint16_t src_port, uint32_t backlog);
+void tcp_exec_accept(uint32_t src_ip, uint16_t src_port, uint32_t flags);
+void tcp_exec_close(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
+		uint16_t dst_port);
+void tcp_exec_close_stub(uint32_t src_ip, uint16_t src_port);
 
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application

@@ -254,6 +254,7 @@ void *Switch_to_Jinni() {
 	struct finsFrame *ff;
 	int protocol;
 	int index;
+	uint32_t exec_call;
 	int status;
 	uint16_t dstport, hostport;
 	uint32_t dstip, hostip;
@@ -284,6 +285,29 @@ void *Switch_to_Jinni() {
 			case CTRL_EXEC:
 				break;
 			case CTRL_EXEC_REPLY:
+				metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call",
+						&exec_call);
+				switch (exec_call) { //TODO atm only for TCP
+				case EXEC_TCP_CONNECT:
+					break;
+				case EXEC_TCP_LISTEN:
+					break;
+				case EXEC_TCP_ACCEPT:
+					break;
+				case EXEC_TCP_SEND:
+					break;
+				case EXEC_TCP_RECV:
+					break;
+				case EXEC_TCP_CLOSE:
+					break;
+				case EXEC_TCP_CLOSE_STUB:
+					break;
+				case EXEC_TCP_OPT:
+					break;
+				default:
+					//error
+					break;
+				}
 				break;
 			case CTRL_ERROR:
 				break;

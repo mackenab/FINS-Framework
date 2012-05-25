@@ -9,7 +9,6 @@
  *
  */
 
-
 #include <queueModule.h>
 
 /**@brief initializes a queue buffer between the switch and the module
@@ -217,7 +216,8 @@ void print_finsFrame(struct finsFrame *fins_in) {
 	}
 
 	if (fins_in->dataOrCtrl == DATA) {
-		PRINT_DEBUG("\nData fins %d \n", fins_in->dataOrCtrl); PRINT_DEBUG("Direction flag %d\n", fins_in->dataFrame.directionFlag);
+		PRINT_DEBUG("\nData fins %d \n", fins_in->dataOrCtrl);
+		PRINT_DEBUG("Direction flag %d\n", fins_in->dataFrame.directionFlag);
 		//PRINT_DEBUG("Meta data (first element) %x\n", fins_in->dataFrame.metaData);
 		PRINT_DEBUG("PDU size (bytes) %d\n", fins_in->dataFrame.pduLength);
 		int i = 0;
@@ -226,16 +226,21 @@ void print_finsFrame(struct finsFrame *fins_in) {
 			i++;
 
 		}
-		temp = (char *)malloc(fins_in->dataFrame.pduLength+1);
+		temp = (char *) malloc(fins_in->dataFrame.pduLength + 1);
 		memcpy(temp, fins_in->dataFrame.pdu, fins_in->dataFrame.pduLength);
 		temp[fins_in->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pdu=%s", temp);
 		free(temp);
 
 	} else if (fins_in->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("\nControl fins %d\n", fins_in->dataOrCtrl); PRINT_DEBUG("\nOpcode %d\n", fins_in->ctrlFrame.opcode); PRINT_DEBUG("\nParameter ID %d\n", fins_in->ctrlFrame.paramterID); PRINT_DEBUG("\nParameter Value %d\n", *(int *)(fins_in->ctrlFrame.paramterValue));
+		PRINT_DEBUG("\nControl fins %d\n", fins_in->dataOrCtrl);
+		PRINT_DEBUG("\nOpcode %d\n", fins_in->ctrlFrame.opcode);
+		PRINT_DEBUG("\nParameter ID %d\n", fins_in->ctrlFrame.paramterID);
+		PRINT_DEBUG("\nParameter Value %d\n",
+				*(int *) (fins_in->ctrlFrame.paramterValue));
 		//		PRINT_DEBUG("\nReply Record (first element) %x\n", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("\nSender Id %d\n", fins_in->ctrlFrame.senderID); PRINT_DEBUG("\nSerial number %d\n", fins_in->ctrlFrame.serialNum);
+		PRINT_DEBUG("\nSender Id %d\n", fins_in->ctrlFrame.senderID);
+		PRINT_DEBUG("\nSerial number %d\n", fins_in->ctrlFrame.serialNum);
 	}
 
 }
@@ -276,14 +281,26 @@ int freeFinsFrame(struct finsFrame *f) {
 
 	if (f == NULL)
 		return (0);
-	if ((f->dataFrame).metaData != NULL) {
-		PRINT_DEBUG("6666");
+	if (f->dataOrCtrl == CONTROL) {
+		if ((f->ctrlFrame).metaData != NULL) {
+			PRINT_DEBUG("6666");
 
-		metadata_destroy((f->dataFrame).metaData);
-		PRINT_DEBUG("5555");
+			metadata_destroy((f->ctrlFrame).metaData);
+			PRINT_DEBUG("5555");
 
-	} PRINT_DEBUG("7777");
+		}
+		PRINT_DEBUG("7777");
 
+	} else {
+		if ((f->dataFrame).metaData != NULL) {
+			PRINT_DEBUG("6666");
+
+			metadata_destroy((f->dataFrame).metaData);
+			PRINT_DEBUG("5555");
+
+		}
+		PRINT_DEBUG("7777");
+	}
 	free(f);
 	PRINT_DEBUG("8888");
 
