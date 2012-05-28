@@ -60,8 +60,7 @@ static struct finsFrame *get_fake_frame() {
  *
  */
 
-int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
-		int symbol, struct sockaddr_in *address, int block_flag) {
+int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
@@ -138,13 +137,11 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 
 	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
-	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
-			(uint16_t *) &srcport) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc", (uint16_t *) &srcport) == 0) {
 		addr_in->sin_port = 0;
 
 	}
-	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc",
-			(uint32_t *) &srcip) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", (uint32_t *) &srcip) == 0) {
 		addr_in->sin_addr.s_addr = 0;
 
 	}
@@ -157,11 +154,9 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport)
-				|| (srcip != jinniSockets[index].dst_IP)) {
+		if ((srcport != jinniSockets[index].dstport) || (srcip != jinniSockets[index].dst_IP)) {
 
-			PRINT_DEBUG(
-					"Wrong address, the socket is already connected to another destination");
+			PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 			sem_post(&jinniSockets_sem);
 			return (0);
 
@@ -203,12 +198,9 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 
 } //end of readFrom_fins
 
-int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
-		uint32_t dst_IP_netformat, uint16_t hostport,
-		uint32_t host_IP_netformat) {
+int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -226,18 +218,15 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	/** metadata_writeToElement() set the value of an element if it already exist
 	 * or it creates the element and set its value in case it is new
 	 */
-	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport,
-			host_IP_netformat);
+	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport, host_IP_netformat);
 
 	uint32_t dstprt = dstport;
 	uint32_t hostprt = hostport;
 
 	metadata_writeToElement(tcpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	metadata_writeToElement(tcpout_meta, "srcport", &hostprt, META_TYPE_INT);
-	metadata_writeToElement(tcpout_meta, "dstip", &dst_IP_netformat,
-			META_TYPE_INT);
-	metadata_writeToElement(tcpout_meta, "srcip", &host_IP_netformat,
-			META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "dstip", &dst_IP_netformat, META_TYPE_INT);
+	metadata_writeToElement(tcpout_meta, "srcip", &host_IP_netformat, META_TYPE_INT);
 
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
@@ -269,49 +258,8 @@ int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 
 }
 
-int jinni_TCP_to_fins_cntrl_old(uint32_t command, u_char *data, int len) {
-
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
-
-	ff->dataOrCtrl = CONTROL;
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
-	ff->destinationID.id = TCPID;
-	ff->destinationID.next = NULL;
-	(ff->ctrlFrame).senderID = JINNIID;
-	(ff->ctrlFrame).opcode = CTRL_EXEC; //MOD_OP?
-	(ff->ctrlFrame).serialNum = serial_num++;
-
-	(ff->ctrlFrame).paramterID = command;
-	(ff->ctrlFrame).paramterValue = data;
-	(ff->ctrlFrame).paramterLen = len;
-
-	struct tableRecord *replyRecord; //prob not needed
-
-	/**TODO insert the frame into jinni_to_switch queue
-	 * check if insertion succeeded or not then
-	 * return 1 on success, or -1 on failure
-	 * */
-	PRINT_DEBUG("");
-	sem_wait(&Jinni_to_Switch_Qsem);
-	if (write_queue(ff, Jinni_to_Switch_Queue)) {
-
-		sem_post(&Jinni_to_Switch_Qsem);
-		PRINT_DEBUG("");
-		return (1);
-	}
-	sem_post(&Jinni_to_Switch_Qsem);
-	PRINT_DEBUG("");
-
-	return (0);
-
-}
-
 int jinni_TCP_to_fins_cntrl_exec(metadata *params) {
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
 		PRINT_DEBUG("ff creation failed");
 		return 0;
@@ -321,9 +269,13 @@ int jinni_TCP_to_fins_cntrl_exec(metadata *params) {
 	ff->destinationID.id = TCPID; //TODO get the address from local copy of switch table
 	ff->destinationID.next = NULL;
 	ff->ctrlFrame.senderID = JINNIID;
-	ff->ctrlFrame.opcode = CTRL_EXEC; //MOD_OP?
+	ff->ctrlFrame.opcode = CTRL_EXEC;
 	ff->ctrlFrame.serialNum = serial_num++;
 	ff->ctrlFrame.metaData = params;
+
+	//ff->ctrlFrame.paramterID = command;
+	//ff->ctrlFrame.paramterValue = data;
+	//ff->ctrlFrame.paramterLen = len;
 
 	PRINT_DEBUG("");
 	sem_wait(&Jinni_to_Switch_Qsem);
@@ -340,155 +292,7 @@ int jinni_TCP_to_fins_cntrl_exec(metadata *params) {
 	}
 }
 
-void socket_tcp(int domain, int type, int protocol,
-		unsigned long long uniqueSockID) {
-
-	PRINT_DEBUG("socket_UDP CALL");
-
-	int index;
-
-	index = insertjinniSocket(uniqueSockID, type, protocol);
-	if (index < 0) {
-		PRINT_DEBUG("incorrect index !! Crash");
-		nack_send(uniqueSockID, socket_call);
-		return;
-	}
-	PRINT_DEBUG("0000");
-
-	ack_send(uniqueSockID, socket_call);
-	PRINT_DEBUG("0003");
-}
-
-void bind_tcp(int index, unsigned long long uniqueSockID,
-		struct sockaddr_in *addr) {
-
-	uint16_t hostport;
-	uint16_t dstport;
-	uint32_t host_IP_netformat;
-	uint32_t dst_IP_netformat;
-
-	if (addr->sin_family != AF_INET) {
-		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, bind_call);
-		return;
-	}
-
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		nack_send(uniqueSockID, bind_call);
-		return;
-	}
-
-	/** TODO fix host port below, it is not initialized with any variable !!! */
-	/** the check below is to make sure that the port is not previously allocated */
-	hostport = ntohs(addr->sin_port);
-	host_IP_netformat = (addr->sin_addr).s_addr;
-	/** check if the same port and address have been both used earlier or not
-	 * it returns (-1) in case they already exist, so that we should not reuse them
-	 * */
-	if (!checkjinniports(hostport, host_IP_netformat)
-			&& !jinniSockets[index].sockopts.FSO_REUSEADDR) {
-		PRINT_DEBUG("this port is not free");
-		nack_send(uniqueSockID, bind_call);
-
-		free(addr);
-		return;
-	}
-
-	/** TODO lock and unlock the protecting semaphores before making
-	 * any modifications to the contents of the jinniSockets database
-	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
-			addr->sin_family);
-
-	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].hostport = ntohs(addr->sin_port);
-	jinniSockets[index].host_IP = (addr->sin_addr).s_addr;
-	sem_post(&jinniSockets_sem);
-
-	/** Reverse again because it was reversed by the application itself
-	 * In our example it is not reversed */
-	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
-	/** TODO convert back to the network endian form before
-	 * sending to the fins core
-	 */
-
-	ack_send(uniqueSockID, bind_call);
-
-	free(addr);
-	return;
-
-}
-
-void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
-	uint32_t host_ip;
-	uint16_t host_port;
-
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		return;
-	}
-	PRINT_DEBUG("index = %d", index);
-
-	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].backlog = backlog;
-	host_ip = jinniSockets[index].host_IP;
-	host_port = jinniSockets[index].hostport;
-	sem_post(&jinniSockets_sem);
-
-	/** Keep all ports and addresses in host order until later  action taken
-	 * in IPv4 module
-	 *  */
-	/** addresses are in host format given that there are by default already filled
-	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
-
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_DEBUG("ff creation failed");
-		nack_send(uniqueSockID, listen_call);
-		return;
-	}
-
-	ff->dataOrCtrl = CONTROL;
-	ff->destinationID.id = TCPID; //TODO get the address from local copy of switch table
-	ff->destinationID.next = NULL;
-	ff->ctrlFrame.senderID = JINNIID;
-	ff->ctrlFrame.opcode = CTRL_EXEC; //MOD_OP?
-	ff->ctrlFrame.serialNum = serial_num++;
-
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	metadata_create(params);
-	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-		nack_send(uniqueSockID, listen_call);
-		free(ff);
-		return;
-	}
-
-	uint32_t exec_call = EXEC_TCP_LISTEN;
-	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "backlog", &backlog, META_TYPE_INT);
-	ff->ctrlFrame.metaData = params;
-
-	sem_wait(&Jinni_to_Switch_Qsem);
-	if (write_queue(ff, Jinni_to_Switch_Queue)) {
-		sem_post(&Jinni_to_Switch_Qsem);
-		ack_send(uniqueSockID, listen_call);
-	} else {
-		sem_post(&Jinni_to_Switch_Qsem);
-
-		PRINT_DEBUG("socketjinni failed to accomplish listen");
-		nack_send(uniqueSockID, listen_call);
-	}
-}
-
-struct finsFrame *getFF(int index, unsigned long long uniqueSockID,
-		int block_flag) {
+struct finsFrame *getFF(int index, unsigned long long uniqueSockID, int block_flag) {
 	struct finsFrame *ff;
 
 	/**
@@ -538,199 +342,151 @@ struct finsFrame *getFF(int index, unsigned long long uniqueSockID,
 	return ff;
 }
 
-void accept_tcp_thread(void *local) {
-	struct accept_data *thread_data = (struct accept_data *) local;
-	unsigned long long uniqueSockID = thread_data->uniqueSockID;
-	free(thread_data);
+void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID) {
+
+	PRINT_DEBUG("socket_UDP CALL");
 
 	int index;
-	struct finsFrame *ff;
-	uint32_t exec_call;
-	uint32_t dst_ip;
-	uint16_t dst_port;
-	struct sockaddr_in * addr;
 
 	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("index = %d", index);
-	if (index == -1) {
-		sem_post(&jinniSockets_sem);
-		pthread_exit(NULL);
-	}
-
-	int block_flag = jinniSockets[index].blockingFlag;
+	index = insertjinniSocket(uniqueSockID, type, protocol);
 	sem_post(&jinniSockets_sem);
 
-	PRINT_DEBUG();
-	ff = getFF(index, uniqueSockID, block_flag);
-	if (ff == NULL || ff->dataOrCtrl != CONTROL
-			|| ff->ctrlFrame.opcode != CTRL_EXEC_REPLY) {
-		pthread_exit(NULL);
+	if (index < 0) {
+		PRINT_DEBUG("incorrect index !! Crash");
+		nack_send(uniqueSockID, socket_call);
+		return;
+	}
+	PRINT_DEBUG("0000");
+
+	ack_send(uniqueSockID, socket_call);
+	PRINT_DEBUG("0003");
+}
+
+void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr) {
+
+	uint16_t hostport;
+	uint16_t dstport;
+	uint32_t host_IP_netformat;
+	uint32_t dst_IP_netformat;
+
+	if (addr->sin_family != AF_INET) {
+		PRINT_DEBUG("Wrong address family");
+		nack_send(uniqueSockID, bind_call);
+		return;
 	}
 
-	metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call);
-	if (exec_call != EXEC_TCP_ACCEPT) {
-		pthread_exit(NULL);
-	}
+	/** TODO fix host port below, it is not initialized with any variable !!! */
+	/** the check below is to make sure that the port is not previously allocated */
+	hostport = ntohs(addr->sin_port);
+	host_IP_netformat = (addr->sin_addr).s_addr;
 
-	if (metadata_readFromElement(ff->ctrlFrame.metaData, "dst_ip",
-			(uint32_t *) &dst_ip) == 0) {
-		addr->sin_addr.s_addr = 0;
-	}
-
-	if (metadata_readFromElement(ff->ctrlFrame.metaData, "dst_port",
-			(uint16_t *) &dst_port) == 0) {
-		addr->sin_port = 0;
-	}
+	PRINT_DEBUG("%d,%d,%d", host_IP_netformat, hostport, addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
 	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-		PRINT_DEBUG("Socket closed, canceling read block.");
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		sem_post(&jinniSockets_sem);
-		pthread_exit(NULL);
+
+		nack_send(uniqueSockID, bind_call);
+		return;
 	}
-	/*
-	 if (jinniSockets[index].connection_status > 0) {
 
-	 if ((srcport != jinniSockets[index].dstport)
-	 || (srcip != jinniSockets[index].dst_IP)) {
+	/** check if the same port and address have been both used earlier or not
+	 * it returns (-1) in case they already exist, so that we should not reuse them
+	 * */
+	if (!checkjinniports(hostport, host_IP_netformat) && !jinniSockets[index].sockopts.FSO_REUSEADDR) {
+		PRINT_DEBUG("this port is not free");
+		sem_post(&jinniSockets_sem);
 
-	 PRINT_DEBUG(
-	 "Wrong address, the socket is already connected to another destination");
-	 sem_post(&jinniSockets_sem);
-	 pthread_exit(NULL);
+		nack_send(uniqueSockID, bind_call);
+		free(addr);
+		return;
+	}
 
-	 }
-	 }*/
+	/** TODO lock and unlock the protecting semaphores before making
+	 * any modifications to the contents of the jinniSockets database
+	 */
+
+	jinniSockets[index].hostport = hostport;
+	jinniSockets[index].host_IP = host_IP_netformat;
 	sem_post(&jinniSockets_sem);
 
-	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
-	//memcpy(*buf,ff->dataFrame.pdu,ff->dataFrame.pduLength);
-	//memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	//*buflen = ff->dataFrame.pduLength;
-
-	PRINT_DEBUG();
-
-	if (symbol == 0) {
-		//		address = NULL;
-		PRINT_DEBUG();
-		//	freeFinsFrame(ff);
-
-		pthread_exit(NULL);
-	}
-	PRINT_DEBUG();
-
-	addr_in->sin_port = srcport;
-	addr_in->sin_addr.s_addr = srcip;
-
-	/**TODO Free the finsFrame
-	 * This is the final consumer
-	 * call finsFrame_free(Struct finsFrame** ff)
+	/** Reverse again because it was reversed by the application itself
+	 * In our example it is not reversed */
+	//jinniSockets[index].host_IP.s_addr = ntohl(jinniSockets[index].host_IP.s_addr);
+	/** TODO convert back to the network endian form before
+	 * sending to the fins core
 	 */
-	PRINT_DEBUG();
 
-	//freeFinsFrame(ff);
+	ack_send(uniqueSockID, bind_call);
+
+	free(addr);
+	return;
+
 }
 
-void accept_tcp(int index, unsigned long long uniqueSockID,
-		unsigned long long uniqueSockID_new, int flags) {
-	int index_new;
+void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	uint32_t host_ip;
 	uint16_t host_port;
-
-	//TODO: finish this
-	index = findjinniSocket(uniqueSockID);
-	if (index < 0) {
-		PRINT_DEBUG("incorrect index !! Crash");
-		return;
-	}
-	PRINT_DEBUG("index = %d", index);
-
-	index_new = insertjinniSocket(uniqueSockID_new, jinniSockets[index].type,
-			jinniSockets[index].protocol);
-	if (index < 0) {
-		PRINT_DEBUG("incorrect index !! Crash");
-		return;
-	}
+	int ret;
 
 	sem_wait(&jinniSockets_sem);
-	jinniSockets[index_new].hostport = jinniSockets[index].hostport;
-	jinniSockets[index_new].host_IP = jinniSockets[index].host_IP;
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		nack_send(uniqueSockID, listen_call);
+
+		sem_post(&jinniSockets_sem);
+		return;
+	}
+
+	jinniSockets[index].listening = 1;
+	jinniSockets[index].backlog = backlog;
+
 	host_ip = jinniSockets[index].host_IP;
 	host_port = jinniSockets[index].hostport;
 	sem_post(&jinniSockets_sem);
 
-	//TODO process flags?
-
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_DEBUG("ff creation failed");
-		nack_send(uniqueSockID, accept_call);
-		return;
-	}
-
-	ff->dataOrCtrl = CONTROL;
-	ff->destinationID.id = TCPID; //TODO get the address from local copy of switch table
-	ff->destinationID.next = NULL;
-	ff->ctrlFrame.senderID = JINNIID;
-	ff->ctrlFrame.opcode = CTRL_EXEC; //MOD_OP?
-	ff->ctrlFrame.serialNum = serial_num++;
-
+	/** Keep all ports and addresses in host order until later  action taken
+	 * in IPv4 module
+	 *  */
+	/** addresses are in host format given that there are by default already filled
+	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		nack_send(uniqueSockID, accept_call);
-		free(ff);
+		nack_send(uniqueSockID, listen_call);
 		return;
 	}
 
-	uint32_t exec_call = EXEC_TCP_ACCEPT;
-	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT);
-	ff->ctrlFrame.metaData = params;
+	uint32_t exec_call = EXEC_TCP_LISTEN;
+	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "backlog", &backlog, META_TYPE_INT) == 0;
 
-	sem_wait(&Jinni_to_Switch_Qsem);
-	if (write_queue(ff, Jinni_to_Switch_Queue)) {
-		sem_post(&Jinni_to_Switch_Qsem);
-
-		pthread_t thread;
-		struct accept_data *thread_data = (struct accept_data *) malloc(
-				sizeof(struct accept_data));
-		thread_data->uniqueSockID = uniqueSockID_new;
-
-		//spin off thread to handle
-		if (pthread_create(&thread, NULL, accept_tcp_thread,
-				(void *) thread_data)) {
-			PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
-			nack_send(uniqueSockID, accept_call);
-		}
+	if (jinni_TCP_to_fins_cntrl_exec(params)) {
+		ack_send(uniqueSockID, listen_call);
 	} else {
-		sem_post(&Jinni_to_Switch_Qsem);
-
 		PRINT_DEBUG("socketjinni failed to accomplish listen");
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, listen_call);
 	}
 }
 
-void connect_tcp_thread(void *local) {
+void *connect_tcp_thread(void *local) {
 	struct accept_data *thread_data = (struct accept_data *) local;
+	int index = thread_data->index;
 	unsigned long long uniqueSockID = thread_data->uniqueSockID;
 	free(thread_data);
 
 	struct finsFrame *ff;
-	int index;
 	int block_flag;
 	uint32_t exec_call;
-	uint32_t ret;
+	uint32_t ret_val;
 
 	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("index = %d", index);
-	if (index == -1) {
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		sem_post(&jinniSockets_sem);
 		pthread_exit(NULL);
 	}
@@ -740,18 +496,20 @@ void connect_tcp_thread(void *local) {
 
 	PRINT_DEBUG();
 	ff = getFF(index, uniqueSockID, block_flag);
-	if (ff == NULL || ff->dataOrCtrl != CONTROL
-			|| ff->ctrlFrame.opcode != CTRL_EXEC_REPLY) {
+	if (ff == NULL || ff->dataOrCtrl != CONTROL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
+		nack_send(uniqueSockID, connect_call);
 		pthread_exit(NULL);
 	}
 
-	metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call);
+	metadata *params = ff->ctrlFrame.metaData;
+	metadata_readFromElement(params, "exec_call", &exec_call);
 	if (exec_call != EXEC_TCP_CONNECT) {
+		nack_send(uniqueSockID, connect_call);
 		pthread_exit(NULL);
 	}
 
-	metadata_readFromElement(ff->ctrlFrame.metaData, "ret", &ret);
-	if (ret) {
+	metadata_readFromElement(params, "ret_val", &ret_val);
+	if (ret_val) {
 		ack_send(uniqueSockID, connect_call);
 	} else {
 		nack_send(uniqueSockID, connect_call);
@@ -760,12 +518,11 @@ void connect_tcp_thread(void *local) {
 	freeFinsFrame(ff);
 }
 
-void connect_tcp(int index, unsigned long long uniqueSockID,
-		struct sockaddr_in *addr) {
+void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	uint32_t host_ip;
 	uint16_t host_port;
-	uint32_t dst_ip;
-	uint16_t dst_port;
+	uint32_t rem_ip;
+	uint16_t rem_port;
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -775,8 +532,8 @@ void connect_tcp(int index, unsigned long long uniqueSockID,
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	dst_port = ntohs(addr->sin_port);
-	dst_ip = ntohl((addr->sin_addr).s_addr);
+	rem_ip = ntohl((addr->sin_addr).s_addr);
+	rem_port = ntohs(addr->sin_port);
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * according to the RFC document and man pages: Application can call connect more than
@@ -793,13 +550,13 @@ void connect_tcp(int index, unsigned long long uniqueSockID,
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
-			addr->sin_family);
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket removed/changed");
+		sem_wait(&jinniSockets_sem);
+
 		nack_send(uniqueSockID, connect_call);
 		return;
 	}
@@ -809,9 +566,8 @@ void connect_tcp(int index, unsigned long long uniqueSockID,
 	 * more than one local socket maybe connected to the same destined address
 	 */
 	if (jinniSockets[index].connection_status > 0) {
-		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP,
-				jinniSockets[index].dstport);
-		PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
+		PRINT_DEBUG("old destined address %d, %d", jinniSockets[index].dst_IP, jinniSockets[index].dstport);
+		PRINT_DEBUG("new destined address %d, %d", rem_ip, rem_port);
 
 	}
 
@@ -820,9 +576,8 @@ void connect_tcp(int index, unsigned long long uniqueSockID,
 	 * and also available
 	 * */
 
-	//sem_wait(&jinniSockets_sem);
-	jinniSockets[index].dst_IP = dst_ip;
-	jinniSockets[index].dstport = dst_port;
+	jinniSockets[index].dst_IP = rem_ip;
+	jinniSockets[index].dstport = rem_port;
 	jinniSockets[index].connection_status++;
 
 	host_ip = jinniSockets[index].host_IP;
@@ -841,26 +596,24 @@ void connect_tcp(int index, unsigned long long uniqueSockID,
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 		nack_send(uniqueSockID, connect_call);
-		free(ff);
 		return;
 	}
 
 	uint32_t exec_call = EXEC_TCP_CONNECT;
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_port", &dst_port, META_TYPE_INT);
+	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 
 	if (jinni_TCP_to_fins_cntrl_exec(params)) {
 		pthread_t thread;
-		struct accept_data *thread_data = (struct accept_data *) malloc(
-				sizeof(struct accept_data));
+		struct accept_data *thread_data = (struct accept_data *) malloc(sizeof(struct accept_data));
+		thread_data->index = index;
 		thread_data->uniqueSockID = uniqueSockID;
 
 		//spin off thread to handle
-		if (pthread_create(&thread, NULL, connect_tcp_thread,
-				(void *) thread_data)) {
+		if (pthread_create(&thread, NULL, connect_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create connect_tcp_thread thread.");
 			nack_send(uniqueSockID, connect_call);
 		}
@@ -872,8 +625,176 @@ void connect_tcp(int index, unsigned long long uniqueSockID,
 	free(addr);
 }
 
-void send_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data, int flags) {
+void *accept_tcp_thread(void *local) {
+	struct accept_data *thread_data = (struct accept_data *) local;
+	int index = thread_data->index;
+	unsigned long long uniqueSockID = thread_data->uniqueSockID;
+	free(thread_data);
+
+	struct finsFrame *ff;
+	int block_flag;
+	int ret;
+	uint32_t exec_call;
+	uint32_t ret_val;
+	uint32_t rem_ip;
+	uint16_t rem_port;
+	struct sockaddr_in * addr;
+
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID == uniqueSockID) {
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, connect_call);
+		pthread_exit(NULL);
+	}
+
+	block_flag = jinniSockets[index].blockingFlag;
+	sem_post(&jinniSockets_sem);
+
+	PRINT_DEBUG();
+	ff = getFF(index, uniqueSockID, block_flag);
+	if (ff == NULL || ff->dataOrCtrl != CONTROL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
+		nack_send(uniqueSockID, connect_call);
+		pthread_exit(NULL);
+	}
+
+	metadata *params = ff->ctrlFrame.metaData;
+	ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+	if (exec_call != EXEC_TCP_ACCEPT && exec_call != EXEC_TCP_CONNECT) {
+		nack_send(uniqueSockID, connect_call);
+		pthread_exit(NULL);
+	}
+
+	ret += metadata_readFromElement(params, "ret_val", &ret_val) == 0;
+
+	if (ret_val & ret == 0) {
+		ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
+		ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+
+		addr->sin_addr.s_addr = rem_ip;
+		addr->sin_port = rem_port;
+
+		if (ret == 0) {
+			sem_wait(&jinniSockets_sem);
+			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_DEBUG("Socket closed, canceling read block.");
+				sem_post(&jinniSockets_sem);
+				pthread_exit(NULL);
+			}
+			/*
+			 if (jinniSockets[index].connection_status > 0) {
+
+			 if ((srcport != jinniSockets[index].dstport)
+			 || (srcip != jinniSockets[index].dst_IP)) {
+
+			 PRINT_DEBUG(
+			 "Wrong address, the socket is already connected to another destination");
+			 sem_post(&jinniSockets_sem);
+			 pthread_exit(NULL);
+
+			 }
+			 }*/
+			sem_post(&jinniSockets_sem);
+		}
+	} else {
+		nack_send(uniqueSockID, connect_call);
+		pthread_exit(NULL);
+	}
+
+	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
+	//memcpy(*buf,ff->dataFrame.pdu,ff->dataFrame.pduLength);
+	//memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	//*buflen = ff->dataFrame.pduLength;
+
+	PRINT_DEBUG();
+
+	/*
+	 if (symbol == 0) {
+	 //		address = NULL;
+	 PRINT_DEBUG();
+	 //	freeFinsFrame(ff);
+
+	 pthread_exit(NULL);
+	 }
+	 PRINT_DEBUG();
+
+	 addr_in->sin_port = srcport;
+	 addr_in->sin_addr.s_addr = srcip;
+	 */
+	/**TODO Free the finsFrame
+	 * This is the final consumer
+	 * call finsFrame_free(Struct finsFrame** ff)
+	 */
+	PRINT_DEBUG();
+
+	freeFinsFrame(ff);
+}
+
+void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
+	int index_new;
+	uint32_t host_ip;
+	uint16_t host_port;
+
+	//TODO: finish this
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket removed/changed");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, accept_call);
+		return;
+	}
+
+	index_new = insertjinniSocket(uniqueSockID_new, jinniSockets[index].type, jinniSockets[index].protocol);
+	if (index < 0) {
+		PRINT_DEBUG("incorrect index !! Crash");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, accept_call);
+		return;
+	}
+
+	jinniSockets[index_new].hostport = jinniSockets[index].hostport;
+	jinniSockets[index_new].host_IP = jinniSockets[index].host_IP;
+
+	host_ip = jinniSockets[index_new].host_IP;
+	host_port = jinniSockets[index_new].hostport;
+	sem_post(&jinniSockets_sem);
+
+	//TODO process flags?
+
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	metadata_create(params);
+	if (params == NULL) {
+		PRINT_DEBUG("metadata creation failed");
+		nack_send(uniqueSockID, connect_call);
+		return;
+	}
+
+	uint32_t exec_call = EXEC_TCP_ACCEPT;
+	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
+	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
+	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT);
+
+	if (jinni_TCP_to_fins_cntrl_exec(params)) {
+		pthread_t thread;
+		struct accept_data *thread_data = (struct accept_data *) malloc(sizeof(struct accept_data));
+		thread_data->index = index_new;
+		thread_data->uniqueSockID = uniqueSockID_new;
+
+		//spin off thread to handle
+		if (pthread_create(&thread, NULL, accept_tcp_thread, (void *) thread_data)) {
+			PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
+			nack_send(uniqueSockID, accept_call);
+		}
+	} else {
+		PRINT_DEBUG("socketjinni failed to accomplish accept");
+		nack_send(uniqueSockID, accept_call);
+	}
+}
+
+void send_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags) {
 
 	//	sendto_tcp(senderid, sockfd, datalen, data, flags, NULL, 0);
 
@@ -887,7 +808,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
 
 	if (flags == -1000) {
 
-		return (write_tcp(uniqueSockID, send_call, datalen, data));
+		return (write_tcp(index, uniqueSockID, send_call, datalen, data));
 
 	}
 	/** TODO handle flags cases */
@@ -919,8 +840,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
 	if (jinniSockets[index].connection_status == 0) {
 		/** socket is not connected to an address. Send call will fail */
 
-		PRINT_DEBUG(
-				"socketjinni failed to accomplish send, socket found unconnected !!!");
+		PRINT_DEBUG("socketjinni failed to accomplish send, socket found unconnected !!!");
 		nack_send(uniqueSockID, send_call);
 
 	}
@@ -976,8 +896,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
 
 }
 
-void write_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data) {
+void write_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -1058,8 +977,7 @@ void write_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
 
 }
 
-void sendto_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data, int flags, struct sockaddr_in *dest_addr,
+void sendto_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags, struct sockaddr_in *dest_addr,
 		socklen_t addrlen) {
 
 	uint16_t hostport;
@@ -1152,8 +1070,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, int socketCallType,
 }
 
 //void recvfrom_tcp(void *threadData) {
-void recvfrom_tcp(int index, unsigned long long uniqueSockID,
-		int socketCallType, int datalen, int flags, int symbol) {
+void recvfrom_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the
 	 * application to get the sender address or not
@@ -1193,14 +1110,14 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID,
 
 	}
 
-	PRINT_DEBUG("Entered recv thread:%d", thread_data->id);
+	//PRINT_DEBUG("Entered recv thread:%d", thread_data->id);
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
 		sem_post(&jinniSockets_sem);
-		recvthread_exit(thread_data);
+		//recvthread_exit(thread_data);
 	}
 
 	PRINT_DEBUG("index = %d", index);
@@ -1212,16 +1129,14 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID,
 	 *
 	 */
 
-	if (TCPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, addr,
-			blocking_flag) == 1) {
+	if (TCPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, addr, blocking_flag) == 1) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + buflen
-				+ (symbol ? sizeof(struct sockaddr_in) : 0);
+		msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(struct sockaddr_in) : 0);
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -1249,10 +1164,9 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID,
 		pt += buflen;
 
 		if (pt - (u_char *) msg != msg_len) {
-			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
-					msg_len);
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
 			free(msg);
-			recvthread_exit(thread_data);
+			//recvthread_exit(thread_data);
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
@@ -1269,7 +1183,7 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID,
 
 		if (index == -1) {
 			PRINT_DEBUG("socket descriptor not found into jinni sockets");
-			recvthread_exit(thread_data);
+			//recvthread_exit(thread_data);
 		} else {
 			nack_send(uniqueSockID, socketCallType);
 		}
@@ -1281,11 +1195,10 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID,
 	 */
 	//free(addr);
 	//free(buf);
-	recvthread_exit(thread_data);
+	//recvthread_exit(thread_data);
 }
 
-void recv_tcp(int index, unsigned long long uniqueSockID, int datalen,
-		int flags) {
+void recv_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags) {
 
 	//recvfrom_tcp(senderid, sockfd, datalen, flags);
 	//return;
@@ -1327,16 +1240,14 @@ void recv_tcp(int index, unsigned long long uniqueSockID, int datalen,
 	 * this the difference between the call from here, and the call in case of
 	 * the function recvfrom_udp
 	 * */
-	if (TCPreadFrom_fins(uniqueSockID, buf, &buflen, 0, NULL, blocking_flag)
-			== 1) {
+	if (TCPreadFrom_fins(uniqueSockID, buf, &buflen, 0, NULL, blocking_flag) == 1) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int)
-				+ buflen;
+		msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + buflen;
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -1356,8 +1267,7 @@ void recv_tcp(int index, unsigned long long uniqueSockID, int datalen,
 		pt += buflen;
 
 		if (pt - (u_char *) msg != msg_len) {
-			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
-					msg_len);
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
 			free(msg);
 			exit(1);
 		}
@@ -1431,12 +1341,10 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 	}
 }
 
-void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level,
-		int optname, int optlen, void *optval) {
+void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
 
 }
 
-void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level,
-		int optname, int optlen, void *optval) {
+void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
 
 }

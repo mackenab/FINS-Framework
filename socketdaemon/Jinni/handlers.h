@@ -53,6 +53,7 @@
 #define NACK 	6666
 #define MIN_port 32768
 #define MAX_port 61000
+#define DEFAULT_BACKLOG 5
 
 /** Socket related calls and their codes */
 #define socket_call 1
@@ -178,9 +179,10 @@ struct finssocket {
 	pid_t childrenList[MaxChildrenNumSharingSocket];
 	int type;
 	int protocol;
-	int backlog;
 
-	sem_t sem;
+	sem_t sem; //TODO implement? would need for multithreading
+	int listening;
+	int backlog;
 
 	/** check the opt_name to find which bit to access in the options variable then use
 	 * the following code to handle the bits individually
@@ -207,8 +209,6 @@ struct finssocket {
 
 	int threads;
 	int replies;
-
-	int state;
 };
 
 struct recvfrom_data {

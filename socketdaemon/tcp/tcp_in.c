@@ -18,19 +18,15 @@ void calcRTT(struct tcp_connection *conn) {
 
 	gettimeofday(&current, 0);
 
-	PRINT_DEBUG("getting seqEndRTT=%d stampRTT=(%d, %d)\n", conn->rtt_seq_end,
-			conn->rtt_stamp.tv_sec, conn->rtt_stamp.tv_usec);
-	PRINT_DEBUG("getting seqEndRTT=%d current=(%d, %d)\n", conn->rtt_seq_end,
-			current.tv_sec, current.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d stampRTT=(%d, %d)\n", conn->rtt_seq_end, conn->rtt_stamp.tv_sec, conn->rtt_stamp.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d current=(%d, %d)\n", conn->rtt_seq_end, current.tv_sec, current.tv_usec);
 
-	PRINT_DEBUG("old sampleRTT=%f estRTT=%f devRTT=%f timout=%f\n", sampRTT,
-			conn->rtt_est, conn->rtt_dev, conn->timeout);
+	PRINT_DEBUG("old sampleRTT=%f estRTT=%f devRTT=%f timout=%f\n", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 
 	conn->rtt_flag = 0;
 
 	if (conn->rtt_stamp.tv_usec > current.tv_usec) {
-		decimal = (1000000.0 + current.tv_usec - conn->rtt_stamp.tv_usec)
-				/ 1000000.0;
+		decimal = (1000000.0 + current.tv_usec - conn->rtt_stamp.tv_usec) / 1000000.0;
 		sampRTT = current.tv_sec - conn->rtt_stamp.tv_sec - 1.0;
 		sampRTT += decimal;
 	} else {
@@ -46,8 +42,7 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->rtt_dev = sampRTT / 2;
 	} else {
 		conn->rtt_est = (1 - alpha) * conn->rtt_est + alpha * sampRTT;
-		conn->rtt_dev = (1 - beta) * conn->rtt_dev
-				+ beta * fabs(sampRTT - conn->rtt_est);
+		conn->rtt_dev = (1 - beta) * conn->rtt_dev + beta * fabs(sampRTT - conn->rtt_est);
 	}
 
 	conn->timeout = conn->rtt_est + conn->rtt_dev / beta;
@@ -57,8 +52,7 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->timeout = MAX_GBN_TIMEOUT;
 	}
 
-	PRINT_DEBUG("new sampleRTT=%f estRTT=%f devRTT=%f timout=%f\n", sampRTT,
-			conn->rtt_est, conn->rtt_dev, conn->timeout);
+	PRINT_DEBUG("new sampleRTT=%f estRTT=%f devRTT=%f timout=%f\n", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 }
 
 void *syn_thread(void *local) {
@@ -77,8 +71,7 @@ void *syn_thread(void *local) {
 		calc = tcp_checksum(seg); //TODO add alt checksum
 		if (seg->checksum == calc) {
 			if (queue_has_space(conn_stub->syn_queue, 1)) {
-				node = node_create((uint8_t *) seg, 1, seg->seq_num,
-						seg->seq_num);
+				node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
 				queue_append(conn_stub->syn_queue, node);
 
 				sem_post(&conn_stub->accept_wait_sem);
@@ -128,8 +121,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 			//drop
 			return -1;
 		} else if (seg->flags & FLAG_FIN) {
-			if ((seg->flags & FLAG_ACK)
-					&& conn->host_seq_num == conn->host_seq_end) {
+			if ((seg->flags & FLAG_ACK) && conn->host_seq_num == conn->host_seq_end) {
 				//if FIN ACK, send ACK, TIME_WAIT
 				conn->state = TIME_WAIT;
 				startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
@@ -139,8 +131,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->state = CLOSING;
 				return 1;
 			}
-		} else if ((seg->flags & FLAG_ACK)
-				&& conn->host_seq_num == conn->host_seq_end) {
+		} else if ((seg->flags & FLAG_ACK) && conn->host_seq_num == conn->host_seq_end) {
 			//if ACK, send -, FIN_WAIT_2
 			conn->state = FIN_WAIT_2;
 			return 0;
@@ -163,8 +154,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 		if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 			//drop
 			return -1;
-		} else if ((seg->flags & FLAG_ACK)
-				&& conn->host_seq_num == conn->host_seq_end) {
+		} else if ((seg->flags & FLAG_ACK) && conn->host_seq_num == conn->host_seq_end) {
 			//if ACK, send -, TIME_WAIT
 			conn->state = TIME_WAIT;
 			startTimer(conn->to_gbn_fd, 2 * DEFAULT_MSL);
@@ -180,8 +170,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 		return 0;
 	case LAST_ACK:
 		//can still get ACKs & resend data
-		if ((seg->flags & FLAG_ACK)
-				&& conn->host_seq_num == conn->host_seq_end) {
+		if ((seg->flags & FLAG_ACK) && conn->host_seq_num == conn->host_seq_end) {
 			//if ACK, send -, CLOSED
 			conn->state = CLOSED;
 		}
@@ -189,8 +178,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void tcp_recv_syn(struct tcp_connection_stub *conn_stub,
-		struct tcp_segment *seg) {
+void tcp_recv_syn(struct tcp_connection_stub *conn_stub, struct tcp_segment *seg) {
 	struct tcp_node *node;
 
 	if (queue_has_space(conn_stub->syn_queue, 1)) {
@@ -248,7 +236,28 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				tcp_send_seg(temp_seg);
 				tcp_free(temp_seg);
 
-				//TODO send ACK to handler, prob connect
+				//send ACK to handler, prob connect
+				metadata *params = (metadata *) malloc(sizeof(metadata));
+				metadata_create(params);
+				if (params == NULL) {
+					PRINT_DEBUG("metadata creation failed");
+					exit(-1);
+				}
+
+				uint32_t exec_call = EXEC_TCP_CONNECT;
+				uint32_t ret_val = 1;
+				metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
+				metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
+				metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
+				metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
+				metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				if (tcp_fcf_to_jinni(params)) {
+					//fine
+				} else {
+					//TODO error
+				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent.");
 
@@ -281,8 +290,7 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 			temp_seg = tcp_create(conn);
 			tcp_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
 
-			temp_node = node_create((uint8_t *) temp_seg, 1, temp_seg->seq_num,
-					temp_seg->seq_num); //host_seq_num == host_seq_end
+			temp_node = node_create((uint8_t *) temp_seg, 1, temp_seg->seq_num, temp_seg->seq_num); //host_seq_num == host_seq_end
 			queue_append(conn->send_queue, temp_node);
 
 			tcp_send_seg(temp_seg);
@@ -335,7 +343,28 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 				handle_data(conn, seg);
 			}
 
-			//TODO send ACK to handler, prob accept
+			//send ACK to handler, prob accept
+			metadata *params = (metadata *) malloc(sizeof(metadata));
+			metadata_create(params);
+			if (params == NULL) {
+				PRINT_DEBUG("metadata creation failed");
+				exit(-1);
+			}
+
+			uint32_t exec_call = EXEC_TCP_ACCEPT;
+			uint32_t ret_val = 1;
+			metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
+			metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
+			metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
+			metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
+			metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+			if (tcp_fcf_to_jinni(params)) {
+				//fine
+			} else {
+				//TODO error
+			}
 		} else {
 			PRINT_DEBUG("Invalid ACK: was not sent.");
 			//TODO send RST?
@@ -370,8 +399,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_segment *temp_seg;
 
 //check if valid ACK
-	if (in_tcp_window(seg->ack_num, seg->ack_num, conn->host_seq_num,
-			conn->host_seq_end)) {
+	if (in_tcp_window(seg->ack_num, seg->ack_num, conn->host_seq_num, conn->host_seq_end)) {
 		if (seg->ack_num == conn->host_seq_num) {
 			conn->rem_window = seg->win_size;
 			conn->duplicate++;
@@ -450,8 +478,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 			node = queue_find(conn->send_queue, seg->ack_num);
 			if (node) {
 				//remove ACK segs
-				while (!queue_is_empty(conn->send_queue)
-						&& conn->send_queue->front != node) {
+				while (!queue_is_empty(conn->send_queue) && conn->send_queue->front != node) {
 					temp_node = queue_remove_front(conn->send_queue);
 					temp_seg = (struct tcp_segment *) temp_node->data;
 					tcp_free(temp_seg);
@@ -487,8 +514,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 					}
 					break;
 				case AVOIDANCE:
-					conn->cong_window += conn->MSS * conn->MSS
-							/ conn->cong_window;
+					conn->cong_window += conn->MSS * conn->MSS / conn->cong_window;
 					break;
 				case RECOVERY:
 					conn->cong_state = AVOIDANCE;
@@ -573,8 +599,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				//TODO process seg options
 
-				PRINT_DEBUG("Connected to seq=%d datalen:%d\n",
-						temp_seg->seq_num, temp_seg->data_len);
+				PRINT_DEBUG("Connected to seq=%d datalen:%d\n", temp_seg->seq_num, temp_seg->data_len);
 
 				if (seg->data_len) {
 					//TODO: insert to read_queue/send to daemon
@@ -607,25 +632,18 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//re-ordered segment
 		seq_end = seg->seq_num + seg->data_len;
 
-		if (in_tcp_window(seg->seq_num, seq_end, conn->rem_seq_num,
-				conn->rem_seq_end)) {
-			temp_node = node_create((uint8_t *) seg, seg->data_len,
-					seg->seq_num, seq_end);
-			ret = queue_insert(conn->recv_queue, temp_node, conn->rem_seq_num,
-					conn->rem_seq_end);
+		if (in_tcp_window(seg->seq_num, seq_end, conn->rem_seq_num, conn->rem_seq_end)) {
+			temp_node = node_create((uint8_t *) seg, seg->data_len, seg->seq_num, seq_end);
+			ret = queue_insert(conn->recv_queue, temp_node, conn->rem_seq_num, conn->rem_seq_end);
 			if (ret) {
 				conn->host_window -= seg->data_len;
 			} else {
-				PRINT_DEBUG("Dropping duplicate rem=(%u, %u) got=(%u, %u)\n",
-						conn->rem_seq_num, conn->rem_seq_end, seg->seq_num,
-						seq_end);
+				PRINT_DEBUG("Dropping duplicate rem=(%u, %u) got=(%u, %u)\n", conn->rem_seq_num, conn->rem_seq_end, seg->seq_num, seq_end);
 				tcp_free(seg);
 				free(temp_node);
 			}
 		} else {
-			PRINT_DEBUG("Dropping out of window rem=(%u, %u) got=(%u, %u)\n",
-					conn->rem_seq_num, conn->rem_seq_end, seg->seq_num,
-					seq_end);
+			PRINT_DEBUG("Dropping out of window rem=(%u, %u) got=(%u, %u)\n", conn->rem_seq_num, conn->rem_seq_end, seg->seq_num, seq_end);
 			tcp_free(seg);
 		}
 	}
@@ -818,20 +836,17 @@ void tcp_in_fdf(struct finsFrame *ff) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
 		}
-		conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip,
-				seg->src_port);
+		conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 		if (conn) {
 			start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
 			sem_post(&conn_list_sem);
 
 			if (start) {
-				thread_data = (struct tcp_thread_data *) malloc(
-						sizeof(struct tcp_thread_data));
+				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 				thread_data->conn = conn;
 				thread_data->seg = seg;
 
-				if (pthread_create(&thread, NULL, recv_thread,
-						(void *) thread_data)) {
+				if (pthread_create(&thread, NULL, recv_thread, (void *) thread_data)) {
 					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 					exit(-1);
 				}
@@ -843,8 +858,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 
 			if (seg->flags & FLAG_ACK) {
 				//TODO send <SEQ=SEG.ACK><CTL=RST>
-			} else if ((seg->flags & FLAG_SYN)
-					&& !(seg->flags & (FLAG_FIN | FLAG_RST))) {
+			} else if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_FIN | FLAG_RST))) {
 				//TODO check security, send RST if lower, etc
 
 				//check if listening sockets
@@ -854,25 +868,20 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				}
 				conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
 				if (conn_stub) {
-					start = (conn_stub->threads < MAX_THREADS) ?
-							conn_stub->threads++ : 0;
+					start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
-						thread_data = (struct tcp_thread_data *) malloc(
-								sizeof(struct tcp_thread_data));
+						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 						thread_data->conn_stub = conn_stub;
 						thread_data->seg = seg;
 
-						if (pthread_create(&thread, NULL, syn_thread,
-								(void *) thread_data)) {
-							PRINT_ERROR(
-									"ERROR: unable to create recv_thread thread.");
+						if (pthread_create(&thread, NULL, syn_thread, (void *) thread_data)) {
+							PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 							exit(-1);
 						}
 					} else {
-						PRINT_DEBUG("Too many threads=%d. Dropping...",
-								conn->threads);
+						PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
 					}
 				} else {
 					sem_post(&conn_stub_list_sem);

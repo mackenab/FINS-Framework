@@ -144,8 +144,7 @@ int read_configurations() {
 
 	/* Read the file. If there is an error, report it and exit. */
 	if (!config_read_file(&cfg, "fins.cfg")) {
-		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
-				config_error_line(&cfg), config_error_text(&cfg));
+		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
 		config_destroy(&cfg);
 		return EXIT_FAILURE;
 	}
@@ -285,8 +284,7 @@ void *Switch_to_Jinni() {
 			case CTRL_EXEC:
 				break;
 			case CTRL_EXEC_REPLY:
-				metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call",
-						&exec_call);
+				metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call);
 				switch (exec_call) { //TODO atm only for TCP
 				case EXEC_TCP_CONNECT:
 					break;
@@ -319,17 +317,13 @@ void *Switch_to_Jinni() {
 			hostip = -1;
 			protocol = -1;
 
-			metadata_readFromElement(ff->dataFrame.metaData, "portdst",
-					&dstport);
-			metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
-					&hostport);
+			metadata_readFromElement(ff->dataFrame.metaData, "portdst", &dstport);
+			metadata_readFromElement(ff->dataFrame.metaData, "portsrc", &hostport);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipdst", &dstip);
 			metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", &hostip);
 
-			metadata_readFromElement(ff->dataFrame.metaData, "protocol",
-					&protocol);
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
-					hostport, dstport);
+			metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol);
+			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip, hostport, dstport);
 
 			protocol = ntohs(protocol);
 			dstport = ntohs(dstport);
@@ -337,27 +331,22 @@ void *Switch_to_Jinni() {
 			dstip = ntohl(dstip);
 			hostip = ntohl(hostip);
 
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip,
-					hostport, dstport);
+			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip, hostport, dstport);
 			///*
-			struct in_addr *temp = (struct in_addr *) malloc(
-					sizeof(struct in_addr));
+			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 			if (hostip) {
 				temp->s_addr = hostip;
 			} else {
 				temp->s_addr = 0;
 			}
-			struct in_addr *temp2 = (struct in_addr *) malloc(
-					sizeof(struct in_addr));
+			struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
 			if (dstip) {
 				temp2->s_addr = dstip;
 			} else {
 				temp2->s_addr = 0;
 			}
-			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol,
-					inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
-			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol,
-					(*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
+			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 			//*/
 			/**
 			 * check if this datagram comes from the address this socket has been previously
@@ -366,10 +355,8 @@ void *Switch_to_Jinni() {
 			if (index >= 0 && jinniSockets[index].connection_status > 0) {
 
 				PRINT_DEBUG("ICMP should not enter here at all");
-				if ((hostport != jinniSockets[index].dstport)
-						|| (hostip != jinniSockets[index].dst_IP)) {
-					PRINT_DEBUG(
-							"Wrong address, the socket is already connected to another destination");
+				if ((hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP)) {
+					PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 
 					freeFinsFrame(ff);
 					sem_post(&jinniSockets_sem);
@@ -394,11 +381,8 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1) {
-				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d",
-						jinniSockets[index].host_IP,
-						jinniSockets[index].hostport,
-						jinniSockets[index].dst_IP, jinniSockets[index].dstport,
-						jinniSockets[index].protocol);
+				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d", jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP,
+						jinniSockets[index].dstport, jinniSockets[index].protocol);
 
 				int value;
 				sem_getvalue(&(jinniSockets[index].Qs), &value);
@@ -431,8 +415,7 @@ void *Switch_to_Jinni() {
 			}
 		} else {
 
-			PRINT_DEBUG(
-					"unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
+			PRINT_DEBUG("unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
 
 		} // end of if , else if , else statement
 
@@ -484,8 +467,7 @@ void *interceptor_to_jinni() {
 	while (1) {
 
 		PRINT_DEBUG("NL counter = %d", counter++);
-		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0,
-				&sockaddr_sender, &sockaddr_senderlen);
+		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen);
 		if (ret_val == -1) {
 			perror("recvfrom() caused an error");
 			exit(-1);
@@ -533,16 +515,14 @@ void *interceptor_to_jinni() {
 				part_len = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
 				if (part_len > RECV_BUFFER_SIZE) {
-					PRINT_DEBUG("part_len (%d) > RECV_BUFFER_SIZE (%d)",
-							part_len, RECV_BUFFER_SIZE);
+					PRINT_DEBUG("part_len (%d) > RECV_BUFFER_SIZE (%d)", part_len, RECV_BUFFER_SIZE);
 				}
 
 				//PRINT_DEBUG("part_len=%d", part_len);
 
 				pos = *(int *) part_pt;
 				part_pt += sizeof(int);
-				if (pos > msg_len
-						|| pos != msg_pt - (unsigned char *) msg_buf) {
+				if (pos > msg_len || pos != msg_pt - (unsigned char *) msg_buf) {
 					if (pos > msg_len) {
 						PRINT_DEBUG("pos > msg_len");
 					} else {
@@ -552,13 +532,11 @@ void *interceptor_to_jinni() {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len,
-						part_len, pos, nlh->nlmsg_seq);
+				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
-						PRINT_DEBUG(
-								"error: msg_buf != NULL at new sequence, freeing");
+						PRINT_DEBUG("error: msg_buf != NULL at new sequence, freeing");
 						free(msg_buf);
 					}
 					msg_buf = malloc(msg_len);
@@ -605,8 +583,7 @@ void *interceptor_to_jinni() {
 
 			msg_len -= 2 * sizeof(int) + sizeof(unsigned long long);
 
-			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType,
-					uniqueSockID);
+			PRINT_DEBUG("callType=%d sockID=%llu", socketCallType, uniqueSockID);
 			PRINT_DEBUG("msg_len=%d", msg_len);
 
 			//###############################
@@ -637,8 +614,7 @@ void *interceptor_to_jinni() {
 			free(temp);
 			//###############################
 
-			PRINT_DEBUG("uniqueSockID=%llu, calltype=%d, threads=%d",
-					uniqueSockID, socketCallType, threads);
+			PRINT_DEBUG("uniqueSockID=%llu, calltype=%d, threads=%d", uniqueSockID, socketCallType, threads);
 
 			switch (socketCallType) {
 
@@ -652,15 +628,13 @@ void *interceptor_to_jinni() {
 				bind_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case getsockname_call:
-				getsockname_call_handler(uniqueSockID, threads, msg_pt,
-						msg_len); //DONE
+				getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case connect_call:
 				connect_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case getpeername_call:
-				getpeername_call_handler(uniqueSockID, threads, msg_pt,
-						msg_len); //DONE
+				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 				/**
 				 * the write call is encapuslated as a send call with the
@@ -716,8 +690,7 @@ void *interceptor_to_jinni() {
 				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			default:
-				PRINT_DEBUG("unknown opcode received (%d), dropping",
-						socketCallType);
+				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType);
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */
@@ -790,11 +763,9 @@ void *Capture() {
 		ether_meta = (metadata *) malloc(sizeof(metadata));
 		metadata_create(ether_meta);
 
-		memcpy(ethersrc, ((struct sniff_ethernet *) data)->ether_shost,
-				ETHER_ADDR_LEN);
+		memcpy(ethersrc, ((struct sniff_ethernet *) data)->ether_shost, ETHER_ADDR_LEN);
 		PRINT_DEBUG();
-		memcpy(etherdst, ((struct sniff_ethernet *) data)->ether_dhost,
-				ETHER_ADDR_LEN);
+		memcpy(etherdst, ((struct sniff_ethernet *) data)->ether_dhost, ETHER_ADDR_LEN);
 		PRINT_DEBUG();
 		protocol_type = ntohs(((struct sniff_ethernet *) data)->ether_type);
 
@@ -862,8 +833,7 @@ void *Inject() {
 		if (ff == NULL)
 			continue;
 
-		PRINT_DEBUG(
-				"\n At least one frame has been read from the Switch to Etherstub");
+		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub");
 
 		//	metadata_readFromElement(ff->dataFrame.metaData,"dstip",&destination);
 		//	loop_host = (struct hostent *) gethostbyname((char *)"");
@@ -887,10 +857,8 @@ void *Inject() {
 		char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
 		char src[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd };
 
-		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest,
-				ETHER_ADDR_LEN);
-		memcpy(((struct sniff_ethernet *) frame)->ether_shost, src,
-				ETHER_ADDR_LEN);
+		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
+		memcpy(((struct sniff_ethernet *) frame)->ether_shost, src, ETHER_ADDR_LEN);
 		((struct sniff_ethernet *) frame)->ether_type = htons(0x0800);
 
 		memcpy(frame + SIZE_ETHERNET, (ff->dataFrame).pdu, framelen);
@@ -1061,10 +1029,8 @@ int main() {
 	// ADDED !!!!! start
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
-	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr,
-			interceptor_to_jinni, NULL); //this has named pipe input from interceptor
-	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr, Switch_to_Jinni,
-			NULL);
+	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr, interceptor_to_jinni, NULL); //this has named pipe input from interceptor
+	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr, Switch_to_Jinni, NULL);
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
 	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
 	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);

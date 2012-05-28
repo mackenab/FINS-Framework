@@ -185,7 +185,7 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
  */
 int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 	int i = 0;
-	sem_wait(&jinniSockets_sem);
+
 	for (i = 0; i < MAX_sockets; i++) {
 		if (jinniSockets[i].uniqueSockID == -1) {
 			jinniSockets[i].uniqueSockID = uniqueSockID;
@@ -213,7 +213,7 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 			jinniSockets[i].type = type;
 
 			jinniSockets[i].protocol = protocol;
-			jinniSockets[i].backlog = -1;
+			jinniSockets[i].backlog = DEFAULT_BACKLOG;
 			jinniSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
 			sem_init(&jinniSockets[i].Qs, 0, 1);
 
@@ -228,13 +228,11 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 
 			jinniSockets[i].sockopts.FSO_REUSEADDR = 0;
 
-			sem_post(&jinniSockets_sem);
 			return i;
 		}
 	}
 	PRINT_DEBUG(
 			"reached maximum # of processes to be served, FINS is out of sockets");
-	sem_post(&jinniSockets_sem);
 	return (-1);
 }
 
@@ -431,23 +429,17 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads,
 		nack_send(uniqueSockID, socket_call);
 		return;
 	}
+
 	if (type == SOCK_DGRAM) {
 		socket_udp(domain, type, protocol, uniqueSockID);
-		return;
 	} else if (type == SOCK_STREAM) {
 		socket_tcp(domain, type, protocol, uniqueSockID);
-		return;
-	} else if (type == SOCK_RAW && (protocol == IPPROTO_ICMP)) {
+	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		socket_icmp(domain, type, protocol, uniqueSockID);
-		return;
-	}
-
-	else {
+	} else {
 		PRINT_DEBUG("non supported socket type");
-		return;
+		nack_send(uniqueSockID, socket_call);
 	}
-
-	return;
 }
 
 /** ----------------------------------------------------------
@@ -477,7 +469,6 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
-
 	memcpy(addr, pt, addrlen);
 	pt += addrlen;
 
@@ -493,21 +484,25 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads,
 	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port),
 			addr->sin_family);
 
+	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
+
 	/** if that requested socket does not exist !!
 	 * this means we can not even talk to the requester FINS crash as a response!!
 	 */
 	if (index == -1) {
 		PRINT_DEBUG(
 				" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
+		sem_post(&jinniSockets_sem);
 		nack_send(uniqueSockID, bind_call);
 		return;
 	}
 
 	jinniSockets[index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
+	sem_post(&jinniSockets_sem);
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
-		bind_udp(uniqueSockID, addr);
+		bind_udp(index, uniqueSockID, addr);
 	else if (jinniSockets[index].type == SOCK_STREAM)
 		bind_tcp(index, uniqueSockID, addr);
 	else
@@ -687,8 +682,8 @@ void sendto_call_handler(unsigned long long uniqueSockID, int threads,
 			sendto_udp(uniqueSockID, sendto_call, datalen, data, flags, addr,
 					addrlen);
 		else if (jinniSockets[index].type == SOCK_STREAM)
-			sendto_tcp(index, uniqueSockID, sendto_call, datalen, data, flags, addr,
-					addrlen);
+			sendto_tcp(index, uniqueSockID, sendto_call, datalen, data, flags,
+					addr, addrlen);
 		else if (jinniSockets[index].type == SOCK_RAW) {
 
 		} else {
@@ -828,8 +823,9 @@ void recvfrom_call_handler(unsigned long long uniqueSockID, int threads,
 			//recvfrom_udp(uniqueSockID, recvfrom_call, datalen, flags, symbol);
 		} else if (jinniSockets[index].type == SOCK_STREAM) {
 			/*rc = pthread_create(recvmsg_thread, NULL,
-					(void * (*)(void *)) recvfrom_tcp, (void *) thread_data);*/
-			recvfrom_tcp(index, uniqueSockID, recvfrom_call, datalen, flags, symbol);
+			 (void * (*)(void *)) recvfrom_tcp, (void *) thread_data);*/
+			recvfrom_tcp(index, uniqueSockID, recvfrom_call, datalen, flags,
+					symbol);
 		} else if ((jinniSockets[index].type == SOCK_RAW)
 				&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
 			rc = pthread_create(recvmsg_thread, NULL,
@@ -970,8 +966,8 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads,
 				sendto_udp(uniqueSockID, sendmsg_call, datalen, data, flags,
 						addr, addrlen);
 			else if (jinniSockets[index].type == SOCK_STREAM)
-				sendto_tcp(index, uniqueSockID, sendmsg_call, datalen, data, flags,
-						addr, addrlen);
+				sendto_tcp(index, uniqueSockID, sendmsg_call, datalen, data,
+						flags, addr, addrlen);
 			else if ((jinniSockets[index].type == SOCK_RAW)
 					&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
 
@@ -1099,8 +1095,9 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads,
 			//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
 		} else if (jinniSockets[index].type == SOCK_STREAM) {
 			/* rc = pthread_create(recvmsg_thread, NULL,
-					(void * (*)(void *)) recvfrom_tcp, (void *) thread_data);*/
-			recvfrom_tcp(index, uniqueSockID, recvmsg_call, datalen, flags, symbol);
+			 (void * (*)(void *)) recvfrom_tcp, (void *) thread_data);*/
+			recvfrom_tcp(index, uniqueSockID, recvmsg_call, datalen, flags,
+					symbol);
 		} else if ((jinniSockets[index].type == SOCK_RAW)
 				&& (jinniSockets[index].protocol == IPPROTO_ICMP)) {
 			rc = pthread_create(recvmsg_thread, NULL,
@@ -1262,7 +1259,10 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads,
 	}
 
 	PRINT_DEBUG("");
+	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
+	sem_post(&jinniSockets_sem);
+
 	if (index == -1) {
 		PRINT_DEBUG(
 				"CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
@@ -1272,11 +1272,11 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads,
 	PRINT_DEBUG("");
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
-		listen_udp(uniqueSockID, backlog);
+		listen_udp(index, uniqueSockID, backlog);
 	else if (jinniSockets[index].type == SOCK_STREAM)
 		listen_tcp(index, uniqueSockID, backlog);
 	else if (jinniSockets[index].type == SOCK_RAW) {
-		listen_icmp(uniqueSockID, backlog);
+		listen_icmp(index, uniqueSockID, backlog);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, listen_call);

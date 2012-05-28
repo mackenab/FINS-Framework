@@ -48,10 +48,8 @@ struct tcp_node {
 	uint32_t seq_end;
 };
 
-struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num,
-		uint32_t seq_end);
-int node_compare(struct tcp_node *node, struct tcp_node *cmp,
-		uint32_t win_seq_num, uint32_t win_seq_end);
+struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end);
+int node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num, uint32_t win_seq_end);
 void node_free(struct tcp_node *node);
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
@@ -66,10 +64,8 @@ struct tcp_queue {
 struct tcp_queue *queue_create(uint32_t max);
 void queue_append(struct tcp_queue *queue, struct tcp_node *node);
 void queue_prepend(struct tcp_queue *queue, struct tcp_node *node);
-void queue_add(struct tcp_queue *queue, struct tcp_node *node,
-		struct tcp_node *prev);
-int queue_insert(struct tcp_queue *queue, struct tcp_node *node,
-		uint32_t win_seq_num, uint32_t win_seq_end);
+void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev);
+int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end);
 struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num);
 struct tcp_node *queue_remove_front(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
@@ -80,7 +76,7 @@ struct tcp_connection_stub {
 	struct tcp_connection_stub *next;
 	sem_t sem;
 
-	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
+	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
@@ -97,11 +93,9 @@ struct tcp_connection_stub {
 };
 
 sem_t conn_stub_list_sem;
-struct tcp_connection_stub *conn_stub_create(uint32_t host_addr,
-		uint16_t host_port, uint32_t backlog);
+struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
 int conn_stub_insert(struct tcp_connection_stub *conn_stub);
-struct tcp_connection_stub *conn_stub_find(uint32_t host_addr,
-		uint16_t host_port);
+struct tcp_connection_stub *conn_stub_find(uint32_t host_ip, uint16_t host_port);
 void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
@@ -111,17 +105,7 @@ void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
 
 enum CONN_STATE /* Defines an enumeration type    */
 {
-	CLOSED,
-	SYN_SENT,
-	LISTEN,
-	SYN_RECV,
-	ESTABLISHED,
-	FIN_WAIT_1,
-	FIN_WAIT_2,
-	CLOSING,
-	TIME_WAIT,
-	CLOSE_WAIT,
-	LAST_ACK
+	CLOSED, SYN_SENT, LISTEN, SYN_RECV, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, CLOSING, TIME_WAIT, CLOSE_WAIT, LAST_ACK
 };
 
 enum CONG_STATE /* Defines an enumeration type    */
@@ -139,9 +123,9 @@ struct tcp_connection {
 
 	//some type of options state
 
-	uint32_t host_addr; //IP address of this machine  //should it be unsigned long?
+	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
-	uint32_t rem_addr; //IP address of remote machine
+	uint32_t rem_ip; //IP address of remote machine
 	uint16_t rem_port; //Port on remote machine
 
 	struct tcp_queue *write_queue; //buffer for raw data to be transfered
@@ -227,11 +211,9 @@ struct tcp_connection {
 #define DEFAULT_MSL 120000
 
 sem_t conn_list_sem;
-struct tcp_connection *conn_create(uint32_t host_addr, uint16_t host_port,
-		uint32_t rem_addr, uint16_t rem_port);
+struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int conn_insert(struct tcp_connection *conn);
-struct tcp_connection *conn_find(uint32_t host_addr, uint16_t host_port,
-		uint32_t rem_addr, uint16_t rem_port);
+struct tcp_connection *conn_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
 int conn_has_space(uint32_t len);
@@ -267,16 +249,13 @@ int tcp_rand(); //Get a random number
 struct tcp_segment *tcp_create(struct tcp_connection *conn);
 struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
 struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
-void tcp_add_data(struct tcp_segment *seg, struct tcp_connection *conn,
-		int data_len);
+void tcp_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);
 uint16_t tcp_checksum(struct tcp_segment *seg);
-void tcp_update(struct tcp_segment *seg, struct tcp_connection *conn,
-		uint32_t flags);
+void tcp_update(struct tcp_segment *seg, struct tcp_connection *conn, uint32_t flags);
 void tcp_send_seg(struct tcp_segment *seg);
 void tcp_free(struct tcp_segment *seg);
 
-int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
-		uint32_t win_seq_end);
+int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
 struct tcp_thread_data {
 	struct tcp_connection *conn; //TODO change conn/conn_stub to union?
@@ -299,31 +278,32 @@ struct tcp_to_thread_data {
 void tcp_init();
 void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
+int tcp_fcf_to_jinni(metadata *params);
+int conf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val); //TODO remove/use?
+//int tcp_fdf_to_jinni(/*...*/);
 
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
-#define EXEC_TCP_CONNECT 1
-#define EXEC_TCP_LISTEN 2
-#define EXEC_TCP_ACCEPT 3
-#define EXEC_TCP_SEND 4
-#define EXEC_TCP_RECV 5
-#define EXEC_TCP_CLOSE 6
-#define EXEC_TCP_CLOSE_STUB 7
-#define EXEC_TCP_OPT 8
+#define EXEC_TCP_CONNECT 0
+#define EXEC_TCP_LISTEN 1
+#define EXEC_TCP_ACCEPT 2
+#define EXEC_TCP_SEND 3
+#define EXEC_TCP_RECV 4
+#define EXEC_TCP_CLOSE 5
+#define EXEC_TCP_CLOSE_STUB 6
+#define EXEC_TCP_OPT 7
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
 void tcp_fcf(struct finsFrame *ff);
 void tcp_exec(struct finsFrame *ff);
 
-void tcp_exec_connect(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
-		uint16_t dst_port);
-void tcp_exec_listen(uint32_t src_ip, uint16_t src_port, uint32_t backlog);
-void tcp_exec_accept(uint32_t src_ip, uint16_t src_port, uint32_t flags);
-void tcp_exec_close(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip,
-		uint16_t dst_port);
-void tcp_exec_close_stub(uint32_t src_ip, uint16_t src_port);
+void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
+void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags);
+void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port);
 
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application

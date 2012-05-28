@@ -10,30 +10,24 @@
 
 #define MAX_DATA_PER_TCP 4096
 
-
-
 #include "handlers.h"
 
-#define EXEC_TCP_CONNECT 1
-#define EXEC_TCP_LISTEN 2
-#define EXEC_TCP_ACCEPT 3
-#define EXEC_TCP_SEND 4
-#define EXEC_TCP_RECV 5
-#define EXEC_TCP_CLOSE 6
-#define EXEC_TCP_CLOSE_STUB 7
-#define EXEC_TCP_OPT 8
+#define EXEC_TCP_CONNECT 0
+#define EXEC_TCP_LISTEN 1
+#define EXEC_TCP_ACCEPT 2
+#define EXEC_TCP_SEND 3
+#define EXEC_TCP_RECV 4
+#define EXEC_TCP_CLOSE 5
+#define EXEC_TCP_CLOSE_STUB 6
+#define EXEC_TCP_OPT 7
 
 struct accept_data {
+	int index;
 	unsigned long long uniqueSockID;
 };
 
-int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
-		uint32_t dst_IP_netformat, uint16_t hostport,
-		uint32_t host_IP_netformat);
-int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
-		int symbol, struct sockaddr_in *address, int block_flag);
-
-
+int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
+int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag);
 
 void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID);
 void socketpair_tcp();
@@ -44,10 +38,9 @@ void getpeername_tcp(int index, unsigned long long uniqueSockID, int addrlen);
 void send_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags);
 void write_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data);
 
-
 void recv_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags);
-void sendto_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags,
-		struct sockaddr_in *dest_addr, socklen_t addrlen);
+void sendto_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags, struct sockaddr_in *dest_addr,
+		socklen_t addrlen);
 //void recvfrom_tcp(void *threadData);
 void recvfrom_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
 
@@ -58,7 +51,7 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 void listen_tcp(int index, unsigned long long uniqueSockID, int len);
 void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void accept4_tcp();
-void shutdown_tcp(int index, unsigned long long uniqueSockID, int  how);
+void shutdown_tcp(int index, unsigned long long uniqueSockID, int how);
 void release_tcp(int index, unsigned long long uniqueSockID);
 
 #endif /* TCPHANDLING_H_ */

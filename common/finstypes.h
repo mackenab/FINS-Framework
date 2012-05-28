@@ -186,7 +186,7 @@ int serializeCtrlFrame (struct finsFrame *, unsigned char **);
  * - called by the sender
  */
 
-struct finsFrame * unserializeCtrlFrame ( unsigned char *, int );
+struct finsFrame * unserializeCtrlFrame(unsigned char *, int);
 /* does the opposite of serializeCtrlFrame; used to reconstruct a controlFrame
  * - pass it the byte array and the length and it will give you a pointer to the
  * -- struct.
