@@ -253,10 +253,11 @@ void *Switch_to_Jinni() {
 	struct finsFrame *ff;
 	int protocol;
 	int index;
-	uint32_t exec_call;
 	int status;
 	uint16_t dstport, hostport;
 	uint32_t dstip, hostip;
+	uint32_t exec_call;
+	uint32_t host_ip, host_port, rem_ip, rem_port;
 
 	while (1) {
 
@@ -272,7 +273,7 @@ void *Switch_to_Jinni() {
 		if (ff->dataOrCtrl == CONTROL) {
 			PRINT_DEBUG("control ff");
 
-			switch ((ff->ctrlFrame).opcode) {
+			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
 				break;
 			case CTRL_READ_PARAM:
@@ -284,30 +285,79 @@ void *Switch_to_Jinni() {
 			case CTRL_EXEC:
 				break;
 			case CTRL_EXEC_REPLY:
-				metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call);
-				switch (exec_call) { //TODO atm only for TCP
-				case EXEC_TCP_CONNECT:
-					break;
-				case EXEC_TCP_LISTEN:
-					break;
-				case EXEC_TCP_ACCEPT:
-					break;
-				case EXEC_TCP_SEND:
-					break;
-				case EXEC_TCP_RECV:
-					break;
-				case EXEC_TCP_CLOSE:
-					break;
-				case EXEC_TCP_CLOSE_STUB:
-					break;
-				case EXEC_TCP_OPT:
-					break;
-				default:
-					//error
-					break;
+				if (ff->ctrlFrame.metaData) {
+					metadata *params = ff->ctrlFrame.metaData;
+					int ret;
+					ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+
+					if (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT || exec_call == EXEC_TCP_SEND || exec_call == EXEC_TCP_CLOSE) {
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
+						ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+
+						if (ret) {
+							//TODO error
+							freeFinsFrame(ff);
+							continue;
+						}
+
+						sem_wait(&jinniSockets_sem);
+						index = match_jinni_socket(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						if (index != -1) {
+							sem_wait(&(jinniSockets[index].Qs));
+
+							/**
+							 * TODO Replace The data Queue with a pipeLine at least for
+							 * the RAW DATA in order to find a natural way to support
+							 * Blocking and Non-Blocking mode
+							 */
+							write_queue(ff, jinniSockets[index].dataQueue);
+							sem_post(&(jinniSockets[index].Qs));
+							sem_post(&(jinniSockets_sem));
+						} else {
+							sem_post(&(jinniSockets_sem));
+
+							freeFinsFrame(ff);
+						}
+					} else if (exec_call == EXEC_TCP_LISTEN || exec_call == EXEC_TCP_CLOSE_STUB) {
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+
+						if (ret) {
+							//TODO error
+							freeFinsFrame(ff);
+							continue;
+						}
+
+						sem_wait(&jinniSockets_sem);
+						index = match_jinni_socket(host_ip, (uint16_t) host_port, 0, 0);
+						if (index != -1) {
+							sem_wait(&(jinniSockets[index].Qs));
+
+							/**
+							 * TODO Replace The data Queue with a pipeLine at least for
+							 * the RAW DATA in order to find a natural way to support
+							 * Blocking and Non-Blocking mode
+							 */
+							write_queue(ff, jinniSockets[index].dataQueue);
+							sem_post(&(jinniSockets[index].Qs));
+							sem_post(&(jinniSockets_sem));
+						} else {
+							sem_post(&(jinniSockets_sem));
+
+							freeFinsFrame(ff);
+						}
+					} else {
+						//TODO error
+					}
+				} else {
+					//TODO error
 				}
 				break;
 			case CTRL_ERROR:
+				break;
+			default:
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {

@@ -627,23 +627,7 @@ void tcp_main_time_wait(struct tcp_connection *conn) {
 		conn->state = CLOSED;
 
 		//send ACK to close handler
-		metadata *params = (metadata *) malloc(sizeof(metadata));
-		metadata_create(params);
-		if (params == NULL) {
-			PRINT_DEBUG("metadata creation failed");
-			exit(-1);
-		}
-
-		uint32_t exec_call = EXEC_TCP_CLOSE;
-		uint32_t ret_val = 1;
-		metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-		metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-		metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-		metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-		metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
-		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
-		if (tcp_fcf_to_jinni(params)) {
+		if (tcp_fcf_to_jinni(EXEC_TCP_CLOSE, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
 			//fine
 		} else {
 			//TODO error
@@ -1078,29 +1062,37 @@ uint8_t *copy_uint64(uint8_t *ptr, uint64_t val) {
 }
 
 struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp) {
-	struct finsFrame *ff = NULL;
-	metadata *meta;
-	uint8_t *ptr;
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	if (params == NULL) {
+		return NULL;
+	}
 
-	ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+	int ret;
+	ret += metadata_writeToElement(params, "srcip", &tcp->src_ip, META_TYPE_INT) == 0; //Write the source ip in
+	ret += metadata_writeToElement(params, "dstip", &tcp->dst_ip, META_TYPE_INT) == 0; //And the destination ip
+	ret += metadata_writeToElement(params, "srcport", &tcp->src_port, META_TYPE_INT) == 0; //Write the source port in
+	ret += metadata_writeToElement(params, "dstport", &tcp->dst_port, META_TYPE_INT) == 0; //And the destination port
+	if (ret) {
+		metadata_destroy(params);
+		return NULL;
+	}
+
+	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		metadata_destroy(params);
+		return NULL;
+	}
+
 	ff->dataOrCtrl = DATA; //leave unset?
 	ff->destinationID.id = IPV4ID; // destination module ID
 	ff->destinationID.next = NULL;
-
 	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
-	ff->dataFrame.metaData = (metadata *) malloc(sizeof(metadata));
-
-	meta = ff->dataFrame.metaData;
-	metadata_writeToElement(meta, "srcip", &tcp->src_ip, META_TYPE_INT); //Write the source ip in
-	metadata_writeToElement(meta, "dstip", &tcp->dst_ip, META_TYPE_INT); //And the destination ip
-	metadata_writeToElement(meta, "srcport", &tcp->src_port, META_TYPE_INT); //Write the source port in
-	metadata_writeToElement(meta, "dstport", &tcp->dst_port, META_TYPE_INT); //And the destination port
-
+	ff->dataFrame.metaData = params;
 	ff->dataFrame.pduLength = tcp->data_len + HEADERSIZE(tcp->flags); //Add in the header size for this, too
 	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
-	ptr = ff->dataFrame.pdu;
 
 	//For big-vs-little endian issues, I shall shift everything and deal with it manually here
+	uint8_t *ptr = ff->dataFrame.pdu;
 	ptr = copy_uint16(ptr, tcp->src_port);
 	ptr = copy_uint16(ptr, tcp->dst_port);
 	ptr = copy_uint32(ptr, tcp->seq_num);
@@ -1144,9 +1136,19 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 		return NULL;
 	}
 
-	metadata *meta = ff->dataFrame.metaData;
-	metadata_readFromElement(meta, "srcip", &seg->src_ip); //host
-	metadata_readFromElement(meta, "dstip", &seg->dst_ip); //remote
+	metadata *params = ff->dataFrame.metaData;
+	if (params == NULL) {
+		free(seg);
+		return NULL;
+	}
+
+	int ret;
+	ret += metadata_readFromElement(params, "srcip", &seg->src_ip) == 0; //host
+	ret += metadata_readFromElement(params, "dstip", &seg->dst_ip) == 0; //remote
+	if (ret) {
+		free(seg);
+		return NULL;
+	}
 
 	ptr = ff->dataFrame.pdu;
 
@@ -1464,7 +1466,6 @@ void tcp_fcf(struct finsFrame *ff) {
 
 void tcp_exec(struct finsFrame *ff) {
 	int ret;
-	metadata *params;
 	uint32_t exec_call;
 	uint32_t host_ip;
 	uint32_t host_port;
@@ -1473,7 +1474,7 @@ void tcp_exec(struct finsFrame *ff) {
 	uint32_t backlog;
 	uint32_t flags;
 
-	params = ff->ctrlFrame.metaData;
+	metadata *params = ff->ctrlFrame.metaData;
 	if (params) {
 		ret = metadata_readFromElement(params, "exec_call", &exec_call) == 0;
 		switch (exec_call) {
@@ -1556,10 +1557,29 @@ int tcp_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-int tcp_fcf_to_jinni(metadata *params) {
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+int tcp_fcf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	metadata_create(params);
+	if (params == NULL) {
+		PRINT_DEBUG("metadata creation failed");
+		return 0;
+	}
 
+	int ret;
+	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == 0;
+	if (ret) {
+		metadata_destroy(params);
+		return 0;
+	}
+
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
+		metadata_destroy(params);
 		return 0;
 	}
 
@@ -1574,31 +1594,61 @@ int tcp_fcf_to_jinni(metadata *params) {
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
 	ff->ctrlFrame.metaData = params;
 
-	//ff->ctrlFrame.serialNum = tcp_serial_num++;
-	//ff->ctrlFrame.paramterID = command;
-	//ff->ctrlFrame.paramterValue = data;
-	//ff->ctrlFrame.paramterLen = len;
-
 	PRINT_DEBUG("");
 	return tcp_to_switch(ff);
 }
 
-int conf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
+int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		exit(-1);
+		return 0;
 	}
 
-	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
-	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+	/** metadata_writeToElement() set the value of an element if it already exist
+	 * or it creates the element and set its value in case it is new
+	 */
 
-	return tcp_fcf_to_jinni(params);
+	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport, host_IP_netformat);
+	uint32_t dstprt = dstport;
+	uint32_t hostprt = hostport;
+	int protocol = TCP_PROTOCOL;
+
+	int ret;
+	ret += metadata_writeToElement(params, "srcip", &host_IP_netformat, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "srcport", &hostprt, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "dstip", &dst_IP_netformat, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "dstport", &dstprt, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
+	if (ret) {
+		metadata_destroy(params);
+		return 0;
+	}
+
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		metadata_destroy(params);
+		return 0;
+	}
+
+	/**TODO get the address automatically by searching the local copy of the
+	 * switch table
+	 */
+	ff->dataOrCtrl = DATA;
+	ff->destinationID.id = JINNIID;
+	ff->destinationID.next = NULL;
+	ff->dataFrame.directionFlag = UP;
+	ff->dataFrame.pduLength = len;
+	ff->dataFrame.pdu = dataLocal;
+	ff->dataFrame.metaData = params;
+
+	/**TODO insert the frame into jinni_to_switch queue
+	 * check if insertion succeeded or not then
+	 * return 1 on success, or -1 on failure
+	 * */
+	PRINT_DEBUG("");
+	return tcp_to_switch(ff);
 }
 
 //TODO: deprecated, remove?------------------------------------------------------------------------------------------------
@@ -1612,13 +1662,13 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 	unsigned char *w = ff->dataFrame.pdu;
 	int nleft = ff->dataFrame.pduLength;
 
-	//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
-	//{
-	//	nleft--;  //By decrementing the number of bytes we have to add in
-	//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
-	//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
-	// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
-	//}
+//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
+//{
+//	nleft--;  //By decrementing the number of bytes we have to add in
+//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
+//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
+// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
+//}
 
 	while (nleft > 0) {
 		//Deal with the high and low words of each 16-bit value here. I tried earlier to do this 'normally' by
@@ -1629,7 +1679,7 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 		nleft -= 2; //Decrement by 2, since we're taking 2 at a time
 	}
 
-	//Fully fill out the checksum
+//Fully fill out the checksum
 	for (;;) {
 		sum = (sum >> 16) + (sum & 0xFFFF); //Get the sum shifted over added into the current sum
 		if (!(sum >> 16)) //Continue this until the sum shifted over is zero

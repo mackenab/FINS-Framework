@@ -83,23 +83,7 @@ void *write_thread(void *local) {
 	sem_post(&conn_list_sem);
 
 	//send ACK to send handler
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	metadata_create(params);
-	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-		exit(-1);
-	}
-
-	uint32_t exec_call = EXEC_TCP_SEND;
-	uint32_t ret_val = 1;
-	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
-	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
-	if (tcp_fcf_to_jinni(params)) {
+	if (tcp_fcf_to_jinni(EXEC_TCP_SEND, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
 		//fine
 	} else {
 		//TODO error
@@ -192,21 +176,7 @@ void *close_stub_thread(void *local) {
 
 	//send ACK to close(_stub) handler
 	if (send_ack) {
-		metadata *params = (metadata *) malloc(sizeof(metadata));
-		metadata_create(params);
-		if (params == NULL) {
-			PRINT_DEBUG("metadata creation failed");
-			exit(-1);
-		}
-
-		uint32_t exec_call = EXEC_TCP_CLOSE_STUB;
-		uint32_t ret_val = 1;
-		metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-		metadata_writeToElement(params, "host_ip", &conn_stub->host_ip, META_TYPE_INT);
-		metadata_writeToElement(params, "host_port", &conn_stub->host_port, META_TYPE_INT);
-		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
-		if (tcp_fcf_to_jinni(params)) {
+		if (tcp_fcf_to_jinni(EXEC_TCP_CLOSE_STUB, conn_stub->host_ip, conn_stub->host_port, 0, 0, 1)) {
 			//fine
 		} else {
 			//TODO error

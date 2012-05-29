@@ -278,9 +278,8 @@ struct tcp_to_thread_data {
 void tcp_init();
 void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
-int tcp_fcf_to_jinni(metadata *params);
-int conf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val); //TODO remove/use?
-//int tcp_fdf_to_jinni(/*...*/);
+int tcp_fcf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
+int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
 
 int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
 //int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field

@@ -237,23 +237,7 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				tcp_free(temp_seg);
 
 				//send ACK to handler, prob connect
-				metadata *params = (metadata *) malloc(sizeof(metadata));
-				metadata_create(params);
-				if (params == NULL) {
-					PRINT_DEBUG("metadata creation failed");
-					exit(-1);
-				}
-
-				uint32_t exec_call = EXEC_TCP_CONNECT;
-				uint32_t ret_val = 1;
-				metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-				metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-				metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-				metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-				metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
-				if (tcp_fcf_to_jinni(params)) {
+				if (tcp_fcf_to_jinni(EXEC_TCP_CONNECT, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
 					//fine
 				} else {
 					//TODO error
@@ -344,23 +328,7 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			}
 
 			//send ACK to handler, prob accept
-			metadata *params = (metadata *) malloc(sizeof(metadata));
-			metadata_create(params);
-			if (params == NULL) {
-				PRINT_DEBUG("metadata creation failed");
-				exit(-1);
-			}
-
-			uint32_t exec_call = EXEC_TCP_ACCEPT;
-			uint32_t ret_val = 1;
-			metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-			metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-			metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-			metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-			metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
-			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
-			if (tcp_fcf_to_jinni(params)) {
+			if (tcp_fcf_to_jinni(EXEC_TCP_ACCEPT, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
 				//fine
 			} else {
 				//TODO error
@@ -543,7 +511,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	int ret;
 	int send_ack = 0;
 
-// data handling
+	//data handling
 	if (seg->seq_num == conn->rem_seq_num) {
 		//in order seq num
 
@@ -558,6 +526,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		if (seg->data_len) {
 			//TODO: insert to read_queue/send to daemon
+
 		}
 
 		conn->host_window -= seg->data_len;
