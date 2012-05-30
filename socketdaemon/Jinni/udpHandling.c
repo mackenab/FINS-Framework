@@ -397,7 +397,6 @@ void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 
 	uint16_t dstport;
 	uint32_t dst_IP;
-	int index;
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -478,7 +477,6 @@ void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, i
 	uint32_t host_IP;
 	uint32_t dst_IP;
 	int len = datalen;
-	int index;
 
 	PRINT_DEBUG("");
 

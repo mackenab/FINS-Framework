@@ -242,20 +242,21 @@ struct tcp_segment {
 	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
-//More specific, internal functions for dealing with the data and all that
-//uint16_t TCP_checksum(struct finsFrame *ff); //Calculate the checksum of this TCP segment
 void tcp_srand(); //Seed the random number generator
 int tcp_rand(); //Get a random number
-struct tcp_segment *tcp_create(struct tcp_connection *conn);
-struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
-struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
-void tcp_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);
-uint16_t tcp_checksum(struct tcp_segment *seg);
-void tcp_update(struct tcp_segment *seg, struct tcp_connection *conn, uint32_t flags);
-void tcp_send_seg(struct tcp_segment *seg);
-void tcp_free(struct tcp_segment *seg);
 
-int in_tcp_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
+struct finsFrame *seg_to_fdf(struct tcp_segment *tcp);
+struct tcp_segment *fdf_to_seg(struct finsFrame *ff);
+
+struct tcp_segment *seg_create(struct tcp_connection *conn);
+void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);
+void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint32_t flags);
+uint16_t seg_checksum(struct tcp_segment *seg);
+void seg_send(struct tcp_segment *seg);
+void seg_free(struct tcp_segment *seg);
+void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn);
+
+int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
 struct tcp_thread_data {
 	struct tcp_connection *conn; //TODO change conn/conn_stub to union?

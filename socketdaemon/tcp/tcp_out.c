@@ -246,10 +246,10 @@ void *connect_thread(void *local) {
 		//conn_change_options(conn, tcp->options, SYN);
 
 		//send SYN
-		temp_seg = tcp_create(conn);
-		tcp_update(temp_seg, conn, FLAG_SYN);
-		tcp_send_seg(temp_seg);
-		tcp_free(temp_seg);
+		temp_seg = seg_create(conn);
+		seg_update(temp_seg, conn, FLAG_SYN);
+		seg_send(temp_seg);
+		seg_free(temp_seg);
 
 		conn->timeout = DEFAULT_GBN_TIMEOUT;
 		startTimer(conn->to_gbn_fd, conn->timeout);
@@ -425,10 +425,10 @@ void *accept_thread(void *local) {
 							//conn_change_options(conn, tcp->options, SYN);
 
 							//send SYN ACK
-							temp_seg = tcp_create(conn);
-							tcp_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
-							tcp_send_seg(temp_seg);
-							tcp_free(temp_seg);
+							temp_seg = seg_create(conn);
+							seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
+							seg_send(temp_seg);
+							seg_free(temp_seg);
 						}
 
 						if (sem_wait(&conn_list_sem)) {
@@ -440,7 +440,7 @@ void *accept_thread(void *local) {
 
 						sem_post(&conn->sem);
 
-						tcp_free(seg);
+						seg_free(seg);
 						break;
 					} else {
 						sem_post(&conn_list_sem);
@@ -458,7 +458,7 @@ void *accept_thread(void *local) {
 				//TODO error
 			}
 
-			tcp_free(seg);
+			seg_free(seg);
 		} else {
 			sem_post(&conn_stub->sem);
 
@@ -558,13 +558,13 @@ void *close_thread(void *local) {
 					//if CLOSE, send FIN, FIN_WAIT_1
 					if (queue_is_empty(conn->write_queue) && conn->host_seq_num == conn->host_seq_end) {
 						//send FIN
-						temp_seg = tcp_create(conn);
-						tcp_update(temp_seg, conn, FLAG_FIN);
+						temp_seg = seg_create(conn);
+						seg_update(temp_seg, conn, FLAG_FIN);
 
 						temp_node = node_create((uint8_t *) temp_seg, 1, temp_seg->seq_num, temp_seg->seq_num);
 						queue_append(conn->send_queue, temp_node);
 
-						tcp_send_seg(temp_seg);
+						seg_send(temp_seg);
 					} //else piggy back it
 				} else {
 					//TODO figure out:

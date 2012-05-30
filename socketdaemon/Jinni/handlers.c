@@ -512,7 +512,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 /** ----------------------------------------------------------
  * ------------------End of bind_call_handler-----------------
  */
-
+/*
 void send_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 
 	int index;
@@ -580,11 +580,11 @@ void send_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 	return;
 
 } //end of send_call_handler()
-
+*/
 /** ----------------------------------------------------------
  * ------------------End of send_call_handler-----------------
  */
-
+/*
 void sendto_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 
 	int index;
@@ -648,11 +648,11 @@ void sendto_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	}
 	PRINT_DEBUG("");
 
-	/**
+	//**
 	 *
 	 * In case a connected socket has been called by mistake using sendto
 	 * (IGNORE THE ADDRESSES AND USET THE ADDRESS THE SOCKET IS CONNECTED TO IT)
-	 */
+	//
 
 	if (jinniSockets[index].connection_status > 0) {
 
@@ -668,9 +668,9 @@ void sendto_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		}
 
 	} else {
-		/**
+		//**
 		 * The default case , the socket is not connected socket
-		 */
+		 //
 
 		if (jinniSockets[index].type == SOCK_DGRAM)
 			sendto_udp(uniqueSockID, sendto_call, datalen, data, flags, addr, addrlen);
@@ -688,7 +688,7 @@ void sendto_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	return;
 
 } //end of sendto_call_handler()
-
+*/
 /** ----------------------------------------------------------
  * ------------------End of sendto_call_handler-----------------
  */
