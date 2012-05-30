@@ -366,7 +366,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
-//check if valid ACK
+	//check if valid ACK
 	if (in_tcp_window(seg->ack_num, seg->ack_num, conn->host_seq_num, conn->host_seq_end)) {
 		if (seg->ack_num == conn->host_seq_num) {
 			conn->rem_window = seg->win_size;
@@ -617,7 +617,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		}
 	}
 
-//send ack
+	//send ack
 	if (send_ack) {
 		if (conn->delayed_flag) {
 			stopTimer(conn->to_delayed_fd);
@@ -637,7 +637,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
-//TODO can receive, send ACKs, send/resend data, & get ACKs
+	//TODO can receive, send ACKs, send/resend data, & get ACKs
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
@@ -646,10 +646,10 @@ void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) 
 }
 
 void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
-//TODO merge with established, can still get ACKs, receive, send ACKs, & resend data
-//if FIN, send ACK, CLOSING
-//if FIN ACK, send ACK, TIME_WAIT
-//if ACK, send -, FIN_WAIT_2
+	//TODO merge with established, can still get ACKs, receive, send ACKs, & resend data
+	//if FIN, send ACK, CLOSING
+	//if FIN ACK, send ACK, TIME_WAIT
+	//if ACK, send -, FIN_WAIT_2
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
@@ -658,14 +658,14 @@ void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
-//TODO merge with established, can still receive, send ACKs
-//if FIN, send ACK, TIME_WAIT
+	//TODO merge with established, can still receive, send ACKs
+	//if FIN, send ACK, TIME_WAIT
 	handle_data(conn, seg);
 }
 
 void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
-//TODO self, can still get ACKs & resend
-//if ACK, send -, TIME_WAIT
+	//TODO self, can still get ACKs & resend
+	//if ACK, send -, TIME_WAIT
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 
@@ -686,7 +686,7 @@ void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
-//TODO can still send & get ACKs
+	//TODO can still send & get ACKs
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 	}
@@ -695,8 +695,8 @@ void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
-//TODO can still get ACKs & resend data
-//if ACK, send -, CLOSED
+	//TODO can still get ACKs & resend data
+	//if ACK, send -, CLOSED
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 

@@ -177,7 +177,7 @@ struct finsFrame {
 //};
 
 /* needed function defs */
-int serializeCtrlFrame (struct finsFrame *, unsigned char **);
+int serializeCtrlFrame(struct finsFrame *, unsigned char **);
 /* serializes a fins control frame for transmission to an external process
  * - pass it the frame (finsFrame) and it will fill in the pointer to the frame, uchar*
  * -- and return the length of the array (return int);

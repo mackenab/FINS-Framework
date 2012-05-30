@@ -393,17 +393,11 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	free(addr);
 } // end of bind_udp
 
-void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
+void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 	uint16_t dstport;
 	uint32_t dst_IP;
 	int index;
-
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		return;
-	}
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -415,6 +409,9 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** the check below is to make sure that the port is not previously allocated */
 	dstport = ntohs(addr->sin_port);
 	dst_IP = ntohl((addr->sin_addr).s_addr);
+
+	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
+
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * according to the RFC document and man pages: Application can call connect more than
@@ -426,6 +423,15 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	 * to. BUT IT WILL BE ALSO THE ONLY ADDRESS TO RECEIVER FROM
 	 *	NOTICE THAT the relation
 	 * */
+
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, connect_call);
+		return;
+	}
 
 	/**
 	 * NOTICE THAT the relation between the host and the destined address is many to one.
@@ -446,11 +452,8 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
-
-	sem_wait(&jinniSockets_sem);
-	jinniSockets[index].dstport = ntohs(addr->sin_port);
-	jinniSockets[index].dst_IP = ntohl((addr->sin_addr).s_addr);
+	jinniSockets[index].dst_IP = dst_IP;
+	jinniSockets[index].dstport = dstport;
 	jinniSockets[index].connection_status++;
 	sem_post(&jinniSockets_sem);
 
@@ -468,7 +471,7 @@ void connect_udp(unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
 }
 
-void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data) {
+void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -479,9 +482,12 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 	PRINT_DEBUG("");
 
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, socketCallType);
 		return;
 	}
 
@@ -494,6 +500,8 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketjinni failed to accomplish send");
+		sem_post(&jinniSockets_sem);
+
 		nack_send(uniqueSockID, socketCallType);
 		return;
 	}
@@ -524,6 +532,7 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
 	host_IP = jinniSockets[index].host_IP;
+	sem_post(&jinniSockets_sem);
 	PRINT_DEBUG("");
 
 	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
@@ -551,18 +560,17 @@ void write_udp(unsigned long long uniqueSockID, int socketCallType, int datalen,
 
 } // end of write_udp
 
-void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags) {
+void send_udp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags) {
 
 	uint16_t hostport;
 	uint16_t dstport;
 	uint32_t host_IP;
 	uint32_t dst_IP;
 	int len = datalen;
-	int index;
 
 	if (flags == -1000) {
 
-		return (write_udp(uniqueSockID, socketCallType, datalen, data));
+		return (write_udp(index, uniqueSockID, socketCallType, datalen, data));
 
 	}
 	/** TODO handle flags cases */
@@ -580,9 +588,12 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, 
 
 	PRINT_DEBUG("");
 
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, socketCallType);
 		return;
 	}
 
@@ -593,8 +604,9 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, 
 
 	if (jinniSockets[index].connection_status == 0) {
 		/** socket is not connected to an address. Send call will fail */
-
 		PRINT_DEBUG("socketjinni failed to accomplish send");
+		sem_post(&jinniSockets_sem);
+
 		nack_send(uniqueSockID, socketCallType);
 		return;
 	}
@@ -634,7 +646,7 @@ void send_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, 
 		}
 		jinniSockets[index].hostport = hostport;
 	}
-
+	sem_post(&jinniSockets_sem);
 	PRINT_DEBUG("");
 
 	PRINT_DEBUG("addr %d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
@@ -1330,17 +1342,17 @@ void listen_udp(int index, unsigned long long uniqueSockID, int backlog) {
 	ack_send(uniqueSockID, listen_call);
 }
 
-void accept_udp(unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
-
-	int index;
-
+void accept_udp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
 	//TODO: finish this
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, accept_call);
 		return;
 	}
-	PRINT_DEBUG("index = %d", index);
+	sem_post(&jinniSockets_sem);
 
 	ack_send(uniqueSockID, accept_call);
 }

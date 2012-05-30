@@ -239,7 +239,7 @@ struct tcp_segment {
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 };
 
 //More specific, internal functions for dealing with the data and all that

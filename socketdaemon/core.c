@@ -303,7 +303,7 @@ void *Switch_to_Jinni() {
 						}
 
 						sem_wait(&jinniSockets_sem);
-						index = match_jinni_socket(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						index = match_jinni_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 						if (index != -1) {
 							sem_wait(&(jinniSockets[index].Qs));
 
@@ -331,7 +331,7 @@ void *Switch_to_Jinni() {
 						}
 
 						sem_wait(&jinniSockets_sem);
-						index = match_jinni_socket(host_ip, (uint16_t) host_port, 0, 0);
+						index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
 						if (index != -1) {
 							sem_wait(&(jinniSockets[index].Qs));
 

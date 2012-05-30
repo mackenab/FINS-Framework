@@ -21,12 +21,9 @@ extern finsQueue Switch_to_Jinni_Queue;
 extern sem_t Jinni_to_Switch_Qsem;
 extern sem_t Switch_to_Jinni_Qsem;
 
-int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
-		uint32_t dst_IP_netformat, uint16_t hostport,
-		uint32_t host_IP_netformat) {
+int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat) {
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
@@ -44,18 +41,15 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	/** metadata_writeToElement() set the value of an element if it already exist
 	 * or it creates the element and set its value in case it is new
 	 */
-	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport,
-			host_IP_netformat);
+	PRINT_DEBUG("%d, %d, %d, %d", dstport, dst_IP_netformat, hostport, host_IP_netformat);
 
 	uint32_t dstprt = dstport;
 	uint32_t hostprt = hostport;
 	int protocol = IP4_PT_ICMP;
 	metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "srcport", &hostprt, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat,
-			META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat,
-			META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "protocol", &protocol, META_TYPE_INT);
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
@@ -86,8 +80,7 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport,
 	return (0);
 
 }
-int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
-		int symbol, struct sockaddr_in *address, int block_flag) {
+int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag) {
 
 	/**TODO MUST BE FIXED LATER
 	 * force symbol to become zero
@@ -160,13 +153,11 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
-	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc",
-			(uint16_t *) &srcport) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc", (uint16_t *) &srcport) == 0) {
 		addr_in->sin_port = 0;
 
 	}
-	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc",
-			(uint32_t *) &srcip) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", (uint32_t *) &srcip) == 0) {
 		addr_in->sin_addr.s_addr = 0;
 
 	}
@@ -183,10 +174,8 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (jinniSockets[index].connection_status > 0) {
 
-		if ((srcport != jinniSockets[index].dstport)
-				|| (srcip != jinniSockets[index].dst_IP)) {
-			PRINT_DEBUG(
-					"Wrong address, the socket is already connected to another destination");
+		if ((srcport != jinniSockets[index].dstport) || (srcip != jinniSockets[index].dst_IP)) {
+			PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 			sem_post(&jinniSockets_sem);
 			return (0);
 
@@ -230,8 +219,7 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 
 }
 
-void socket_icmp(int domain, int type, int protocol,
-		unsigned long long uniqueSockID) {
+void socket_icmp(int domain, int type, int protocol, unsigned long long uniqueSockID) {
 
 	char clientName[200];
 	int index;
@@ -264,9 +252,7 @@ void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 }
 
-void sendto_icmp(unsigned long long uniqueSockID, int socketCallType,
-		int datalen, u_char *data, int flags, struct sockaddr_in *addr,
-		socklen_t addrlen) {
+void sendto_icmp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
 
 	//	int index;
 	//
@@ -449,16 +435,14 @@ void recvfrom_icmp(void *threadData) {
 	 *
 	 */
 
-	if (ICMPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address,
-			blocking_flag) == 1) {
+	if (ICMPreadFrom_fins(uniqueSockID, bufptr, &buflen, symbol, address, blocking_flag) == 1) {
 
 		buf[buflen] = '\0'; //may be specific to symbol==0
 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen
-				+ (symbol ? sizeof(int) + addressLen : 0);
+		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(int) + addressLen : 0);
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -486,8 +470,7 @@ void recvfrom_icmp(void *threadData) {
 		pt += buflen;
 
 		if (pt - (u_char *) msg != msg_len) {
-			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg,
-					msg_len);
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
 			free(msg);
 			recvthread_exit(thread_data);
 		}
@@ -527,8 +510,7 @@ void sendmsg_icmp() {
 void recvmsg_icmp() {
 
 }
-void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname,
-		int optlen, void *optval) {
+void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
 
 	//TODO: convert
 
@@ -568,8 +550,7 @@ void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname,
 	return;
 
 }
-void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname,
-		int optlen, void *optval) {
+void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
 
 	int index;
 
@@ -629,18 +610,17 @@ void listen_icmp(int index, unsigned long long uniqueSockID, int backlog) {
 	ack_send(uniqueSockID, listen_call);
 }
 
-void accept_icmp(unsigned long long uniqueSockID,
-		unsigned long long uniqueSockID_new, int flags) {
-
-	int index;
-
+void accept_icmp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
 	//TODO: finish this
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, accept_call);
 		return;
 	}
-	PRINT_DEBUG("index = %d", index);
+	sem_post(&jinniSockets_sem);
 
 	ack_send(uniqueSockID, accept_call);
 }

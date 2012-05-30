@@ -1067,15 +1067,10 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp) {
 		return NULL;
 	}
 
-	int ret;
-	ret += metadata_writeToElement(params, "srcip", &tcp->src_ip, META_TYPE_INT) == 0; //Write the source ip in
-	ret += metadata_writeToElement(params, "dstip", &tcp->dst_ip, META_TYPE_INT) == 0; //And the destination ip
-	ret += metadata_writeToElement(params, "srcport", &tcp->src_port, META_TYPE_INT) == 0; //Write the source port in
-	ret += metadata_writeToElement(params, "dstport", &tcp->dst_port, META_TYPE_INT) == 0; //And the destination port
-	if (ret) {
-		metadata_destroy(params);
-		return NULL;
-	}
+	metadata_writeToElement(params, "srcip", &tcp->src_ip, META_TYPE_INT); //Write the source ip in
+	metadata_writeToElement(params, "dstip", &tcp->dst_ip, META_TYPE_INT); //And the destination ip
+	metadata_writeToElement(params, "srcport", &tcp->src_port, META_TYPE_INT); //Write the source port in
+	metadata_writeToElement(params, "dstport", &tcp->dst_port, META_TYPE_INT); //And the destination port
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1440,7 +1435,7 @@ void tcp_get_FF() {
 
 void tcp_fcf(struct finsFrame *ff) {
 
-//TODO fill out
+	//TODO fill out
 	switch ((ff->ctrlFrame).opcode) {
 	case CTRL_ALERT:
 		break;
@@ -1565,17 +1560,12 @@ int tcp_fcf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, u
 		return 0;
 	}
 
-	int ret;
-	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == 0;
-	if (ret) {
-		metadata_destroy(params);
-		return 0;
-	}
+	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
+	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT)0;
+	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1615,16 +1605,11 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_
 	uint32_t hostprt = hostport;
 	int protocol = TCP_PROTOCOL;
 
-	int ret;
-	ret += metadata_writeToElement(params, "srcip", &host_IP_netformat, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "srcport", &hostprt, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "dstip", &dst_IP_netformat, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "dstport", &dstprt, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
-	if (ret) {
-		metadata_destroy(params);
-		return 0;
-	}
+	metadata_writeToElement(params, "srcip", &host_IP_netformat, META_TYPE_INT);
+	metadata_writeToElement(params, "srcport", &hostprt, META_TYPE_INT) == 0;
+	metadata_writeToElement(params, "dstip", &dst_IP_netformat, META_TYPE_INT);
+	metadata_writeToElement(params, "dstport", &dstprt, META_TYPE_INT);
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1662,13 +1647,13 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 	unsigned char *w = ff->dataFrame.pdu;
 	int nleft = ff->dataFrame.pduLength;
 
-//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
-//{
-//	nleft--;  //By decrementing the number of bytes we have to add in
-//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
-//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
-// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
-//}
+	//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
+	//{
+	//	nleft--;  //By decrementing the number of bytes we have to add in
+	//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
+	//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
+	// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
+	//}
 
 	while (nleft > 0) {
 		//Deal with the high and low words of each 16-bit value here. I tried earlier to do this 'normally' by
@@ -1679,7 +1664,7 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 		nleft -= 2; //Decrement by 2, since we're taking 2 at a time
 	}
 
-//Fully fill out the checksum
+	//Fully fill out the checksum
 	for (;;) {
 		sum = (sum >> 16) + (sum & 0xFFFF); //Get the sum shifted over added into the current sum
 		if (!(sum >> 16)) //Continue this until the sum shifted over is zero

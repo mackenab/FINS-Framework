@@ -24,6 +24,8 @@
 struct accept_data {
 	int index;
 	unsigned long long uniqueSockID;
+	int blocking_flag;
+	unsigned long long uniqueSockID_new;
 };
 
 int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
