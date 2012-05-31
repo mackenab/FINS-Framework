@@ -558,7 +558,7 @@ void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, i
 
 } // end of write_udp
 
-void send_udp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags) {
+void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -568,7 +568,7 @@ void send_udp(int index, unsigned long long uniqueSockID, int socketCallType, in
 
 	if (flags == -1000) {
 
-		return (write_udp(index, uniqueSockID, socketCallType, datalen, data));
+		return (write_udp(index, uniqueSockID, sendmsg_call, datalen, data));
 
 	}
 	/** TODO handle flags cases */
@@ -591,7 +591,7 @@ void send_udp(int index, unsigned long long uniqueSockID, int socketCallType, in
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		sem_post(&jinniSockets_sem);
 
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 		return;
 	}
 
@@ -605,7 +605,7 @@ void send_udp(int index, unsigned long long uniqueSockID, int socketCallType, in
 		PRINT_DEBUG("socketjinni failed to accomplish send");
 		sem_post(&jinniSockets_sem);
 
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 		return;
 	}
 
@@ -662,16 +662,16 @@ void send_udp(int index, unsigned long long uniqueSockID, int socketCallType, in
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
 		PRINT_DEBUG("");
 
-		ack_send(uniqueSockID, socketCallType);
+		ack_send(uniqueSockID, sendmsg_call);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 	}
 } // end of send_udp
 
-void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
+void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -679,7 +679,6 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 	uint32_t dst_IP;
 
 	int len = datalen;
-	int index;
 	int i;
 
 	struct in_addr *temp;
@@ -709,7 +708,7 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 		return;
 	}
 
@@ -769,12 +768,12 @@ void sendto_udp(unsigned long long uniqueSockID, int socketCallType, int datalen
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
 		PRINT_DEBUG("");
 
-		ack_send(uniqueSockID, socketCallType);
+		ack_send(uniqueSockID, sendmsg_call);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish sendto");
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 	}
 
 	return;

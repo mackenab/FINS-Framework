@@ -252,7 +252,7 @@ void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 }
 
-void sendto_icmp(unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
+void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
 
 	//	int index;
 	//
@@ -281,7 +281,6 @@ void sendto_icmp(unsigned long long uniqueSockID, int socketCallType, int datale
 	uint32_t dst_IP;
 
 	int len = datalen;
-	int index;
 
 	PRINT_DEBUG();
 
@@ -313,7 +312,7 @@ void sendto_icmp(unsigned long long uniqueSockID, int socketCallType, int datale
 
 	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 		PRINT_DEBUG("");
 	}
 
@@ -357,12 +356,12 @@ void sendto_icmp(unsigned long long uniqueSockID, int socketCallType, int datale
 
 	{
 		PRINT_DEBUG("");
-		ack_send(uniqueSockID, socketCallType);
+		ack_send(uniqueSockID, sendmsg_call);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish sendto");
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 	}
 
 	return;

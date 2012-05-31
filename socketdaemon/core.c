@@ -671,36 +671,17 @@ void *interceptor_to_jinni() {
 			case socket_call:
 				socket_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
-			case socketpair_call:
-				socketpair_call_handler(uniqueSockID, threads, msg_pt, msg_len);
-				break;
 			case bind_call:
 				bind_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
-			case getsockname_call:
-				getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+			case listen_call:
+				listen_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case connect_call:
 				connect_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
-			case getpeername_call:
-				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
-				break;
-				/**
-				 * the write call is encapuslated as a send call with the
-				 * parameter flags = -1000  			//DONE
-				 */
-			case send_call:
-				send_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
-				break;
-			case recv_call:
-				recv_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
-				break;
-			case sendto_call:
-				sendto_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
-				break;
-			case recvfrom_call:
-				recvfrom_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+			case accept_call:
+				accept_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case sendmsg_call:
 				sendmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only send call from wedge
@@ -708,17 +689,20 @@ void *interceptor_to_jinni() {
 			case recvmsg_call:
 				recvmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only recv call from wedge
 				break;
+			case socketpair_call:
+				socketpair_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				break;
+			case getsockname_call:
+				getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				break;
+			case getpeername_call:
+				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				break;
 			case getsockopt_call:
 				getsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); //Dummy response
 				break;
 			case setsockopt_call:
 				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
-				break;
-			case listen_call:
-				listen_call_handler(uniqueSockID, threads, msg_pt, msg_len);
-				break;
-			case accept_call:
-				accept_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case accept4_call:
 				accept4_call_handler(uniqueSockID, threads, msg_pt, msg_len);
