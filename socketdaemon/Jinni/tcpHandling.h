@@ -36,17 +36,15 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 void listen_tcp(int index, unsigned long long uniqueSockID, int len);
 void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
-void sendmsg_tcp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags);
-void write_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data);
-void sendto_tcp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
+void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
+void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
+void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
+void recv_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags);
+void recvfrom_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags, int symbol);
+
 void socketpair_tcp();
 void getsockname_tcp();
 void getpeername_tcp(int index, unsigned long long uniqueSockID, int addrlen);
-
-void recv_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags);
-//void recvfrom_tcp(void *threadData);
-void recvfrom_tcp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, int flags, int symbol);
-
 void recvmsg_tcp();
 void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);

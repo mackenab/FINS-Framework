@@ -65,13 +65,17 @@ struct FINS_sock {
 };
 
 // Function prototypes:
-static int FINS_create_socket(struct net *net, struct socket *sock,
-		int protocol, int kern);
+static int FINS_create_socket(struct net *net, struct socket *sock, int protocol, int kern);
+static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len);
+static int FINS_listen(struct socket *sock, int backlog);
+static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
+static int FINS_accept(struct socket *sock, struct socket *newsock, int flags);
+static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len);
+static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags);
 
 /* FINS netlink functions*/
 int nl_send(int pid, void *buf, ssize_t len, int flags);
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len,
-		int flags);
+int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags);
 void nl_data_ready(struct sk_buff *skb);
 
 // This function extracts a unique ID from the kernel-space perspective for each socket
@@ -114,14 +118,12 @@ int checkConfirmation(int index);
 //	void *buf;	// pointer to a buffer with whatever other data is important
 //	ssize_t len;	// length of the buffer	
 //};
-
 /* 
  * The current version of this module does not support selective redirection through the original inet stack (IPv4)
  * If that functionality were required, the kernel would have to export inet_create, among other changes, and this 
  * function prototype would need to be declared.
  */
 //static int inet_create(struct net *net, struct socket *sock, int protocol, int kern);
-
 /* This is a flag to enable or disable the FINS stack passthrough */
 int FINS_stack_passthrough_enabled;
 EXPORT_SYMBOL( FINS_stack_passthrough_enabled);

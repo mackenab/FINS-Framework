@@ -21,17 +21,18 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 void listen_udp(int index, unsigned long long uniqueSockID, int backlog);
 void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void accept_udp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
+void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
+void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
+void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);
+
+void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
+void recvfrom_udp(void *threadData);
+
 void socketpair_udp();
 void getsockname_udp();
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen);
 //void send_udp(); /** UDP DOESN NOT IMPLEMENT SEND without recipient */
-void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
-void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data);
-void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags);
-void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen);
 
-void recvfrom_udp(void *threadData);
-void recvmsg_udp();
 void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void accept4_udp();

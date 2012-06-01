@@ -663,7 +663,6 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 	int index;
 	int datalen;
-	int flags;
 	int msg_flags;
 	int symbol;
 	int controlFlag = 0;
@@ -677,9 +676,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	PRINT_DEBUG("");
 
 	pt = buf;
-
-	flags = *(int *) pt;
-	pt += sizeof(int);
 
 	symbol = *(int *) pt;
 	pt += sizeof(int);
@@ -752,9 +748,9 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	 */
 	if (status > 0) {
 		if (type == SOCK_DGRAM) {
-			sendmsg_udp(index, uniqueSockID, datalen, data, flags);
+			send_udp(index, uniqueSockID, data, datalen, msg_flags);
 		} else if (type == SOCK_STREAM) {
-			sendmsg_tcp(index, uniqueSockID, datalen, data, flags);
+			send_tcp(index, uniqueSockID, data, datalen, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 			//TODO finish icmp case?
 		} else {
@@ -768,11 +764,13 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		 */
 		if (symbol) { // check that the passed address is not NULL
 			if (type == SOCK_DGRAM) {
-				sendto_udp(index, uniqueSockID, datalen, data, flags, addr, addrlen); //TODO here
+				sendto_udp(index, uniqueSockID, data, datalen, msg_flags, addr, addrlen);
 			} else if (type == SOCK_STREAM) {
-				sendto_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
+				//TODO implement or error?
+				//sendto_tcp(index, uniqueSockID, data,datalen,  msg_flags, addr, addrlen);
+				nack_send(uniqueSockID, sendmsg_call);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-				sendto_icmp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
+				sendto_icmp(index, uniqueSockID, data, datalen, msg_flags, addr, addrlen);
 			} else {
 				PRINT_DEBUG("unknown target address !!!");
 				nack_send(uniqueSockID, sendmsg_call);
@@ -781,7 +779,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			PRINT_DEBUG("unknown target address !!!");
 			nack_send(uniqueSockID, sendmsg_call);
 		}
-
 	}
 
 	PRINT_DEBUG();
@@ -796,12 +793,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	int controlFlag;
 	ssize_t msgControl_Length;
 	void *msgControl;
-	u_char *data;
 	u_char *pt;
-
-	struct recvfrom_data *thread_data;
-	pthread_t *recvmsg_thread;
-	int rc;
 
 	PRINT_DEBUG();
 
@@ -873,20 +865,14 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	if (status > 0) {
 		if (type == SOCK_DGRAM) {
-			//recvmsg_udp(index, uniqueSockID, datalen, data, flags); //recvfrom_udp
-			/*
-			 unsigned long long uniqueSockID = thread_data->uniqueSockID;
-			 int socketCallType = thread_data->socketCallType;
-			 int datalen = thread_data->datalen;
-			 int flags = thread_data->flags;
-			 int symbol = thread_data->symbol;
-			 */
+			//recv_udp(index, uniqueSockID, datalen, data, flags); //recvfrom_udp
 		} else if (type == SOCK_STREAM) {
-			//sendmsg_tcp(index, uniqueSockID, datalen, data, flags);
+			recv_tcp(index, uniqueSockID, datalen, flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+			//TODO implement?
 		} else {
 			PRINT_DEBUG("unknown socket type has been read !!!");
-			//nack_send(uniqueSockID, sendmsg_call);
+			nack_send(uniqueSockID, recvmsg_call);
 		}
 	} else {
 		/**
@@ -895,20 +881,24 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		 */
 		if (symbol) { // check that the passed address is not NULL
 			if (type == SOCK_DGRAM) {
-				//sendto_udp(uniqueSockID, sendmsg_call, datalen, data, flags, addr, addrlen);
+				//sendto_udp(uniqueSockID, datalen, data, flags, addr, addrlen);
 			} else if (type == SOCK_STREAM) {
-				//sendto_tcp(index, uniqueSockID, sendmsg_call, datalen, data, flags, addr, addrlen);
+				//sendto_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-				//sendto_icmp(uniqueSockID, sendmsg_call, datalen, data, flags, addr, addrlen);
+				//sendto_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
 			} else {
 				PRINT_DEBUG("unknown target address !!!");
-				nack_send(uniqueSockID, sendmsg_call);
+				nack_send(uniqueSockID, recvmsg_call);
 			}
 		} else {
 			PRINT_DEBUG("unknown target address !!!");
-			nack_send(uniqueSockID, sendmsg_call);
+			nack_send(uniqueSockID, recvmsg_call);
 		}
 	}
+
+	struct recvfrom_data *thread_data;
+	pthread_t *recvmsg_thread;
+	int rc;
 
 	if (recv_thread_count < MAX_recv_threads) {
 		PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);

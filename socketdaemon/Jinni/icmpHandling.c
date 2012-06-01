@@ -253,28 +253,6 @@ void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags) {
 }
 
 void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
-
-	//	int index;
-	//
-	//		index = findjinniSocket(uniqueSockID);
-	//		PRINT_DEBUG("");
-	//
-	//
-	//		if (index == -1) {
-	//			PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-	//			exit(1);
-	//		}
-	//
-	//
-	//		sem_wait(jinniSockets[index].s);
-	//		PRINT_DEBUG("");
-	//
-	//			ack_write(jinniSockets[index].jinniside_pipe_ds, uniqueSockID);
-	//			sem_post(jinniSockets[index].as);
-	//
-	//		sem_post(jinniSockets[index].s);
-	//			PRINT_DEBUG("");
-	//			return;
 	uint16_t hostport;
 	uint16_t dstport;
 	uint32_t host_IP;
@@ -302,14 +280,6 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	struct sockaddr_in *address;
 	address = (struct sockaddr_in *) addr;
 
-	index = findjinniSocket(uniqueSockID);
-	PRINT_DEBUG("");
-
-	if (index == -1) {
-		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-		exit(1);
-	}
-
 	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, sendmsg_call);
@@ -327,6 +297,15 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
+		sem_wait(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, sendmsg_call);
+		return;
+	}
+
 	/**
 	 * Default current host port to be assigned is 58088
 	 * It is supposed to be randomly selected from the range found in
@@ -341,13 +320,15 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
 	host_IP = jinniSockets[index].host_IP;
-
+	sem_post(&jinniSockets_sem);
 	PRINT_DEBUG("");
 
 	PRINT_DEBUG("%d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
+
+	int blocking_flag = 1; //TODO get from flags
 
 	/** the meta-data paraters are all passes by copy starting from this point
 	 *

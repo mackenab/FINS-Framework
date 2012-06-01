@@ -470,7 +470,7 @@ void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 
 }
 
-void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, int datalen, u_char *data) {
+void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -485,7 +485,7 @@ void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, i
 		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
 		sem_post(&jinniSockets_sem);
 
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 		return;
 	}
 
@@ -500,7 +500,7 @@ void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, i
 		PRINT_DEBUG("socketjinni failed to accomplish send");
 		sem_post(&jinniSockets_sem);
 
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 		return;
 	}
 
@@ -541,24 +541,20 @@ void write_udp(int index, unsigned long long uniqueSockID, int socketCallType, i
 	/** the meta-data paraters are all passes by copy starting from this point
 	 *
 	 */
-	if (jinni_UDP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)
-
-	{
+	if (jinni_UDP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1) {
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
 		PRINT_DEBUG("");
 
-		ack_send(uniqueSockID, socketCallType);
+		ack_send(uniqueSockID, sendmsg_call);
 		PRINT_DEBUG("");
-
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
-		nack_send(uniqueSockID, socketCallType);
+		nack_send(uniqueSockID, sendmsg_call);
 	}
-
 } // end of write_udp
 
-void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags) {
+void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -567,9 +563,7 @@ void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	int len = datalen;
 
 	if (flags == -1000) {
-
-		return (write_udp(index, uniqueSockID, sendmsg_call, datalen, data));
-
+		return write_udp(index, uniqueSockID, sendmsg_call, data, datalen);
 	}
 	/** TODO handle flags cases */
 	switch (flags) {
@@ -635,15 +629,6 @@ void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 	hostport = jinniSockets[index].hostport;
-	if (hostport == 0) {
-		while (1) {
-			hostport = randoming(MIN_port, MAX_port);
-			if (checkjinniports(hostport, host_IP)) {
-				break;
-			}
-		}
-		jinniSockets[index].hostport = hostport;
-	}
 	sem_post(&jinniSockets_sem);
 	PRINT_DEBUG("");
 
@@ -651,6 +636,8 @@ void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
+
+	int blocking_flag = 1; //TODO get from flags
 
 	/** the meta-data paraters are all passes by copy starting from this point
 	 *
@@ -671,7 +658,7 @@ void sendmsg_udp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	}
 } // end of send_udp
 
-void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
+void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
 
 	uint16_t hostport;
 	uint16_t dstport;
@@ -700,12 +687,6 @@ void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char 
 	}
 	PRINT_DEBUG("");
 
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
-		return;
-	}
-
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, sendmsg_call);
@@ -723,6 +704,15 @@ void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char 
 	/** Keep all ports and addresses in host order until later  action taken */
 	dstport = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
 
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("CRASH !! socket descriptor not found into jinni sockets");
+		sem_wait(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, sendmsg_call);
+		return;
+	}
+
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
@@ -738,7 +728,7 @@ void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char 
 	 * check insertjinniSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 	hostport = jinniSockets[index].hostport;
-	if (hostport == (uint16_t)(-1)) {
+	if (hostport == 0) {
 		while (1) {
 			hostport = randoming(MIN_port, MAX_port);
 			if (checkjinniports(hostport, host_IP)) {
@@ -747,7 +737,7 @@ void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char 
 		}
 		jinniSockets[index].hostport = hostport;
 	}
-
+	sem_post(&jinniSockets_sem);
 	PRINT_DEBUG("");
 
 	PRINT_DEBUG("index=%d, dst=%d/%d, host=%d/%d", index, dst_IP, dstport, host_IP, hostport);
@@ -758,6 +748,8 @@ void sendto_udp(int index, unsigned long long uniqueSockID, int datalen, u_char 
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
+
+	int blocking_flag = 1; //TODO get from flags
 
 	/** the meta-data parameters are all passes by copy starting from this point
 	 *
