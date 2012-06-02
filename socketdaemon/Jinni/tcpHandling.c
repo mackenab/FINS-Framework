@@ -856,7 +856,7 @@ void *sendmsg_tcp_thread(void *local) {
 	struct jinni_tcp_thread_data *thread_data = (struct jinni_tcp_thread_data *) local;
 	int index = thread_data->index;
 	unsigned long long uniqueSockID = thread_data->uniqueSockID;
-	int block_flag = thread_data->blocking_flag;
+	//int block_flag = thread_data->blocking_flag;
 	free(thread_data);
 
 	uint32_t exec_call;
@@ -865,7 +865,7 @@ void *sendmsg_tcp_thread(void *local) {
 	PRINT_DEBUG();
 	struct finsFrame *ff = getFF(index, uniqueSockID, block_flag);
 	if (ff == NULL || ff->dataOrCtrl != CONTROL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call); //TODO check return of nonblocking send
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -897,7 +897,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	int len = datalen;
 
 	if (flags == -1000) {
-		return (write_tcp(index, uniqueSockID, sendmsg_call, data, datalen)); //TODO remove?
+		return (write_tcp(index, uniqueSockID, data, datalen)); //TODO remove?
 	}
 	/** TODO handle flags cases */
 	switch (flags) {
@@ -976,22 +976,21 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	 *
 	 */
 	if (jinni_TCP_to_fins(data, len, dstport, dst_IP, hostport, host_IP, blocking_flag)) {
-		pthread_t thread;
-		struct jinni_tcp_thread_data *thread_data = (struct jinni_tcp_thread_data *) malloc(sizeof(struct jinni_tcp_thread_data));
-		thread_data->index = index;
-		thread_data->uniqueSockID = uniqueSockID;
-		thread_data->blocking_flag = blocking_flag;
+		if (blocking_flag) {
+			pthread_t thread;
+			struct jinni_tcp_thread_data *thread_data = (struct jinni_tcp_thread_data *) malloc(sizeof(struct jinni_tcp_thread_data));
+			thread_data->index = index;
+			thread_data->uniqueSockID = uniqueSockID;
+			//thread_data->blocking_flag = blocking_flag;
 
-		//spin off thread to handle
-		if (pthread_create(&thread, NULL, sendmsg_tcp_thread, (void *) thread_data)) {
-			PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
-			nack_send(uniqueSockID, sendmsg_call);
+			//spin off thread to handle
+			if (pthread_create(&thread, NULL, sendmsg_tcp_thread, (void *) thread_data)) {
+				PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
+				nack_send(uniqueSockID, sendmsg_call);
+			}
+		} else {
+			ack_send(uniqueSockID, sendmsg_call);
 		}
-
-		PRINT_DEBUG("");
-		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		//ack_send(uniqueSockID, sendmsg_call);
-		//PRINT_DEBUG("");
 	} else {
 		PRINT_DEBUG("socketjinni failed to accomplish send");
 		nack_send(uniqueSockID, sendmsg_call);

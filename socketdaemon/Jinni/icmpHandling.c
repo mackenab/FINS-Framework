@@ -252,7 +252,7 @@ void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags) {
 
 }
 
-void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char *data, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
+void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
 	uint16_t hostport;
 	uint16_t dstport;
 	uint32_t host_IP;
@@ -348,6 +348,7 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, int datalen, u_char
 	return;
 
 }
+
 void recvfrom_icmp(void *threadData) {
 
 	/** symbol parameter is the one to tell if an address has been passed from the

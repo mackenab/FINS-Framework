@@ -563,7 +563,7 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	int len = datalen;
 
 	if (flags == -1000) {
-		return write_udp(index, uniqueSockID, sendmsg_call, data, datalen);
+		return write_udp(index, uniqueSockID, data, datalen);
 	}
 	/** TODO handle flags cases */
 	switch (flags) {
