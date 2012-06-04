@@ -394,7 +394,8 @@ void *Switch_to_Jinni() {
 				temp2->s_addr = dstip;
 			} else {
 				temp2->s_addr = 0;
-			}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			}
+			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 			//*/
 			/**
@@ -529,23 +530,29 @@ void *interceptor_to_jinni() {
 		if (okFlag = NLMSG_OK(nlh, ret_val)) {
 			switch (nlh->nlmsg_type) {
 			case NLMSG_NOOP:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP")
+				;
 				break;
 			case NLMSG_ERROR:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR")
+				;
 			case NLMSG_OVERRUN:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN")
+				;
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE")
+				;
 				doneFlag = 1;
 			default:
-				PRINT_DEBUG("nlh->nlmsg_type=default");
+				PRINT_DEBUG("nlh->nlmsg_type=default")
+				;
 				nl_buf = NLMSG_DATA(nlh);
 				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				PRINT_DEBUG("nl_len= %d", nl_len);
+				PRINT_DEBUG("nl_len= %d", nl_len)
+				;
 
 				part_pt = nl_buf;
 				test_msg_len = *(ssize_t *) part_pt;
@@ -582,7 +589,8 @@ void *interceptor_to_jinni() {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
+				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq)
+				;
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
@@ -659,7 +667,8 @@ void *interceptor_to_jinni() {
 					sprintf(pt, " %02x", msg_pt[i]);
 					pt += 3;
 				}
-			}PRINT_DEBUG("msg='%s'", temp);
+			}
+			PRINT_DEBUG("msg='%s'", temp);
 			free(temp);
 			//###############################
 
@@ -688,6 +697,15 @@ void *interceptor_to_jinni() {
 			case recvmsg_call:
 				recvmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only recv call from wedge
 				break;
+			case release_call:
+				release_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				break;
+			case getsockopt_call:
+				getsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); //Dummy response
+				break;
+			case setsockopt_call:
+				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
+				break;
 			case socketpair_call:
 				socketpair_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
@@ -696,12 +714,6 @@ void *interceptor_to_jinni() {
 				break;
 			case getpeername_call:
 				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
-				break;
-			case getsockopt_call:
-				getsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); //Dummy response
-				break;
-			case setsockopt_call:
-				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
 				break;
 			case accept4_call:
 				accept4_call_handler(uniqueSockID, threads, msg_pt, msg_len);
@@ -716,14 +728,12 @@ void *interceptor_to_jinni() {
 				 */
 				close_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
-			case release_call:
-				release_call_handler(uniqueSockID, threads, msg_pt, msg_len);
-				break;
 			case ioctl_call:
 				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			default:
-				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType);
+				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType)
+				;
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */
@@ -978,7 +988,8 @@ int main() {
 	if (ret_val != 0) {
 		perror("sendfins() caused an error");
 		exit(-1);
-	}PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	}
+	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {

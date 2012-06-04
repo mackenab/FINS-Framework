@@ -43,8 +43,10 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
 void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
-void recv_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags);
 void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags); //TODO need symbol?
+void release_tcp(int index, unsigned long long uniqueSockID);
+
+void recv_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags);
 
 void socketpair_tcp();
 void getsockname_tcp();
@@ -54,6 +56,5 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void accept4_tcp();
 void shutdown_tcp(int index, unsigned long long uniqueSockID, int how);
-void release_tcp(int index, unsigned long long uniqueSockID);
 
 #endif /* TCPHANDLING_H_ */

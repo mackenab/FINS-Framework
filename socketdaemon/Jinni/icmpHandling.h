@@ -27,6 +27,6 @@ void recvmsg_icmp();
 void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void shutdown_icmp(unsigned long long uniqueSockID, int how);
-void release_udp(unsigned long long uniqueSockID);
+void release_icmp(int index, unsigned long long uniqueSockID);
 
 #endif /* ICMPHANDLING_H_ */

@@ -555,19 +555,25 @@ void shutdown_icmp(unsigned long long uniqueSockID, int how) {
 
 }
 
-void release_icmp(unsigned long long uniqueSockID) {
-	int index;
+void release_icmp(int index, unsigned long long uniqueSockID) {
+	int ret;
 
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
-		exit(1);
+	PRINT_DEBUG("release_icmp: index=%d uniqueSockID=%llu", index, uniqueSockID);
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("Socket closed, canceling release_icmp.");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, recvmsg_call);
+		return;
 	}
 
-	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	ret = removejinniSocket(uniqueSockID);
 
-	if (removejinniSocket(uniqueSockID)) {
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
+
+	if (ret) {
 		ack_send(uniqueSockID, release_call);
 	} else {
 		nack_send(uniqueSockID, release_call);

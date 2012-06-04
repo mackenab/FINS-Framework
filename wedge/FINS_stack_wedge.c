@@ -1753,7 +1753,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	*(int *)pt = len;
 	pt += sizeof(int);
 
-	if (len > 0) {
+	if (len > 0) { //TODO prob don't need
 		ret = copy_from_user(pt, optval, len);
 		pt += len;
 		if (ret) {

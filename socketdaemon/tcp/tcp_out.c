@@ -57,7 +57,8 @@ void *write_thread(void *local) {
 					if (conn->main_wait_flag) {
 						PRINT_DEBUG("posting to wait_sem\n");
 						sem_post(&conn->main_wait_sem);
-					}PRINT_DEBUG("");
+					}
+					PRINT_DEBUG("");
 					sem_post(&conn->sem);
 				} else {
 					PRINT_DEBUG("");
@@ -70,7 +71,8 @@ void *write_thread(void *local) {
 					}
 					sem_init(&conn->write_wait_sem, 0, 0);
 					PRINT_DEBUG("left conn->send_wait_sem\n");
-				}PRINT_DEBUG("");
+				}
+				PRINT_DEBUG("");
 				if (sem_wait(&conn->sem)) {
 					PRINT_ERROR("conn->sem prod");
 					exit(-1);

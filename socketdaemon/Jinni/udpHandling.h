@@ -25,10 +25,10 @@ void accept_udp(int index, unsigned long long uniqueSockID, unsigned long long u
 void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
 void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);
-
 void recvfrom_udp(int index, unsigned long long uniqueSockID, int datalen, int flags, int msgFlags);
-void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
+void release_udp(int index, unsigned long long uniqueSockID);
 
+void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
 void socketpair_udp();
 void getsockname_udp();
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen);
@@ -38,7 +38,6 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int
 void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void accept4_udp();
 void shutdown_udp(unsigned long long uniqueSockID, int how);
-void release_udp(unsigned long long uniqueSockID);
 
 struct jinni_udp_thread_data {
 	int id;
