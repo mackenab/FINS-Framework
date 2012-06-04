@@ -204,22 +204,14 @@ struct finssocket {
 	uint32_t dst_IP; //host format
 	char name[50];
 	int data_pipe[2];
+	finsQueue controlQueue;
 	finsQueue dataQueue;
 	sem_t Qs; /** The data Queue Semaphore Pointer*/
 
+	int recv_ind;
 	int threads;
 	int replies;
 };
-
-struct recvfrom_data {
-	int id;
-	unsigned long long uniqueSockID;
-	int socketCallType;
-	int datalen;
-	int flags;
-	int symbol;
-};
-#define MAX_recv_threads 100
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
 #ifdef BUILD_FOR_ANDROID
@@ -253,6 +245,9 @@ int checkjinniports(uint16_t hostport, uint32_t hostip);
 int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
+struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_flag);
+struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag);
+
 /** calls handling functions */
 void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void bind_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
@@ -277,6 +272,16 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *bu
 
 void close_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
+//######################### //TODO remove
+struct recvfrom_data {
+	int id;
+	unsigned long long uniqueSockID;
+	int socketCallType;
+	int datalen;
+	int flags;
+	int symbol;
+};
 void recvthread_exit(struct recvfrom_data *thread_data);
+//#########################
 
 #endif /* HANDLERS_H_ */

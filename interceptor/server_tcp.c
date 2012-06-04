@@ -27,12 +27,14 @@ int main(int argc, char *argv[]) {
 
 	(void) signal(SIGINT, termination_handler);
 	int sock;
+	int sock_client;
 	int addr_len = sizeof(struct sockaddr);
 	int bytes_read;
+	int recv_buf_size = 4000;
 	char recv_data[4000];
 
 	struct sockaddr_in server_addr;
-	struct sockaddr_in *client_addr;
+	struct sockaddr_in client_addr;
 
 	if (argc > 1)
 
@@ -40,53 +42,68 @@ int main(int argc, char *argv[]) {
 	else
 		port = 5000;
 
-	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
+	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
+		printf("Failure");
 		exit(1);
 	}
 
+	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_port = htons(port);
 
 //	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 //          server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 
 //	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
-	bzero(&(server_addr.sin_zero), 8);
+	//bzero(&(server_addr.sin_zero), 8); //TODO is for what?
 
-	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
+	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
 		perror("Bind");
 		printf("Failure");
 		exit(1);
 	}
 
-	addr_len = sizeof(struct sockaddr);
+	if (listen(sock, 10) < 0) {
+		perror("Listen");
+		printf("Failure");
+		exit(1);
+	}
+
+	//addr_len = sizeof(struct sockaddr);
 
 	printf("\n UDPServer Waiting for client on port %d", ntohs(server_addr.sin_port));
+	fflush(stdout);
+
+	if ((sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len)) < 0) {
+		perror("Accept");
+		printf("Failure");
+		exit(1);
+	}
+
+	printf("\n Connection establisehed sock_client=%d to (%d/%d)", sock_client, client_addr.sin_addr.s_addr, ntohs(client_addr.sin_port));
 	fflush(stdout);
 
 	i = 0;
 
 	while (1) {
-
-		bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
-		//      bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
-		//	bytes_read = recv(sock,recv_data,1024,0);
-		i = i + 1;
-		printf("\n (%d) frame number", i);
+		bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
+		//bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
+		//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
+		//bytes_read = recv(sock,recv_data,1024,0);
 		if (bytes_read > 0) {
+			printf("\n (%d) frame number", ++i);
 			recv_data[bytes_read] = '\0';
-			printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
+			//printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 			//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
+			printf("\n");
 			printf(" (%s) to the Server\n", recv_data);
-		} else {
-			printf("\n Error recv at the Server\n", recv_data);
+			fflush(stdout);
 		}
-		fflush(stdout);
-
 	}
+
 	return 0;
 }
 

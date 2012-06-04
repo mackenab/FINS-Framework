@@ -21,6 +21,7 @@ struct tcp_connection *conn_list; //The list of current connections we have
 int conn_num;
 
 int tcp_serial_num = 0;
+int tcp_thread_count = 0;
 
 struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end) {
 	struct tcp_node *node = NULL;
@@ -364,19 +365,24 @@ void conn_stub_shutdown(struct tcp_connection_stub *conn_stub) {
 
 	//clear all threads using this conn_stub
 	while (1) {
+		PRINT_DEBUG("");
 		if (sem_wait(&conn_stub_list_sem)) {
 			PRINT_ERROR("conn_stub_list_sem wait prob");
 			exit(-1);
 		}
 		if (conn_stub->threads == 1) {
+			PRINT_DEBUG("");
 			sem_post(&conn_stub_list_sem);
 			break;
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn_stub_list_sem);
-		}
+		}PRINT_DEBUG("");
 		sem_post(&conn_stub->accept_wait_sem);
 
+		PRINT_DEBUG("");
 		sem_post(&conn_stub->sem);
+		PRINT_DEBUG("");
 		if (sem_wait(&conn_stub->sem)) {
 			PRINT_ERROR("conn_stub->sem wait prob");
 			exit(-1);
@@ -413,8 +419,7 @@ void *to_thread(void *local) {
 			PRINT_DEBUG("posting to wait_sem");
 			sem_post(to_data->sem);
 		}
-	}
-	PRINT_DEBUG("to: %u thread stop", (unsigned int) to_data->fd);
+	}PRINT_DEBUG("to: %u thread stop", (unsigned int) to_data->fd);
 
 	pthread_exit(NULL);
 }
@@ -596,6 +601,7 @@ void tcp_main_established(struct tcp_connection *conn) {
 				startTimer(conn->to_gbn_fd, conn->timeout);
 			}
 
+			PRINT_DEBUG("");
 			sem_post(&conn->write_wait_sem); //unstop write_thread if waiting
 		} else {
 			conn->main_wait_flag = 1;
@@ -650,6 +656,7 @@ void *main_thread(void *local) {
 	int data_len;
 	struct tcp_node *temp_node;
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -710,13 +717,16 @@ void *main_thread(void *local) {
 				conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag, conn->delayed_flag, conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
 
 		if (conn->main_wait_flag && !conn->to_gbn_flag && !conn->to_delayed_flag) {
+			PRINT_DEBUG("");
 			sem_post(&conn->sem);
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn->main_wait_sem)) {
 				PRINT_ERROR("conn->main_wait_sem wait prob");
 				exit(-1);
 			}
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
@@ -724,8 +734,10 @@ void *main_thread(void *local) {
 			conn->main_wait_flag = 0;
 			//sem_init(&conn->main_wait_sem, 0, 0);
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn->sem);
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
@@ -840,6 +852,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 		exit(-1);
 	}
 	struct tcp_to_thread_data gbn_data;
+	gbn_data.id = tcp_thread_count++;
 	gbn_data.running = &conn->running_flag;
 	gbn_data.fd = &conn->to_gbn_fd;
 	gbn_data.flag = &conn->to_gbn_flag;
@@ -856,6 +869,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 		exit(-1);
 	}
 	struct tcp_to_thread_data delayed_data;
+	delayed_data.id = tcp_thread_count++;
 	delayed_data.running = &conn->running_flag;
 	delayed_data.fd = &conn->to_delayed_fd;
 	delayed_data.flag = &conn->to_delayed_flag;
@@ -955,22 +969,28 @@ void conn_shutdown(struct tcp_connection *conn) {
 	//TODO stop silly window timer
 	//TODO stop nagel timer
 	if (conn->main_wait_flag)
-		sem_post(&conn->main_wait_sem);
+		PRINT_DEBUG("");
+	sem_post(&conn->main_wait_sem);
 
 	//clear all threads using this conn_stub
 	while (1) {
+		PRINT_DEBUG("");
 		if (sem_wait(&conn_list_sem)) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
 		}
 		if (conn->threads == 1) {
+			PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
 			break;
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
 		}
 
+		PRINT_DEBUG("");
 		sem_post(&conn->sem);
+		PRINT_DEBUG("");
 		if (sem_wait(&conn->sem)) {
 			PRINT_ERROR("conn->sem wait prob");
 			exit(-1);
@@ -1413,11 +1433,15 @@ void tcp_init() {
 void tcp_get_FF() {
 
 	struct finsFrame *ff;
+
+	PRINT_DEBUG();
 	do {
 		sem_wait(&Switch_to_TCP_Qsem);
 		ff = read_queue(Switch_to_TCP_Queue);
 		sem_post(&Switch_to_TCP_Qsem);
 	} while (ff == NULL);
+
+	PRINT_DEBUG("");
 
 	if (ff->dataOrCtrl == CONTROL) {
 		tcp_fcf(ff);
@@ -1533,20 +1557,23 @@ void tcp_exec(struct finsFrame *ff) {
 			//TODO finish
 			break;
 		default:
-			//TODO error
+			PRINT_DEBUG("tcp_exec: Error unknown exec_call=%d", exec_call);
+			//TODO implement?
 			break;
 		}
 	} else {
 		//TODO send nack
+		PRINT_DEBUG("tcp_exec: Error fcf.metadata==NULL");
 	}
 }
 
 int tcp_to_switch(struct finsFrame *ff) {
+	PRINT_DEBUG("");
 	if (sem_wait(&TCP_to_Switch_Qsem)) {
 		PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
 		exit(-1);
 	}
-	return write_queue(ff, TCP_to_Switch_Queue);
+	return write_queue(ff, TCP_to_Switch_Queue);PRINT_DEBUG("");
 	sem_post(&TCP_to_Switch_Qsem);
 
 	return 0;

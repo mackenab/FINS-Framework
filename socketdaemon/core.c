@@ -46,8 +46,8 @@ sem_t jinniSockets_sem;
 struct finssocket jinniSockets[MAX_sockets];
 
 int recv_thread_index;
-int recv_thread_count;
-sem_t recv_thread_sem;
+int thread_count; //TODO move?
+sem_t thread_sem;
 
 /** The list of major Queues which connect the modules to each other
  * including the switch module
@@ -167,9 +167,9 @@ void init_jinnisockets() {
 		jinniSockets[i].connection_status = 0;
 	}
 
-	sem_init(&recv_thread_sem, 0, 1);
+	sem_init(&thread_sem, 0, 1);
 	recv_thread_index = 0;
-	recv_thread_count = 0;
+	thread_count = 0;
 }
 
 void Queues_init() {
@@ -312,7 +312,7 @@ void *Switch_to_Jinni() {
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							write_queue(ff, jinniSockets[index].dataQueue);
+							write_queue(ff, jinniSockets[index].controlQueue);
 							sem_post(&(jinniSockets[index].Qs));
 							sem_post(&(jinniSockets_sem));
 						} else {
@@ -340,7 +340,7 @@ void *Switch_to_Jinni() {
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							write_queue(ff, jinniSockets[index].dataQueue);
+							write_queue(ff, jinniSockets[index].controlQueue);
 							sem_post(&(jinniSockets[index].Qs));
 							sem_post(&(jinniSockets_sem));
 						} else {
@@ -394,8 +394,7 @@ void *Switch_to_Jinni() {
 				temp2->s_addr = dstip;
 			} else {
 				temp2->s_addr = 0;
-			}
-			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 			//*/
 			/**
@@ -431,8 +430,9 @@ void *Switch_to_Jinni() {
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1) {
-				PRINT_DEBUG("Matched: host=%d/%d, dst=%d/%d, prot=%d", jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP,
-						jinniSockets[index].dstport, jinniSockets[index].protocol);
+				PRINT_DEBUG(
+						"Matched: host=%d/%d, dst=%d/%d, prot=%d",
+						jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport, jinniSockets[index].protocol);
 
 				int value;
 				sem_getvalue(&(jinniSockets[index].Qs), &value);
@@ -659,8 +659,7 @@ void *interceptor_to_jinni() {
 					sprintf(pt, " %02x", msg_pt[i]);
 					pt += 3;
 				}
-			}
-			PRINT_DEBUG("msg='%s'", temp);
+			}PRINT_DEBUG("msg='%s'", temp);
 			free(temp);
 			//###############################
 
@@ -979,8 +978,7 @@ int main() {
 	if (ret_val != 0) {
 		perror("sendfins() caused an error");
 		exit(-1);
-	}
-	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	}PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {

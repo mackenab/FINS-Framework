@@ -259,6 +259,7 @@ void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn);
 int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
 struct tcp_thread_data {
+	int id;
 	struct tcp_connection *conn; //TODO change conn/conn_stub to union?
 	struct tcp_connection_stub *conn_stub;
 	struct tcp_segment *seg; //TODO change seg/raw to union?
@@ -268,6 +269,7 @@ struct tcp_thread_data {
 };
 
 struct tcp_to_thread_data {
+	int id;
 	uint8_t *running;
 	uint32_t *fd;
 	uint8_t *flag;

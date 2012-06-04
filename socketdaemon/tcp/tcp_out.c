@@ -10,6 +10,8 @@
 #include <string.h>
 #include "tcp.h"
 
+extern int tcp_thread_count;
+
 void *write_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
@@ -24,11 +26,13 @@ void *write_thread(void *local) {
 	uint8_t *buf;
 	struct tcp_node *node;
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn->write_sem)) { //func depends on write_sem, write op can't be interrupted
 		PRINT_ERROR("conn->write_sem wait prob");
 		exit(-1);
 	}
 	if (conn->running_flag) {
+		PRINT_DEBUG("");
 		if (sem_wait(&conn->sem)) {
 			PRINT_ERROR("conn->write_sem wait prob");
 			exit(-1);
@@ -53,18 +57,20 @@ void *write_thread(void *local) {
 					if (conn->main_wait_flag) {
 						PRINT_DEBUG("posting to wait_sem\n");
 						sem_post(&conn->main_wait_sem);
-					}
+					}PRINT_DEBUG("");
 					sem_post(&conn->sem);
 				} else {
+					PRINT_DEBUG("");
 					sem_post(&conn->sem);
 
+					PRINT_DEBUG("");
 					if (sem_wait(&conn->write_wait_sem)) {
 						PRINT_ERROR("conn->send_wait_sem prod");
 						exit(-1);
 					}
 					sem_init(&conn->write_wait_sem, 0, 0);
 					PRINT_DEBUG("left conn->send_wait_sem\n");
-				}
+				}PRINT_DEBUG("");
 				if (sem_wait(&conn->sem)) {
 					PRINT_ERROR("conn->sem prod");
 					exit(-1);
@@ -75,11 +81,13 @@ void *write_thread(void *local) {
 		}
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
 	conn->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
 	//send ACK to send handler
@@ -119,17 +127,20 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	src_port = (uint16_t) src_port_buf;
 	dst_port = (uint16_t) dst_port_buf;
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
 	conn = conn_find(src_ip, src_port, dst_ip, dst_port); //TODO check if right
 	start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+	PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
 	if (conn) {
 		if (start) {
 			thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			thread_data->id = tcp_thread_count++;
 			thread_data->conn = conn;
 			thread_data->data_raw = ff->dataFrame.pdu;
 			thread_data->data_len = ff->dataFrame.pduLength;
@@ -153,12 +164,14 @@ void tcp_out_fdf(struct finsFrame *ff) {
 
 void *close_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	uint32_t send_ack = thread_data->flags;
 
 	struct tcp_segment *temp_seg;
 	struct tcp_node *temp_node;
 
+	PRINT_DEBUG("close_stub_thread: id=%d", id);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -167,11 +180,13 @@ void *close_stub_thread(void *local) {
 		conn_stub_shutdown(conn_stub);
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
 	conn_stub->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_stub_list_sem);
 
 	//send ACK to close(_stub) handler
@@ -183,6 +198,7 @@ void *close_stub_thread(void *local) {
 		}
 	}
 
+	PRINT_DEBUG("");
 	sem_post(&conn_stub->sem);
 
 	free(thread_data);
@@ -195,6 +211,7 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
+	PRINT_DEBUG("tcp_exec_close_stub: host=%d/%d", host_ip, host_port);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -203,10 +220,12 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 	if (conn_stub) {
 		conn_stub_remove(conn_stub);
 		start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 
 		if (start) {
 			thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			thread_data->id = tcp_thread_count++;
 			thread_data->conn_stub = conn_stub;
 			thread_data->flags = 1;
 
@@ -218,6 +237,7 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 			PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
 		}
 	} else {
+		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 		//TODO error
 	}
@@ -226,10 +246,12 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 void *connect_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 
 	struct tcp_segment *temp_seg;
 
+	PRINT_DEBUG("connect_thread: id=%d", id);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -255,13 +277,16 @@ void *connect_thread(void *local) {
 		startTimer(conn->to_gbn_fd, conn->timeout);
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
 	conn->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
+	PRINT_DEBUG("");
 	sem_post(&conn->sem);
 
 	free(thread_data);
@@ -277,6 +302,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
+	PRINT_DEBUG("tcp_exec_connect: host=%d/%d, rem=%d/%d", host_ip, host_port, rem_ip, rem_port);
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -287,9 +313,11 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 			conn = conn_create(host_ip, host_port, rem_ip, rem_port);
 			if (conn_insert(conn)) {
 				conn->threads++;
+				PRINT_DEBUG("");
 				sem_post(&conn_list_sem);
 
 				//if listening stub remove
+				PRINT_DEBUG("");
 				if (sem_wait(&conn_stub_list_sem)) {
 					PRINT_ERROR("conn_list_sem wait prob");
 					exit(-1);
@@ -298,10 +326,12 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 				if (conn_stub) {
 					conn_stub_remove(conn_stub);
 					start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+					PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
 						stub_thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						thread_data->id = tcp_thread_count++;
 						stub_thread_data->conn_stub = conn_stub;
 						stub_thread_data->flags = 0;
 
@@ -311,10 +341,12 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 						}
 					}
 				} else {
+					PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
 				}
 
 				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_thread_count++;
 				thread_data->conn = conn;
 
 				if (pthread_create(&thread, NULL, connect_thread, (void *) thread_data)) {
@@ -322,6 +354,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 					exit(-1);
 				}
 			} else {
+				PRINT_DEBUG("");
 				sem_post(&conn_list_sem);
 
 				//error - shouldn't happen
@@ -329,11 +362,13 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 				conn_shutdown(conn);
 			}
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
 
 			//TODO throw minor error, list full
 		}
 	} else {
+		PRINT_DEBUG("");
 		sem_post(&conn_list_sem);
 
 		//TODO error, existing connection already connected there
@@ -343,6 +378,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 	struct tcp_connection_stub *conn_stub;
 
+	PRINT_DEBUG("tcp_exec_listen: addr=%d/%d, backlog=%d", host_ip, host_port, backlog);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
@@ -352,8 +388,10 @@ void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 		if (conn_stub_has_space(1)) {
 			conn_stub = conn_stub_create(host_ip, host_port, backlog);
 			if (conn_stub_insert(conn_stub)) {
+				PRINT_DEBUG("");
 				sem_post(&conn_stub_list_sem);
 			} else {
+				PRINT_DEBUG("");
 				sem_post(&conn_stub_list_sem);
 
 				//error - shouldn't happen
@@ -361,10 +399,12 @@ void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 				conn_stub_free(conn_stub);
 			}
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn_stub_list_sem);
 			//TODO throw minor error
 		}
 	} else {
+		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 		//TODO error
 	}
@@ -375,6 +415,7 @@ void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 void *accept_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	uint32_t flags = thread_data->flags;
 
@@ -384,6 +425,7 @@ void *accept_thread(void *local) {
 	int start;
 	struct tcp_segment *temp_seg;
 
+	PRINT_DEBUG("accept_thread: id=%d", id);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -391,10 +433,12 @@ void *accept_thread(void *local) {
 	while (conn_stub->running_flag) {
 		if (!queue_is_empty(conn_stub->syn_queue)) {
 			node = queue_remove_front(conn_stub->syn_queue);
+			PRINT_DEBUG("");
 			sem_post(&conn_stub->sem);
 
 			seg = (struct tcp_segment *) node->data;
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn_list_sem)) {
 				PRINT_ERROR("conn_list_sem wait prob");
 				exit(-1);
@@ -405,8 +449,10 @@ void *accept_thread(void *local) {
 					conn = conn_create(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 					if (conn_insert(conn)) {
 						conn->threads++;
+						PRINT_DEBUG("");
 						sem_post(&conn_list_sem);
 
+						PRINT_DEBUG("");
 						if (sem_wait(&conn->sem)) {
 							PRINT_ERROR("conn->sem wait prob");
 							exit(-1);
@@ -431,18 +477,22 @@ void *accept_thread(void *local) {
 							seg_free(temp_seg);
 						}
 
+						PRINT_DEBUG("");
 						if (sem_wait(&conn_list_sem)) {
 							PRINT_ERROR("conn_list_sem wait prob");
 							exit(-1);
 						}
 						conn->threads--;
+						PRINT_DEBUG("");
 						sem_post(&conn_list_sem);
 
+						PRINT_DEBUG("");
 						sem_post(&conn->sem);
 
 						seg_free(seg);
 						break;
 					} else {
+						PRINT_DEBUG("");
 						sem_post(&conn_list_sem);
 
 						//error - shouldn't happen
@@ -450,18 +500,22 @@ void *accept_thread(void *local) {
 						conn_shutdown(conn);
 					}
 				} else {
+					PRINT_DEBUG("");
 					sem_post(&conn_list_sem);
 					//TODO throw minor error
 				}
 			} else {
+				PRINT_DEBUG("");
 				sem_post(&conn_list_sem);
 				//TODO error
 			}
 
 			seg_free(seg);
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn_stub->sem);
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn_stub->accept_wait_sem)) {
 				PRINT_ERROR("conn_stub->accept_wait_sem prod");
 				exit(-1);
@@ -470,19 +524,23 @@ void *accept_thread(void *local) {
 			PRINT_DEBUG("left conn_stub->accept_wait_sem\n");
 		}
 
+		PRINT_DEBUG("");
 		if (sem_wait(&conn_stub->sem)) {
 			PRINT_ERROR("conn_stub->sem prod");
 			exit(-1);
 		}
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
 	conn_stub->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_stub_list_sem);
 
+	PRINT_DEBUG("");
 	sem_post(&conn_stub->sem);
 
 	free(thread_data);
@@ -500,6 +558,7 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 	struct tcp_connection *conn;
 	struct tcp_segment *temp_seg;
 
+	PRINT_DEBUG("tcp_exec_accept: host=%d/%d, flags=%d", host_ip, host_port, flags);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
@@ -507,10 +566,12 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 	conn_stub = conn_stub_find(host_ip, host_port);
 	if (conn_stub) {
 		start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 
 		if (start) {
 			thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			thread_data->id = tcp_thread_count++;
 			thread_data->conn_stub = conn_stub;
 			thread_data->flags = flags;
 
@@ -522,6 +583,7 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 			PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
 		}
 	} else {
+		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 		//TODO error
 	}
@@ -529,24 +591,29 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 
 void *close_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 
 	struct tcp_segment *temp_seg;
 	struct tcp_node *temp_node;
 
+	PRINT_DEBUG("close_thread: id=%d", id);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
 	}
 	if (conn->running_flag) {
 		if (conn->state == ESTABLISHED) {
+			PRINT_DEBUG("");
 			sem_post(&conn->sem);
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn->write_sem)) {
 				PRINT_ERROR("conn->write_sem wait prob");
 				exit(-1);
 			}
 
+			PRINT_DEBUG("");
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
@@ -577,13 +644,16 @@ void *close_thread(void *local) {
 		}
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
 	conn->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
+	PRINT_DEBUG("");
 	sem_post(&conn->sem);
 
 	free(thread_data);
@@ -596,6 +666,7 @@ void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint1
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
+	PRINT_DEBUG("tcp_exec_close: host=%d/%d, rem=%d/%d", host_ip, host_port, rem_ip, rem_port);
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -603,10 +674,12 @@ void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint1
 	conn = conn_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn) {
 		start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+		PRINT_DEBUG("");
 		sem_post(&conn_list_sem);
 
 		if (start) {
 			thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			thread_data->id = tcp_thread_count++;
 			thread_data->conn = conn;
 
 			if (pthread_create(&thread, NULL, close_thread, (void *) thread_data)) {
@@ -617,6 +690,7 @@ void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint1
 			PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
 		}
 	} else {
+		PRINT_DEBUG("");
 		sem_post(&conn_list_sem);
 		//TODO error trying to close closed connection
 	}

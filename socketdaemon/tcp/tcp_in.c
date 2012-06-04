@@ -11,6 +11,8 @@
 #include <errno.h>
 #include "tcp.h"
 
+extern int tcp_thread_count;
+
 void calcRTT(struct tcp_connection *conn) {
 	struct timeval current;
 	double decimal, sampRTT;
@@ -63,6 +65,7 @@ void *syn_thread(void *local) {
 	uint16_t calc;
 	struct tcp_node *node;
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -74,6 +77,7 @@ void *syn_thread(void *local) {
 				node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
 				queue_append(conn_stub->syn_queue, node);
 
+				PRINT_DEBUG("");
 				sem_post(&conn_stub->accept_wait_sem);
 			} else {
 				//queue full
@@ -87,13 +91,16 @@ void *syn_thread(void *local) {
 		seg_free(seg);
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
 	conn_stub->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_stub_list_sem);
 
+	PRINT_DEBUG("");
 	sem_post(&conn_stub->sem);
 
 	free(thread_data);
@@ -185,6 +192,7 @@ void tcp_recv_syn(struct tcp_connection_stub *conn_stub, struct tcp_segment *seg
 		node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
 		queue_append(conn_stub->syn_queue, node);
 
+		PRINT_DEBUG("");
 		sem_post(&conn_stub->accept_wait_sem);
 	} else {
 		//queue full
@@ -596,6 +604,7 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 			}
 		}
 
+		PRINT_DEBUG("");
 		sem_post(&conn->main_wait_sem); //signal recv main thread
 	} else {
 		//re-ordered segment
@@ -720,6 +729,7 @@ void *recv_thread(void *local) {
 
 	uint16_t calc;
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -778,13 +788,16 @@ void *recv_thread(void *local) {
 		seg_free(seg);
 	}
 
+	PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
 	conn->threads--;
+	PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
+	PRINT_DEBUG("");
 	sem_post(&conn->sem);
 
 	free(thread_data);
@@ -801,6 +814,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 
 	seg = fdf_to_seg(ff);
 	if (seg) {
+		PRINT_DEBUG("");
 		if (sem_wait(&conn_list_sem)) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
@@ -808,10 +822,12 @@ void tcp_in_fdf(struct finsFrame *ff) {
 		conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 		if (conn) {
 			start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+			PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
 
 			if (start) {
 				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_thread_count++;
 				thread_data->conn = conn;
 				thread_data->seg = seg;
 
@@ -823,6 +839,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
 			}
 		} else {
+			PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
 
 			if (seg->flags & FLAG_ACK) {
@@ -831,6 +848,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				//TODO check security, send RST if lower, etc
 
 				//check if listening sockets
+				PRINT_DEBUG("");
 				if (sem_wait(&conn_stub_list_sem)) {
 					PRINT_ERROR("conn_stub_list_sem wait prob");
 					exit(-1);
@@ -838,10 +856,12 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
 				if (conn_stub) {
 					start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+					PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
 						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						thread_data->id = tcp_thread_count++;
 						thread_data->conn_stub = conn_stub;
 						thread_data->seg = seg;
 
@@ -853,6 +873,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 						PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
 					}
 				} else {
+					PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
 					PRINT_DEBUG("Found no stub. Dropping...");
 					seg_free(seg);

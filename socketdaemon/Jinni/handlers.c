@@ -15,8 +15,8 @@ extern sem_t jinniSockets_sem;
 extern struct finssocket jinniSockets[MAX_sockets];
 
 extern int recv_thread_index;
-extern int recv_thread_count;
-extern sem_t recv_thread_sem;
+extern int thread_count;
+extern sem_t thread_sem;
 
 /** The queues might be moved later to another Master file */
 
@@ -223,6 +223,7 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 
 			jinniSockets[i].protocol = protocol;
 			jinniSockets[i].backlog = DEFAULT_BACKLOG;
+			jinniSockets[i].controlQueue = init_queue(NULL, MAX_Queue_size);
 			jinniSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
 			sem_init(&jinniSockets[i].Qs, 0, 1);
 
@@ -238,8 +239,7 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 
 			return i;
 		}
-	}
-	PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
+	}PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
 	return (-1);
 }
 
@@ -260,6 +260,7 @@ int removejinniSocket(unsigned long long targetID) {
 			//TODO stop all threads related to
 
 			jinniSockets[i].connection_status = 0;
+			term_queue(jinniSockets[i].controlQueue);
 			term_queue(jinniSockets[i].dataQueue);
 			return (1);
 
@@ -396,6 +397,108 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 	return (1);
 }
 
+struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_flag) {
+	struct finsFrame *ff;
+
+	/**
+	 * It keeps looping as a bad method to implement the blocking feature
+	 * of recvfrom. In case it is not blocking then the while loop should
+	 * be replaced with only a single trial !
+	 *
+	 */
+	if (index < 0) {
+		return NULL;
+	}
+
+	PRINT_DEBUG("");
+	if (block_flag) {
+		/**
+		 * WE Must FINS another way to emulate the blocking.
+		 * The best suggestion is to use a pipeline to push the data in
+		 * instead of the data queue
+		 */
+		do {
+			sem_wait(&jinniSockets_sem);
+			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_DEBUG("Socket closed, canceling read block.");
+				sem_post(&jinniSockets_sem);
+				return NULL;
+			}
+
+			sem_wait(&(jinniSockets[index].Qs));
+			ff = read_queue(jinniSockets[index].dataQueue);
+			//	ff = get_fake_frame();
+			sem_post(&(jinniSockets[index].Qs));
+			sem_post(&jinniSockets_sem);
+		} while (ff == NULL);
+	} else {
+		sem_wait(&jinniSockets_sem);
+		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling read block.");
+			sem_post(&jinniSockets_sem);
+			return NULL;
+		}
+		sem_wait(&(jinniSockets[index].Qs));
+		ff = read_queue(jinniSockets[index].dataQueue);
+		//ff = get_fake_frame();
+		//print_finsFrame(ff);
+		sem_post(&(jinniSockets[index].Qs));
+		sem_post(&jinniSockets_sem);
+	}PRINT_DEBUG("");
+
+	return ff;
+}
+
+struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag) {
+	struct finsFrame *ff;
+
+	/**
+	 * It keeps looping as a bad method to implement the blocking feature
+	 * of recvfrom. In case it is not blocking then the while loop should
+	 * be replaced with only a single trial !
+	 *
+	 */
+	PRINT_DEBUG("");
+	if (block_flag) {
+		/**
+		 * WE Must FINS another way to emulate the blocking.
+		 * The best suggestion is to use a pipeline to push the data in
+		 * instead of the data queue
+		 */
+		do {
+			sem_wait(&jinniSockets_sem);
+			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_DEBUG("Socket closed, canceling read block.");
+				sem_post(&jinniSockets_sem);
+				return NULL;
+			}
+
+			sem_wait(&(jinniSockets[index].Qs));
+			ff = read_queue(jinniSockets[index].controlQueue);
+			//	ff = get_fake_frame();
+			sem_post(&(jinniSockets[index].Qs));
+			sem_post(&jinniSockets_sem);
+		} while (ff == NULL);
+	} else {
+		sem_wait(&jinniSockets_sem);
+		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling read block.");
+			sem_post(&jinniSockets_sem);
+			return NULL;
+		}
+		sem_wait(&(jinniSockets[index].Qs));
+		ff = read_queue(jinniSockets[index].controlQueue);
+		//ff = get_fake_frame();
+		//print_finsFrame(ff);
+		sem_post(&(jinniSockets[index].Qs));
+		sem_post(&jinniSockets_sem);
+	}
+
+	PRINT_DEBUG("");
+
+	return ff;
+}
+
 void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 
 	int domain;
@@ -423,7 +526,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		return;
 	}
 
-	PRINT_DEBUG("socket call handler2");
+	PRINT_DEBUG("socket call handler: domain=%d, type=%d, protocol=%d", domain, type, protocol);
 
 	PRINT_DEBUG("%d,%d,%d", domain, protocol, type);
 	if (domain != AF_INET) {
@@ -482,7 +585,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 		return;
 	}
 
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("bind_call_handler: addr=%d/%d family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
@@ -532,7 +635,8 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		return;
 	}
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("listen_call_handler: backlog=%d", backlog);
+
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
@@ -588,7 +692,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		return;
 	}
 
-	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("connect_call_handler: addr=%d/%d family=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
@@ -767,8 +871,8 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 				sendto_udp(index, uniqueSockID, data, datalen, msg_flags, addr, addrlen);
 			} else if (type == SOCK_STREAM) {
 				//TODO implement or error?
-				//sendto_tcp(index, uniqueSockID, data,datalen,  msg_flags, addr, addrlen);
-				nack_send(uniqueSockID, sendmsg_call);
+				sendto_tcp(index, uniqueSockID, data, datalen, msg_flags, addr, addrlen);
+				//nack_send(uniqueSockID, sendmsg_call);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 				sendto_icmp(index, uniqueSockID, data, datalen, msg_flags, addr, addrlen);
 			} else {
@@ -786,20 +890,20 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 	int index;
-	int datalen;
+	int data_len;
 	int flags;
 	int symbol;
-	int msgFlags;
-	int controlFlag;
-	ssize_t msgControl_Length;
-	void *msgControl;
+	int msg_flags;
+	int control_flag;
+	ssize_t msg_control_len;
+	void *msg_control;
 	u_char *pt;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("recvmsg_call_handler: Entered: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
-	datalen = *(ssize_t *) pt; //check on not in original socket_interceptor: recvmsg
+	data_len = *(ssize_t *) pt; //check on not in original socket_interceptor: recvmsg
 	pt += sizeof(ssize_t);
 
 	flags = *(int *) pt;
@@ -808,25 +912,25 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	symbol = *(int *) pt;
 	pt += sizeof(int);
 
-	msgFlags = *(int *) pt;
+	msg_flags = *(int *) pt;
 	pt += sizeof(int);
 
-	controlFlag = *(int *) pt;
+	control_flag = *(int *) pt;
 	pt += sizeof(int);
 
-	if (controlFlag) {
-		msgControl_Length = *(u_int *) pt;
+	if (control_flag) {
+		msg_control_len = *(u_int *) pt;
 		pt += sizeof(u_int);
 
-		if (msgControl_Length <= 0) {
-			PRINT_DEBUG("READING ERROR! CRASH, msgControl_Length=%d", msgControl_Length);
+		if (msg_control_len <= 0) {
+			PRINT_DEBUG("READING ERROR! CRASH, msgControl_Length=%d", msg_control_len);
 			nack_send(uniqueSockID, recvmsg_call);
 			return;
 		}
-		msgControl = (u_char *) malloc(msgControl_Length);
-		if (msgControl) {
-			memcpy(msgControl, pt, msgControl_Length); //??? originally had &msgControl
-			pt += msgControl_Length;
+		msg_control = (u_char *) malloc(msg_control_len);
+		if (msg_control) {
+			memcpy(msg_control, pt, msg_control_len); //??? originally had &msgControl
+			pt += msg_control_len;
 		} else {
 			PRINT_DEBUG("allocation error");
 			nack_send(uniqueSockID, recvmsg_call);
@@ -865,11 +969,13 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	if (status > 0) {
 		if (type == SOCK_DGRAM) {
-			//recv_udp(index, uniqueSockID, datalen, data, flags); //recvfrom_udp
+			//recv_udp(index, uniqueSockID, datalen, data, flags);
+			recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
 		} else if (type == SOCK_STREAM) {
-			recv_tcp(index, uniqueSockID, datalen, flags);
+			//recv_tcp(index, uniqueSockID, data_len, flags, msg_flags);
+			recvfrom_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-			//TODO implement?
+			nack_send(uniqueSockID, recvmsg_call); //TODO implement?
 		} else {
 			PRINT_DEBUG("unknown socket type has been read !!!");
 			nack_send(uniqueSockID, recvmsg_call);
@@ -881,11 +987,13 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		 */
 		if (symbol) { // check that the passed address is not NULL
 			if (type == SOCK_DGRAM) {
-				//sendto_udp(uniqueSockID, datalen, data, flags, addr, addrlen);
+				recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
 			} else if (type == SOCK_STREAM) {
 				//sendto_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
+				nack_send(uniqueSockID, recvmsg_call);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 				//sendto_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
+				nack_send(uniqueSockID, recvmsg_call); //TODO what should this be?
 			} else {
 				PRINT_DEBUG("unknown target address !!!");
 				nack_send(uniqueSockID, recvmsg_call);
@@ -894,54 +1002,6 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			PRINT_DEBUG("unknown target address !!!");
 			nack_send(uniqueSockID, recvmsg_call);
 		}
-	}
-
-	struct recvfrom_data *thread_data;
-	pthread_t *recvmsg_thread;
-	int rc;
-
-	if (recv_thread_count < MAX_recv_threads) {
-		PRINT_DEBUG("recv_thread_count=%d", recv_thread_count);
-		recvmsg_thread = (pthread_t *) malloc(sizeof(pthread_t));
-
-		thread_data = (struct recvfrom_data *) malloc(sizeof(struct recvfrom_data));
-		thread_data->id = recv_thread_index++;
-		thread_data->uniqueSockID = uniqueSockID;
-		thread_data->socketCallType = recvmsg_call;
-		thread_data->datalen = datalen;
-		thread_data->flags = flags;
-		thread_data->symbol = symbol;
-
-		if (jinniSockets[index].type == SOCK_DGRAM) {
-			/** Whenever we need to implement non_blocking mode using
-			 * threads. We will call the function below using thread_create
-			 */
-			//rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_udp, (void *) thread_data);
-			//recvfrom_udp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
-		} else if (jinniSockets[index].type == SOCK_STREAM) {
-			/* rc = pthread_create(recvmsg_thread, NULL,
-			 (void * (*)(void *)) recvfrom_tcp, (void *) thread_data);*/
-			//recvfrom_tcp(index, uniqueSockID, recvmsg_call, datalen, flags, symbol);
-		} else if ((jinniSockets[index].type == SOCK_RAW) && (jinniSockets[index].protocol == IPPROTO_ICMP)) {
-			//rc = pthread_create(recvmsg_thread, NULL, (void * (*)(void *)) recvfrom_icmp, (void *) thread_data);
-			//recvfrom_icmp(uniqueSockID, recvmsg_call, datalen, flags, symbol);
-		} else {
-			PRINT_DEBUG("This socket is of unknown type");
-			nack_send(uniqueSockID, recvmsg_call);
-			rc = 1;
-		}
-
-		if (rc) {
-			PRINT_DEBUG("Problem starting recvmsg thread: %d, ret=%d", thread_data->id, rc);
-		} else {
-			sem_wait(&recv_thread_sem);
-			recv_thread_count++;
-			sem_post(&recv_thread_sem);
-		}
-		free(recvmsg_thread);
-	} else {
-		PRINT_DEBUG("Hit max allowed recv thread, count=%d", recv_thread_count);
-		nack_send(uniqueSockID, recvmsg_call);
 	}
 }
 
@@ -985,8 +1045,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
 		nack_send(uniqueSockID, getsockopt_call);
 		return;
-	}
-	PRINT_DEBUG("");
+	}PRINT_DEBUG("");
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
 		getsockopt_udp(uniqueSockID, level, optname, optlen, optval);
@@ -1040,8 +1099,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is notfound too ");
 		nack_send(uniqueSockID, setsockopt_call);
 		return;
-	}
-	PRINT_DEBUG("");
+	}PRINT_DEBUG("");
 
 	if (jinniSockets[index].type == SOCK_DGRAM)
 		setsockopt_udp(uniqueSockID, level, optname, optlen, optval);
@@ -1161,8 +1219,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
 		nack_send(uniqueSockID, ioctl_call);
 		return;
-	}
-	PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
+	}PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
 
 	/*if (jinniSockets[index].type == SOCK_DGRAM)
 	 ioctl_udp(uniqueSockID, cmd, arg);
@@ -1343,9 +1400,9 @@ void socketpair_call_handler() {
 }
 
 void recvthread_exit(struct recvfrom_data *thread_data) {
-	sem_wait(&recv_thread_sem);
-	recv_thread_count--;
-	sem_post(&recv_thread_sem);
+	sem_wait(&thread_sem);
+	thread_count--;
+	sem_post(&thread_sem);
 
 	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
 	free(thread_data);

@@ -14,7 +14,8 @@
 #include "handlers.h"
 
 int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
-int UDPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag, int multi_flag);
+int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag,
+		int multi_flag);
 
 void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSockID);
 void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
@@ -25,8 +26,8 @@ void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);
 
+void recvfrom_udp(int index, unsigned long long uniqueSockID, int datalen, int flags, int msgFlags);
 void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
-void recvfrom_udp(void *threadData);
 
 void socketpair_udp();
 void getsockname_udp();
@@ -38,5 +39,16 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int
 void accept4_udp();
 void shutdown_udp(unsigned long long uniqueSockID, int how);
 void release_udp(unsigned long long uniqueSockID);
+
+struct jinni_udp_thread_data {
+	int id;
+	int index;
+	unsigned long long uniqueSockID;
+	int data_len;
+	int flags;
+	//int socketCallType; //TODO remove?
+	//int symbol; //TODO remove?
+};
+#define MAX_recv_threads 100
 
 #endif /* UDPHANDLING_H_ */

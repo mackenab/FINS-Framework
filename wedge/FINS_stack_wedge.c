@@ -787,8 +787,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	int controlFlag = 0;
 	int i = 0;
 	u_int data_len = 0;
-	int symbol = 1; //default value unless passes address equal NULL
-	int flags = 0; //TODO: determine correct value
+	int symbol = 1; //default value unless passes address equal NULL //TODO remove?
 
 	ssize_t buf_len;
 	void *buf;
@@ -1018,7 +1017,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len >= sizeof(int))) {
+	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len >= 0)) {
 		pt = jinniSockets[index].reply_buf;
 
 		if (jinniSockets[index].reply_ret == ACK) {
@@ -1102,7 +1101,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	} else {
 		PRINT_ERROR("jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p", jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
 		rc = -1;
-	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
+	}
+	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
 	up(&jinniSockets[index].reply_sem_r);
 
 	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);

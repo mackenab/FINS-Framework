@@ -22,10 +22,14 @@
 #define EXEC_TCP_OPT 7
 
 struct jinni_tcp_thread_data {
+	int id;
 	int index;
 	unsigned long long uniqueSockID;
-	int blocking_flag;
+	int data_len;
+	int flags;
 	unsigned long long uniqueSockID_new;
+	//int socketCallType; //TODO remove?
+	//int symbol; //TODO remove?
 };
 
 int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat, int block_flag);
@@ -39,8 +43,8 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
 void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
-void recv_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags);
-void recvfrom_tcp(int index, unsigned long long uniqueSockID, int datalen, int flags, int symbol);
+void recv_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags);
+void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags); //TODO need symbol?
 
 void socketpair_tcp();
 void getsockname_tcp();

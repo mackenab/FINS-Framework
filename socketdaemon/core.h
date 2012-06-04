@@ -43,17 +43,15 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset);
 //begin: interceptor merge
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-	#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/fins"
 #else
-	#define FINS_TMP_ROOT "/tmp/fins"
+#define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
 /** The Global socket channel descriptor is used to communicate between the socket
  * interceptor and the socket jinni until they exchange the socket UNIQUE ID, then a separate
  * named pipe gets opened for the newly created socket */
 //end: interceptor merge
-
-
 
 #endif /* SOCKETGENI_H_ */
 
