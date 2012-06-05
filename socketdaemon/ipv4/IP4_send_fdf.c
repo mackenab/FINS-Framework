@@ -13,34 +13,31 @@ extern sem_t IPv4_to_Switch_Qsem;
 
 void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 
-	struct finsFrame *fins_frame = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
 	PRINT_DEBUG("IP4_send_fdf_in() called");
 	fins_frame->dataOrCtrl = DATA;
-	PRINT_DEBUG("protocol # %d",pheader->protocol);
+	PRINT_DEBUG("protocol # %d", pheader->protocol);
 	switch (pheader->protocol) {
-		case IP4_PT_TCP:
-			fins_frame->destinationID.id = TCPID;
-			break;
-		case IP4_PT_UDP:
-			fins_frame->destinationID.id = UDPID;
-			break;
-		case IP4_PT_ICMP:
-			fins_frame->destinationID.id = SOCKETSTUBID;
-			//fins_frame->destinationID.id = ICMPID;// todo: ICMPID should be decided
-			break;
+	case IP4_PT_TCP:
+		fins_frame->destinationID.id = TCPID;
+		break;
+	case IP4_PT_UDP:
+		fins_frame->destinationID.id = UDPID;
+		break;
+	case IP4_PT_ICMP:
+		fins_frame->destinationID.id = SOCKETSTUBID;
+		//fins_frame->destinationID.id = ICMPID;// todo: ICMPID should be decided
+		break;
 	}
 
 	PRINT_DEBUG();
 	fins_frame->destinationID.next = NULL;
 	fins_frame->dataFrame.directionFlag = UP;
-	fins_frame->dataFrame.pduLength = pheader->packet_length
-			- pheader->header_length;
+	fins_frame->dataFrame.pduLength = pheader->packet_length - pheader->header_length;
 	//	fins_frame->dataFrame.pduLength = pheader->packet_length - 20;
 	data = (char *) malloc(pheader->packet_length - pheader->header_length);
-	memcpy(data, ppacket->ip_data, pheader->packet_length
-			- pheader->header_length);
+	memcpy(data, ppacket->ip_data, pheader->packet_length - pheader->header_length);
 	fins_frame->dataFrame.pdu = data;
 	/**	char ssss[20];
 	 memcpy(ssss,(ppacket->ip_data)+ 8, (pheader->packet_length - pheader->header_length) -8);
@@ -53,7 +50,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 
 	IP4addr srcaddress = ppacket->ip_src;
 	IP4addr dstaddress = ppacket->ip_dst;
-	PRINT_DEBUG("protocol # %d",ppacket->ip_proto);
+	PRINT_DEBUG("protocol # %d", ppacket->ip_proto);
 	uint16_t protocol = ppacket->ip_proto; /* protocol number should  be 17 from metadata */
 	/** Filling into the metadata with sourceIP, DestinationIP, and ProtocolNumber */
 
@@ -61,14 +58,13 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	metadata_writeToElement(ipv4_meta, "ipdst", &dstaddress, META_TYPE_INT);
 	metadata_writeToElement(ipv4_meta, "protocol", &protocol, META_TYPE_INT);
 	fins_frame->dataFrame.metaData = ipv4_meta;
-	PRINT_DEBUG("protocol %d, srcip %lu, dstip %lu", protocol,srcaddress,dstaddress);
+	PRINT_DEBUG("protocol %d, srcip %lu, dstip %lu", protocol, srcaddress, dstaddress);
 
 	sendToSwitch_IPv4(fins_frame);
 
 }
 
-void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket,
-		struct ip4_next_hop_info next_hop, uint16_t length) {
+void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length) {
 
 	if (ff == NULL) {
 
@@ -78,8 +74,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket,
 	}
 
 	//print_finsFrame(ff);
-	struct finsFrame *fins_frame = (struct finsFrame *) malloc(
-			sizeof(struct finsFrame));
+	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
 	PRINT_DEBUG("IP4_send_fdf_out() called.");
 	fins_frame->dataOrCtrl = DATA;
@@ -89,7 +84,6 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket,
 	(fins_frame->dataFrame.metaData) = ff->dataFrame.metaData;
 	(fins_frame->dataFrame).pduLength = length + IP4_MIN_HLEN;
 	//(fins_frame->dataFrame).pdu = (unsigned char *)ppacket;
-
 
 	data = (char *) malloc(length + IP4_MIN_HLEN);
 

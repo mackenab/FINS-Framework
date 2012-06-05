@@ -1066,7 +1066,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	optlen = *(int *) pt;
 	pt += sizeof(int);
 
-	if (optlen > 0) {
+	if (optlen > 0) { //TODO remove?
 		optval = (u_char *) malloc(optlen);
 		memcpy(optval, pt, optlen);
 		pt += optlen;

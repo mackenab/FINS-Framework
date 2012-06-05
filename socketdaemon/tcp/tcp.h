@@ -30,14 +30,25 @@
 #define FLAG_NS			0x100	//ECN-nonce concealment protection.
 //bytes 4-6 in this field are reserved for future use and should be set = 0
 #define FLAG_DATAOFFSET	0xF000	//For easily grabbing the data offset from the flags field
-#define HEADERSIZE(x)	((x & FLAG_DATAOFFSET) * 4)	//For easily grabbing the size of the header in bytes from the flags field
-#define MAX_OPTIONS_LEN			320						//Maximum number of bits in the options field of the TCP header is 320 bits, says RFC
-#define MIN_DATA_OFFSET_LEN		5						//As per RFC spec, if the TCP header has no options set, the length will be 5 32-bit segments
-#define MIN_TCP_HEADER_LEN		MIN_DATA_OFFSET_LEN * 4	//Therefore, the minimum TCP header length is 4*5=20 bytes
-#define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_DATA_OFFSET_LEN	//Maximum TCP header size, as defined by the maximum options size
+#define MAX_TCP_OPTIONS_WORDS		10
+#define MIN_TCP_HEADER_WORDS		5
+#define MAX_TCP_HEADER_WORDS		(MIN_TCP_HEADER_WORDS + MAX_TCP_OPTIONS_WORDS)
+#define MIN_TCP_HEADER_BYTES		(MIN_TCP_HEADER_WORDS*4)
+#define MAX_TCP_HEADER_BYTES		(MAX_TCP_HEADER_WORDS*4)
+#define TCP_HEADER_WORDS(flags)		((flags & FLAG_DATAOFFSET) >> 12)
+#define TCP_OPTIONS_WORDS(flags)	(TCP_HEADER_WORDS(flags) - MIN_TCP_HEADER_WORDS)
+#define TCP_HEADER_BYTES(flags)		(TCP_HEADER_WORDS(flags)*4)	//For easily grabbing the size of the header in bytes from the flags field
+#define TCP_OPTIONS_BYTES(flags)	(TCP_OPTIONS_WORDS(flags)*4)
+
+#define TCP_PROTOCOL 		6
+#define IP_HEADER_WORDS 	3
+#define IP_HEADER_BYTES 	(IP_HEADER_WORDS*4)
+
+//#define MAX_OPTIONS_LEN			320						//Maximum number of bits in the options field of the TCP header is 320 bits, says RFC
+//#define MIN_DATA_OFFSET			5						//As per RFC spec, if the TCP header has no options set, the length will be 5 32-bit segments
+//#define MIN_TCP_HEADER_LEN		MIN_DATA_OFFSET * 4	//Therefore, the minimum TCP header length is 4*5=20 bytes
+//#define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_TCP_HEADER_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
-#define TCP_PROTOCOL 6
-#define IP_HEADERSIZE 12
 
 //structure for a record of a tcp_queue
 struct tcp_node {
@@ -187,7 +198,7 @@ struct tcp_connection {
 	uint32_t rem_seq_end; //seq of rem last sent
 	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint16_t rem_window; //avail bytes in rem recv buffer
-//-----
+	//-----
 };
 
 //TODO raise any of these?
@@ -270,8 +281,8 @@ struct tcp_thread_data {
 
 struct tcp_to_thread_data {
 	int id;
+	int fd;
 	uint8_t *running;
-	uint32_t *fd;
 	uint8_t *flag;
 	uint8_t *waiting;
 	sem_t *sem;
@@ -283,9 +294,6 @@ void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
-
-int tcp_getheadersize(uint16_t flags); //Get the size of the TCP header in bytes from the flags field
-//int		tcp_get_datalen(uint16_t flags);					//Extract the datalen for a tcp_segment from the flags field
 
 #define EXEC_TCP_CONNECT 0
 #define EXEC_TCP_LISTEN 1

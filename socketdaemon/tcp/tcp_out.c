@@ -15,6 +15,7 @@ extern int tcp_thread_count;
 void *write_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 	uint8_t *called_data = thread_data->data_raw;
 	uint32_t called_len = thread_data->data_len;
@@ -26,7 +27,7 @@ void *write_thread(void *local) {
 	uint8_t *buf;
 	struct tcp_node *node;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("write_thread: Entered: id=%d", id);
 	if (sem_wait(&conn->write_sem)) { //func depends on write_sem, write op can't be interrupted
 		PRINT_ERROR("conn->write_sem wait prob");
 		exit(-1);
@@ -57,8 +58,7 @@ void *write_thread(void *local) {
 					if (conn->main_wait_flag) {
 						PRINT_DEBUG("posting to wait_sem\n");
 						sem_post(&conn->main_wait_sem);
-					}
-					PRINT_DEBUG("");
+					}PRINT_DEBUG("");
 					sem_post(&conn->sem);
 				} else {
 					PRINT_DEBUG("");
@@ -71,8 +71,7 @@ void *write_thread(void *local) {
 					}
 					sem_init(&conn->write_wait_sem, 0, 0);
 					PRINT_DEBUG("left conn->send_wait_sem\n");
-				}
-				PRINT_DEBUG("");
+				}PRINT_DEBUG("");
 				if (sem_wait(&conn->sem)) {
 					PRINT_ERROR("conn->sem prod");
 					exit(-1);
@@ -99,6 +98,7 @@ void *write_thread(void *local) {
 		//TODO error
 	}
 
+	PRINT_DEBUG("write_thread: Exited: id=%d", id);
 	free(buf);
 	free(called_data);
 	free(thread_data);
@@ -118,6 +118,8 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
+	PRINT_DEBUG("tcp_out_fdf: Entered");
+
 	metadata* meta = (ff->dataFrame).metaData;
 	metadata_readFromElement(meta, "srcip", &src_ip); //host
 	metadata_readFromElement(meta, "dstip", &dst_ip); //remote
@@ -135,7 +137,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		exit(-1);
 	}
 	conn = conn_find(src_ip, src_port, dst_ip, dst_port); //TODO check if right
-	start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+	start = (conn->threads < MAX_THREADS) ? ++conn->threads : 0;
 	PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
@@ -173,7 +175,7 @@ void *close_stub_thread(void *local) {
 	struct tcp_segment *temp_seg;
 	struct tcp_node *temp_node;
 
-	PRINT_DEBUG("close_stub_thread: id=%d", id);
+	PRINT_DEBUG("close_stub_thread: Entered: id=%d", id);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -203,6 +205,8 @@ void *close_stub_thread(void *local) {
 	PRINT_DEBUG("");
 	sem_post(&conn_stub->sem);
 
+	PRINT_DEBUG("write_thread: Exited: id=%d", id);
+
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -213,7 +217,7 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	PRINT_DEBUG("tcp_exec_close_stub: host=%d/%d", host_ip, host_port);
+	PRINT_DEBUG("tcp_exec_close_stub: Entered: host=%d/%d", host_ip, host_port);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -221,7 +225,7 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 	conn_stub = conn_stub_find(host_ip, host_port);
 	if (conn_stub) {
 		conn_stub_remove(conn_stub);
-		start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+		start = (conn_stub->threads < MAX_THREADS) ? ++conn_stub->threads : 0;
 		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 
@@ -253,7 +257,7 @@ void *connect_thread(void *local) {
 
 	struct tcp_segment *temp_seg;
 
-	PRINT_DEBUG("connect_thread: id=%d", id);
+	PRINT_DEBUG("connect_thread: Entered: id=%d", id);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -291,6 +295,8 @@ void *connect_thread(void *local) {
 	PRINT_DEBUG("");
 	sem_post(&conn->sem);
 
+	PRINT_DEBUG("connect_thread: Exited: id=%d", id);
+
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -304,7 +310,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
-	PRINT_DEBUG("tcp_exec_connect: host=%d/%d, rem=%d/%d", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("tcp_exec_connect: Entered: host=%d/%d, rem=%d/%d", host_ip, host_port, rem_ip, rem_port);
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -327,7 +333,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 				conn_stub = conn_stub_find(host_ip, host_port);
 				if (conn_stub) {
 					conn_stub_remove(conn_stub);
-					start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+					start = (conn_stub->threads < MAX_THREADS) ? ++conn_stub->threads : 0;
 					PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
 
@@ -380,7 +386,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 	struct tcp_connection_stub *conn_stub;
 
-	PRINT_DEBUG("tcp_exec_listen: addr=%d/%d, backlog=%d", host_ip, host_port, backlog);
+	PRINT_DEBUG("tcp_exec_listen: Entered: addr=%d/%d, backlog=%d", host_ip, host_port, backlog);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
@@ -427,7 +433,7 @@ void *accept_thread(void *local) {
 	int start;
 	struct tcp_segment *temp_seg;
 
-	PRINT_DEBUG("accept_thread: id=%d", id);
+	PRINT_DEBUG("accept_thread: Entered: id=%d", id);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -545,6 +551,8 @@ void *accept_thread(void *local) {
 	PRINT_DEBUG("");
 	sem_post(&conn_stub->sem);
 
+	PRINT_DEBUG("accept_thread: Exited: id=%d", id);
+
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -560,14 +568,14 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 	struct tcp_connection *conn;
 	struct tcp_segment *temp_seg;
 
-	PRINT_DEBUG("tcp_exec_accept: host=%d/%d, flags=%d", host_ip, host_port, flags);
+	PRINT_DEBUG("tcp_exec_accept: Entered: host=%d/%d, flags=%d", host_ip, host_port, flags);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
 	conn_stub = conn_stub_find(host_ip, host_port);
 	if (conn_stub) {
-		start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+		start = (conn_stub->threads < MAX_THREADS) ? ++conn_stub->threads : 0;
 		PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
 
@@ -599,7 +607,7 @@ void *close_thread(void *local) {
 	struct tcp_segment *temp_seg;
 	struct tcp_node *temp_node;
 
-	PRINT_DEBUG("close_thread: id=%d", id);
+	PRINT_DEBUG("close_thread: Entered: id=%d", id);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -658,6 +666,8 @@ void *close_thread(void *local) {
 	PRINT_DEBUG("");
 	sem_post(&conn->sem);
 
+	PRINT_DEBUG("close_thread: Exited: id=%d", id);
+
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -668,14 +678,14 @@ void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint1
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	PRINT_DEBUG("tcp_exec_close: host=%d/%d, rem=%d/%d", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("tcp_exec_close: Entered: host=%d/%d, rem=%d/%d", host_ip, host_port, rem_ip, rem_port);
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
 	conn = conn_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn) {
-		start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+		start = (conn->threads < MAX_THREADS) ? ++conn->threads : 0;
 		PRINT_DEBUG("");
 		sem_post(&conn_list_sem);
 

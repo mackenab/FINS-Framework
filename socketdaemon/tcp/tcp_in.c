@@ -59,13 +59,14 @@ void calcRTT(struct tcp_connection *conn) {
 
 void *syn_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	struct tcp_segment *seg = thread_data->seg;
 
 	uint16_t calc;
 	struct tcp_node *node;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("syn_thread: Entered: id=%d", id);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -103,6 +104,7 @@ void *syn_thread(void *local) {
 	PRINT_DEBUG("");
 	sem_post(&conn_stub->sem);
 
+	PRINT_DEBUG("syn_thread: Exited: id=%d", id);
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -724,12 +726,13 @@ void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 void *recv_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 	struct tcp_segment *seg = thread_data->seg;
 
 	uint16_t calc;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("recv_thread: Entered: id=%d", id);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -800,6 +803,8 @@ void *recv_thread(void *local) {
 	PRINT_DEBUG("");
 	sem_post(&conn->sem);
 
+	PRINT_DEBUG("recv_thread: Exited: id=%d", id);
+
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -812,6 +817,8 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
+	PRINT_DEBUG("tcp_in_fdf: Entered");
+
 	seg = fdf_to_seg(ff);
 	if (seg) {
 		PRINT_DEBUG("");
@@ -821,7 +828,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 		}
 		conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 		if (conn) {
-			start = (conn->threads < MAX_THREADS) ? conn->threads++ : 0;
+			start = (conn->threads < MAX_THREADS) ? ++conn->threads : 0;
 			PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
 
@@ -855,7 +862,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				}
 				conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
 				if (conn_stub) {
-					start = (conn_stub->threads < MAX_THREADS) ? conn_stub->threads++ : 0;
+					start = (conn_stub->threads < MAX_THREADS) ? ++conn_stub->threads : 0;
 					PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
 

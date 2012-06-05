@@ -890,8 +890,9 @@ void *Inject() {
 		//		continue;
 		//	}
 		framelen = ff->dataFrame.pduLength;
+		PRINT_DEBUG("framelen=%d", framelen);
 		frame = (char *) malloc(framelen + SIZE_ETHERNET);
-
+		PRINT_DEBUG("");
 		/** TODO Fill the dest and src with the correct MAC addresses
 		 * you receive from the ARP module
 		 */

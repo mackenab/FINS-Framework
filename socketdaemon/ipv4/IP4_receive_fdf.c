@@ -53,6 +53,9 @@ void IP4_receive_fdf() {
 			case IP4_PT_ICMP:
 				IP4_out(pff, (pff->dataFrame).pduLength, my_ip_addr, IP4_PT_ICMP);
 				break;
+			case IP4_PT_TCP:
+				IP4_out(pff, (pff->dataFrame).pduLength, my_ip_addr, IP4_PT_TCP);
+				break;
 			default:
 				PRINT_DEBUG("invalid protocol neither UDP nor ICMP !!!!!! protocol=%d", protocol);
 				/**

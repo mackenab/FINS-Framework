@@ -332,7 +332,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	PRINT_DEBUG("bind_UDP CALL");
 
 	if (addr->sin_family != AF_INET) {
-		PRINT_DEBUG("Wrong address family");
+		PRINT_DEBUG("Wrong address family=%d", addr->sin_family);
 		nack_send(uniqueSockID, bind_call);
 		return;
 	}
@@ -340,7 +340,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
 	hostport = ntohs(addr->sin_port);
-	host_IP_netformat = (addr->sin_addr).s_addr;
+	host_IP_netformat = addr->sin_addr.s_addr;
 
 	/**TODO check if the port is free for binding or previously allocated
 	 * Current code assume that the port is authorized to be accessed
@@ -351,8 +351,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the jinniSockets database
 	 */
-	PRINT_DEBUG("bind address: %d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
-	PRINT_DEBUG("bind address: %d, %s/%d", addr->sin_family, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+	PRINT_DEBUG("bind address: host=%s/%d host_IP_netformat=%d", inet_ntoa(addr->sin_addr), hostport, host_IP_netformat);
 
 	sem_wait(&jinniSockets_sem);
 	if (jinniSockets[index].uniqueSockID != uniqueSockID) {

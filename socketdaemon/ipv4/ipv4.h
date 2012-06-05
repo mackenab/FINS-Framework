@@ -225,36 +225,26 @@ int IP4_dest_check(IP4addr destination);
 //void IP4_reass(void);
 void IP4_send_fdf_in(struct ip4_header*, struct ip4_packet*);
 
-void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket,
-		struct ip4_next_hop_info next_hop, uint16_t length);
+void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length);
 
 uint8_t IP4_add_fragment(struct ip4_reass_list*, struct ip4_fragment*);
-struct ip4_packet* IP4_reass(struct ip4_header *header,
-		struct ip4_packet *packet);
-struct ip4_reass_list* IP4_new_packet_entry(struct ip4_header* pheader,
-		struct ip4_reass_list* previous, struct ip4_reass_list* next);
-struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader,
-		struct ip4_packet* ppacket);
+struct ip4_packet* IP4_reass(struct ip4_header *header, struct ip4_packet *packet);
+struct ip4_reass_list* IP4_new_packet_entry(struct ip4_header* pheader, struct ip4_reass_list* previous, struct ip4_reass_list* next);
+struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader, struct ip4_packet* ppacket);
 struct ip4_reass_hole* IP4_previous_hole(struct ip4_reass_hole* current_hole);
 struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole);
-void IP4_remove_hole(struct ip4_reass_hole* current_hole,
-		struct ip4_reass_list *list);
-void IP4_const_header(struct ip4_packet *packet, IP4addr source,
-		IP4addr destination, uint8_t protocol);
-struct ip4_fragment IP4_fragment_data(void *data, uint16_t length,
-		uint16_t offest, uint16_t fragment_size);
+void IP4_remove_hole(struct ip4_reass_hole* current_hole, struct ip4_reass_list *list);
+void IP4_const_header(struct ip4_packet *packet, IP4addr source, IP4addr destination, uint8_t protocol);
+struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offest, uint16_t fragment_size);
 
-void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
-		uint8_t protocol);
+void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t protocol);
 
 struct ip4_routing_table * IP4_get_routing_table();
-struct ip4_routing_table * IP4_sort_routing_table(
-		struct ip4_routing_table * table_pointer);
+struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * table_pointer);
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer);
 void IP4_init();
 struct ip4_next_hop_info IP4_next_hop(IP4addr dst);
-int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest,
-		uint16_t length);
+int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length);
 void IP4_receive_fdf();
 int InputQueue_Read_local(struct finsFrame *pff);
 void sendToSwitch_IPv4(struct finsFrame *fins_frame);
