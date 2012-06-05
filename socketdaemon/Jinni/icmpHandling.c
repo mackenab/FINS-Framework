@@ -491,11 +491,9 @@ void sendmsg_icmp() {
 void recvmsg_icmp() {
 
 }
-void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
+void getsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
 
 	//TODO: convert
-
-	int index;
 
 	int optvalue = -1;
 	index = findjinniSocket(uniqueSockID);
@@ -531,9 +529,7 @@ void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, in
 	return;
 
 }
-void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
-
-	int index;
+void setsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval) {
 
 	index = findjinniSocket(uniqueSockID);
 

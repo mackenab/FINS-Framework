@@ -1079,20 +1079,26 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 
 	PRINT_DEBUG("");
+	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&jinniSockets_sem);
+
 		nack_send(uniqueSockID, getsockopt_call);
 		return;
 	}
-	PRINT_DEBUG("");
 
-	if (jinniSockets[index].type == SOCK_DGRAM)
-		getsockopt_udp(uniqueSockID, level, optname, optlen, optval);
-	else if (jinniSockets[index].type == SOCK_STREAM)
+	int type = jinniSockets[index].type;
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
+
+	if (type == SOCK_DGRAM)
+		getsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
+	else if (type == SOCK_STREAM)
 		getsockopt_tcp(index, uniqueSockID, level, optname, optlen, optval);
-	else if (jinniSockets[index].type == SOCK_RAW) {
-		getsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
+	else if (type == SOCK_RAW) {
+		getsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, getsockopt_call);
@@ -1134,20 +1140,26 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 
 	PRINT_DEBUG("");
+	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is notfound too ");
-		nack_send(uniqueSockID, setsockopt_call);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, getsockopt_call);
 		return;
 	}
-	PRINT_DEBUG("");
 
-	if (jinniSockets[index].type == SOCK_DGRAM)
-		setsockopt_udp(uniqueSockID, level, optname, optlen, optval);
-	else if (jinniSockets[index].type == SOCK_STREAM)
+	int type = jinniSockets[index].type;
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
+
+	if (type == SOCK_DGRAM)
+		setsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
+	else if (type == SOCK_STREAM)
 		setsockopt_tcp(index, uniqueSockID, level, optname, optlen, optval);
-	else if (jinniSockets[index].type == SOCK_RAW) {
-		setsockopt_icmp(uniqueSockID, level, optname, optlen, optval);
+	else if (type == SOCK_RAW) {
+		setsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, setsockopt_call);

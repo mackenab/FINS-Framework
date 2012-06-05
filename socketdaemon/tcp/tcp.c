@@ -1194,13 +1194,11 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 	int protocol;
 
 	int ret;
-	unsigned long test;
 	ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
-	//ret += metadata_readFromElement(params, "ipsrc", &seg->src_ip) == 0; //host
-	ret += metadata_readFromElement(params, "ipsrc", &test) == 0; //host
+	ret += metadata_readFromElement(params, "ipsrc", &seg->src_ip) == 0; //host
 	ret += metadata_readFromElement(params, "ipdst", &seg->dst_ip) == 0; //remote
 
-	seg->src_ip = (uint32_t) test;
+	//seg->src_ip = htonl(seg->src_ip);
 	seg->dst_ip = htonl(seg->dst_ip); //correction for IPv4 changes //TODO align all module so don't need
 
 	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {

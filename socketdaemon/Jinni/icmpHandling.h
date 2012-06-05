@@ -24,8 +24,8 @@ void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags);
 void recvfrom_icmp(void *threadData);
 void sendmsg_icmp();
 void recvmsg_icmp();
-void getsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
-void setsockopt_icmp(unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
+void getsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
+void setsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
 void shutdown_icmp(unsigned long long uniqueSockID, int how);
 void release_icmp(int index, unsigned long long uniqueSockID);
 

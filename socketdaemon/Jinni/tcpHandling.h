@@ -52,8 +52,8 @@ void socketpair_tcp();
 void getsockname_tcp();
 void getpeername_tcp(int index, unsigned long long uniqueSockID, int addrlen);
 void recvmsg_tcp();
-void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
-void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
+void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
+void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void accept4_tcp();
 void shutdown_tcp(int index, unsigned long long uniqueSockID, int how);
 

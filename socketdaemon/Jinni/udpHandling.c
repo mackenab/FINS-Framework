@@ -1169,17 +1169,22 @@ void shutdown_udp(unsigned long long uniqueSockID, int how) {
 	ack_send(uniqueSockID, shutdown_call);
 }
 
-void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
-	int index;
+void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
 
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+
+
+	PRINT_DEBUG("setsockopt_udp: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("Socket closed, canceling getsockopt_udp.");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, setsockopt_call);
 		return;
 	}
 
-	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname, optlen);
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
 
 	/*
 	 * 7 levels+:
@@ -1260,8 +1265,7 @@ void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int
 	//uint32_t socketoptions;
 }
 
-void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
-	int index;
+void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
 	int len;
 	char *val;
 	void *msg;
@@ -1269,14 +1273,18 @@ void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int
 	int msg_len;
 	int ret_val;
 
-	index = findjinniSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+	PRINT_DEBUG("getsockopt_udp: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("Socket closed, canceling getsockopt_udp.");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, getsockopt_call);
 		return;
 	}
 
-	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG("level=%d, optname=%d, optlen=%d", level, optname, optlen);
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
 
 	/*
 	 metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));

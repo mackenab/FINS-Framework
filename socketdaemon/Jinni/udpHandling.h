@@ -34,8 +34,8 @@ void getsockname_udp();
 void getpeername_udp(unsigned long long uniqueSockID, int addrlen);
 //void send_udp(); /** UDP DOESN NOT IMPLEMENT SEND without recipient */
 
-void getsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
-void setsockopt_udp(unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
+void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
+void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval);
 void accept4_udp();
 void shutdown_udp(unsigned long long uniqueSockID, int how);
 

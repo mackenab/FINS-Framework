@@ -45,12 +45,13 @@
 
 /* control message types - finsCtrlFrame.opcode values */
 #define CTRL_ALERT 	0			// "pushed" messages; not error messages
-#define CTRL_READ_PARAM	1		// read module parameter message
-#define CTRL_READ_PARAM_REPLY 2	// reply to the above message; contains param value
-#define CTRL_SET_PARAM 3		// set module param message
-#define CTRL_EXEC 4				// telling a module to do something; module dependent
-#define CTRL_EXEC_REPLY 5		// a reply to the above, if necessary
-#define CTRL_ERROR 6 			// error message; ICMP msg for example
+#define CTRL_ERROR 1 			// error message; ICMP msg for example
+#define CTRL_READ_PARAM	2		// read module parameter message
+#define CTRL_READ_PARAM_REPLY 3	// reply to the above message; contains param value
+#define CTRL_SET_PARAM 4		// set module param message
+#define CTRL_SET_PARAM_REPLY 5	// reply to the above message; contains ACK
+#define CTRL_EXEC 6				// telling a module to do something; module dependent
+#define CTRL_EXEC_REPLY 7		// a reply to the above, if necessary
 
 /* frame type - finsframe.dataOrCtrl values */
 #define DATA 0
@@ -90,15 +91,16 @@ struct finsCtrlFrame {
 	unsigned short int opcode;	// type of control message, see CTRL_* values
 	unsigned int serialNum;		// unique identifier, varies by msg type
 
-	//below 2 fields from vt_kevin
 	unsigned char * name ; 		// parameter/function/error name
 	void * data ; 				// pointer to relevant data; msg type dependent
 								// if using a struct for this, define elsewhere
 								// such as ICMP data information, define in ICMP
 	/* Special fields for control frames depending on the Opcode */
+
 	unsigned int paramterID;
 	void *paramterValue;
 	unsigned int paramterLen;
+
 	struct tableRecord *replyRecord;
 	metadata *metaData;			// metadata
 };
