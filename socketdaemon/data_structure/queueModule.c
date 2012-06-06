@@ -281,8 +281,7 @@ int freeFinsFrame(struct finsFrame *f) {
 	if (f->dataOrCtrl == CONTROL) {
 		PRINT_DEBUG("freeFinsFrame: Entered: ff=%d meta=%d", (int) f, (int) f->ctrlFrame.metaData);
 		if ((f->ctrlFrame).metaData != NULL) {
-			PRINT_DEBUG("6666");
-
+			PRINT_DEBUG("freeing meta=%d", (int)(f->ctrlFrame).metaData);
 			metadata_destroy((f->ctrlFrame).metaData);
 			PRINT_DEBUG("5555");
 
@@ -291,8 +290,7 @@ int freeFinsFrame(struct finsFrame *f) {
 	} else {
 		PRINT_DEBUG("freeFinsFrame: Entered: ff=%d meta=%d", (int) f, (int) f->dataFrame.metaData);
 		if ((f->dataFrame).metaData != NULL) {
-			PRINT_DEBUG("6666");
-
+			PRINT_DEBUG("freeing meta=%d", (int)(f->dataFrame).metaData);
 			metadata_destroy((f->dataFrame).metaData);
 			PRINT_DEBUG("5555");
 

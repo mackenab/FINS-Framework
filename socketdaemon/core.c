@@ -1079,6 +1079,7 @@ void *Inject() {
 			return (0);
 		}
 
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		free(frame);
 	} // end of while loop

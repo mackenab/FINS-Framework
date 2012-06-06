@@ -270,7 +270,6 @@ void queue_free(struct tcp_queue *queue) {
 		node_free(node);
 		node = next;
 	}
-
 	free(queue);
 }
 
@@ -385,6 +384,7 @@ int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_ca
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed, freeing meta=%d", (int) params);
 		metadata_destroy(params);
 		return 0;
 	}
@@ -442,7 +442,6 @@ void conn_stub_free(struct tcp_connection_stub *conn_stub) {
 
 	if (conn_stub->syn_queue)
 		queue_free(conn_stub->syn_queue);
-
 	free(conn_stub);
 }
 
@@ -1077,14 +1076,14 @@ int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t re
 	ret += metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("meta write failed");
+		PRINT_ERROR("meta write failed, meta=%d", (int) params);
 		metadata_destroy(params);
 		return 0;
 	}
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed");
+		PRINT_ERROR("ff creation failed, meta=%d", (int) params);
 		metadata_destroy(params);
 		return 0;
 	}
@@ -1161,7 +1160,6 @@ void conn_free(struct tcp_connection *conn) {
 		queue_free(conn->recv_queue);
 	//if (conn->read_queue)
 	//	queue_free(conn->read_queue);
-
 	free(conn);
 }
 
@@ -1233,14 +1231,14 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("seg_to_fdf: failed matadata write: seg=%d", (int)seg);
+		PRINT_ERROR("seg_to_fdf: failed matadata write: seg=%d meta=%d", (int)seg, (int)params);
 		metadata_destroy(params);
 		return NULL;
 	}
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("seg_to_fdf: failed to create ff: seg=%d", (int)seg);
+		PRINT_ERROR("seg_to_fdf: failed to create ff: seg=%d meta=%d", (int)seg, (int)params);
 		metadata_destroy(params);
 		return NULL;
 	}
@@ -1317,7 +1315,6 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 
 	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {
 		PRINT_DEBUG("fdf_to_seg: error: ret=%d, protocol=%d", ret, protocol);
-
 		free(seg);
 		return NULL;
 	}
@@ -1588,12 +1585,13 @@ int seg_send(struct tcp_segment *seg) {
 }
 
 void seg_free(struct tcp_segment *seg) {
-	if (seg->data_len)
+	if (seg->data_len) {
 		free(seg->data);
+	}
 
-	if (seg->opt_len)
+	if (seg->opt_len) {
 		free(seg->options); //TODO change when have options object
-
+	}
 	free(seg);
 }
 
@@ -1749,7 +1747,7 @@ void tcp_fcf(struct finsFrame *ff) {
 	case CTRL_EXEC:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		tcp_exec(ff);
-		freeFinsFrame(ff);
+		//#freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -1902,7 +1900,7 @@ int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed");
+		PRINT_ERROR("ff creation failed, meta=%d", (int)params);
 		metadata_destroy(params);
 		return 0;
 	}
@@ -1948,13 +1946,14 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("tcp_fdf_to_jinni: failed matadata write");
+		PRINT_ERROR("tcp_fdf_to_jinni: failed matadata write, meta=%d", (int)params);
 		metadata_destroy(params);
 		return 0;
 	}
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
+		PRINT_ERROR("tcp_fdf_to_jinni: ff creation failed, meta=%d", (int)params);
 		metadata_destroy(params);
 		return 0;
 	}

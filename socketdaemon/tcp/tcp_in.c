@@ -821,6 +821,7 @@ void *recv_thread(void *local) {
 			seg_free(seg);
 		}
 	} else {
+		PRINT_DEBUG("not running, dropping: seg=%d", (int)seg);
 		seg_free(seg);
 	}
 
@@ -938,5 +939,5 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	}
 
 	free(ff->dataFrame.pdu);
-	freeFinsFrame(ff);
+	//#freeFinsFrame(ff);
 }

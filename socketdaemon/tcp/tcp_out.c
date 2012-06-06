@@ -164,7 +164,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		PRINT_DEBUG("error");
 	}
 
-	freeFinsFrame(ff);
+	//#freeFinsFrame(ff);
 }
 
 void *close_stub_thread(void *local) {

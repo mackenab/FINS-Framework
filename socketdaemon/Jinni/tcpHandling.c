@@ -474,6 +474,7 @@ void *connect_tcp_thread(void *local) {
 		PRINT_DEBUG("connect_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
 		nack_send(uniqueSockID, connect_call);
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -501,6 +502,7 @@ void *connect_tcp_thread(void *local) {
 		ack_send(uniqueSockID, connect_call);
 	}
 
+	PRINT_DEBUG("freeing ff=%d", (int)ff);
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
 }
@@ -667,6 +669,7 @@ void *accept_tcp_thread(void *local) {
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("accept_tcp_thread: Exiting, No fdf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		nack_send(uniqueSockID, accept_call);
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -724,6 +727,7 @@ void *accept_tcp_thread(void *local) {
 	 */
 	PRINT_DEBUG();
 
+	PRINT_DEBUG("freeing ff=%d", (int)ff);
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
 }
@@ -992,6 +996,7 @@ void *sendmsg_tcp_thread(void *local) {
 	PRINT_DEBUG("sendmsg_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
 		nack_send(uniqueSockID, sendmsg_call); //TODO check return of nonblocking send
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -1006,6 +1011,7 @@ void *sendmsg_tcp_thread(void *local) {
 		ack_send(uniqueSockID, sendmsg_call);
 	}
 
+	PRINT_DEBUG("freeing ff=%d", (int)ff);
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
 }
@@ -1248,7 +1254,7 @@ void *recvfrom_tcp_thread(void *local) {
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
-	PRINT_DEBUG("release_udp: index=%d uniqueSockID=%llu", index, uniqueSockID);
+	PRINT_DEBUG("recvfrom_tcp_thread: index=%d uniqueSockID=%llu", index, uniqueSockID);
 	sem_wait(&jinniSockets_sem);
 	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("Socket closed, canceling release_tcp.");
@@ -1273,7 +1279,7 @@ void *recvfrom_tcp_thread(void *local) {
 
 	PRINT_DEBUG();
 	struct finsFrame *ff = get_fdf(index, uniqueSockID, blocking_flag);
-	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d", uniqueSockID, index);
+	PRINT_DEBUG("recvfrom_tcp_thread: after get_fdf uniqID=%llu ind=%d", uniqueSockID, index);
 
 	if (ff == NULL) { //TODO add check if nonblocking send
 		PRINT_DEBUG("recvfrom_tcp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
@@ -1452,6 +1458,7 @@ void *release_tcp_thread(void *local) {
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("release_tcp_thread: Exiting, No fdf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		nack_send(uniqueSockID, release_call);
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -1491,6 +1498,7 @@ void *release_tcp_thread(void *local) {
 
 	PRINT_DEBUG();
 
+	PRINT_DEBUG("freeing ff=%d", (int)ff);
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
 }
@@ -1861,6 +1869,7 @@ void *getsockopt_tcp_thread(void *local) {
 		PRINT_DEBUG("getsockopt_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
 		nack_send(uniqueSockID, getsockopt_call);
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -1920,6 +1929,7 @@ void *getsockopt_tcp_thread(void *local) {
 		}
 	}
 
+	PRINT_DEBUG("freeing ff=%d", (int)ff);
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
 }
@@ -2073,9 +2083,11 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	}
 
 	if (send_dst == -1) {
+		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 		nack_send(uniqueSockID, getsockopt_call);
 	} else if (send_dst == 0) {
+		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 
 		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
@@ -2177,6 +2189,7 @@ void *setsockopt_tcp_thread(void *local) {
 		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
 		nack_send(uniqueSockID, setsockopt_call);
+		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -2194,6 +2207,7 @@ void *setsockopt_tcp_thread(void *local) {
 		ack_send(uniqueSockID, setsockopt_call);
 	}
 
+	PRINT_DEBUG("freeing ff=%d", (int)ff);
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
 }
@@ -2342,9 +2356,11 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	}
 
 	if (send_dst == -1) {
+		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 		nack_send(uniqueSockID, getsockopt_call);
 	} else if (send_dst == 0) {
+		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 
 		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
