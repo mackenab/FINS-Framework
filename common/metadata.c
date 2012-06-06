@@ -10,9 +10,6 @@
 
 #include "metadata.h"
 
-
-
-
 /** @example <USEmetadata>
  * int main(int argc, char **argv)
  {
@@ -58,6 +55,8 @@ void metadata_create(metadata *mptr) {
 }
 
 void metadata_destroy(metadata *metadata) {
+	if (metadata)
+		PRINT_DEBUG("metadata_destroy: Entered: meta=%d", (int) metadata);
 
 	config_destroy(metadata);
 
@@ -102,8 +101,7 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
  * if it does not exist, it creates the element and set its value
  * if it already exists , it sets its value only
  */
-int metadata_writeToElement(metadata *cfgptr, char *target, void *value,
-		int type) {
+int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int type) {
 
 	int status;
 	metadata_element *root, *handle;
@@ -115,7 +113,7 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value,
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT);
 		status = config_setting_set_int(handle, *(int *) value);
-		PRINT_DEBUG("%d",status);
+		PRINT_DEBUG("%d", status);
 		break;
 
 	case CONFIG_TYPE_STRING:
@@ -123,7 +121,7 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value,
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_STRING);
 		status = config_setting_set_string(handle, (char *) value);
-		PRINT_DEBUG("%d",status);
+		PRINT_DEBUG("%d", status);
 		break;
 	default:
 		PRINT_DEBUG(" wrong type to be written\n");
@@ -165,8 +163,7 @@ int metadata_setElement(metadata_element *element, void *value) {
  * it returns a pointer to that new added element
  */
 
-metadata_element *metadata_addElement(metadata *cfgptr, char *elementName,
-		int type) {
+metadata_element *metadata_addElement(metadata *cfgptr, char *elementName, int type) {
 	metadata_element *root;
 	root = config_root_setting(cfgptr);
 	return (config_setting_add(root, elementName, type));
@@ -198,15 +195,15 @@ int metadata_print(metadata *cfgptr) {
 		name = config_setting_name(handle);
 
 		type = config_setting_type(handle);
-		PRINT_DEBUG("\n%s \\",name);
+		PRINT_DEBUG("\n%s \\", name);
 		switch (type) {
 		case CONFIG_TYPE_INT:
 			value = config_setting_get_int(handle);
-			PRINT_DEBUG("%d",value);
+			PRINT_DEBUG("%d", value);
 			break;
 		case CONFIG_TYPE_STRING:
-			stringValue = (char *)config_setting_get_string(handle);
-			PRINT_DEBUG("%s",stringValue);
+			stringValue = (char *) config_setting_get_string(handle);
+			PRINT_DEBUG("%s", stringValue);
 			break;
 
 		default:

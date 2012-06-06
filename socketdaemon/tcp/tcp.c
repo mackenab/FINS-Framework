@@ -371,7 +371,7 @@ int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_ca
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		return 0;
 	}
 
@@ -1061,22 +1061,30 @@ int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t re
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
+		return 0;
+	}
+	int status = 1;
+
+	int ret = 0;
+	ret += metadata_writeToElement(params, "status", &status, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == 0;
+
+	ret += metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT) == 0;
+
+	if (ret) {
+		PRINT_ERROR("meta write failed");
+		metadata_destroy(params);
 		return 0;
 	}
 
-	int status = 1;
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
-	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
-	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
-
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed");
 		metadata_destroy(params);
 		return 0;
 	}
@@ -1211,18 +1219,28 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
+		PRINT_ERROR("seg_to_fdf: failed to create matadata: seg=%d", (int)seg);
 		return NULL;
 	}
 
-	int protocol = TCP_PROTOCOL;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
-	metadata_writeToElement(params, "src_ip", &seg->src_ip, META_TYPE_INT); //Write the source ip in
-	metadata_writeToElement(params, "dst_ip", &seg->dst_ip, META_TYPE_INT); //And the destination ip
-	metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT); //Write the source port in
-	metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT); //And the destination port
+	int ret = 0;
+	ret += metadata_writeToElement(params, "src_ip", &seg->src_ip, META_TYPE_INT) == 0; //Write the source ip in
+	ret += metadata_writeToElement(params, "dst_ip", &seg->dst_ip, META_TYPE_INT) == 0; //And the destination ip
+	ret += metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT) == 0; //Write the source port in
+	ret += metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT) == 0; //And the destination port
+
+	uint32_t protocol = (uint32_t) TCP_PROTOCOL;
+	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
+
+	if (ret) {
+		PRINT_ERROR("seg_to_fdf: failed matadata write: seg=%d", (int)seg);
+		metadata_destroy(params);
+		return NULL;
+	}
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
+		PRINT_ERROR("seg_to_fdf: failed to create ff: seg=%d", (int)seg);
 		metadata_destroy(params);
 		return NULL;
 	}
@@ -1234,8 +1252,8 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ff->dataFrame.metaData = params;
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
 	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
-	PRINT_DEBUG("seg_to_fdf: seg=%d ff=%d data_len=%d hdr=%d pduLength=%d",
-			(int)seg, (int)ff, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
+	PRINT_DEBUG("seg_to_fdf: seg=%d ff=%d meta=%d data_len=%d hdr=%d pduLength=%d",
+			(int)seg, (int)ff, (int) ff->dataFrame.metaData, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
 
 	//For big-vs-little endian issues, I shall shift everything and deal with it manually here
 	uint8_t *ptr = ff->dataFrame.pdu;
@@ -1265,7 +1283,7 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 		ptr += seg->data_len;
 	}
 
-	PRINT_DEBUG("seg_to_fdf: Exited: seg=%d ff=%d", (int)seg, (int)ff);
+	PRINT_DEBUG("seg_to_fdf: Exited: seg=%d ff=%d meta=%d", (int)seg, (int)ff, (int) ff->dataFrame.metaData);
 	return ff;
 }
 
@@ -1289,12 +1307,13 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 		free(seg);
 		return NULL;
 	}
-	int protocol;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 	ret += metadata_readFromElement(params, "src_ip", &seg->src_ip) == 0; //host
 	ret += metadata_readFromElement(params, "dst_ip", &seg->dst_ip) == 0; //remote
+
+	uint32_t protocol;
+	ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 
 	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {
 		PRINT_DEBUG("fdf_to_seg: error: ret=%d, protocol=%d", ret, protocol);
@@ -1468,7 +1487,7 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint32_t f
 
 	int offset = seg->opt_len / 32; //TODO improve logic, use ceil? round up
 	seg->flags |= ((MIN_TCP_HEADER_WORDS + offset) << 12) & FLAG_DATAOFFSET;
-	PRINT_DEBUG("seg_update: offset=%d pkt_len=%d", offset, TCP_HEADER_BYTES(seg->flags));
+	PRINT_DEBUG("seg_update: offset=%d header_len=%d pkt_len=%d", offset, TCP_HEADER_BYTES(seg->flags), TCP_HEADER_BYTES(seg->flags)+seg->data_len);
 
 	//TODO alt checksum
 	seg->checksum = seg_checksum(seg);
@@ -1518,7 +1537,7 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	return ((uint16_t) sum);
 }
 
-void seg_send(struct tcp_segment *seg) {
+int seg_send(struct tcp_segment *seg) {
 	PRINT_DEBUG("seg_send: Entered: seg=%d", (int)seg);
 
 	struct finsFrame *ff = seg_to_fdf(seg);
@@ -1554,9 +1573,18 @@ void seg_send(struct tcp_segment *seg) {
 	 }
 	 //###############################*/
 
-	tcp_to_switch(ff);
-
-	PRINT_DEBUG("seg_send: Exited: seg=%d ff=%d", (int)seg, (int)ff);
+	if (ff) {
+		if (tcp_to_switch(ff)) {
+			PRINT_DEBUG("seg_send: Exited, normal: seg=%d ff=%d meta=%d", (int)seg, (int)ff, (int) ff->dataFrame.metaData);
+			return 1;
+		} else {
+			PRINT_DEBUG("seg_send: Exited, failed: seg=%d ff=%d meta=%d", (int)seg, (int)ff, (int) ff->dataFrame.metaData);
+			return 0;
+		}
+	} else {
+		PRINT_DEBUG("seg_send: Exited, failed: seg=%d ff=%d meta=%d", (int)seg, (int)0, (int)0);
+		return 0;
+	}
 }
 
 void seg_free(struct tcp_segment *seg) {
@@ -1834,7 +1862,11 @@ void tcp_exec(struct finsFrame *ff) {
 }
 
 int tcp_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("");
+	if (ff->dataOrCtrl == CONTROL) {
+		PRINT_DEBUG("tcp_to_switch: Entered: ff=%d meta=%d", (int)ff, (int) ff->ctrlFrame.metaData);
+	} else {
+		PRINT_DEBUG("tcp_to_switch: Entered: ff=%d meta=%d", (int)ff, (int) ff->ctrlFrame.metaData);
+	}
 	if (sem_wait(&TCP_to_Switch_Qsem)) {
 		PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
 		exit(-1);
@@ -1853,7 +1885,7 @@ int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		return 0;
 	}
 
@@ -1870,6 +1902,7 @@ int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed");
 		metadata_destroy(params);
 		return 0;
 	}
@@ -1893,7 +1926,7 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		return 0;
 	}
 
@@ -1905,12 +1938,20 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_
 	uint32_t dstprt = (uint32_t) dstport;
 	uint32_t hostprt = (uint32_t) hostport;
 
-	int protocol = TCP_PROTOCOL;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
-	metadata_writeToElement(params, "src_ip", &host_IP_netformat, META_TYPE_INT);
-	metadata_writeToElement(params, "src_port", &hostprt, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_ip", &dst_IP_netformat, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_port", &dstprt, META_TYPE_INT);
+	int ret = 0;
+	ret += metadata_writeToElement(params, "src_ip", &host_IP_netformat, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "src_port", &hostprt, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "dst_ip", &dst_IP_netformat, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "dst_port", &dstprt, META_TYPE_INT) == 0;
+
+	uint32_t protocol = (uint32_t) TCP_PROTOCOL;
+	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
+
+	if (ret) {
+		PRINT_ERROR("tcp_fdf_to_jinni: failed matadata write");
+		metadata_destroy(params);
+		return 0;
+	}
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {

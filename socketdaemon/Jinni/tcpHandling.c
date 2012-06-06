@@ -987,7 +987,7 @@ void *sendmsg_tcp_thread(void *local) {
 	uint32_t exec_call;
 	uint32_t ret_val;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("sendmsg_tcp_thread: Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 	struct finsFrame *ff = get_fcf(index, uniqueSockID, 1);
 	PRINT_DEBUG("sendmsg_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
@@ -1038,7 +1038,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 		break;
 	} // end of the switch clause
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("send_tcp: Entered: index=%d, uniqueSockID=%llu, data_len=%d, flags=%d", index, uniqueSockID, data_len, flags);
 
 	sem_wait(&jinniSockets_sem);
 	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
@@ -1090,9 +1090,9 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	host_ip = jinniSockets[index].host_IP;
 	PRINT_DEBUG("");
 	sem_post(&jinniSockets_sem);
-	PRINT_DEBUG("");
 
-	PRINT_DEBUG("%d,%d,%d,%d", dst_ip, dst_port, host_ip, host_port);
+	PRINT_DEBUG("host=%u/%d, dst=%u/%d", host_ip, host_port, dst_ip, dst_port);
+
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -1110,6 +1110,8 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 			thread_data->index = index;
 			thread_data->uniqueSockID = uniqueSockID;
 			//thread_data->blocking_flag = blocking_flag;
+
+			PRINT_DEBUG("");
 
 			//spin off thread to handle
 			if (pthread_create(&thread, NULL, sendmsg_tcp_thread, (void *) thread_data)) {
@@ -1266,7 +1268,6 @@ void *recvfrom_tcp_thread(void *local) {
 
 	/** TODO handle flags cases, convert flags/msg_flags to */
 	//thread_flags = 0; // |= FLAGS_BLOCK | MULTI_FLAG;
-
 	PRINT_DEBUG("");
 	sem_post(&jinniSockets_sem);
 

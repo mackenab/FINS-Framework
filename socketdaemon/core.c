@@ -269,13 +269,21 @@ void *Switch_to_Jinni() {
 			continue;
 		}PRINT_DEBUG("");
 		if (ff->dataOrCtrl == CONTROL) {
-			PRINT_DEBUG("control ff: opcode=%d", ff->ctrlFrame.opcode);
+			host_ip = -1;
+			host_port = -1;
+			rem_ip = -1;
+			rem_port = -1;
+
+			PRINT_DEBUG("control ff: ff=%d meta=%d opcode=%d", (int)ff, (int)ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
+				PRINT_DEBUG("");
 				break;
 			case CTRL_ALERT_REPLY:
+				PRINT_DEBUG("");
 				break;
 			case CTRL_READ_PARAM:
+				PRINT_DEBUG("");
 				break;
 			case CTRL_READ_PARAM_REPLY:
 				if (ff->ctrlFrame.metaData) {
@@ -362,10 +370,13 @@ void *Switch_to_Jinni() {
 				}
 				break;
 			case CTRL_SET_PARAM:
+				PRINT_DEBUG("");
 				break;
 			case CTRL_SET_PARAM_REPLY:
+				PRINT_DEBUG("");
 				break;
 			case CTRL_EXEC:
+				PRINT_DEBUG("");
 				break;
 			case CTRL_EXEC_REPLY:
 				if (ff->ctrlFrame.metaData) {
@@ -470,8 +481,7 @@ void *Switch_to_Jinni() {
 							temp->s_addr = host_ip;
 						} else {
 							temp->s_addr = 0;
-						}
-						PRINT_DEBUG("NETFORMAT %d, host=%s/%d", protocol, inet_ntoa(*temp), (host_port));
+						}PRINT_DEBUG("NETFORMAT %d, host=%s/%d", protocol, inet_ntoa(*temp), (host_port));
 						PRINT_DEBUG("NETFORMAT %d, host=%u/%d", protocol, (*temp).s_addr, (host_port));
 						//##################
 
@@ -506,8 +516,10 @@ void *Switch_to_Jinni() {
 				}
 				break;
 			case CTRL_ERROR:
+				PRINT_DEBUG("");
 				break;
 			default:
+				PRINT_DEBUG("");
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {

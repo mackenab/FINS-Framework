@@ -265,7 +265,7 @@ struct tcp_segment *seg_create(struct tcp_connection *conn);
 void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);
 void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint32_t flags);
 uint16_t seg_checksum(struct tcp_segment *seg);
-void seg_send(struct tcp_segment *seg);
+int seg_send(struct tcp_segment *seg);
 void seg_free(struct tcp_segment *seg);
 void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn);
 

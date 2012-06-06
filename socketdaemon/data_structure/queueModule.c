@@ -236,8 +236,7 @@ void print_finsFrame(struct finsFrame *fins_in) {
 		PRINT_DEBUG("\nControl fins %d\n", fins_in->dataOrCtrl);
 		PRINT_DEBUG("\nOpcode %d\n", fins_in->ctrlFrame.opcode);
 		PRINT_DEBUG("\nParameter ID %d\n", fins_in->ctrlFrame.paramterID);
-		PRINT_DEBUG("\nParameter Value %d\n",
-				*(int *) (fins_in->ctrlFrame.paramterValue));
+		PRINT_DEBUG("\nParameter Value %d\n", *(int *) (fins_in->ctrlFrame.paramterValue));
 		//		PRINT_DEBUG("\nReply Record (first element) %x\n", fins_in->ctrlFrame.replyRecord);
 		PRINT_DEBUG("\nSender Id %d\n", fins_in->ctrlFrame.senderID);
 		PRINT_DEBUG("\nSerial number %d\n", fins_in->ctrlFrame.serialNum);
@@ -277,29 +276,27 @@ struct finsFrame * buildFinsFrame(void) {
 }
 
 int freeFinsFrame(struct finsFrame *f) {
-	//PRINT_DEBUG("4444");
-
 	if (f == NULL)
 		return (0);
 	if (f->dataOrCtrl == CONTROL) {
+		PRINT_DEBUG("freeFinsFrame: Entered: ff=%d meta=%d", (int) f, (int) f->ctrlFrame.metaData);
 		if ((f->ctrlFrame).metaData != NULL) {
 			PRINT_DEBUG("6666");
 
 			metadata_destroy((f->ctrlFrame).metaData);
 			PRINT_DEBUG("5555");
 
-		}
-		PRINT_DEBUG("7777");
+		}PRINT_DEBUG("7777");
 
 	} else {
+		PRINT_DEBUG("freeFinsFrame: Entered: ff=%d meta=%d", (int) f, (int) f->dataFrame.metaData);
 		if ((f->dataFrame).metaData != NULL) {
 			PRINT_DEBUG("6666");
 
 			metadata_destroy((f->dataFrame).metaData);
 			PRINT_DEBUG("5555");
 
-		}
-		PRINT_DEBUG("7777");
+		}PRINT_DEBUG("7777");
 	}
 	free(f);
 	PRINT_DEBUG("8888");
