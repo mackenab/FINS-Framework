@@ -45,13 +45,14 @@
 
 /* control message types - finsCtrlFrame.opcode values */
 #define CTRL_ALERT 	0			// "pushed" messages; not error messages
-#define CTRL_ERROR 1 			// error message; ICMP msg for example
+#define CTRL_ALERT_REPLY 1
 #define CTRL_READ_PARAM	2		// read module parameter message
 #define CTRL_READ_PARAM_REPLY 3	// reply to the above message; contains param value
 #define CTRL_SET_PARAM 4		// set module param message
 #define CTRL_SET_PARAM_REPLY 5	// reply to the above message; contains ACK
 #define CTRL_EXEC 6				// telling a module to do something; module dependent
 #define CTRL_EXEC_REPLY 7		// a reply to the above, if necessary
+#define CTRL_ERROR 8 			// error message; ICMP msg for example
 
 /* frame type - finsframe.dataOrCtrl values */
 #define DATA 0

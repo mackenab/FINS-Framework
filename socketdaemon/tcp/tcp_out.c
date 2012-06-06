@@ -38,6 +38,7 @@ void *write_thread(void *local) {
 			PRINT_ERROR("conn->write_sem wait prob");
 			exit(-1);
 		}
+		PRINT_DEBUG("write_thread: state=%d", conn->state);
 		if (conn->state == ESTABLISHED || conn->state == CLOSE_WAIT) {
 			while (index < called_len) {
 				space = conn->write_queue->max - conn->write_queue->len;
@@ -161,6 +162,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		//TODO error
 
 		//TODO LISTEN: if SEND, SYN, SYN_SENT
+		PRINT_DEBUG("error");
 	}
 
 	freeFinsFrame(ff);
@@ -197,8 +199,10 @@ void *close_stub_thread(void *local) {
 	if (send_ack) {
 		if (tcp_fcf_to_jinni(EXEC_TCP_CLOSE_STUB, conn_stub->host_ip, conn_stub->host_port, 0, 0, 1)) {
 			//fine
+			PRINT_DEBUG("fine");
 		} else {
 			//TODO error
+			PRINT_DEBUG("error");
 		}
 	}
 
@@ -264,6 +268,7 @@ void *connect_thread(void *local) {
 	}
 	if (conn->running_flag) {
 		//if CONNECT, send SYN, SYN_SENT
+		PRINT_DEBUG("connect_thread: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
 		conn->state = SYN_SENT;
 		conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
 		conn->host_seq_end = conn->host_seq_num;
@@ -467,6 +472,7 @@ void *accept_thread(void *local) {
 						}
 						if (conn->running_flag) {
 							//if SYN, send SYN ACK, SYN_RECV
+							PRINT_DEBUG("accept_thread: SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
 							conn->state = SYN_RECV;
 							conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
 							conn->host_seq_end = conn->host_seq_num;
@@ -630,11 +636,13 @@ void *close_thread(void *local) {
 			}
 			if (conn->running_flag) {
 				if (conn->state == ESTABLISHED) {
+					PRINT_DEBUG("close_thread: CLOSE: state=%d conn=%d", conn->state, (int)conn);
 					conn->state = FIN_WAIT_1;
 
 					//if CLOSE, send FIN, FIN_WAIT_1
 					if (queue_is_empty(conn->write_queue) && conn->host_seq_num == conn->host_seq_end) {
 						//send FIN
+						PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT: state=%d", conn->state);
 						temp_seg = seg_create(conn);
 						seg_update(temp_seg, conn, FLAG_FIN);
 
@@ -645,12 +653,15 @@ void *close_thread(void *local) {
 					} //else piggy back it
 				} else {
 					//TODO figure out:
+					PRINT_DEBUG("");
 				}
 			} else {
 				//TODO figure out: conn shutting down already?
+				PRINT_DEBUG("");
 			}
 		} else {
 			//TODO figure out close call on non-establisehd conn
+			PRINT_DEBUG("");
 		}
 	}
 

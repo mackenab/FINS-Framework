@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
+	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
@@ -58,26 +59,29 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
-	bzero(&(server_addr.sin_zero), 8);
+	//bzero(&(server_addr.sin_zero), 8);
 
-	if (argc > 2) {
-		client_port = atoi(argv[2]);
+	//if (argc > 2) {
+	//client_port = atoi(argv[2]);
+	client_port = 5050;
 
-		client_addr.sin_family = AF_INET;
-		client_addr.sin_port = htons(client_port);
-		//client_addr.sin_addr.s_addr = xxx(128,173,92,37);
-		//client_addr.sin_addr.s_addr = xxx(127,0,0,1);
-		//client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
-		client_addr.sin_addr.s_addr = INADDR_ANY;
-		//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
-		//bzero(&(client_addr.sin_zero), 8); //TODO what's this for?
+	memset(&client_addr, 0, sizeof(client_addr));
+	client_addr.sin_family = AF_INET;
+	client_addr.sin_port = htons(client_port);
+	//client_addr.sin_addr.s_addr = xxx(128,173,92,37);
+	client_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
+	//client_addr.sin_addr.s_addr = INADDR_ANY;
 
-		if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
-			perror("Bind");
-			printf("Failure");
-			exit(1);
-		}
+	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
+	//bzero(&(client_addr.sin_zero), 8); //TODO what's this for?
+
+	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
+		perror("Bind");
+		printf("Failure");
+		exit(1);
 	}
+	//}
 
 	if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
 		perror("Connect");

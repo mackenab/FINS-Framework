@@ -256,11 +256,9 @@ void *Switch_to_Jinni() {
 	int status;
 	uint16_t dstport, hostport;
 	uint32_t dstip, hostip;
-	uint32_t exec_call;
 	uint32_t host_ip, host_port, rem_ip, rem_port;
 
 	while (1) {
-
 		sem_wait(&Switch_to_Jinni_Qsem);
 		ff = read_queue(Switch_to_Jinni_Queue);
 		sem_post(&Switch_to_Jinni_Qsem);
@@ -268,29 +266,23 @@ void *Switch_to_Jinni() {
 		if (ff == NULL) {
 
 			continue;
-		}
-
+		}PRINT_DEBUG("");
 		if (ff->dataOrCtrl == CONTROL) {
-			PRINT_DEBUG("control ff");
-
+			PRINT_DEBUG("control ff: opcode=%d", ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
+				break;
+			case CTRL_ALERT_REPLY:
 				break;
 			case CTRL_READ_PARAM:
 				break;
 			case CTRL_READ_PARAM_REPLY:
-				break;
-			case CTRL_SET_PARAM:
-				break;
-			case CTRL_EXEC:
-				break;
-			case CTRL_EXEC_REPLY:
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
 					int ret;
-					ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+					ret += metadata_readFromElement(params, "status", &status) == 0;
 
-					if (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT || exec_call == EXEC_TCP_SEND || exec_call == EXEC_TCP_CLOSE) {
+					if (status) {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
 						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
@@ -298,13 +290,16 @@ void *Switch_to_Jinni() {
 
 						if (ret) {
 							//TODO error
+							PRINT_DEBUG("error");
 							freeFinsFrame(ff);
 							continue;
 						}
 
+						PRINT_DEBUG("");
 						sem_wait(&jinniSockets_sem);
 						index = match_jinni_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 						if (index != -1) {
+							PRINT_DEBUG("");
 							sem_wait(&(jinniSockets[index].Qs));
 
 							/**
@@ -313,26 +308,33 @@ void *Switch_to_Jinni() {
 							 * Blocking and Non-Blocking mode
 							 */
 							write_queue(ff, jinniSockets[index].controlQueue);
+							PRINT_DEBUG("");
 							sem_post(&(jinniSockets[index].Qs));
+							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
 						} else {
+							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
 
+							PRINT_DEBUG("No socket found, dropping");
 							freeFinsFrame(ff);
 						}
-					} else if (exec_call == EXEC_TCP_LISTEN || exec_call == EXEC_TCP_CLOSE_STUB) {
+					} else {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
 
 						if (ret) {
 							//TODO error
+							PRINT_DEBUG("error");
 							freeFinsFrame(ff);
 							continue;
 						}
 
+						PRINT_DEBUG("");
 						sem_wait(&jinniSockets_sem);
 						index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
 						if (index != -1) {
+							PRINT_DEBUG("");
 							sem_wait(&(jinniSockets[index].Qs));
 
 							/**
@@ -341,18 +343,111 @@ void *Switch_to_Jinni() {
 							 * Blocking and Non-Blocking mode
 							 */
 							write_queue(ff, jinniSockets[index].controlQueue);
+							PRINT_DEBUG("");
 							sem_post(&(jinniSockets[index].Qs));
+							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
 						} else {
+							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
 
+							PRINT_DEBUG("No socket found, dropping");
 							freeFinsFrame(ff);
 						}
-					} else {
-						//TODO error
 					}
 				} else {
 					//TODO error
+					PRINT_DEBUG("error");
+				}
+				break;
+			case CTRL_SET_PARAM:
+				break;
+			case CTRL_SET_PARAM_REPLY:
+				break;
+			case CTRL_EXEC:
+				break;
+			case CTRL_EXEC_REPLY:
+				if (ff->ctrlFrame.metaData) {
+					metadata *params = ff->ctrlFrame.metaData;
+					int ret;
+					ret += metadata_readFromElement(params, "status", &status) == 0;
+
+					if (status) {
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
+						ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+
+						if (ret) {
+							//TODO error
+							PRINT_DEBUG("error");
+							freeFinsFrame(ff);
+							continue;
+						}
+
+						PRINT_DEBUG("");
+						sem_wait(&jinniSockets_sem);
+						index = match_jinni_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						if (index != -1) {
+							PRINT_DEBUG("");
+							sem_wait(&(jinniSockets[index].Qs));
+
+							/**
+							 * TODO Replace The data Queue with a pipeLine at least for
+							 * the RAW DATA in order to find a natural way to support
+							 * Blocking and Non-Blocking mode
+							 */
+							write_queue(ff, jinniSockets[index].controlQueue);
+							PRINT_DEBUG("");
+							sem_post(&(jinniSockets[index].Qs));
+							PRINT_DEBUG("");
+							sem_post(&(jinniSockets_sem));
+						} else {
+							PRINT_DEBUG("");
+							sem_post(&(jinniSockets_sem));
+
+							PRINT_DEBUG("No socket found, dropping");
+							freeFinsFrame(ff);
+						}
+					} else {
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+
+						if (ret) {
+							//TODO error
+							PRINT_DEBUG("error");
+							freeFinsFrame(ff);
+							continue;
+						}
+
+						PRINT_DEBUG("");
+						sem_wait(&jinniSockets_sem);
+						index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+						if (index != -1) {
+							PRINT_DEBUG("");
+							sem_wait(&(jinniSockets[index].Qs));
+
+							/**
+							 * TODO Replace The data Queue with a pipeLine at least for
+							 * the RAW DATA in order to find a natural way to support
+							 * Blocking and Non-Blocking mode
+							 */
+							write_queue(ff, jinniSockets[index].controlQueue);
+							PRINT_DEBUG("");
+							sem_post(&(jinniSockets[index].Qs));
+							PRINT_DEBUG("");
+							sem_post(&(jinniSockets_sem));
+						} else {
+							PRINT_DEBUG("");
+							sem_post(&(jinniSockets_sem));
+
+							PRINT_DEBUG("No socket found, dropping");
+							freeFinsFrame(ff);
+						}
+					}
+				} else {
+					//TODO error
+					PRINT_DEBUG("error");
 				}
 				break;
 			case CTRL_ERROR:
@@ -394,8 +489,7 @@ void *Switch_to_Jinni() {
 				temp2->s_addr = dstip;
 			} else {
 				temp2->s_addr = 0;
-			}
-			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 			//*/
 			/**
@@ -530,29 +624,23 @@ void *interceptor_to_jinni() {
 		if (okFlag = NLMSG_OK(nlh, ret_val)) {
 			switch (nlh->nlmsg_type) {
 			case NLMSG_NOOP:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
 				break;
 			case NLMSG_ERROR:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR");
 			case NLMSG_OVERRUN:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN");
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE");
 				doneFlag = 1;
 			default:
-				PRINT_DEBUG("nlh->nlmsg_type=default")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=default");
 				nl_buf = NLMSG_DATA(nlh);
 				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				PRINT_DEBUG("nl_len= %d", nl_len)
-				;
+				PRINT_DEBUG("nl_len= %d", nl_len);
 
 				part_pt = nl_buf;
 				test_msg_len = *(ssize_t *) part_pt;
@@ -589,8 +677,7 @@ void *interceptor_to_jinni() {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq)
-				;
+				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
@@ -667,8 +754,7 @@ void *interceptor_to_jinni() {
 					sprintf(pt, " %02x", msg_pt[i]);
 					pt += 3;
 				}
-			}
-			PRINT_DEBUG("msg='%s'", temp);
+			}PRINT_DEBUG("msg='%s'", temp);
 			free(temp);
 			//###############################
 
@@ -732,8 +818,7 @@ void *interceptor_to_jinni() {
 				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			default:
-				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType)
-				;
+				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType);
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */
@@ -989,8 +1074,7 @@ int main() {
 	if (ret_val != 0) {
 		perror("sendfins() caused an error");
 		exit(-1);
-	}
-	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	}PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//added to include code from fins_jinni.sh -- mrd015 !!!!!
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {

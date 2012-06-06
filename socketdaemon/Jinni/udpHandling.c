@@ -126,8 +126,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 			sem_post(&(jinniSockets[index].Qs));
 			PRINT_DEBUG("");
 			sem_post(&jinniSockets_sem);
-		} while (ff == NULL);
-		PRINT_DEBUG();
+		} while (ff == NULL);PRINT_DEBUG();
 
 	} else {
 		PRINT_DEBUG();
@@ -170,8 +169,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	if (ff == NULL) {
 		//free(ff);
 		return (0);
-	}
-	PRINT_DEBUG("recv'd uniqID=%llu ind=%d", uniqueSockID, index);
+	}PRINT_DEBUG("recv'd uniqID=%llu ind=%d", uniqueSockID, index);
 	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
 	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc", (uint16_t *) &srcport) == 0) {
@@ -193,8 +191,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 		PRINT_DEBUG("Socket closed, canceling read block.");
 		sem_post(&jinniSockets_sem);
 		return (0);
-	}
-	PRINT_DEBUG("Rest of read for index=%d.", index);
+	}PRINT_DEBUG("Rest of read for index=%d.", index);
 
 	if (jinniSockets[index].connection_status > 0) {
 		if ((srcport != jinniSockets[index].dstport) || (srcip != jinniSockets[index].dst_IP)) {
@@ -202,8 +199,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 			sem_post(&jinniSockets_sem);
 			return (0);
 		}
-	}
-	PRINT_DEBUG("");
+	}PRINT_DEBUG("");
 	sem_post(&jinniSockets_sem);
 
 	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
@@ -377,8 +373,8 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/**
 	 * Binding
 	 */
-	jinniSockets[index].hostport = ntohs(addr->sin_port);
-	jinniSockets[index].host_IP = (addr->sin_addr).s_addr;
+	jinniSockets[index].hostport = hostport;
+	jinniSockets[index].host_IP = host_IP_netformat;
 
 	PRINT_DEBUG("bind: index:%d, host:%d/%d, dst:%d/%d",
 			index, jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport);
@@ -728,8 +724,7 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	default:
 		break;
 
-	}
-	PRINT_DEBUG("");
+	}PRINT_DEBUG("");
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -781,8 +776,7 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 			}
 		}
 		jinniSockets[index].hostport = hostport;
-	}
-	PRINT_DEBUG("");
+	}PRINT_DEBUG("");
 	sem_post(&jinniSockets_sem);
 
 	PRINT_DEBUG("index=%d, dst=%d/%d, host=%d/%d", index, dst_IP, dstport, host_IP, hostport);
@@ -1171,8 +1165,6 @@ void shutdown_udp(unsigned long long uniqueSockID, int how) {
 
 void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
 
-
-
 	PRINT_DEBUG("setsockopt_udp: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
 	sem_wait(&jinniSockets_sem);
 	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
@@ -1200,13 +1192,11 @@ void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	switch (optname) {
 	case SO_DEBUG:
 		jinniSockets[index].sockopts.FSO_DEBUG = *(int *) optval;
-		PRINT_DEBUG("FSO_DEBUG=%d", jinniSockets[index].sockopts.FSO_DEBUG)
-		;
+		PRINT_DEBUG("FSO_DEBUG=%d", jinniSockets[index].sockopts.FSO_DEBUG);
 		break;
 	case SO_REUSEADDR:
 		jinniSockets[index].sockopts.FSO_REUSEADDR = *(int *) optval;
-		PRINT_DEBUG("FSO_REUSEADDR=%d", jinniSockets[index].sockopts.FSO_REUSEADDR)
-		;
+		PRINT_DEBUG("FSO_REUSEADDR=%d", jinniSockets[index].sockopts.FSO_REUSEADDR);
 		break;
 	case SO_TYPE:
 	case SO_PROTOCOL:
@@ -1242,8 +1232,7 @@ void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	case SO_ATTACH_FILTER:
 	case SO_DETACH_FILTER:
 	default:
-		PRINT_DEBUG("default=%d", optname)
-		;
+		PRINT_DEBUG("default=%d", optname);
 		break;
 	}
 

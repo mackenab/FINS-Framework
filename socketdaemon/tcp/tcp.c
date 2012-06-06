@@ -659,13 +659,16 @@ void tcp_main_time_wait(struct tcp_connection *conn) {
 	if (conn->to_gbn_flag) {
 		//TODO TO, CLOSE
 		conn->to_gbn_flag = 0;
+		PRINT_DEBUG("tcp_main_time_wait: TO, CLOSE: state=%d conn=%d", conn->state, (int)conn);
 		conn->state = CLOSED;
 
 		//send ACK to close handler
 		if (tcp_fcf_to_jinni(EXEC_TCP_CLOSE, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
 			//fine
+			PRINT_DEBUG("");
 		} else {
 			//TODO error
+			PRINT_DEBUG("");
 		}
 
 		//free connection
@@ -825,6 +828,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	sem_init(&conn->sem, 0, 1);
 	conn->running_flag = 1;
 	conn->threads = 1;
+	PRINT_DEBUG("conn_create: create: state=%d conn=%d", conn->state, (int)conn);
 	conn->state = CLOSED;
 
 	conn->host_ip = host_ip;
@@ -1108,9 +1112,9 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 
 	PRINT_DEBUG("seg_to_fdf: info: src=%d/%d, dst=%d/%d, seq=%d, ack=%d, flags=%d, win=%d, checksum=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->ack_num, seg->flags, seg->win_size, seg->checksum);
-	PRINT_DEBUG("seg_to_fdf: info: host: src=%d/%d, dst=%d/%d, netw: src=%d/%d, dst=%d/%d",
-			ntohl(seg->src_ip), ntohs(seg->src_port), ntohl(seg->dst_ip), ntohs(seg->dst_port),
-			htonl(seg->src_ip), htons(seg->src_port), htonl(seg->dst_ip), htons(seg->dst_port));
+	PRINT_DEBUG(
+			"seg_to_fdf: info: host: src=%d/%d, dst=%d/%d, netw: src=%d/%d, dst=%d/%d",
+			ntohl(seg->src_ip), ntohs(seg->src_port), ntohl(seg->dst_ip), ntohs(seg->dst_port), htonl(seg->src_ip), htons(seg->src_port), htonl(seg->dst_ip), htons(seg->dst_port));
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	metadata_create(params);
@@ -1178,16 +1182,18 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 
 	struct tcp_segment *seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
 	if (!seg) {
-		PRINT_ERROR("tcpreturn malloc error");
+		PRINT_ERROR("seg malloc error");
 		return NULL;
 	}
 
 	if (ff->dataFrame.pduLength < MIN_TCP_HEADER_BYTES) {
+		PRINT_ERROR("pduLength too small");
 		return NULL;
 	}
 
 	metadata *params = ff->dataFrame.metaData;
 	if (params == NULL) {
+		PRINT_ERROR("metadata NULL");
 		free(seg);
 		return NULL;
 	}
@@ -1203,6 +1209,7 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 
 	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {
 		PRINT_DEBUG("fdf_to_seg: error: ret=%d, protocol=%d", ret, protocol);
+
 		free(seg);
 		return NULL;
 	}
@@ -1243,9 +1250,9 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 
 	PRINT_DEBUG("fdf_to_seg: info: src=%d/%d, dst=%d/%d, seq=%d, ack=%d, flags=%d, win=%d, checksum=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->ack_num, seg->flags, seg->win_size, seg->checksum);
-	PRINT_DEBUG("fdf_to_seg: info: host: src=%d/%d, dst=%d/%d, netw: src=%d/%d, dst=%d/%d",
-			ntohl(seg->src_ip), ntohs(seg->src_port), ntohl(seg->dst_ip), ntohs(seg->dst_port),
-			htonl(seg->src_ip), htons(seg->src_port), htonl(seg->dst_ip), htons(seg->dst_port));
+	PRINT_DEBUG(
+			"fdf_to_seg: info: host: src=%d/%d, dst=%d/%d, netw: src=%d/%d, dst=%d/%d",
+			ntohl(seg->src_ip), ntohs(seg->src_port), ntohl(seg->dst_ip), ntohs(seg->dst_port), htonl(seg->src_ip), htons(seg->src_port), htonl(seg->dst_ip), htons(seg->dst_port));
 
 	//Now copy the rest of the data, starting with the options
 	seg->opt_len = TCP_OPTIONS_BYTES(seg->flags);
@@ -1384,8 +1391,8 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	uint32_t sum = 0;
 
 	//fake IP header
-	sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip & 0xFFFF));
-	sum += ((uint16_t)(seg->dst_ip >> 16)) + ((uint16_t)(seg->dst_ip & 0xFFFF));
+	//sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip & 0xFFFF)); //TODO FIX! prob isn't problem ip replacement is
+	//sum += ((uint16_t)(seg->dst_ip >> 16)) + ((uint16_t)(seg->dst_ip & 0xFFFF));
 	sum += (uint16_t) TCP_PROTOCOL;
 	sum += (uint16_t)(IP_HEADER_BYTES + TCP_HEADER_BYTES(seg->flags) + seg->data_len);
 
@@ -1425,6 +1432,38 @@ void seg_send(struct tcp_segment *seg) {
 	PRINT_DEBUG("seg_send: Entered: seg=%d", (int)seg);
 
 	struct finsFrame *ff = seg_to_fdf(seg);
+
+	//###############################
+	struct tcp_segment *seg_test = fdf_to_seg(ff);
+	if (seg_test) {
+		if (seg->src_ip != seg_test->src_ip)
+			PRINT_DEBUG("diff: src_ip: seg=%d, test=%d", seg->src_ip, seg_test->src_ip);
+		if (seg->dst_ip != seg_test->dst_ip)
+			PRINT_DEBUG("diff: dst_ip: seg=%d, test=%d", seg->dst_ip, seg_test->dst_ip);
+		if (seg->src_port != seg_test->src_port)
+			PRINT_DEBUG("diff: src_port: seg=%d, test=%d", seg->src_port, seg_test->src_port);
+		if (seg->dst_port != seg_test->dst_port)
+			PRINT_DEBUG("diff: dst_port: seg=%d, test=%d", seg->dst_port, seg_test->dst_port);
+		if (seg->seq_num != seg_test->seq_num)
+			PRINT_DEBUG("diff: seq_num: seg=%d, test=%d", seg->seq_num, seg_test->seq_num);
+		if (seg->ack_num != seg_test->ack_num)
+			PRINT_DEBUG("diff: ack_num: seg=%d, test=%d", seg->ack_num, seg_test->ack_num);
+		if (seg->flags != seg_test->flags)
+			PRINT_DEBUG("diff: flags: seg=%d, test=%d", seg->flags, seg_test->flags);
+		if (seg->win_size != seg_test->win_size)
+			PRINT_DEBUG("diff: win_size: seg=%d, test=%d", seg->win_size, seg_test->win_size);
+		if (seg->checksum != seg_test->checksum)
+			PRINT_DEBUG("diff: checksum: seg=%d, test=%d", seg->checksum, seg_test->checksum);
+		if (seg->urg_pointer != seg_test->urg_pointer)
+			PRINT_DEBUG("diff: urg_pointer: seg=%d, test=%d", seg->urg_pointer, seg_test->urg_pointer);
+		if (seg->opt_len != seg_test->opt_len)
+			PRINT_DEBUG("diff: opt_len: seg=%d, test=%d", seg->opt_len, seg_test->opt_len);
+		if (seg->data_len != seg_test->data_len)
+			PRINT_DEBUG("diff: data_len: seg=%d, test=%d", seg->data_len, seg_test->data_len);
+		//check options/data?
+	}
+	//###############################
+
 	tcp_to_switch(ff);
 
 	PRINT_DEBUG("seg_send: Exited: seg=%d ff=%d", (int)seg, (int)ff);
