@@ -71,10 +71,10 @@ void udp_out(struct finsFrame* ff) {
 	uint32_t srcip;
 
 	PRINT_DEBUG("UDP_out");
-	metadata_readFromElement(meta, "dstport", &dstbuf);
-	metadata_readFromElement(meta, "srcport", &srcbuf);
-	metadata_readFromElement(meta, "dstip", &dstip);
-	metadata_readFromElement(meta, "srcip", &srcip);
+	metadata_readFromElement(meta, "dst_port", &dstbuf);
+	metadata_readFromElement(meta, "src_port", &srcbuf);
+	metadata_readFromElement(meta, "dst_ip", &dstip);
+	metadata_readFromElement(meta, "src_ip", &srcip);
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
 	 */

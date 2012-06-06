@@ -46,10 +46,10 @@ int jinni_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t ds
 	uint32_t dstprt = dstport;
 	uint32_t hostprt = hostport;
 	int protocol = IP4_PT_ICMP;
-	metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "srcport", &hostprt, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "dstip", &dst_IP_netformat, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "srcip", &host_IP_netformat, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "dst_port", &dstprt, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "src_port", &hostprt, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "dst_ip", &dst_IP_netformat, META_TYPE_INT);
+	metadata_writeToElement(udpout_meta, "src_ip", &host_IP_netformat, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "protocol", &protocol, META_TYPE_INT);
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
@@ -153,11 +153,11 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
-	if (metadata_readFromElement(ff->dataFrame.metaData, "portsrc", (uint16_t *) &srcport) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "src_port", (uint16_t *) &srcport) == 0) {
 		addr_in->sin_port = 0;
 
 	}
-	if (metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", (uint32_t *) &srcip) == 0) {
+	if (metadata_readFromElement(ff->dataFrame.metaData, "src_ip", (uint32_t *) &srcip) == 0) {
 		addr_in->sin_addr.s_addr = 0;
 
 	}
@@ -606,4 +606,99 @@ void accept_icmp(int index, unsigned long long uniqueSockID, unsigned long long 
 	sem_post(&jinniSockets_sem);
 
 	ack_send(uniqueSockID, accept_call);
+}
+
+void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
+	int status;
+	uint32_t host_ip = 0;
+	uint16_t host_port = 0;
+	uint32_t rem_ip = 0;
+	uint16_t rem_port = 0;
+
+	PRINT_DEBUG("getname_tcp CALL");
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket descriptor not found into jinni sockets");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, getname_call);
+		return;
+	}
+
+	if (peer == 1) { //TODO find right number
+		host_ip = jinniSockets[index].host_IP;
+		host_port = jinniSockets[index].hostport;
+	} else if (peer == 2) {
+		status = jinniSockets[index].connection_status;
+		if (status) {
+			rem_ip = jinniSockets[index].dst_IP;
+			rem_port = jinniSockets[index].dstport;
+		}
+	}
+
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
+
+	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
+	if (addr == NULL) {
+		PRINT_DEBUG("getname_tcp: addr creation failed");
+		nack_send(uniqueSockID, getname_call);
+		return;
+	}
+
+	if (peer == 1) { //TODO find right number
+		//getsockname
+	} else if (peer == 2) {
+		addr->sin_addr.s_addr = host_ip;
+		//addr->sin_addr.s_addr = htonl(host_ip);
+		addr->sin_port = htons(host_port);
+	} else {
+		//TODO ??
+	}
+
+	int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+	u_char *msg = (u_char *) malloc(msg_len);
+	if (msg == NULL) {
+		PRINT_DEBUG("getname_tcp: Exiting, msg creation fail: index=%d, uniqueSockID=%llu", index, uniqueSockID);
+		nack_send(uniqueSockID, getname_call);
+		free(addr);
+		return;
+	}
+	u_char *pt = msg;
+
+	*(int *) pt = getname_call;
+	pt += sizeof(int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(int *) pt = ACK;
+	pt += sizeof(int);
+
+	*(int *) pt = peer;
+	pt += sizeof(int);
+
+	*(int *) pt = sizeof(addr);
+	pt += sizeof(int);
+
+	memcpy(pt, &addr, sizeof(addr));
+	pt += sizeof(struct sockaddr);
+
+	if (pt - msg != msg_len) {
+		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		free(msg);
+		PRINT_DEBUG("getname_tcp: Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
+		nack_send(uniqueSockID, getname_call);
+		return;
+	}
+
+	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+		PRINT_DEBUG("getname_tcp: Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
+		nack_send(uniqueSockID, getname_call);
+	} else {
+		PRINT_DEBUG("getname_tcp: Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
+	}
+
+	free(msg);
 }

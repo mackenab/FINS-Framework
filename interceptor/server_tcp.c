@@ -53,6 +53,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = AF_INET;
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
 
@@ -85,7 +86,8 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	printf("\n Connection establisehed sock_client=%d to (%d/%d)", sock_client, client_addr.sin_addr.s_addr, ntohs(client_addr.sin_port));
+	printf("\n Connection establisehed sock_client=%d to (%s/%d) netw=%u", sock_client, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+
 	fflush(stdout);
 
 	i = 0;

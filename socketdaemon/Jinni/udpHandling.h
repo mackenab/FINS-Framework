@@ -22,6 +22,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 void listen_udp(int index, unsigned long long uniqueSockID, int backlog);
 void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void accept_udp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
+void getname_udp(int index, unsigned long long uniqueSockID, int peer);
 void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
 void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);

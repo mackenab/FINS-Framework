@@ -40,6 +40,7 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 void listen_tcp(int index, unsigned long long uniqueSockID, int len);
 void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
+void getname_tcp(int index, unsigned long long uniqueSockID, int peer);
 void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len);
 void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags);
 void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);

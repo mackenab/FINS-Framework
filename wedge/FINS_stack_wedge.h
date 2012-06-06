@@ -12,9 +12,10 @@
 #define socket_call 1
 #define socketpair_call 2
 #define bind_call 3
-#define getsockname_call 4
+//#define getsockname_call 4
+#define getname_call 4
 #define connect_call 5
-#define getpeername_call 6
+//#define getpeername_call 6
 #define send_call 7
 #define recv_call 8
 #define sendto_call 9

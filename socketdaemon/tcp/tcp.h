@@ -110,8 +110,9 @@ struct tcp_connection_stub *conn_stub_find(uint32_t host_ip, uint16_t host_port)
 void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
-void conn_stub_free(struct tcp_connection_stub *conn_stub);
+int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val);
 void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
+void conn_stub_free(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 enum CONN_STATE /* Defines an enumeration type    */
@@ -228,8 +229,9 @@ struct tcp_connection *conn_find(uint32_t host_ip, uint16_t host_port, uint32_t 
 void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
 int conn_has_space(uint32_t len);
-void conn_free(struct tcp_connection *conn);
+int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
 void conn_shutdown(struct tcp_connection *conn);
+void conn_free(struct tcp_connection *conn);
 
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
@@ -292,7 +294,7 @@ struct tcp_to_thread_data {
 void tcp_init();
 void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
-int tcp_fcf_to_jinni(uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
+int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
 
 #define EXEC_TCP_CONNECT 0

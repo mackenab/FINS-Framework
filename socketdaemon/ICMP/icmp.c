@@ -337,12 +337,12 @@ void ICMP_ping_reply(struct finsFrame* ff)
 
 	//Get source and destination IP's from finsFrame
 	IP4addr IP_Dest, IP_Src;
-	if(metadata_readFromElement(ffout->dataFrame.metaData, "ipsrc", &IP_Src) == CONFIG_FALSE)
+	if(metadata_readFromElement(ffout->dataFrame.metaData, "src_ip", &IP_Src) == CONFIG_FALSE)
 	{
 		PRINT_DEBUG("ICMP_ping_reply(): Missing data in FINS frame metadata: no source IP");
 		return; //Stop here
 	}
-	if(metadata_readFromElement(ffout->dataFrame.metaData, "ipdst", &IP_Dest) == CONFIG_FALSE)
+	if(metadata_readFromElement(ffout->dataFrame.metaData, "dst_ip", &IP_Dest) == CONFIG_FALSE)
 	{
 		PRINT_DEBUG("ICMP_ping_reply(): Missing data in FINS frame metadata: no destination IP");
 		return; //Stop here
@@ -350,10 +350,10 @@ void ICMP_ping_reply(struct finsFrame* ff)
 
 	//Write our IP to the "ipsrc". Do we actually care about doing this? Or will the ethernet stub handle this properly anyhow? Oh, well.
 	//I shall do it.
-	metadata_writeToElement(ffout->dataFrame.metaData, "ipsrc", &IP_Dest, META_TYPE_INT);
+	metadata_writeToElement(ffout->dataFrame.metaData, "src_ip", &IP_Dest, META_TYPE_INT);
 
 	//Write the original "src IP" to the data as the destination IP
-	metadata_writeToElement(ffout->dataFrame.metaData, "ipdst", &IP_Src, META_TYPE_INT);
+	metadata_writeToElement(ffout->dataFrame.metaData, "dst_ip", &IP_Src, META_TYPE_INT);
 
 	PRINT_DEBUG("Source IP: %lu, Dest IP: %lu", IP_Dest, IP_Src);
 	//Make sure this goes to the right place. Is this what we have to do to send out an ICMP packet?
@@ -520,7 +520,7 @@ void ICMP_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code)
 	ffout->dataFrame.pdu = (unsigned char *)malloc(totallen);	//Allocate memory for the data we'll be sticking in
 	metadata_create(ffout->dataFrame.metaData);
 	//Fill the metadata with dest IP.
-	metadata_writeToElement(ffout->dataFrame.metaData, "ipdst", &(((struct ip4_packet*) ff->ctrlFrame.data)->ip_src), META_TYPE_INT);
+	metadata_writeToElement(ffout->dataFrame.metaData, "dst_ip", &(((struct ip4_packet*) ff->ctrlFrame.data)->ip_src), META_TYPE_INT);
 	//I treat all the ICMP stuff as raw data, rather than encapsulating it in structs, due to working with such structs earlier this summer
 	//and running into a ton of little-vs-big-endian issues. Handling the raw data this way is easier for me than remembering to htons()
 	//everything, especially because most ICMP headers contain variable-sized data anyway.

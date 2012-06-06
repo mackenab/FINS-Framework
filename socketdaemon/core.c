@@ -254,6 +254,7 @@ void *Switch_to_Jinni() {
 	int protocol;
 	int index;
 	int status;
+	uint32_t exec_call;
 	uint16_t dstport, hostport;
 	uint32_t dstip, hostip;
 	uint32_t host_ip, host_port, rem_ip, rem_port;
@@ -279,7 +280,7 @@ void *Switch_to_Jinni() {
 			case CTRL_READ_PARAM_REPLY:
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
-					int ret;
+					int ret = 0;
 					ret += metadata_readFromElement(params, "status", &status) == 0;
 
 					if (status) {
@@ -369,7 +370,7 @@ void *Switch_to_Jinni() {
 			case CTRL_EXEC_REPLY:
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
-					int ret;
+					int ret = 0;
 					ret += metadata_readFromElement(params, "status", &status) == 0;
 
 					if (status) {
@@ -384,6 +385,22 @@ void *Switch_to_Jinni() {
 							freeFinsFrame(ff);
 							continue;
 						}
+
+						//##################
+						struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+						if (host_ip) {
+							temp->s_addr = htonl(host_ip);
+						} else {
+							temp->s_addr = 0;
+						}
+						struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
+						if (rem_ip) {
+							temp2->s_addr = htonl(rem_ip);
+						} else {
+							temp2->s_addr = 0;
+						}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (host_port), inet_ntoa(*temp2), (rem_port));
+						PRINT_DEBUG("NETFORMAT %d, host=%u/%d, dst=%u/%d,", protocol, (*temp).s_addr, (host_port), (*temp2).s_addr, (rem_port));
+						//##################
 
 						PRINT_DEBUG("");
 						sem_wait(&jinniSockets_sem);
@@ -403,11 +420,38 @@ void *Switch_to_Jinni() {
 							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
 						} else {
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
 
-							PRINT_DEBUG("No socket found, dropping");
-							freeFinsFrame(ff);
+							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
+								index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+								if (index != -1) {
+									PRINT_DEBUG("");
+									sem_wait(&(jinniSockets[index].Qs));
+
+									/**
+									 * TODO Replace The data Queue with a pipeLine at least for
+									 * the RAW DATA in order to find a natural way to support
+									 * Blocking and Non-Blocking mode
+									 */
+									write_queue(ff, jinniSockets[index].controlQueue);
+									PRINT_DEBUG("");
+									sem_post(&(jinniSockets[index].Qs));
+									PRINT_DEBUG("");
+									sem_post(&(jinniSockets_sem));
+								} else {
+									PRINT_DEBUG("");
+									sem_post(&(jinniSockets_sem));
+
+									PRINT_DEBUG("No socket found, dropping");
+									freeFinsFrame(ff);
+								}
+							} else {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+
+								PRINT_DEBUG("No socket found, dropping");
+								freeFinsFrame(ff);
+							}
 						}
 					} else {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
@@ -419,6 +463,17 @@ void *Switch_to_Jinni() {
 							freeFinsFrame(ff);
 							continue;
 						}
+
+						//##################
+						struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+						if (hostip) {
+							temp->s_addr = host_ip;
+						} else {
+							temp->s_addr = 0;
+						}
+						PRINT_DEBUG("NETFORMAT %d, host=%s/%d", protocol, inet_ntoa(*temp), (host_port));
+						PRINT_DEBUG("NETFORMAT %d, host=%u/%d", protocol, (*temp).s_addr, (host_port));
+						//##################
 
 						PRINT_DEBUG("");
 						sem_wait(&jinniSockets_sem);
@@ -462,10 +517,10 @@ void *Switch_to_Jinni() {
 			hostip = -1;
 			protocol = -1;
 
-			metadata_readFromElement(ff->dataFrame.metaData, "portdst", &dstport);
-			metadata_readFromElement(ff->dataFrame.metaData, "portsrc", &hostport);
-			metadata_readFromElement(ff->dataFrame.metaData, "ipdst", &dstip);
-			metadata_readFromElement(ff->dataFrame.metaData, "ipsrc", &hostip);
+			metadata_readFromElement(ff->dataFrame.metaData, "dst_port", &dstport);
+			metadata_readFromElement(ff->dataFrame.metaData, "src_port", &hostport);
+			metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &dstip);
+			metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip);
 
 			metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol);
 			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip, hostport, dstport);
@@ -761,7 +816,6 @@ void *interceptor_to_jinni() {
 			PRINT_DEBUG("uniqueSockID=%llu, calltype=%d, threads=%d", uniqueSockID, socketCallType, threads);
 
 			switch (socketCallType) {
-
 			case socket_call:
 				socket_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
@@ -776,6 +830,9 @@ void *interceptor_to_jinni() {
 				break;
 			case accept_call:
 				accept_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				break;
+			case getname_call:
+				getname_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case sendmsg_call:
 				sendmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only send call from wedge
@@ -792,14 +849,16 @@ void *interceptor_to_jinni() {
 			case setsockopt_call:
 				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
 				break;
+				/*
+				 case getsockname_call:
+				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				 break;
+				 case getpeername_call:
+				 getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				 break;
+				 */
 			case socketpair_call:
 				socketpair_call_handler(uniqueSockID, threads, msg_pt, msg_len);
-				break;
-			case getsockname_call:
-				getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
-				break;
-			case getpeername_call:
-				getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
 				break;
 			case accept4_call:
 				accept4_call_handler(uniqueSockID, threads, msg_pt, msg_len);
@@ -823,6 +882,7 @@ void *interceptor_to_jinni() {
 				 * to original conditions before crashing
 				 */
 				//exit(1);
+				break;
 			}
 
 			free(msg_buf);

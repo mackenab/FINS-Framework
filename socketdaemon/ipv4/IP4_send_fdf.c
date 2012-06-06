@@ -50,12 +50,12 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 
 	IP4addr srcaddress = ppacket->ip_src;
 	IP4addr dstaddress = ppacket->ip_dst;
-	PRINT_DEBUG("protocol # %d", ppacket->ip_proto);
+	PRINT_DEBUG("protocol # %d src=%u, dst=%u", ppacket->ip_proto, (uint32_t)srcaddress, (uint32_t)dstaddress);
 	uint16_t protocol = ppacket->ip_proto; /* protocol number should  be 17 from metadata */
 	/** Filling into the metadata with sourceIP, DestinationIP, and ProtocolNumber */
 
-	metadata_writeToElement(ipv4_meta, "ipsrc", &srcaddress, META_TYPE_INT);
-	metadata_writeToElement(ipv4_meta, "ipdst", &dstaddress, META_TYPE_INT);
+	metadata_writeToElement(ipv4_meta, "src_ip", &srcaddress, META_TYPE_INT);
+	metadata_writeToElement(ipv4_meta, "dst_ip", &dstaddress, META_TYPE_INT);
 	metadata_writeToElement(ipv4_meta, "protocol", &protocol, META_TYPE_INT);
 	fins_frame->dataFrame.metaData = ipv4_meta;
 	PRINT_DEBUG("protocol %d, srcip %lu, dstip %lu", protocol, srcaddress, dstaddress);

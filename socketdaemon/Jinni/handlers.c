@@ -174,8 +174,8 @@ int match_jinni_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip
 
 	int i;
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID != -1 && jinniSockets[i].host_IP == host_ip && jinniSockets[i].hostport == host_port && jinniSockets[i].dst_IP
-				== rem_ip && jinniSockets[i].dstport == rem_port) {
+		if (jinniSockets[i].uniqueSockID != -1 && jinniSockets[i].host_IP == host_ip && jinniSockets[i].hostport == host_port
+				&& jinniSockets[i].dst_IP == rem_ip && jinniSockets[i].dstport == rem_port) {
 			PRINT_DEBUG("Matched connection");
 			return (i);
 		}
@@ -239,8 +239,7 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 
 			return i;
 		}
-	}
-	PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
+	}PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
 	return (-1);
 }
 
@@ -445,8 +444,7 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_
 		//print_finsFrame(ff);
 		sem_post(&(jinniSockets[index].Qs));
 		sem_post(&jinniSockets_sem);
-	}
-	PRINT_DEBUG("");
+	}PRINT_DEBUG("");
 
 	return ff;
 }
@@ -587,7 +585,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 		return;
 	}
 
-	PRINT_DEBUG("bind_call_handler: addr=%d/%d family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
+	PRINT_DEBUG("bind_call_handler: addr=%u/%d family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
@@ -694,7 +692,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		return;
 	}
 
-	PRINT_DEBUG("connect_call_handler: addr=%d/%d family=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
+	PRINT_DEBUG("connect_call_handler: addr=%u/%d family=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
 	sem_wait(&jinniSockets_sem);
 	index = findjinniSocket(uniqueSockID);
@@ -763,6 +761,51 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, accept_call);
+	}
+}
+
+void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len) {
+	int index;
+	int peer;
+	u_char *pt;
+
+	PRINT_DEBUG("");
+
+	pt = buf;
+
+	peer = *(int *) pt;
+	pt += sizeof(int);
+
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		nack_send(uniqueSockID, getname_call);
+		return;
+	}
+
+	PRINT_DEBUG("");
+	sem_wait(&jinniSockets_sem);
+	index = findjinniSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, getname_call);
+		return;
+	}
+
+	int type = jinniSockets[index].type;
+	sem_post(&jinniSockets_sem);
+	PRINT_DEBUG("");
+
+	if (type == SOCK_DGRAM)
+		getname_udp(index, uniqueSockID, peer);
+	else if (type == SOCK_STREAM)
+		getname_tcp(index, uniqueSockID, peer);
+	else if (type == SOCK_RAW) {
+		getname_icmp(index, uniqueSockID, peer);
+	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, getname_call);
 	}
 }
 
@@ -1241,8 +1284,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
 		nack_send(uniqueSockID, ioctl_call);
 		return;
-	}
-	PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
+	}PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
 
 	/*if (jinniSockets[index].type == SOCK_DGRAM)
 	 ioctl_udp(uniqueSockID, cmd, arg);
@@ -1302,7 +1344,7 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	 */
 	if (index == -1) {
 		PRINT_DEBUG(" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
-		nack_send(uniqueSockID, getsockname_call);
+		//nack_send(uniqueSockID, getsockname_call);
 		return;
 	}
 
@@ -1318,7 +1360,7 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	msg = malloc(msg_len);
 	pt = msg;
 
-	*(u_int *) pt = getsockname_call;
+	//*(u_int *) pt = getsockname_call;
 	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
@@ -1336,7 +1378,7 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	if (pt - (u_char *) msg != msg_len) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
 		free(msg);
-		nack_send(uniqueSockID, getsockname_call);
+		//nack_send(uniqueSockID, getsockname_call);
 		return;
 	}
 
@@ -1370,7 +1412,7 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	 */
 	if (index == -1) {
 		PRINT_DEBUG(" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
-		nack_send(uniqueSockID, getpeername_call);
+		//nack_send(uniqueSockID, getpeername_call);
 		return;
 	}
 
@@ -1386,7 +1428,7 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	msg = malloc(msg_len);
 	pt = msg;
 
-	*(u_int *) pt = getpeername_call;
+	//*(u_int *) pt = getpeername_call;
 	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
@@ -1404,7 +1446,7 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	if (pt - (u_char *) msg != msg_len) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
 		free(msg);
-		nack_send(uniqueSockID, getpeername_call);
+		//nack_send(uniqueSockID, getpeername_call);
 		return;
 	}
 

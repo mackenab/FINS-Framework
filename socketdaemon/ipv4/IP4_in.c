@@ -24,11 +24,11 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	header.differentiated_service = ppacket->ip_dif;
 	header.packet_length = ntohs(ppacket->ip_len);
 	header.id = ntohs(ppacket->ip_id);
-	header.flags = (uint8_t) (IP4_FLG(ntohs(ppacket->ip_fragoff));
+	header.flags = (uint8_t)(IP4_FLG(ntohs(ppacket->ip_fragoff));
 	header.fragmentation_offset = ntohs(ppacket->ip_fragoff) & IP4_FRAGOFF;
 	header.ttl = ppacket->ip_ttl;
 	header.protocol = ppacket->ip_proto;
-	PRINT_DEBUG("protocol number is %d",header.protocol);
+	PRINT_DEBUG("protocol number is %d", header.protocol);
 	header.checksum = ntohs(ppacket->ip_cksum);
 
 	PRINT_DEBUG();
@@ -36,28 +36,28 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	if (header.version != IP4_VERSION) {
 		stats.badver++;
 		stats.droppedtotal++;
-		PRINT_ERROR("Packet ID %d has a wrong IP version (%d)", header.id,header.version);
+		PRINT_ERROR("Packet ID %d has a wrong IP version (%d)", header.id, header.version);
 		//free ppacket
 		return;
-	} PRINT_DEBUG();
+	}PRINT_DEBUG();
 
 	/* Check minimum header length */
 	if (header.header_length < IP4_MIN_HLEN) {
 		stats.badhlen++;
 		stats.droppedtotal++;
-		PRINT_ERROR("Packet header length (%d) in packet ID %d is smaller than the defined minimum (20).",header.header_length, header.id);
+		PRINT_ERROR("Packet header length (%d) in packet ID %d is smaller than the defined minimum (20).", header.header_length, header.id);
 		//free ppacket
 		return;
-	} PRINT_DEBUG();
+	}PRINT_DEBUG();
 
 	/* Check the integrity of the header. Drop the packet if corrupted header.*/
 	if (IP4_checksum(ppacket, IP4_HLEN(ppacket)) != 0) {
 		stats.badsum++;
 		stats.droppedtotal++;
-		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d",header.id, IP4_checksum(ppacket, IP4_HLEN(ppacket)));
+		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, IP4_checksum(ppacket, IP4_HLEN(ppacket)));
 		//free ppacket
 		return;
-	} PRINT_DEBUG();
+	}PRINT_DEBUG();
 
 	/* Check the length of the packet. If physical shorter than the declared in the header
 	 * drop the packet
@@ -71,9 +71,9 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 			//free ppacket
 			return;
 		}
-	} PRINT_DEBUG();
+	}PRINT_DEBUG();
 
-	PRINT_DEBUG("%lu",header.destination );
+	PRINT_DEBUG("src=%lu dst=%lu (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
 	if (IP4_dest_check(header.destination) == 0) {
 		PRINT_DEBUG();
@@ -86,13 +86,13 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.droppedtotal++;
 		//free ppacket
 		return;
-	} PRINT_DEBUG();
+	}PRINT_DEBUG();
 
 	/* Check fragmentation errors */
 	if ((header.flags & (IP4_DF | IP4_MF)) == (IP4_DF | IP4_MF)) {
 		stats.fragerror++;
 		stats.droppedtotal++;
-		PRINT_ERROR("Packet ID %d has both DF and MF flags set",header.id);
+		PRINT_ERROR("Packet ID %d has both DF and MF flags set", header.id);
 		//free ppacket
 		return;
 	}

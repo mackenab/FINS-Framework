@@ -73,7 +73,7 @@ void *syn_thread(void *local) {
 	}
 	if (conn_stub->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum
-		if (seg->checksum == calc) {
+		if (1 || seg->checksum == calc) { //TODO remove override when IP prob fixed
 			if (queue_has_space(conn_stub->syn_queue, 1)) {
 				node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
 				queue_append(conn_stub->syn_queue, node);
@@ -100,7 +100,7 @@ void *syn_thread(void *local) {
 		exit(-1);
 	}
 	conn_stub->threads--;
-	PRINT_DEBUG("");
+	PRINT_DEBUG("syn_thread: leaving thread: conn_stub=%d, threads=%d", (int)conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
 
 	PRINT_DEBUG("");
@@ -216,6 +216,8 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
+	PRINT_DEBUG("tcp_recv_syn_sent: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO ACK, If SEG.ACK =< ISS, or SEG.ACK > SND.NXT, send a reset <SEQ=SEG.ACK><CTL=RST>
 	//TODO ACK, If SND.UNA =< SEG.ACK =< SND.NXT
 
@@ -258,15 +260,9 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				seg_free(temp_seg);
 
 				//send ACK to handler, prob connect
-				if (tcp_fcf_to_jinni(EXEC_TCP_CONNECT, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
-					//fine
-					PRINT_DEBUG("");
-				} else {
-					//TODO error
-					PRINT_DEBUG("");
-				}
+				conn_send_jinni(conn, EXEC_TCP_CONNECT, 1);
 			} else {
-				PRINT_DEBUG("Invalid ACK: was not sent.");
+				PRINT_DEBUG("Invalid ACK: was not sent: ack=%d, host_seq_num=%d", seg->ack_num, conn->host_seq_num);
 
 				//SYN ACK for dup SYN, send RST, resend SYN
 
@@ -314,6 +310,8 @@ void tcp_recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_segment *temp_seg;
 
+	PRINT_DEBUG("tcp_recv_syn_recv: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	if (seg->flags & FLAG_RST) {
 		//TODO handle RSTs back
 		//if RST, send -, LISTEN
@@ -356,13 +354,7 @@ void tcp_recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			}
 
 			//send ACK to handler, prob accept
-			if (tcp_fcf_to_jinni(EXEC_TCP_ACCEPT, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, 1)) {
-				//fine
-				PRINT_DEBUG("");
-			} else {
-				//TODO error
-				PRINT_DEBUG("");
-			}
+			conn_send_jinni(conn, EXEC_TCP_ACCEPT, 1);
 		} else {
 			PRINT_DEBUG("Invalid ACK: was not sent.");
 			//TODO send RST?
@@ -396,6 +388,8 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *node;
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
+
+	PRINT_DEBUG("handle_ACK: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
 
 	//check if valid ACK
 	if (in_window(seg->ack_num, seg->ack_num, conn->host_seq_num, conn->host_seq_end)) {
@@ -538,6 +532,8 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
+	PRINT_DEBUG("handle_data: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	uint32_t seq_end;
 	int ret;
 	int send_ack = 0;
@@ -669,6 +665,8 @@ int handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
+	PRINT_DEBUG("tcp_recv_established: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO can receive, send ACKs, send/resend data, & get ACKs
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
@@ -678,6 +676,8 @@ void tcp_recv_established(struct tcp_connection *conn, struct tcp_segment *seg) 
 }
 
 void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
+	PRINT_DEBUG("tcp_recv_fin_wait_1: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO merge with established, can still get ACKs, receive, send ACKs, & resend data
 	//if FIN, send ACK, CLOSING
 	//if FIN ACK, send ACK, TIME_WAIT
@@ -690,12 +690,16 @@ void tcp_recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
+	PRINT_DEBUG("tcp_recv_fin_wait_2: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO merge with established, can still receive, send ACKs
 	//if FIN, send ACK, TIME_WAIT
 	handle_data(conn, seg);
 }
 
 void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
+	PRINT_DEBUG("tcp_recv_closing: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO self, can still get ACKs & resend
 	//if ACK, send -, TIME_WAIT
 	if (seg->flags & FLAG_ACK) {
@@ -704,6 +708,7 @@ void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 		if (seg->seq_num == conn->rem_seq_num) {
 			if (seg->flags & (FLAG_SYN | FLAG_RST)) {
 				//drop
+				PRINT_DEBUG("");
 			} else if (conn->host_seq_num == conn->host_seq_end) {
 				//if ACK, send -, TIME_WAIT
 				PRINT_DEBUG("tcp_recv_closing: ACK, send -, TIME_WAIT: state=%d conn=%d, seg=%d", conn->state, (int)conn, (int) seg);
@@ -719,6 +724,8 @@ void tcp_recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
+	PRINT_DEBUG("tcp_recv_close_wait: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO can still send & get ACKs
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
@@ -728,6 +735,8 @@ void tcp_recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
 }
 
 void tcp_recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
+	PRINT_DEBUG("tcp_recv_last_ack: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
+
 	//TODO can still get ACKs & resend data
 	//if ACK, send -, CLOSED
 	if (seg->flags & FLAG_ACK) {
@@ -762,14 +771,14 @@ void *recv_thread(void *local) {
 	}
 	if (conn->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum
-		if (seg->checksum == calc) {
+		if (1 || seg->checksum == calc) { //TODO remove override when IP prob fixed
 			PRINT_DEBUG("recv_thread: state=%d", conn->state);
 			switch (conn->state) {
 			case CLOSED:
 				//TODO if RST, -, -
 				//TODO if ACK, <SEQ=SEG.ACK><CTL=RST>
 				//TODO else, <SEQ=0><ACK=SEG.SEQ+SEG.LEN><CTL=RST,ACK>
-
+				PRINT_DEBUG("Closed, dropping");
 				seg_free(seg);
 				break;
 			case LISTEN:
@@ -821,7 +830,7 @@ void *recv_thread(void *local) {
 		exit(-1);
 	}
 	conn->threads--;
-	PRINT_DEBUG("");
+	PRINT_DEBUG("recv_thread: leaving thread: conn=%d, threads=%d", (int)conn, conn->threads);
 	sem_post(&conn_list_sem);
 
 	PRINT_DEBUG("");

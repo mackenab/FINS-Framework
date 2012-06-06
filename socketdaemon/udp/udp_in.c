@@ -50,8 +50,8 @@ void udp_in(struct finsFrame* ff) {
 	unsigned long dstip;
 
 	metadata_readFromElement(meta, "protocol", &protocol_type);
-	metadata_readFromElement(meta, "ipsrc", &srcip);
-	metadata_readFromElement(meta, "ipdst", &dstip);
+	metadata_readFromElement(meta, "src_ip", &srcip);
+	metadata_readFromElement(meta, "dst_ip", &dstip);
 
 
 	PRINT_DEBUG("UDP_in");
@@ -103,8 +103,8 @@ void udp_in(struct finsFrame* ff) {
 	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip,
 			(int)packet->u_dst, (int)packet->u_src);
 
-	metadata_writeToElement(meta, "portdst", &packet->u_dst, META_TYPE_INT);
-	metadata_writeToElement(meta, "portsrc", &packet->u_src, META_TYPE_INT);
+	metadata_writeToElement(meta, "dst_port", &packet->u_dst, META_TYPE_INT);
+	metadata_writeToElement(meta, "src_port", &packet->u_src, META_TYPE_INT);
 
 
 	/* put the header into the meta data*/
