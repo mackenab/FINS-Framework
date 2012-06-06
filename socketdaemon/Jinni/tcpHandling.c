@@ -465,13 +465,13 @@ void *connect_tcp_thread(void *local) {
 	struct finsFrame *ff = get_fcf(index, uniqueSockID, block_flag);
 	PRINT_DEBUG("connect_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL) {
-		PRINT_DEBUG("recvfrom_udp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+		PRINT_DEBUG("connect_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		nack_send(uniqueSockID, connect_call);
 		pthread_exit(NULL);
 	}
 
 	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
-		PRINT_DEBUG("recvfrom_udp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
+		PRINT_DEBUG("connect_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
 		nack_send(uniqueSockID, connect_call);
 		freeFinsFrame(ff);
@@ -483,14 +483,14 @@ void *connect_tcp_thread(void *local) {
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 
 	if (ret || (exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT) || ret_val == 0) {
-		PRINT_DEBUG("recvfrom_udp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
+		PRINT_DEBUG("connect_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
 		nack_send(uniqueSockID, connect_call);
 	} else {
-		PRINT_DEBUG("recvfrom_udp_thread: Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+		PRINT_DEBUG("connect_tcp_thread: Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		sem_wait(&jinniSockets_sem);
 		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-			PRINT_DEBUG("recvfrom_udp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+			PRINT_DEBUG("connect_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 			sem_post(&jinniSockets_sem);
 			pthread_exit(NULL);
 		}
@@ -1240,6 +1240,35 @@ void *recvfrom_tcp_thread(void *local) {
 	PRINT_DEBUG("recvfrom_tcp_thread: Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 
 	int blocking_flag = 1; //TODO get from flags
+	uint32_t status;
+	uint32_t host_ip;
+	uint16_t host_port;
+	uint32_t rem_ip;
+	uint16_t rem_port;
+
+	PRINT_DEBUG("release_udp: index=%d uniqueSockID=%llu", index, uniqueSockID);
+	sem_wait(&jinniSockets_sem);
+	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("Socket closed, canceling release_tcp.");
+		sem_post(&jinniSockets_sem);
+
+		nack_send(uniqueSockID, release_call);
+		return;
+	}
+
+	status = jinniSockets[index].connection_status;
+	host_ip = jinniSockets[index].host_IP;
+	host_port = jinniSockets[index].hostport;
+	if (status) {
+		rem_ip = jinniSockets[index].dst_IP;
+		rem_port = jinniSockets[index].dstport;
+	}
+
+	/** TODO handle flags cases, convert flags/msg_flags to */
+	//thread_flags = 0; // |= FLAGS_BLOCK | MULTI_FLAG;
+
+	PRINT_DEBUG("");
+	sem_post(&jinniSockets_sem);
 
 	PRINT_DEBUG();
 	struct finsFrame *ff = get_fdf(index, uniqueSockID, blocking_flag);
@@ -1308,10 +1337,40 @@ void *recvfrom_tcp_thread(void *local) {
 		PRINT_DEBUG("recvfrom_tcp_thread: Exiting, fail send_wedge: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		nack_send(uniqueSockID, recvmsg_call);
 	} else {
-		PRINT_DEBUG("recvfrom_tcp_thread: Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-	}
+		//TODO send size back to TCP handlers
+		if (status) {
+			PRINT_DEBUG("recvfrom address: host=%u/%d rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+		} else {
+			PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
+		}
 
-	//TODO send size back to TCP handlers
+		metadata *params = (metadata *) malloc(sizeof(metadata));
+		metadata_create(params);
+		if (params == NULL) {
+			PRINT_ERROR("metadata creation failed");
+
+			nack_send(uniqueSockID, recvmsg_call);
+			pthread_exit(NULL);
+		}
+
+		metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+
+		uint32_t param_id = CTRL_SET_PARAM;
+		metadata_writeToElement(params, "param_id", &param_id, META_TYPE_INT);
+		metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
+		metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
+		if (status) {
+			metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
+			metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
+		}
+
+		if (jinni_TCP_to_fins_cntrl(CTRL_SET_PARAM, params)) {
+			PRINT_DEBUG("recvfrom_tcp_thread: Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+		} else {
+			PRINT_DEBUG("recvfrom_tcp_thread: Exiting, fail sending flow msgs: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+		}
+
+	}
 
 	free(msg);
 	pthread_exit(NULL);
@@ -1528,7 +1587,7 @@ void recvfrom_tcp_old(int index, unsigned long long uniqueSockID, int data_len, 
 	int blocking_flag;
 
 	void *msg;
-	u_char *pt;
+	u_char * pt;
 	int msg_len;
 	int ret_val;
 	/*
@@ -1650,7 +1709,7 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 	blocking_flag = 1;
 
 	void *msg;
-	u_char *pt;
+	u_char * pt;
 	int msg_len;
 	int ret_val;
 

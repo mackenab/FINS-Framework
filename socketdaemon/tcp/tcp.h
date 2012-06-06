@@ -279,6 +279,7 @@ struct tcp_thread_data {
 	uint8_t *data_raw;
 	uint32_t data_len;
 	uint32_t flags;
+	struct finsFrame *ff;
 };
 
 struct tcp_to_thread_data {
@@ -304,12 +305,20 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_
 #define EXEC_TCP_RECV 4
 #define EXEC_TCP_CLOSE 5
 #define EXEC_TCP_CLOSE_STUB 6
-#define EXEC_TCP_OPT 7
+
+#define SET_PARAM_TCP_HOST_WINDOW 0
+#define SET_PARAM_TCP_SOCK_OPT 1
+
+#define READ_PARAM_TCP_HOST_WINDOW 0
+#define READ_PARAM_TCP_SOCK_OPT 1
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
 void tcp_fcf(struct finsFrame *ff);
 void tcp_exec(struct finsFrame *ff);
+
+int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
+void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 
 void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
@@ -317,7 +326,17 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags);
 void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port);
 
+void tcp_set_param(struct finsFrame *ff);
+void tcp_read_param(struct finsFrame *ff);
+
+/*
+ void tcp_read_param_host_window(struct finsFrame *ff);
+ void tcp_read_param_sock_opt(struct finsFrame *ff);
+
+ void tcp_set_param_host_window(struct finsFrame *ff);
+ void tcp_set_param_sock_opt(struct finsFrame *ff);
+ */
+
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application
-
 #endif /* TCP_H_ */

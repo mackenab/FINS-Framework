@@ -1296,11 +1296,6 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 	ret += metadata_readFromElement(params, "src_ip", &seg->src_ip) == 0; //host
 	ret += metadata_readFromElement(params, "dst_ip", &seg->dst_ip) == 0; //remote
 
-	seg->src_ip = ntohl(seg->src_ip); //makes seg_to_fdf & fdf_to_seg non reciprical //TODO align all module so don't need
-	seg->dst_ip = ntohl(seg->dst_ip);
-
-	seg->src_ip = 2130706433; //TODO remove, include atm to keep local
-
 	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {
 		PRINT_DEBUG("fdf_to_seg: error: ret=%d, protocol=%d", ret, protocol);
 
@@ -1618,6 +1613,41 @@ int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t
 
 }
 
+int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
+	uint32_t host_port_buf;
+	uint32_t rem_port_buf;
+
+	int ret = 0;
+	ret += metadata_readFromElement(params, "status", status) == 0;
+
+	ret += metadata_readFromElement(params, "host_ip", host_ip) == 0;
+	ret += metadata_readFromElement(params, "host_port", &host_port_buf) == 0;
+	*host_port = (uint16_t) host_port_buf;
+
+	if (ret && *status) {
+		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == 0;
+		ret += metadata_readFromElement(params, "rem_port", &rem_port_buf) == 0;
+		*rem_port = (uint16_t) rem_port_buf;
+	}
+
+	return !ret;
+}
+
+void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
+	uint32_t host_port_buf;
+	uint32_t rem_port_buf;
+
+	metadata_writeToElement(params, "status", status, META_TYPE_INT);
+
+	metadata_writeToElement(params, "host_ip", host_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "host_port", host_port, META_TYPE_INT);
+
+	if (*status) {
+		metadata_writeToElement(params, "rem_ip", rem_ip, META_TYPE_INT);
+		metadata_writeToElement(params, "rem_port", rem_port, META_TYPE_INT);
+	}
+}
+
 void tcp_init() {
 
 	PRINT_DEBUG("TCP started");
@@ -1671,18 +1701,27 @@ void tcp_fcf(struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		break;
+	case CTRL_ALERT_REPLY:
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		tcp_read_param(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		tcp_set_param(ff);
+		break;
+	case CTRL_SET_PARAM_REPLY:
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		tcp_exec(ff);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -1694,8 +1733,6 @@ void tcp_fcf(struct finsFrame *ff) {
 		PRINT_DEBUG("tcp_fcf: opcode=default (%d)", ff->ctrlFrame.opcode);
 		break;
 	}
-
-	freeFinsFrame(ff);
 }
 
 void tcp_exec(struct finsFrame *ff) {
@@ -1708,7 +1745,7 @@ void tcp_exec(struct finsFrame *ff) {
 	uint32_t backlog;
 	uint32_t flags;
 
-	PRINT_DEBUG("tcp_exec: Entered");
+	PRINT_DEBUG("tcp_exec: Entered: ff=%d", (int)ff);
 
 	metadata *params = ff->ctrlFrame.metaData;
 	if (params) {
@@ -1784,11 +1821,6 @@ void tcp_exec(struct finsFrame *ff) {
 			} else {
 				tcp_exec_close_stub(host_ip, (uint16_t) host_port);
 			}
-			break;
-		case EXEC_TCP_OPT:
-			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_OPT (%d)", exec_call);
-
-			//TODO finish
 			break;
 		default:
 			PRINT_DEBUG("tcp_exec: Error unknown exec_call=%d", exec_call);

@@ -853,6 +853,15 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	PRINT_DEBUG("tcp_in_fdf: Entered");
 
 	seg = fdf_to_seg(ff);
+
+	//####################### //TODO fix IP/Eth issues so can remove this
+	if (seg) {
+		seg->src_ip = ntohl(seg->src_ip); //makes seg_to_fdf & fdf_to_seg non reciprical //TODO align all module so don't need
+		seg->dst_ip = ntohl(seg->dst_ip);
+		seg->src_ip = 2130706433; //TODO remove, include atm to keep local
+	}
+	//#######################
+
 	if (seg) {
 		PRINT_DEBUG("");
 		if (sem_wait(&conn_list_sem)) {
