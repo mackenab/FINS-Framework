@@ -91,7 +91,8 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	printf("\n Connection establisehed %d/%d", server_addr.sin_addr.s_addr, ntohs(server_addr.sin_port));
+	printf("\n Connection establisehed sock=%d to (%s/%d) netw=%u", sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
+			server_addr.sin_addr.s_addr);
 
 	int i = 0;
 	while (1) {
@@ -99,13 +100,13 @@ int main(int argc, char *argv[]) {
 		gets(send_data);
 		printf("%s", send_data);
 		sleep(1);
+		numbytes = send(sock, send_data, strlen(send_data), 0);
+		//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+		printf("\n %d", numbytes);
+		fflush(stdout);
+
 		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
 			break;
-		} else {
-			numbytes = send(sock, send_data, strlen(send_data), 0);
-			//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
-			printf("\n %d", numbytes);
-			fflush(stdout);
 		}
 	}
 

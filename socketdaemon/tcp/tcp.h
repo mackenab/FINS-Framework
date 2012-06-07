@@ -190,8 +190,8 @@ struct tcp_connection {
 	//-----values agreed upon during setup
 	uint16_t MSS; //max segment size
 
-	uint32_t host_seq_num; //seq of host sendbase, tied with send_queue
-	uint32_t host_seq_end; //seq of host last sent
+	uint32_t host_seq_num; //seq of host sendbase, tied with send_queue, seq of unACKed data
+	uint32_t host_seq_end; //1+seq of last sent byte by host
 	uint16_t host_max_window; //max bytes in host recv buffer, tied with rem_seq_num/recv_queue
 	uint16_t host_window; //avail bytes in host recv buffer
 
@@ -296,7 +296,7 @@ void tcp_init();
 void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
-int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
+int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 
 #define EXEC_TCP_CONNECT 0
 #define EXEC_TCP_LISTEN 1

@@ -55,8 +55,9 @@ void metadata_create(metadata *mptr) {
 }
 
 void metadata_destroy(metadata *metadata) {
-	if (metadata)
+	if (metadata) {
 		PRINT_DEBUG("metadata_destroy: Entered: meta=%d", (int) metadata);
+	}
 
 	config_destroy(metadata);
 

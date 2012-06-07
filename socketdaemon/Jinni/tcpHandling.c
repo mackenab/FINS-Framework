@@ -480,10 +480,10 @@ void *connect_tcp_thread(void *local) {
 	}
 
 	int ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
+	//ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 
-	if (ret || (exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT) || ret_val == 0) {
+	if (ret || /*(exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT) ||*/ ret_val == 0) {
 		PRINT_DEBUG("connect_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
 		nack_send(uniqueSockID, connect_call);
@@ -675,12 +675,12 @@ void *accept_tcp_thread(void *local) {
 	}
 
 	int ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
+	//ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "rem_ip", &rem_ip) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "rem_port", &rem_port) == 0;
 
-	if (ret || exec_call != EXEC_TCP_ACCEPT || ret_val == 0) {
+	if (ret || /*exec_call != EXEC_TCP_ACCEPT ||*/ ret_val == 0) {
 		PRINT_DEBUG("accept_tcp_thread: Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
 		nack_send(uniqueSockID, accept_call);
@@ -1002,10 +1002,10 @@ void *sendmsg_tcp_thread(void *local) {
 	}
 
 	int ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
+	//ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 
-	if (ret || exec_call != EXEC_TCP_SEND || ret_val == 0) {
+	if (ret || /*exec_call != EXEC_TCP_SEND ||*/ ret_val == 0) {
 		nack_send(uniqueSockID, sendmsg_call);
 	} else {
 		ack_send(uniqueSockID, sendmsg_call);
@@ -1464,10 +1464,10 @@ void *release_tcp_thread(void *local) {
 	}
 
 	int ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
+	//ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 
-	if (ret || (exec_call != EXEC_TCP_CLOSE && exec_call != EXEC_TCP_CLOSE_STUB) || ret_val == 0) {
+	if (ret || /*(exec_call != EXEC_TCP_CLOSE && exec_call != EXEC_TCP_CLOSE_STUB) ||*/ ret_val == 0) {
 		PRINT_DEBUG("release_tcp_thread: Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
 		nack_send(uniqueSockID, release_call);
@@ -2084,11 +2084,11 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 
 	if (send_dst == -1) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
-		metadata_destroy(params);
+		//#metadata_destroy(params);
 		nack_send(uniqueSockID, getsockopt_call);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
-		metadata_destroy(params);
+		//#metadata_destroy(params);
 
 		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
 		u_char *msg = (u_char *) malloc(msg_len);
@@ -2198,8 +2198,8 @@ void *setsockopt_tcp_thread(void *local) {
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "param_id", &param_id) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 
-	if (ret /*|| (exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT)*/|| ret_val == 0) {
-		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
+	if (ret /*|| (param_id != EXEC_TCP_CONNECT && param_id != EXEC_TCP_ACCEPT)*/|| ret_val == 0) {
+		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, param_id=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, param_id, ret_val);
 		nack_send(uniqueSockID, setsockopt_call);
 	} else {
@@ -2357,11 +2357,11 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 
 	if (send_dst == -1) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
-		metadata_destroy(params);
+		//#metadata_destroy(params);
 		nack_send(uniqueSockID, getsockopt_call);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
-		metadata_destroy(params);
+		//#metadata_destroy(params);
 
 		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
 		u_char *msg = (u_char *) malloc(msg_len);

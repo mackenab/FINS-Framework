@@ -32,12 +32,14 @@ void *write_thread(void *local) {
 		PRINT_ERROR("conn->write_sem wait prob");
 		exit(-1);
 	}
+
+	PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
+	if (sem_wait(&conn->sem)) {
+		PRINT_ERROR("conn->sem wait prob");
+		exit(-1);
+	}
 	if (conn->running_flag) {
-		PRINT_DEBUG("");
-		if (sem_wait(&conn->sem)) {
-			PRINT_ERROR("conn->write_sem wait prob");
-			exit(-1);
-		}PRINT_DEBUG("write_thread: state=%d", conn->state);
+		PRINT_DEBUG("write_thread: state=%d", conn->state);
 		if (conn->state == ESTABLISHED || conn->state == CLOSE_WAIT) {
 			while (conn->running_flag && index < called_len) {
 				space = conn->write_queue->max - conn->write_queue->len;
@@ -58,10 +60,10 @@ void *write_thread(void *local) {
 					if (conn->main_wait_flag) {
 						PRINT_DEBUG("posting to wait_sem\n");
 						sem_post(&conn->main_wait_sem);
-					}PRINT_DEBUG("");
+					}PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 					sem_post(&conn->sem);
 				} else {
-					PRINT_DEBUG("");
+					PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 					sem_post(&conn->sem);
 
 					PRINT_DEBUG("");
@@ -71,23 +73,38 @@ void *write_thread(void *local) {
 					}
 					sem_init(&conn->write_wait_sem, 0, 0);
 					PRINT_DEBUG("left conn->send_wait_sem\n");
-				}PRINT_DEBUG("");
+				}
+
+				PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 				if (sem_wait(&conn->sem)) {
 					PRINT_ERROR("conn->sem prod");
 					exit(-1);
 				}
 			}
+
+			if (conn->running_flag) {
+				PRINT_DEBUG("");
+				//send ACK to send handler
+				conn_send_jinni(conn, EXEC_TCP_SEND, 1);
+			} else {
+				PRINT_DEBUG("");
+				//send NACK to send handler
+				conn_send_jinni(conn, EXEC_TCP_SEND, 0);
+			}
 		} else {
 			//TODO error, send/write'ing when conn sending is closed
 			PRINT_DEBUG("");
+			//send NACK to send handler
+			conn_send_jinni(conn, EXEC_TCP_SEND, 0);
 		}
-
-		//send ACK to send handler
-		conn_send_jinni(conn, EXEC_TCP_SEND, 1);
 	} else {
+		PRINT_DEBUG("");
 		//send NACK to send handler
 		conn_send_jinni(conn, EXEC_TCP_SEND, 0);
 	}
+
+	PRINT_DEBUG("");
+	sem_post(&conn->write_sem);
 
 	PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
@@ -97,6 +114,9 @@ void *write_thread(void *local) {
 	conn->threads--;
 	PRINT_DEBUG("write_thread: leaving thread: conn=%d, threads=%d", (int)conn, conn->threads);
 	sem_post(&conn_list_sem);
+
+	PRINT_DEBUG("sem_post: conn=%d", (int) conn);
+	sem_post(&conn->sem);
 
 	PRINT_DEBUG("write_thread: Exited: id=%d", id);
 	free(buf);
@@ -164,7 +184,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		PRINT_DEBUG("error");
 	}
 
-	//#freeFinsFrame(ff);
+	freeFinsFrame(ff);
 }
 
 void *close_stub_thread(void *local) {
@@ -177,6 +197,8 @@ void *close_stub_thread(void *local) {
 	struct tcp_node *temp_node;
 
 	PRINT_DEBUG("close_stub_thread: Entered: id=%d", id);
+
+	PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -247,6 +269,8 @@ void *connect_thread(void *local) {
 	struct tcp_segment *temp_seg;
 
 	PRINT_DEBUG("connect_thread: Entered: id=%d", id);
+
+	PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -257,6 +281,10 @@ void *connect_thread(void *local) {
 		conn->state = SYN_SENT;
 		conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
 		conn->host_seq_end = conn->host_seq_num;
+
+		PRINT_DEBUG(
+				"host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
+				conn->host_seq_num, conn->host_seq_end, conn->host_window, conn->host_max_window, conn->rem_seq_num, conn->rem_seq_end, conn->rem_window, conn->rem_max_window);
 
 		//TODO add options, for: MSS, max window size!!
 		//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
@@ -270,7 +298,7 @@ void *connect_thread(void *local) {
 		seg_free(temp_seg);
 
 		conn->timeout = DEFAULT_GBN_TIMEOUT;
-		//startTimer(conn->to_gbn_fd, conn->timeout);
+		//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
 	} else {
 		//send NACK to connect handler
 		conn_send_jinni(conn, EXEC_TCP_CONNECT, 0);
@@ -285,7 +313,7 @@ void *connect_thread(void *local) {
 	PRINT_DEBUG("connect_thread: leaving thread: conn=%d, threads=%d", (int)conn, conn->threads);
 	sem_post(&conn_list_sem);
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("connect_thread: Exited: id=%d", id);
@@ -428,6 +456,8 @@ void *accept_thread(void *local) {
 	struct tcp_segment *temp_seg;
 
 	PRINT_DEBUG("accept_thread: Entered: id=%d", id);
+
+	PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -435,7 +465,7 @@ void *accept_thread(void *local) {
 	while (conn_stub->running_flag) {
 		if (!queue_is_empty(conn_stub->syn_queue)) {
 			node = queue_remove_front(conn_stub->syn_queue);
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
 			sem_post(&conn_stub->sem);
 
 			seg = (struct tcp_segment *) node->data;
@@ -454,19 +484,23 @@ void *accept_thread(void *local) {
 						PRINT_DEBUG("");
 						sem_post(&conn_list_sem);
 
-						PRINT_DEBUG("");
+						PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 						if (sem_wait(&conn->sem)) {
 							PRINT_ERROR("conn->sem wait prob");
 							exit(-1);
 						}
-						if (conn->running_flag) {
+						if (conn->running_flag) { //LISTENING state
 							//if SYN, send SYN ACK, SYN_RECV
 							PRINT_DEBUG("accept_thread: SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
 							conn->state = SYN_RECV;
 							conn->host_seq_num = 0; //tcp_rand(); //TODO uncomment
 							conn->host_seq_end = conn->host_seq_num;
-							conn->rem_seq_num = seg->seq_num;
+							conn->rem_seq_num = seg->seq_num + 1;
 							conn->rem_window = seg->win_size;
+
+							PRINT_DEBUG(
+									"host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
+									conn->host_seq_num, conn->host_seq_end, conn->host_window, conn->host_max_window, conn->rem_seq_num, conn->rem_seq_end, conn->rem_window, conn->rem_max_window);
 
 							//TODO process options, decide: MSS, max window size!!
 							//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
@@ -489,7 +523,7 @@ void *accept_thread(void *local) {
 						PRINT_DEBUG("accept_thread: leaving thread: conn=%d, threads=%d", (int)conn, conn->threads);
 						sem_post(&conn_list_sem);
 
-						PRINT_DEBUG("");
+						PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 						sem_post(&conn->sem);
 
 						seg_free(seg);
@@ -516,7 +550,7 @@ void *accept_thread(void *local) {
 
 			seg_free(seg);
 		} else {
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
 			sem_post(&conn_stub->sem);
 
 			PRINT_DEBUG("");
@@ -528,7 +562,7 @@ void *accept_thread(void *local) {
 			PRINT_DEBUG("left conn_stub->accept_wait_sem\n");
 		}
 
-		PRINT_DEBUG("");
+		PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 		if (sem_wait(&conn_stub->sem)) {
 			PRINT_ERROR("conn_stub->sem prod");
 			exit(-1);
@@ -548,7 +582,7 @@ void *accept_thread(void *local) {
 	PRINT_DEBUG("accept_thread: leaving thread: conn_stub=%d, threads=%d", (int)conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("accept_thread: Exited: id=%d", id);
@@ -609,64 +643,66 @@ void *close_thread(void *local) {
 	int open = 1;
 
 	PRINT_DEBUG("close_thread: Entered: id=%d", id);
+
+	PRINT_DEBUG("");
+	if (sem_wait(&conn->write_sem)) {
+		PRINT_ERROR("conn->write_sem wait prob");
+		exit(-1);
+	}
+
+	PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
 	}
 	if (conn->running_flag) {
 		if (conn->state == ESTABLISHED) {
-			PRINT_DEBUG("");
-			sem_post(&conn->sem);
+			PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%d", conn->state, (int) conn);
+			conn->state = FIN_WAIT_1;
 
-			PRINT_DEBUG("");
-			if (sem_wait(&conn->write_sem)) {
-				PRINT_ERROR("conn->write_sem wait prob");
-				exit(-1);
-			}
+			PRINT_DEBUG(
+					"host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
+					conn->host_seq_num, conn->host_seq_end, conn->host_window, conn->host_max_window, conn->rem_seq_num, conn->rem_seq_end, conn->rem_window, conn->rem_max_window);
 
-			PRINT_DEBUG("");
-			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->sem wait prob");
-				exit(-1);
-			}
-			if (conn->running_flag) {
-				if (conn->state == ESTABLISHED) {
-					PRINT_DEBUG("close_thread: CLOSE: state=%d conn=%d", conn->state, (int)conn);
-					conn->state = FIN_WAIT_1;
+			//if CLOSE, send FIN, FIN_WAIT_1
+			if (queue_is_empty(conn->write_queue) && conn->host_seq_num == conn->host_seq_end) {
+				//send FIN
+				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
+				temp_seg = seg_create(conn);
+				seg_update(temp_seg, conn, FLAG_FIN);
 
-					//if CLOSE, send FIN, FIN_WAIT_1
-					if (queue_is_empty(conn->write_queue) && conn->host_seq_num == conn->host_seq_end) {
-						//send FIN
-						PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT: state=%d", conn->state);
-						temp_seg = seg_create(conn);
-						seg_update(temp_seg, conn, FLAG_FIN);
+				temp_node = node_create((uint8_t *) temp_seg, 1, temp_seg->seq_num, temp_seg->seq_num);
+				queue_append(conn->send_queue, temp_node);
 
-						temp_node = node_create((uint8_t *) temp_seg, 1, temp_seg->seq_num, temp_seg->seq_num);
-						queue_append(conn->send_queue, temp_node);
+				seg_send(temp_seg);
 
-						seg_send(temp_seg);
-					} //else piggy back it
-				} else {
-					//TODO figure out:
-					PRINT_DEBUG("");
-				}
-			} else {
-				//TODO figure out: conn shutting down already?
-				PRINT_DEBUG("");
-			}
+				//TODO add TO
+			} //else piggy back it
 		} else {
-			//TODO figure out close call on non-establisehd conn
+			//TODO figure out:
 			PRINT_DEBUG("");
-
-			conn_shutdown(conn);
-
-			//send ACK to close handler
-			conn_send_jinni(conn, EXEC_TCP_CLOSE, 1);
-
-			conn_free(conn);
-			open = 0;
 		}
+	} else {
+		//TODO figure out: conn shutting down already?
+		PRINT_DEBUG("");
 	}
+
+	PRINT_DEBUG("");
+	sem_post(&conn->write_sem);
+
+	/*
+	 //TODO figure out close call on non-establisehd conn
+	 PRINT_DEBUG("");
+	 sem_post(&conn->write_sem);
+
+	 conn_shutdown(conn);
+
+	 //send ACK to close handler
+	 conn_send_jinni(conn, EXEC_TCP_CLOSE, 1);
+
+	 conn_free(conn);
+	 open = 0;
+	 */
 
 	if (open) {
 		PRINT_DEBUG("");
@@ -678,7 +714,7 @@ void *close_thread(void *local) {
 		PRINT_DEBUG("close_thread: leaving thread: conn=%d, threads=%d", (int)conn, conn->threads);
 		sem_post(&conn_list_sem);
 
-		PRINT_DEBUG("");
+		PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 		sem_post(&conn->sem);
 	}
 
@@ -750,13 +786,13 @@ void *read_param_conn_thread(void *local) {
 			value = 0;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->write_sem wait prob");
+				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
 			}
 			value = conn->host_window;
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 			sem_post(&conn->sem);
 
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
@@ -775,13 +811,13 @@ void *read_param_conn_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//fill in with switch of opts? or have them separate?
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->write_sem wait prob");
+				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
 			}
 			//TODO read sock opts
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 			sem_post(&conn->sem);
 			value = 1;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
@@ -827,7 +863,7 @@ void *read_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			/*//TODO do something? error?
-			 PRINT_DEBUG("");
+			 PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 			 if (sem_wait(&conn_stub->sem)) {
 			 PRINT_ERROR("conn_stub->write_sem wait prob");
 			 exit(-1);
@@ -836,7 +872,7 @@ void *read_param_conn_stub_thread(void *local) {
 			 conn_stub->host_window -= value;
 			 } else {
 			 conn_stub->host_window = 0;
-			 }PRINT_DEBUG("");
+			 }PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
 			 sem_post(&conn_stub->sem);
 			 */
 			value = 1;
@@ -857,16 +893,16 @@ void *read_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			/*//fill in with switch of opts? or have them separate?
-			 PRINT_DEBUG("");
+			 PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 			 if (sem_wait(&conn->sem)) {
-			 PRINT_ERROR("conn->write_sem wait prob");
+			 PRINT_ERROR("conn->sem wait prob");
 			 exit(-1);
 			 }
 			 if (value > conn->host_window) {
 			 conn->host_window -= value;
 			 } else {
 			 conn->host_window = 0;
-			 }PRINT_DEBUG("");
+			 }PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 			 sem_post(&conn->sem);
 			 */
 			value = 1;
@@ -997,16 +1033,16 @@ void *set_param_conn_thread(void *local) {
 			value = 0;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
-			PRINT_DEBUG("");
+			PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->write_sem wait prob");
+				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
 			}
-			if (value > conn->host_window) {
-				conn->host_window -= value;
+			if (conn->host_window + value < conn->host_window || conn->host_max_window < conn->host_window + value) {
+				conn->host_window = conn->host_max_window;
 			} else {
-				conn->host_window = 0;
-			}PRINT_DEBUG("");
+				conn->host_window += value;
+			}PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 			sem_post(&conn->sem);
 
 			value = 1;
@@ -1027,16 +1063,16 @@ void *set_param_conn_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			/*//fill in with switch of opts? or have them separate?
-			 PRINT_DEBUG("");
+			 PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 			 if (sem_wait(&conn->sem)) {
-			 PRINT_ERROR("conn->write_sem wait prob");
+			 PRINT_ERROR("conn->sem wait prob");
 			 exit(-1);
 			 }
 			 if (value > conn->host_window) {
 			 conn->host_window -= value;
 			 } else {
 			 conn->host_window = 0;
-			 }PRINT_DEBUG("");
+			 }PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 			 sem_post(&conn->sem);
 			 */
 			value = 1;
@@ -1083,7 +1119,7 @@ void *set_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			/*//TODO do something? error?
-			 PRINT_DEBUG("");
+			 PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 			 if (sem_wait(&conn_stub->sem)) {
 			 PRINT_ERROR("conn_stub->write_sem wait prob");
 			 exit(-1);
@@ -1092,7 +1128,7 @@ void *set_param_conn_stub_thread(void *local) {
 			 conn_stub->host_window -= value;
 			 } else {
 			 conn_stub->host_window = 0;
-			 }PRINT_DEBUG("");
+			 }PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
 			 sem_post(&conn_stub->sem);
 			 */
 			value = 1;
@@ -1113,16 +1149,16 @@ void *set_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			/*//fill in with switch of opts? or have them separate?
-			 PRINT_DEBUG("");
+			 PRINT_DEBUG("sem_wait: conn=%d", (int) conn);
 			 if (sem_wait(&conn->sem)) {
-			 PRINT_ERROR("conn->write_sem wait prob");
+			 PRINT_ERROR("conn->sem wait prob");
 			 exit(-1);
 			 }
 			 if (value > conn->host_window) {
 			 conn->host_window -= value;
 			 } else {
 			 conn->host_window = 0;
-			 }PRINT_DEBUG("");
+			 }PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 			 sem_post(&conn->sem);
 			 */
 			value = 1;

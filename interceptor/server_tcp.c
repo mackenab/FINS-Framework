@@ -80,13 +80,12 @@ int main(int argc, char *argv[]) {
 	printf("\n UDPServer Waiting for client on port %d", ntohs(server_addr.sin_port));
 	fflush(stdout);
 
-	if ((sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len)) < 0) {
-		perror("Accept");
-		printf("Failure");
-		exit(1);
-	}
+	sock_client = -1;
+	while ((sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len)) < 0)
+		;
 
-	printf("\n Connection establisehed sock_client=%d to (%s/%d) netw=%u", sock_client, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	printf("\n Connection establisehed sock_client=%d to (%s/%d) netw=%u", sock_client, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port),
+			client_addr.sin_addr.s_addr);
 
 	fflush(stdout);
 
@@ -105,8 +104,26 @@ int main(int argc, char *argv[]) {
 			printf("\n");
 			printf(" (%s) to the Server\n", recv_data);
 			fflush(stdout);
+
+			if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
+				break;
+			}
 		}
 	}
+
+	printf("\n Closing client socket");
+	fflush(stdout);
+	close(sock_client);
+
+	printf("\n Closing server socket");
+	fflush(stdout);
+	close(sock);
+
+	printf("\n FIN");
+	fflush(stdout);
+
+	while (1)
+		;
 
 	return 0;
 }

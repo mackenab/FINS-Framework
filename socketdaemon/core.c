@@ -256,6 +256,7 @@ void *Switch_to_Jinni() {
 	int status;
 	uint32_t exec_call;
 	uint16_t dstport, hostport;
+	uint32_t dstport_buf, hostport_buf;
 	uint32_t dstip, hostip;
 	uint32_t host_ip, host_port, rem_ip, rem_port;
 
@@ -300,6 +301,7 @@ void *Switch_to_Jinni() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -326,6 +328,7 @@ void *Switch_to_Jinni() {
 							sem_post(&(jinniSockets_sem));
 
 							PRINT_DEBUG("No socket found, dropping");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 						}
 					} else {
@@ -335,6 +338,7 @@ void *Switch_to_Jinni() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -361,6 +365,7 @@ void *Switch_to_Jinni() {
 							sem_post(&(jinniSockets_sem));
 
 							PRINT_DEBUG("No socket found, dropping");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 						}
 					}
@@ -393,6 +398,7 @@ void *Switch_to_Jinni() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -431,38 +437,40 @@ void *Switch_to_Jinni() {
 							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
 						} else {
-							ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+							//ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
 
-							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
-								index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
-								if (index != -1) {
-									PRINT_DEBUG("");
-									sem_wait(&(jinniSockets[index].Qs));
+							//if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
+							index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+							if (index != -1) {
+								PRINT_DEBUG("");
+								sem_wait(&(jinniSockets[index].Qs));
 
-									/**
-									 * TODO Replace The data Queue with a pipeLine at least for
-									 * the RAW DATA in order to find a natural way to support
-									 * Blocking and Non-Blocking mode
-									 */
-									write_queue(ff, jinniSockets[index].controlQueue);
-									PRINT_DEBUG("");
-									sem_post(&(jinniSockets[index].Qs));
-									PRINT_DEBUG("");
-									sem_post(&(jinniSockets_sem));
-								} else {
-									PRINT_DEBUG("");
-									sem_post(&(jinniSockets_sem));
-
-									PRINT_DEBUG("No socket found, dropping");
-									freeFinsFrame(ff);
-								}
+								/**
+								 * TODO Replace The data Queue with a pipeLine at least for
+								 * the RAW DATA in order to find a natural way to support
+								 * Blocking and Non-Blocking mode
+								 */
+								write_queue(ff, jinniSockets[index].controlQueue);
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
 							} else {
 								PRINT_DEBUG("");
 								sem_post(&(jinniSockets_sem));
 
 								PRINT_DEBUG("No socket found, dropping");
+								PRINT_DEBUG("freeing ff=%d", (int)ff);
 								freeFinsFrame(ff);
 							}
+							/*} else {
+							 PRINT_DEBUG("");
+							 sem_post(&(jinniSockets_sem));
+
+							 PRINT_DEBUG("No socket found, dropping");
+							 PRINT_DEBUG("freeing ff=%d", (int)ff);
+							 freeFinsFrame(ff);
+							 }*/
 						}
 					} else {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
@@ -471,6 +479,7 @@ void *Switch_to_Jinni() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -507,6 +516,7 @@ void *Switch_to_Jinni() {
 							sem_post(&(jinniSockets_sem));
 
 							PRINT_DEBUG("No socket found, dropping");
+							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 						}
 					}
@@ -529,13 +539,24 @@ void *Switch_to_Jinni() {
 			hostip = -1;
 			protocol = -1;
 
-			metadata_readFromElement(ff->dataFrame.metaData, "dst_port", &dstport);
-			metadata_readFromElement(ff->dataFrame.metaData, "src_port", &hostport);
-			metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &dstip);
-			metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip);
+			int ret = 0;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip) == 0;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_port", &hostport_buf) == 0;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &dstip) == 0;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_port", &dstport_buf) == 0;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == 0;
 
-			metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol);
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip, hostport, dstport);
+			if (ret) {
+				PRINT_ERROR("prob reading metadata");
+				PRINT_DEBUG("freeing ff=%d", (int)ff);
+				freeFinsFrame(ff);
+				continue;
+			}
+
+			dstport = (uint16_t) dstport_buf;
+			hostport = (uint16_t) hostport_buf;
+
+			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d, ff=%d", protocol, hostip, dstip, hostport, dstport, (int)ff);
 
 			protocol = ntohs(protocol);
 			dstport = ntohs(dstport);
@@ -543,7 +564,7 @@ void *Switch_to_Jinni() {
 			dstip = ntohl(dstip);
 			hostip = ntohl(hostip);
 
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d,", protocol, hostip, dstip, hostport, dstport);
+			PRINT_DEBUG("HOSTFORMAT %d,%d,%d,%d,%d, ff=%d", protocol, hostip, dstip, hostport, dstport, (int)ff);
 			///*
 			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 			if (hostip) {
@@ -558,43 +579,45 @@ void *Switch_to_Jinni() {
 				temp2->s_addr = 0;
 			}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
-			//*/
-			/**
-			 * check if this datagram comes from the address this socket has been previously
-			 * connected to it (Only if the socket is already connected to certain address)
-			 */
-			if (index >= 0 && jinniSockets[index].connection_status > 0) {
-
-				PRINT_DEBUG("ICMP should not enter here at all");
-				if ((hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP)) {
-					PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
-
-					freeFinsFrame(ff);
-					sem_post(&jinniSockets_sem);
-					continue;
-
-				}
-
-			}
 
 			/**
 			 * check if this received datagram destIP and destport matching which socket hostIP
 			 * and hostport insidee our sockets database
 			 */
+			sem_wait(&jinniSockets_sem);
 			if (protocol == IPPROTO_ICMP) {
 				index = matchjinniSocket(0, hostip, protocol);
-			}
-
-			else {
-
+			} else if (protocol == TCP_PROTOCOL) {
+				index = match_jinni_connection(hostip, hostport, dstip, dstport);
+				if (index == -1) {
+					index = match_jinni_connection(hostip, hostport, 0, 0);
+				}
+			} else {
 				index = matchjinniSocket(dstport, dstip, protocol);
+
+				if (index != -1 && jinniSockets[index].connection_status > 0) { //TODO review this logic might be bad
+					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
+					if ((hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP)) {
+						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
+						sem_post(&jinniSockets_sem);
+
+						PRINT_DEBUG("freeing ff=%d", (int)ff);
+						freeFinsFrame(ff);
+						continue;
+					}
+				}
 			}
 
 			PRINT_DEBUG("index %d", index);
-			if (index != -1) {
+			if (index != -1 && jinniSockets[index].uniqueSockID != -1) {
 				PRINT_DEBUG(
 						"Matched: host=%d/%d, dst=%d/%d, prot=%d",
 						jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport, jinniSockets[index].protocol);
+
+				/**
+				 * check if this datagram comes from the address this socket has been previously
+				 * connected to it (Only if the socket is already connected to certain address)
+				 */
 
 				int value;
 				sem_getvalue(&(jinniSockets[index].Qs), &value);
@@ -608,6 +631,8 @@ void *Switch_to_Jinni() {
 				 */
 				write_queue(ff, jinniSockets[index].dataQueue);
 				sem_post(&(jinniSockets[index].Qs));
+				sem_post(&jinniSockets_sem);
+
 				//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
 
 				char *buf;
@@ -618,11 +643,11 @@ void *Switch_to_Jinni() {
 				free(buf);
 
 				PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
-			}
-
-			else {
+			} else {
 				PRINT_DEBUG("No match, freeing ff");
+				sem_post(&jinniSockets_sem);
 
+				PRINT_DEBUG("freeing ff=%d", (int)ff);
 				freeFinsFrame(ff);
 			}
 		} else {
