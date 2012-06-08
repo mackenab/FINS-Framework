@@ -41,48 +41,41 @@
  *  If the datagram is correct, the returned value should be zero. However, this function can be used to calculate
  *  the true checksum by setting the checksum field to 0 and using the returned value as the checksum.
  */
-unsigned short UDP_checksum(struct udp_packet* pcket,
-		struct udp_metadata_parsed* meta) {
+unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t dst_ip) {
 
 	int i;
-	int ucksum;
-	ucksum = 0;
-	unsigned short* ptr = (unsigned short*) meta;
-	unsigned short checkreturn;
-	unsigned short length = meta->u_pslen;
+	//packet is in network format
+	uint32_t sum = 0;
 
-	for (i = 0; i < 6; ++i) { /* loops 6 times to get all data from the psuedoheader which was in the metadata */
-		ucksum += *ptr++;
+	//fake IP header
+	sum += ((uint16_t)(src_ip >> 16)) + ((uint16_t)(src_ip & 0xFFFF));
+	sum += ((uint16_t)(dst_ip >> 16)) + ((uint16_t)(dst_ip & 0xFFFF));
+	sum += (uint16_t) UDP_PROTOCOL;
+	sum += IP_HEADER_LEN + pcket->u_len;
+
+	//fake UDP header
+	sum += pcket->u_src;
+	sum += pcket->u_dst;
+	sum += pcket->u_len;
+	//checksum set to 0
+
+	uint16_t *ptr = (uint16_t *) pcket->u_data;
+	uint16_t data_len = ntohs(pcket->u_len) - U_HEADER_LEN;
+	PRINT_DEBUG("pkt=%u ptr=%u *ptr=%u data_len=%d", (unsigned int)pcket, ptr, *ptr, data_len);
+	for (i = 0; i < data_len; i += 2) {
+		sum += *ptr++;
 	}
-	//	printf("\nThe sum of the pseudo header: %u\n",ucksum);
 
-	ptr = (unsigned short *) pcket;
-
-	for (i = 0; i < U_HEADER_LEN / 2; ++i) { /*loops through the UDP header summing it up*/
-		//		printf("\n the value of the UDP header: %d\n", *ptr);
-		ucksum += *ptr++;
+	if (data_len & 0x1) {
+		sum += *ptr & 0xFF00;
 	}
 
-	if (length % 2) {
-		((char *) pcket)[length] = 0; /* pads the data if the length is an odd number*/
-		length += 1;
-
+	sum = (sum & 0xFFFF) + (sum & 0xFFFF0000);
+	if (sum & 0x00010000) {
+		sum++;
 	}
-	length >>= 1; /*divides the length by two because we are taking 2 bytes at a time*/
 
-	for (i = U_HEADER_LEN / 2; i < length; ++i) { /* starts the ptr on the data, following the header, and loops through it*/
-
-		//		printf("\n the value of the data is %d\n", htons(*ptr));
-		ucksum += htons(*ptr++); /* htons was used for the test, I don't believe it is needed in a real implementation */
-	}
-	ucksum = (ucksum >> 16) + (ucksum & 0xffff);
-	ucksum += (ucksum >> 16); /* ucksum is now the complete addition but still needs to be complimented */
-
-	checkreturn = (unsigned short) (~ucksum & 0xffff);
-
-	// printf("The calculated checksum is %x\n", checkreturn);	/* returns the checksum. If it is an incoming file to be processes, the checksum is 0 */
-
-
-	return checkreturn;
+	sum = ~sum;
+	return ((uint16_t) sum);
 }
 

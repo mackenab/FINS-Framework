@@ -49,11 +49,12 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
+	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
+	//server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
+	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 
-//	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
-//          server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
-
-//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
+	//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
 	bzero(&(server_addr.sin_zero), 8);
 
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
@@ -64,7 +65,8 @@ int main(int argc, char *argv[]) {
 
 	addr_len = sizeof(struct sockaddr);
 
-	printf("\n UDPServer Waiting for client on port %d", ntohs(server_addr.sin_port));
+	printf("\n UDPServer Waiting for client at server_addr=%s/%d, netw=%u", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
+			server_addr.sin_addr.s_addr);
 	fflush(stdout);
 
 	i = 0;
@@ -78,7 +80,7 @@ int main(int argc, char *argv[]) {
 		printf("\n (%d) frame number", i);
 		if (bytes_read > 0) {
 			recv_data[bytes_read] = '\0';
-			printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
+			printf("\n(%s:%d, n=%u) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port), client_addr->sin_addr.s_addr);
 			//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
 			printf(" (%s) to the Server\n", recv_data);
 		} else {

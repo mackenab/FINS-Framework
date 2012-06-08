@@ -14,11 +14,12 @@
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-	#include <sys/endian.h>
+#include <sys/endian.h>
 #endif
 
 #define IP_MAXLEN 65535
 #define IP_MINLEN 5
+#define IP_HEADER_LEN 12		/* IP header length in bytes, 96 bits */
 #define U_HEADER_LEN 8 										/* UDP header length in bytes, 64 bits. */
 #define U_MAXLEN  4096  	/* Maximum amount of data in the UDP packet */
 
@@ -30,7 +31,6 @@ struct udp_header {
 	uint16_t u_dst; /*UDP destination port */
 	uint16_t u_len; /*Length of UDP packet */
 	uint16_t u_cksum; /* UDP checksum all 1's means no checksum*/
-
 };
 
 struct udp_packet {
@@ -87,19 +87,17 @@ struct udp_statistics {
 
 void udp_init();
 
-unsigned short UDP_checksum(struct udp_packet* pcket,
-		struct udp_metadata_parsed* meta);
+//unsigned short UDP_checksum(struct udp_packet* pcket, struct udp_metadata_parsed* meta);
+unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t dst_ip);
 
 void udp_in(struct finsFrame* ff);
 void udp_out(struct finsFrame* ff);
-struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID,
-		int PDU_length, unsigned char* PDU, metadata *meta);
+struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, unsigned char* PDU, metadata *meta);
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 void udp_get_FF();
 void sendToSwitch(struct finsFrame *ff);
 static inline unsigned short from64to16(unsigned long x);
 
-unsigned short UDP_checkSeparate(uint32_t src, uint32_t dest,
-		unsigned short len, unsigned short protocol, uint16_t wsum);
+unsigned short UDP_checkSeparate(uint32_t src, uint32_t dest, unsigned short len, unsigned short protocol, uint16_t wsum);
 
 #endif

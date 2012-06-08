@@ -78,6 +78,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	printf("\n UDPClient Sending to server at server_addr=%s/%d, netw=%u from client_addr=%s/%d, netw=%u", inet_ntoa(server_addr.sin_addr),
+			ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port),
+			client_addr.sin_addr.s_addr);
+
 	int i = 0;
 	while (1) {
 

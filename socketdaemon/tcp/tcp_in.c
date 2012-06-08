@@ -75,6 +75,7 @@ void *syn_thread(void *local) {
 	}
 	if (conn_stub->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum
+		PRINT_DEBUG("syn_thread: checksum=%u calc=%u %d", seg->checksum, calc, seg->checksum == calc);
 		if (1 || seg->checksum == calc) { //TODO remove override when IP prob fixed
 			if (queue_has_space(conn_stub->syn_queue, 1)) {
 				node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
@@ -877,6 +878,7 @@ void *recv_thread(void *local) {
 	}
 	if (conn->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum
+		PRINT_DEBUG("recv_thread: checksum=%u calc=%u %d", seg->checksum, calc, seg->checksum == calc);
 		if (1 || seg->checksum == calc) { //TODO remove override when IP prob fixed
 			PRINT_DEBUG("recv_thread: state=%d", conn->state);
 			switch (conn->state) {
@@ -965,8 +967,8 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	if (seg) {
 		seg->src_ip = ntohl(seg->src_ip); //makes seg_to_fdf & fdf_to_seg non reciprical //TODO align all module so don't need
 		seg->dst_ip = ntohl(seg->dst_ip);
-		seg->src_ip = 2130706433; //TODO remove, include atm to keep local
-		seg->dst_ip = 2130706433; //TODO remove, include atm to keep local
+		//seg->src_ip = 2130706433; //TODO remove, include atm to keep local
+		//seg->dst_ip = 2130706433; //TODO remove, include atm to keep local
 	}
 	//#######################
 

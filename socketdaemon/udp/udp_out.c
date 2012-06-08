@@ -51,11 +51,9 @@ void udp_out(struct finsFrame* ff) {
 
 	//print_finsFrame(ff);
 
-
 	metadata* meta = (ff->dataFrame).metaData;
 
-	u_char *udp_dataunit = (u_char *) malloc((ff->dataFrame).pduLength
-			+ U_HEADER_LEN);
+	u_char *udp_dataunit = (u_char *) malloc((ff->dataFrame).pduLength + U_HEADER_LEN);
 
 	packet_length = (ff->dataFrame).pduLength + U_HEADER_LEN;
 	/** constructs the UDP packet from the FDF and the meta data */
@@ -85,10 +83,9 @@ void udp_out(struct finsFrame* ff) {
 	packet_noninversed.u_src = srcbuf16;
 	packet_noninversed.u_len = ((ff->dataFrame).pduLength) + U_HEADER_LEN;
 	packet_noninversed.u_cksum = 0;
-	memcpy(packet_noninversed.u_data, (ff->dataFrame).pdu,
-			(ff->dataFrame).pduLength);
+	memcpy(packet_noninversed.u_data, (ff->dataFrame).pdu, (ff->dataFrame).pduLength);
 
-	PRINT_DEBUG("%d,%d,%d,%d",packet_noninversed.u_dst,packet_noninversed.u_src,packet_noninversed.u_len,packet_noninversed.u_cksum );
+	PRINT_DEBUG("%d,%d,%d,%d", packet_noninversed.u_dst, packet_noninversed.u_src, packet_noninversed.u_len, packet_noninversed.u_cksum);
 
 	/*
 	 int i=0;
@@ -131,20 +128,19 @@ void udp_out(struct finsFrame* ff) {
 	parsed_meta.u_pslen = (packet_noninversed.u_len);
 	parsed_meta.u_prcl = (UDP_PROTOCOL);
 
-	PRINT_DEBUG("%d,%d,%d,%d,",parsed_meta.u_IPsrc,parsed_meta.u_IPdst,parsed_meta.u_pslen,
-			parsed_meta.u_prcl);
+	PRINT_DEBUG("%d,%d,%d,%d,", parsed_meta.u_IPsrc, parsed_meta.u_IPdst, parsed_meta.u_pslen, parsed_meta.u_prcl);
 
 	parsed_meta.u_destPort = dstbuf16;
 	parsed_meta.u_srcPort = (srcbuf16);
 
-	//	packet.u_cksum = UDP_checksum(&packet_noninversed, &parsed_meta);
-	//	packet.u_cksum = htons(packet.u_cksum);
-	packet.u_cksum = 0;
-	PRINT_DEBUG("%x",packet.u_cksum);
+	packet.u_cksum = UDP_checksum(&packet_noninversed, srcip, dstip);
+	packet.u_cksum = htons(packet.u_cksum);
+	//packet.u_cksum = 0;
+	PRINT_DEBUG("%x", packet.u_cksum);
 
 	PRINT_DEBUG("%d,%d", srcip, dstip);
 
-	PRINT_DEBUG("%d,%d,%d,%x", packet.u_src,packet.u_dst,packet.u_len,packet.u_cksum);
+	PRINT_DEBUG("%d,%d,%d,%x", packet.u_src, packet.u_dst, packet.u_len, packet.u_cksum);
 
 	//	packet.u_cksum = UDP_checksum(&packet, meta);												/* calculates ands stores the real checksum in the checksum field */
 	/* need to be careful in the line ^ above ^, the metadata needs to have the s
@@ -164,13 +160,11 @@ void udp_out(struct finsFrame* ff) {
 	 */
 
 	//	packet.u_cksum = 30;
-
 	PRINT_DEBUG("UDP_out");
 	memcpy(udp_dataunit, &packet, U_HEADER_LEN); /* copies the UDP packet into the memory that has been allocated for the PDU */
 	//	PRINT_DEBUG("%d, %d",(ff->dataFrame).pdu, ff->dataFrame.pduLength);
 
-	memcpy(udp_dataunit + U_HEADER_LEN, (ff->dataFrame).pdu,
-			ff->dataFrame.pduLength); /* moves the pointer 8 bytes to account for those empty 8 bytes*/
+	memcpy(udp_dataunit + U_HEADER_LEN, (ff->dataFrame).pdu, ff->dataFrame.pduLength); /* moves the pointer 8 bytes to account for those empty 8 bytes*/
 	;
 	//	PRINT_DEBUG("%d",packet.u_len);
 
@@ -194,14 +188,13 @@ void udp_out(struct finsFrame* ff) {
 
 	ff->dataFrame.pdu = udp_dataunit;
 	/* creates a new FDF to be sent out */
-	PRINT_DEBUG("%d",(int)ff->dataFrame.pdu);
+	PRINT_DEBUG("%d", (int)ff->dataFrame.pdu);
 
 	PRINT_DEBUG("UDP_out");
 
-	newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, ff->dataFrame.pdu,
-			ff->dataFrame.metaData);
+	newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, ff->dataFrame.pdu, ff->dataFrame.metaData);
 
-	PRINT_DEBUG("%d",(int)newFF->dataFrame.pdu);
+	PRINT_DEBUG("%d", (int)newFF->dataFrame.pdu);
 
 	print_finsFrame(newFF);
 	udpStat.totalSent++;
