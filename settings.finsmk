@@ -56,7 +56,7 @@ TARGET_PLATFORM = "Linux x86"
 
 CC = gcc
 LD = gcc
-CCOPTS =
+CCOPTS = -g -O0
 INCLS =
 LDOPTS =
 LIBPATHS =

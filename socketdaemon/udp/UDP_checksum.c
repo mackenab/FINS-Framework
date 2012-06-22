@@ -44,38 +44,43 @@
 unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t dst_ip) {
 
 	int i;
-	//packet is in network format
+	uint8_t *ptr;
 	uint32_t sum = 0;
 
+	//packet is in network format
+
 	//fake IP header
-	sum += ((uint16_t)(src_ip >> 16)) + ((uint16_t)(src_ip & 0xFFFF));
-	sum += ((uint16_t)(dst_ip >> 16)) + ((uint16_t)(dst_ip & 0xFFFF));
-	sum += (uint16_t) UDP_PROTOCOL;
-	sum += IP_HEADER_LEN + pcket->u_len;
+	ptr = (uint8_t *) &src_ip;
+	for (i = 0, ptr--; i < 4; i += 2) {
+		sum += (*++ptr << 8) + *++ptr;
+	}
 
-	//fake UDP header
-	sum += pcket->u_src;
-	sum += pcket->u_dst;
+	ptr = (uint8_t *) &dst_ip;
+	for (i = 0, ptr--; i < 4; i += 2) {
+		sum += (*++ptr << 8) + *++ptr;
+	}
+
+	sum += (UDP_PROTOCOL); //TODO check!
 	sum += pcket->u_len;
-	//checksum set to 0
 
-	uint16_t *ptr = (uint16_t *) pcket->u_data;
-	uint16_t data_len = ntohs(pcket->u_len) - U_HEADER_LEN;
-	PRINT_DEBUG("pkt=%u ptr=%u *ptr=%u data_len=%d", (unsigned int)pcket, ptr, *ptr, data_len);
-	for (i = 0; i < data_len; i += 2) {
-		sum += *ptr++;
+	ptr = (uint8_t *) pcket;
+
+	uint16_t len = ntohs(pcket->u_len);
+	if (len & 0x1) {
+		sum += ptr[--len] << 8;
 	}
 
-	if (data_len & 0x1) {
-		sum += *ptr & 0xFF00;
+	for (i = 0, ptr--; i < len; i += 2) {
+		PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(ptr+1), *(ptr+1), i+1, *(ptr+2), *(ptr+2));
+		sum += (*++ptr << 8) + *++ptr;
+		//if (sum >> 16) {sum = ++sum & 0xFFFF;} //alternative to while loop
 	}
 
-	sum = (sum & 0xFFFF) + (sum & 0xFFFF0000);
-	if (sum & 0x00010000) {
-		sum++;
+	while (sum >> 16) {
+		sum = (sum & 0xFFFF) + (sum >> 16);
 	}
 
 	sum = ~sum;
-	return ((uint16_t) sum);
+	return htons((uint16_t) sum);
 }
 

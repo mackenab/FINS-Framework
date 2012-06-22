@@ -50,6 +50,9 @@ Queue CreateQueue(const char* name, int MaxElements) {
 	/* 7*/
 	if (Q->Array == NULL)
 		/* 8*/FatalError( "Out of space!!!" );
+
+	memset(Q->Array, 0, sizeof(ElementType) * MaxElements); //avoid freeFinsFrame: use of f->dataOrControl
+
 	/* 9*/
 	Q->Capacity = MaxElements;
 	strcpy(Q->name, name);
@@ -137,12 +140,12 @@ void Dequeue(Queue Q) {
 }
 
 ElementType FrontAndDequeue(Queue Q) {
-	ElementType X = (ElementType) malloc(sizeof(ElementType));
+	ElementType X;// = (ElementType) malloc(sizeof(ElementType)); //this just gets overwritten
 
 	if (IsEmpty(Q)) {
 		//Error( "Empty queue" );
 		// PRINT_DEBUG("Empty queue");
-		free(X);
+		//free(X);
 		return (NULL);
 	} else {
 		Q->Size--;

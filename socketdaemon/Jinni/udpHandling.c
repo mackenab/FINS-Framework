@@ -245,13 +245,13 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst
 
 	PRINT_DEBUG();
 
-	metadata_create(udpout_meta);
-
 	if (udpout_meta == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 		free(ff);
 		return 0;
 	}
+
+	metadata_create(udpout_meta);
 
 	/** metadata_writeToElement() set the value of an element if it already exist
 	 * or it creates the element and set its value in case it is new
@@ -292,6 +292,8 @@ int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst
 	}
 	sem_post(&Jinni_to_Switch_Qsem);
 	PRINT_DEBUG("");
+
+	metadata_destroy(udpout_meta);
 
 	return (0);
 }

@@ -40,16 +40,18 @@ int TerminateFinsQueue(finsQueue Q) {
 		max = Q->Rear;
 
 		for (i = min; i <= max; i++) {
-			if (freeFinsFrame(Q->Array[i]) == 0) {
-				//PRINT_DEBUG("333");
+			if (Q->Array[i]) {
+				if (freeFinsFrame(Q->Array[i]) == 0) {
+					//PRINT_DEBUG("333");
 
-				//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
-				empty++;
+					//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+					empty++;
 
-			} else {
+				} else {
 
-				counter++;
+					counter++;
 
+				}
 			}
 		}
 
@@ -59,30 +61,34 @@ int TerminateFinsQueue(finsQueue Q) {
 		min = Q->Rear;
 
 		for (i = max; i < Q->Capacity; i++) {
-			if (freeFinsFrame(Q->Array[i]) == 0) {
-				//PRINT_DEBUG("333");
+			if (Q->Array[i]) {
+				if (freeFinsFrame(Q->Array[i]) == 0) {
+					//PRINT_DEBUG("333");
 
-				//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
-				empty++;
+					//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+					empty++;
 
-			} else {
+				} else {
 
-				counter++;
+					counter++;
 
+				}
 			}
 		}
 
 		for (i = 0; i <= min; i++) {
-			if (freeFinsFrame(Q->Array[i]) == 0) {
-				//PRINT_DEBUG("333");
+			if (Q->Array[i]) {
+				if (freeFinsFrame(Q->Array[i]) == 0) {
+					//PRINT_DEBUG("333");
 
-				//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
-				empty++;
+					//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
+					empty++;
 
-			} else {
+				} else {
 
-				counter++;
+					counter++;
 
+				}
 			}
 		}
 
@@ -114,8 +120,11 @@ int DisposeFinsQueue(finsQueue Q) {
  * @param q points to this structure
  * */
 int term_queue(finsQueue q) {
-
-	return (TerminateFinsQueue(q) && DisposeFinsQueue(q));
+	if (q) {
+		return (TerminateFinsQueue(q) && DisposeFinsQueue(q));
+	} else {
+		return 1;
+	}
 	/**TODO dispose the queue */
 
 }
@@ -281,20 +290,20 @@ int freeFinsFrame(struct finsFrame *f) {
 	if (f->dataOrCtrl == CONTROL) {
 		PRINT_DEBUG("freeFinsFrame: Entered: ff=%d meta=%d", (int) f, (int) f->ctrlFrame.metaData);
 		if ((f->ctrlFrame).metaData != NULL) {
-			PRINT_DEBUG("freeing meta=%d", (int)(f->ctrlFrame).metaData);
 			metadata_destroy((f->ctrlFrame).metaData);
 			PRINT_DEBUG("5555");
 
 		}PRINT_DEBUG("7777");
 
-	} else {
+	} else if (f->dataOrCtrl == DATA) {
 		PRINT_DEBUG("freeFinsFrame: Entered: ff=%d meta=%d", (int) f, (int) f->dataFrame.metaData);
 		if ((f->dataFrame).metaData != NULL) {
-			PRINT_DEBUG("freeing meta=%d", (int)(f->dataFrame).metaData);
 			metadata_destroy((f->dataFrame).metaData);
 			PRINT_DEBUG("5555");
 
 		}PRINT_DEBUG("7777");
+	} else {
+		//dataOrCtrl uninitialized
 	}
 	free(f);
 	PRINT_DEBUG("8888");

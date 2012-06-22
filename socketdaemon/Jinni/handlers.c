@@ -63,16 +63,14 @@ int init_fins_nl() {
  */
 int send_wedge(int sockfd, void *buf, size_t len, int flags) {
 	int ret_val; // Holds system call return values for error checking
-	struct nlmsghdr *nlh = NULL;
-	struct iovec iov;
-	struct msghdr msg;
 
 	// Begin send message section
 	// Build a message to send to the kernel
-	nlh = (struct nlmsghdr *) malloc(NLMSG_LENGTH(len));
-	memset(nlh, 0, NLMSG_LENGTH(len));
+	int nlmsg_len = NLMSG_LENGTH(len);
+	struct nlmsghdr *nlh = (struct nlmsghdr *) malloc(nlmsg_len);
+	memset(nlh, 0, nlmsg_len);
 
-	nlh->nlmsg_len = NLMSG_LENGTH(len);
+	nlh->nlmsg_len = nlmsg_len;
 	// following can be used by application to track message, opaque to netlink core
 	nlh->nlmsg_type = 0; // arbitrary value
 	nlh->nlmsg_seq = 0; // sequence number
@@ -83,10 +81,13 @@ int send_wedge(int sockfd, void *buf, size_t len, int flags) {
 	memcpy(NLMSG_DATA(nlh), buf, len);
 
 	// finish message packing
+	struct iovec iov;
+	memset(&iov, 0, sizeof(struct iovec));
 	iov.iov_base = (void *) nlh;
 	iov.iov_len = nlh->nlmsg_len;
 
-	memset(&msg, 0, sizeof(msg));
+	struct msghdr msg;
+	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_name = (void *) &kernel_sockaddress;
 	msg.msg_namelen = sizeof(kernel_sockaddress);
 	msg.msg_iov = &iov;

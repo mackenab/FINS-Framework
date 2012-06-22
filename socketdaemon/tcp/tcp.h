@@ -15,6 +15,7 @@
 #include <sys/timerfd.h>
 #include <semaphore.h>
 #include <math.h>
+#include <time.h>
 
 //Macros for the TCP header
 
@@ -28,8 +29,14 @@
 #define FLAG_ECE		0x40	//ECN-Echo flag
 #define FLAG_CWR		0x80	//Congestion Reduced Window
 #define FLAG_NS			0x100	//ECN-nonce concealment protection.
+#define FLAG_ACK_PLUS	0x1000 	//defined for this implementation
 //bytes 4-6 in this field are reserved for future use and should be set = 0
+
 #define FLAG_DATAOFFSET	0xF000	//For easily grabbing the data offset from the flags field
+#define FLAG_RESERVED	0x0E00
+#define FLAG_ECN		0x01C0
+#define FLAG_CONTROL	0x003F
+
 #define MAX_TCP_OPTIONS_WORDS		10
 #define MIN_TCP_HEADER_WORDS		5
 #define MAX_TCP_HEADER_WORDS		(MIN_TCP_HEADER_WORDS + MAX_TCP_OPTIONS_WORDS)
@@ -159,9 +166,10 @@ struct tcp_connection {
 	//int connect_threads;
 
 	uint8_t first_flag;
-
 	uint32_t duplicate;
 	uint8_t fast_flag;
+	uint8_t fin_sent;
+	uint8_t fin_sep; //TODO replace with fin_seq
 
 	int to_gbn_fd; //GBN timeout occurred
 	pthread_t to_gbn_thread;
@@ -173,7 +181,22 @@ struct tcp_connection {
 	pthread_t to_delayed_thread;
 	uint8_t to_delayed_flag; //1 delayed ack timeout occured
 	uint8_t delayed_flag; //0 no delayed ack, 1 delayed ack
+	uint16_t delayed_ack_flags;
 
+	//host:send_win == rem:recv_win, host:recv_win == rem:send_win
+	uint32_t send_max_win; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
+	uint32_t send_win; //avail bytes in rem recv buffer
+	uint32_t send_win_seq; //TODO shorten to send_last_seq & send_last_ack
+	uint32_t send_win_ack;
+	uint32_t send_seq_num; //seq of host sendbase, tied with send_queue, seq of unACKed data
+	uint32_t send_seq_end; //1+seq of last sent byte by host
+
+	uint32_t recv_max_win; //max bytes in host recv buffer, tied with rem_seq_num/recv_queue
+	uint32_t recv_win; //avail bytes in host recv buffer
+	uint32_t recv_seq_num; //seq of rem sendbase, tied with recv_queue
+	uint32_t recv_seq_end; //seq of rem last sent
+
+	uint16_t MSS; //max segment size
 	enum CONG_STATE cong_state;
 	double cong_window;
 	double threshhold;
@@ -184,22 +207,20 @@ struct tcp_connection {
 	struct timeval rtt_stamp;
 	double rtt_est;
 	double rtt_dev;
-
 	double timeout;
 
-	//-----values agreed upon during setup
-	uint16_t MSS; //max segment size
+	uint8_t active_open;
 
-	uint32_t host_seq_num; //seq of host sendbase, tied with send_queue, seq of unACKed data
-	uint32_t host_seq_end; //1+seq of last sent byte by host
-	uint16_t host_max_window; //max bytes in host recv buffer, tied with rem_seq_num/recv_queue
-	uint16_t host_window; //avail bytes in host recv buffer
+	uint8_t tsopt_attempt; //attempt time stamp option
+	uint8_t tsopt_enabled; //time stamp option enabled
 
-	uint32_t rem_seq_num; //seq of rem sendbase, tied with recv_queue
-	uint32_t rem_seq_end; //seq of rem last sent
-	uint16_t rem_max_window; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
-	uint16_t rem_window; //avail bytes in rem recv buffer
-	//-----
+	uint8_t sack_attempt; //attempt selective ACK option
+	uint8_t sack_enabled; //selective ACK option enabled
+
+	uint8_t wsopt_attempt; //attempt window scaling option
+	uint8_t wsopt_enabled; //window scaling option enabled
+	uint8_t ws_send; //window scaling applied on sending
+	uint8_t ws_recv; //window scaling applied on recving
 };
 
 //TODO raise any of these?
@@ -209,18 +230,43 @@ struct tcp_connection {
 //#define MAX_ACCEPT_THREADS 10
 //#define MAX_CONNECT_THREADS 10
 //#define MAX_SYS_THREADS 10
-#define MAX_THREADS 50
+#define TCP_THREADS_MAX 50
+#define TCP_MAX_QUEUE_DEFAULT 65535
+#define TCP_CONN_MAX 512
+#define TCP_GBN_TO_MIN 1000
+#define TCP_GBN_TO_MAX 64000
+#define TCP_GBN_TO_DEFAULT 5000
+#define TCP_DELAYED_TO_DEFAULT 200
+#define TCP_MAX_SEQ_NUM 4294967295.0
+#define TCP_MAX_WINDOW_DEFAULT 8191
+#define TCP_MSS_DEFAULT 1460 //also said to be, 536
+#define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO
+#define TCP_KA_TO_DEFAULT 7200000 //keep alive TO
+#define TCP_SEND_MIN 4096
+#define TCP_SEND_MAX 3444736
+#define TCP_SEND_DEFAULT 16384
+#define TCP_RECV_MIN 4096
+#define TCP_RECV_MAX 3444736
+#define TCP_RECV_DEFAULT 87380
 
-#define DEFAULT_MAX_QUEUE 65535
-#define MAX_CONNECTIONS 512
-#define MIN_GBN_TIMEOUT 1000
-#define MAX_GBN_TIMEOUT 64000
-#define DEFAULT_GBN_TIMEOUT 5000
-#define DELAYED_TIMEOUT 200
-#define MAX_SEQ_NUM 4294967295.0
-#define DEFAULT_MAX_WINDOW 8191
-#define DEFAULT_MSS 536
-#define DEFAULT_MSL 120000
+//TCP Options
+#define TCP_EOL 0
+#define TCP_NOP 1
+#define TCP_MSS 2
+#define TCP_MSS_BYTES 4
+#define TCP_WS 3
+#define TCP_WS_BYTES 3
+#define TCP_WS_DEFAULT 2 //default value?
+#define TCP_WS_MAX 14
+#define TCP_SACK_PERM 4
+#define TCP_SACK_PERM_BYTES 2
+#define TCP_SACK 5
+#define TCP_SACK_BYTES(x) (8*x+2)
+#define TCP_SACK_MIN_BYTES TCP_SACK_BYTES(0)
+#define TCP_SACK_MAX_BYTES TCP_SACK_BYTES(3)
+#define TCP_SACK_LEN(x) ((x-2)/8)
+#define TCP_TS 8
+#define TCP_TS_BYTES 10
 
 sem_t conn_list_sem;
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
@@ -231,6 +277,7 @@ int conn_is_empty(void);
 int conn_has_space(uint32_t len);
 int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
 void conn_shutdown(struct tcp_connection *conn);
+void conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
 void conn_free(struct tcp_connection *conn);
 
 void startTimer(int fd, double millis);
@@ -238,8 +285,39 @@ void stopTimer(int fd);
 
 //Structure for TCP segments (Straight from the RFC, just in struct form)
 struct tcp_segment {
+	uint16_t src_port; //Source port
+	uint16_t dst_port; //Destination port
+	uint32_t seq_num; //Sequence number
+	uint32_t ack_num; //Acknowledgment number
+	uint16_t flags; //Flags and data offset
+	uint16_t win_size; //Window size
+	uint16_t checksum; //TCP checksum
+	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
+	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+
+	int opt_len; //length of the options in bytes
+	uint8_t *data; //Actual TCP segment data
+	int data_len; //Length of the data. This, of course, is not in the original TCP header.
+	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+
 	uint32_t src_ip; //Source addr
 	uint32_t dst_ip; //Destination addr
+	uint32_t seq_end;
+};
+
+struct tcp_header {
+	uint16_t src_port; //Source port
+	uint16_t dst_port; //Destination port
+	uint32_t seq_num; //Sequence number
+	uint32_t ack_num; //Acknowledgment number
+	uint16_t flags; //Flags and data offset
+	uint16_t win_size; //Window size
+	uint16_t checksum; //TCP checksum
+	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
+	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+};
+
+struct tcp_packet {
 	uint16_t src_port; //Source port
 	uint16_t dst_port; //Destination port
 	uint32_t seq_num; //Sequence number
@@ -253,6 +331,8 @@ struct tcp_segment {
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
 	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
+	uint32_t src_ip; //Source addr
+	uint32_t dst_ip; //Destination addr
 };
 
 void tcp_srand(); //Seed the random number generator
@@ -263,7 +343,7 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff);
 
 struct tcp_segment *seg_create(struct tcp_connection *conn);
 void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);
-void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint32_t flags);
+void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t flags);
 uint16_t seg_checksum(struct tcp_segment *seg);
 int seg_send(struct tcp_segment *seg);
 void seg_free(struct tcp_segment *seg);
@@ -329,6 +409,8 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port);
 void tcp_set_param(struct finsFrame *ff);
 void tcp_read_param(struct finsFrame *ff);
 
+int process_options(struct tcp_connection *conn, struct tcp_segment *seg);
+
 /*
  void tcp_read_param_host_window(struct finsFrame *ff);
  void tcp_read_param_sock_opt(struct finsFrame *ff);
@@ -340,3 +422,4 @@ void tcp_read_param(struct finsFrame *ff);
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application
 #endif /* TCP_H_ */
+

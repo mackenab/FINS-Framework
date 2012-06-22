@@ -86,22 +86,21 @@ void udp_in(struct finsFrame* ff) {
 	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip, (int)packet->u_dst, (int)packet->u_src);
 	PRINT_DEBUG("UDP_checksum=%u checksum=%u", UDP_checksum((struct udp_packet*)packet, srcip, dstip), ntohs(packet->u_cksum));
 
-	/*
-	 if (packet->u_cksum != IGNORE_CHEKSUM) {
-	 if (UDP_checksum(packet, srcip, dstip) != 0) {
-	 udpStat.badChecksum++;
-	 udpStat.totalBadDatagrams++;
-	 PRINT_DEBUG("UDP_in");
+	if (packet->u_cksum != IGNORE_CHEKSUM) {
+		if (0 && UDP_checksum((struct udp_packet*) packet, srcip, dstip) != 0) { //TODO enable again
+			udpStat.badChecksum++;
+			udpStat.totalBadDatagrams++;
+			PRINT_DEBUG("UDP_in");
 
-	 return;
-	 }
+			return;
+		}
 
-	 } else {
-	 udpStat.noChecksum++;
-	 PRINT_DEBUG("UDP_in");
+	} else {
+		udpStat.noChecksum++;
+		PRINT_DEBUG("UDP_in");
 
-	 }PRINT_DEBUG("UDP_in");
-	 //*/
+	}PRINT_DEBUG("UDP_in");
+
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
 	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip, (int)packet->u_dst, (int)packet->u_src);
@@ -126,7 +125,7 @@ void udp_in(struct finsFrame* ff) {
 
 	//print_finsFrame(newFF);
 
-	//freeFinsFrame(ff);
+	//freeFinsFrame(ff); //can't since using meta
 
 	sendToSwitch(newFF);
 }

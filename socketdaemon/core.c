@@ -251,14 +251,14 @@ void Queues_init() {
 void *Switch_to_Jinni() {
 
 	struct finsFrame *ff;
-	int protocol;
-	int index;
-	int status;
-	uint32_t exec_call;
-	uint16_t dstport, hostport;
-	uint32_t dstport_buf, hostport_buf;
-	uint32_t dstip, hostip;
-	uint32_t host_ip, host_port, rem_ip, rem_port;
+	int protocol = 0;
+	int index = 0;
+	int status = 0;
+	uint32_t exec_call = 0;
+	uint16_t dstport, hostport = 0;
+	uint32_t dstport_buf = 0, hostport_buf = 0;
+	uint32_t dstip = 0, hostip = 0;
+	uint32_t host_ip = 0, host_port = 0, rem_ip = 0, rem_port = 0;
 
 	while (1) {
 		sem_wait(&Switch_to_Jinni_Qsem);
@@ -278,13 +278,16 @@ void *Switch_to_Jinni() {
 			PRINT_DEBUG("control ff: ff=%d meta=%d opcode=%d", (int)ff, (int)ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_ALERT_REPLY:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM_REPLY:
 				if (ff->ctrlFrame.metaData) {
@@ -318,11 +321,18 @@ void *Switch_to_Jinni() {
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							write_queue(ff, jinniSockets[index].controlQueue);
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets[index].Qs));
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+							} else {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+								freeFinsFrame(ff);
+							}
 						} else {
 							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
@@ -355,11 +365,18 @@ void *Switch_to_Jinni() {
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							write_queue(ff, jinniSockets[index].controlQueue);
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets[index].Qs));
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+							} else {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+								freeFinsFrame(ff);
+							}
 						} else {
 							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
@@ -375,13 +392,16 @@ void *Switch_to_Jinni() {
 				}
 				break;
 			case CTRL_SET_PARAM:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_SET_PARAM_REPLY:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC_REPLY:
 				if (ff->ctrlFrame.metaData) {
@@ -404,19 +424,27 @@ void *Switch_to_Jinni() {
 						}
 
 						//##################
-						struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+						struct sockaddr_in *temp = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
+						//memset(temp->sin_addr, 0, sizeof(struct sockaddr_in));
 						if (host_ip) {
-							temp->s_addr = htonl(host_ip);
+							temp->sin_addr.s_addr = (int) htonl(host_ip);
 						} else {
-							temp->s_addr = 0;
+							temp->sin_addr.s_addr = 0;
 						}
-						struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
+						//temp->sin_port = 0;
+						struct sockaddr_in *temp2 = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
+						//memset(temp2, 0, sizeof(struct sockaddr_in));
 						if (rem_ip) {
-							temp2->s_addr = htonl(rem_ip);
+							temp2->sin_addr.s_addr = (int) htonl(rem_ip);
 						} else {
-							temp2->s_addr = 0;
-						}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (host_port), inet_ntoa(*temp2), (rem_port));
-						PRINT_DEBUG("NETFORMAT %d, host=%u/%d, dst=%u/%d,", protocol, (*temp).s_addr, (host_port), (*temp2).s_addr, (rem_port));
+							temp2->sin_addr.s_addr = 0;
+						}
+						//temp2->sin_port = 0;
+						PRINT_DEBUG("NETFORMAT host=%s/%d, dst=%s/%d,",
+								inet_ntoa(temp->sin_addr), (host_port), inet_ntoa(temp2->sin_addr), (rem_port));
+						PRINT_DEBUG("NETFORMAT host=%u/%d, dst=%u/%d,", (temp->sin_addr), (host_port), (temp2->sin_addr), (rem_port));
+						free(temp);
+						free(temp2);
 						//##################
 
 						PRINT_DEBUG("");
@@ -431,30 +459,52 @@ void *Switch_to_Jinni() {
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							write_queue(ff, jinniSockets[index].controlQueue);
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets[index].Qs));
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
-						} else {
-							//ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
-
-							//if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
-							index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
-							if (index != -1) {
-								PRINT_DEBUG("");
-								sem_wait(&(jinniSockets[index].Qs));
-
-								/**
-								 * TODO Replace The data Queue with a pipeLine at least for
-								 * the RAW DATA in order to find a natural way to support
-								 * Blocking and Non-Blocking mode
-								 */
-								write_queue(ff, jinniSockets[index].controlQueue);
+							if (write_queue(ff, jinniSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
 								sem_post(&(jinniSockets[index].Qs));
 								PRINT_DEBUG("");
 								sem_post(&(jinniSockets_sem));
+							} else {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+								freeFinsFrame(ff);
+							}
+						} else {
+							ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+
+							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
+								index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+								if (index != -1) {
+									PRINT_DEBUG("");
+									sem_wait(&(jinniSockets[index].Qs));
+
+									/**
+									 * TODO Replace The data Queue with a pipeLine at least for
+									 * the RAW DATA in order to find a natural way to support
+									 * Blocking and Non-Blocking mode
+									 */
+									if (write_queue(ff, jinniSockets[index].controlQueue)) {
+										PRINT_DEBUG("");
+										sem_post(&(jinniSockets[index].Qs));
+										PRINT_DEBUG("");
+										sem_post(&(jinniSockets_sem));
+									} else {
+										PRINT_DEBUG("");
+										sem_post(&(jinniSockets[index].Qs));
+										PRINT_DEBUG("");
+										sem_post(&(jinniSockets_sem));
+										freeFinsFrame(ff);
+									}
+								} else {
+									PRINT_DEBUG("");
+									sem_post(&(jinniSockets_sem));
+
+									PRINT_DEBUG("No socket found, dropping");
+									PRINT_DEBUG("freeing ff=%d", (int)ff);
+									freeFinsFrame(ff);
+								}
 							} else {
 								PRINT_DEBUG("");
 								sem_post(&(jinniSockets_sem));
@@ -463,14 +513,6 @@ void *Switch_to_Jinni() {
 								PRINT_DEBUG("freeing ff=%d", (int)ff);
 								freeFinsFrame(ff);
 							}
-							/*} else {
-							 PRINT_DEBUG("");
-							 sem_post(&(jinniSockets_sem));
-
-							 PRINT_DEBUG("No socket found, dropping");
-							 PRINT_DEBUG("freeing ff=%d", (int)ff);
-							 freeFinsFrame(ff);
-							 }*/
 						}
 					} else {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
@@ -490,8 +532,8 @@ void *Switch_to_Jinni() {
 							temp->s_addr = host_ip;
 						} else {
 							temp->s_addr = 0;
-						}PRINT_DEBUG("NETFORMAT %d, host=%s/%d", protocol, inet_ntoa(*temp), (host_port));
-						PRINT_DEBUG("NETFORMAT %d, host=%u/%d", protocol, (*temp).s_addr, (host_port));
+						}PRINT_DEBUG("NETFORMAT host=%s/%d", inet_ntoa(*temp), (host_port));
+						PRINT_DEBUG("NETFORMAT host=%u/%d", (*temp).s_addr, (host_port));
 						//##################
 
 						PRINT_DEBUG("");
@@ -506,11 +548,18 @@ void *Switch_to_Jinni() {
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							write_queue(ff, jinniSockets[index].controlQueue);
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets[index].Qs));
-							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+							} else {
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets[index].Qs));
+								PRINT_DEBUG("");
+								sem_post(&(jinniSockets_sem));
+								freeFinsFrame(ff);
+							}
 						} else {
 							PRINT_DEBUG("");
 							sem_post(&(jinniSockets_sem));
@@ -526,10 +575,12 @@ void *Switch_to_Jinni() {
 				}
 				break;
 			case CTRL_ERROR:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Not yet implmented");
+				freeFinsFrame(ff); //ftm
 				break;
 			default:
-				PRINT_DEBUG("");
+				PRINT_DEBUG("Unknown opcode");
+				freeFinsFrame(ff); //ftm
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {
@@ -579,6 +630,8 @@ void *Switch_to_Jinni() {
 				temp2->s_addr = 0;
 			}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
+			free(temp);
+			free(temp2);
 
 			/**
 			 * check if this received datagram destIP and destport matching which socket hostIP
@@ -629,20 +682,29 @@ void *Switch_to_Jinni() {
 				 * the RAW DATA in order to find a natural way to support
 				 * Blocking and Non-Blocking mode
 				 */
-				write_queue(ff, jinniSockets[index].dataQueue);
-				sem_post(&(jinniSockets[index].Qs));
-				sem_post(&jinniSockets_sem);
+				if (write_queue(ff, jinniSockets[index].dataQueue)) {
+					PRINT_DEBUG("");
+					sem_post(&(jinniSockets[index].Qs));
+					PRINT_DEBUG("");
+					sem_post(&(jinniSockets_sem));
 
-				//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
+					//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
 
-				char *buf;
-				buf = (char *) malloc(ff->dataFrame.pduLength + 1);
-				memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-				buf[ff->dataFrame.pduLength] = '\0';
-				PRINT_DEBUG("pdu='%s'", buf);
-				free(buf);
+					char *buf;
+					buf = (char *) malloc(ff->dataFrame.pduLength + 1);
+					memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+					buf[ff->dataFrame.pduLength] = '\0';
+					PRINT_DEBUG("pdu='%s'", buf);
+					free(buf);
 
-				PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
+					PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
+				} else {
+					PRINT_DEBUG("");
+					sem_post(&(jinniSockets[index].Qs));
+					PRINT_DEBUG("");
+					sem_post(&(jinniSockets_sem));
+					freeFinsFrame(ff);
+				}
 			} else {
 				PRINT_DEBUG("No match, freeing ff");
 				sem_post(&jinniSockets_sem);
@@ -653,6 +715,7 @@ void *Switch_to_Jinni() {
 		} else {
 
 			PRINT_DEBUG("unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
+			freeFinsFrame(ff);
 
 		} // end of if , else if , else statement
 
@@ -679,7 +742,8 @@ void *interceptor_to_jinni() {
 	}
 
 	struct sockaddr sockaddr_sender; // Needed for recvfrom
-	socklen_t sockaddr_senderlen; // Needed for recvfrom
+	socklen_t sockaddr_senderlen = sizeof(sockaddr_sender); // Needed for recvfrom
+	memset(&sockaddr_sender, 0, sockaddr_senderlen);
 
 	struct nlmsghdr *nlh;
 	void *nl_buf; // Pointer to your actual data payload
@@ -832,7 +896,7 @@ void *interceptor_to_jinni() {
 			free(temp);
 
 			unsigned char *pt;
-			temp = (unsigned char *) malloc(3 * msg_len);
+			temp = (unsigned char *) malloc(3 * msg_len + 1);
 			pt = temp;
 			int i;
 			for (i = 0; i < msg_len; i++) {
@@ -846,7 +910,9 @@ void *interceptor_to_jinni() {
 					sprintf(pt, " %02x", msg_pt[i]);
 					pt += 3;
 				}
-			}PRINT_DEBUG("msg='%s'", temp);
+			}
+			temp[3 * msg_len] = '\0';
+			PRINT_DEBUG("msg='%s'", temp);
 			free(temp);
 			//###############################
 
@@ -1030,7 +1096,7 @@ void *Inject() {
 	int framelen;
 	int inject_pipe_fd;
 	int numBytes;
-	struct finsFrame *ff = NULL;
+	struct finsFrame *ff;
 	struct ipv4_packet *packet;
 	IP4addr destination;
 	struct hostent *loop_host;
@@ -1094,6 +1160,8 @@ void *Inject() {
 		numBytes = write(inject_pipe_fd, &datalen, sizeof(int));
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			freeFinsFrame(ff);
+			free(frame);
 			return (0);
 		}
 
@@ -1101,6 +1169,8 @@ void *Inject() {
 
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			freeFinsFrame(ff);
+			free(frame);
 			return (0);
 		}
 
@@ -1155,7 +1225,47 @@ void cap_inj_init() {
 
 }
 
+#define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
+
 int main() {
+
+	/*
+	 FILE *f;
+	 unsigned int temp;
+	 uint8_t num[3000];
+	 int i = 0;
+	 int rv;
+	 int num_values;
+
+	 f = fopen("udp_input_3.txt", "r");
+	 if (f == NULL) {
+	 printf("file doesnt exist?!\n");
+	 return 1;
+	 }
+
+	 while (i < 3000) {
+	 rv = fscanf(f, "%x", &temp);
+	 if (rv != 1)
+	 break;
+	 num[i] = (uint8_t) temp;
+	 printf("%d: %x (%u)\n", i, temp, num[i]);
+
+	 i++;
+	 }
+	 fclose(f);
+	 printf("i=%d\n", i);
+
+	 uint32_t src_ip = xxx(192,168,1,11);
+	 uint32_t dst_ip = xxx(66,69,232,38);
+	 src_ip = htonl(src_ip);
+	 dst_ip = htonl(dst_ip);
+	 struct udp_packet *pkt = (struct udp_packet *) num;
+	 uint16_t checksum = pkt->u_cksum;
+	 uint16_t calc = UDP_checksum(pkt, (src_ip), (dst_ip));
+	 PRINT_DEBUG("checksum: %4x %4x", checksum, calc);
+
+	 return 0;
+	 */
 
 	//init the netlink socket connection to daemon
 	//int nl_sockfd;

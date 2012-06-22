@@ -87,6 +87,7 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
 		IP4_send_fdf_out(ff, construct_packet_buffer, next_hop, length);
 	} else {
 		PRINT_DEBUG("No route to the destination, packet discarded");
+		freeFinsFrame(ff);
 	}
 
 }

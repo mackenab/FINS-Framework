@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
-	server_addr.sin_addr.s_addr = xxx(114,53,31,172);
+	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	//bzero(&(server_addr.sin_zero), 8);

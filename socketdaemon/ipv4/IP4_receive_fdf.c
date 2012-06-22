@@ -67,17 +67,17 @@ void IP4_receive_fdf() {
 				/**
 				 * TODO investigate why the freeFinsFrame below create segmentation fault
 				 */
-				//freeFinsFrame(pff);
+				freeFinsFrame(pff);
 				break;
 			}
 
 		} else {
 			PRINT_DEBUG("Wrong value of fdf.directionFlag");
+			freeFinsFrame(pff);
 		}
-	}
-
-	else {
+	} else {
 		PRINT_DEBUG("Wrong pff->dataOrCtrl value");
+		freeFinsFrame(pff);
 	}
 
 }

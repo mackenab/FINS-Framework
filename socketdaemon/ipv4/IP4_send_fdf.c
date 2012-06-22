@@ -45,7 +45,6 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	 PRINT_DEBUG("%s",ssss);
 	 */
 	metadata *ipv4_meta = (metadata *) malloc(sizeof(metadata));
-
 	metadata_create(ipv4_meta);
 
 	IP4addr srcaddress = ppacket->ip_src;
@@ -92,9 +91,11 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	(fins_frame->dataFrame).pdu = data;
 
 	//print_finsFrame(fins_frame);
-	//free(ff);
-	//fins_frame.dataFrame.metaData = ..... // todo: meta data needs to be filled with the required info.
 	sendToSwitch_IPv4(fins_frame);
+
+	PRINT_DEBUG("Freeing ff=%d", (int)ff);
+	free(ff);
+
 }
 
 //todo: needs to be replaced by something meaningful
