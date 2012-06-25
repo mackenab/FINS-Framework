@@ -29,23 +29,29 @@
 #define FLAG_ECE		0x40	//ECN-Echo flag
 #define FLAG_CWR		0x80	//Congestion Reduced Window
 #define FLAG_NS			0x100	//ECN-nonce concealment protection.
-#define FLAG_ACK_PLUS	0x1000 	//defined for this implementation
 //bytes 4-6 in this field are reserved for future use and should be set = 0
-
 #define FLAG_DATAOFFSET	0xF000	//For easily grabbing the data offset from the flags field
 #define FLAG_RESERVED	0x0E00
 #define FLAG_ECN		0x01C0
 #define FLAG_CONTROL	0x003F
 
-#define MAX_TCP_OPTIONS_WORDS		10
-#define MIN_TCP_HEADER_WORDS		5
+//flags defined for this implementation
+#define FLAG_ACK_PLUS	0x1000
+
+//header & option sizes in words
+#define MAX_TCP_OPTIONS_WORDS		(10)
+#define MIN_TCP_HEADER_WORDS		(5)
 #define MAX_TCP_HEADER_WORDS		(MIN_TCP_HEADER_WORDS + MAX_TCP_OPTIONS_WORDS)
-#define MIN_TCP_HEADER_BYTES		(MIN_TCP_HEADER_WORDS*4)
-#define MAX_TCP_HEADER_BYTES		(MAX_TCP_HEADER_WORDS*4)
 #define TCP_HEADER_WORDS(flags)		((flags & FLAG_DATAOFFSET) >> 12)
 #define TCP_OPTIONS_WORDS(flags)	(TCP_HEADER_WORDS(flags) - MIN_TCP_HEADER_WORDS)
-#define TCP_HEADER_BYTES(flags)		(TCP_HEADER_WORDS(flags)*4)	//For easily grabbing the size of the header in bytes from the flags field
-#define TCP_OPTIONS_BYTES(flags)	(TCP_OPTIONS_WORDS(flags)*4)
+
+//Byte equivalent
+#define WORDS_TO_BYTES(words)		(words*4)
+#define MAX_TCP_OPTIONS_BYTES		WORDS_TO_BYTES(MAX_TCP_OPTIONS_WORDS)
+#define MIN_TCP_HEADER_BYTES		WORDS_TO_BYTES(MIN_TCP_HEADER_WORDS)
+#define MAX_TCP_HEADER_BYTES		WORDS_TO_BYTES(MAX_TCP_HEADER_WORDS)
+#define TCP_HEADER_BYTES(flags)		WORDS_TO_BYTES(TCP_HEADER_WORDS(flags))	//For easily grabbing the size of the header in bytes from the flags field
+#define TCP_OPTIONS_BYTES(flags)	WORDS_TO_BYTES(TCP_OPTIONS_WORDS(flags))
 
 #define TCP_PROTOCOL 		6
 #define IP_HEADER_WORDS 	3
@@ -132,6 +138,48 @@ enum CONG_STATE /* Defines an enumeration type    */
 	INITIAL, SLOWSTART, AVOIDANCE, RECOVERY
 };
 
+struct ipv4_header {
+	uint32_t src_ip; //Source ip
+	uint32_t dst_ip; //Destination ip
+	uint8_t zeros; //Unused zeros
+	uint8_t protocol; //protocol
+	uint16_t tcp_len; //TCP length
+};
+
+struct tcpv4_header {
+	uint16_t src_port; //Source port
+	uint16_t dst_port; //Destination port
+	uint32_t seq_num; //Sequence number
+	uint32_t ack_num; //Acknowledgment number
+	uint16_t flags; //Flags and data offset
+	uint16_t win_size; //Window size
+	uint16_t checksum; //TCP checksum
+	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
+	uint8_t options[MAX_TCP_OPTIONS_BYTES]; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+};
+
+struct tcp_packet {
+	struct ipv4_header ip_hdr;
+	struct tcpv4_header tcp_hdr;
+};
+
+struct tcp_packet2 {
+	uint32_t src_ip; //Source ip
+	uint32_t dst_ip; //Destination ip
+	uint8_t zeros; //Unused zeros
+	uint8_t protocol; //protocol
+	uint16_t tcp_len; //TCP length
+	uint16_t src_port; //Source port
+	uint16_t dst_port; //Destination port
+	uint32_t seq_num; //Sequence number
+	uint32_t ack_num; //Acknowledgment number
+	uint16_t flags; //Flags and data offset
+	uint16_t win_size; //Window size
+	uint16_t checksum; //TCP checksum
+	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
+	uint8_t options[MAX_TCP_OPTIONS_BYTES]; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+};
+
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
 	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
@@ -184,6 +232,8 @@ struct tcp_connection {
 	uint16_t delayed_ack_flags;
 
 	//host:send_win == rem:recv_win, host:recv_win == rem:send_win
+
+	uint32_t issn; //initial send seq num
 	uint32_t send_max_win; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint32_t send_win; //avail bytes in rem recv buffer
 	uint32_t send_win_seq; //TODO shorten to send_last_seq & send_last_ack
@@ -216,11 +266,32 @@ struct tcp_connection {
 
 	uint8_t sack_attempt; //attempt selective ACK option
 	uint8_t sack_enabled; //selective ACK option enabled
+	uint8_t sack_len;
 
 	uint8_t wsopt_attempt; //attempt window scaling option
 	uint8_t wsopt_enabled; //window scaling option enabled
 	uint8_t ws_send; //window scaling applied on sending
 	uint8_t ws_recv; //window scaling applied on recving
+
+	//-------------------------------------------------------------alternate implementation for sending
+	uint8_t *send_buf; //send buf, circular buffer that keeps data to send
+	uint32_t send_len; //size of send buffer
+	uint32_t send_start; //index in send_buf that corresponds to send_seq_num (SSN)
+	uint32_t send_next; //index in send_buf that corresponds to send_seq_end (SSE)
+	uint32_t send_end; //index in send_buf that corresponds to (1+end of data), so is where write to next
+	struct tcp_packet *send_pkt; //the single tcpv4_packet used for sending
+
+	//if start == end, then no data written, next-start = len of data unACKed,
+	//for optimization malloc a single packet for sending since for info:
+	//doesn't change: src ip, dst ip, protocol, src port, dst port
+	//always latest: ack, win, options
+	//per seg: ip_tcp_len, seq_num, flags, checksum, urg pointer, data
+	//just reference data in send_buffer
+
+	//call:
+	//update_pkt_latest(conn, flag?): ack, win, opts, opt_len;
+	//update_pkt_seg(seq, flags, data, data_len, urg pt): ip_tcp_len, checksum;
+	//checksum(pkt, opt_len, data, data_len): checksum
 };
 
 //TODO raise any of these?
@@ -293,46 +364,19 @@ struct tcp_segment {
 	uint16_t win_size; //Window size
 	uint16_t checksum; //TCP checksum
 	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
-	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
+	uint8_t options[MAX_TCP_OPTIONS_BYTES]; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
 
 	int opt_len; //length of the options in bytes
 	uint8_t *data; //Actual TCP segment data
 	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
 
 	uint32_t src_ip; //Source addr
 	uint32_t dst_ip; //Destination addr
 	uint32_t seq_end;
-};
 
-struct tcp_header {
-	uint16_t src_port; //Source port
-	uint16_t dst_port; //Destination port
-	uint32_t seq_num; //Sequence number
-	uint32_t ack_num; //Acknowledgment number
-	uint16_t flags; //Flags and data offset
-	uint16_t win_size; //Window size
-	uint16_t checksum; //TCP checksum
-	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
-	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
-};
-
-struct tcp_packet {
-	uint16_t src_port; //Source port
-	uint16_t dst_port; //Destination port
-	uint32_t seq_num; //Sequence number
-	uint32_t ack_num; //Acknowledgment number
-	uint16_t flags; //Flags and data offset
-	uint16_t win_size; //Window size
-	uint16_t checksum; //TCP checksum
-	uint16_t urg_pointer; //Urgent pointer (If URG flag set)
-	uint8_t *options; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
-	int opt_len; //length of the options in bytes
-	uint8_t *data; //Actual TCP segment data
-	int data_len; //Length of the data. This, of course, is not in the original TCP header.
-	//We don't need an optionslen variable because we can figure it out from the 'data offset' part of the flags.
-	uint32_t src_ip; //Source addr
-	uint32_t dst_ip; //Destination addr
+	//uint32_t ts_val;
+	//uint32_t ts_secr;
+	//uint32_t sack_len;
 };
 
 void tcp_srand(); //Seed the random number generator

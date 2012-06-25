@@ -281,7 +281,8 @@ void *connect_thread(void *local) {
 		conn->state = SYN_SENT;
 		conn->active_open = 1;
 
-		conn->send_seq_num = 0; //tcp_rand(); //TODO uncomment
+		conn->issn = 0; //tcp_rand(); //TODO uncomment
+		conn->send_seq_num = conn->issn;
 		conn->send_seq_end = conn->send_seq_num;
 
 		PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
@@ -498,9 +499,10 @@ void *accept_thread(void *local) {
 							conn->state = SYN_RECV;
 							conn->active_open = 0;
 
-							conn->send_seq_num = 0; //tcp_rand(); //TODO uncomment
+							conn->issn = 0; //tcp_rand(); //TODO uncomment
+							conn->send_seq_num = conn->issn;
 							conn->send_seq_end = conn->send_seq_num;
-							conn->send_win = (uint32_t)seg->win_size;
+							conn->send_win = (uint32_t) seg->win_size;
 							conn->send_max_win = conn->send_win;
 
 							conn->recv_seq_num = seg->seq_num + 1;

@@ -78,17 +78,15 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->send_win_ack = seg->ack_num;
 			}
 
-			conn->duplicate++;
-
 			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			//TODO process ACK options
 
+			conn->duplicate++;
 			//check for FR
 			if (conn->duplicate == 3) {
 				conn->duplicate = 0;
-				conn->fast_flag = 1;
 
 				//RTT
 				conn->rtt_flag = 0;
@@ -98,15 +96,22 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				switch (conn->cong_state) {
 				case SLOWSTART:
 				case AVOIDANCE:
-					conn->cong_state = RECOVERY;
-					conn->threshhold = conn->cong_window / 2;
-					if (conn->threshhold < (double) conn->MSS) {
-						conn->threshhold = conn->MSS;
+					if (conn->send_seq_num == conn->issn) {
+						//TODO do nothing don't FR
+					} else { //TODO should be only if there's no data & it doesn't update the adv window
+						conn->cong_state = RECOVERY;
+						conn->fast_flag = 1;
+
+						conn->threshhold = conn->cong_window / 2.0;
+						if (conn->threshhold < (double) conn->MSS) {
+							conn->threshhold = (double) conn->MSS;
+						}
+						conn->cong_window = conn->threshhold + 3.0 * conn->MSS;
 					}
-					conn->cong_window = conn->threshhold + 3 * ((double) conn->MSS);
 					break;
 				case RECOVERY:
-					//conn->fast_flag = 0; //TODO send FR every 3 repeated, check if should do only first
+					conn->fast_flag = 1; //TODO send FR every 3 repeated, check if should do only first then ff=0
+					//conn->cong_window += (double) conn->MSS; //in RFC but FR is sent right afterward in same code
 					break;
 				}
 			} else {
@@ -588,7 +593,6 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 	PRINT_DEBUG("handle_data: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
 
-	uint32_t seq_end;
 	int ret;
 	uint16_t flags = 0;
 	uint16_t send_flags = 0;
@@ -675,21 +679,19 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		}
 
 		//re-ordered segment
-		seq_end = seg->seq_num + (uint32_t) seg->data_len;
-
 		if (conn->recv_win) {
-			if (in_window(seg->seq_num, seq_end, conn->recv_seq_num, conn->recv_seq_end)) {
-				node = node_create((uint8_t *) seg, seg->data_len, seg->seq_num, seq_end);
+			if (in_window(seg->seq_num, seg->seq_end, conn->recv_seq_num, conn->recv_seq_end)) {
+				node = node_create((uint8_t *) seg, seg->data_len, seg->seq_num, seg->seq_end);
 				ret = queue_insert(conn->recv_queue, node, conn->recv_seq_num, conn->recv_seq_end);
 				if (ret) {
 					conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
 				} else {
-					PRINT_DEBUG("Dropping duplicate rem=(%u, %u) got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seq_end);
+					PRINT_DEBUG("Dropping duplicate rem=(%u, %u) got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 					seg_free(seg);
 					free(node);
 				}
 			} else {
-				PRINT_DEBUG("Dropping out of window rem=(%u, %u) got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seq_end);
+				PRINT_DEBUG("Dropping out of window rem=(%u, %u) got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 				seg_free(seg);
 			}
 		} else {
@@ -1014,7 +1016,8 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else if (seg->flags & FLAG_SYN) {
 		//if SYN, send SYN ACK, SYN_RECV
 		PRINT_DEBUG("tcp_recv_syn_recv: SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
-		conn->send_seq_num = 0; //tcp_rand(); //TODO uncomment
+		conn->issn = 0; //tcp_rand(); //TODO uncomment
+		conn->send_seq_num = conn->issn;
 		conn->send_seq_end = conn->send_seq_num;
 		conn->recv_seq_num = seg->seq_num + 1;
 		conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
@@ -1082,7 +1085,7 @@ void recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 
 	if (seg->flags & FLAG_ACK) {
-		if (conn->fin_sent && conn->send_seq_num == conn->send_seq_end) {
+		if (conn->fin_sent && conn->fin_sep && conn->send_seq_num == conn->send_seq_end) {
 			if (seg->ack_num == conn->send_seq_num + 1) {
 				conn->send_seq_num = seg->ack_num;
 				conn->send_seq_end = conn->send_seq_num;
