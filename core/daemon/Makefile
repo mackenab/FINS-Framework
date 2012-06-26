@@ -2,7 +2,7 @@
 include $(FINS_ROOT_DIR)/settings.finsmk
 
 #this name must be the same as the current directory
-MODULE_NAME = Jinni
+MODULE_NAME = daemon
 
 #extra includes for FINS core modules
 CFLAGS += $(CORE_MODULES_INC)

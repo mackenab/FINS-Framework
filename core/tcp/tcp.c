@@ -370,8 +370,8 @@ int conn_stub_has_space(uint32_t len) {
 	return conn_stub_num + len <= TCP_CONN_MAX;
 }
 
-int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val) {
-	PRINT_DEBUG("conn_stub_send_jinni: Entered: conn_stub=%d, exec_call=%d, ret_val=%d", (int)conn_stub, exec_call, ret_val);
+int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val) {
+	PRINT_DEBUG("conn_stub_send_daemon: Entered: conn_stub=%d, exec_call=%d, ret_val=%d", (int)conn_stub, exec_call, ret_val);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -822,7 +822,7 @@ void main_time_wait(struct tcp_connection *conn) {
 		conn->state = CLOSED;
 
 		//send ACK to close handler
-		conn_send_jinni(conn, EXEC_TCP_CLOSE, 1); //TODO check move to end of last_ack/start of time_wait?
+		conn_send_daemon(conn, EXEC_TCP_CLOSE, 1); //TODO check move to end of last_ack/start of time_wait?
 
 		//conn->main_wait_flag = 0;
 		conn_shutdown(conn);
@@ -1222,8 +1222,8 @@ int conn_has_space(uint32_t len) {
 	return conn_num + len <= TCP_CONN_MAX;
 }
 
-int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val) {
-	PRINT_DEBUG("conn_send_jinni: Entered: conn=%d, exec_call=%d, ret_val=%d", (int)conn, exec_call, ret_val);
+int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val) {
+	PRINT_DEBUG("conn_send_daemon: Entered: conn=%d, exec_call=%d, ret_val=%d", (int)conn, exec_call, ret_val);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -2410,7 +2410,7 @@ int tcp_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
+int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_ERROR("metadata creation failed");
@@ -2456,8 +2456,8 @@ int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint
 	}
 }
 
-int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("tcp_fdf_to_jinni: Entered: host=%u/%d, rem=%u/%d, len=%d", host_ip, host_port, rem_ip, rem_port, len);
+int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+	PRINT_DEBUG("tcp_fdf_to_daemon: Entered: host=%u/%d, rem=%u/%d, len=%d", host_ip, host_port, rem_ip, rem_port, len);
 
 	uint32_t src_ip_netw = htonl(host_ip);
 	uint32_t src_port_netw = (uint32_t) htons(host_port);
@@ -2486,19 +2486,19 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("tcp_fdf_to_jinni: failed matadata write, meta=%d", (int)params);
+		PRINT_ERROR("tcp_fdf_to_daemon: failed matadata write, meta=%d", (int)params);
 		metadata_destroy(params);
 		return 0;
 	}
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("tcp_fdf_to_jinni: ff creation failed, meta=%d", (int)params);
+		PRINT_ERROR("tcp_fdf_to_daemon: ff creation failed, meta=%d", (int)params);
 		metadata_destroy(params);
 		return 0;
 	}
 
-	PRINT_DEBUG("tcp_fdf_to_jinni: src=%u/%d, dst=%u/%d, ff=%d", src_ip_netw, src_port_netw, dst_ip_netw, dst_port_netw, (int)ff);
+	PRINT_DEBUG("tcp_fdf_to_daemon: src=%u/%d, dst=%u/%d, ff=%d", src_ip_netw, src_port_netw, dst_ip_netw, dst_port_netw, (int)ff);
 
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
@@ -2511,7 +2511,7 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host
 	ff->dataFrame.pdu = dataLocal;
 	ff->dataFrame.metaData = params;
 
-	/**TODO insert the frame into jinni_to_switch queue
+	/**TODO insert the frame into daemon_to_switch queue
 	 * check if insertion succeeded or not then
 	 * return 1 on success, or -1 on failure
 	 * */

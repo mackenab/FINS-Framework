@@ -13,7 +13,7 @@
 
 #include "handlers.h"
 
-int jinni_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
+int daemon_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
 int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag,
 		int multi_flag);
 
@@ -40,7 +40,7 @@ void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 void accept4_udp();
 void shutdown_udp(unsigned long long uniqueSockID, int how);
 
-struct jinni_udp_thread_data {
+struct daemon_udp_thread_data {
 	int id;
 	int index;
 	unsigned long long uniqueSockID;

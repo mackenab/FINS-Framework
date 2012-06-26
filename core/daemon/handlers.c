@@ -11,8 +11,8 @@
 
 #include "handlers.h"
 
-extern sem_t jinniSockets_sem;
-extern struct finssocket jinniSockets[MAX_sockets];
+extern sem_t daemonSockets_sem;
+extern struct finssocket daemonSockets[MAX_sockets];
 
 extern int recv_thread_index;
 extern int thread_count;
@@ -20,10 +20,10 @@ extern sem_t thread_sem;
 
 /** The queues might be moved later to another Master file */
 
-extern finsQueue Jinni_to_Switch_Queue;
-extern finsQueue Switch_to_Jinni_Queue;
-extern sem_t Jinni_to_Switch_Qsem;
-extern sem_t Switch_to_Jinni_Qsem;
+extern finsQueue Daemon_to_Switch_Queue;
+extern finsQueue Switch_to_Daemon_Queue;
+extern sem_t Daemon_to_Switch_Qsem;
+extern sem_t Switch_to_Daemon_Qsem;
 
 int init_fins_nl() {
 	int sockfd;
@@ -105,39 +105,39 @@ int send_wedge(int sockfd, void *buf, size_t len, int flags) {
 }
 
 /**
- * @brief find a jinni socket among the jinni sockets array
+ * @brief find a daemon socket among the daemon sockets array
  * @param
  * @return the location index on success , -1 on failure
  */
-int findjinniSocket(unsigned long long targetID) {
+int find_daemonSocket(unsigned long long targetID) {
 	int i = 0;
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID == targetID)
+		if (daemonSockets[i].uniqueSockID == targetID)
 			return (i);
 	}
 	return (-1);
 }
 
-int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
+int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 	int i;
 
-	PRINT_DEBUG("matchjinniSocket: %d/%d: %d, ", dstip, dstport, protocol);
+	PRINT_DEBUG("matchdaemonSocket: %d/%d: %d, ", dstip, dstport, protocol);
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID != -1) {
+		if (daemonSockets[i].uniqueSockID != -1) {
 			if (protocol == IPPROTO_ICMP) {
-				if ((jinniSockets[i].protocol == protocol) && (jinniSockets[i].dst_IP == dstip)) {
+				if ((daemonSockets[i].protocol == protocol) && (daemonSockets[i].dst_IP == dstip)) {
 					PRINT_DEBUG("ICMP");
 					return (i);
 				}
 			} else {
-				if (jinniSockets[i].host_IP == INADDR_ANY) {
-					if (jinniSockets[i].hostport == dstport) {
+				if (daemonSockets[i].host_IP == INADDR_ANY) {
+					if (daemonSockets[i].hostport == dstport) {
 						PRINT_DEBUG("hostport == dstport");
 						return (i);
 					}
-				} else if ((jinniSockets[i].hostport == dstport) && (jinniSockets[i].host_IP == dstip)/** && (jinniSockets[i].protocol == protocol)*/) {
+				} else if ((daemonSockets[i].hostport == dstport) && (daemonSockets[i].host_IP == dstip)/** && (daemonSockets[i].protocol == protocol)*/) {
 					PRINT_DEBUG("host_IP == dstip");
 					return (i);
 				} else {
@@ -146,18 +146,18 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 			}
 
 			if (0) {
-				if (jinniSockets[i].host_IP == INADDR_ANY && (protocol != IPPROTO_ICMP)) {
-					if ((jinniSockets[i].hostport == dstport))
+				if (daemonSockets[i].host_IP == INADDR_ANY && (protocol != IPPROTO_ICMP)) {
+					if ((daemonSockets[i].hostport == dstport))
 						return (i);
-				} else if ((jinniSockets[i].hostport == dstport) && (jinniSockets[i].host_IP == dstip) && ((protocol != IPPROTO_ICMP))
-				/** && (jinniSockets[i].protocol == protocol)*/) {
+				} else if ((daemonSockets[i].hostport == dstport) && (daemonSockets[i].host_IP == dstip) && ((protocol != IPPROTO_ICMP))
+				/** && (daemonSockets[i].protocol == protocol)*/) {
 					return (i);
 				}
 
 				/** Matching for ICMP incoming datagrams
 				 * In this case the IP passes is actually the source IP of that incoming message (Or called the host)
 				 */
-				else if ((jinniSockets[i].protocol == protocol) && (protocol == IPPROTO_ICMP) && (jinniSockets[i].dst_IP == dstip)) {
+				else if ((daemonSockets[i].protocol == protocol) && (protocol == IPPROTO_ICMP) && (daemonSockets[i].dst_IP == dstip)) {
 					return (i);
 
 				} else {
@@ -170,13 +170,13 @@ int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 }
 
-int match_jinni_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("match_jinni_socket: %d/%d to %d/%d", host_ip, host_port, rem_ip, rem_port);
+int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+	PRINT_DEBUG("match_daemon_socket: %d/%d to %d/%d", host_ip, host_port, rem_ip, rem_port);
 
 	int i;
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID != -1 && jinniSockets[i].host_IP == host_ip && jinniSockets[i].hostport == host_port
-				&& jinniSockets[i].dst_IP == rem_ip && jinniSockets[i].dstport == rem_port) {
+		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_IP == host_ip && daemonSockets[i].hostport == host_port
+				&& daemonSockets[i].dst_IP == rem_ip && daemonSockets[i].dstport == rem_port) {
 			PRINT_DEBUG("Matched connection");
 			return (i);
 		}
@@ -188,55 +188,55 @@ int match_jinni_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip
 }
 
 /**
- * @brief insert new jinni socket in the first empty location
- * in the jinni sockets array
+ * @brief insert new daemon socket in the first empty location
+ * in the daemon sockets array
  * @param
  * @return value of 1 on success , -1 on failure
  */
-int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
+int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol) {
 	int i = 0;
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID == -1) {
-			jinniSockets[i].uniqueSockID = uniqueSockID;
-			sem_init(&jinniSockets[i].sem, 0, 1);
+		if (daemonSockets[i].uniqueSockID == -1) {
+			daemonSockets[i].uniqueSockID = uniqueSockID;
+			sem_init(&daemonSockets[i].sem, 0, 1);
 
-			jinniSockets[i].blockingFlag = 1;
+			daemonSockets[i].blockingFlag = 1;
 			/**
 			 * bind the socket by default to the default IP which is assigned
 			 * to the Interface which was already started by the Capturing and Injecting process
 			 * The IP default value it supposed to be acquired from the configuration file
 			 * The allowable ports range is supposed also to be aquired the same way
 			 */
-			jinniSockets[i].host_IP = 0;
+			daemonSockets[i].host_IP = 0;
 			/**
 			 * The host port is initially assigned randomly and stay the same unless
 			 * binding explicitly later
 			 */
-			jinniSockets[i].hostport = 0;
-			jinniSockets[i].dst_IP = 0;
-			jinniSockets[i].dstport = 0;
+			daemonSockets[i].hostport = 0;
+			daemonSockets[i].dst_IP = 0;
+			daemonSockets[i].dstport = 0;
 			/** Transport protocol SUBTYPE SOCK_DGRAM , SOCK_RAW, SOCK_STREAM
 			 * it has nothing to do with layer 4 protocols like TCP, UDP , etc
 			 */
 
-			jinniSockets[i].type = type;
+			daemonSockets[i].type = type;
 
-			jinniSockets[i].protocol = protocol;
-			jinniSockets[i].backlog = DEFAULT_BACKLOG;
-			jinniSockets[i].controlQueue = init_queue(NULL, MAX_Queue_size);
-			jinniSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
-			sem_init(&jinniSockets[i].Qs, 0, 1);
+			daemonSockets[i].protocol = protocol;
+			daemonSockets[i].backlog = DEFAULT_BACKLOG;
+			daemonSockets[i].controlQueue = init_queue(NULL, MAX_Queue_size);
+			daemonSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
+			sem_init(&daemonSockets[i].Qs, 0, 1);
 
-			sprintf(jinniSockets[i].name, "socket# %llu", jinniSockets[i].uniqueSockID);
+			sprintf(daemonSockets[i].name, "socket# %llu", daemonSockets[i].uniqueSockID);
 
 			errno = 0;
 			PRINT_DEBUG("errno is %d", errno);
 
-			jinniSockets[i].threads = 0;
-			jinniSockets[i].replies = 0;
+			daemonSockets[i].threads = 0;
+			daemonSockets[i].replies = 0;
 
-			jinniSockets[i].sockopts.FSO_REUSEADDR = 0;
+			daemonSockets[i].sockopts.FSO_REUSEADDR = 0;
 
 			return i;
 		}
@@ -245,30 +245,30 @@ int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
 }
 
 /**
- * @brief remove a jinni socket from
- * the jinni sockets array
+ * @brief remove a daemon socket from
+ * the daemon sockets array
  * @param
  * @return value of 1 on success , -1 on failure
  */
 
-int removejinniSocket(unsigned long long targetID) {
+int remove_daemonSocket(unsigned long long targetID) {
 
 	int i = 0;
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID == targetID) {
-			jinniSockets[i].uniqueSockID = -1;
+		if (daemonSockets[i].uniqueSockID == targetID) {
+			daemonSockets[i].uniqueSockID = -1;
 
 			//TODO stop all threads related to
 
-			jinniSockets[i].connection_status = 0;
-			term_queue(jinniSockets[i].controlQueue);
-			term_queue(jinniSockets[i].dataQueue);
+			daemonSockets[i].connection_status = 0;
+			term_queue(daemonSockets[i].controlQueue);
+			term_queue(daemonSockets[i].dataQueue);
 			return (1);
 
 		}
 	}
 	return 0;
-} // end of removejinniSocket
+} // end of removedaemonSocket
 
 /**
  * @brief check if this host port is free or not
@@ -277,17 +277,17 @@ int removejinniSocket(unsigned long long targetID) {
  * @return value of 1 on success (found free) , -1 on failure (found previously-allocated)
  */
 
-int checkjinniports(uint16_t hostport, uint32_t hostip) {
+int check_daemon_ports(uint16_t hostport, uint32_t hostip) {
 
 	int i = 0;
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].host_IP == INADDR_ANY) {
-			if (jinniSockets[i].hostport == hostport)
+		if (daemonSockets[i].host_IP == INADDR_ANY) {
+			if (daemonSockets[i].hostport == hostport)
 				return (0);
 
 		} else {
-			if ((jinniSockets[i].hostport == hostport) && (jinniSockets[i].host_IP == hostip))
+			if ((daemonSockets[i].hostport == hostport) && (daemonSockets[i].host_IP == hostip))
 				return (0);
 
 		}
@@ -304,12 +304,12 @@ int checkjinniports(uint16_t hostport, uint32_t hostip) {
  * @return value of 1 on success (found free) , -1 on failure (found pre-allocated)
  */
 
-int checkjinnidstports(uint16_t dstport, uint32_t dstip) {
+int check_daemon_dstports(uint16_t dstport, uint32_t dstip) {
 
 	int i = 0;
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if ((jinniSockets[i].dstport == dstport) && (jinniSockets[i].dst_IP == dstip))
+		if ((daemonSockets[i].dstport == dstport) && (daemonSockets[i].dst_IP == dstip))
 			return (-1);
 
 	}
@@ -318,7 +318,7 @@ int checkjinnidstports(uint16_t dstport, uint32_t dstip) {
 }
 
 /** ----------------------------------------------------------
- * end of functions that handle finsjinnisockets
+ * end of functions that handle finsdaemonsockets
  */
 
 /**
@@ -419,32 +419,32 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_
 		 * instead of the data queue
 		 */
 		do {
-			sem_wait(&jinniSockets_sem);
-			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+			sem_wait(&daemonSockets_sem);
+			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 				PRINT_DEBUG("Socket closed, canceling read block.");
-				sem_post(&jinniSockets_sem);
+				sem_post(&daemonSockets_sem);
 				return NULL;
 			}
 
-			sem_wait(&(jinniSockets[index].Qs));
-			ff = read_queue(jinniSockets[index].dataQueue);
+			sem_wait(&(daemonSockets[index].Qs));
+			ff = read_queue(daemonSockets[index].dataQueue);
 			//	ff = get_fake_frame();
-			sem_post(&(jinniSockets[index].Qs));
-			sem_post(&jinniSockets_sem);
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
 		} while (ff == NULL);
 	} else {
-		sem_wait(&jinniSockets_sem);
-		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		sem_wait(&daemonSockets_sem);
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 			PRINT_DEBUG("Socket closed, canceling read block.");
-			sem_post(&jinniSockets_sem);
+			sem_post(&daemonSockets_sem);
 			return NULL;
 		}
-		sem_wait(&(jinniSockets[index].Qs));
-		ff = read_queue(jinniSockets[index].dataQueue);
+		sem_wait(&(daemonSockets[index].Qs));
+		ff = read_queue(daemonSockets[index].dataQueue);
 		//ff = get_fake_frame();
 		//print_finsFrame(ff);
-		sem_post(&(jinniSockets[index].Qs));
-		sem_post(&jinniSockets_sem);
+		sem_post(&(daemonSockets[index].Qs));
+		sem_post(&daemonSockets_sem);
 	}PRINT_DEBUG("");
 
 	return ff;
@@ -467,32 +467,32 @@ struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_
 		 * instead of the data queue
 		 */
 		do {
-			sem_wait(&jinniSockets_sem);
-			if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+			sem_wait(&daemonSockets_sem);
+			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 				PRINT_DEBUG("Socket closed, canceling read block.");
-				sem_post(&jinniSockets_sem);
+				sem_post(&daemonSockets_sem);
 				return NULL;
 			}
 
-			sem_wait(&(jinniSockets[index].Qs));
-			ff = read_queue(jinniSockets[index].controlQueue);
+			sem_wait(&(daemonSockets[index].Qs));
+			ff = read_queue(daemonSockets[index].controlQueue);
 			//	ff = get_fake_frame();
-			sem_post(&(jinniSockets[index].Qs));
-			sem_post(&jinniSockets_sem);
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
 		} while (ff == NULL);
 	} else {
-		sem_wait(&jinniSockets_sem);
-		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
+		sem_wait(&daemonSockets_sem);
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 			PRINT_DEBUG("Socket closed, canceling read block.");
-			sem_post(&jinniSockets_sem);
+			sem_post(&daemonSockets_sem);
 			return NULL;
 		}
-		sem_wait(&(jinniSockets[index].Qs));
-		ff = read_queue(jinniSockets[index].controlQueue);
+		sem_wait(&(daemonSockets[index].Qs));
+		ff = read_queue(daemonSockets[index].controlQueue);
 		//ff = get_fake_frame();
 		//print_finsFrame(ff);
-		sem_post(&(jinniSockets[index].Qs));
-		sem_post(&jinniSockets_sem);
+		sem_post(&(daemonSockets[index].Qs));
+		sem_post(&daemonSockets_sem);
 	}
 
 	PRINT_DEBUG("");
@@ -588,20 +588,20 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 
 	PRINT_DEBUG("bind_call_handler: addr=%u/%d family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
 
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG(" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, bind_call);
 		return;
 	}
 
-	jinniSockets[index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
+	daemonSockets[index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
 
-	int type = jinniSockets[index].type;
-	sem_post(&jinniSockets_sem);
+	int type = daemonSockets[index].type;
+	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		bind_udp(index, uniqueSockID, addr);
@@ -638,18 +638,18 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	PRINT_DEBUG("listen_call_handler: backlog=%d", backlog);
 
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, listen_call);
 		return;
 	}
 
-	int type = jinniSockets[index].type;
-	sem_post(&jinniSockets_sem);
+	int type = daemonSockets[index].type;
+	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
@@ -695,16 +695,16 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	PRINT_DEBUG("connect_call_handler: addr=%u/%d family=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG(" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
+		PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		nack_send(uniqueSockID, connect_call);
 		return;
 	}
 
-	int type = jinniSockets[index].type;
-	sem_post(&jinniSockets_sem);
+	int type = daemonSockets[index].type;
+	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM) {
 		connect_udp(index, uniqueSockID, addr);
@@ -739,18 +739,18 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	}
 
 	PRINT_DEBUG("");
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, accept_call);
 		return;
 	}
 
-	int type = jinniSockets[index].type;
-	sem_post(&jinniSockets_sem);
+	int type = daemonSockets[index].type;
+	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
@@ -784,18 +784,18 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 	}
 
 	PRINT_DEBUG("");
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, getname_call);
 		return;
 	}
 
-	int type = jinniSockets[index].type;
-	sem_post(&jinniSockets_sem);
+	int type = daemonSockets[index].type;
+	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
@@ -877,20 +877,20 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	}
 
 	PRINT_DEBUG("");
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is notfound too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, sendmsg_call);
 		return;
 	}
 
-	int status = jinniSockets[index].connection_status;
-	int type = jinniSockets[index].type;
-	int protocol = jinniSockets[index].protocol;
-	sem_post(&jinniSockets_sem);
+	int status = daemonSockets[index].connection_status;
+	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
+	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	/**
@@ -996,22 +996,22 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	 * the receiver is already known
 	 */
 
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is notfound too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, recvmsg_call);
 		return;
 	}
 
-	jinniSockets[index].threads = threads;
+	daemonSockets[index].threads = threads;
 
-	int status = jinniSockets[index].connection_status;
-	int type = jinniSockets[index].type;
-	int protocol = jinniSockets[index].protocol;
-	sem_post(&jinniSockets_sem);
+	int status = daemonSockets[index].connection_status;
+	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
+	sem_post(&daemonSockets_sem);
 
 	if (status > 0) {
 		if (type == SOCK_DGRAM) {
@@ -1062,19 +1062,19 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		return;
 	}
 
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is notfound too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, release_call);
 		return;
 	}
-	//jinniSockets[index].threads = threads;
+	//daemonSockets[index].threads = threads;
 
-	int type = jinniSockets[index].type;
-	sem_post(&jinniSockets_sem);
+	int type = daemonSockets[index].type;
+	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		release_udp(index, uniqueSockID);
@@ -1123,19 +1123,19 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 
 	PRINT_DEBUG("");
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, getsockopt_call);
 		return;
 	}
 
-	int type = jinniSockets[index].type;
+	int type = daemonSockets[index].type;
 	PRINT_DEBUG("");
-	sem_post(&jinniSockets_sem);
+	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		getsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
@@ -1184,19 +1184,19 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 
 	PRINT_DEBUG("");
-	sem_wait(&jinniSockets_sem);
-	index = findjinniSocket(uniqueSockID);
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
-		sem_post(&jinniSockets_sem);
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, getsockopt_call);
 		return;
 	}
 
-	int type = jinniSockets[index].type;
+	int type = daemonSockets[index].type;
 	PRINT_DEBUG("");
-	sem_post(&jinniSockets_sem);
+	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		setsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
@@ -1233,20 +1233,20 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int threads, unsigne
 		return;
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!socket descriptor not found into jinni sockets");
+		PRINT_DEBUG("CRASH !!socket descriptor not found into daemon sockets");
 		nack_send(uniqueSockID, shutdown_call);
 		return;
 	}
 
-	if (jinniSockets[index].type == SOCK_DGRAM) {
+	if (daemonSockets[index].type == SOCK_DGRAM) {
 		/** Whenever we need to implement non_blocking mode using
 		 * threads. We will call the function below using thread_create
 		 */
 		shutdown_udp(uniqueSockID, how);
 
-	} else if (jinniSockets[index].type == SOCK_STREAM) {
+	} else if (daemonSockets[index].type == SOCK_STREAM) {
 		shutdown_tcp(index, uniqueSockID, how);
 
 	} else {
@@ -1280,18 +1280,18 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 	}
 
 	PRINT_DEBUG("");
-	index = findjinniSocket(uniqueSockID);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into jinni sockets SO pipe descriptor to reply is not found too ");
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
 		nack_send(uniqueSockID, ioctl_call);
 		return;
 	}PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
 
-	/*if (jinniSockets[index].type == SOCK_DGRAM)
+	/*if (daemonSockets[index].type == SOCK_DGRAM)
 	 ioctl_udp(uniqueSockID, cmd, arg);
-	 else if (jinniSockets[index].type == SOCK_STREAM)
+	 else if (daemonSockets[index].type == SOCK_STREAM)
 	 ioctl_tcp(uniqueSockID, cmd, arg);
-	 else if (jinniSockets[index].type == SOCK_RAW) {
+	 else if (daemonSockets[index].type == SOCK_RAW) {
 	 ioctl_icmp(uniqueSockID, cmd, arg);
 	 } else {
 	 PRINT_DEBUG("unknown socket type has been read !!!");
@@ -1306,9 +1306,9 @@ void close_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 	PRINT_DEBUG("close call handler1");
 	PRINT_DEBUG("%llu", uniqueSockID);
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("CRASH !!socket descriptor not found into jinni sockets");
+		PRINT_DEBUG("CRASH !!socket descriptor not found into daemon sockets");
 		nack_send(uniqueSockID, close_call);
 		return;
 	}
@@ -1317,7 +1317,7 @@ void close_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 	 * TODO Fix the problem with terminate queue which goes into infinite loop
 	 * when close is called
 	 */
-	if (removejinniSocket(uniqueSockID)) {
+	if (remove_daemonSocket(uniqueSockID)) {
 		ack_send(uniqueSockID, close_call);
 	} else {
 		nack_send(uniqueSockID, close_call);
@@ -1339,12 +1339,12 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	addrlen = sizeof(struct sockaddr_in);
 	addr = (struct sockaddr_in *) malloc(addrlen);
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_daemonSocket(uniqueSockID);
 	/** if that requested socket does not exist !!
 	 * this means we can not even talk to the requester FINS crash as a response!!
 	 */
 	if (index == -1) {
-		PRINT_DEBUG(" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
+		PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		//nack_send(uniqueSockID, getsockname_call);
 		return;
 	}
@@ -1353,9 +1353,9 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	//memset( addr, 0,addrlen);
 	addr->sin_family = AF_INET;
 
-	addr->sin_addr.s_addr = jinniSockets[index].host_IP;
-	addr->sin_port = jinniSockets[index].hostport;
-	PRINT_DEBUG("%d , %d", jinniSockets[index].host_IP, jinniSockets[index].hostport);
+	addr->sin_addr.s_addr = daemonSockets[index].host_IP;
+	addr->sin_port = daemonSockets[index].hostport;
+	PRINT_DEBUG("%d , %d", daemonSockets[index].host_IP, daemonSockets[index].hostport);
 
 	msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
 	msg = malloc(msg_len);
@@ -1407,12 +1407,12 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	addrlen = sizeof(struct sockaddr_in);
 	addr = (struct sockaddr_in *) malloc(addrlen);
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_daemonSocket(uniqueSockID);
 	/** if that requested socket does not exist !!
 	 * this means we can not even talk to the requester FINS crash as a response!!
 	 */
 	if (index == -1) {
-		PRINT_DEBUG(" CRASH !socket descriptor not found into jinni sockets! Bind failed on Jinni Side ");
+		PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		//nack_send(uniqueSockID, getpeername_call);
 		return;
 	}
@@ -1421,9 +1421,9 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	//memset( addr, 0,addrlen);
 	addr->sin_family = AF_INET;
 
-	addr->sin_addr.s_addr = ntohl(jinniSockets[index].dst_IP);
-	addr->sin_port = jinniSockets[index].dstport;
-	PRINT_DEBUG("%d , %d", jinniSockets[index].dst_IP, jinniSockets[index].dstport);
+	addr->sin_addr.s_addr = ntohl(daemonSockets[index].dst_IP);
+	addr->sin_port = daemonSockets[index].dstport;
+	PRINT_DEBUG("%d , %d", daemonSockets[index].dst_IP, daemonSockets[index].dstport);
 
 	msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
 	msg = malloc(msg_len);

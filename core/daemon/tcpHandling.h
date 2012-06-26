@@ -21,7 +21,7 @@
 #define EXEC_TCP_CLOSE_STUB 6
 #define EXEC_TCP_OPT 7
 
-struct jinni_tcp_thread_data {
+struct daemon_tcp_thread_data {
 	int id;
 	int index;
 	unsigned long long uniqueSockID;
@@ -32,7 +32,7 @@ struct jinni_tcp_thread_data {
 	//int symbol; //TODO remove?
 };
 
-int jinni_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat, int block_flag);
+int daemon_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat, int block_flag);
 int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag);
 
 void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID);

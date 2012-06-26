@@ -12,8 +12,8 @@
 #include <arpa/inet.h>
 
 #define MAX_modules 16
-extern finsQueue Jinni_to_Switch_Queue;
-extern finsQueue Switch_to_Jinni_Queue;
+extern finsQueue Daemon_to_Switch_Queue;
+extern finsQueue Switch_to_Daemon_Queue;
 
 extern finsQueue RTM_to_Switch_Queue;
 extern finsQueue Switch_to_RTM_Queue;
@@ -42,8 +42,8 @@ extern sem_t Switch_to_ICMP_Qsem;
 extern sem_t RTM_to_Switch_Qsem;
 extern sem_t Switch_to_RTM_Qsem;
 
-extern sem_t Jinni_to_Switch_Qsem;
-extern sem_t Switch_to_Jinni_Qsem;
+extern sem_t Daemon_to_Switch_Qsem;
+extern sem_t Switch_to_Daemon_Qsem;
 
 extern sem_t Switch_to_UDP_Qsem;
 extern sem_t UDP_to_Switch_Qsem;
@@ -105,10 +105,10 @@ void init_switch() {
 					sem_post(&Switch_to_RTM_Qsem);
 					break;
 				case DAEMONID:
-					PRINT_DEBUG("Jinni Queue +1");
-					sem_wait(&Switch_to_Jinni_Qsem);
-					write_queue(ff, Switch_to_Jinni_Queue);
-					sem_post(&Switch_to_Jinni_Qsem);
+					PRINT_DEBUG("Daemon Queue +1");
+					sem_wait(&Switch_to_Daemon_Qsem);
+					write_queue(ff, Switch_to_Daemon_Queue);
+					sem_post(&Switch_to_Daemon_Qsem);
 					break;
 				case UDPID:
 					PRINT_DEBUG("UDP Queue +1");

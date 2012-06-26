@@ -158,7 +158,7 @@ int read_configurations() {
  * @param
  * @return nothing
  */
-void init_daemonsockets() {
+void init_daemonSockets() {
 	int i;
 
 	sem_init(&daemonSockets_sem, 0, 1);
@@ -639,14 +639,14 @@ void *Switch_to_Daemon() {
 			 */
 			sem_wait(&daemonSockets_sem);
 			if (protocol == IPPROTO_ICMP) {
-				index = matchdaemonSocket(0, hostip, protocol);
+				index = match_daemonSocket(0, hostip, protocol);
 			} else if (protocol == TCP_PROTOCOL) {
 				index = match_daemon_connection(hostip, hostport, dstip, dstport);
 				if (index == -1) {
 					index = match_daemon_connection(hostip, hostport, 0, 0);
 				}
 			} else {
-				index = matchdaemonSocket(dstport, dstip, protocol);
+				index = match_daemonSocket(dstport, dstip, protocol);
 
 				if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
 					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
@@ -1317,7 +1317,7 @@ int main() {
 	 * 3.
 	 */
 	//	read_configurations();
-	init_daemonsockets();
+	init_daemonSockets();
 	Queues_init();
 
 	cap_inj_init();

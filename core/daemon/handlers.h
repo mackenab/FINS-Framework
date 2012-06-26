@@ -233,15 +233,15 @@ int send_wedge(int sockfd, void *buf, size_t len, int flags);
 int nack_send(unsigned long long uniqueSockID, int socketCallType);
 int ack_send(unsigned long long uniqueSockID, int socketCallType);
 
-void init_jinnisockets();
+void init_daemonSockets();
 int randoming(int min, int max);
-int checkjinniSocket(unsigned long long uniqueSockID);
-int matchjinniSocket(uint16_t dstport, uint32_t dstip, int protocol);
-int match_jinni_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-int findjinniSocket(unsigned long long uniqueSockID);
-int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
-int removejinniSocket(unsigned long long uniqueSockID);
-int checkjinniports(uint16_t hostport, uint32_t hostip);
+int check_daemonSocket(unsigned long long uniqueSockID);
+int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol);
+int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int find_daemonSocket(unsigned long long uniqueSockID);
+int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol);
+int remove_daemonSocket(unsigned long long uniqueSockID);
+int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 
 int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);

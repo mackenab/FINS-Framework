@@ -573,8 +573,8 @@ int process_seg(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *
 			conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 	if (seg->data_len) {
-		//send data to jinni
-		if (tcp_fdf_to_jinni(seg->data, seg->data_len, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port)) {
+		//send data to daemon
+		if (tcp_fdf_to_daemon(seg->data, seg->data_len, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port)) {
 			//fine
 			/*#*/PRINT_DEBUG("");
 			seg->data_len = 0;
@@ -896,7 +896,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				seg_free(temp_seg);
 
 				//send ACK to handler, prob connect
-				conn_send_jinni(conn, EXEC_TCP_CONNECT, 1);
+				conn_send_daemon(conn, EXEC_TCP_CONNECT, 1);
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent: ack=%d, host_seq_num=%d", seg->ack_num, conn->send_seq_num);
 
@@ -1008,7 +1008,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			}
 
 			//send ACK to handler, prob accept
-			conn_send_jinni(conn, EXEC_TCP_ACCEPT, 1);
+			conn_send_daemon(conn, EXEC_TCP_ACCEPT, 1);
 		} else {
 			PRINT_DEBUG("Invalid ACK: was not sent.");
 			//TODO send RST?
@@ -1212,7 +1212,7 @@ void recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 				PRINT_DEBUG("tcp_recv_last_ack: ACK, send -, CLOSED: state=%d conn=%d, seg=%d", conn->state, (int)conn, (int) seg);
 				conn->state = CLOSED;
 
-				conn_send_jinni(conn, EXEC_TCP_CLOSE, 1); //TODO check move to end of last_ack/start of time_wait?
+				conn_send_daemon(conn, EXEC_TCP_CLOSE, 1); //TODO check move to end of last_ack/start of time_wait?
 
 				conn_shutdown(conn);
 			}

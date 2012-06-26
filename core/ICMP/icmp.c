@@ -358,9 +358,9 @@ void ICMP_ping_reply(struct finsFrame* ff)
 
 	PRINT_DEBUG("Source IP: %lu, Dest IP: %lu", IP_Dest, IP_Src);
 	//Make sure this goes to the right place. Is this what we have to do to send out an ICMP packet?
-	ffout->destinationID.id = IPV4ID;		//Go to the socket stub (Socket jinni) //vt_mark
+	ffout->destinationID.id = IPV4ID;		//Go to the socket stub (Socket daemon) //vt_mark
 	ffout->destinationID.next = NULL;		//Set this to NULL, since we're only sending one.
-	//ffout->destinationID.id = DAEMONID;		//Go to the socket stub (Socket jinni) //bu_mike code
+	//ffout->destinationID.id = DAEMONID;		//Go to the socket stub (Socket daemon) //bu_mike code
 	//ffout->destinationID.next = NULL;		//I have no idea what this does, so I'll set it to null for now.
 	ffout->dataFrame.directionFlag = DOWN;	//Go out (Down the stack)
 

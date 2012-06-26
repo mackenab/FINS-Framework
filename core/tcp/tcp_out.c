@@ -86,22 +86,22 @@ void *write_thread(void *local) {
 			if (conn->running_flag) {
 				/*#*/PRINT_DEBUG("");
 				//send ACK to send handler
-				conn_send_jinni(conn, EXEC_TCP_SEND, 1);
+				conn_send_daemon(conn, EXEC_TCP_SEND, 1);
 			} else {
 				/*#*/PRINT_DEBUG("");
 				//send NACK to send handler
-				conn_send_jinni(conn, EXEC_TCP_SEND, 0);
+				conn_send_daemon(conn, EXEC_TCP_SEND, 0);
 			}
 		} else {
 			//TODO error, send/write'ing when conn sending is closed
 			PRINT_DEBUG("");
 			//send NACK to send handler
-			conn_send_jinni(conn, EXEC_TCP_SEND, 0);
+			conn_send_daemon(conn, EXEC_TCP_SEND, 0);
 		}
 	} else {
 		PRINT_DEBUG("");
 		//send NACK to send handler
-		conn_send_jinni(conn, EXEC_TCP_SEND, 0);
+		conn_send_daemon(conn, EXEC_TCP_SEND, 0);
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -208,12 +208,12 @@ void *close_stub_thread(void *local) {
 		conn_stub_shutdown(conn_stub);
 
 		//send ACK to close handler
-		conn_stub_send_jinni(conn_stub, EXEC_TCP_CLOSE_STUB, 1);
+		conn_stub_send_daemon(conn_stub, EXEC_TCP_CLOSE_STUB, 1);
 
 		conn_stub_free(conn_stub);
 	} else {
 		//send NACK to close handler
-		conn_stub_send_jinni(conn_stub, EXEC_TCP_CLOSE_STUB, 0);
+		conn_stub_send_daemon(conn_stub, EXEC_TCP_CLOSE_STUB, 0);
 	}
 
 	PRINT_DEBUG("close_stub_thread: Exited: id=%d", id);
@@ -303,7 +303,7 @@ void *connect_thread(void *local) {
 		//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
 	} else {
 		//send NACK to connect handler
-		conn_send_jinni(conn, EXEC_TCP_CONNECT, 0);
+		conn_send_daemon(conn, EXEC_TCP_CONNECT, 0);
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -586,7 +586,7 @@ void *accept_thread(void *local) {
 	}
 
 	if (!conn_stub->running_flag) {
-		conn_stub_send_jinni(conn_stub, EXEC_TCP_ACCEPT, 0);
+		conn_stub_send_daemon(conn_stub, EXEC_TCP_ACCEPT, 0);
 	}
 
 	/*#*/PRINT_DEBUG("");

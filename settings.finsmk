@@ -75,7 +75,7 @@ COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/common/OBJS.finsmk)
 
 ####### FINS CORE MODULES #######
 # Add/remove module directory names to this space-separated list
-CORE_MODULE_LIST = arp data_structure ICMP ipv4 Jinni RTM switch tcp udp
+CORE_MODULE_LIST = arp data_structure ICMP ipv4 daemon RTM switch tcp udp
 
 
 
