@@ -104,11 +104,11 @@ struct finssocket {
 	int reply_len;
 };
 
-void init_jinnisockets(void);
-int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol);
-int findjinniSocket(unsigned long long uniqueSockID);
-int removejinniSocket(unsigned long long uniqueSockID);
-int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype);
+void init_wedgesockets(void);
+int insert_wedgeSocket(unsigned long long uniqueSockID, int type, int protocol);
+int find_wedgeSocket(unsigned long long uniqueSockID);
+int remove_wedgeSocket(unsigned long long uniqueSockID);
+int wait_wedgeSocket(unsigned long long uniqueSockID, int index, u_int calltype);
 int checkConfirmation(int index);
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */

@@ -32,7 +32,7 @@
 #define SWITCHID 00
 
 #define IPV4ID IPID
-#define JINNIID SOCKETSTUBID
+#define DAEMONID SOCKETSTUBID
 
 //following block excluded in vt_mark's code, temp. included for ARP code
 /* Definition of the possible Opcodes */

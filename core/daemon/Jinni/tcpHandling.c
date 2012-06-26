@@ -271,7 +271,7 @@ int jinni_TCP_to_fins_cntrl(uint16_t opcode, metadata *params) {
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = TCPID; //TODO get the address from local copy of switch table
 	ff->destinationID.next = NULL;
-	ff->ctrlFrame.senderID = JINNIID;
+	ff->ctrlFrame.senderID = DAEMONID;
 	ff->ctrlFrame.serialNum = serial_num++;
 	ff->ctrlFrame.opcode = opcode;
 	ff->ctrlFrame.metaData = params;

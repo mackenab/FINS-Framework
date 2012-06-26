@@ -399,7 +399,7 @@ int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_ca
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = JINNIID;
+	ff->destinationID.id = DAEMONID;
 	ff->destinationID.next = NULL;
 	ff->ctrlFrame.senderID = TCPID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
@@ -1261,7 +1261,7 @@ int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t re
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = JINNIID;
+	ff->destinationID.id = DAEMONID;
 	ff->destinationID.next = NULL;
 	ff->ctrlFrame.senderID = TCPID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
@@ -2440,7 +2440,7 @@ int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = JINNIID;
+	ff->destinationID.id = DAEMONID;
 	ff->destinationID.next = NULL;
 	ff->ctrlFrame.senderID = TCPID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
@@ -2504,7 +2504,7 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host
 	 * switch table
 	 */
 	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = JINNIID;
+	ff->destinationID.id = DAEMONID;
 	ff->destinationID.next = NULL;
 	ff->dataFrame.directionFlag = UP;
 	ff->dataFrame.pduLength = len;

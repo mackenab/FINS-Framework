@@ -104,7 +104,7 @@ void init_switch() {
 					write_queue(ff, Switch_to_RTM_Queue);
 					sem_post(&Switch_to_RTM_Qsem);
 					break;
-				case JINNIID:
+				case DAEMONID:
 					PRINT_DEBUG("Jinni Queue +1");
 					sem_wait(&Switch_to_Jinni_Qsem);
 					write_queue(ff, Switch_to_Jinni_Queue);

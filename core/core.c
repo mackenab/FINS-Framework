@@ -2,7 +2,7 @@
  * 		@file socketgeni.c
  * *  	@date Nov 26, 2010
  *      @author Abdallah Abdallah
- *      @brief This is the FINS CORE including (the Jinni name pipes based
+ *      @brief This is the FINS CORE including (the Daemon name pipes based
  *      server)
  *      notice that A read call will normally block; that is, it will cause the process to
  *       wait until data becomes available. If the other end of the pipe has been closed,
@@ -25,7 +25,7 @@
 //#include <stdio.h> //added
 //kernel stuff
 
-/** Global parameters of the socketjinni
+/** Global parameters of the socketdaemon
  *
  */
 
@@ -39,11 +39,11 @@
 
 /*
  * Semaphore for recvfrom_udp/tcp/icmp threads created b/c of blocking
- * in UDPreadFrom_fins. Only lock/unlock when changing jinniSockets,
+ * in UDPreadFrom_fins. Only lock/unlock when changing daemonSockets,
  * since recvfrom_udp just reads data.
  */
-sem_t jinniSockets_sem;
-struct finssocket jinniSockets[MAX_sockets];
+sem_t daemonSockets_sem;
+struct finssocket daemonSockets[MAX_sockets];
 
 int recv_thread_index;
 int thread_count; //TODO move?
@@ -54,8 +54,8 @@ sem_t thread_sem;
  * The list of Semaphores which protect the Queues
  */
 
-finsQueue Jinni_to_Switch_Queue;
-finsQueue Switch_to_Jinni_Queue;
+finsQueue Daemon_to_Switch_Queue;
+finsQueue Switch_to_Daemon_Queue;
 
 finsQueue Switch_to_RTM_Queue;
 finsQueue RTM_to_Switch_Queue;
@@ -78,8 +78,8 @@ finsQueue EtherStub_to_Switch_Queue;
 finsQueue Switch_to_ICMP_Queue;
 finsQueue ICMP_to_Switch_Queue;
 
-sem_t Jinni_to_Switch_Qsem;
-sem_t Switch_to_Jinni_Qsem;
+sem_t Daemon_to_Switch_Qsem;
+sem_t Switch_to_Daemon_Qsem;
 
 /** RunTimeManager Module to connect to the user interface  */
 sem_t RTM_to_Switch_Qsem;
@@ -154,17 +154,17 @@ int read_configurations() {
 }
 
 /**
- * @brief initialize the jinni sockets array by filling with value of -1
+ * @brief initialize the daemon sockets array by filling with value of -1
  * @param
  * @return nothing
  */
-void init_jinnisockets() {
+void init_daemonsockets() {
 	int i;
 
-	sem_init(&jinniSockets_sem, 0, 1);
+	sem_init(&daemonSockets_sem, 0, 1);
 	for (i = 0; i < MAX_sockets; i++) {
-		jinniSockets[i].uniqueSockID = -1;
-		jinniSockets[i].connection_status = 0;
+		daemonSockets[i].uniqueSockID = -1;
+		daemonSockets[i].connection_status = 0;
 	}
 
 	sem_init(&thread_sem, 0, 1);
@@ -174,14 +174,14 @@ void init_jinnisockets() {
 
 void Queues_init() {
 
-	Jinni_to_Switch_Queue = init_queue("jinni2switch", MAX_Queue_size);
-	Switch_to_Jinni_Queue = init_queue("switch2jinni", MAX_Queue_size);
-	modules_IO_queues[0] = Jinni_to_Switch_Queue;
-	modules_IO_queues[1] = Switch_to_Jinni_Queue;
-	sem_init(&Jinni_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_Jinni_Qsem, 0, 1);
-	IO_queues_sem[0] = &Jinni_to_Switch_Qsem;
-	IO_queues_sem[1] = &Switch_to_Jinni_Qsem;
+	Daemon_to_Switch_Queue = init_queue("daemon2switch", MAX_Queue_size);
+	Switch_to_Daemon_Queue = init_queue("switch2daemon", MAX_Queue_size);
+	modules_IO_queues[0] = Daemon_to_Switch_Queue;
+	modules_IO_queues[1] = Switch_to_Daemon_Queue;
+	sem_init(&Daemon_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_Daemon_Qsem, 0, 1);
+	IO_queues_sem[0] = &Daemon_to_Switch_Qsem;
+	IO_queues_sem[1] = &Switch_to_Daemon_Qsem;
 
 	UDP_to_Switch_Queue = init_queue("udp2switch", MAX_Queue_size);
 	Switch_to_UDP_Queue = init_queue("switch2udp", MAX_Queue_size);
@@ -248,7 +248,7 @@ void Queues_init() {
 
 }
 
-void *Switch_to_Jinni() {
+void *Switch_to_Daemon() {
 
 	struct finsFrame *ff;
 	int protocol = 0;
@@ -261,9 +261,9 @@ void *Switch_to_Jinni() {
 	uint32_t host_ip = 0, host_port = 0, rem_ip = 0, rem_port = 0;
 
 	while (1) {
-		sem_wait(&Switch_to_Jinni_Qsem);
-		ff = read_queue(Switch_to_Jinni_Queue);
-		sem_post(&Switch_to_Jinni_Qsem);
+		sem_wait(&Switch_to_Daemon_Qsem);
+		ff = read_queue(Switch_to_Daemon_Queue);
+		sem_post(&Switch_to_Daemon_Qsem);
 
 		if (ff == NULL) {
 
@@ -310,32 +310,32 @@ void *Switch_to_Jinni() {
 						}
 
 						PRINT_DEBUG("");
-						sem_wait(&jinniSockets_sem);
-						index = match_jinni_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						sem_wait(&daemonSockets_sem);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 						if (index != -1) {
 							PRINT_DEBUG("");
-							sem_wait(&(jinniSockets[index].Qs));
+							sem_wait(&(daemonSockets[index].Qs));
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 								freeFinsFrame(ff);
 							}
 						} else {
 							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							sem_post(&(daemonSockets_sem));
 
 							PRINT_DEBUG("No socket found, dropping");
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -354,32 +354,32 @@ void *Switch_to_Jinni() {
 						}
 
 						PRINT_DEBUG("");
-						sem_wait(&jinniSockets_sem);
-						index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+						sem_wait(&daemonSockets_sem);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0);
 						if (index != -1) {
 							PRINT_DEBUG("");
-							sem_wait(&(jinniSockets[index].Qs));
+							sem_wait(&(daemonSockets[index].Qs));
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 								freeFinsFrame(ff);
 							}
 						} else {
 							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							sem_post(&(daemonSockets_sem));
 
 							PRINT_DEBUG("No socket found, dropping");
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -448,58 +448,58 @@ void *Switch_to_Jinni() {
 						//##################
 
 						PRINT_DEBUG("");
-						sem_wait(&jinniSockets_sem);
-						index = match_jinni_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						sem_wait(&daemonSockets_sem);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 						if (index != -1) {
 							PRINT_DEBUG("");
-							sem_wait(&(jinniSockets[index].Qs));
+							sem_wait(&(daemonSockets[index].Qs));
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 								freeFinsFrame(ff);
 							}
 						} else {
 							ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
 
 							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
-								index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0);
 								if (index != -1) {
 									PRINT_DEBUG("");
-									sem_wait(&(jinniSockets[index].Qs));
+									sem_wait(&(daemonSockets[index].Qs));
 
 									/**
 									 * TODO Replace The data Queue with a pipeLine at least for
 									 * the RAW DATA in order to find a natural way to support
 									 * Blocking and Non-Blocking mode
 									 */
-									if (write_queue(ff, jinniSockets[index].controlQueue)) {
+									if (write_queue(ff, daemonSockets[index].controlQueue)) {
 										PRINT_DEBUG("");
-										sem_post(&(jinniSockets[index].Qs));
+										sem_post(&(daemonSockets[index].Qs));
 										PRINT_DEBUG("");
-										sem_post(&(jinniSockets_sem));
+										sem_post(&(daemonSockets_sem));
 									} else {
 										PRINT_DEBUG("");
-										sem_post(&(jinniSockets[index].Qs));
+										sem_post(&(daemonSockets[index].Qs));
 										PRINT_DEBUG("");
-										sem_post(&(jinniSockets_sem));
+										sem_post(&(daemonSockets_sem));
 										freeFinsFrame(ff);
 									}
 								} else {
 									PRINT_DEBUG("");
-									sem_post(&(jinniSockets_sem));
+									sem_post(&(daemonSockets_sem));
 
 									PRINT_DEBUG("No socket found, dropping");
 									PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -507,7 +507,7 @@ void *Switch_to_Jinni() {
 								}
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 
 								PRINT_DEBUG("No socket found, dropping");
 								PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -537,32 +537,32 @@ void *Switch_to_Jinni() {
 						//##################
 
 						PRINT_DEBUG("");
-						sem_wait(&jinniSockets_sem);
-						index = match_jinni_connection(host_ip, (uint16_t) host_port, 0, 0);
+						sem_wait(&daemonSockets_sem);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0);
 						if (index != -1) {
 							PRINT_DEBUG("");
-							sem_wait(&(jinniSockets[index].Qs));
+							sem_wait(&(daemonSockets[index].Qs));
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
 							 * the RAW DATA in order to find a natural way to support
 							 * Blocking and Non-Blocking mode
 							 */
-							if (write_queue(ff, jinniSockets[index].controlQueue)) {
+							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets[index].Qs));
+								sem_post(&(daemonSockets[index].Qs));
 								PRINT_DEBUG("");
-								sem_post(&(jinniSockets_sem));
+								sem_post(&(daemonSockets_sem));
 								freeFinsFrame(ff);
 							}
 						} else {
 							PRINT_DEBUG("");
-							sem_post(&(jinniSockets_sem));
+							sem_post(&(daemonSockets_sem));
 
 							PRINT_DEBUG("No socket found, dropping");
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -637,22 +637,22 @@ void *Switch_to_Jinni() {
 			 * check if this received datagram destIP and destport matching which socket hostIP
 			 * and hostport insidee our sockets database
 			 */
-			sem_wait(&jinniSockets_sem);
+			sem_wait(&daemonSockets_sem);
 			if (protocol == IPPROTO_ICMP) {
-				index = matchjinniSocket(0, hostip, protocol);
+				index = matchdaemonSocket(0, hostip, protocol);
 			} else if (protocol == TCP_PROTOCOL) {
-				index = match_jinni_connection(hostip, hostport, dstip, dstport);
+				index = match_daemon_connection(hostip, hostport, dstip, dstport);
 				if (index == -1) {
-					index = match_jinni_connection(hostip, hostport, 0, 0);
+					index = match_daemon_connection(hostip, hostport, 0, 0);
 				}
 			} else {
-				index = matchjinniSocket(dstport, dstip, protocol);
+				index = matchdaemonSocket(dstport, dstip, protocol);
 
-				if (index != -1 && jinniSockets[index].connection_status > 0) { //TODO review this logic might be bad
+				if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
 					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
-					if ((hostport != jinniSockets[index].dstport) || (hostip != jinniSockets[index].dst_IP)) {
+					if ((hostport != daemonSockets[index].dstport) || (hostip != daemonSockets[index].dst_IP)) {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
-						sem_post(&jinniSockets_sem);
+						sem_post(&daemonSockets_sem);
 
 						PRINT_DEBUG("freeing ff=%d", (int)ff);
 						freeFinsFrame(ff);
@@ -662,10 +662,10 @@ void *Switch_to_Jinni() {
 			}
 
 			PRINT_DEBUG("index %d", index);
-			if (index != -1 && jinniSockets[index].uniqueSockID != -1) {
+			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
 				PRINT_DEBUG(
 						"Matched: host=%d/%d, dst=%d/%d, prot=%d",
-						jinniSockets[index].host_IP, jinniSockets[index].hostport, jinniSockets[index].dst_IP, jinniSockets[index].dstport, jinniSockets[index].protocol);
+						daemonSockets[index].host_IP, daemonSockets[index].hostport, daemonSockets[index].dst_IP, daemonSockets[index].dstport, daemonSockets[index].protocol);
 
 				/**
 				 * check if this datagram comes from the address this socket has been previously
@@ -673,20 +673,20 @@ void *Switch_to_Jinni() {
 				 */
 
 				int value;
-				sem_getvalue(&(jinniSockets[index].Qs), &value);
+				sem_getvalue(&(daemonSockets[index].Qs), &value);
 				PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
-				sem_wait(&(jinniSockets[index].Qs));
+				sem_wait(&(daemonSockets[index].Qs));
 
 				/**
 				 * TODO Replace The data Queue with a pipeLine at least for
 				 * the RAW DATA in order to find a natural way to support
 				 * Blocking and Non-Blocking mode
 				 */
-				if (write_queue(ff, jinniSockets[index].dataQueue)) {
+				if (write_queue(ff, daemonSockets[index].dataQueue)) {
 					PRINT_DEBUG("");
-					sem_post(&(jinniSockets[index].Qs));
+					sem_post(&(daemonSockets[index].Qs));
 					PRINT_DEBUG("");
-					sem_post(&(jinniSockets_sem));
+					sem_post(&(daemonSockets_sem));
 
 					//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
 
@@ -700,14 +700,14 @@ void *Switch_to_Jinni() {
 					PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
 				} else {
 					PRINT_DEBUG("");
-					sem_post(&(jinniSockets[index].Qs));
+					sem_post(&(daemonSockets[index].Qs));
 					PRINT_DEBUG("");
-					sem_post(&(jinniSockets_sem));
+					sem_post(&(daemonSockets_sem));
 					freeFinsFrame(ff);
 				}
 			} else {
 				PRINT_DEBUG("No match, freeing ff");
-				sem_post(&jinniSockets_sem);
+				sem_post(&daemonSockets_sem);
 
 				PRINT_DEBUG("freeing ff=%d", (int)ff);
 				freeFinsFrame(ff);
@@ -722,7 +722,7 @@ void *Switch_to_Jinni() {
 	} // end of while
 } // end of function
 
-void *interceptor_to_jinni() {
+void *interceptor_to_daemon() {
 	int ret_val;
 	//int nl_sockfd;
 	/*
@@ -971,7 +971,7 @@ void *interceptor_to_jinni() {
 				break;
 			case close_call:
 				/**
-				 * TODO fix the problem into remove jinnisockets
+				 * TODO fix the problem into remove daemonsockets
 				 * the Queue Terminate function has a bug as explained into it
 				 */
 				close_call_handler(uniqueSockID, threads, msg_pt, msg_len);
@@ -1156,7 +1156,7 @@ void *Inject() {
 		memcpy(frame + SIZE_ETHERNET, (ff->dataFrame).pdu, framelen);
 		datalen = framelen + SIZE_ETHERNET;
 		//	print_finsFrame(ff);
-		PRINT_DEBUG("jinni inject to ethernet stub \n");
+		PRINT_DEBUG("daemon inject to ethernet stub \n");
 		numBytes = write(inject_pipe_fd, &datalen, sizeof(int));
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
@@ -1284,7 +1284,7 @@ int main() {
 		exit(-1);
 	}PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
-	//added to include code from fins_jinni.sh -- mrd015 !!!!!
+	//added to include code from fins_daemon.sh -- mrd015 !!!!!
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
@@ -1312,18 +1312,18 @@ int main() {
 #endif
 	// END of added section !!!!!
 
-	/** 1. init the Jinni sockets database
-	 * 2. Init the queues connecting Jinnin to thw FINS Switch
+	/** 1. init the Daemon sockets database
+	 * 2. Init the queues connecting Daemonn to thw FINS Switch
 	 * 3.
 	 */
 	//	read_configurations();
-	init_jinnisockets();
+	init_daemonsockets();
 	Queues_init();
 
 	cap_inj_init();
 
-	pthread_t interceptor_to_jinni_thread;
-	pthread_t Switch_to_jinni_thread;
+	pthread_t interceptor_to_daemon_thread;
+	pthread_t Switch_to_daemon_thread;
 
 	pthread_t udp_thread;
 	pthread_t icmp_thread;
@@ -1344,8 +1344,8 @@ int main() {
 	pthread_t switch_thread;
 
 	/* original !!!!!
-	 pthread_create(&interceptor_to_jinni_thread, NULL, interceptor_to_jinni, NULL);
-	 pthread_create(&Switch_to_jinni_thread, NULL, Switch_to_Jinni, NULL);
+	 pthread_create(&interceptor_to_daemon_thread, NULL, interceptor_to_daemon, NULL);
+	 pthread_create(&Switch_to_daemon_thread, NULL, Switch_to_Daemon, NULL);
 
 	 pthread_create(&udp_thread, NULL, UDP, NULL);
 	 //	pthread_create(&rtm_thread, NULL, RTM, NULL);
@@ -1365,8 +1365,8 @@ int main() {
 	// ADDED !!!!! start
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
-	pthread_create(&interceptor_to_jinni_thread, &fins_pthread_attr, interceptor_to_jinni, NULL); //this has named pipe input from interceptor
-	pthread_create(&Switch_to_jinni_thread, &fins_pthread_attr, Switch_to_Jinni, NULL);
+	pthread_create(&interceptor_to_daemon_thread, &fins_pthread_attr, interceptor_to_daemon, NULL); //this has named pipe input from interceptor
+	pthread_create(&Switch_to_daemon_thread, &fins_pthread_attr, Switch_to_Daemon, NULL);
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
 	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
 	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
@@ -1380,8 +1380,8 @@ int main() {
 	/**
 	 *************************************************************
 	 */
-	pthread_join(interceptor_to_jinni_thread, NULL);
-	pthread_join(Switch_to_jinni_thread, NULL);
+	pthread_join(interceptor_to_daemon_thread, NULL);
+	pthread_join(Switch_to_daemon_thread, NULL);
 	pthread_join(etherStub_capturing, NULL);
 	pthread_join(etherStub_injecting, NULL);
 	pthread_join(switch_thread, NULL);

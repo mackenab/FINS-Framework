@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 
 #include "wifidemux.h"
-#include "Jinni/handlers.h"
+#include "daemon/handlers.h"
 
 #define MAX_modules	16
 #define SNAP_LEN 		4096
@@ -49,7 +49,7 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset);
 #endif
 
 /** The Global socket channel descriptor is used to communicate between the socket
- * interceptor and the socket jinni until they exchange the socket UNIQUE ID, then a separate
+ * interceptor and the socket daemon until they exchange the socket UNIQUE ID, then a separate
  * named pipe gets opened for the newly created socket */
 //end: interceptor merge
 

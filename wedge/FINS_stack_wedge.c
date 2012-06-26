@@ -60,8 +60,8 @@
 
 // Create one semaphore here for every socketcall that is going to block
 //struct semaphore FINS_semaphores[MAX_calls];
-struct finssocket jinniSockets[MAX_sockets];
-rwlock_t jinnisockets_rwlock;
+struct finssocket wedgeSockets[MAX_sockets];
+rwlock_t wedgeSockets_rwlock;
 struct semaphore link_sem;
 
 int print_exit(const char *func, int line, int rc) {
@@ -71,122 +71,122 @@ int print_exit(const char *func, int line, int rc) {
 	return rc;
 }
 
-void init_jinnisockets(void) {
+void init_wedgeSockets(void) {
 	int i;
 
 	PRINT_DEBUG("Entered.");
 
-	rwlock_init(&jinnisockets_rwlock);
+	rwlock_init(&wedgeSockets_rwlock);
 	for (i = 0; i < MAX_sockets; i++) {
-		jinniSockets[i].uniqueSockID = -1;
-		jinniSockets[i].type = -1;
-		jinniSockets[i].protocol = -1;
+		wedgeSockets[i].uniqueSockID = -1;
+		wedgeSockets[i].type = -1;
+		wedgeSockets[i].protocol = -1;
 	}
 
 	PRINT_DEBUG("Exited.");
 }
 
-int insertjinniSocket(unsigned long long uniqueSockID, int type, int protocol) {
+int insert_wedgeSocket(unsigned long long uniqueSockID, int type, int protocol) {
 	int i;
 	int j;
 
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	write_lock(&jinnisockets_rwlock);
+	write_lock(&wedgeSockets_rwlock);
 	for (i = 0; i < MAX_sockets; i++) {
-		if ((jinniSockets[i].uniqueSockID == -1)) {
-			jinniSockets[i].uniqueSockID = uniqueSockID;
-			jinniSockets[i].type = type;
-			jinniSockets[i].protocol = protocol;
+		if ((wedgeSockets[i].uniqueSockID == -1)) {
+			wedgeSockets[i].uniqueSockID = uniqueSockID;
+			wedgeSockets[i].type = type;
+			wedgeSockets[i].protocol = protocol;
 
 			for (j = 0; j < MAX_calls; j++) {
-				sema_init(&jinniSockets[i].call_sems[j], 0);
+				sema_init(&wedgeSockets[i].call_sems[j], 0);
 			}
 
-			jinniSockets[i].release_flag = 0;
-			jinniSockets[i].threads = 0;
-			sema_init(&jinniSockets[i].threads_sem, 1);
+			wedgeSockets[i].release_flag = 0;
+			wedgeSockets[i].threads = 0;
+			sema_init(&wedgeSockets[i].threads_sem, 1);
 
-			sema_init(&jinniSockets[i].reply_sem_w, 1);
-			sema_init(&jinniSockets[i].reply_sem_r, 1);
-			jinniSockets[i].reply_call = 0;
-			jinniSockets[i].reply_ret = -1;
-			jinniSockets[i].reply_buf = NULL;
-			jinniSockets[i].reply_len = -1;
+			sema_init(&wedgeSockets[i].reply_sem_w, 1);
+			sema_init(&wedgeSockets[i].reply_sem_r, 1);
+			wedgeSockets[i].reply_call = 0;
+			wedgeSockets[i].reply_ret = -1;
+			wedgeSockets[i].reply_buf = NULL;
+			wedgeSockets[i].reply_len = -1;
 
-			write_unlock(&jinnisockets_rwlock);
+			write_unlock(&wedgeSockets_rwlock);
 			return print_exit(__FUNCTION__, __LINE__, i);
 			//return (i);
-		} else if (jinniSockets[i].uniqueSockID == uniqueSockID) {
+		} else if (wedgeSockets[i].uniqueSockID == uniqueSockID) {
 
-			write_unlock(&jinnisockets_rwlock);
+			write_unlock(&wedgeSockets_rwlock);
 			return print_exit(__FUNCTION__, __LINE__, -1);
 			//return (-1);
 		}
 	}
 
-	write_unlock(&jinnisockets_rwlock);
+	write_unlock(&wedgeSockets_rwlock);
 	return print_exit(__FUNCTION__, __LINE__, -1);
 	//return (-1);
 }
 
-int findjinniSocket(unsigned long long uniqueSockID) {
+int find_wedgeSocket(unsigned long long uniqueSockID) {
 	int i;
 
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	read_lock(&jinnisockets_rwlock);
+	read_lock(&wedgeSockets_rwlock);
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID == uniqueSockID) {
-			read_unlock(&jinnisockets_rwlock);
+		if (wedgeSockets[i].uniqueSockID == uniqueSockID) {
+			read_unlock(&wedgeSockets_rwlock);
 			return print_exit(__FUNCTION__, __LINE__, i);
 			//return (i);
 		}
 	}
-	read_unlock(&jinnisockets_rwlock);
+	read_unlock(&wedgeSockets_rwlock);
 	return print_exit(__FUNCTION__, __LINE__, -1);
 	//return (-1);
 }
 
-int removejinniSocket(unsigned long long uniqueSockID) {
+int remove_wedgeSocket(unsigned long long uniqueSockID) {
 	int i;
 	int j;
 	int threads;
 
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	write_lock(&jinnisockets_rwlock);
+	write_lock(&wedgeSockets_rwlock);
 	for (i = 0; i < MAX_sockets; i++) {
-		if (jinniSockets[i].uniqueSockID == uniqueSockID) {
-			jinniSockets[i].uniqueSockID = -1;
-			jinniSockets[i].type = -1;
-			jinniSockets[i].protocol = -1;
+		if (wedgeSockets[i].uniqueSockID == uniqueSockID) {
+			wedgeSockets[i].uniqueSockID = -1;
+			wedgeSockets[i].type = -1;
+			wedgeSockets[i].protocol = -1;
 
-			threads = jinniSockets[i].threads + 1;
-			write_unlock(&jinnisockets_rwlock);
-			PRINT_DEBUG("jinniSocket[%d] removed.", i);
+			threads = wedgeSockets[i].threads + 1;
+			write_unlock(&wedgeSockets_rwlock);
+			PRINT_DEBUG("wedgeSocket[%d] removed.", i);
 
-			PRINT_DEBUG("jinniSocket[%d].threads=%d", i, threads);
+			PRINT_DEBUG("wedgeSocket[%d].threads=%d", i, threads);
 			for (j = 0; j < threads; j++) {
-				up(&jinniSockets[i].reply_sem_w);
+				up(&wedgeSockets[i].reply_sem_w);
 				msleep(50); //may need to change
 			}
 			return (1);
 		}
 	}
-	write_unlock(&jinnisockets_rwlock);
+	write_unlock(&wedgeSockets_rwlock);
 	return (-1);
 }
 
 int threads_incr(int index) {
 	int ret;
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
+	if (down_interruptible(&wedgeSockets[index].threads_sem)) {
 		PRINT_ERROR("threads aquire fail");
 	}
-	ret = ++jinniSockets[index].threads;
-	PRINT_DEBUG("jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
+	ret = ++wedgeSockets[index].threads;
+	PRINT_DEBUG("wedgeSockets[%d].threads=%d", index, wedgeSockets[index].threads);
+	up(&wedgeSockets[index].threads_sem);
 
 	return ret;
 }
@@ -194,38 +194,38 @@ int threads_incr(int index) {
 int threads_decr(int index) {
 	int ret;
 
-	if (down_interruptible(&jinniSockets[index].threads_sem)) {
+	if (down_interruptible(&wedgeSockets[index].threads_sem)) {
 		PRINT_ERROR("threads aquire fail");
 	}
-	ret = --jinniSockets[index].threads;
-	PRINT_DEBUG("jinniSockets[%d].threads=%d", index, jinniSockets[index].threads);
-	up(&jinniSockets[index].threads_sem);
+	ret = --wedgeSockets[index].threads;
+	PRINT_DEBUG("wedgeSockets[%d].threads=%d", index, wedgeSockets[index].threads);
+	up(&wedgeSockets[index].threads_sem);
 
 	return ret;
 }
 
-int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) {
+int wait_wedgeSocket(unsigned long long uniqueSockID, int index, u_int calltype) {
 	int error = 0;
 
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	if (down_interruptible(&jinniSockets[index].call_sems[calltype])) { // block until daemon replies
-		PRINT_ERROR("call aquire fail, throwing error: sem[%d]=%d", calltype, jinniSockets[index].call_sems[calltype].count);
+	if (down_interruptible(&wedgeSockets[index].call_sems[calltype])) { // block until daemon replies
+		PRINT_ERROR("call aquire fail, throwing error: sem[%d]=%d", calltype, wedgeSockets[index].call_sems[calltype].count);
 		error = 1;
 	}
 
-	if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
-		PRINT_ERROR("shared aquire fail, r=%d", jinniSockets[index].reply_sem_r.count);
+	if (down_interruptible(&wedgeSockets[index].reply_sem_r)) {
+		PRINT_ERROR("shared aquire fail, r=%d", wedgeSockets[index].reply_sem_r.count);
 	}
-	if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-		up(&jinniSockets[index].reply_sem_r);
-		PRINT_ERROR("jinniSocket removed for uniqueSockID=%llu", uniqueSockID);
+	if (wedgeSockets[index].uniqueSockID != uniqueSockID) {
+		up(&wedgeSockets[index].reply_sem_r);
+		PRINT_ERROR("wedgeSocket removed for uniqueSockID=%llu", uniqueSockID);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -233,7 +233,7 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 
 	if (error) {
 		PRINT_ERROR("wait fail");
-		up(&jinniSockets[index].reply_sem_r);
+		up(&wedgeSockets[index].reply_sem_r);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -241,21 +241,21 @@ int waitjinniSocket(unsigned long long uniqueSockID, int index, u_int calltype) 
 }
 
 int checkConfirmation(int index) {
-	//exract msg from jinniSockets[index].reply_buf
-	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len == 0)) {
-		if (jinniSockets[index].reply_ret == ACK) {
+	//exract msg from wedgeSockets[index].reply_buf
+	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len == 0)) {
+		if (wedgeSockets[index].reply_ret == ACK) {
 			PRINT_DEBUG("recv ACK");
 			return 0;
-		} else if (jinniSockets[index].reply_ret == NACK) {
+		} else if (wedgeSockets[index].reply_ret == NACK) {
 			PRINT_DEBUG("recv NACK");
 			return -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", jinniSockets[index].reply_ret);
+			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 			return -1;
 		}
 	} else {
-		PRINT_ERROR("jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p", jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 		return -1;
 	}
 }
@@ -321,7 +321,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 	uniqueSockID = getUniqueSockID(sock);
 
-	index = insertjinniSocket(uniqueSockID, sock->type, protocol);
+	index = insert_wedgeSocket(uniqueSockID, sock->type, protocol);
 	PRINT_DEBUG("insert index=%d", index);
 	if (index == -1) {
 		goto removeSocket;
@@ -369,7 +369,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 		goto removeSocket;
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, socket_call);
+	index = wait_wedgeSocket(uniqueSockID, index, socket_call);
 	PRINT_DEBUG("after index=%d", index);
 	if (index == -1) {
 		goto removeSocket;
@@ -378,15 +378,15 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	if (rc != 0) {
-		removeSocket: ret = removejinniSocket(uniqueSockID);
+		removeSocket: ret = remove_wedgeSocket(uniqueSockID);
 
 		if (sk) {
 			lock_sock(sk);
@@ -423,7 +423,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -472,7 +472,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, bind_call);
+	index = wait_wedgeSocket(uniqueSockID, index, bind_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -481,12 +481,12 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -509,7 +509,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -552,7 +552,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, listen_call);
+	index = wait_wedgeSocket(uniqueSockID, index, listen_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -561,12 +561,12 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -589,7 +589,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -635,7 +635,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, connect_call);
+	index = wait_wedgeSocket(uniqueSockID, index, connect_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -644,12 +644,12 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -674,7 +674,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -740,7 +740,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, accept_call);
+	index = wait_wedgeSocket(uniqueSockID, index, accept_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -749,15 +749,15 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	if (rc == 0) {
-		index_new = insertjinniSocket(uniqueSockID_new, newsock->type, jinniSockets[index].protocol);
+		index_new = insert_wedgeSocket(uniqueSockID_new, newsock->type, wedgeSockets[index].protocol);
 		PRINT_DEBUG("insert index_new=%d", index_new);
 		if (index == -1) {
 			rc = -1;
@@ -801,7 +801,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -846,7 +846,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, getname_call);
+	index = wait_wedgeSocket(uniqueSockID, index, getname_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -854,10 +854,10 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len >= sizeof(int))) {
-		pt = jinniSockets[index].reply_buf;
+	if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
+		pt = wedgeSockets[index].reply_buf;
 
-		if (jinniSockets[index].reply_ret == ACK) {
+		if (wedgeSockets[index].reply_ret == ACK) {
 			PRINT_DEBUG("recv ACK");
 
 			//TODO: find out if this is right! udpHandling writes sockaddr_in here
@@ -884,8 +884,8 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 					rc = -1;
 				}
 
-				if (pt - jinniSockets[index].reply_buf != jinniSockets[index].reply_len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - jinniSockets[index].reply_buf, jinniSockets[index].reply_len);
+				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
 					rc = -1;
 				}
 				rc = 0;
@@ -893,23 +893,23 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 				PRINT_DEBUG("different peer value=%d", ret);
 				rc = -1;
 			}
-		} else if (jinniSockets[index].reply_ret == NACK) {
+		} else if (wedgeSockets[index].reply_ret == NACK) {
 			PRINT_DEBUG("recv NACK");
 			rc = -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", jinniSockets[index].reply_ret);
+			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 			rc = -1;
 		}
 	} else {
-		PRINT_ERROR("jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p", jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 		rc = -1;
-	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	up(&jinniSockets[index].reply_sem_r);
+	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -938,7 +938,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1029,7 +1029,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		// pick an appropriate errno
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, sendmsg_call);
+	index = wait_wedgeSocket(uniqueSockID, index, sendmsg_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1041,12 +1041,12 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	if (rc == 0) {
 		rc = data_len;
 	}
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1074,7 +1074,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1142,7 +1142,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		// pick an appropriate errno
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, recvmsg_call);
+	index = wait_wedgeSocket(uniqueSockID, index, recvmsg_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1150,10 +1150,10 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len >= 0)) {
-		pt = jinniSockets[index].reply_buf;
+	if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= 0)) {
+		pt = wedgeSockets[index].reply_buf;
 
-		if (jinniSockets[index].reply_ret == ACK) {
+		if (wedgeSockets[index].reply_ret == ACK) {
 			PRINT_DEBUG("recv ACK");
 
 			if (symbol == 1) {
@@ -1220,27 +1220,27 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				rc = -1;
 			}
 
-			if (pt - jinniSockets[index].reply_buf != jinniSockets[index].reply_len) {
-				PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - jinniSockets[index].reply_buf, jinniSockets[index].reply_len);
+			if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+				PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
 				rc = -1;
 			}
-		} else if (jinniSockets[index].reply_ret == NACK) {
+		} else if (wedgeSockets[index].reply_ret == NACK) {
 			PRINT_DEBUG("recv NACK");
 			rc = -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", jinniSockets[index].reply_ret);
+			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 			rc = -1;
 		}
 	} else {
-		PRINT_ERROR("jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p", jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 		rc = -1;
-	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	up(&jinniSockets[index].reply_sem_r);
+	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1270,7 +1270,7 @@ static int FINS_release(struct socket *sock) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1310,9 +1310,9 @@ static int FINS_release(struct socket *sock) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	jinniSockets[index].release_flag = 1;
+	wedgeSockets[index].release_flag = 1;
 
-	index = waitjinniSocket(uniqueSockID, index, release_call);
+	index = wait_wedgeSocket(uniqueSockID, index, release_call);
 	PRINT_DEBUG("after index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1321,16 +1321,16 @@ static int FINS_release(struct socket *sock) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
-	ret = removejinniSocket(uniqueSockID);
+	ret = remove_wedgeSocket(uniqueSockID);
 	if (ret == -1) {
-		PRINT_ERROR("removejinniSocket fail");
+		PRINT_ERROR("removewedgeSocket fail");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -1493,7 +1493,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1543,7 +1543,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, ioctl_call);
+	index = wait_wedgeSocket(uniqueSockID, index, ioctl_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1552,12 +1552,12 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1581,7 +1581,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1624,7 +1624,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, shutdown_call);
+	index = wait_wedgeSocket(uniqueSockID, index, shutdown_call);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1633,12 +1633,12 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-	jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1661,7 +1661,7 @@ if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea wh
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1717,7 +1717,7 @@ ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, setsockopt_call);
+	index = wait_wedgeSocket(uniqueSockID, index, setsockopt_call);
 	PRINT_DEBUG("index=%d", index);
 if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1726,13 +1726,13 @@ if (index == -1) {
 	PRINT_DEBUG("relocked my semaphore");
 
 rc = checkConfirmation(index);
-	up(&jinniSockets[index].reply_sem_r);
+	up(&wedgeSockets[index].reply_sem_r);
 
 	PRINT_DEBUG( "shared consumed: call=%d, sockID=%llu, ret=%d, len=%d",
-		jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+		wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1756,7 +1756,7 @@ if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea wh
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = findjinniSocket(uniqueSockID);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1822,7 +1822,7 @@ ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = waitjinniSocket(uniqueSockID, index, getsockopt_call);
+	index = wait_wedgeSocket(uniqueSockID, index, getsockopt_call);
 	PRINT_DEBUG("index=%d", index);
 if (index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1830,11 +1830,11 @@ if (index == -1) {
 
 	PRINT_DEBUG("relocked my semaphore");
 
-//exract msg from jinniSockets[index].reply_buf
-if (jinniSockets[index].reply_buf && (jinniSockets[index].reply_len >= sizeof(int))) {
-		if (jinniSockets[index].reply_ret == ACK) {
+//exract msg from wedgeSockets[index].reply_buf
+if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
+		if (wedgeSockets[index].reply_ret == ACK) {
 			PRINT_DEBUG("recv ACK");
-pt = jinniSockets[index].reply_buf;
+pt = wedgeSockets[index].reply_buf;
 			rc = 0;
 
 			//re-using len var
@@ -1853,27 +1853,27 @@ rc = -1;
 rc = -1;
 				}
 			}
-		} else if (jinniSockets[index].reply_ret == NACK) {
+		} else if (wedgeSockets[index].reply_ret == NACK) {
 			PRINT_DEBUG("recv NACK");
 rc = -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", jinniSockets[index].reply_ret);
+			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 rc = -1;
 		}
 	} else {
-		PRINT_ERROR( "jinniSockets[index].reply_buf error, jinniSockets[index].reply_len=%d jinniSockets[index].reply_buf=%p",
-		jinniSockets[index].reply_len, jinniSockets[index].reply_buf);
+		PRINT_ERROR( "wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p",
+		wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 rc = -1;
 	}
 	PRINT_DEBUG( "shared used: call=%d, sockID=%llu, ret=%d, len=%d",
-		jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-up(&jinniSockets[index].reply_sem_r);
+		wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+up(&wedgeSockets[index].reply_sem_r);
 
 	PRINT_DEBUG( "shared consumed: call=%d, sockID=%llu, ret=%d, len=%d",
-		jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-jinniSockets[index].reply_call = 0;
-	up(&jinniSockets[index].reply_sem_w);
-	PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
+		wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1894,7 +1894,7 @@ if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea wh
 	return print_exit(__FUNCTION__, __LINE__, -1);
 }
 
-index = findjinniSocket(uniqueSockID);
+index = find_wedgeSocket(uniqueSockID);
 PRINT_DEBUG("index=%d", index);
 if (index == -1) {
 	return print_exit(__FUNCTION__, __LINE__, -1);
@@ -2178,7 +2178,7 @@ if (pid == -1) { // if the socket daemon hasn't made contact before
 		PRINT_DEBUG("got a daemon reply to a call (%d).", reply_call);
 		/*
 		 * extract msg or pass to shared buffer
-		 * jinniSockets[index].reply_call & shared_sockID, are to verify buf goes to the write sock & call
+		 * wedgeSockets[index].reply_call & shared_sockID, are to verify buf goes to the write sock & call
 		 * This is preemptive as with multithreading we may have to add a shared queue
 		 */
 
@@ -2187,52 +2187,52 @@ if (pid == -1) { // if the socket daemon hasn't made contact before
 
 		PRINT_DEBUG("reply for uniqueSockID=%llu call=%d", uniqueSockID, reply_call);
 
-		index = findjinniSocket(uniqueSockID);
+		index = find_wedgeSocket(uniqueSockID);
 		PRINT_DEBUG("index=%d", index);
 		if (index == -1) {
 			PRINT_ERROR("socket not found for uniqueSockID=%llu", uniqueSockID);
 			goto end;
 		}
 
-		if (jinniSockets[index].release_flag && (reply_call != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
+		if (wedgeSockets[index].release_flag && (reply_call != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
 			PRINT_DEBUG("socket released, dropping for uniqueSockID=%llu call=%d", uniqueSockID, reply_call);
 			goto end;
 		}
 
 		//lock the semaphore so shared data can't be changed until it's consumed
-		PRINT_DEBUG("jinniSockets[%d].reply_sem_w=%d", index, jinniSockets[index].reply_sem_w.count);
-		if (down_interruptible(&jinniSockets[index].reply_sem_w)) {
-			PRINT_ERROR("shared aquire fail, using hard down w=%d", jinniSockets[index].reply_sem_w.count);
+		PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
+		if (down_interruptible(&wedgeSockets[index].reply_sem_w)) {
+			PRINT_ERROR("shared aquire fail, using hard down w=%d", wedgeSockets[index].reply_sem_w.count);
 		}
 
-		PRINT_DEBUG("jinniSockets[%d].reply_sem_r=%d", index, jinniSockets[index].reply_sem_r.count);
-		if (down_interruptible(&jinniSockets[index].reply_sem_r)) {
-			PRINT_ERROR("shared aquire fail, using hard down r=%d", jinniSockets[index].reply_sem_r.count);
+		PRINT_DEBUG("wedgeSockets[%d].reply_sem_r=%d", index, wedgeSockets[index].reply_sem_r.count);
+		if (down_interruptible(&wedgeSockets[index].reply_sem_r)) {
+			PRINT_ERROR("shared aquire fail, using hard down r=%d", wedgeSockets[index].reply_sem_r.count);
 		}
 
-		if (jinniSockets[index].uniqueSockID != uniqueSockID) {
-			PRINT_ERROR("jinniSocket removed for uniqueSockID=%llu", uniqueSockID);
-			up(&jinniSockets[index].reply_sem_r);
+		if (wedgeSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_ERROR("wedgeSocket removed for uniqueSockID=%llu", uniqueSockID);
+			up(&wedgeSockets[index].reply_sem_r);
 			goto end;
 		}
 
-		write_lock(&jinnisockets_rwlock);
+		write_lock(&wedgeSockets_rwlock);
 
-		jinniSockets[index].reply_call = reply_call;
+		wedgeSockets[index].reply_call = reply_call;
 
-		jinniSockets[index].reply_ret = *(int *) pt;
+		wedgeSockets[index].reply_ret = *(int *) pt;
 		pt += sizeof(int);
 
-		jinniSockets[index].reply_buf = pt;
+		wedgeSockets[index].reply_buf = pt;
 
 		len -= sizeof(unsigned long long) + sizeof(int);
-		jinniSockets[index].reply_len = len;
+		wedgeSockets[index].reply_len = len;
 
-		write_unlock(&jinnisockets_rwlock);
-		PRINT_DEBUG("shared created: call=%d, sockID=%llu, ret=%d, len=%d", jinniSockets[index].reply_call, jinniSockets[index].uniqueSockID, jinniSockets[index].reply_ret, jinniSockets[index].reply_len);
-		up(&jinniSockets[index].reply_sem_r);
+		write_unlock(&wedgeSockets_rwlock);
+		PRINT_DEBUG("shared created: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+		up(&wedgeSockets[index].reply_sem_r);
 
-		up(&jinniSockets[index].call_sems[reply_call]);
+		up(&wedgeSockets[index].call_sems[reply_call]);
 	} else {
 		PRINT_DEBUG("got an unsupported/binding daemon reply (%d)", reply_call);
 	}
@@ -2330,7 +2330,7 @@ static int __init FINS_stack_wedge_init(void) {
 PRINT_DEBUG("Loading the FINS_stack_wedge module");
 setup_FINS_protocol();
 	setup_FINS_netlink();
-	init_jinnisockets();
+	init_wedgeSockets();
 	PRINT_DEBUG("Made it through the FINS_stack_wedge initialization");
 return 0;
 }
