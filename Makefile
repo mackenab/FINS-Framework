@@ -19,8 +19,8 @@ capturer:
 common:
 	@cd $@; $(MAKE) all
 
-.PHONY:socketdaemon
-socketdaemon:
+.PHONY:core
+core:
 	@cd $@; $(MAKE) all
 
 .PHONY:interceptor

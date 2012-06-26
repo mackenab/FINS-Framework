@@ -13,7 +13,7 @@ BUILD_FOR_LINUX = "If uncommented, the FINS source will build for linux"
 ###### build for android (arch arm) ######
 ifdef BUILD_FOR_ANDROID_ARM
 
-PROJECT_LIST = common capturer socketdaemon
+PROJECT_LIST = common capturer core
 
 TARGET_PLATFORM = "Android arch-ARM"
 
@@ -31,7 +31,7 @@ endif
 ###### build for android x86 ######
 ifdef BUILD_FOR_ANDROID_X86
 
-PROJECT_LIST = common capturer socketdaemon
+PROJECT_LIST = common capturer core
 
 TARGET_PLATFORM = "Android arch-x86"
 
@@ -50,7 +50,7 @@ endif
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
 
-PROJECT_LIST = common capturer socketdaemon wedge examples interceptor
+PROJECT_LIST = common capturer core wedge examples interceptor
 
 TARGET_PLATFORM = "Linux x86"
 

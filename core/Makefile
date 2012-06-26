@@ -2,7 +2,7 @@
 include $(FINS_ROOT_DIR)/settings.finsmk
 
 #This is the name of the FINS core executable
-PROJECT_NAME = socketdaemon
+PROJECT_NAME = core
 
 #These are the extra includes for the FINS core modules.
 CFLAGS += $(FINS_CORE_INC)
