@@ -71,7 +71,7 @@ unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t 
 	}
 
 	for (i = 0, ptr--; i < len; i += 2) {
-		PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(ptr+1), *(ptr+1), i+1, *(ptr+2), *(ptr+2));
+		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(ptr+1), *(ptr+1), i+1, *(ptr+2), *(ptr+2));
 		sum += (*++ptr << 8) + *++ptr;
 		//if (sum >> 16) {sum = ++sum & 0xFFFF;} //alternative to while loop
 	}

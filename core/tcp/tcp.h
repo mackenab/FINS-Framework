@@ -263,6 +263,8 @@ struct tcp_connection {
 
 	uint8_t tsopt_attempt; //attempt time stamp option
 	uint8_t tsopt_enabled; //time stamp option enabled
+	uint32_t ts_rem; //latest ts val from rem
+	uint32_t ts_used;
 
 	uint8_t sack_attempt; //attempt selective ACK option
 	uint8_t sack_enabled; //selective ACK option enabled

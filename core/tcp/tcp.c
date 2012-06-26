@@ -1460,7 +1460,8 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	hdr->ack_num = htonl(seg->ack_num);
 	hdr->flags = htons(seg->flags);
 	hdr->win_size = htons(seg->win_size);
-	hdr->checksum = htons(seg->checksum);
+	//hdr->checksum = htons(seg->checksum)
+	hdr->checksum = 0;
 	hdr->urg_pointer = htons(seg->urg_pointer);
 
 	if (seg->opt_len > 0) {
@@ -1469,10 +1470,40 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	}
 
 	if (seg->data_len > 0) {
-		uint8_t *ptr = hdr->options + seg->opt_len;
-		memcpy(ptr, seg->data, seg->data_len);
+		//uint8_t *ptr = hdr->options + seg->opt_len;
+		//memcpy(ptr, seg->data, seg->data_len);
+		memcpy(hdr->options + seg->opt_len, seg->data, seg->data_len);
 		//ptr += seg->data_len;
 	}
+
+	uint32_t sum = 0;
+	uint8_t *pt;
+
+	struct ipv4_header ip_hdr;
+	ip_hdr.src_ip = htonl(seg->src_ip);
+	ip_hdr.dst_ip = htonl(seg->dst_ip);
+	ip_hdr.zeros = 0;
+	ip_hdr.protocol = TCP_PROTOCOL;
+	ip_hdr.tcp_len = htons(ff->dataFrame.pdu);
+
+	pt = (uint8_t *) &ip_hdr;
+	for (i = 0, pt--; i < IP_HEADER_BYTES; i += 2) {
+		sum += (*++pt << 8) + *++pt;
+	}
+
+	pt = (uint8_t *) ff->dataFrame.pdu;
+	for (i = 1, pt--; i < ff->dataFrame.pduLength; i += 2) {
+		sum += (*++pt << 8) + *++pt;
+	}
+	if (ff->dataFrame.pduLength & 0x1) {
+		sum += *++pt << 8;
+	}
+
+	while (sum >> 16) {
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+	sum = ~sum;
+	hdr->checksum = htons((uint16_t) sum);
 
 	PRINT_DEBUG("seg_to_fdf: Exited: seg=%d ff=%d meta=%d", (int)seg, (int)ff, (int) ff->dataFrame.metaData);
 	return ff;
@@ -1788,7 +1819,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 			*(uint32_t *) pt = htonl(((int) time(NULL))); //TODO complete
 			pt += sizeof(uint32_t);
-			*(uint32_t *) pt = 0;
+			*(uint32_t *) pt = htonl(0); //conn->ts_latest ?
 			pt += sizeof(uint32_t);
 		}
 
@@ -1833,9 +1864,9 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 				pt += sizeof(uint32_t);
 				*(uint32_t *) pt = htonl(right);
 				pt += sizeof(uint32_t);
-				seg->opt_len += 2 * sizeof(uint32_t);
-				*len_pt += 2 * sizeof(uint32_t);
 
+				*len_pt += 2 * sizeof(uint32_t);
+				seg->opt_len += 2 * sizeof(uint32_t);
 				if (seg->opt_len > 32) {
 					break;
 				}
@@ -1935,8 +1966,8 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 	seg->flags |= ((MIN_TCP_HEADER_WORDS + offset) << 12) & FLAG_DATAOFFSET;
 	PRINT_DEBUG("seg_update: offset=%d header_len=%d pkt_len=%d", offset, TCP_HEADER_BYTES(seg->flags), TCP_HEADER_BYTES(seg->flags)+seg->data_len);
 
-//TODO alt checksum
-	seg->checksum = seg_checksum(seg);
+	//TODO alt checksum
+	//seg->checksum = seg_checksum(seg);
 }
 
 uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works, check rollover
@@ -1945,29 +1976,46 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 
 	uint32_t sum = 0;
 
-//fake IP header
-	sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip & 0xFFFF)); //TODO fix
-	sum += ((uint16_t)(seg->dst_ip >> 16)) + ((uint16_t)(seg->dst_ip & 0xFFFF));
-	sum += (uint16_t) TCP_PROTOCOL;
-	sum += (uint16_t)(IP_HEADER_BYTES + TCP_HEADER_BYTES(seg->flags) + seg->data_len);
+	struct tcp_packet2 pkt;
+	pkt.src_ip = htonl(seg->src_ip);
+	pkt.dst_ip = htonl(seg->dst_ip);
+	pkt.zeros = 0;
+	pkt.protocol = TCP_PROTOCOL;
+	pkt.tcp_len = htons(TCP_HEADER_BYTES(seg->flags) + seg->data_len);
+	pkt.src_port = htons(seg->src_port);
+	pkt.dst_port = htons(seg->dst_port);
+	pkt.seq_num = htonl(seg->seq_num);
+	pkt.ack_num = htonl(seg->ack_num);
+	pkt.flags = htons(seg->flags);
+	pkt.win_size = htons(seg->win_size);
+	pkt.checksum = htons(seg->checksum);
+	pkt.urg_pointer = htons(seg->urg_pointer);
 
-//fake TCP header
-	sum += seg->src_port;
-	sum += seg->dst_port;
-	sum += ((uint16_t)(seg->seq_num >> 16)) + ((uint16_t)(seg->seq_num & 0xFFFF));
-	sum += ((uint16_t)(seg->ack_num >> 16)) + ((uint16_t)(seg->ack_num & 0xFFFF));
-	sum += seg->flags;
-	sum += seg->win_size;
-//sum += seg->checksum; //dummy checksum=0
-	sum += seg->urg_pointer;
+	/*
+	 //fake IP header
+	 sum += ((uint16_t)(seg->src_ip >> 16)) + ((uint16_t)(seg->src_ip & 0xFFFF)); //TODO fix
+	 sum += ((uint16_t)(seg->dst_ip >> 16)) + ((uint16_t)(seg->dst_ip & 0xFFFF));
+	 sum += (uint16_t) TCP_PROTOCOL;
+	 sum += (uint16_t)(IP_HEADER_BYTES + TCP_HEADER_BYTES(seg->flags) + seg->data_len);
 
-//options, opt_len always has to be a factor of 2
-	uint8_t * ptr = (uint8_t *) seg->options;
+	 //fake TCP header
+	 sum += seg->src_port;
+	 sum += seg->dst_port;
+	 sum += ((uint16_t)(seg->seq_num >> 16)) + ((uint16_t)(seg->seq_num & 0xFFFF));
+	 sum += ((uint16_t)(seg->ack_num >> 16)) + ((uint16_t)(seg->ack_num & 0xFFFF));
+	 sum += seg->flags;
+	 sum += seg->win_size;
+	 //sum += seg->checksum; //dummy checksum=0
+	 sum += seg->urg_pointer;
+	 */
+
+	//options, opt_len always has to be a factor of 2
+	uint8_t *ptr = (uint8_t *) seg->options;
 	for (i = 0, ptr--; i < seg->opt_len; i += 2) {
 		sum += (*++ptr << 8) + *++ptr;
 	}
 
-//data
+	//data
 	ptr = (uint8_t *) seg->data;
 	for (i = 1, ptr--; i < seg->data_len; i += 2) {
 		sum += (*++ptr << 8) + *++ptr;
