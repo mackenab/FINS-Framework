@@ -577,8 +577,8 @@ void main_established(struct tcp_connection *conn) {
 
 		if (queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
-			if ((conn->state == FIN_WAIT_1 || conn->state == LAST_ACK) && queue_is_empty(conn->write_queue) && conn->fin_sent
-					&& conn->send_seq_num == conn->send_seq_end) {
+			if ((conn->state == FIN_WAIT_1 || conn->state == LAST_ACK) && queue_is_empty(conn->write_queue) && conn->fin_sent && conn->send_seq_num
+					== conn->send_seq_end) {
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
 
@@ -779,21 +779,21 @@ void main_established(struct tcp_connection *conn) {
 void main_fin_wait_1(struct tcp_connection *conn) {
 	PRINT_DEBUG("main_fin_wait_1: Entered: conn=%d", (int)conn);
 
-//merge with established, can still get ACKs, receive, send ACKs, & send/resend data (don't accept new data)
+	//merge with established, can still get ACKs, receive, send ACKs, & send/resend data (don't accept new data)
 	main_established(conn);
 }
 
 void main_fin_wait_2(struct tcp_connection *conn) {
 	PRINT_DEBUG("main_fin_wait_2: Entered: conn=%d", (int)conn);
 
-//can still receive, send ACKs
+	//can still receive, send ACKs
 	conn->main_wait_flag = 1;
 }
 
 void main_closing(struct tcp_connection *conn) {
 	PRINT_DEBUG("main_closing: Entered: conn=%d", (int)conn);
 
-//self, can still get ACKs & send/resend data (don't accept new data)
+	//self, can still get ACKs & send/resend data (don't accept new data)
 	main_established(conn);
 }
 
@@ -849,17 +849,17 @@ void main_time_wait(struct tcp_connection *conn) {
 void main_close_wait(struct tcp_connection *conn) {
 	PRINT_DEBUG("main_close_wait: Entered: conn=%d", (int)conn);
 
-//can still send & get ACKs
+	//can still send & get ACKs
 	main_established(conn);
 }
 
 void main_last_ack(struct tcp_connection *conn) {
 	PRINT_DEBUG("main_last_ack: Entered: conn=%d", (int)conn);
 
-//can still get ACKs & send/resend data (don't accept new data)
+	//can still get ACKs & send/resend data (don't accept new data)
 	main_established(conn);
 
-//TODO augment so that on final ack, call conn_shutdown(conn);
+	//TODO augment so that on final ack, call conn_shutdown(conn);
 }
 
 void *main_thread(void *local) {
@@ -952,7 +952,7 @@ void *main_thread(void *local) {
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
-//close & free connection
+	//close & free connection
 	conn_stop(conn);
 	conn_free(conn);
 
@@ -1014,17 +1014,17 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT); //TODO: could wait on this
 	conn->send_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
 	conn->recv_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
-//conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //TODO might not need
+	//conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //TODO might not need
 
 	conn->main_wait_flag = 0;
 	sem_init(&conn->main_wait_sem, 0, 0);
 
-//conn->write_threads = 0;
+	//conn->write_threads = 0;
 	sem_init(&conn->write_sem, 0, 1);
 	sem_init(&conn->write_wait_sem, 0, 0);
 	conn->index = 0;
 
-//conn->recv_threads = 0;
+	//conn->recv_threads = 0;
 
 	conn->first_flag = 1;
 	conn->duplicate = 0;
@@ -1112,7 +1112,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	 conn->send_pkt->tcp_hdr.dst_port = conn->rem_port;
 	 */
 	//##################################################################
-//start timers
+	//start timers
 	struct tcp_to_thread_data *gbn_data = (struct tcp_to_thread_data *) malloc(sizeof(struct tcp_to_thread_data));
 	gbn_data->id = tcp_thread_count++;
 	gbn_data->fd = conn->to_gbn_fd;
@@ -1141,11 +1141,11 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 		exit(-1);
 	}
 
-//TODO add keepalive timer - implement through gbn timer
-//TODO add silly window timer
-//TODO add nagel timer
+	//TODO add keepalive timer - implement through gbn timer
+	//TODO add silly window timer
+	//TODO add nagel timer
 
-//start main thread
+	//start main thread
 	if (pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn)) {
 		PRINT_ERROR("ERROR: unable to create main_thread thread.");
 		exit(-1);
@@ -1289,16 +1289,16 @@ void conn_stop(struct tcp_connection *conn) {
 
 	conn->running_flag = 0;
 
-//stop threads
+	//stop threads
 	startTimer(conn->to_gbn_fd, 1);
 	startTimer(conn->to_delayed_fd, 1);
-//TODO stop keepalive timer
-//TODO stop silly window timer
-//TODO stop nagel timer
-//sem_post(&conn->main_wait_sem);
+	//TODO stop keepalive timer
+	//TODO stop silly window timer
+	//TODO stop nagel timer
+	//sem_post(&conn->main_wait_sem);
 	sem_post(&conn->write_wait_sem);
-//sem_post(&conn->write_sem);
-//clear all threads using this conn_stub
+	//sem_post(&conn->write_sem);
+	//clear all threads using this conn_stub
 
 	while (1) {
 		/*#*/PRINT_DEBUG("");
@@ -1325,7 +1325,7 @@ void conn_stop(struct tcp_connection *conn) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-//post to read/write/connect/etc threads
+	//post to read/write/connect/etc threads
 	pthread_join(conn->to_gbn_thread, NULL);
 	pthread_join(conn->to_delayed_thread, NULL);
 	/*#*/PRINT_DEBUG("");
@@ -1341,8 +1341,8 @@ void conn_free(struct tcp_connection *conn) {
 		queue_free(conn->send_queue);
 	if (conn->recv_queue)
 		queue_free(conn->recv_queue);
-//if (conn->read_queue)
-//	queue_free(conn->read_queue);
+	//if (conn->read_queue)
+	//	queue_free(conn->read_queue);
 	free(conn);
 }
 
@@ -1362,28 +1362,28 @@ uint8_t *copy_uint8(uint8_t *ptr, uint8_t val) {
 }
 
 uint8_t *copy_uint16(uint8_t *ptr, uint16_t val) {
-	*ptr++ = (uint8_t)(val >> 8);
-	*ptr++ = (uint8_t)(val & 0x00FF);
+	*ptr++ = (uint8_t) (val >> 8);
+	*ptr++ = (uint8_t) (val & 0x00FF);
 	return ptr;
 }
 
 uint8_t *copy_uint32(uint8_t *ptr, uint32_t val) {
-	*ptr++ = (uint8_t)(val >> 24);
-	*ptr++ = (uint8_t)((val & 0x00FF0000) >> 16);
-	*ptr++ = (uint8_t)((val & 0x0000FF00) >> 8);
-	*ptr++ = (uint8_t)(val & 0x000000FF);
+	*ptr++ = (uint8_t) (val >> 24);
+	*ptr++ = (uint8_t) ((val & 0x00FF0000) >> 16);
+	*ptr++ = (uint8_t) ((val & 0x0000FF00) >> 8);
+	*ptr++ = (uint8_t) (val & 0x000000FF);
 	return ptr;
 }
 
 uint8_t *copy_uint64(uint8_t *ptr, uint64_t val) {
-	*ptr++ = (uint8_t)(val >> 56);
-	*ptr++ = (uint8_t)((val & 0x00FF000000000000) >> 48);
-	*ptr++ = (uint8_t)((val & 0x0000FF0000000000) >> 40);
-	*ptr++ = (uint8_t)((val & 0x000000FF00000000) >> 32);
-	*ptr++ = (uint8_t)((val & 0x00000000FF000000) >> 24);
-	*ptr++ = (uint8_t)((val & 0x0000000000FF0000) >> 16);
-	*ptr++ = (uint8_t)((val & 0x000000000000FF00) >> 8);
-	*ptr++ = (uint8_t)(val & 0x00000000000000FF);
+	*ptr++ = (uint8_t) (val >> 56);
+	*ptr++ = (uint8_t) ((val & 0x00FF000000000000) >> 48);
+	*ptr++ = (uint8_t) ((val & 0x0000FF0000000000) >> 40);
+	*ptr++ = (uint8_t) ((val & 0x000000FF00000000) >> 32);
+	*ptr++ = (uint8_t) ((val & 0x00000000FF000000) >> 24);
+	*ptr++ = (uint8_t) ((val & 0x0000000000FF0000) >> 16);
+	*ptr++ = (uint8_t) ((val & 0x000000000000FF00) >> 8);
+	*ptr++ = (uint8_t) (val & 0x00000000000000FF);
 	return ptr;
 }
 
@@ -1478,6 +1478,7 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 
 	uint32_t sum = 0;
 	uint8_t *pt;
+	uint32_t i;
 
 	struct ipv4_header ip_hdr;
 	ip_hdr.src_ip = htonl(seg->src_ip);
@@ -1689,7 +1690,8 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 	//add options //TODO implement options system
 	switch (conn->state) {
 	case SYN_SENT:
-		PRINT_DEBUG("");
+		PRINT_DEBUG("")
+		;
 		//add MSS to seg
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_attempt + TCP_TS_BYTES * conn->tsopt_attempt + TCP_WS_BYTES * conn->wsopt_attempt;
 		//if (seg->opt_len % 4) {
@@ -1747,7 +1749,8 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 		}
 		break;
 	case SYN_RECV:
-		PRINT_DEBUG("");
+		PRINT_DEBUG("")
+		;
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_enabled + TCP_TS_BYTES * conn->tsopt_enabled + TCP_WS_BYTES * conn->wsopt_enabled;
 		//if (seg->opt_len % 4) {
 		//	seg->opt_len += 4 - (seg->opt_len % 4); //round options up?
@@ -1880,7 +1883,8 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 		break;
 	default:
-		PRINT_DEBUG("");
+		PRINT_DEBUG("")
+		;
 		seg->opt_len = 0;
 		//seg->options = NULL;
 		break;
@@ -1914,7 +1918,7 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 	case FIN_WAIT_1:
 		seg_delayed_ack(seg, conn);
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) { //TODO remove?
-		//send fin
+			//send fin
 			PRINT_DEBUG("seg_update: add FIN");
 			seg->flags |= FLAG_FIN;
 		}
@@ -1972,7 +1976,7 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 
 uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works, check rollover
 	int i;
-//TODO add TCP alternate checksum w/data in options (15)
+	//TODO add TCP alternate checksum w/data in options (15)
 
 	uint32_t sum = 0;
 
@@ -1990,6 +1994,16 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	pkt.win_size = htons(seg->win_size);
 	pkt.checksum = htons(seg->checksum);
 	pkt.urg_pointer = htons(seg->urg_pointer);
+
+	pt = (uint8_t *) &ip_hdr;
+	for (i = 0, pt--; i < IP_HEADER_BYTES; i += 2) {
+		sum += (*++pt << 8) + *++pt;
+	}
+
+	uint8_t *pt = (uint8_t *) &pkt;
+	for (i = 0, pt--; i < IP_HEADER_BYTES + MIN_TCP_HEADER_BYTES; i += 2) {
+		sum += (*++pt << 8) + *++pt;
+	}
 
 	/*
 	 //fake IP header
@@ -2010,19 +2024,19 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	 */
 
 	//options, opt_len always has to be a factor of 2
-	uint8_t *ptr = (uint8_t *) seg->options;
-	for (i = 0, ptr--; i < seg->opt_len; i += 2) {
-		sum += (*++ptr << 8) + *++ptr;
+	pt = (uint8_t *) seg->options;
+	for (i = 0, pt--; i < seg->opt_len; i += 2) {
+		sum += (*++pt << 8) + *++pt;
 	}
 
 	//data
-	ptr = (uint8_t *) seg->data;
-	for (i = 1, ptr--; i < seg->data_len; i += 2) {
-		sum += (*++ptr << 8) + *++ptr;
+	pt = (uint8_t *) seg->data;
+	for (i = 1, pt--; i < seg->data_len; i += 2) {
+		sum += (*++pt << 8) + *++pt;
 	}
 
 	if (seg->data_len & 0x1) {
-		sum += *++ptr << 8;
+		sum += *++pt << 8;
 	}
 
 	while (sum >> 16) {
@@ -2109,8 +2123,8 @@ void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 // 0=out of window, 1=in window
 int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end) {
-//check if tcp_seg is in connection window
-//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover,
+	//check if tcp_seg is in connection window
+	//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover,
 	if (win_seq_num <= win_seq_end) { // [] |
 		if (seq_num <= seq_end) { // <> |
 			if (win_seq_num <= seq_num && seq_end <= win_seq_end) { // [ <> ] |
@@ -2141,8 +2155,8 @@ int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t
 }
 
 int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end) {
-//check if tcp_seg is in connection window
-//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover
+	//check if tcp_seg is in connection window
+	//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover
 	if (seq_num == seq_end) {
 		if (win_seq_num == win_seq_end) {
 			if (win_seq_num == seq_num) {
@@ -2298,40 +2312,50 @@ void tcp_get_FF() {
 void tcp_fcf(struct finsFrame *ff) {
 	PRINT_DEBUG("tcp_fcf: Entered");
 
-//TODO fill out
+	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		tcp_read_param(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		tcp_set_param(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		tcp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("tcp_fcf: opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		break;
 	default:
-		PRINT_DEBUG("tcp_fcf: opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("tcp_fcf: opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		break;
 	}
 }
@@ -2353,7 +2377,8 @@ void tcp_exec(struct finsFrame *ff) {
 		ret = metadata_readFromElement(params, "exec_call", &exec_call) == 0;
 		switch (exec_call) {
 		case EXEC_TCP_LISTEN:
-			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_LISTEN (%d)", exec_call);
+			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_LISTEN (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
@@ -2367,7 +2392,8 @@ void tcp_exec(struct finsFrame *ff) {
 			}
 			break;
 		case EXEC_TCP_CONNECT:
-			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CONNECT (%d)", exec_call);
+			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CONNECT (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
@@ -2382,7 +2408,8 @@ void tcp_exec(struct finsFrame *ff) {
 			}
 			break;
 		case EXEC_TCP_ACCEPT:
-			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_ACCEPT (%d)", exec_call);
+			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_ACCEPT (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
@@ -2396,7 +2423,8 @@ void tcp_exec(struct finsFrame *ff) {
 			}
 			break;
 		case EXEC_TCP_CLOSE:
-			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CLOSE (%d)", exec_call);
+			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CLOSE (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
@@ -2411,7 +2439,8 @@ void tcp_exec(struct finsFrame *ff) {
 			}
 			break;
 		case EXEC_TCP_CLOSE_STUB:
-			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CLOSE_STUB (%d)", exec_call);
+			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CLOSE_STUB (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
@@ -2424,7 +2453,8 @@ void tcp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("tcp_exec: Error unknown exec_call=%d", exec_call);
+			PRINT_ERROR("tcp_exec: Error unknown exec_call=%d", exec_call)
+			;
 			//TODO implement?
 			break;
 		}
@@ -2583,13 +2613,13 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 	unsigned char *w = ff->dataFrame.pdu;
 	int nleft = ff->dataFrame.pduLength;
 
-//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
-//{
-//	nleft--;  //By decrementing the number of bytes we have to add in
-//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
-//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
-// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
-//}
+	//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
+	//{
+	//	nleft--;  //By decrementing the number of bytes we have to add in
+	//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
+	//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
+	// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
+	//}
 
 	while (nleft > 0) {
 		//Deal with the high and low words of each 16-bit value here. I tried earlier to do this 'normally' by
@@ -2600,11 +2630,11 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 		nleft -= 2; //Decrement by 2, since we're taking 2 at a time
 	}
 
-//Fully fill out the checksum
+	//Fully fill out the checksum
 	for (;;) {
 		sum = (sum >> 16) + (sum & 0xFFFF); //Get the sum shifted over added into the current sum
 		if (!(sum >> 16)) //Continue this until the sum shifted over is zero
 			break;
 	}
-	return ~((uint16_t)(sum)); //Return one's complement of the sum
+	return ~((uint16_t) (sum)); //Return one's complement of the sum
 }

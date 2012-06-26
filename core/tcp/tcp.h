@@ -82,7 +82,7 @@ struct tcp_queue {
 	struct tcp_node *end;
 	uint32_t max;
 	uint32_t len;
-	sem_t sem;
+	sem_t sem; //TODO remove, not used anymore
 };
 
 struct tcp_queue *queue_create(uint32_t max);
@@ -182,10 +182,10 @@ struct tcp_packet2 {
 
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
-	struct tcp_connection *next; //Next item in the list of TCP connections (since we'll probably want more than one open at once)
+	struct tcp_connection *next; //Next item in the list of TCP connections //TODO remove when change conn_list to circular array of ptrs
 	sem_t sem; //for next, state, write_threads
-	uint8_t running_flag;
-	uint32_t threads;
+	uint8_t running_flag; //signifies if it is running, 0 when shutting down
+	uint32_t threads; //Number of threads accessing this obj
 	enum CONN_STATE state;
 
 	//some type of options state
@@ -283,17 +283,17 @@ struct tcp_connection {
 	uint32_t send_end; //index in send_buf that corresponds to (1+end of data), so is where write to next
 	struct tcp_packet *send_pkt; //the single tcpv4_packet used for sending
 
-	//if start == end, then no data written, next-start = len of data unACKed,
-	//for optimization malloc a single packet for sending since for info:
-	//doesn't change: src ip, dst ip, protocol, src port, dst port
-	//always latest: ack, win, options
-	//per seg: ip_tcp_len, seq_num, flags, checksum, urg pointer, data
-	//just reference data in send_buffer
+//if start == end, then no data written, next-start = len of data unACKed,
+//for optimization malloc a single packet for sending since for info:
+//doesn't change: src ip, dst ip, protocol, src port, dst port
+//always latest: ack, win, options
+//per seg: ip_tcp_len, seq_num, flags, checksum, urg pointer, data
+//just reference data in send_buffer
 
-	//call:
-	//update_pkt_latest(conn, flag?): ack, win, opts, opt_len;
-	//update_pkt_seg(seq, flags, data, data_len, urg pt): ip_tcp_len, checksum;
-	//checksum(pkt, opt_len, data, data_len): checksum
+//call:
+//update_pkt_latest(conn, flag?): ack, win, opts, opt_len;
+//update_pkt_seg(seq, flags, data, data_len, urg pt): ip_tcp_len, checksum;
+//checksum(pkt, opt_len, data, data_len): checksum
 };
 
 //TODO raise any of these?
@@ -356,7 +356,7 @@ void conn_free(struct tcp_connection *conn);
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
 
-//Structure for TCP segments (Straight from the RFC, just in struct form)
+//Object for TCP segments all values are in host format
 struct tcp_segment {
 	uint16_t src_port; //Source port
 	uint16_t dst_port; //Destination port

@@ -451,10 +451,12 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 		kind = pt[i++];
 		switch (kind) {
 		case TCP_EOL:
-			PRINT_DEBUG("process_options: EOL: (%u/%u)", i-1, seg->opt_len);
+			PRINT_DEBUG("process_options: EOL: (%u/%u)", i-1, seg->opt_len)
+			;
 			return 1;
 		case TCP_NOP:
-			PRINT_DEBUG("process_options: NOP: (%u/%u)", i-1, seg->opt_len);
+			PRINT_DEBUG("process_options: NOP: (%u/%u)", i-1, seg->opt_len)
+			;
 			continue;
 		case TCP_MSS:
 			len = pt[i++];
@@ -538,9 +540,16 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 						conn->tsopt_enabled = 1;
 
 						//TODO
+						if (conn->ts_rem > ts_val) {
+							//error
+							return 0;
+						}
+						//conn->ts_rem = ts_val;
 					}
 				} else if (conn->tsopt_enabled) {
 					//TODO
+
+					//conn->ts_rem = ts_val;
 				}
 			} else {
 				PRINT_DEBUG("process_options: TS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
@@ -855,6 +864,11 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 		if (seg->flags & FLAG_ACK) {
 			//if SYN ACK, send ACK, ESTABLISHED
 			if (seg->ack_num == conn->send_seq_num + 1) {
+				//TODO process options, MSS, max_window
+				if (seg->opt_len) {
+					process_options(conn, seg);
+				}
+
 				PRINT_DEBUG("tcp_recv_syn_sent: SYN ACK, send ACK, ESTABLISHED: state=%d", conn->state);
 				conn->state = ESTABLISHED;
 
@@ -867,11 +881,6 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 						conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-				//TODO process options, MSS, max_window
-				if (seg->opt_len) {
-					process_options(conn, seg);
-				}
 
 				//flags
 				conn->first_flag = 1;
@@ -916,6 +925,11 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//TODO WAIT then send SYN
 			}
 		} else {
+			//TODO process options, decide: MSS, max window size!!
+			if (seg->opt_len) {
+				process_options(conn, seg);
+			}
+
 			//if SYN, send SYN ACK, SYN_RECV (simultaneous)
 			PRINT_DEBUG("tcp_recv_syn_sent: SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
 			conn->state = SYN_RECV;
@@ -927,11 +941,6 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-			//TODO process options, decide: MSS, max window size!!
-			if (seg->opt_len) {
-				process_options(conn, seg);
-			}
 
 			temp_seg = seg_create(conn);
 			seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
@@ -967,6 +976,11 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else if (seg->flags & FLAG_ACK) {
 		//if ACK/SYN ACK, send -, ESTABLISHED
 		if (seg->ack_num == conn->send_seq_num + 1) {
+			//TODO process options
+			if (seg->opt_len) {
+				process_options(conn, seg);
+			}
+
 			PRINT_DEBUG("tcp_recv_syn_recv: ACK/SYN ACK, send -, ESTABLISHED: state=%d", conn->state);
 			conn->state = ESTABLISHED;
 
@@ -979,11 +993,6 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-			//TODO process options
-			if (seg->opt_len) {
-				process_options(conn, seg);
-			}
 
 			//flags
 			conn->first_flag = 1;
@@ -1014,6 +1023,12 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			//TODO send RST?
 		}
 	} else if (seg->flags & FLAG_SYN) {
+		//TODO process options, decide: MSS, max window size!!
+		//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+		if (seg->opt_len) {
+			process_options(conn, seg);
+		}
+
 		//if SYN, send SYN ACK, SYN_RECV
 		PRINT_DEBUG("tcp_recv_syn_recv: SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
 		conn->issn = 0; //tcp_rand(); //TODO uncomment
@@ -1025,12 +1040,6 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 				conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-		//TODO process options, decide: MSS, max window size!!
-		//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
-		if (seg->opt_len) {
-			process_options(conn, seg);
-		}
 
 		//conn_change_options(conn, tcp->options, SYN); //?
 
@@ -1125,8 +1134,8 @@ void recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
 	PRINT_DEBUG("tcp_recv_fin_wait_2: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
 	uint16_t flags;
 
-//TODO merge with established, can still receive, send ACKs
-//if FIN, send ACK, TIME_WAIT
+	//TODO merge with established, can still receive, send ACKs
+	//if FIN, send ACK, TIME_WAIT
 	flags = handle_data(conn, seg);
 
 	if (flags) {
@@ -1137,8 +1146,8 @@ void recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
 void recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 	PRINT_DEBUG("tcp_recv_closing: Entered: conn=%d, seg=%d, state=%d", (int) conn, (int)seg, conn->state);
 
-//TODO self, can still get ACKs & resend
-//if ACK, send -, TIME_WAIT
+	//TODO self, can still get ACKs & resend
+	//if ACK, send -, TIME_WAIT
 	if (seg->flags & FLAG_ACK) {
 		handle_ACK(conn, seg);
 
@@ -1322,14 +1331,14 @@ void tcp_in_fdf(struct finsFrame *ff) {
 
 	seg = fdf_to_seg(ff);
 
-//####################### //TODO fix IP/Eth issues so can remove this
+	//####################### //TODO fix IP/Eth issues so can remove this
 	if (seg) {
 		seg->src_ip = ntohl(seg->src_ip); //makes seg_to_fdf & fdf_to_seg non reciprical //TODO align all module so don't need
 		seg->dst_ip = ntohl(seg->dst_ip);
 		seg->src_ip = 2130706433; //TODO remove, include atm to keep local
 		seg->dst_ip = 2130706433; //TODO remove, include atm to keep local
 	}
-//#######################
+	//#######################
 
 	if (seg) {
 		/*#*/PRINT_DEBUG("");
