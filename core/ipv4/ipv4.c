@@ -22,8 +22,9 @@ void ipv4_init() {
 	 * or from a configuration file
 	 */
 
-	//my_ip_addr = IP4_ADR_P2N(192,168,1,2 );
+	my_ip_addr = IP4_ADR_P2N(192,168,1,12);
 	//my_ip_addr = IP4_ADR_P2N(172,31,63,231 );
+	//my_ip_addr = IP4_ADR_P2N(172,31,53,114);
 	/** TODO get the IP of the default interface from
 	 * the configuration file (To Be done by the initialization primary thread
 	 * before invokiung the IPv4 thread). Same for the mask value. It can be also
@@ -31,14 +32,13 @@ void ipv4_init() {
 	 * the conventional stack down (Using the iptables API)
 	 *
 	 */
-	my_ip_addr = IP4_ADR_P2N(172,31,53,114);
-	PRINT_DEBUG("%lu",my_ip_addr);
+	PRINT_DEBUG("%lu", my_ip_addr);
 	my_mask = IP4_ADR_P2N(255,255,255,0);
 
 	//ADDED mrd015 !!!!!
-	#ifndef BUILD_FOR_ANDROID	
-		IP4_init();
-	#endif
+#ifndef BUILD_FOR_ANDROID
+	IP4_init();
+#endif
 
 	while (1) {
 		IP4_receive_fdf();

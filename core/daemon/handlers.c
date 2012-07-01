@@ -240,7 +240,8 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 
 			return i;
 		}
-	}PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
+	}
+	PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
 	return (-1);
 }
 
@@ -335,7 +336,7 @@ int randoming(int min, int max) {
 
 }
 
-int nack_send(unsigned long long uniqueSockID, int socketCallType) {
+int nack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) {
 	int nack = NACK;
 	int buf_len;
 	void *buf;
@@ -344,7 +345,7 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType) {
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d nack %d", uniqueSockID, socketCallType, nack);
 
-	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + sizeof(int);
+	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + 2 * sizeof(int);
 	buf = malloc(buf_len);
 	pt = buf;
 
@@ -357,13 +358,16 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType) {
 	*(int *) pt = nack;
 	pt += sizeof(int);
 
+	*(int *) pt = ret_msg;
+	pt += sizeof(int);
+
 	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
 	free(buf);
 
 	return ret_val == 1;
 }
 
-int ack_send(unsigned long long uniqueSockID, int socketCallType) {
+int ack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) {
 	int ack = ACK;
 	int buf_len;
 	void *buf;
@@ -372,7 +376,7 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType) {
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d ack %d", uniqueSockID, socketCallType, ack);
 
-	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + sizeof(int);
+	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + 2 * sizeof(int);
 	buf = malloc(buf_len);
 	pt = buf;
 
@@ -383,6 +387,9 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType) {
 	pt += sizeof(unsigned long long);
 
 	*(int *) pt = ack;
+	pt += sizeof(int);
+
+	*(int *) pt = ret_msg;
 	pt += sizeof(int);
 
 	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
@@ -445,7 +452,8 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_
 		//print_finsFrame(ff);
 		sem_post(&(daemonSockets[index].Qs));
 		sem_post(&daemonSockets_sem);
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	return ff;
 }
@@ -507,8 +515,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	int protocol;
 	u_char *pt;
 
-	PRINT_DEBUG("socket call handler1");
-	PRINT_DEBUG("%llu", uniqueSockID);
+	PRINT_DEBUG("socket_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -523,7 +530,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, socket_call);
+		nack_send(uniqueSockID, socket_call, 0);
 		return;
 	}
 
@@ -532,7 +539,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	PRINT_DEBUG("%d,%d,%d", domain, protocol, type);
 	if (domain != AF_INET) {
 		PRINT_DEBUG("Wrong domain, only AF_INET us supported");
-		nack_send(uniqueSockID, socket_call);
+		nack_send(uniqueSockID, socket_call, 0);
 		return;
 	}
 
@@ -544,7 +551,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		socket_icmp(domain, type, protocol, uniqueSockID);
 	} else {
 		PRINT_DEBUG("non supported socket type");
-		nack_send(uniqueSockID, socket_call);
+		nack_send(uniqueSockID, socket_call, 0);
 	}
 }
 
@@ -560,6 +567,8 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 	u_char *pt;
 	int reuseaddr;
 
+	PRINT_DEBUG("bind_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
+
 	pt = buf;
 
 	addrlen = *(int *) pt;
@@ -567,7 +576,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 
 	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH, addrlen=%d", addrlen);
-		nack_send(uniqueSockID, bind_call);
+		nack_send(uniqueSockID, bind_call, 0);
 		return;
 	} else {
 		PRINT_DEBUG("addrlen=%d", addrlen);
@@ -582,7 +591,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, bind_call);
+		nack_send(uniqueSockID, bind_call, 0);
 		return;
 	}
 
@@ -594,7 +603,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 		PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, bind_call);
+		nack_send(uniqueSockID, bind_call, 0);
 		return;
 	}
 
@@ -623,7 +632,7 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	int backlog;
 	u_char *pt;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("listen_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -632,7 +641,7 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 		return;
 	}
 
@@ -644,7 +653,7 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 		return;
 	}
 
@@ -660,7 +669,7 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		listen_icmp(index, uniqueSockID, backlog);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 	}
 }
 
@@ -671,6 +680,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	struct sockaddr_in *addr;
 	u_char *pt;
 
+	PRINT_DEBUG("connect_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 	pt = buf;
 
 	addrlen = *(int *) pt;
@@ -678,7 +688,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	if (addrlen <= 0) {
 		PRINT_DEBUG("READING ERROR! CRASH, addrlen=%d", addrlen);
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		return;
 	}
 
@@ -689,7 +699,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		return;
 	}
 
@@ -699,7 +709,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		return;
 	}
 
@@ -712,7 +722,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		connect_tcp(index, uniqueSockID, addr);
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 	}
 }
 
@@ -722,7 +732,7 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	int flags;
 	u_char *pt;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("accept_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -734,7 +744,7 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		return;
 	}
 
@@ -745,7 +755,7 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		return;
 	}
 
@@ -761,7 +771,7 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		accept_icmp(index, uniqueSockID, uniqueSockID_new, flags);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 	}
 }
 
@@ -770,7 +780,7 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 	int peer;
 	u_char *pt;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("getname_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -779,7 +789,7 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
@@ -790,7 +800,7 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
@@ -806,7 +816,7 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 		getname_icmp(index, uniqueSockID, peer);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 	}
 }
 
@@ -823,7 +833,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	struct sockaddr_in *addr;
 	u_char *pt;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("sendmsg_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -860,7 +870,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	if (data_len <= 0) {
 		PRINT_DEBUG("DATA Field is empty!!");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -872,7 +882,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -883,7 +893,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -905,7 +915,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			//TODO finish icmp case?
 		} else {
 			PRINT_DEBUG("unknown socket type has been read !!!");
-			nack_send(uniqueSockID, sendmsg_call);
+			nack_send(uniqueSockID, sendmsg_call, 0);
 		}
 	} else {
 		/**
@@ -923,11 +933,11 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 				sendto_icmp(index, uniqueSockID, data, data_len, msg_flags, addr, addrlen);
 			} else {
 				PRINT_DEBUG("unknown target address !!!");
-				nack_send(uniqueSockID, sendmsg_call);
+				nack_send(uniqueSockID, sendmsg_call, 0);
 			}
 		} else {
 			PRINT_DEBUG("unknown target address !!!");
-			nack_send(uniqueSockID, sendmsg_call);
+			nack_send(uniqueSockID, sendmsg_call, 0);
 		}
 	}
 
@@ -970,7 +980,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 		if (msg_control_len <= 0) {
 			PRINT_DEBUG("READING ERROR! CRASH, msgControl_Length=%d", msg_control_len);
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 			return;
 		}
 		msg_control = (u_char *) malloc(msg_control_len);
@@ -979,14 +989,14 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			pt += msg_control_len;
 		} else {
 			PRINT_DEBUG("allocation error");
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 			return;
 		}
 	}
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		return;
 	}
 
@@ -1002,7 +1012,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		return;
 	}
 
@@ -1021,10 +1031,10 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			//recv_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 			recvfrom_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-			nack_send(uniqueSockID, recvmsg_call); //TODO implement?
+			nack_send(uniqueSockID, recvmsg_call, 0); //TODO implement?
 		} else {
 			PRINT_DEBUG("unknown socket type has been read !!!");
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 		}
 	} else {
 		/**
@@ -1036,17 +1046,17 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 				recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
 			} else if (type == SOCK_STREAM) {
 				//sendto_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
-				nack_send(uniqueSockID, recvmsg_call);
+				nack_send(uniqueSockID, recvmsg_call, 0);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 				//sendto_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
-				nack_send(uniqueSockID, recvmsg_call); //TODO what should this be?
+				nack_send(uniqueSockID, recvmsg_call, 0); //TODO what should this be?
 			} else {
 				PRINT_DEBUG("unknown target address !!!");
-				nack_send(uniqueSockID, recvmsg_call);
+				nack_send(uniqueSockID, recvmsg_call, 0);
 			}
 		} else {
 			PRINT_DEBUG("unknown target address !!!");
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 		}
 	}
 }
@@ -1056,9 +1066,11 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	u_char *pt;
 	pt = buf;
 
+	PRINT_DEBUG("release_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
+
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		return;
 	}
 
@@ -1068,7 +1080,7 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		return;
 	}
 	//daemonSockets[index].threads = threads;
@@ -1084,7 +1096,7 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		release_icmp(index, uniqueSockID);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 	}
 }
 
@@ -1097,7 +1109,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	u_char *optval;
 	u_char *pt;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("getsockopt_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -1118,7 +1130,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		return;
 	}
 
@@ -1129,7 +1141,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		return;
 	}
 
@@ -1145,7 +1157,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 		getsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 	}
 }
 
@@ -1158,7 +1170,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	u_char *optval;
 	u_char *pt;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("setsockopt_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -1179,7 +1191,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 		return;
 	}
 
@@ -1190,7 +1202,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		return;
 	}
 
@@ -1206,12 +1218,53 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 		setsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 	}
 }
 
-void accept4_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
+void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
+	int index;
+	u_int cmd;
+	u_long arg;
+	u_char *pt;
 
+	PRINT_DEBUG("ioctl_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
+
+	pt = buf;
+
+	cmd = *(u_int *) pt;
+	pt += sizeof(u_int);
+
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		nack_send(uniqueSockID, ioctl_call, 0);
+		return;
+	}
+
+	PRINT_DEBUG("");
+	index = find_daemonSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+		nack_send(uniqueSockID, ioctl_call, 0);
+		return;
+	}
+	PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
+
+	if (daemonSockets[index].type == SOCK_DGRAM) {
+		//ioctl_udp(uniqueSockID, cmd, pt);
+	} else if (daemonSockets[index].type == SOCK_STREAM) {
+		//ioctl_tcp(uniqueSockID, cmd, pt);
+	} else if (daemonSockets[index].type == SOCK_RAW) {
+		//ioctl_icmp(uniqueSockID, cmd, pt);
+	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, ioctl_call, 0);
+	}
+	ack_send(uniqueSockID, ioctl_call, 0);
+}
+
+void accept4_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
+	PRINT_DEBUG("accept4_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 }
 
 void shutdown_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
@@ -1220,7 +1273,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int threads, unsigne
 	int how;
 	u_char *pt;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("shutdown_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	pt = buf;
 
@@ -1229,14 +1282,14 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int threads, unsigne
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, shutdown_call);
+		nack_send(uniqueSockID, shutdown_call, 0);
 		return;
 	}
 
 	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !!socket descriptor not found into daemon sockets");
-		nack_send(uniqueSockID, shutdown_call);
+		nack_send(uniqueSockID, shutdown_call, 0);
 		return;
 	}
 
@@ -1251,65 +1304,20 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int threads, unsigne
 
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
-		nack_send(uniqueSockID, shutdown_call);
+		nack_send(uniqueSockID, shutdown_call, 0);
 	}
 
-}
-
-//TODO: dummy function, need to implement this
-void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
-	int index;
-	u_int cmd;
-	u_long arg;
-	u_char *pt;
-
-	PRINT_DEBUG("");
-
-	pt = buf;
-
-	cmd = *(u_int *) pt;
-	pt += sizeof(u_int);
-
-	arg = *(u_long *) pt;
-	pt += sizeof(u_long);
-
-	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, ioctl_call);
-		return;
-	}
-
-	PRINT_DEBUG("");
-	index = find_daemonSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
-		nack_send(uniqueSockID, ioctl_call);
-		return;
-	}PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
-
-	/*if (daemonSockets[index].type == SOCK_DGRAM)
-	 ioctl_udp(uniqueSockID, cmd, arg);
-	 else if (daemonSockets[index].type == SOCK_STREAM)
-	 ioctl_tcp(uniqueSockID, cmd, arg);
-	 else if (daemonSockets[index].type == SOCK_RAW) {
-	 ioctl_icmp(uniqueSockID, cmd, arg);
-	 } else {
-	 PRINT_DEBUG("unknown socket type has been read !!!");
-	 nack_send(uniqueSockID, setsockopt_call);
-	 }*/
-	ack_send(uniqueSockID, ioctl_call);
 }
 
 void close_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 
 	int index;
-	PRINT_DEBUG("close call handler1");
-	PRINT_DEBUG("%llu", uniqueSockID);
+	PRINT_DEBUG("close_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
 
 	index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
 		PRINT_DEBUG("CRASH !!socket descriptor not found into daemon sockets");
-		nack_send(uniqueSockID, close_call);
+		nack_send(uniqueSockID, close_call, 0);
 		return;
 	}
 
@@ -1318,9 +1326,9 @@ void close_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 	 * when close is called
 	 */
 	if (remove_daemonSocket(uniqueSockID)) {
-		ack_send(uniqueSockID, close_call);
+		ack_send(uniqueSockID, close_call, 0);
 	} else {
-		nack_send(uniqueSockID, close_call);
+		nack_send(uniqueSockID, close_call, 0);
 	}
 
 }

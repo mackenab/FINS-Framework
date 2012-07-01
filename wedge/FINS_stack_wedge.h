@@ -100,6 +100,7 @@ struct finssocket {
 	struct semaphore reply_sem_r; //reassuring, but might not be necessary
 	u_int reply_call;
 	int reply_ret;
+	int reply_msg;
 	u_char *reply_buf;
 	int reply_len;
 };

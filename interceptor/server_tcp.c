@@ -42,6 +42,9 @@ int main(int argc, char *argv[]) {
 	else
 		port = 5000;
 
+	int optval = 1;
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
@@ -77,7 +80,7 @@ int main(int argc, char *argv[]) {
 
 	//addr_len = sizeof(struct sockaddr);
 
-	printf("\n UDPServer Waiting for client on port %d", ntohs(server_addr.sin_port));
+	printf("\n TCP Server waiting for client on port %d", ntohs(server_addr.sin_port));
 	fflush(stdout);
 
 	sock_client = -1;

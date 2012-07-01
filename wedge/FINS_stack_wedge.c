@@ -26,6 +26,7 @@
 #include <linux/sockios.h>
 #include <linux/ipx.h>
 #include <linux/delay.h>
+#include <linux/if.h>
 
 #include <asm/spinlock.h> //might be linux/spin... for rwlock
 //#include <sys/socket.h> /* may need to be removed */
@@ -260,6 +261,305 @@ int checkConfirmation(int index) {
 	}
 }
 
+/* FINS Netlink functions  */
+/*
+ * Sends len bytes from buffer buf to process pid, and sets the flags.
+ * If buf is longer than RECV_BUFFER_SIZE, it's broken into sequential messages.
+ * Returns 0 if successful or -1 if an error occurred.
+ */
+
+//assumes msg_buf is just the msg, does not have a prepended msg_len
+//break msg_buf into parts of size RECV_BUFFER_SIZE with a prepended header (header part of RECV...)
+//prepend msg header: total msg length, part length, part starting position
+int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags) {
+	struct nlmsghdr *nlh;
+	struct sk_buff *skb;
+	int ret_val;
+
+//####################
+	u_char *print_buf;
+	u_char *print_pt;
+	u_char *pt;
+	int i;
+
+	PRINT_DEBUG("pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
+
+	print_buf = kmalloc(5 * len, GFP_KERNEL);
+	if (!print_buf) {
+		PRINT_ERROR("print_buf allocation fail");
+	} else {
+		print_pt = print_buf;
+		pt = buf;
+		for (i = 0; i < len; i++) {
+			if (i == 0) {
+				sprintf(print_pt, "%02x", *(pt + i));
+				print_pt += 2;
+			} else if (i % 4 == 0) {
+				sprintf(print_pt, ":%02x", *(pt + i));
+				print_pt += 3;
+			} else {
+				sprintf(print_pt, " %02x", *(pt + i));
+				print_pt += 3;
+			}
+		}
+		PRINT_DEBUG("buf='%s'", print_buf);
+		kfree(print_buf);
+	}
+//####################
+
+// Allocate a new netlink message
+	skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
+	if (!skb) {
+		PRINT_ERROR("netlink Failed to allocate new skb");
+		return -1;
+	}
+
+// Load nlmsg header
+// nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int payload, int flags)
+	nlh = nlmsg_put(skb, KERNEL_PID, seq, type, len, flags);
+	NETLINK_CB(skb).dst_group = 0; // not in a multicast group
+
+// Copy data into buffer
+	memcpy(NLMSG_DATA(nlh), buf, len);
+
+// Send the message
+	ret_val = nlmsg_unicast(FINS_nl_sk, skb, pid);
+	if (ret_val < 0) {
+		PRINT_ERROR("netlink error sending to user");
+		return -1;
+	}
+
+	return 0;
+}
+
+int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
+	int ret;
+	void *part_buf;
+	u_char *msg_pt;
+	int pos;
+	u_int seq;
+	u_char *hdr_msg_len;
+	u_char *hdr_part_len;
+	u_char *hdr_pos;
+	u_char *msg_start;
+	ssize_t header_size;
+	ssize_t part_len;
+
+//####################
+	u_char *print_buf;
+	u_char *print_pt;
+	u_char *pt;
+	int i;
+//####################
+
+	if (down_interruptible(&link_sem)) {
+		PRINT_ERROR("link_sem aquire fail");
+	}
+
+//####################
+	print_buf = kmalloc(5 * msg_len, GFP_KERNEL);
+	if (!print_buf) {
+		PRINT_ERROR("print_buf allocation fail");
+	} else {
+		print_pt = print_buf;
+		pt = msg_buf;
+		for (i = 0; i < msg_len; i++) {
+			if (i == 0) {
+				sprintf(print_pt, "%02x", *(pt + i));
+				print_pt += 2;
+			} else if (i % 4 == 0) {
+				sprintf(print_pt, ":%02x", *(pt + i));
+				print_pt += 3;
+			} else {
+				sprintf(print_pt, " %02x", *(pt + i));
+				print_pt += 3;
+			}
+		}
+		PRINT_DEBUG("nl_send: msg_buf='%s'", print_buf);
+		kfree(print_buf);
+	}
+//####################
+
+	part_buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
+	if (!part_buf) {
+		PRINT_ERROR("part_buf allocation fail");
+		up(&link_sem);
+		return -1;
+	}
+
+	msg_pt = msg_buf;
+	pos = 0;
+	seq = 0;
+
+	hdr_msg_len = part_buf;
+	hdr_part_len = hdr_msg_len + sizeof(ssize_t);
+	hdr_pos = hdr_part_len + sizeof(ssize_t);
+	msg_start = hdr_pos + sizeof(int);
+
+	header_size = msg_start - hdr_msg_len;
+	part_len = RECV_BUFFER_SIZE - header_size;
+
+	*(ssize_t *) hdr_msg_len = msg_len;
+	*(ssize_t *) hdr_part_len = part_len;
+
+	while (msg_len - pos > part_len) {
+		PRINT_DEBUG("pos=%d", pos);
+
+		*(int *) hdr_pos = pos;
+
+		memcpy(msg_start, msg_pt, part_len);
+
+		PRINT_DEBUG("seq=%d", seq);
+
+		ret = nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
+		if (ret < 0) {
+			PRINT_ERROR("netlink error sending seq %d to user", seq);
+			up(&link_sem);
+			return -1;
+		}
+
+		msg_pt += part_len;
+		pos += part_len;
+		seq++;
+	}
+
+	part_len = msg_len - pos;
+	*(ssize_t *) hdr_part_len = part_len;
+	*(int *) hdr_pos = pos;
+
+	memcpy(msg_start, msg_pt, part_len);
+
+	ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, header_size + part_len, flags);
+	if (ret < 0) {
+		PRINT_ERROR("netlink error sending seq %d to user", seq);
+		up(&link_sem);
+		return -1;
+	}
+
+	kfree(part_buf);
+	up(&link_sem);
+
+	return 0;
+}
+
+/*
+ * This function is automatically called when the kernel receives a datagram on the corresponding netlink socket.
+ */
+void nl_data_ready(struct sk_buff *skb) {
+	struct nlmsghdr *nlh;
+	void *buf; // Pointer to data in payload
+	u_char *pt;
+	ssize_t len; // Payload length
+	int pid; // pid of sending process
+	unsigned long long uniqueSockID;
+	int index;
+
+	u_int reply_call; // a number corresponding to the type of socketcall this packet is in response to
+
+	PRINT_DEBUG("Entered");
+
+	if (skb == NULL) {
+		PRINT_DEBUG("skb is NULL \n");
+		PRINT_DEBUG("exited");
+		return;
+	}
+	nlh = (struct nlmsghdr *) skb->data;
+	pid = nlh->nlmsg_pid; // get pid from the header
+
+// Get a pointer to the start of the data in the buffer and the buffer (payload) length
+	buf = NLMSG_DATA(nlh);
+	len = NLMSG_PAYLOAD(nlh, 0);
+
+	PRINT_DEBUG("nl_len=%d", len);
+
+// **** Remember the LKM must be up first, then the daemon,
+// but the daemon must make contact before any applications try to use socket()
+
+	if (pid == -1) { // if the socket daemon hasn't made contact before
+		// Print what we received
+		PRINT_DEBUG("Socket Daemon made contact: %s", (char *) buf);
+	} else {
+		// demultiplex to the appropriate call handler
+		pt = buf;
+
+		reply_call = *(u_int *) pt;
+		pt += sizeof(u_int);
+		len -= sizeof(u_int);
+
+		if (reply_call == daemonconnect_call) {
+			FINS_daemon_pid = pid;
+			PRINT_DEBUG("Daemon connected, pid=%d\n",FINS_daemon_pid);
+		} else if (reply_call < MAX_calls) {
+			PRINT_DEBUG("got a daemon reply to a call (%d).", reply_call);
+			/*
+			 * extract msg or pass to shared buffer
+			 * wedgeSockets[index].reply_call & shared_sockID, are to verify buf goes to the write sock & call
+			 * This is preemptive as with multithreading we may have to add a shared queue
+			 */
+
+			uniqueSockID = *(unsigned long long *) pt;
+			pt += sizeof(unsigned long long);
+
+			PRINT_DEBUG("reply for uniqueSockID=%llu call=%d", uniqueSockID, reply_call);
+
+			index = find_wedgeSocket(uniqueSockID);
+			PRINT_DEBUG("index=%d", index);
+			if (index == -1) {
+				PRINT_ERROR("socket not found for uniqueSockID=%llu", uniqueSockID);
+				goto end;
+			}
+
+			if (wedgeSockets[index].release_flag && (reply_call != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
+				PRINT_DEBUG("socket released, dropping for uniqueSockID=%llu call=%d", uniqueSockID, reply_call);
+				goto end;
+			}
+
+			//lock the semaphore so shared data can't be changed until it's consumed
+			PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
+			if (down_interruptible(&wedgeSockets[index].reply_sem_w)) {
+				PRINT_ERROR("shared aquire fail, using hard down w=%d", wedgeSockets[index].reply_sem_w.count);
+			}
+
+			PRINT_DEBUG("wedgeSockets[%d].reply_sem_r=%d", index, wedgeSockets[index].reply_sem_r.count);
+			if (down_interruptible(&wedgeSockets[index].reply_sem_r)) {
+				PRINT_ERROR("shared aquire fail, using hard down r=%d", wedgeSockets[index].reply_sem_r.count);
+			}
+
+			if (wedgeSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_ERROR("wedgeSocket removed for uniqueSockID=%llu", uniqueSockID);
+				up(&wedgeSockets[index].reply_sem_r);
+				goto end;
+			}
+
+			write_lock(&wedgeSockets_rwlock);
+
+			wedgeSockets[index].reply_call = reply_call;
+
+			wedgeSockets[index].reply_ret = *(int *) pt; //NACK or ACK
+			pt += sizeof(int);
+
+			wedgeSockets[index].reply_msg = *(int *) pt; //return msg or error code
+			pt += sizeof(int);
+
+			wedgeSockets[index].reply_buf = pt;
+
+			len -= sizeof(unsigned long long) + 2 * sizeof(int);
+			wedgeSockets[index].reply_len = len;
+
+			write_unlock(&wedgeSockets_rwlock);
+			PRINT_DEBUG("shared created: call=%d, sockID=%llu, ret=%d, msg=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_msg, wedgeSockets[index].reply_len);
+			up(&wedgeSockets[index].reply_sem_r);
+
+			up(&wedgeSockets[index].call_sems[reply_call]);
+		} else {
+			PRINT_DEBUG("got an unsupported/binding daemon reply (%d)", reply_call);
+		}
+	}
+
+	end:
+	PRINT_DEBUG("exited");
+}
+
 /* This function is called from within FINS_release and is modeled after ipx_destroy_socket() */
 static void FINS_destroy_socket(struct sock *sk) {
 	PRINT_DEBUG("called.");
@@ -298,13 +598,13 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 	PRINT_DEBUG("Entered");
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Required stuff for kernel side	
+// Required stuff for kernel side
 	rc = -ENOMEM;
 	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &FINS_proto);
 
@@ -327,7 +627,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 		goto removeSocket;
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -361,7 +661,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 	}
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", socket_call, uniqueSockID, buf_len);
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -415,9 +715,10 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	struct sock *sk = sock->sk;
 
 	uniqueSockID = getUniqueSockID(sock);
-	PRINT_DEBUG("Entered for %llu.", uniqueSockID);PRINT_DEBUG("addr_len=%d.", addr_len);
+	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
+	PRINT_DEBUG("addr_len=%d.", addr_len);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -429,7 +730,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addr_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -464,7 +765,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", bind_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -503,7 +804,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -515,7 +816,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -544,7 +845,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", listen_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -581,9 +882,10 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	int index;
 
 	uniqueSockID = getUniqueSockID(sock);
-	PRINT_DEBUG("Entered for %llu.", uniqueSockID);PRINT_DEBUG("addr_len=%d", addr_len);
+	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
+	PRINT_DEBUG("addr_len=%d", addr_len);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -595,7 +897,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addr_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -627,7 +929,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", connect_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -655,7 +957,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 }
 
 static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
-	//accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+//accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 	int rc = -ESOCKTNOSUPPORT;
 	unsigned long long uniqueSockID, uniqueSockID_new;
 	struct sock *sk;
@@ -668,7 +970,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -680,7 +982,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Required stuff for kernel side
+// Required stuff for kernel side
 	rc = -ENOMEM;
 	sk = sk_alloc(sock_net(sock->sk), PF_FINS, GFP_KERNEL, &FINS_proto);
 
@@ -698,7 +1000,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	uniqueSockID_new = getUniqueSockID(newsock);
 	PRINT_DEBUG("Entered for new=%llu", uniqueSockID_new);
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + 2 * sizeof(unsigned long long) + sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -722,7 +1024,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	*(int *) pt = flags;
 	pt += sizeof(int);
 
-	//sock->type //need?
+//sock->type //need?
 
 	if (pt - (u_char *) buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
@@ -732,7 +1034,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", listen_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -795,7 +1097,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -807,7 +1109,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -828,7 +1130,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	*(int *) pt = peer;
 	pt += sizeof(int);
 
-	//todo: finish, copy addr/len?
+//todo: finish, copy addr/len?
 
 	if (pt - (u_char *) buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
@@ -838,7 +1140,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", getname_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -903,7 +1205,8 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	} else {
 		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 		rc = -1;
-	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	}
+	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
 	up(&wedgeSockets[index].reply_sem_r);
 
 	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -932,7 +1235,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -954,7 +1257,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	if (msg->msg_name == NULL)
 		symbol = 0;
 
-	// Build the message
+// Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 3 * sizeof(int) + (symbol ? sizeof(u_int) + msg->msg_namelen : 0)
 			+ (controlFlag ? sizeof(u_int) + msg->msg_controllen : 0) + data_len;
 	buf = kmalloc(buf_len, GFP_KERNEL);
@@ -997,7 +1300,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		memcpy(pt, msg->msg_control, msg->msg_controllen);
 		pt += msg->msg_controllen;
 	}
-	//Notice that the compiler takes  (msg->msg_iov[i]) as a struct not a pointer to struct
+//Notice that the compiler takes  (msg->msg_iov[i]) as a struct not a pointer to struct
 
 	*(u_int *) pt = data_len;
 	pt += sizeof(u_int);
@@ -1017,10 +1320,11 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	PRINT_DEBUG("data_len=%d", data_len);PRINT_DEBUG("data='%s'", temp);
+	PRINT_DEBUG("data_len=%d", data_len);
+	PRINT_DEBUG("data='%s'", temp);
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", sendmsg_call, uniqueSockID, buf_len);
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -1068,7 +1372,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1085,7 +1389,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	if (msg->msg_name == NULL)
 		symbol = 0;
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(ssize_t) + 4 * sizeof(int) + (controlFlag ? sizeof(u_int) + msg->msg_controllen : 0);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -1133,7 +1437,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", recvmsg_call, uniqueSockID, buf_len);
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -1234,7 +1538,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	} else {
 		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 		rc = -1;
-	}PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	}
+	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
 	up(&wedgeSockets[index].reply_sem_r);
 
 	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -1264,7 +1569,7 @@ static int FINS_release(struct socket *sock) {
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("entered for %llu.", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1276,7 +1581,7 @@ static int FINS_release(struct socket *sock) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -1302,7 +1607,7 @@ static int FINS_release(struct socket *sock) {
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", release_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -1354,72 +1659,8 @@ static int FINS_release(struct socket *sock) {
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
-	unsigned long long uniqueSockID1, uniqueSockID2;
-	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
-
-	uniqueSockID1 = getUniqueSockID(sock1);
-	uniqueSockID2 = getUniqueSockID(sock2);
-
-	PRINT_DEBUG("Entered for %llu, %llu.", uniqueSockID1, uniqueSockID2);
-
-	// Notify FINS daemon
-	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
-
-	//TODO: finish this & daemon side
-
-	// Build the message
-	buf = "FINS_socketpair() called.";
-	buffer_length = strlen(buf) + 1;
-
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret) {
-		PRINT_ERROR("nl_send failed");
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
-
-	return 0;
-}
-
-static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *pt) {
-	unsigned long long uniqueSockID;
-	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
-
-	uniqueSockID = getUniqueSockID(sock);
-	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
-
-	// Notify FINS daemon
-	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
-
-	//TODO: finish this & daemon side
-
-	// Build the message
-	buf = "FINS_poll() called.";
-	buffer_length = strlen(buf) + 1;
-
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-	if (ret) {
-		PRINT_ERROR("nl_send failed");
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
-
-	return 0;
-}
-
 static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
-	int rc;
+	int rc = 0;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
 	void *buf; // used for test
@@ -1427,65 +1668,22 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	int ret;
 	int index;
 
+	struct ifconf ifc;
+	struct ifreq ifr;
+	struct ifreq *ifr_pt;
+
+	void __user
+	*arg_pt = (void __user *)arg;
+
+	int len;
+	char __user
+	*pos;
+
+	//char *name;
+	struct sockaddr_in *addr;
+
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
-
-	switch (cmd) {
-	case TIOCOUTQ:
-		PRINT_DEBUG("cmd=%d ==TIOCOUTQ", cmd);
-		break;
-	case TIOCINQ:
-		PRINT_DEBUG("cmd=%d ==TIOCINQ", cmd);
-		break;
-	case SIOCADDRT:
-		PRINT_DEBUG("cmd=%d ==SIOCADDRT", cmd);
-		break;
-	case SIOCDELRT:
-		PRINT_DEBUG("cmd=%d ==SIOCDELRT", cmd);
-		break;
-	case SIOCSIFADDR:
-		PRINT_DEBUG("cmd=%d ==SIOCSIFADDR", cmd);
-		break;
-	case SIOCAIPXITFCRT:
-		PRINT_DEBUG("cmd=%d ==SIOCAIPXITFCRT", cmd);
-		break;
-	case SIOCAIPXPRISLT:
-		PRINT_DEBUG("cmd=%d ==SIOCAIPXPRISLT", cmd);
-		break;
-	case SIOCGIFADDR:
-		PRINT_DEBUG("cmd=%d ==SIOCGIFADDR", cmd);
-		break;
-	case SIOCIPXCFGDATA:
-		PRINT_DEBUG("cmd=%d ==SIOCIPXCFGDATA", cmd);
-		break;
-	case SIOCIPXNCPCONN:
-		PRINT_DEBUG("cmd=%d ==SIOCIPXNCPCONN", cmd);
-		break;
-	case SIOCGSTAMP:
-		PRINT_DEBUG("cmd=%d ==SIOCGSTAMP", cmd);
-		break;
-	case SIOCGIFDSTADDR:
-		PRINT_DEBUG("cmd=%d ==SIOCGIFDSTADDR", cmd);
-		break;
-	case SIOCSIFDSTADDR:
-		PRINT_DEBUG("cmd=%d ==SIOCSIFDSTADDR", cmd);
-		break;
-	case SIOCGIFBRDADDR:
-		PRINT_DEBUG("cmd=%d ==SIOCGIFBRDADDR", cmd);
-		break;
-	case SIOCSIFBRDADDR:
-		PRINT_DEBUG("cmd=%d ==SIOCSIFBRDADDR", cmd);
-		break;
-	case SIOCGIFNETMASK:
-		PRINT_DEBUG("cmd=%d ==SIOCGIFNETMASK", cmd);
-		break;
-	case SIOCSIFNETMASK:
-		PRINT_DEBUG("cmd=%d ==SIOCSIFNETMASK", cmd);
-		break;
-	default:
-		PRINT_DEBUG("cmd=%d default", cmd);
-		break;
-	}
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -1499,33 +1697,126 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
-	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(u_long);
-	buf = kmalloc(buf_len, GFP_KERNEL);
-	if (!buf) {
-		PRINT_ERROR("buffer allocation error");
+	switch (cmd) {
+	case SIOCGIFCONF:
+		PRINT_DEBUG("cmd=%d ==SIOCGIFCONF", cmd);
+
+		if (copy_from_user(&ifc, arg_pt, sizeof(struct ifconf))) {
+			PRINT_ERROR("ERROR: cmd=%d ==SIOCGIFDSTADDR", cmd);
+			//TODO error
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+
+		len = ifc.ifc_len;
+		pos = ifc.ifc_buf;
+		ifr_pt = ifc.ifc_req;
+
+		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (int)pos, (int)ifr_pt);
+
+		// Build the message
+		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long); // + IFNAMSIZ;
+		buf = kmalloc(buf_len, GFP_KERNEL);
+		if (!buf) {
+			PRINT_ERROR("buffer allocation error");
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+		pt = buf;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = threads_incr(index);
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = cmd;
+		pt += sizeof(u_int);
+
+		//TODO finish implementing
+		//*(u_int *) pt = IFNAMSIZ;
+		//pt += sizeof(u_int);
+
+		//memcpy(pt, ifr.ifr_name, IFNAMSIZ);
+		break;
+	case SIOCGIFADDR:
+	case SIOCGIFDSTADDR:
+	case SIOCGIFBRDADDR:
+	case SIOCGIFNETMASK:
+		if (copy_from_user(&ifr, arg_pt, sizeof(struct ifreq))) {
+			PRINT_ERROR("ERROR: cmd=%d ==SIOCGIFDSTADDR", cmd);
+			//TODO error
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+
+		PRINT_DEBUG("cmd=%d name='%s'", cmd, ifr.ifr_name);
+
+		// Build the message
+		buf_len = 4 * sizeof(u_int) + sizeof(unsigned long long) + IFNAMSIZ;
+		buf = kmalloc(buf_len, GFP_KERNEL);
+		if (!buf) {
+			PRINT_ERROR("buffer allocation error");
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+		pt = buf;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = threads_incr(index);
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = cmd;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = IFNAMSIZ;
+		pt += sizeof(u_int);
+
+		memcpy(pt, ifr.ifr_name, IFNAMSIZ);
+		pt += IFNAMSIZ;
+		break;
+	case TIOCOUTQ:
+	case TIOCINQ:
+	case SIOCADDRT:
+	case SIOCDELRT:
+	case SIOCSIFADDR:
+	case SIOCAIPXITFCRT:
+	case SIOCAIPXPRISLT:
+	case SIOCIPXCFGDATA:
+	case SIOCIPXNCPCONN:
+	case SIOCGSTAMP:
+	case SIOCSIFDSTADDR:
+	case SIOCSIFBRDADDR:
+	case SIOCSIFNETMASK:
+		//TODO implement
+		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
+		buf = kmalloc(buf_len, GFP_KERNEL);
+		if (!buf) {
+			PRINT_ERROR("buffer allocation error");
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+		pt = buf;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = threads_incr(index);
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = cmd;
+		pt += sizeof(u_int);
+		break;
+	default:
+		PRINT_DEBUG("cmd=%d default", cmd);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
-	pt = buf;
-
-	*(u_int *) pt = ioctl_call;
-	pt += sizeof(u_int);
-
-	*(unsigned long long *) pt = uniqueSockID;
-	pt += sizeof(unsigned long long);
-
-	*(u_int *) pt = threads_incr(index);
-	pt += sizeof(u_int);
-
-	*(u_int *) pt = cmd;
-	pt += sizeof(u_int);
-
-	*(u_long *) pt = arg;
-	pt += sizeof(u_long);
-
-	//we have not supported this before
-	//TODO: find out what else needs to be sent/done
-	//http://lxr.linux.no/#linux+v2.6.39.4/net/ipx/af_ipx.c#L1858
 
 	if (pt - (u_char *) buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
@@ -1551,7 +1842,124 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	rc = checkConfirmation(index);
+	if (wedgeSockets[index].reply_ret == ACK) {
+		PRINT_DEBUG("ioctl ACK");
+
+		switch (cmd) {
+		case SIOCGIFCONF:
+			//TODO implement
+			//rc = -1;
+			break;
+		case SIOCGIFADDR:
+			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
+				memcpy(&ifr.ifr_addr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+
+				//#################
+				addr = (struct sockaddr_in *) &ifr.ifr_addr;
+				//memcpy(addr, pt, sizeof(struct sockaddr));
+				PRINT_DEBUG("name=%s, addr=%d (%d/%d)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				//#################
+
+				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
+					PRINT_ERROR("ERROR: cmd=%d", cmd);
+					//TODO error
+					return print_exit(__FUNCTION__, __LINE__, -1);
+				}
+			} else {
+				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+				rc = -1;
+			}
+			break;
+		case SIOCGIFDSTADDR:
+			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
+				memcpy(&ifr.ifr_dstaddr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+
+				//#################
+				addr = (struct sockaddr_in *) &ifr.ifr_dstaddr;
+				PRINT_DEBUG("name=%s, addr=%d (%d/%d)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				//#################
+
+				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
+					PRINT_ERROR("ERROR: cmd=%d", cmd);
+					//TODO error
+					return print_exit(__FUNCTION__, __LINE__, -1);
+				}
+			} else {
+				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+				rc = -1;
+			}
+			break;
+		case SIOCGIFBRDADDR:
+			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
+				memcpy(&ifr.ifr_broadaddr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+
+				//#################
+				addr = (struct sockaddr_in *) &ifr.ifr_broadaddr;
+				PRINT_DEBUG("name=%s, addr=%d (%d/%d)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				//#################
+
+				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
+					PRINT_ERROR("ERROR: cmd=%d", cmd);
+					//TODO error
+					return print_exit(__FUNCTION__, __LINE__, -1);
+				}
+			} else {
+				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+				rc = -1;
+			}
+			break;
+		case SIOCGIFNETMASK:
+			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
+				memcpy(&ifr.ifr_addr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+
+				//#################
+				addr = (struct sockaddr_in *) &ifr.ifr_addr;
+				PRINT_DEBUG("name=%s, addr=%d (%d/%d)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				//#################
+
+				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
+					PRINT_ERROR("ERROR: cmd=%d", cmd);
+					//TODO error
+					return print_exit(__FUNCTION__, __LINE__, -1);
+				}
+			} else {
+				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+				rc = -1;
+			}
+			break;
+			//-----------------------------------
+		case TIOCOUTQ:
+		case TIOCINQ:
+		case SIOCADDRT:
+		case SIOCDELRT:
+		case SIOCSIFADDR:
+		case SIOCAIPXITFCRT:
+		case SIOCAIPXPRISLT:
+		case SIOCIPXCFGDATA:
+		case SIOCIPXNCPCONN:
+		case SIOCGSTAMP:
+		case SIOCSIFDSTADDR:
+		case SIOCSIFBRDADDR:
+		case SIOCSIFNETMASK:
+			//TODO implement cases above
+			if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len == 0)) {
+			} else {
+				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+				rc = -1;
+			}
+			break;
+		default:
+			PRINT_DEBUG("cmd=%d default", cmd);
+			rc = -1;
+			break;
+		}
+	} else if (wedgeSockets[index].reply_ret == NACK) {
+		PRINT_DEBUG("ioctl NACK");
+		rc = -1;
+	} else {
+		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
+		rc = -1;
+	}
 	up(&wedgeSockets[index].reply_sem_r);
 
 	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -1560,6 +1968,70 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	return print_exit(__FUNCTION__, __LINE__, rc);
+}
+
+static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
+	unsigned long long uniqueSockID1, uniqueSockID2;
+	int ret;
+	char *buf; // used for test
+	ssize_t buffer_length; // used for test
+
+	uniqueSockID1 = getUniqueSockID(sock1);
+	uniqueSockID2 = getUniqueSockID(sock2);
+
+	PRINT_DEBUG("Entered for %llu, %llu.", uniqueSockID1, uniqueSockID2);
+
+// Notify FINS daemon
+	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
+		PRINT_ERROR("daemon not connected");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+//TODO: finish this & daemon side
+
+// Build the message
+	buf = "FINS_socketpair() called.";
+	buffer_length = strlen(buf) + 1;
+
+// Send message to FINS_daemon
+	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	if (ret) {
+		PRINT_ERROR("nl_send failed");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	return 0;
+}
+
+static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *pt) {
+	unsigned long long uniqueSockID;
+	int ret;
+	char *buf; // used for test
+	ssize_t buffer_length; // used for test
+
+	uniqueSockID = getUniqueSockID(sock);
+	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
+
+// Notify FINS daemon
+	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
+		PRINT_ERROR("daemon not connected");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+//TODO: finish this & daemon side
+
+// Build the message
+	buf = "FINS_poll() called.";
+	buffer_length = strlen(buf) + 1;
+
+// Send message to FINS_daemon
+	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	if (ret) {
+		PRINT_ERROR("nl_send failed");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	return 0;
 }
 
 //TODO figure out when this is called
@@ -1575,7 +2047,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-	// Notify FINS daemon
+// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -1587,7 +2059,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	// Build the message
+// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -1616,7 +2088,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", shutdown_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
+// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -1750,9 +2222,15 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
+//SO_REUSEADDR
+//SO_ERROR
+//SO_PRIORITY
+//SO_SNDBUF
+//SO_RCVBUF
+
 // Notify FINS daemon
 if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-		PRINT_ERROR("daemon not connected");
+			PRINT_ERROR("daemon not connected");
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -1806,74 +2284,74 @@ kfree(buf);
 		}
 	}
 
-	if (pt - (u_char *)buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+		if (pt - (u_char *)buf != buf_len) {
+			PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
 kfree(buf);
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
 
-	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", getsockopt_call, uniqueSockID, buf_len);
+		PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", getsockopt_call, uniqueSockID, buf_len);
 
 // Send message to FINS_daemon
 ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
-	kfree(buf);
-	if (ret) {
-		PRINT_ERROR("nl_send failed");
+		kfree(buf);
+		if (ret) {
+			PRINT_ERROR("nl_send failed");
 return print_exit(__FUNCTION__, __LINE__, -1);
-	}
+		}
 
-	index = wait_wedgeSocket(uniqueSockID, index, getsockopt_call);
-	PRINT_DEBUG("index=%d", index);
+		index = wait_wedgeSocket(uniqueSockID, index, getsockopt_call);
+		PRINT_DEBUG("index=%d", index);
 if (index == -1) {
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
 
-	PRINT_DEBUG("relocked my semaphore");
+		PRINT_DEBUG("relocked my semaphore");
 
 //exract msg from wedgeSockets[index].reply_buf
 if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
-		if (wedgeSockets[index].reply_ret == ACK) {
-			PRINT_DEBUG("recv ACK");
+			if (wedgeSockets[index].reply_ret == ACK) {
+				PRINT_DEBUG("recv ACK");
 pt = wedgeSockets[index].reply_buf;
-			rc = 0;
+				rc = 0;
 
-			//re-using len var
-			len = *(int *)pt;
-			pt += sizeof(int);
-			ret = copy_to_user(optlen, &len, sizeof(int));
-			if (ret) {
-				PRINT_ERROR("copy_from_user fail ret=%d", ret);
-rc = -1;
-			}
-
-			if (len > 0) {
-				ret = copy_to_user(optval, pt, len);
+				//re-using len var
+				len = *(int *)pt;
+				pt += sizeof(int);
+				ret = copy_to_user(optlen, &len, sizeof(int));
 				if (ret) {
 					PRINT_ERROR("copy_from_user fail ret=%d", ret);
 rc = -1;
 				}
+
+				if (len > 0) {
+					ret = copy_to_user(optval, pt, len);
+					if (ret) {
+						PRINT_ERROR("copy_from_user fail ret=%d", ret);
+rc = -1;
+					}
+				}
+			} else if (wedgeSockets[index].reply_ret == NACK) {
+				PRINT_DEBUG("recv NACK");
+rc = -1;
+			} else {
+				PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
+rc = -1;
 			}
-		} else if (wedgeSockets[index].reply_ret == NACK) {
-			PRINT_DEBUG("recv NACK");
-rc = -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
-rc = -1;
-		}
-	} else {
-		PRINT_ERROR( "wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p",
+			PRINT_ERROR( "wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p",
 		wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 rc = -1;
-	}
-	PRINT_DEBUG( "shared used: call=%d, sockID=%llu, ret=%d, len=%d",
+		}
+		PRINT_DEBUG( "shared used: call=%d, sockID=%llu, ret=%d, len=%d",
 		wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
 up(&wedgeSockets[index].reply_sem_r);
 
-	PRINT_DEBUG( "shared consumed: call=%d, sockID=%llu, ret=%d, len=%d",
+		PRINT_DEBUG( "shared consumed: call=%d, sockID=%llu, ret=%d, len=%d",
 		wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
 wedgeSockets[index].reply_call = 0;
-	up(&wedgeSockets[index].reply_sem_w);
-	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
+		up(&wedgeSockets[index].reply_sem_w);
+		PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 return print_exit(__FUNCTION__, __LINE__, rc);
 }
@@ -1949,299 +2427,6 @@ if (ret) {
 return 0;
 }
 
-/* FINS Netlink functions  */
-/*
- * Sends len bytes from buffer buf to process pid, and sets the flags.
- * If buf is longer than RECV_BUFFER_SIZE, it's broken into sequential messages.
- * Returns 0 if successful or -1 if an error occurred.
- */
-
-//assumes msg_buf is just the msg, does not have a prepended msg_len
-//break msg_buf into parts of size RECV_BUFFER_SIZE with a prepended header (header part of RECV...)
-//prepend msg header: total msg length, part length, part starting position
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags) {
-struct nlmsghdr *nlh;
-struct sk_buff *skb;
-int ret_val;
-
-//####################
-u_char *print_buf;
-u_char *print_pt;
-u_char *pt;
-int i;
-
-PRINT_DEBUG("pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
-
-print_buf = kmalloc(5 * len, GFP_KERNEL);
-if (!print_buf) {
-	PRINT_ERROR("print_buf allocation fail");
-} else {
-	print_pt = print_buf;
-	pt = buf;
-	for (i = 0; i < len; i++) {
-		if (i == 0) {
-			sprintf(print_pt, "%02x", *(pt + i));
-			print_pt += 2;
-		} else if (i % 4 == 0) {
-			sprintf(print_pt, ":%02x", *(pt + i));
-			print_pt += 3;
-		} else {
-			sprintf(print_pt, " %02x", *(pt + i));
-			print_pt += 3;
-		}
-	}PRINT_DEBUG("buf='%s'", print_buf);
-	kfree(print_buf);
-}
-//####################
-
-// Allocate a new netlink message
-skb = nlmsg_new(len, 0); // nlmsg_new(size_t payload, gfp_t flags)
-if (!skb) {
-	PRINT_ERROR("netlink Failed to allocate new skb");
-	return -1;
-}
-
-// Load nlmsg header
-// nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int payload, int flags)
-nlh = nlmsg_put(skb, KERNEL_PID, seq, type, len, flags);
-NETLINK_CB(skb).dst_group = 0; // not in a multicast group
-
-// Copy data into buffer
-memcpy(NLMSG_DATA(nlh), buf, len);
-
-// Send the message
-ret_val = nlmsg_unicast(FINS_nl_sk, skb, pid);
-if (ret_val < 0) {
-	PRINT_ERROR("netlink error sending to user");
-	return -1;
-}
-
-return 0;
-}
-
-int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
-int ret;
-void *part_buf;
-u_char *msg_pt;
-int pos;
-u_int seq;
-u_char *hdr_msg_len;
-u_char *hdr_part_len;
-u_char *hdr_pos;
-u_char *msg_start;
-ssize_t header_size;
-ssize_t part_len;
-
-//####################
-u_char *print_buf;
-u_char *print_pt;
-u_char *pt;
-int i;
-//####################
-
-if (down_interruptible(&link_sem)) {
-	PRINT_ERROR("link_sem aquire fail");
-}
-
-//####################
-print_buf = kmalloc(5 * msg_len, GFP_KERNEL);
-if (!print_buf) {
-	PRINT_ERROR("print_buf allocation fail");
-} else {
-	print_pt = print_buf;
-	pt = msg_buf;
-	for (i = 0; i < msg_len; i++) {
-		if (i == 0) {
-			sprintf(print_pt, "%02x", *(pt + i));
-			print_pt += 2;
-		} else if (i % 4 == 0) {
-			sprintf(print_pt, ":%02x", *(pt + i));
-			print_pt += 3;
-		} else {
-			sprintf(print_pt, " %02x", *(pt + i));
-			print_pt += 3;
-		}
-	}PRINT_DEBUG("nl_send: msg_buf='%s'", print_buf);
-	kfree(print_buf);
-}
-//####################
-
-part_buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
-if (!part_buf) {
-	PRINT_ERROR("part_buf allocation fail");
-	up(&link_sem);
-	return -1;
-}
-
-msg_pt = msg_buf;
-pos = 0;
-seq = 0;
-
-hdr_msg_len = part_buf;
-hdr_part_len = hdr_msg_len + sizeof(ssize_t);
-hdr_pos = hdr_part_len + sizeof(ssize_t);
-msg_start = hdr_pos + sizeof(int);
-
-header_size = msg_start - hdr_msg_len;
-part_len = RECV_BUFFER_SIZE - header_size;
-
-*(ssize_t *) hdr_msg_len = msg_len;
-*(ssize_t *) hdr_part_len = part_len;
-
-while (msg_len - pos > part_len) {
-	PRINT_DEBUG("pos=%d", pos);
-
-	*(int *) hdr_pos = pos;
-
-	memcpy(msg_start, msg_pt, part_len);
-
-	PRINT_DEBUG("seq=%d", seq);
-
-	ret = nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
-	if (ret < 0) {
-		PRINT_ERROR("netlink error sending seq %d to user", seq);
-		up(&link_sem);
-		return -1;
-	}
-
-	msg_pt += part_len;
-	pos += part_len;
-	seq++;
-}
-
-part_len = msg_len - pos;
-*(ssize_t *) hdr_part_len = part_len;
-*(int *) hdr_pos = pos;
-
-memcpy(msg_start, msg_pt, part_len);
-
-ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, header_size + part_len, flags);
-if (ret < 0) {
-	PRINT_ERROR("netlink error sending seq %d to user", seq);
-	up(&link_sem);
-	return -1;
-}
-
-kfree(part_buf);
-up(&link_sem);
-
-return 0;
-}
-
-/*
- * This function is automatically called when the kernel receives a datagram on the corresponding netlink socket.
- */
-void nl_data_ready(struct sk_buff *skb) {
-struct nlmsghdr *nlh = NULL;
-void *buf; // Pointer to data in payload
-u_char *pt;
-ssize_t len; // Payload length
-int pid; // pid of sending process
-unsigned long long uniqueSockID;
-int index;
-
-u_int reply_call; // a number corresponding to the type of socketcall this packet is in response to
-
-PRINT_DEBUG("Entered");
-
-if (skb == NULL) {
-	PRINT_DEBUG("skb is NULL \n");PRINT_DEBUG("exited");
-	return;
-}
-nlh = (struct nlmsghdr *) skb->data;
-pid = nlh->nlmsg_pid; // get pid from the header
-
-// Get a pointer to the start of the data in the buffer and the buffer (payload) length
-buf = NLMSG_DATA(nlh);
-len = NLMSG_PAYLOAD(nlh, 0);
-
-PRINT_DEBUG("nl_len=%d", len);
-
-// **** Remember the LKM must be up first, then the daemon,
-// but the daemon must make contact before any applications try to use socket()
-
-if (pid == -1) { // if the socket daemon hasn't made contact before
-	// Print what we received
-	PRINT_DEBUG("Socket Daemon made contact: %s", (char *) buf);
-} else {
-	// demultiplex to the appropriate call handler
-	pt = buf;
-
-	reply_call = *(u_int *) pt;
-	pt += sizeof(u_int);
-	len -= sizeof(u_int);
-
-	if (reply_call == daemonconnect_call) {
-		FINS_daemon_pid = pid;
-		PRINT_DEBUG("Daemon connected, pid=%d\n",FINS_daemon_pid);
-	} else if (reply_call < MAX_calls) {
-		PRINT_DEBUG("got a daemon reply to a call (%d).", reply_call);
-		/*
-		 * extract msg or pass to shared buffer
-		 * wedgeSockets[index].reply_call & shared_sockID, are to verify buf goes to the write sock & call
-		 * This is preemptive as with multithreading we may have to add a shared queue
-		 */
-
-		uniqueSockID = *(unsigned long long *) pt;
-		pt += sizeof(unsigned long long);
-
-		PRINT_DEBUG("reply for uniqueSockID=%llu call=%d", uniqueSockID, reply_call);
-
-		index = find_wedgeSocket(uniqueSockID);
-		PRINT_DEBUG("index=%d", index);
-		if (index == -1) {
-			PRINT_ERROR("socket not found for uniqueSockID=%llu", uniqueSockID);
-			goto end;
-		}
-
-		if (wedgeSockets[index].release_flag && (reply_call != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
-			PRINT_DEBUG("socket released, dropping for uniqueSockID=%llu call=%d", uniqueSockID, reply_call);
-			goto end;
-		}
-
-		//lock the semaphore so shared data can't be changed until it's consumed
-		PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
-		if (down_interruptible(&wedgeSockets[index].reply_sem_w)) {
-			PRINT_ERROR("shared aquire fail, using hard down w=%d", wedgeSockets[index].reply_sem_w.count);
-		}
-
-		PRINT_DEBUG("wedgeSockets[%d].reply_sem_r=%d", index, wedgeSockets[index].reply_sem_r.count);
-		if (down_interruptible(&wedgeSockets[index].reply_sem_r)) {
-			PRINT_ERROR("shared aquire fail, using hard down r=%d", wedgeSockets[index].reply_sem_r.count);
-		}
-
-		if (wedgeSockets[index].uniqueSockID != uniqueSockID) {
-			PRINT_ERROR("wedgeSocket removed for uniqueSockID=%llu", uniqueSockID);
-			up(&wedgeSockets[index].reply_sem_r);
-			goto end;
-		}
-
-		write_lock(&wedgeSockets_rwlock);
-
-		wedgeSockets[index].reply_call = reply_call;
-
-		wedgeSockets[index].reply_ret = *(int *) pt;
-		pt += sizeof(int);
-
-		wedgeSockets[index].reply_buf = pt;
-
-		len -= sizeof(unsigned long long) + sizeof(int);
-		wedgeSockets[index].reply_len = len;
-
-		write_unlock(&wedgeSockets_rwlock);
-		PRINT_DEBUG("shared created: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
-		up(&wedgeSockets[index].reply_sem_r);
-
-		up(&wedgeSockets[index].call_sems[reply_call]);
-	} else {
-		PRINT_DEBUG("got an unsupported/binding daemon reply (%d)", reply_call);
-	}
-}
-
-end:
-PRINT_DEBUG("exited");
-}
-
 /* Data structures needed for protocol registration */
 /* A proto struct for the dummy protocol */
 static struct proto FINS_proto = { .name = "FINS_PROTO", .owner = THIS_MODULE, .obj_size = sizeof(struct FINS_sock), };
@@ -2283,11 +2468,13 @@ FINS_stack_passthrough_enabled = 1; // Initialize kernel wide FINS data passthro
 
 /* Call proto_register and report debugging info */
 rc = proto_register(&FINS_proto, 1);
-PRINT_DEBUG("proto_register returned: %d", rc);PRINT_DEBUG("Made it through FINS proto_register()");
+PRINT_DEBUG("proto_register returned: %d", rc);
+PRINT_DEBUG("Made it through FINS proto_register()");
 
 /* Call sock_register to register the handler with the socket layer */
 rc = sock_register(&FINS_net_proto);
-PRINT_DEBUG("sock_register returned: %d", rc);PRINT_DEBUG("Made it through FINS sock_register()");
+PRINT_DEBUG("sock_register returned: %d", rc);
+PRINT_DEBUG("Made it through FINS sock_register()");
 }
 
 static void teardown_FINS_protocol(void) {
@@ -2322,7 +2509,7 @@ if (FINS_nl_sk != NULL) {
 }
 
 /* LKM specific functions */
-/* 
+/*
  * Note: the init and exit functions must be defined (or declared/declared in header file) before the macros are called
  */
 static int __init FINS_stack_wedge_init(void) {
@@ -2340,7 +2527,7 @@ static void __exit FINS_stack_wedge_exit(void) {
 teardown_FINS_netlink();
 	teardown_FINS_protocol();
 	PRINT_DEBUG("Made it through the FINS_stack_wedge removal");
- // the system call wrapped by rmmod frees all memory that is allocated in the module
+// the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
 /* Macros defining the init and exit functions */

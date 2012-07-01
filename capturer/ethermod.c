@@ -18,23 +18,18 @@
  * @author: Abdallah Abdallah
  */
 
-
 #include "wifistub.h"
 #include <signal.h>
-
 
 #define APP_NAME		"sniffex"
 #define APP_DESC		"Sniffer example using libpcap"
 #define APP_COPYRIGHT	"Copyright (c) 2005 The Tcpdump Group"
 #define APP_DISCLAIMER	"THERE IS ABSOLUTELY NO WARRANTY FOR THIS PROGRAM."
 
-
 /*
  * app name/banner
  */
-void
-print_app_banner(void)
-{
+void print_app_banner(void) {
 
 	printf("%s - %s\n", APP_NAME, APP_DESC);
 	printf("%s\n", APP_COPYRIGHT);
@@ -43,14 +38,11 @@ print_app_banner(void)
 	printf("\n The message printed above is a part of ");
 	printf("\n the redistribution conditions requested by the Tcpdump group \n");
 
-
-return;
+	return;
 }
 
 #define DEBUG
 #define ERROR
-
-
 
 /** packet inject handle */
 pcap_t *inject_handle;
@@ -65,22 +57,16 @@ int inject_pipe_fd;
  * Globally defined counters
  *
  */
-int inject_count=0;
-int capture_count=0;
+int inject_count = 0;
+int capture_count = 0;
 
 /** handling termination ctrl+c signal
  * */
 
-
-void termination_handler(int sig)
-{
-  printf("\n**Number of captured frames = %d \n ****Number of Injected frames = %d\n", capture_count,inject_count );
-  exit(2);
+void termination_handler(int sig) {
+	printf("\n**Number of captured frames = %d \n ****Number of Injected frames = %d\n", capture_count, inject_count);
+	exit(2);
 }
-
-
-
-
 
 /** @brief open the incoming and outgoing NAMED PIPES
  *
@@ -94,34 +80,31 @@ void termination_handler(int sig)
  * Continue Forever
  * */
 
+void main() {
 
-void  main()
-{
-
-  	(void) signal(SIGINT, termination_handler);
-  	print_app_banner();
-
+	(void) signal(SIGINT, termination_handler);
+	print_app_banner();
 
 	// ADDED mrd015 !!!!! 
 	// trying to put code from fins_ethernet.sh here. This should allow mkfifo to be called w/o building coreutils for android?
 	
 	printf("\n\nAttempting to make " FINS_TMP_ROOT "\n");
-	if(system("mkdir " FINS_TMP_ROOT) != 0){
+	if (system("mkdir " FINS_TMP_ROOT) != 0) {
 		printf(FINS_TMP_ROOT " already exists! Cleaning...\n");
 		// if cannot create directory, assume it contains files and try to delete them
-		if(system("cd " FINS_TMP_ROOT ";rm *") != 0){
-			printf("Cannot remove files in " FINS_TMP_ROOT  "!\n");
-		}else {
+		if (system("cd " FINS_TMP_ROOT ";rm *") != 0) {
+			printf("Cannot remove files in " FINS_TMP_ROOT "!\n");
+		} else {
 			printf(FINS_TMP_ROOT " was cleaned successfully.\n\n");
 		}
 	}
 
-	if(mkfifo(INCOME_PIPE, 0777) != 0){
+	if (mkfifo(INCOME_PIPE, 0777) != 0) {
 		PRINT_DEBUG("Failed to mkfifo(INCOME_PIPE, 0777)");
 		exit(1);
 	}
 
-	if(mkfifo(INJECT_PIPE, 0777) != 0){
+	if (mkfifo(INJECT_PIPE, 0777) != 0) {
 		PRINT_DEBUG("Failed to mkfifo(INJECT_PIPE, 0777)");
 		exit(1);
 	}
@@ -131,10 +114,9 @@ void  main()
 	pid_t pID;
 	char device[20];
 	//strcpy(device, "lo"); //original !!!!!
-	strcpy(device, "eth0"); //changed to this !!!!!
-	//strcpy(device, "eth1"); //changed to this !!!!!
+	//strcpy(device, "eth0"); //changed to this !!!!! //on linux eth0 used for TCP
+	strcpy(device, "eth1"); //changed to this !!!!! //on linux eth1 used for UDP
 	//strcpy(device, "wlan0");
-
 
 	/** Time to split into two processes
 	 *  1. the child Process is for capturing (incoming)
@@ -142,9 +124,9 @@ void  main()
 	 */
 	pID = fork();
 
-	if (pID == 0)  // child -- Capture process
+	if (pID == 0) // child -- Capture process
 
-	{
+			{
 
 		// Code only executed by child process
 		PRINT_DEBUG("child started to capture \n");
@@ -156,14 +138,14 @@ void  main()
 
 	else if (pID < 0) // failed to fork
 
-	{
+			{
 
-		PRINT_DEBUG ("Failed to Fork \n");
+		PRINT_DEBUG("Failed to Fork \n");
 		exit(1);
 
 	}
 
-	else      // parent
+	else // parent
 
 	{
 		// Code only executed by parent process
@@ -177,20 +159,17 @@ void  main()
 		inject_init(device);
 		// 	while (1);
 
-
 	}
 
-
 	/**
-			if (inject_handle != NULL);
-				pcap_close(inject_handle);
+	 if (inject_handle != NULL);
+	 pcap_close(inject_handle);
 
-			if (capture_handle != NULL);
-				pcap_close(capture_handle);
+	 if (capture_handle != NULL);
+	 pcap_close(capture_handle);
 	 */
 
 //	return;
-
 }
 
 // end of main function

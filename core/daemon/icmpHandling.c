@@ -232,12 +232,12 @@ void socket_icmp(int domain, int type, int protocol, unsigned long long uniqueSo
 
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
-		nack_send(uniqueSockID, socket_call);
+		nack_send(uniqueSockID, socket_call, 0);
 		return;
 	}
 	PRINT_DEBUG("0000");
 
-	ack_send(uniqueSockID, socket_call);
+	ack_send(uniqueSockID, socket_call, 0);
 	PRINT_DEBUG("0003");
 
 	return;
@@ -282,7 +282,7 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int d
 
 	if (address->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		PRINT_DEBUG("");
 	}
 
@@ -302,7 +302,7 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int d
 		PRINT_DEBUG("CRASH !! socket descriptor not found into daemon sockets");
 		sem_wait(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -337,12 +337,12 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int d
 
 	{
 		PRINT_DEBUG("");
-		ack_send(uniqueSockID, sendmsg_call);
+		ack_send(uniqueSockID, sendmsg_call, 0);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish sendto");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 	}
 
 	return;
@@ -423,7 +423,7 @@ void recvfrom_icmp(void *threadData) {
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = 3 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(int) + addressLen : 0);
+		msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(int) + addressLen : 0);
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -435,6 +435,9 @@ void recvfrom_icmp(void *threadData) {
 
 		*(int *) pt = ACK;
 		pt += sizeof(int);
+
+		*(int *) pt = 0;
+			pt += sizeof(int);
 
 		if (symbol) {
 			*(int *) pt = addressLen;
@@ -473,7 +476,7 @@ void recvfrom_icmp(void *threadData) {
 			PRINT_DEBUG("socket descriptor not found into daemon sockets");
 			recvthread_exit(thread_data);
 		} else {
-			nack_send(uniqueSockID, socketCallType);
+			nack_send(uniqueSockID, socketCallType, 0);
 		}
 	}
 	PRINT_DEBUG();
@@ -541,7 +544,7 @@ void setsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int 
 	PRINT_DEBUG("index = %d", index);
 	PRINT_DEBUG();
 
-	ack_send(uniqueSockID, setsockopt_call);
+	ack_send(uniqueSockID, setsockopt_call, 0);
 
 	return;
 
@@ -560,7 +563,7 @@ void release_icmp(int index, unsigned long long uniqueSockID) {
 		PRINT_DEBUG("Socket closed, canceling release_icmp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		return;
 	}
 
@@ -570,9 +573,9 @@ void release_icmp(int index, unsigned long long uniqueSockID) {
 	sem_post(&daemonSockets_sem);
 
 	if (ret) {
-		ack_send(uniqueSockID, release_call);
+		ack_send(uniqueSockID, release_call, 0);
 	} else {
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 	}
 }
 
@@ -582,7 +585,7 @@ void listen_icmp(int index, unsigned long long uniqueSockID, int backlog) {
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 		return;
 	}
 
@@ -590,7 +593,7 @@ void listen_icmp(int index, unsigned long long uniqueSockID, int backlog) {
 	daemonSockets[index].backlog = backlog;
 	sem_post(&daemonSockets_sem);
 
-	ack_send(uniqueSockID, listen_call);
+	ack_send(uniqueSockID, listen_call, 0);
 }
 
 void accept_icmp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags) {
@@ -600,12 +603,12 @@ void accept_icmp(int index, unsigned long long uniqueSockID, unsigned long long 
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		return;
 	}
 	sem_post(&daemonSockets_sem);
 
-	ack_send(uniqueSockID, accept_call);
+	ack_send(uniqueSockID, accept_call, 0);
 }
 
 void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
@@ -621,7 +624,7 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
@@ -642,7 +645,7 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if (addr == NULL) {
 		PRINT_DEBUG("getname_tcp: addr creation failed");
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
@@ -656,11 +659,11 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 		//TODO ??
 	}
 
-	int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_DEBUG("getname_tcp: Exiting, msg creation fail: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		free(addr);
 		return;
 	}
@@ -675,6 +678,9 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 	*(int *) pt = ACK;
 	pt += sizeof(int);
 
+	*(int *) pt = 0;
+		pt += sizeof(int);
+
 	*(int *) pt = peer;
 	pt += sizeof(int);
 
@@ -688,14 +694,14 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 		free(msg);
 		PRINT_DEBUG("getname_tcp: Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_DEBUG("getname_tcp: Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 	} else {
 		PRINT_DEBUG("getname_tcp: Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
 	}

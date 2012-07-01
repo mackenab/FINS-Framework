@@ -40,7 +40,30 @@ void *write_thread(void *local) {
 	}
 	if (conn->running_flag) {
 		PRINT_DEBUG("write_thread: state=%d", conn->state);
-		if (conn->state == ESTABLISHED || conn->state == CLOSE_WAIT) {
+		if (conn->state == SYN_SENT || conn->state == SYN_RECV) { //equiv to non blocking
+			PRINT_DEBUG("write_thread: non-blocking");
+			if (conn->running_flag) {
+				space = conn->write_queue->max - conn->write_queue->len;
+				if (space >= called_len) {
+					node = node_create(called_data, called_len, 0, 0);
+					queue_append(conn->write_queue, node);
+
+					if (conn->main_wait_flag) {
+						PRINT_DEBUG("posting to wait_sem\n");
+						sem_post(&conn->main_wait_sem);
+					}
+				} else {
+					/*#*/PRINT_DEBUG("");
+					conn_send_daemon(conn, EXEC_TCP_SEND, 0, 2); //TODO change msg values, "error: insufficient resources"
+					free(called_data);
+				}
+			} else {
+				/*#*/PRINT_DEBUG("");
+				conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
+				free(called_data);
+			}
+		} else if (conn->state == ESTABLISHED || conn->state == CLOSE_WAIT) { //essentially blocking
+			PRINT_DEBUG("write_thread: blocking");
 			while (conn->running_flag && index < called_len) {
 				space = conn->write_queue->max - conn->write_queue->len;
 				if (space > 0) {
@@ -60,8 +83,9 @@ void *write_thread(void *local) {
 					if (conn->main_wait_flag) {
 						PRINT_DEBUG("posting to wait_sem\n");
 						sem_post(&conn->main_wait_sem);
-					}/*#*/
-					PRINT_DEBUG("sem_post: conn=%d", (int) conn);
+					}
+
+					/*#*/PRINT_DEBUG("sem_post: conn=%d", (int) conn);
 					sem_post(&conn->sem);
 				} else {
 					/*#*/PRINT_DEBUG("sem_post: conn=%d", (int) conn);
@@ -86,22 +110,31 @@ void *write_thread(void *local) {
 			if (conn->running_flag) {
 				/*#*/PRINT_DEBUG("");
 				//send ACK to send handler
-				conn_send_daemon(conn, EXEC_TCP_SEND, 1);
+				if (index == called_len) {
+					conn_send_daemon(conn, EXEC_TCP_SEND, 1, 0);
+				} else {
+					conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1); //TODO change msg values
+				}
 			} else {
 				/*#*/PRINT_DEBUG("");
 				//send NACK to send handler
-				conn_send_daemon(conn, EXEC_TCP_SEND, 0);
+				conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
 			}
+
+			free(called_data);
 		} else {
 			//TODO error, send/write'ing when conn sending is closed
 			PRINT_DEBUG("");
 			//send NACK to send handler
-			conn_send_daemon(conn, EXEC_TCP_SEND, 0);
+			conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
+
+			free(called_data);
 		}
 	} else {
 		PRINT_DEBUG("");
 		//send NACK to send handler
-		conn_send_daemon(conn, EXEC_TCP_SEND, 0);
+		conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
+		free(called_data);
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -120,7 +153,6 @@ void *write_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("write_thread: Exited: id=%d", id);
-	free(called_data);
 	free(thread_data);
 	pthread_exit(NULL);
 }
@@ -300,10 +332,10 @@ void *connect_thread(void *local) {
 		seg_free(temp_seg);
 
 		conn->timeout = TCP_GBN_TO_DEFAULT;
-		//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
+		startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
 	} else {
 		//send NACK to connect handler
-		conn_send_daemon(conn, EXEC_TCP_CONNECT, 0);
+		conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 1);
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -525,6 +557,8 @@ void *accept_thread(void *local) {
 							seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
 							seg_send(temp_seg);
 							seg_free(temp_seg);
+
+							startTimer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
 						}
 
 						/*#*/PRINT_DEBUG("");
@@ -684,6 +718,7 @@ void *close_thread(void *local) {
 				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
+				conn->fin_ack = conn->send_seq_end + 1;
 
 				seg = seg_create(conn);
 				seg_update(seg, conn, FLAG_FIN);
@@ -704,6 +739,7 @@ void *close_thread(void *local) {
 				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
+				conn->fin_ack = conn->send_seq_end + 1;
 
 				seg = seg_create(conn);
 				seg_update(seg, conn, FLAG_FIN);

@@ -268,7 +268,8 @@ void *Switch_to_Daemon() {
 		if (ff == NULL) {
 
 			continue;
-		}PRINT_DEBUG("");
+		}
+		PRINT_DEBUG("");
 		if (ff->dataOrCtrl == CONTROL) {
 			host_ip = -1;
 			host_port = -1;
@@ -440,8 +441,7 @@ void *Switch_to_Daemon() {
 							temp2->sin_addr.s_addr = 0;
 						}
 						//temp2->sin_port = 0;
-						PRINT_DEBUG("NETFORMAT host=%s/%d, dst=%s/%d,",
-								inet_ntoa(temp->sin_addr), (host_port), inet_ntoa(temp2->sin_addr), (rem_port));
+						PRINT_DEBUG("NETFORMAT host=%s/%d, dst=%s/%d,", inet_ntoa(temp->sin_addr), (host_port), inet_ntoa(temp2->sin_addr), (rem_port));
 						PRINT_DEBUG("NETFORMAT host=%u/%d, dst=%u/%d,", (temp->sin_addr), (host_port), (temp2->sin_addr), (rem_port));
 						free(temp);
 						free(temp2);
@@ -532,7 +532,8 @@ void *Switch_to_Daemon() {
 							temp->s_addr = host_ip;
 						} else {
 							temp->s_addr = 0;
-						}PRINT_DEBUG("NETFORMAT host=%s/%d", inet_ntoa(*temp), (host_port));
+						}
+						PRINT_DEBUG("NETFORMAT host=%s/%d", inet_ntoa(*temp), (host_port));
 						PRINT_DEBUG("NETFORMAT host=%u/%d", (*temp).s_addr, (host_port));
 						//##################
 
@@ -628,7 +629,8 @@ void *Switch_to_Daemon() {
 				temp2->s_addr = dstip;
 			} else {
 				temp2->s_addr = 0;
-			}PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
+			}
+			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
 			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
 			free(temp);
 			free(temp2);
@@ -645,8 +647,8 @@ void *Switch_to_Daemon() {
 				if (index == -1) {
 					index = match_daemon_connection(hostip, hostport, 0, 0);
 				}
-			} else {
-				index = match_daemonSocket(dstport, dstip, protocol);
+			} else { //udp
+				index = match_daemonSocket(dstport, dstip, protocol); //TODO change for multicast
 
 				if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
 					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
@@ -663,8 +665,7 @@ void *Switch_to_Daemon() {
 
 			PRINT_DEBUG("index %d", index);
 			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
-				PRINT_DEBUG(
-						"Matched: host=%d/%d, dst=%d/%d, prot=%d",
+				PRINT_DEBUG( "Matched: host=%d/%d, dst=%d/%d, prot=%d",
 						daemonSockets[index].host_IP, daemonSockets[index].hostport, daemonSockets[index].dst_IP, daemonSockets[index].dstport, daemonSockets[index].protocol);
 
 				/**
@@ -952,6 +953,9 @@ void *interceptor_to_daemon() {
 			case setsockopt_call:
 				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
 				break;
+			case ioctl_call:
+				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				break;
 				/*
 				 case getsockname_call:
 				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
@@ -975,9 +979,6 @@ void *interceptor_to_daemon() {
 				 * the Queue Terminate function has a bug as explained into it
 				 */
 				close_call_handler(uniqueSockID, threads, msg_pt, msg_len);
-				break;
-			case ioctl_call:
-				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			default:
 				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType);
@@ -1012,9 +1013,14 @@ void *Capture() {
 	metadata *ether_meta;
 
 	struct sniff_ethernet *ethernet_header;
-	u_char ethersrc[ETHER_ADDR_LEN];
-	u_char etherdst[ETHER_ADDR_LEN];
+	u_char ethersrc[ETHER_ADDR_LEN + 1];
+	u_char etherdst[ETHER_ADDR_LEN + 1];
 	u_short protocol_type;
+
+	//####
+	ethersrc[ETHER_ADDR_LEN] = '\0';
+	etherdst[ETHER_ADDR_LEN] = '\0';
+	//####
 
 	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
 	if (capture_pipe_fd == -1) {
@@ -1038,6 +1044,15 @@ void *Capture() {
 			break;
 		}
 
+		if (numBytes != datalen) {
+			PRINT_DEBUG("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
+			continue;
+		}
+
+		if (numBytes < sizeof(struct sniff_ethernet)) {
+
+		}
+
 		PRINT_DEBUG("A frame of length %d has been written-----", datalen);
 
 		//print_frame(data,datalen);
@@ -1055,12 +1070,13 @@ void *Capture() {
 		metadata_create(ether_meta);
 
 		memcpy(ethersrc, ((struct sniff_ethernet *) data)->ether_shost, ETHER_ADDR_LEN);
-		PRINT_DEBUG();
+		//PRINT_DEBUG();
 		memcpy(etherdst, ((struct sniff_ethernet *) data)->ether_dhost, ETHER_ADDR_LEN);
-		PRINT_DEBUG();
+		//PRINT_DEBUG();
 		protocol_type = ntohs(((struct sniff_ethernet *) data)->ether_type);
 
-		PRINT_DEBUG();
+		PRINT_DEBUG("Capture: got frame: ethersrc=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, etherdst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, proto=%d",
+				(uint8_t)ethersrc[0], (uint8_t )ethersrc[1], (uint8_t )ethersrc[2], (uint8_t )ethersrc[3], (uint8_t )ethersrc[4], (uint8_t )ethersrc[5], (uint8_t )etherdst[0], (uint8_t )etherdst[1], (uint8_t )etherdst[2], (uint8_t )etherdst[3], (uint8_t )etherdst[4], (uint8_t )etherdst[5], protocol_type);
 
 		ff->dataOrCtrl = DATA;
 		(ff->destinationID).id = IPV4ID;
@@ -1073,17 +1089,12 @@ void *Capture() {
 
 		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
 
-		PRINT_DEBUG("%d", (int) &(ff->dataFrame).pdu);
-		PRINT_DEBUG("%d", (int) &((ff->dataFrame).pdu));
-		PRINT_DEBUG("%d", (int) data);
-
-		PRINT_DEBUG();
+		PRINT_DEBUG("pdu=%d, data=%d", (int) &(ff->dataFrame).pdu, (int) data);
 
 		sem_wait(&EtherStub_to_Switch_Qsem);
 		write_queue(ff, EtherStub_to_Switch_Queue);
-		sem_post(&EtherStub_to_Switch_Qsem);
 		PRINT_DEBUG();
-
+		sem_post(&EtherStub_to_Switch_Qsem);
 	} // end of while loop
 
 }
@@ -1146,7 +1157,8 @@ void *Inject() {
 		 */
 		//char dest[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		//char src[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-		char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
+		//char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
+		char dest[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd };
 		char src[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd };
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
@@ -1282,7 +1294,8 @@ int main() {
 	if (ret_val != 0) {
 		perror("sendfins() caused an error");
 		exit(-1);
-	}PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	}
+	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//added to include code from fins_daemon.sh -- mrd015 !!!!!
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {

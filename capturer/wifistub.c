@@ -13,17 +13,11 @@
  *
  */
 
-
-
-
-
 /** Globally defined counters
  *
  */
 extern int inject_count;
 extern int capture_count;
-
-
 
 /**
  * print data in rows of 16 bytes: offset   hex   ascii
@@ -123,10 +117,9 @@ void print_frame(const u_char *payload, int len) {
 } // end of print_frame
 
 /** ----------------------------------------------------------------------------------*/
-/*int*/void got_packet(u_char *args, const struct pcap_pkthdr *header,
-		const u_char *packetReceived) { //TODO: pcap_handlers must be of void type. This method of returning data will have to be amended
+/*int*/void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packetReceived) { //TODO: pcap_handlers must be of void type. This method of returning data will have to be amended
 	static int count = 1; /* packet counter */
-	u_char *packet; /* Packet Pointer */
+	u_char * packet; /* Packet Pointer */
 	struct data_to_pass data;
 	u_int numBytes;
 	u_int dataLength;
@@ -210,17 +203,22 @@ void capture_init(char *interface) {
 	 * device name
 	 */
 	//	strcat(filter_exp,"ether dst ");
-
 	//char filter_exp[] = "ether src 00:1e:2a:52:ec:9c";		/* filter expression [3] */
-
 	//	getDevice_MACAddress(dev_macAddress,dev);
 	//	strcat(filter_exp,dev_macAddress);
 	//strcat(filter_exp," not arp and not tcp");
 	//strcat(filter_exp," and udp and");
 	//strcat(filter_exp,"dst host 127.0.0.1 and udp and port 5001");
 	//strcat(filter_exp, "udp and port 5000");
-	//strcat(filter_exp, "");
-	strcat(filter_exp, "dst host 127.0.0.1");
+
+	//strcat(filter_exp, ""); //everything
+	strcat(filter_exp, "dst host 127.0.0.1"); //local loopback
+	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or arp"); //final?
+	//strcat(filter_exp, "((ether dst 001cbf871afd) or broadcast or multicast) and not icmp"); //works, no icmp
+	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or icmp[0] == 8 or icmp[0] == 0"); //broken, icmp request/reply
+	//strcat(filter_exp, "icmp");
+	//strcat(filter_exp, "((ether dst 001cbf871afd) or broadcast or multicast) and (not icmp src and dst host)"); //192.168.1.12
+
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
@@ -239,41 +237,37 @@ void capture_init(char *interface) {
 		exit(EXIT_FAILURE);
 	}
 	
-
 	/* make sure we're capturing on an Ethernet device [2] */
 	data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
 		fprintf(stderr, "%s is not an Ethernet\n", dev);
 		exit(EXIT_FAILURE);
 	}
-	printf("Datalink layer Description: %s \n",
-			pcap_datalink_val_to_description(data_linkValue));
+	printf("Datalink layer Description: %s \n", pcap_datalink_val_to_description(data_linkValue));
 
 	/* compile the filter expression */
 
 	if (pcap_compile(capture_handle, &fp, filter_exp, 0, net) == -1) {
-		fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp,
-				pcap_geterr(capture_handle));
+		fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(capture_handle));
 		exit(EXIT_FAILURE);
 	}
 
 	/* apply the compiled filter */
 	if (pcap_setfilter(capture_handle, &fp) == -1) {
-		fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp,
-				pcap_geterr(capture_handle));
+		fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(capture_handle));
 		exit(EXIT_FAILURE);
 	}
 
 	//CHANGED mrd015 !!!!! start pcap_can_set_rfmon(...) not in Bionic!
-	#ifndef BUILD_FOR_ANDROID
-		check_monitor_mode = pcap_can_set_rfmon(capture_handle); 
-		if (check_monitor_mode) {
-			PRINT_DEBUG("\n Monitor mode can be set\n");
-		} else if (check_monitor_mode == 0) {
-			PRINT_DEBUG("\n Monitor mode could not be set\n");
-		} else
-			PRINT_DEBUG("\n check_monior_mode value is %d \n",check_monitor_mode);
-	#endif
+#ifndef BUILD_FOR_ANDROID
+	check_monitor_mode = pcap_can_set_rfmon(capture_handle);
+	if (check_monitor_mode) {
+		PRINT_DEBUG("\n Monitor mode can be set\n");
+	} else if (check_monitor_mode == 0) {
+		PRINT_DEBUG("\n Monitor mode could not be set\n");
+	} else
+		PRINT_DEBUG("\n check_monior_mode value is %d \n", check_monitor_mode);
+#endif
 	//CHANGE END !!!!!	
 
 	/* now we can set our callback function */
@@ -309,7 +303,6 @@ void inject_init(char *interface) {
 
 	//getDevice_MACAddress(dev_macAddress,dev);
 
-
 	/** has to run without return check to work as blocking call
 	 * It blocks until the other communication side opens the pipe
 	 * */
@@ -322,7 +315,7 @@ void inject_init(char *interface) {
 
 	/** Setup the Injection Interface */
 	if ((inject_handle = pcap_open_live(dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
-		PRINT_DEBUG( "\nError: %s\n", errbuf );
+		PRINT_DEBUG( "\nError: %s\n", errbuf);
 		exit(1);
 	}
 
@@ -350,15 +343,13 @@ void inject_init(char *interface) {
 		 */
 
 		numBytes = pcap_inject(inject_handle, frame, framelen);
-		if (numBytes == -1){
+		if (numBytes == -1) {
 			PRINT_DEBUG("Failed to inject the packet");
-		}
-		else {
-		PRINT_DEBUG("\n Message #%d has been injected whose size is %d  ",inject_count,numBytes);
-		inject_count++;
+		} else {
+			PRINT_DEBUG("\n Message #%d has been injected whose size is %d  ", inject_count, numBytes);
+			inject_count++;
 		}
 	} // end of while loop
-
 
 } // inject_init()
 

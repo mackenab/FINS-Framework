@@ -112,7 +112,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 			sem_post(&(daemonSockets[index].Qs));
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
-		} while (ff == NULL);PRINT_DEBUG();
+		} while (ff == NULL);
+		PRINT_DEBUG();
 
 	} else {
 		PRINT_DEBUG();
@@ -165,7 +166,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 			return (0);
 
 		}
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
@@ -181,7 +183,8 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 		//	freeFinsFrame(ff);
 
 		return (1);
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	addr_in->sin_port = srcport;
 	addr_in->sin_addr.s_addr = srcip;
@@ -306,11 +309,12 @@ void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSoc
 
 	if (index < 0) {
 		PRINT_DEBUG("incorrect index !! Crash");
-		nack_send(uniqueSockID, socket_call);
+		nack_send(uniqueSockID, socket_call, 0);
 		return;
-	}PRINT_DEBUG("0000");
+	}
+	PRINT_DEBUG("0000");
 
-	ack_send(uniqueSockID, socket_call);
+	ack_send(uniqueSockID, socket_call, 0);
 	PRINT_DEBUG("0003");
 }
 
@@ -324,7 +328,7 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family=%d", addr->sin_family);
-		nack_send(uniqueSockID, bind_call);
+		nack_send(uniqueSockID, bind_call, 0);
 		return;
 	}
 
@@ -341,18 +345,18 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, bind_call);
+		nack_send(uniqueSockID, bind_call, 0);
 		return;
 	}
 
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!check_daemon_ports(host_port, host_ip_netw) && !daemonSockets[index].sockopts.FSO_REUSEADDR) {
+	if (!check_daemon_ports(host_port, host_ip_netw) && !daemonSockets[index].sockopts.FSO_REUSEADDR) { //change, need to check if in TIME_WAIT state
 		PRINT_DEBUG("this port is not free");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, bind_call);
+		nack_send(uniqueSockID, bind_call, 0);
 		free(addr);
 		return;
 	}
@@ -374,7 +378,7 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	 * sending to the fins core
 	 */
 
-	ack_send(uniqueSockID, bind_call);
+	ack_send(uniqueSockID, bind_call, 0);
 
 	free(addr);
 	return;
@@ -392,7 +396,7 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 		return;
 	}
 
@@ -414,7 +418,7 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -429,10 +433,10 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	metadata_writeToElement(params, "backlog", &backlog, META_TYPE_INT);
 
 	if (daemon_TCP_to_fins_cntrl(CTRL_EXEC, params)) {
-		ack_send(uniqueSockID, listen_call);
+		ack_send(uniqueSockID, listen_call, 0);
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish listen");
-		nack_send(uniqueSockID, listen_call);
+		nack_send(uniqueSockID, listen_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -467,14 +471,14 @@ void *connect_tcp_thread(void *local) {
 	PRINT_DEBUG("connect_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL) {
 		PRINT_DEBUG("connect_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		pthread_exit(NULL);
 	}
 
 	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("connect_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
@@ -487,7 +491,7 @@ void *connect_tcp_thread(void *local) {
 	if (ret || (exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT) || ret_val == 0) {
 		PRINT_DEBUG("connect_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 	} else {
 		PRINT_DEBUG("connect_tcp_thread: Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		sem_wait(&daemonSockets_sem);
@@ -501,7 +505,7 @@ void *connect_tcp_thread(void *local) {
 		PRINT_DEBUG("");
 		sem_post(&daemonSockets_sem);
 
-		ack_send(uniqueSockID, connect_call);
+		ack_send(uniqueSockID, connect_call, 0);
 	}
 
 	PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -519,7 +523,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		return;
 	}
 
@@ -553,7 +557,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 		PRINT_DEBUG("socket removed/changed");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		return;
 	}
 
@@ -599,9 +603,11 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 			if (check_daemon_ports(host_port, host_ip_netw)) {
 				break;
 			}
-		}PRINT_DEBUG("");
+		}
+		PRINT_DEBUG("");
 		daemonSockets[index].hostport = host_port;
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
@@ -614,7 +620,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -639,13 +645,13 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 		//spin off thread to handle
 		if (pthread_create(&thread, NULL, connect_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create connect_tcp_thread thread.");
-			nack_send(uniqueSockID, connect_call);
+			nack_send(uniqueSockID, connect_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish connect");
-		nack_send(uniqueSockID, connect_call);
+		nack_send(uniqueSockID, connect_call, 0);
 		metadata_destroy(params);
 	}
 
@@ -673,7 +679,7 @@ void *accept_tcp_thread(void *local) {
 	PRINT_DEBUG("accept_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("accept_tcp_thread: Exiting, No fdf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
@@ -688,7 +694,7 @@ void *accept_tcp_thread(void *local) {
 	if (ret || exec_call != EXEC_TCP_ACCEPT || ret_val == 0) {
 		PRINT_DEBUG("accept_tcp_thread: Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 	} else {
 		PRINT_DEBUG("");
 		sem_wait(&daemonSockets_sem);
@@ -697,7 +703,7 @@ void *accept_tcp_thread(void *local) {
 			sem_post(&daemonSockets_sem);
 
 			PRINT_DEBUG("accept_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send(uniqueSockID, accept_call);
+			nack_send(uniqueSockID, accept_call, 0);
 		} else {
 			int index_new = insert_daemonSocket(uniqueSockID_new, daemonSockets[index].type, daemonSockets[index].protocol);
 			if (index_new < 0) {
@@ -706,7 +712,7 @@ void *accept_tcp_thread(void *local) {
 
 				PRINT_DEBUG("accept_tcp_thread: Exiting, insert faile: id=%d, index=%d, uniqueSockID=%llu, uniqueSockID_new=%llu",
 						id, index, uniqueSockID, uniqueSockID_new);
-				nack_send(uniqueSockID, accept_call);
+				nack_send(uniqueSockID, accept_call, 0);
 			} else {
 				daemonSockets[index_new].host_IP = daemonSockets[index].host_IP;
 				daemonSockets[index_new].hostport = daemonSockets[index].hostport;
@@ -721,7 +727,7 @@ void *accept_tcp_thread(void *local) {
 
 				PRINT_DEBUG("accept_tcp_thread: Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu, uniqueSockID_new=%llu",
 						id, index, uniqueSockID, uniqueSockID_new);
-				ack_send(uniqueSockID, accept_call);
+				ack_send(uniqueSockID, accept_call, 0);
 			}
 		}
 	}
@@ -748,7 +754,7 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 		PRINT_DEBUG("socket removed/changed");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		return;
 	}
 
@@ -756,7 +762,7 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 		PRINT_DEBUG("socket not listening");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		return;
 
 	}
@@ -775,7 +781,7 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -801,13 +807,13 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 		//spin off thread to handle
 		if (pthread_create(&thread, NULL, accept_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
-			nack_send(uniqueSockID, accept_call);
+			nack_send(uniqueSockID, accept_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish accept");
-		nack_send(uniqueSockID, accept_call);
+		nack_send(uniqueSockID, accept_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -825,7 +831,7 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
@@ -859,11 +865,11 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	PRINT_DEBUG("address: addr=%s/%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 	//#######
 
-	int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_DEBUG("getname_tcp: Exiting, msg creation fail: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 	u_char *pt = msg;
@@ -875,6 +881,9 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	pt += sizeof(unsigned long long);
 
 	*(int *) pt = ACK;
+	pt += sizeof(int);
+
+	*(int *) pt = 0;
 	pt += sizeof(int);
 
 	*(int *) pt = peer;
@@ -890,14 +899,14 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 		free(msg);
 		PRINT_DEBUG("getname_tcp: Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_DEBUG("getname_tcp: Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send(uniqueSockID, getname_call);
+		nack_send(uniqueSockID, getname_call, 0);
 	} else {
 		PRINT_DEBUG("getname_tcp: Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
 	}
@@ -919,7 +928,7 @@ void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -932,7 +941,7 @@ void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketdaemon failed to accomplish send");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
@@ -977,12 +986,12 @@ void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 	if (daemon_TCP_to_fins(data, len, dstport, dst_IP, hostport, host_IP, block_flag)) {
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		ack_send(uniqueSockID, sendmsg_call);
+		ack_send(uniqueSockID, sendmsg_call, 0);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish send");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 	}
 
 	return;
@@ -1004,7 +1013,7 @@ void *sendmsg_tcp_thread(void *local) {
 	struct finsFrame *ff = get_fcf(index, uniqueSockID, 1);
 	PRINT_DEBUG("sendmsg_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
-		nack_send(uniqueSockID, sendmsg_call); //TODO check return of nonblocking send
+		nack_send(uniqueSockID, sendmsg_call, 0); //TODO check return of nonblocking send
 		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
@@ -1015,9 +1024,9 @@ void *sendmsg_tcp_thread(void *local) {
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
 
 	if (ret || exec_call != EXEC_TCP_SEND || ret_val == 0) {
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 	} else {
-		ack_send(uniqueSockID, sendmsg_call);
+		ack_send(uniqueSockID, sendmsg_call, 0);
 	}
 
 	PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -1060,7 +1069,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 		PRINT_DEBUG("CRASH !! socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -1075,7 +1084,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 		PRINT_DEBUG("socketdaemon failed to accomplish send, socket found unconnected !!!");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -1131,14 +1140,14 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 			//spin off thread to handle
 			if (pthread_create(&thread, NULL, sendmsg_tcp_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
-				nack_send(uniqueSockID, sendmsg_call);
+				nack_send(uniqueSockID, sendmsg_call, 0);
 			}
 		} else {
-			ack_send(uniqueSockID, sendmsg_call);
+			ack_send(uniqueSockID, sendmsg_call, 0);
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish send");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 	}
 }
 
@@ -1164,11 +1173,12 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	default:
 		break;
 
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -1189,7 +1199,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 		PRINT_DEBUG("CRASH !! socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 		return;
 	}
 
@@ -1197,7 +1207,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	 if (daemonSockets[index].connection_status == 0 || dst_IP != daemonSockets[index].dst_IP || dstport != daemonSockets[index].dstport) {
 	 sem_wait(&daemonSockets_sem);
 
-	 nack_send(uniqueSockID, sendmsg_call);
+	 nack_send(uniqueSockID, sendmsg_call, 0);
 	 return;
 	 }
 	 */
@@ -1225,7 +1235,8 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 			}
 		}
 		daemonSockets[index].hostport = hostport;
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	int blocking_flag = 1; //TODO get from flags
@@ -1236,12 +1247,12 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	if (daemon_TCP_to_fins(data, len, dstport, dst_IP, hostport, host_IP, blocking_flag)) {
 		PRINT_DEBUG("");
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
-		ack_send(uniqueSockID, sendmsg_call);
+		ack_send(uniqueSockID, sendmsg_call, 0);
 		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish sendto");
-		nack_send(uniqueSockID, sendmsg_call);
+		nack_send(uniqueSockID, sendmsg_call, 0);
 	}
 }
 
@@ -1269,7 +1280,7 @@ void *recvfrom_tcp_thread(void *local) {
 		PRINT_DEBUG("Socket closed, canceling release_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		pthread_exit(NULL);
 	}
 
@@ -1292,7 +1303,7 @@ void *recvfrom_tcp_thread(void *local) {
 
 	if (ff == NULL) { //TODO add check if nonblocking send
 		PRINT_DEBUG("recvfrom_tcp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		pthread_exit(NULL);
 	}
 
@@ -1315,7 +1326,7 @@ void *recvfrom_tcp_thread(void *local) {
 	PRINT_DEBUG("address: %d/%d", addr.sin_addr.s_addr, ntohs(addr.sin_port));
 	//#######
 
-	int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
+	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
 	u_char *msg = (u_char *) malloc(msg_len);
 	u_char *pt = msg;
 
@@ -1326,6 +1337,9 @@ void *recvfrom_tcp_thread(void *local) {
 	pt += sizeof(unsigned long long);
 
 	*(int *) pt = ACK;
+	pt += sizeof(int);
+
+	*(int *) pt = 0;
 	pt += sizeof(int);
 
 	*(int *) pt = sizeof(addr);
@@ -1344,7 +1358,7 @@ void *recvfrom_tcp_thread(void *local) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 		free(msg);
 		PRINT_DEBUG("recvfrom_tcp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -1352,7 +1366,7 @@ void *recvfrom_tcp_thread(void *local) {
 	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_DEBUG("recvfrom_tcp_thread: Exiting, fail send_wedge: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 	} else {
 		//TODO send size back to TCP handlers
 		if (status) {
@@ -1365,7 +1379,7 @@ void *recvfrom_tcp_thread(void *local) {
 		if (params == NULL) {
 			PRINT_ERROR("metadata creation failed");
 
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 			freeFinsFrame(ff);
 			pthread_exit(NULL);
 		}
@@ -1418,7 +1432,7 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int 
 		PRINT_DEBUG("Socket closed, canceling read block.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		return;
 	}
 
@@ -1443,7 +1457,7 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int 
 		//spin off thread to handle
 		if (pthread_create(&thread, NULL, recvfrom_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create recvfrom_udp_thread thread.");
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 
 			free(thread_data);
 		}
@@ -1470,7 +1484,7 @@ void *release_tcp_thread(void *local) {
 	PRINT_DEBUG("release_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL || ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("release_tcp_thread: Exiting, No fdf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
@@ -1483,7 +1497,7 @@ void *release_tcp_thread(void *local) {
 	if (ret || (exec_call != EXEC_TCP_CLOSE && exec_call != EXEC_TCP_CLOSE_STUB) || ret_val == 0) {
 		PRINT_DEBUG("release_tcp_thread: Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 	} else {
 		PRINT_DEBUG("");
 		sem_wait(&daemonSockets_sem);
@@ -1492,18 +1506,18 @@ void *release_tcp_thread(void *local) {
 			sem_post(&daemonSockets_sem);
 
 			PRINT_DEBUG("release_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send(uniqueSockID, release_call);
+			nack_send(uniqueSockID, release_call, 0);
 		} else {
 			if (remove_daemonSocket(uniqueSockID)) {
 				PRINT_DEBUG("release_tcp_thread: Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				sem_post(&daemonSockets_sem);
 
-				ack_send(uniqueSockID, release_call);
+				ack_send(uniqueSockID, release_call, 0);
 			} else {
 				PRINT_DEBUG("release_tcp_thread: Exiting, remove fail: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				sem_post(&daemonSockets_sem);
 
-				nack_send(uniqueSockID, release_call);
+				nack_send(uniqueSockID, release_call, 0);
 			}
 
 		}
@@ -1529,7 +1543,7 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 		PRINT_DEBUG("Socket closed, canceling release_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		return;
 	}
 
@@ -1556,7 +1570,7 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -1584,13 +1598,13 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 		//spin off thread to handle
 		if (pthread_create(&thread, NULL, release_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create release_tcp_thread thread.");
-			nack_send(uniqueSockID, release_call);
+			nack_send(uniqueSockID, release_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish release");
-		nack_send(uniqueSockID, release_call);
+		nack_send(uniqueSockID, release_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -1663,7 +1677,7 @@ void recvfrom_tcp_old(int index, unsigned long long uniqueSockID, int data_len, 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(struct sockaddr_in) : 0);
+		msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(struct sockaddr_in) : 0);
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -1675,6 +1689,9 @@ void recvfrom_tcp_old(int index, unsigned long long uniqueSockID, int data_len, 
 
 		*(int *) pt = ACK;
 		pt += sizeof(int);
+
+		*(int *) pt = 0;
+			pt += sizeof(int);
 
 		if (symbol) {
 			*(int *) pt = sizeof(struct sockaddr_in);
@@ -1713,9 +1730,10 @@ void recvfrom_tcp_old(int index, unsigned long long uniqueSockID, int data_len, 
 			PRINT_DEBUG("socket descriptor not found into daemon sockets");
 			//recvthread_exit(thread_data);
 		} else {
-			nack_send(uniqueSockID, recvmsg_call);
+			nack_send(uniqueSockID, recvmsg_call, 0);
 		}
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
@@ -1752,7 +1770,7 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 		PRINT_DEBUG("Socket closed, canceling read block.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, recvmsg_call);
+		nack_send(uniqueSockID, recvmsg_call, 0);
 		return;
 	}
 	//TODO something?
@@ -1773,7 +1791,7 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + buflen;
+		msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + buflen;
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -1785,6 +1803,9 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 
 		*(int *) pt = ACK;
 		pt += sizeof(int);
+
+		*(int *) pt = 0;
+			pt += sizeof(int);
 
 		*(int *) pt = buflen;
 		pt += sizeof(int);
@@ -1808,7 +1829,7 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 		PRINT_DEBUG();
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish recv_udp");
-		nack_send(uniqueSockID, recv_call);
+		nack_send(uniqueSockID, recv_call, 0);
 	}
 
 	PRINT_DEBUG();
@@ -1842,7 +1863,7 @@ void shutdown_tcp(int index, unsigned long long uniqueSockID, int how) {
 	PRINT_DEBUG("index = %d", index);
 	PRINT_DEBUG();
 
-	ack_send(uniqueSockID, shutdown_call);
+	ack_send(uniqueSockID, shutdown_call, 0);
 }
 
 void *getsockopt_tcp_thread(void *local) {
@@ -1877,14 +1898,14 @@ void *getsockopt_tcp_thread(void *local) {
 	PRINT_DEBUG("getsockopt_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL) {
 		PRINT_DEBUG("getsockopt_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		pthread_exit(NULL);
 	}
 
 	if (ff->ctrlFrame.opcode != CTRL_READ_PARAM_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("getsockopt_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
@@ -1897,14 +1918,14 @@ void *getsockopt_tcp_thread(void *local) {
 	if (ret || /*(exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT) ||*/ret_val == 0) {
 		PRINT_DEBUG("getsockopt_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, param_id, ret_val);
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 	} else {
 		//TODO switch by param_id, convert into val/len
 		int len = 0;
 		uint8_t *val;
 		//################
 
-		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
+		int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + len;
 		u_char *msg = (u_char *) malloc(msg_len);
 		u_char *pt = msg;
 
@@ -1916,6 +1937,9 @@ void *getsockopt_tcp_thread(void *local) {
 
 		*(int *) pt = ACK;
 		pt += sizeof(int);
+
+		*(int *) pt = 0;
+			pt += sizeof(int);
 
 		*(int *) pt = param_id;
 		pt += sizeof(int);
@@ -1932,7 +1956,7 @@ void *getsockopt_tcp_thread(void *local) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
 			PRINT_DEBUG("getsockopt_tcp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send(uniqueSockID, getsockopt_call);
+			nack_send(uniqueSockID, getsockopt_call, 0);
 			freeFinsFrame(ff);
 			pthread_exit(NULL);
 		}
@@ -1940,7 +1964,7 @@ void *getsockopt_tcp_thread(void *local) {
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_DEBUG("getsockopt_tcp_thread: Exiting, fail send_wedge: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send(uniqueSockID, getsockopt_call);
+			nack_send(uniqueSockID, getsockopt_call, 0);
 		} else {
 			PRINT_DEBUG("getsockopt_tcp_thread: Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		}
@@ -1964,7 +1988,7 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 		PRINT_DEBUG("Socket closed, canceling getsockopt_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		return;
 	}
 
@@ -1983,7 +2007,7 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -2103,12 +2127,12 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	if (send_dst == -1) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 
-		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
+		int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + len;
 		u_char *msg = (u_char *) malloc(msg_len);
 		u_char *pt = msg;
 
@@ -2120,6 +2144,9 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 
 		*(int *) pt = ACK;
 		pt += sizeof(int);
+
+		*(int *) pt = 0;
+			pt += sizeof(int);
 
 		*(int *) pt = param_id;
 		pt += sizeof(int);
@@ -2136,14 +2163,14 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
 			PRINT_DEBUG("getsockopt_tcp: Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-			nack_send(uniqueSockID, getsockopt_call);
+			nack_send(uniqueSockID, getsockopt_call, 0);
 			return;
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_DEBUG("getsockopt_tcp: Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-			nack_send(uniqueSockID, getsockopt_call);
+			nack_send(uniqueSockID, getsockopt_call, 0);
 		} else {
 			PRINT_DEBUG("getsockopt_tcp: Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
 		}
@@ -2158,13 +2185,13 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, getsockopt_tcp_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create getsockopt_tcp_thread thread.");
-				nack_send(uniqueSockID, getsockopt_call);
+				nack_send(uniqueSockID, getsockopt_call, 0);
 				free(thread_data);
 				metadata_destroy(params);
 			}
 		} else {
 			PRINT_DEBUG("socketdaemon failed to accomplish accept");
-			nack_send(uniqueSockID, getsockopt_call);
+			nack_send(uniqueSockID, getsockopt_call, 0);
 			metadata_destroy(params);
 		}
 	}
@@ -2202,14 +2229,14 @@ void *setsockopt_tcp_thread(void *local) {
 	PRINT_DEBUG("setsockopt_tcp_thread: after get_fdf: id=%d index=%d uniqueSockID=%llu", id, index, uniqueSockID);
 	if (ff == NULL) {
 		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 		pthread_exit(NULL);
 	}
 
 	if (ff->ctrlFrame.opcode != CTRL_READ_PARAM_REPLY || ff->ctrlFrame.metaData == NULL) {
 		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
 				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
@@ -2222,10 +2249,10 @@ void *setsockopt_tcp_thread(void *local) {
 	if (ret /*|| (param_id != EXEC_TCP_CONNECT && param_id != EXEC_TCP_ACCEPT)*/|| ret_val == 0) {
 		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, param_id=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, param_id, ret_val);
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 	} else {
 		PRINT_DEBUG("setsockopt_tcp_thread: Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		ack_send(uniqueSockID, setsockopt_call);
+		ack_send(uniqueSockID, setsockopt_call, 0);
 	}
 
 	PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -2246,7 +2273,7 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 		PRINT_DEBUG("Socket closed, canceling setsockopt_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 		return;
 	}
 
@@ -2265,7 +2292,7 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send(uniqueSockID, setsockopt_call);
+		nack_send(uniqueSockID, setsockopt_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -2380,12 +2407,12 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	if (send_dst == -1) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
-		nack_send(uniqueSockID, getsockopt_call);
+		nack_send(uniqueSockID, getsockopt_call, 0);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 
-		int msg_len = 4 * sizeof(int) + sizeof(unsigned long long) + len;
+		int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + len;
 		u_char *msg = (u_char *) malloc(msg_len);
 		u_char *pt = msg;
 
@@ -2397,6 +2424,9 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 
 		*(int *) pt = ACK;
 		pt += sizeof(int);
+
+		*(int *) pt = 0;
+			pt += sizeof(int);
 
 		*(int *) pt = param_id;
 		pt += sizeof(int);
@@ -2413,14 +2443,14 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
 			PRINT_DEBUG("setsockopt_tcp: Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-			nack_send(uniqueSockID, getsockopt_call);
+			nack_send(uniqueSockID, getsockopt_call, 0);
 			return;
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_DEBUG("setsockopt_tcp: Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-			nack_send(uniqueSockID, setsockopt_call);
+			nack_send(uniqueSockID, setsockopt_call, 0);
 		} else {
 			PRINT_DEBUG("setsockopt_tcp: Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
 		}
@@ -2435,13 +2465,13 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, setsockopt_tcp_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create setsockopt_tcp_thread thread.");
-				nack_send(uniqueSockID, setsockopt_call);
+				nack_send(uniqueSockID, setsockopt_call, 0);
 				free(thread_data);
 				metadata_destroy(params);
 			}
 		} else {
 			PRINT_DEBUG("socketdaemon failed to accomplish accept");
-			nack_send(uniqueSockID, setsockopt_call);
+			nack_send(uniqueSockID, setsockopt_call, 0);
 			metadata_destroy(params);
 		}
 	}

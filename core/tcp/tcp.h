@@ -218,6 +218,12 @@ struct tcp_connection {
 	uint8_t fast_flag;
 	uint8_t fin_sent;
 	uint8_t fin_sep; //TODO replace with fin_seq
+	uint32_t fin_ack;
+
+	int to_msl_fd; //MSL timeout occurred
+	pthread_t to_msl_thread;
+	uint8_t to_msl_flag; //MSL timeout occurred
+	//uint8_t msl_flag; //MSL performing GBN
 
 	int to_gbn_fd; //GBN timeout occurred
 	pthread_t to_gbn_thread;
@@ -234,6 +240,7 @@ struct tcp_connection {
 	//host:send_win == rem:recv_win, host:recv_win == rem:send_win
 
 	uint32_t issn; //initial send seq num
+	//uint32_t fsse; //final send seq end, so fsse == final ACK
 	uint32_t send_max_win; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint32_t send_win; //avail bytes in rem recv buffer
 	uint32_t send_win_seq; //TODO shorten to send_last_seq & send_last_ack
@@ -321,6 +328,8 @@ struct tcp_connection {
 #define TCP_RECV_MIN 4096
 #define TCP_RECV_MAX 3444736
 #define TCP_RECV_DEFAULT 87380
+#define TCP_SYN_RETRIES
+#define TCP_SYNACK_RETRIES
 
 //TCP Options
 #define TCP_EOL 0

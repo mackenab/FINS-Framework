@@ -230,8 +230,8 @@ struct finssocket {
 int init_fins_nl();
 int send_wedge(int sockfd, void *buf, size_t len, int flags);
 
-int nack_send(unsigned long long uniqueSockID, int socketCallType);
-int ack_send(unsigned long long uniqueSockID, int socketCallType);
+int nack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg);
+int ack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg);
 
 void init_daemonSockets();
 int randoming(int min, int max);

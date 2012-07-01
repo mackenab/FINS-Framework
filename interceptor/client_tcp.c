@@ -49,6 +49,9 @@ int main(int argc, char *argv[]) {
 	else
 		port = 5000;
 
+	int optval = 1;
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -70,8 +73,8 @@ int main(int argc, char *argv[]) {
 	client_addr.sin_family = AF_INET;
 	client_addr.sin_port = htons(client_port);
 	//client_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	//client_addr.sin_addr.s_addr = xxx(127,0,0,1);
-	client_addr.sin_addr.s_addr = xxx(114,53,31,172);
+	client_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//client_addr.sin_addr.s_addr = xxx(114,53,31,172);
 	client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
 	//client_addr.sin_addr.s_addr = INADDR_ANY;
 
