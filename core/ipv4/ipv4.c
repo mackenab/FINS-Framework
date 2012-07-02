@@ -22,7 +22,7 @@ void ipv4_init() {
 	 * or from a configuration file
 	 */
 
-	my_ip_addr = IP4_ADR_P2N(192,168,1,12);
+	my_ip_addr = IP4_ADR_P2N(192,168,1,20);
 	//my_ip_addr = IP4_ADR_P2N(172,31,63,231 );
 	//my_ip_addr = IP4_ADR_P2N(172,31,53,114);
 	/** TODO get the IP of the default interface from

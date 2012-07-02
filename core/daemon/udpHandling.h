@@ -9,7 +9,6 @@
 #define UDPHANDLING_H_
 
 #define MAX_DATA_PER_UDP 4096
-#define IP4_ADR_P2N(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
 #include "handlers.h"
 

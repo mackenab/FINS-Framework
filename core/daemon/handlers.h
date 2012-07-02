@@ -23,6 +23,8 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 
 #include <linux/netlink.h>
 #include <linux/if_ether.h>
@@ -42,6 +44,8 @@
 #include "udpHandling.h"
 #include "tcpHandling.h"
 #include "icmpHandling.h"
+
+#define IP4_ADR_P2N(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
 /** FINS Sockets database related defined constants */
 #define MAX_sockets 100
@@ -175,7 +179,7 @@ struct finssocket {
 	 * check the address of the senders of the received datagrams against the address which this
 	 * socket is connected to it before approving or dropping any datagram
 	 */
-	int connection_status;
+	int connection_status; //0=created, not connected to anything, 1=connecting/accepting, 2=established
 	unsigned long long uniqueSockID;
 	pid_t childrenList[MaxChildrenNumSharingSocket];
 	int type;
@@ -230,8 +234,8 @@ struct finssocket {
 int init_fins_nl();
 int send_wedge(int sockfd, void *buf, size_t len, int flags);
 
-int nack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg);
-int ack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg);
+int nack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
+int ack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
 
 void init_daemonSockets();
 int randoming(int min, int max);

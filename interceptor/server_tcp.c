@@ -3,13 +3,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <signal.h>
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
@@ -42,15 +43,17 @@ int main(int argc, char *argv[]) {
 	else
 		port = 5000;
 
-	int optval = 1;
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
 	}
+
+	int optval = 1;
+	//fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK);
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	//setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;

@@ -874,14 +874,14 @@ void *interceptor_to_daemon() {
 		if (doneFlag) {
 			msg_pt = msg_buf;
 
-			socketCallType = *(int *) msg_pt;
-			msg_pt += sizeof(int);
+			socketCallType = *(u_int *) msg_pt;
+			msg_pt += sizeof(u_int);
 
 			uniqueSockID = *(unsigned long long *) msg_pt;
 			msg_pt += sizeof(unsigned long long);
 
-			threads = *(int *) msg_pt;
-			msg_pt += sizeof(int);
+			threads = *(u_int *) msg_pt;
+			msg_pt += sizeof(u_int);
 
 			msg_len -= 2 * sizeof(int) + sizeof(unsigned long long);
 

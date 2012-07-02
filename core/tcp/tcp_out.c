@@ -1252,73 +1252,97 @@ void tcp_set_param(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 
 	metadata *params = ff->ctrlFrame.metaData;
-	if (metadata_read_conn(params, &status, &host_ip, &host_port, &rem_ip, &rem_port)) {
-		if (status) {
-			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
-			if (sem_wait(&conn_list_sem)) {
-				PRINT_ERROR("conn_list_sem wait prob");
-				exit(-1);
-			}
-			struct tcp_connection *conn = conn_find(host_ip, host_port, rem_ip, rem_port);
-			if (conn) {
-				start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_list_sem);
+	if (params) {
+		if (metadata_read_conn(params, &status, &host_ip, &host_port, &rem_ip, &rem_port)) {
+			if (status) {
+				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+				if (sem_wait(&conn_list_sem)) {
+					PRINT_ERROR("conn_list_sem wait prob");
+					exit(-1);
+				}
+				struct tcp_connection *conn = conn_find(host_ip, host_port, rem_ip, rem_port);
+				if (conn) {
+					start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
+					/*#*/PRINT_DEBUG("");
+					sem_post(&conn_list_sem);
 
-				if (start) {
-					thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-					thread_data->id = tcp_thread_count++;
-					thread_data->conn = conn;
-					thread_data->ff = ff;
-					thread_data->flags = status;
+					if (start) {
+						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						thread_data->id = tcp_thread_count++;
+						thread_data->conn = conn;
+						thread_data->ff = ff;
+						thread_data->flags = status;
 
-					if (pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data)) {
-						PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-						exit(-1);
+						if (pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data)) {
+							PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
+							exit(-1);
+						}
+					} else {
+						PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
 					}
 				} else {
-					PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+					PRINT_DEBUG("");
+					sem_post(&conn_list_sem);
+
+					//TODO error
+					PRINT_DEBUG("todo error");
+
+					int value = 0;
+					metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
+
+					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+					tcp_to_switch(ff);
 				}
 			} else {
-				PRINT_DEBUG("");
-				sem_post(&conn_list_sem);
+				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d", host_ip, host_port);
+				if (sem_wait(&conn_stub_list_sem)) {
+					PRINT_ERROR("conn_stub_list_sem wait prob");
+					exit(-1);
+				}
+				struct tcp_connection_stub *conn_stub = conn_stub_find(host_ip, host_port);
+				if (conn_stub) {
+					start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
+					/*#*/PRINT_DEBUG("");
+					sem_post(&conn_stub_list_sem);
 
-				//TODO error
+					if (start) {
+						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						thread_data->id = tcp_thread_count++;
+						thread_data->conn_stub = conn_stub;
+						thread_data->ff = ff;
+						thread_data->flags = status;
+
+						if (pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data)) {
+							PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
+							exit(-1);
+						}
+					} else {
+						PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
+					}
+				} else {
+					PRINT_DEBUG("");
+					sem_post(&conn_stub_list_sem);
+
+					//TODO error
+					PRINT_DEBUG("todo error");
+					int value = 0;
+					metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
+
+					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+					tcp_to_switch(ff);
+				}
 			}
 		} else {
-			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d", host_ip, host_port);
-			if (sem_wait(&conn_stub_list_sem)) {
-				PRINT_ERROR("conn_stub_list_sem wait prob");
-				exit(-1);
-			}
-			struct tcp_connection_stub *conn_stub = conn_stub_find(host_ip, host_port);
-			if (conn_stub) {
-				start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_stub_list_sem);
+			//TODO error
+			PRINT_DEBUG("todo error");
+			int value = 0;
+			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 
-				if (start) {
-					thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-					thread_data->id = tcp_thread_count++;
-					thread_data->conn_stub = conn_stub;
-					thread_data->ff = ff;
-					thread_data->flags = status;
-
-					if (pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data)) {
-						PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-						exit(-1);
-					}
-				} else {
-					PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
-				}
-			} else {
-				PRINT_DEBUG("");
-				sem_post(&conn_stub_list_sem);
-
-				//TODO error
-			}
+			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			tcp_to_switch(ff);
 		}
 	} else {
-		//TODO error
+		//TODO huge error
+		PRINT_DEBUG("todo error huge");
 	}
 }

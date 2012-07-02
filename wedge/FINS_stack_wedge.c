@@ -535,15 +535,15 @@ void nl_data_ready(struct sk_buff *skb) {
 
 			wedgeSockets[index].reply_call = reply_call;
 
-			wedgeSockets[index].reply_ret = *(int *) pt; //NACK or ACK
-			pt += sizeof(int);
+			wedgeSockets[index].reply_ret = *(u_int *) pt; //NACK or ACK
+			pt += sizeof(u_int);
 
-			wedgeSockets[index].reply_msg = *(int *) pt; //return msg or error code
-			pt += sizeof(int);
+			wedgeSockets[index].reply_msg = *(u_int *) pt; //return msg or error code
+			pt += sizeof(u_int);
 
 			wedgeSockets[index].reply_buf = pt;
 
-			len -= sizeof(unsigned long long) + 2 * sizeof(int);
+			len -= sizeof(unsigned long long) + 2 * sizeof(u_int);
 			wedgeSockets[index].reply_len = len;
 
 			write_unlock(&wedgeSockets_rwlock);
@@ -1167,24 +1167,18 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 			pt += sizeof(int);
 
 			if (peer == ret) {
-				*len = *(int *) pt;
-				pt += sizeof(int);
+				*len = sizeof(struct sockaddr);
 
 				PRINT_DEBUG("len=%d", *len);
-				if (*len > 0) {
-					memset(addr, 0, sizeof(struct sockaddr));
-					memcpy(addr, pt, *len);
-					pt += *len;
+				memset(addr, 0, sizeof(struct sockaddr));
+				memcpy(addr, pt, sizeof(struct sockaddr));
+				pt += sizeof(struct sockaddr);
 
-					//########
-					addr_in = (struct sockaddr_in *) addr;
-					//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
-					PRINT_DEBUG("address: %u/%d", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
-					//########
-				} else {
-					PRINT_ERROR("address problem, len=%d", *len);
-					rc = -1;
-				}
+				//########
+				addr_in = (struct sockaddr_in *) addr;
+				//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
+				PRINT_DEBUG("address: %u/%d", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
+				//########
 
 				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
 					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
@@ -1462,29 +1456,16 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 			if (symbol == 1) {
 				//TODO: find out if this is right! udpHandling writes sockaddr_in here
-				msg->msg_namelen = *(u_int *) pt;
-				pt += sizeof(u_int);
+				msg->msg_namelen = sizeof(struct sockaddr_in);
+				memcpy(msg->msg_name, pt, sizeof(struct sockaddr_in));
+				pt += sizeof(struct sockaddr_in);
 
-				PRINT_DEBUG("msg_namelen=%d", msg->msg_namelen);
+				//########
+				addr_in = (struct sockaddr_in *) msg->msg_name;
+				//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
+				PRINT_DEBUG("address: %d/%d", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
+				//########
 
-				if (msg->msg_namelen > 0) {
-					if (msg->msg_name) {
-						memcpy(msg->msg_name, pt, msg->msg_namelen);
-						pt += msg->msg_namelen;
-
-						//########
-						addr_in = (struct sockaddr_in *) msg->msg_name;
-						//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
-						PRINT_DEBUG("address: %d/%d", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
-						//########
-					} else {
-						PRINT_ERROR("m->msg_name alloc failure");
-						rc = -1;
-					}
-				} else {
-					PRINT_ERROR("address problem, msg_namelen=%d", msg->msg_namelen);
-					rc = -1;
-				}
 			} else if (symbol) {
 				PRINT_ERROR("symbol error, symbol=%d", symbol); //will remove
 				rc = -1;
@@ -1682,6 +1663,8 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	//char *name;
 	struct sockaddr_in *addr;
 
+	//http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L4905 - ioctl
+
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
@@ -1707,14 +1690,18 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 
-		len = ifc.ifc_len;
 		pos = ifc.ifc_buf;
-		ifr_pt = ifc.ifc_req;
+		if (ifc.ifc_buf == NULL) {
+			len = 0;
+		} else {
+			len = ifc.ifc_len;
+		}
+		ifr_pt = ifc.ifc_req; //TODO figure out what this is used for
 
 		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (int)pos, (int)ifr_pt);
 
 		// Build the message
-		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long); // + IFNAMSIZ;
+		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
 		buf = kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
@@ -1734,11 +1721,14 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		*(u_int *) pt = cmd;
 		pt += sizeof(u_int);
 
-		//TODO finish implementing
-		//*(u_int *) pt = IFNAMSIZ;
-		//pt += sizeof(u_int);
+		*(int *) pt = len;
+		pt += sizeof(int);
 
-		//memcpy(pt, ifr.ifr_name, IFNAMSIZ);
+		if (pt - (u_char *) buf != buf_len) {
+			PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+			kfree(buf);
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
 		break;
 	case SIOCGIFADDR:
 	case SIOCGIFDSTADDR:
@@ -1753,7 +1743,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		PRINT_DEBUG("cmd=%d name='%s'", cmd, ifr.ifr_name);
 
 		// Build the message
-		buf_len = 4 * sizeof(u_int) + sizeof(unsigned long long) + IFNAMSIZ;
+		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + IFNAMSIZ;
 		buf = kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
@@ -1773,11 +1763,17 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		*(u_int *) pt = cmd;
 		pt += sizeof(u_int);
 
-		*(u_int *) pt = IFNAMSIZ;
-		pt += sizeof(u_int);
+		*(int *) pt = IFNAMSIZ;
+		pt += sizeof(int);
 
 		memcpy(pt, ifr.ifr_name, IFNAMSIZ);
 		pt += IFNAMSIZ;
+
+		if (pt - (u_char *) buf != buf_len) {
+			PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+			kfree(buf);
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
 		break;
 	case TIOCOUTQ:
 	case TIOCINQ:
@@ -1812,15 +1808,15 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		*(u_int *) pt = cmd;
 		pt += sizeof(u_int);
+
+		if (pt - (u_char *) buf != buf_len) {
+			PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+			kfree(buf);
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
 		break;
 	default:
 		PRINT_DEBUG("cmd=%d default", cmd);
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
-
-	if (pt - (u_char *) buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
-		kfree(buf);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -1844,15 +1840,52 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	if (wedgeSockets[index].reply_ret == ACK) {
 		PRINT_DEBUG("ioctl ACK");
-
 		switch (cmd) {
 		case SIOCGIFCONF:
-			//TODO implement
+			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len >= sizeof(int)) {
+				//values stored in ifr.ifr_addr
+				pt = wedgeSockets[index].reply_buf;
+
+				len = *(int *) pt;
+				pt += sizeof(int);
+
+				PRINT_DEBUG("SIOCGIFCONF len=%d ifc_len=%d", len, ifc.ifc_len);
+				ifc.ifc_len = len;
+				PRINT_DEBUG("SIOCGIFCONF len=%d ifc_len=%d", len, ifc.ifc_len);
+
+				if (copy_to_user(ifc.ifc_buf, pt, len)) {
+					PRINT_ERROR("ERROR: cmd=%d", cmd);
+					//TODO error
+					rc = -1;
+				}
+				pt += len;
+
+				//len = ifc.ifc_len;
+				//pos = ifc.ifc_buf;
+				//ifr_pt = ifc.ifc_req;
+
+				if (copy_to_user(arg_pt, &ifc, sizeof(struct ifconf))) {
+					PRINT_ERROR("ERROR: cmd=%d", cmd);
+					//TODO error
+					rc = -1;
+				}
+
+				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
+					rc = -1;
+				}
+			} else {
+				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+				rc = -1;
+			}
 			//rc = -1;
 			break;
 		case SIOCGIFADDR:
 			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
-				memcpy(&ifr.ifr_addr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+				pt = wedgeSockets[index].reply_buf;
+
+				memcpy(&ifr.ifr_addr, pt, sizeof(struct sockaddr_in));
+				pt += sizeof(struct sockaddr_in);
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_addr;
@@ -1863,7 +1896,12 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
 					//TODO error
-					return print_exit(__FUNCTION__, __LINE__, -1);
+					rc = -1;
+				}
+
+				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
+					rc = -1;
 				}
 			} else {
 				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
@@ -1872,7 +1910,10 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			break;
 		case SIOCGIFDSTADDR:
 			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
-				memcpy(&ifr.ifr_dstaddr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+				pt = wedgeSockets[index].reply_buf;
+
+				memcpy(&ifr.ifr_dstaddr, pt, sizeof(struct sockaddr_in));
+				pt += sizeof(struct sockaddr_in);
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_dstaddr;
@@ -1882,7 +1923,12 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
 					//TODO error
-					return print_exit(__FUNCTION__, __LINE__, -1);
+					rc = -1;
+				}
+
+				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
+					rc = -1;
 				}
 			} else {
 				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
@@ -1891,7 +1937,10 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			break;
 		case SIOCGIFBRDADDR:
 			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
-				memcpy(&ifr.ifr_broadaddr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+				pt = wedgeSockets[index].reply_buf;
+
+				memcpy(&ifr.ifr_broadaddr, pt, sizeof(struct sockaddr_in));
+				pt += sizeof(struct sockaddr_in);
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_broadaddr;
@@ -1901,7 +1950,12 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
 					//TODO error
-					return print_exit(__FUNCTION__, __LINE__, -1);
+					rc = -1;
+				}
+
+				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
+					rc = -1;
 				}
 			} else {
 				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
@@ -1910,18 +1964,26 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			break;
 		case SIOCGIFNETMASK:
 			if (wedgeSockets[index].reply_buf && wedgeSockets[index].reply_len == sizeof(struct sockaddr_in)) {
-				memcpy(&ifr.ifr_addr, wedgeSockets[index].reply_buf, sizeof(struct sockaddr_in));
+				pt = wedgeSockets[index].reply_buf;
+
+				memcpy(&ifr.ifr_addr, pt, sizeof(struct sockaddr_in));
+				pt += sizeof(struct sockaddr_in);
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_addr;
 				PRINT_DEBUG("name=%s, addr=%d (%d/%d)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
 				//#################
-
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
 					//TODO error
-					return print_exit(__FUNCTION__, __LINE__, -1);
+					rc = -1;
 				}
+
+				if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
+					rc = -1;
+				}
+
 			} else {
 				PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 				rc = -1;
@@ -2012,19 +2074,19 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
-// Notify FINS daemon
+	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-//TODO: finish this & daemon side
+	//TODO: finish this & daemon side
 
-// Build the message
+	// Build the message
 	buf = "FINS_poll() called.";
 	buffer_length = strlen(buf) + 1;
 
-// Send message to FINS_daemon
+	// Send message to FINS_daemon
 	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");

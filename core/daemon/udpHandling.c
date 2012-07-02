@@ -126,7 +126,8 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 			sem_post(&(daemonSockets[index].Qs));
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
-		} while (ff == NULL);PRINT_DEBUG();
+		} while (ff == NULL);
+		PRINT_DEBUG();
 
 	} else {
 		PRINT_DEBUG();
@@ -169,7 +170,8 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	if (ff == NULL) {
 		//free(ff);
 		return (0);
-	}PRINT_DEBUG("recv'd uniqID=%llu ind=%d", uniqueSockID, index);
+	}
+	PRINT_DEBUG("recv'd uniqID=%llu ind=%d", uniqueSockID, index);
 	PRINT_DEBUG("PDU length %d", ff->dataFrame.pduLength);
 
 	if (metadata_readFromElement(ff->dataFrame.metaData, "src_port", (uint16_t *) &srcport) == 0) {
@@ -191,7 +193,8 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 		PRINT_DEBUG("Socket closed, canceling read block.");
 		sem_post(&daemonSockets_sem);
 		return (0);
-	}PRINT_DEBUG("Rest of read for index=%d.", index);
+	}
+	PRINT_DEBUG("Rest of read for index=%d.", index);
 
 	if (daemonSockets[index].connection_status > 0) {
 		if ((srcport != daemonSockets[index].dstport) || (srcip != daemonSockets[index].dst_IP)) {
@@ -199,7 +202,8 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 			sem_post(&daemonSockets_sem);
 			return (0);
 		}
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	//*buf = (u_char *)malloc(sizeof(ff->dataFrame.pduLength));
@@ -560,7 +564,7 @@ void getname_udp(int index, unsigned long long uniqueSockID, int peer) {
 		//TODO ??
 	}
 
-	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+	int msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) +  sizeof(int) + sizeof(struct sockaddr_in);
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_DEBUG("getname_udp: Exiting, msg creation fail: index=%d, uniqueSockID=%llu", index, uniqueSockID);
@@ -570,22 +574,19 @@ void getname_udp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 	u_char *pt = msg;
 
-	*(int *) pt = getname_call;
-	pt += sizeof(int);
+	*(u_int *) pt = getname_call;
+	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
 
-	*(int *) pt = 0;
-		pt += sizeof(int);
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	*(int *) pt = peer;
-	pt += sizeof(int);
-
-	*(int *) pt = sizeof(addr);
 	pt += sizeof(int);
 
 	memcpy(pt, &addr, sizeof(addr));
@@ -824,7 +825,8 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	default:
 		break;
 
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -876,7 +878,8 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 			}
 		}
 		daemonSockets[index].hostport = hostport;
-	}PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", index, dst_IP, dstport, host_IP, hostport);
@@ -954,24 +957,21 @@ void *recvfrom_udp_thread(void *local) {
 	PRINT_DEBUG("address: addr=%s/%d", inet_ntoa(addr.sin_addr), addr.sin_port);
 	//#######
 
-	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
+	int msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
 	u_char *msg = (u_char *) malloc(msg_len);
 	u_char *pt = msg;
 
-	*(int *) pt = recvmsg_call;
-	pt += sizeof(int);
+	*(u_int *) pt = recvmsg_call;
+	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
 
-	*(int *) pt = 0;
-		pt += sizeof(int);
-
-	*(int *) pt = sizeof(addr);
-	pt += sizeof(int);
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	memcpy(pt, &addr, sizeof(struct sockaddr_in));
 	pt += sizeof(struct sockaddr_in);
@@ -1136,7 +1136,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + buflen;
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + buflen;
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -1146,11 +1146,11 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 		*(unsigned long long *) pt = uniqueSockID;
 		pt += sizeof(unsigned long long);
 
-		*(int *) pt = ACK;
-		pt += sizeof(int);
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
 
-		*(int *) pt = 0;
-			pt += sizeof(int);
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
 
 		*(int *) pt = buflen;
 		pt += sizeof(int);
@@ -1191,65 +1191,6 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 } // end of recv_udp
 
 /** .......................................................................*/
-/**
- * @brief getpeername_udp
- *
- */
-
-void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
-	void *msg;
-	u_char *pt;
-	int msg_len;
-	int ret_val;
-
-	int index;
-	struct sockaddr_in address;
-	int address_length = sizeof(struct sockaddr_in);
-	index = find_daemonSocket(uniqueSockID);
-
-	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = daemonSockets[index].dst_IP;
-	address.sin_port = daemonSockets[index].dstport;
-	memset(address.sin_zero, 0, 8);
-
-	PRINT_DEBUG("*****%d*********%d , %d*************", address_length, address.sin_addr.s_addr, address.sin_port)
-
-	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 3 * sizeof(int) + address_length;
-	msg = malloc(msg_len);
-	pt = msg;
-
-	//*(u_int *) pt = getpeername_call;
-	pt += sizeof(u_int);
-
-	*(unsigned long long *) pt = uniqueSockID;
-	pt += sizeof(unsigned long long);
-
-	*(int *) pt = ACK;
-	pt += sizeof(int);
-
-	*(int *) pt = 0;
-		pt += sizeof(int);
-
-		*(int *) pt = address_length;
-	pt += sizeof(int);
-
-	memcpy(pt, &address, address_length);
-	pt += address_length;
-
-	if (pt - (u_char *) msg != msg_len) {
-		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
-		free(msg);
-		//nack_send(uniqueSockID, getpeername_call, 0);
-		return;
-	}
-
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
-	ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
-	free(msg);
-	if (ret_val) {
-		//nack_send(uniqueSockID, getpeername_call, 0);
-	}
-}
 
 void shutdown_udp(unsigned long long uniqueSockID, int how) {
 
@@ -1437,7 +1378,7 @@ void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 		break;
 	}
 
-	msg_len = sizeof(u_int) + sizeof(unsigned long long) + 3 * sizeof(int) + len;
+	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + len;
 	msg = malloc(msg_len);
 	pt = msg;
 
@@ -1447,11 +1388,11 @@ void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
 
-	*(int *) pt = 0;
-		pt += sizeof(int);
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	*(int *) pt = len;
 	pt += sizeof(int);
@@ -1471,6 +1412,68 @@ void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	free(msg);
 	if (ret_val) {
 		nack_send(uniqueSockID, getsockopt_call, 0);
+	}
+}
+
+//############################## Deprecated, not used & only temp keeping
+
+/**
+ * @brief getpeername_udp
+ *
+ */
+
+void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
+	void *msg;
+	u_char *pt;
+	int msg_len;
+	int ret_val;
+
+	int index;
+	struct sockaddr_in address;
+	int address_length = sizeof(struct sockaddr_in);
+	index = find_daemonSocket(uniqueSockID);
+
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = daemonSockets[index].dst_IP;
+	address.sin_port = daemonSockets[index].dstport;
+	memset(address.sin_zero, 0, 8);
+
+	PRINT_DEBUG("*****%d*********%d , %d*************", sizeof(struct sockaddr_in), address.sin_addr.s_addr, address.sin_port)
+
+	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + sizeof(struct sockaddr_in);
+	msg = malloc(msg_len);
+	pt = msg;
+
+	*(u_int *) pt = 0; //getpeername_call;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
+
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
+
+	*(int *) pt = sizeof(struct sockaddr_in);
+	pt += sizeof(int);
+
+	memcpy(pt, &address, address_length);
+	pt += sizeof(struct sockaddr_in);
+
+	if (pt - (u_char *) msg != msg_len) {
+		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
+		free(msg);
+		//nack_send(uniqueSockID, getpeername_call, 0);
+		return;
+	}
+
+	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+	ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
+	free(msg);
+	if (ret_val) {
+		//nack_send(uniqueSockID, getpeername_call, 0);
 	}
 }
 

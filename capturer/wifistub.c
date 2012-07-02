@@ -210,10 +210,9 @@ void capture_init(char *interface) {
 	//strcat(filter_exp," and udp and");
 	//strcat(filter_exp,"dst host 127.0.0.1 and udp and port 5001");
 	//strcat(filter_exp, "udp and port 5000");
-
 	//strcat(filter_exp, ""); //everything
-	strcat(filter_exp, "dst host 127.0.0.1"); //local loopback
-	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or arp"); //final?
+	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
+	strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or arp"); //final?
 	//strcat(filter_exp, "((ether dst 001cbf871afd) or broadcast or multicast) and not icmp"); //works, no icmp
 	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or icmp[0] == 8 or icmp[0] == 0"); //broken, icmp request/reply
 	//strcat(filter_exp, "icmp");

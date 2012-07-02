@@ -865,7 +865,7 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	PRINT_DEBUG("address: addr=%s/%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 	//#######
 
-	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+	int msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + sizeof(struct sockaddr_in);
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_DEBUG("getname_tcp: Exiting, msg creation fail: index=%d, uniqueSockID=%llu", index, uniqueSockID);
@@ -874,22 +874,19 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 	u_char *pt = msg;
 
-	*(int *) pt = getname_call;
-	pt += sizeof(int);
+	*(u_int *) pt = getname_call;
+	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
 
-	*(int *) pt = 0;
-	pt += sizeof(int);
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	*(int *) pt = peer;
-	pt += sizeof(int);
-
-	*(int *) pt = sizeof(struct sockaddr_in);
 	pt += sizeof(int);
 
 	memcpy(pt, &addr, sizeof(struct sockaddr_in));
@@ -1326,24 +1323,21 @@ void *recvfrom_tcp_thread(void *local) {
 	PRINT_DEBUG("address: %d/%d", addr.sin_addr.s_addr, ntohs(addr.sin_port));
 	//#######
 
-	int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
+	int msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
 	u_char *msg = (u_char *) malloc(msg_len);
 	u_char *pt = msg;
 
-	*(int *) pt = recvmsg_call;
-	pt += sizeof(int);
+	*(u_int *) pt = recvmsg_call;
+	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
 
-	*(int *) pt = 0;
-	pt += sizeof(int);
-
-	*(int *) pt = sizeof(addr);
-	pt += sizeof(int);
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	memcpy(pt, &addr, sizeof(struct sockaddr_in));
 	pt += sizeof(struct sockaddr_in);
@@ -1677,21 +1671,21 @@ void recvfrom_tcp_old(int index, unsigned long long uniqueSockID, int data_len, 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + buflen + (symbol ? sizeof(struct sockaddr_in) : 0);
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int) + buflen + (symbol ? sizeof(struct sockaddr_in) : 0);
 		msg = malloc(msg_len);
 		pt = msg;
 
-		*(int *) pt = recvmsg_call;
-		pt += sizeof(int);
+		*(u_int *) pt = recvmsg_call;
+		pt += sizeof(u_int);
 
 		*(unsigned long long *) pt = uniqueSockID;
 		pt += sizeof(unsigned long long);
 
-		*(int *) pt = ACK;
-		pt += sizeof(int);
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
 
-		*(int *) pt = 0;
-			pt += sizeof(int);
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
 
 		if (symbol) {
 			*(int *) pt = sizeof(struct sockaddr_in);
@@ -1791,7 +1785,7 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 		PRINT_DEBUG("%d", buflen);
 		PRINT_DEBUG("%s", buf);
 
-		msg_len = sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + buflen;
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + buflen;
 		msg = malloc(msg_len);
 		pt = msg;
 
@@ -1801,11 +1795,11 @@ void recv_tcp_old(int index, unsigned long long uniqueSockID, int data_len, int 
 		*(unsigned long long *) pt = uniqueSockID;
 		pt += sizeof(unsigned long long);
 
-		*(int *) pt = ACK;
-		pt += sizeof(int);
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
 
-		*(int *) pt = 0;
-			pt += sizeof(int);
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
 
 		*(int *) pt = buflen;
 		pt += sizeof(int);
@@ -1925,24 +1919,24 @@ void *getsockopt_tcp_thread(void *local) {
 		uint8_t *val;
 		//################
 
-		int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + len;
+		int msg_len = 4 * sizeof(u_int) + sizeof(unsigned long long) + 1 * sizeof(int) + (len > 0 ? len : 0);
 		u_char *msg = (u_char *) malloc(msg_len);
 		u_char *pt = msg;
 
-		*(int *) pt = getsockopt_call;
-		pt += sizeof(int);
+		*(u_int *) pt = getsockopt_call;
+		pt += sizeof(u_int);
 
 		*(unsigned long long *) pt = uniqueSockID;
 		pt += sizeof(unsigned long long);
 
-		*(int *) pt = ACK;
-		pt += sizeof(int);
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
 
-		*(int *) pt = 0;
-			pt += sizeof(int);
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
 
-		*(int *) pt = param_id;
-		pt += sizeof(int);
+		*(u_int *) pt = param_id;
+		pt += sizeof(u_int);
 
 		*(int *) pt = len;
 		pt += sizeof(int);
@@ -2132,24 +2126,24 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 
-		int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + len;
+		int msg_len = 4 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + (len > 0 ? len : 0);
 		u_char *msg = (u_char *) malloc(msg_len);
 		u_char *pt = msg;
 
-		*(int *) pt = getsockopt_call;
-		pt += sizeof(int);
+		*(u_int *) pt = getsockopt_call;
+		pt += sizeof(u_int);
 
 		*(unsigned long long *) pt = uniqueSockID;
 		pt += sizeof(unsigned long long);
 
-		*(int *) pt = ACK;
-		pt += sizeof(int);
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
 
-		*(int *) pt = 0;
-			pt += sizeof(int);
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
 
-		*(int *) pt = param_id;
-		pt += sizeof(int);
+		*(u_int *) pt = param_id;
+		pt += sizeof(u_int);
 
 		*(int *) pt = len;
 		pt += sizeof(int);
@@ -2412,23 +2406,23 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 		PRINT_DEBUG("freeing meta=%d", (int)params);
 		metadata_destroy(params);
 
-		int msg_len = 5 * sizeof(int) + sizeof(unsigned long long) + len;
+		int msg_len = 4 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + (len > 0 ? len : 0);
 		u_char *msg = (u_char *) malloc(msg_len);
 		u_char *pt = msg;
 
-		*(int *) pt = getsockopt_call;
-		pt += sizeof(int);
+		*(u_int *) pt = getsockopt_call;
+		pt += sizeof(u_int);
 
 		*(unsigned long long *) pt = uniqueSockID;
 		pt += sizeof(unsigned long long);
 
-		*(int *) pt = ACK;
-		pt += sizeof(int);
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
 
-		*(int *) pt = 0;
-			pt += sizeof(int);
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
 
-		*(int *) pt = param_id;
+		*(u_int *) pt = param_id;
 		pt += sizeof(int);
 
 		*(int *) pt = len;

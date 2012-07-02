@@ -336,7 +336,7 @@ int randoming(int min, int max) {
 
 }
 
-int nack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) {
+int nack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg) {
 	int nack = NACK;
 	int buf_len;
 	void *buf;
@@ -345,21 +345,21 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) 
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d nack %d", uniqueSockID, socketCallType, nack);
 
-	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + 2 * sizeof(int);
+	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
 	buf = malloc(buf_len);
 	pt = buf;
 
-	*(unsigned int *) pt = socketCallType;
-	pt += sizeof(unsigned int);
+	*(u_int *) pt = socketCallType;
+	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = nack;
-	pt += sizeof(int);
+	*(u_int *) pt = nack;
+	pt += sizeof(u_int);
 
-	*(int *) pt = ret_msg;
-	pt += sizeof(int);
+	*(u_int *) pt = ret_msg;
+	pt += sizeof(u_int);
 
 	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
 	free(buf);
@@ -367,7 +367,7 @@ int nack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) 
 	return ret_val == 1;
 }
 
-int ack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) {
+int ack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg) {
 	int ack = ACK;
 	int buf_len;
 	void *buf;
@@ -376,21 +376,21 @@ int ack_send(unsigned long long uniqueSockID, int socketCallType, int ret_msg) {
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d ack %d", uniqueSockID, socketCallType, ack);
 
-	buf_len = sizeof(unsigned int) + sizeof(unsigned long long) + 2 * sizeof(int);
+	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
 	buf = malloc(buf_len);
 	pt = buf;
 
-	*(unsigned int *) pt = socketCallType;
-	pt += sizeof(unsigned int);
+	*(u_int *) pt = socketCallType;
+	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ack;
-	pt += sizeof(int);
+	*(u_int *) pt = ack;
+	pt += sizeof(u_int);
 
-	*(int *) pt = ret_msg;
-	pt += sizeof(int);
+	*(u_int *) pt = ret_msg;
+	pt += sizeof(u_int);
 
 	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
 	free(buf);
@@ -1222,45 +1222,409 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 }
 
-void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
-	int index;
+void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t buf_len) {
 	u_int cmd;
-	u_long arg;
 	u_char *pt;
+	u_char *temp;
+	int len;
+	int msg_len;
+	u_char *msg;
+	struct sockaddr_in addr;
+	struct ifreq ifr;
+	int total;
+	int index;
 
-	PRINT_DEBUG("ioctl_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
+	PRINT_DEBUG("ioctl_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, buf_len);
 
 	pt = buf;
 
 	cmd = *(u_int *) pt;
 	pt += sizeof(u_int);
 
-	if (pt - buf != len) {
-		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
-		nack_send(uniqueSockID, ioctl_call, 0);
-		return;
+	switch (cmd) {
+	case SIOCGIFCONF:
+		//TODO implement: http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L3919, http://lxr.linux.no/linux+v2.6.39.4/net/ipv4/devinet.c#L926
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		if (pt - buf != buf_len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
+
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + 3 * sizeof(struct ifreq);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		temp = pt; //store ptr to where total should be stored
+		pt += sizeof(int);
+
+		//TODO implement a looped version of this that's taken from where interface/device info will be stored
+		total = 0;
+		if (total + sizeof(struct ifreq) <= len) {
+			strcpy(ifr.ifr_name, "lo");
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2N(127, 0, 0, 1));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
+
+			memcpy(pt, &ifr, sizeof(struct ifreq));
+			pt += sizeof(struct ifreq);
+			total += sizeof(struct ifreq);
+		} else {
+			msg_len -= sizeof(struct ifreq);
+		}
+
+		if (total + sizeof(struct ifreq) <= len) {
+			strcpy(ifr.ifr_name, "eth1");
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 20));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
+
+			memcpy(pt, &ifr, sizeof(struct ifreq));
+			pt += sizeof(struct ifreq);
+			total += sizeof(struct ifreq);
+		} else {
+			msg_len -= sizeof(struct ifreq);
+		}
+
+		if (total + sizeof(struct ifreq) <= len) {
+			strcpy(ifr.ifr_name, "eth0");
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 15));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
+
+			memcpy(pt, &ifr, sizeof(struct ifreq));
+			pt += sizeof(struct ifreq);
+			total += sizeof(struct ifreq);
+		} else {
+			msg_len -= sizeof(struct ifreq);
+		}
+
+		*temp = total;
+		PRINT_DEBUG("total=%d (%d)", total, total/32);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+
+		break;
+	case SIOCGIFADDR:
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		temp = malloc(len);
+		memcpy(temp, pt, len);
+		pt += len;
+
+		if (pt - buf != buf_len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp);
+
+		//TODO get correct values from IP?
+		if (strcmp(temp, "eth0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 15));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "eth1") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 20));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "lo") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(127, 0, 0, 1));
+			addr.sin_port = 0;
+		} else {
+			PRINT_DEBUG("%s", temp);
+		}
+
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		pt += sizeof(struct sockaddr_in);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	case SIOCGIFDSTADDR:
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		temp = malloc(len);
+		memcpy(temp, pt, len);
+		pt += len;
+
+		if (pt - buf != buf_len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp);
+
+		//TODO get correct values from IP?
+		if (strcmp(temp, "eth0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 15));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "eth1") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 20));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "lo") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(127, 0, 0, 1));
+			addr.sin_port = 0;
+		} else {
+			PRINT_DEBUG("%s", temp);
+		}
+
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		pt += sizeof(struct sockaddr_in);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	case SIOCGIFBRDADDR:
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		temp = malloc(len);
+		memcpy(temp, pt, len);
+		pt += len;
+
+		if (pt - buf != buf_len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp);
+
+		//TODO get correct values from IP?
+		if (strcmp(temp, "eth0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 255));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "eth1") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 255));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "lo") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(0, 0, 0, 0));
+			addr.sin_port = 0;
+		} else {
+			PRINT_DEBUG("%s", temp);
+		}
+
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		pt += sizeof(struct sockaddr_in);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	case SIOCGIFNETMASK:
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		temp = malloc(len);
+		memcpy(temp, pt, len);
+		pt += len;
+
+		if (pt - buf != buf_len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp);
+
+		//TODO get correct values from IP?
+		if (strcmp(temp, "eth0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(255, 255, 255, 0));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "eth1") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(255, 255, 255, 0));
+			addr.sin_port = 0;
+		} else if (strcmp(temp, "lo") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(255, 0, 0, 0));
+			addr.sin_port = 0;
+		} else {
+			PRINT_DEBUG("%s", temp);
+		}
+
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+
+		msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(struct sockaddr_in);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		pt += sizeof(struct sockaddr_in);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	case TIOCOUTQ:
+	case TIOCINQ:
+	case SIOCADDRT:
+	case SIOCDELRT:
+	case SIOCSIFADDR:
+		//case SIOCAIPXITFCRT:
+		//case SIOCAIPXPRISLT:
+		//case SIOCIPXCFGDATA:
+		//case SIOCIPXNCPCONN:
+	case SIOCGSTAMP:
+	case SIOCSIFDSTADDR:
+	case SIOCSIFBRDADDR:
+	case SIOCSIFNETMASK:
+		//TODO
+		PRINT_DEBUG("not implemented: cmd=%d", cmd);
+		if (pt - buf != buf_len) {
+			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	default:
+		PRINT_DEBUG("cmd=%d default", cmd);
+		break;
 	}
 
-	PRINT_DEBUG("");
-	index = find_daemonSocket(uniqueSockID);
-	if (index == -1) {
-		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
-		nack_send(uniqueSockID, ioctl_call, 0);
-		return;
-	}
-	PRINT_DEBUG("uniqueSockID=%llu, index=%d, cmd=%d, arg=%lu", uniqueSockID, index, cmd, arg);
-
-	if (daemonSockets[index].type == SOCK_DGRAM) {
-		//ioctl_udp(uniqueSockID, cmd, pt);
-	} else if (daemonSockets[index].type == SOCK_STREAM) {
-		//ioctl_tcp(uniqueSockID, cmd, pt);
-	} else if (daemonSockets[index].type == SOCK_RAW) {
-		//ioctl_icmp(uniqueSockID, cmd, pt);
+	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	if (msg_len) {
+		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+			PRINT_DEBUG("ioctl_call_handler: Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
+			nack_send(uniqueSockID, ioctl_call, 0);
+		}
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
-		nack_send(uniqueSockID, ioctl_call, 0);
+		PRINT_DEBUG("");
+		index = find_daemonSocket(uniqueSockID);
+		if (index == -1) {
+			PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		PRINT_DEBUG("sock based ioctl: uniqueSockID=%llu, index=%d, cmd=%d", uniqueSockID, index, cmd);
+
+		/*
+		 if (daemonSockets[index].type == SOCK_DGRAM) {
+		 ioctl_udp(uniqueSockID, cmd, pt);
+		 } else if (daemonSockets[index].type == SOCK_STREAM) {
+		 ioctl_tcp(uniqueSockID, cmd, pt);
+		 } else if (daemonSockets[index].type == SOCK_RAW) {
+		 ioctl_icmp(uniqueSockID, cmd, pt);
+		 } else {
+		 PRINT_DEBUG("unknown socket type has been read !!!");
+		 nack_send(uniqueSockID, ioctl_call, 0);
+		 }*/
+		ack_send(uniqueSockID, ioctl_call, 0);
 	}
-	ack_send(uniqueSockID, ioctl_call, 0);
 }
 
 void accept4_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
@@ -1333,6 +1697,23 @@ void close_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 
 }
 
+void socketpair_call_handler() {
+
+}
+
+void recvthread_exit(struct recvfrom_data *thread_data) {
+	sem_wait(&thread_sem);
+	thread_count--;
+	sem_post(&thread_sem);
+
+	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
+	free(thread_data);
+
+	pthread_exit(NULL);
+}
+
+//############################## Deprecated, not used & only temp keeping
+
 void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
 
 	int index;
@@ -1365,18 +1746,21 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	addr->sin_port = daemonSockets[index].hostport;
 	PRINT_DEBUG("%d , %d", daemonSockets[index].host_IP, daemonSockets[index].hostport);
 
-	msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
+	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
 	msg = malloc(msg_len);
 	pt = msg;
 
-	//*(u_int *) pt = getsockname_call;
+	*(u_int *) pt = 0; //getsockname_call;
 	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
+
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	*(int *) pt = addrlen;
 	pt += sizeof(int);
@@ -1433,18 +1817,21 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	addr->sin_port = daemonSockets[index].dstport;
 	PRINT_DEBUG("%d , %d", daemonSockets[index].dst_IP, daemonSockets[index].dstport);
 
-	msg_len = sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
+	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
 	msg = malloc(msg_len);
 	pt = msg;
 
-	//*(u_int *) pt = getpeername_call;
+	*(u_int *) pt = 0; //getpeername_call;
 	pt += sizeof(u_int);
 
 	*(unsigned long long *) pt = uniqueSockID;
 	pt += sizeof(unsigned long long);
 
-	*(int *) pt = ACK;
-	pt += sizeof(int);
+	*(u_int *) pt = ACK;
+	pt += sizeof(u_int);
+
+	*(u_int *) pt = 0;
+	pt += sizeof(u_int);
 
 	*(int *) pt = addrlen;
 	pt += sizeof(int);
@@ -1467,19 +1854,4 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 
 	return;
 
-}
-
-void socketpair_call_handler() {
-
-}
-
-void recvthread_exit(struct recvfrom_data *thread_data) {
-	sem_wait(&thread_sem);
-	thread_count--;
-	sem_post(&thread_sem);
-
-	PRINT_DEBUG("Exiting recv thread:%d", thread_data->id);
-	free(thread_data);
-
-	pthread_exit(NULL);
 }
