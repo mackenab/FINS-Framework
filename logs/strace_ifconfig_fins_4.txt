@@ -1,0 +1,75 @@
+27257      0.000000 execve("/sbin/ifconfig", ["ifconfig"], ["ORBIT_SOCKETDIR=/tmp/orbit-root", "SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "WINDOWID=67108998", "OLDPWD=/home/bucknell/Jonathan/F"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "PATH=/usr/local/sbin:/usr/local/"..., "MAIL=/var/mail/root", "PWD=/home/bucknell/Jonathan/FINS"..., "LANG=en_US.UTF-8", "SHLVL=2", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace"]) = 0 <0.000689>
+27257      0.008733 brk(0)              = 0x94c4000 <0.000062>
+27257      0.000453 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory) <0.000069>
+27257      0.006569 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7733000 <0.000075>
+27257      0.000699 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory) <0.000129>
+27257      0.000902 open("/etc/ld.so.cache", O_RDONLY) = 3 <0.000089>
+27257      0.000865 fstat64(3, {st_dev=makedev(8, 1), st_ino=132735, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=136, st_size=68866, st_atime=2012/07/01-13:49:40, st_mtime=2012/06/10-05:58:10, st_ctime=2012/06/10-05:58:10}) = 0 <0.000118>
+27257      0.003796 mmap2(NULL, 68866, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7722000 <0.000084>
+27257      0.001604 close(3)            = 0 <0.000058>
+27257      0.000646 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory) <0.000064>
+27257      0.000480 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3 <0.000070>
+27257      0.000430 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512 <0.000102>
+27257      0.001796 fstat64(3, {st_dev=makedev(8, 1), st_ino=2363879, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2824, st_size=1442372, st_atime=2012/07/01-13:49:40, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/10-05:45:10}) = 0 <0.000084>
+27257      0.000585 mmap2(NULL, 1448456, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb75c0000 <0.000080>
+27257      0.000520 mmap2(0xb771c000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15c) = 0xb771c000 <0.001730>
+27257      0.002026 mmap2(0xb771f000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb771f000 <0.000964>
+27257      0.001278 close(3)            = 0 <0.000058>
+27257      0.000369 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb75bf000 <0.000060>
+27257      0.000362 set_thread_area({entry_number:-1 -> 6, base_addr:0xb75bf8d0, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0 <0.002706>
+27257      0.003401 mprotect(0xb771c000, 8192, PROT_READ) = 0 <0.000098>
+27257      0.000377 mprotect(0x8057000, 4096, PROT_READ) = 0 <0.000088>
+27257      0.000384 mprotect(0xb7752000, 4096, PROT_READ) = 0 <0.000084>
+27257      0.001322 munmap(0xb7722000, 68866) = 0 <0.004212>
+27257      0.005146 brk(0)              = 0x94c4000 <0.000060>
+27257      0.000481 brk(0x94e5000)      = 0x94e5000 <0.000059>
+27257      0.000703 open("/usr/lib/locale/locale-archive", O_RDONLY|O_LARGEFILE) = 3 <0.000074>
+27257      0.001338 fstat64(3, {st_dev=makedev(8, 1), st_ino=2236270, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=16256, st_size=8322432, st_atime=2012/07/01-13:49:40, st_mtime=2011/09/12-19:58:37, st_ctime=2011/09/12-19:58:37}) = 0 <0.000060>
+27257      0.000491 mmap2(NULL, 2097152, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb73bf000 <0.000062>
+27257      0.000379 mmap2(NULL, 4096, PROT_READ, MAP_PRIVATE, 3, 0x2a1) = 0xb7732000 <0.000071>
+27257      0.004085 close(3)            = 0 <0.000060>
+27257      0.000449 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-fins", version="#1 SMP Thu Oct 13 15:41:05 EDT 2011", machine="i686"}) = 0 <0.000066>
+27257      0.003613 access("/proc/net", R_OK) = 0 <0.000112>
+27257      0.004621 access("/proc/net/unix", R_OK) = 0 <0.000089>
+27257      0.000832 socket(PF_FILE, SOCK_DGRAM, 0) = 3 <0.000069>
+27257      0.000400 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 4 <0.030892>
+27257      0.031362 access("/proc/net/if_inet6", R_OK) = 0 <0.000088>
+27257      0.000593 socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP) = 5 <0.000065>
+27257      0.000476 access("/proc/net/ax25", R_OK) = -1 ENOENT (No such file or directory) <0.000072>
+27257      0.000519 access("/proc/net/nr", R_OK) = -1 ENOENT (No such file or directory) <0.000067>
+27257      0.000331 access("/proc/net/rose", R_OK) = -1 ENOENT (No such file or directory) <0.000067>
+27257      0.000333 access("/proc/net/ipx", R_OK) = -1 ENOENT (No such file or directory) <0.000065>
+27257      0.001400 access("/proc/net/appletalk", R_OK) = -1 ENOENT (No such file or directory) <0.000066>
+27257      0.000353 access("/proc/sys/net/econet", R_OK) = -1 ENOENT (No such file or directory) <0.000243>
+27257      0.002383 access("/proc/sys/net/ash", R_OK) = -1 ENOENT (No such file or directory) <0.000066>
+27257      0.000365 access("/proc/net/x25", R_OK) = -1 ENOENT (No such file or directory) <0.000067>
+27257      0.000412 open("/proc/net/dev", O_RDONLY) = 6 <0.000079>
+27257      0.000382 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026531957, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2012/07/02-00:14:53, st_mtime=2012/07/02-00:14:53, st_ctime=2012/07/02-00:14:53}) = 0 <0.000105>
+27257      0.004307 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7731000 <0.000081>
+27257      0.000401 read(6, "Inter-|   Receive               "..., 1024) = 569 <0.000145>
+27257      0.000674 read(6, "", 1024)   = 0 <0.000065>
+27257      0.000385 close(6)            = 0 <0.000064>
+27257      0.000348 munmap(0xb7731000, 4096) = 0 <0.000091>
+27257      0.001265 open("/usr/share/locale/locale.alias", O_RDONLY) = 6 <0.000068>
+27257      0.004127 fstat64(6, {st_dev=makedev(8, 1), st_ino=131243, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=2570, st_atime=2012/07/01-13:49:40, st_mtime=2010/08/05-11:57:14, st_ctime=2011/06/10-10:45:09}) = 0 <0.000099>
+27257      0.000943 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7731000 <0.000080>
+27257      0.000747 read(6, "# Locale name alias data base.\n#"..., 4096) = 2570 <0.000149>
+27257      0.000917 read(6, "", 4096)   = 0 <0.000061>
+27257      0.000364 close(6)            = 0 <0.000061>
+27257      0.000369 munmap(0xb7731000, 4096) = 0 <0.000088>
+27257      0.000415 open("/usr/share/locale/en_US/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.004594>
+27257      0.005360 open("/usr/share/locale/en/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000077>
+27257      0.000618 open("/usr/share/locale-langpack/en_US/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000087>
+27257      0.000936 open("/usr/share/locale-langpack/en/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000074>
+27257      0.000522 ioctl(4, SIOCGIFCONF, {138841440, 94c5b60}) = -1 EPERM (Operation not permitted) <0.005916>
+27257      0.006335 dup(2)              = 6 <0.000060>
+27257      0.000300 fcntl64(6, F_GETFL) = 0x2 (flags O_RDWR) <0.001404>
+27257      0.001641 fstat64(6, {st_dev=makedev(0, 11), st_ino=7, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=0, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 4), st_atime=2012/07/02-00:14:53, st_mtime=2012/07/02-00:14:53, st_ctime=2012/06/30-23:28:07}) = 0 <0.000059>
+27257      0.000471 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7731000 <0.000060>
+27257      0.000295 _llseek(6, 0, 0xbfdb7ca0, SEEK_CUR) = -1 ESPIPE (Illegal seek) <0.000058>
+27257      0.004040 write(2, "ifconfig: malloc.c:3096: sYSMALL"..., 433) = 433 <0.000302>
+27257      0.000696 rt_sigprocmask(SIG_UNBLOCK, [ABRT], NULL, 8) = 0 <0.000069>
+27257      0.000383 gettid()            = 27257 <0.000058>
+27257      0.000289 tgkill(27257, 27257, SIGABRT) = 0 <0.000063>
+27257      0.000310 --- SIGABRT (Aborted) @ 0 (0) ---
+27257      0.057544 +++ killed by SIGABRT +++

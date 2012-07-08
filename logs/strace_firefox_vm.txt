@@ -1,0 +1,281 @@
+2324       0.000000 --- SIGCHLD (Child exited) @ 0 (0) ---
+2326       0.178916 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3 <0.000656>
+2326       0.001497 connect(3, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0 <0.000361>
+2326       0.000748 getpeername(3, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0 <0.000202>
+2326       0.003763 getsockname(3, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000165>
+2324       0.056983 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4 <0.000082>
+2324       0.000736 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory) <0.000168>
+2324       0.000830 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4 <0.000155>
+2324       0.000302 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory) <0.000104>
+2324       0.039462 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 4 <0.000064>
+2324       0.000560 connect(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0 <0.000277>
+2324       0.000518 getpeername(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"...}, [20]) = 0 <0.000057>
+2324       0.002378 getsockname(4, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000092>
+2327       0.192497 --- SIGCHLD (Child exited) @ 0 (0) ---
+2326       0.001222 --- SIGCHLD (Child exited) @ 0 (0) ---
+2324       0.153541 --- SIGCHLD (Child exited) @ 0 (0) ---
+2324       0.044640 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 4 <0.000062>
+2324       0.000554 connect(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0 <0.000252>
+2324       0.000476 getpeername(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0 <0.000057>
+2324       0.001516 getsockname(4, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000057>
+2324       0.117867 socket(PF_FILE, SOCK_STREAM, 0) = 11 <0.000092>
+2324       0.001073 connect(11, {sa_family=AF_FILE, path=@"/tmp/.ICE-unix/1356"}, 22) = 0 <0.000234>
+2324       0.023622 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 12 <0.000076>
+2324       0.000972 connect(12, {sa_family=AF_FILE, path=@"/tmp/dbus-P5KxTMML9R"...}, 23) = 0 <0.000209>
+2324       0.001802 sendmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x00", 1}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=2324, uid=1000, gid=1000}}, msg_flags=0}, MSG_NOSIGNAL) = 1 <0.000167>
+2324       0.000634 send(12, "AUTH\r\n", 6, MSG_NOSIGNAL) = 6 <0.000202>
+2324       0.000491 recv(12, "REJECTED EXTERNAL DBUS_COOKIE_SH"..., 4096, 0) = 46 <0.000112>
+2324       0.000510 send(12, "AUTH EXTERNAL 31303030\r\n", 24, MSG_NOSIGNAL) = 24 <0.000205>
+2324       0.000516 recv(12, "OK 10d3439371a18f8f23ca8a4000000"..., 4096, 0) = 37 <0.000061>
+2324       0.000433 send(12, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19 <0.000510>
+2324       0.000804 recv(12, "AGREE_UNIX_FD\r\n", 4096, 0) = 15 <0.000061>
+2324       0.000376 send(12, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7 <0.000167>
+2330       0.011370 sendmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6d\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128 <0.004392>
+2330       0.005204 recvmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0b\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000121>
+2330       0.000514 recvmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x30\x39\x00\x00\x05\x01\x75\x00\x01\x00\x00\x00\x08\x01\x67\x00\x01\x73\x00\x00"..., 75}], msg_controllen=0, msg_flags=0}, 0) = 75 <0.000061>
+2330       0.002842 recvmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x04\x01\x01\x0b\x00\x00\x00\x02\x00\x00\x00\x8d\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000089>
+2330       0.000549 sendmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x01\x02\x01\x00\x00\x00\x00\x02\x00\x00\x00\x68\x00\x00\x00\x08\x01\x67\x00\x00\x00\x00\x00\x01\x01\x6f\x00\x10\x00\x00\x00"..., 120}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 120 <0.000602>
+2330       0.001067 recvmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65\x65\x64\x65\x73\x6b\x74\x6f\x70\x2f\x44\x42\x75\x73\x00\x00\x00"..., 155}], msg_controllen=0, msg_flags=0}, 0) = 155 <0.000062>
+2330       0.001378 recvmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x71\x02\x00\x00\x20\x00\x00\x00\x2d\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000060>
+2330       0.000705 recvmsg(12, {msg_name(0)=NULL, msg_iov(1)=[{"\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x30\x39\x00\x00\x05\x01\x75\x00\x02\x00\x00\x00\x08\x01\x67\x00\x01\x73\x00\x00"..., 673}], msg_controllen=0, msg_flags=0}, 0) = 673 <0.000058>
+2324       0.006467 socket(PF_FILE, SOCK_STREAM, 0) = 12 <0.000063>
+2324       0.000534 connect(12, {sa_family=AF_FILE, path="/tmp/orbit-bucknell/linc-5a0-0-53ce78e46c6e1"}, 47) = 0 <0.000243>
+2324       0.001895 socket(PF_FILE, SOCK_STREAM, 0) = 15 <0.000062>
+2324       0.000359 setsockopt(15, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0 <0.000071>
+2324       0.000212 bind(15, {sa_family=AF_FILE, path="/tmp/orbit-bucknell/linc-914-0-62bf31e1a0e25"}, 47) = 0 <0.000080>
+2324       0.000499 listen(15, 10)      = 0 <0.000251>
+2324       0.000859 getsockname(15, {sa_family=AF_FILE, path="/tmp/orbit-bucknell/linc-914-0-62bf31e1a0e25"}, [47]) = 0 <0.000065>
+2324       0.001936 accept(15, {sa_family=AF_FILE, NULL}, [2]) = 16 <0.000062>
+2324       0.019909 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 18 <0.000068>
+2324       0.000584 connect(18, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory) <0.000072>
+2324       0.000608 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 18 <0.000063>
+2324       0.000177 connect(18, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory) <0.000068>
+2331       0.010269 socketpair(PF_FILE, SOCK_STREAM, 0, [19, 20]) = 0 <0.000092>
+2324       0.011385 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 23 <0.000098>
+2324       0.000556 connect(23, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0 <0.000308>
+2324       0.000541 getpeername(23, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"...}, [20]) = 0 <0.000061>
+2324       0.001607 getsockname(23, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000060>
+2335       0.065301 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 25 <0.000068>
+2335       0.000950 connect(25, {sa_family=AF_FILE, path=@"/tmp/dbus-P5KxTMML9R"...}, 23) = 0 <0.000287>
+2335       0.006437 sendmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x00", 1}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=2324, uid=1000, gid=1000}}, msg_flags=0}, MSG_NOSIGNAL) = 1 <0.000222>
+2335       0.000629 send(25, "AUTH\r\n", 6, MSG_NOSIGNAL) = 6 <0.000200>
+2335       0.000464 recv(25, "REJECTED EXTERNAL DBUS_COOKIE_SH"..., 4096, 0) = 46 <0.000061>
+2335       0.000471 send(25, "AUTH EXTERNAL 31303030\r\n", 24, MSG_NOSIGNAL) = 24 <0.000200>
+2335       0.000491 recv(25, "OK 10d3439371a18f8f23ca8a4000000"..., 4096, 0) = 37 <0.000061>
+2335       0.000428 send(25, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19 <0.000205>
+2335       0.001307 recv(25, "AGREE_UNIX_FD\r\n", 4096, 0) = 15 <0.000063>
+2335       0.000592 send(25, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7 <0.000180>
+2330       0.004316 sendmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6d\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128 <0.002159>
+2330       0.002584 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0b\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000083>
+2330       0.000451 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x30\x00\x00\x05\x01\x75\x00\x01\x00\x00\x00\x08\x01\x67\x00\x01\x73\x00\x00"..., 75}], msg_controllen=0, msg_flags=0}, 0) = 75 <0.000059>
+2330       0.003291 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x04\x01\x01\x0b\x00\x00\x00\x02\x00\x00\x00\x8d\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000070>
+2330       0.001053 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65\x65\x64\x65\x73\x6b\x74\x6f\x70\x2f\x44\x42\x75\x73\x00\x00\x00"..., 155}], msg_controllen=0, msg_flags=0}, 0) = 155 <0.000060>
+2324       0.103056 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 28 <0.000080>
+2324       0.000707 connect(28, {sa_family=AF_FILE, path=@"/tmp/dbus-P5KxTMML9R"}, 23) = 0 <0.000253>
+2324       0.001009 getsockname(28, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000060>
+2324       0.000644 send(28, "\x00", 1, MSG_NOSIGNAL) = 1 <0.000191>
+2324       0.000324 send(28, "AUTH EXTERNAL 31303030\r\n", 24, MSG_NOSIGNAL) = 24 <0.000195>
+2324       0.000827 send(28, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19 <0.000187>
+2324       0.000763 send(28, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7 <0.000155>
+2324       0.000471 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6e\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128 <0.002470>
+2324       0.003082 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0b\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x31\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 262 <0.000063>
+2324       0.000385 recvmsg(28, 0xbf81da38, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000060>
+2324       0.000475 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x8a\x00\x00\x00\x01\x01\x6f\x00\x19\x00\x00\x00\x2f\x6f\x72\x67\x2f\x67\x74\x6b"..., 160}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 160 <0.001109>
+2324       0.001896 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x4c\x03\x00\x00\x30\x00\x00\x00\x36\x00\x00\x00\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x31\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 916 <0.000062>
+2324       0.000532 recvmsg(28, 0xbf81db18, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000263>
+2324       0.069519 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 33 <0.000102>
+2324       0.000631 connect(33, {sa_family=AF_FILE, path="/var/run/dbus/system_bus_socket"}, 33) = 0 <0.000214>
+2324       0.000907 getsockname(33, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000060>
+2324       0.000389 send(33, "\x00", 1, MSG_NOSIGNAL) = 1 <0.000147>
+2324       0.000292 send(33, "AUTH EXTERNAL 31303030\r\n", 24, MSG_NOSIGNAL) = 24 <0.000185>
+2324       0.000803 send(33, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19 <0.000151>
+2324       0.000720 send(33, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7 <0.000140>
+2324       0.000406 sendmsg(33, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6e\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128 <0.003589>
+2324       0.004220 recvmsg(33, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0a\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x35\x34\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 260 <0.000102>
+2324       0.000443 recvmsg(33, 0xbf81e7d8, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000157>
+2324       0.000791 sendmsg(33, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x8c\x00\x00\x00\x02\x00\x00\x00\x7f\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 144}, {"\x87\x00\x00\x00\x74\x79\x70\x65\x3d\x27\x73\x69\x67\x6e\x61\x6c\x27\x2c\x69\x6e\x74\x65\x72\x66\x61\x63\x65\x3d\x27\x6f\x72\x67"..., 140}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 284 <0.000313>
+2324       0.001446 recvmsg(33, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x00\x00\x00\x00\x03\x00\x00\x00\x35\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x35\x34\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 72 <0.000068>
+2324       0.000692 recvmsg(33, 0xbf81e818, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000061>
+2324       0.000363 sendmsg(33, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x86\x00\x00\x00\x01\x01\x6f\x00\x1f\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 152}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 152 <0.000434>
+2324       0.083940 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 34 <0.000087>
+2324       0.000807 connect(34, {sa_family=AF_FILE, path=@"/tmp/dbus-P5KxTMML9R"}, 23) = 0 <0.000238>
+2324       0.001048 getsockname(34, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000104>
+2324       0.000605 send(34, "\x00", 1, MSG_NOSIGNAL) = 1 <0.000220>
+2324       0.000357 send(34, "AUTH EXTERNAL 31303030\r\n", 24, MSG_NOSIGNAL) = 24 <0.000272>
+2324       0.000876 send(34, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19 <0.000200>
+2324       0.001013 send(34, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7 <0.000156>
+2324       0.000467 sendmsg(34, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6e\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128 <0.002575>
+2324       0.003212 recvmsg(34, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0b\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x32\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 262 <0.000067>
+2324       0.000408 recvmsg(34, 0xbf81e768, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000062>
+2324       0.000277 sendmsg(34, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x22\x00\x00\x00\x02\x00\x00\x00\x70\x00\x00\x00\x01\x01\x6f\x00\x0d\x00\x00\x00\x2f\x6f\x72\x67\x2f\x61\x31\x31"..., 128}, {"\x0f\x00\x00\x00\x6f\x72\x67\x2e\x61\x31\x31\x79\x2e\x53\x74\x61\x74\x75\x73\x00\x09\x00\x00\x00\x49\x73\x45\x6e\x61\x62\x6c\x65"..., 34}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 162 <0.000547>
+2324       0.179820 recvmsg(33, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x04\x00\x00\x00\xbf\x00\x00\x00\x2d\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x35\x34\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 68 <0.000072>
+2324       0.000822 recvmsg(33, 0xbf81e978, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000061>
+2330       0.002616 sendmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x01\x00\x01\xaf\x00\x00\x00\x02\x00\x00\x00\x7d\x00\x00\x00\x08\x01\x67\x00\x01\x73\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00"..., 319}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 319 <0.000255>
+2330       0.000794 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x00\x00\x00\x00\x03\x00\x00\x00\x35\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000070>
+2330       0.000442 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x30\x00\x00\x05\x01\x75\x00\x02\x00\x00\x00\x07\x01\x73\x00\x14\x00\x00\x00"..., 56}], msg_controllen=0, msg_flags=0}, 0) = 56 <0.000060>
+2330       0.004301 sendmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x01\x00\x01\x24\x00\x00\x00\x03\x00\x00\x00\x7d\x00\x00\x00\x08\x01\x67\x00\x01\x73\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00"..., 180}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 180 <0.000334>
+2330       0.000878 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x03\x01\x01\x50\x00\x00\x00\x04\x00\x00\x00\x75\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000058>
+2330       0.000892 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x30\x00\x00\x04\x01\x73\x00\x29\x00\x00\x00\x6f\x72\x67\x2e\x66\x72\x65\x65"..., 200}], msg_controllen=0, msg_flags=0}, 0) = 200 <0.000062>
+2330       0.004342 sendmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x01\x00\x01\x24\x00\x00\x00\x04\x00\x00\x00\x7d\x00\x00\x00\x08\x01\x67\x00\x01\x73\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00"..., 180}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 180 <0.000256>
+2330       0.000665 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x03\x01\x01\x50\x00\x00\x00\x05\x00\x00\x00\x75\x00\x00\x00", 16}], msg_controllen=0, msg_flags=0}, 0) = 16 <0.000058>
+2330       0.000448 recvmsg(25, {msg_name(0)=NULL, msg_iov(1)=[{"\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x30\x00\x00\x04\x01\x73\x00\x29\x00\x00\x00\x6f\x72\x67\x2e\x66\x72\x65\x65"..., 200}], msg_controllen=0, msg_flags=0}, 0) = 200 <0.000060>
+2324       0.162879 recvmsg(34, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x03\x01\x01\x41\x00\x00\x00\x03\x00\x00\x00\x75\x00\x00\x00\x06\x01\x73\x00\x06\x00\x00\x00\x3a\x31\x2e\x31\x31\x32\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 201 <0.000068>
+2324       0.000794 recvmsg(34, 0xbf81e1f8, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable) <0.000062>
+2324       0.811073 socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 41 <0.000074>
+2343       0.013001 socket(PF_NETLINK, SOCK_RAW, 0) = 42 <0.000633>
+2343       0.001127 bind(42, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0 <0.000073>
+2343       0.000295 getsockname(42, {sa_family=AF_NETLINK, pid=2324, groups=00000000}, [12]) = 0 <0.000061>
+2343       0.000433 sendto(42, "\x14\x00\x00\x00\x16\x00\x01\x03\x48\x9e\xef\x4f\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20 <0.000070>
+2343       0.000440 recvmsg(42, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x48\x9e\xef\x4f\x14\x09\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168 <0.000164>
+2343       0.000509 recvmsg(42, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x48\x9e\xef\x4f\x14\x09\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192 <0.000164>
+2343       0.000515 recvmsg(42, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x48\x9e\xef\x4f\x14\x09\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20 <0.000134>
+2343       0.014252 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 45 <0.000072>
+2343       0.000607 connect(45, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0 <0.000064>
+2343       0.000499 send(45, "\x78\x73\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05\x73\x74\x61\x72\x74\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01"..., 34, MSG_NOSIGNAL) = 34 <0.000276>
+2343       0.100892 recvfrom(45, "\x78\x73\x81\x80\x00\x01\x00\x03\x00\x00\x00\x00\x05\x73\x74\x61\x72\x74\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 82 <0.002012>
+2343       0.006904 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 45 <0.000064>
+2343       0.000190 connect(45, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("91.189.89.88")}, 16) = 0 <0.000066>
+2343       0.000224 getsockname(45, {sa_family=AF_INET, sin_port=htons(53403), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000057>
+2343       0.000207 connect(45, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000058>
+2343       0.000230 connect(45, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("91.189.90.40")}, 16) = 0 <0.000061>
+2343       0.000228 getsockname(45, {sa_family=AF_INET, sin_port=htons(55012), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000058>
+2343       0.000239 connect(45, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000057>
+2343       0.000217 connect(45, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("91.189.90.41")}, 16) = 0 <0.000061>
+2343       0.000202 getsockname(45, {sa_family=AF_INET, sin_port=htons(57432), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000057>
+2333       0.259607 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 53 <0.000066>
+2333       0.000814 setsockopt(53, SOL_TCP, TCP_NODELAY, [1], 4) = 0 <0.000071>
+2333       0.000600 connect(53, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("91.189.89.88")}, 16) = -1 EINPROGRESS (Operation now in progress) <0.000196>
+2333       0.002066 getsockopt(53, SOL_SOCKET, SO_ERROR, [0], [4]) = 0 <0.000075>
+2333       0.002255 send(53, "GET /11.04/Google/?sourceid=hp H"..., 319, 0) = 319 <0.000072>
+2324       0.023102 getsockname(53, {sa_family=AF_INET, sin_port=htons(52330), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000060>
+2324       0.086415 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 55 <0.000069>
+2324       0.000198 connect(55, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0 <0.000315>
+2324       0.000548 getpeername(55, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"...}, [20]) = 0 <0.000067>
+2324       0.001665 getsockname(55, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000061>
+2324       0.023214 socket(PF_FILE, SOCK_STREAM, 0) = 55 <0.000066>
+2324       0.000825 setsockopt(55, SOL_SOCKET, SO_PRIORITY, [6], 4) = 0 <0.000069>
+2324       0.000428 connect(55, {sa_family=AF_FILE, path="/home/bucknell/.pulse/561842e061f77bd6f166c6ef00000007-runtime/native"}, 110) = 0 <0.000835>
+2349       0.002905 getsockopt(55, SOL_SOCKET, SO_ERROR, [0], [4]) = 0 <0.000072>
+2349       0.000434 setsockopt(55, SOL_SOCKET, SO_RCVBUF, [65496], 4) = 0 <0.000069>
+2349       0.000201 setsockopt(55, SOL_SOCKET, SO_SNDBUF, [65496], 4) = 0 <0.000068>
+2349       0.000291 getsockname(55, {sa_family=AF_FILE, NULL}, [2]) = 0 <0.000074>
+2349       0.000225 setsockopt(55, SOL_SOCKET, SO_PASSCRED, [1], 4) = 0 <0.000069>
+2349       0.001935 sendmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x00\x00\x01\x14\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=2324, uid=1000, gid=1000}}, msg_flags=0}, MSG_NOSIGNAL) = 20 <0.000123>
+2349       0.000774 send(55, "\x4c\x00\x00\x00\x08\x4c\x00\x00\x00\x00\x4c\x80\x00\x00\x10\x78\x00\x00\x01\x00\x1a\x0d\x28\x30\x6b\xd8\xec\x8f\xb1\x95\x88\xc2"..., 276, MSG_NOSIGNAL) = 276 <0.000144>
+2349       0.000764 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x00\x00\x00\x0f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 20 <0.000062>
+2349       0.000709 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x4c\x00\x00\x00\x02\x4c\x00\x00\x00\x00\x4c\x80\x00\x00\x10", 15}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 15 <0.000069>
+2349       0.002769 send(55, "\x00\x00\x02\x0b\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20, MSG_NOSIGNAL) = 20 <0.000111>
+2349       0.001447 send(55, "\x4c\x00\x00\x00\x09\x4c\x00\x00\x00\x01\x50\x74\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2e\x6e\x61\x6d\x65\x00\x4c\x00\x00"..., 523, MSG_NOSIGNAL) = 523 <0.000505>
+2349       0.001132 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x00\x00\x00\x0f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 20 <0.000070>
+2349       0.000717 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x4c\x00\x00\x00\x02\x4c\x00\x00\x00\x01\x4c\x00\x00\x00\x11", 15}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 15 <0.000062>
+2324       0.000967 send(54, "W", 1, MSG_NOSIGNAL) = -1 ENOTSOCK (Socket operation on non-socket) <0.000057>
+2349       0.000909 send(55, "\x00\x00\x00\x0f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20, MSG_NOSIGNAL) = 20 <0.000178>
+2349       0.002252 send(55, "\x4c\x00\x00\x00\x23\x4c\x00\x00\x00\x02\x4c\x00\x00\x00\x04", 15, MSG_NOSIGNAL) = 15 <0.000124>
+2349       0.000643 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x00\x00\x00\x0a\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 20 <0.000074>
+2349       0.000321 send(55, "\x00\x00\x02\x5c\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20, MSG_NOSIGNAL) = 20 <0.000107>
+2349       0.000719 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x4c\x00\x00\x00\x02\x4c\x00\x00\x00\x02", 10}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 10 <0.000057>
+2349       0.000304 send(55, "\x4c\x00\x00\x00\x12\x4c\x00\x00\x00\x03\x4c\xff\xff\xff\xff\x4e\x4c\xff\xff\xff\xff\x74\x77\x69\x6e\x64\x6f\x77\x2d\x6e\x65\x77"..., 604, MSG_NOSIGNAL) = 604 <0.000145>
+2349       0.001174 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x00\x00\x00\x0f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 20 <0.000058>
+2349       0.000998 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x4c\x00\x00\x00\x00\x4c\x00\x00\x00\x03\x4c\x00\x00\x00\x05", 15}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 15 <0.000058>
+2333       0.107599 recv(53, "HTTP/1.0 200 OK\r\nDate: Sun, 01 J"..., 32768, 0) = 543 <0.000082>
+2333       0.000852 recv(53, 0xa93d0000, 32768, 0) = -1 EAGAIN (Resource temporarily unavailable) <0.001310>
+2333       0.002042 recv(53, "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\xc5\x58\xdb\x6e\xdb\x38\x10\x7d\xf7\x57\xb0\x0a\xd0\x24\x40\x65\xc9\xb7\xc4\x76\x6c\x03"..., 32768, 0) = 1573 <0.000061>
+2333       0.001576 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable) <0.000057>
+2333       0.138226 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable) <0.000063>
+2333       0.001725 send(53, "GET /12.04/sprite.png HTTP/1.1\r\n"..., 280, 0) = 280 <0.000080>
+2324       0.027210 getsockname(53, {sa_family=AF_INET, sin_port=htons(52330), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000062>
+2333       0.101204 recv(53, "HTTP/1.0 200 OK\r\nDate: Sun, 01 J"..., 32768, 0) = 4477 <0.000063>
+2333       0.001185 recv(53, 0xaaaec000, 28672, 0) = -1 EAGAIN (Resource temporarily unavailable) <0.000089>
+2333       0.255333 recv(53, "\x97\xc9\x64\xb4\x70\xe1\x42\x19\x63\xb4\x69\xd3\x26\xdd\x7c\xf3\xcd\xd9\xb0\x1b\x8b\xc5\x34\x7f\xfe\x7c\xcd\x9d\x3b\x37\x7b\x71"..., 32768, 0) = 12288 <0.000064>
+2333       0.000668 recv(53, 0xaaaee000, 20480, 0) = -1 EAGAIN (Resource temporarily unavailable) <0.000058>
+2333       0.120870 recv(53, "\x7e\x63\x34\x5f\x79\x55\xc1\x00\x1c\x11\xf1\x7b\x4b\xcf\x8d\xab\xae\xfe\xcf\xd9\x3e\x6a\x4a\x5f\x03\x00\x00\xa6\x3f\x04\xa7\xbb"..., 32768, 0) = 7294 <0.000063>
+2333       0.001284 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable) <0.000059>
+2343       0.013893 socket(PF_NETLINK, SOCK_RAW, 0) = 59 <0.000067>
+2343       0.000531 bind(59, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0 <0.000060>
+2343       0.000190 getsockname(59, {sa_family=AF_NETLINK, pid=2324, groups=00000000}, [12]) = 0 <0.000057>
+2343       0.000344 sendto(59, "\x14\x00\x00\x00\x16\x00\x01\x03\x49\x9e\xef\x4f\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20 <0.000066>
+2343       0.000282 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168 <0.000119>
+2343       0.000420 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192 <0.000069>
+2343       0.000359 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20 <0.000058>
+2343       0.001742 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 59 <0.000063>
+2343       0.000324 connect(59, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0 <0.000064>
+2343       0.000447 send(59, "\x2c\xee\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01", 32, MSG_NOSIGNAL) = 32 <0.000257>
+2351       0.008799 socket(PF_NETLINK, SOCK_RAW, 0) = 60 <0.000123>
+2352       0.000668 socket(PF_NETLINK, SOCK_RAW, 0 <unfinished ...>
+2351       0.000048 bind(60, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12 <unfinished ...>
+2352       0.000146 <... socket resumed> ) = 61 <0.000175>
+2351       0.000026 <... bind resumed> ) = 0 <0.000136>
+2352       0.000130 bind(61, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12 <unfinished ...>
+2351       0.000065 getsockname(60,  <unfinished ...>
+2352       0.000108 <... bind resumed> ) = 0 <0.000136>
+2351       0.000025 <... getsockname resumed> {sa_family=AF_NETLINK, pid=2324, groups=00000000}, [12]) = 0 <0.000116>
+2352       0.000145 getsockname(61, {sa_family=AF_NETLINK, pid=-4205, groups=00000000}, [12]) = 0 <0.000057>
+2352       0.000354 sendto(61, "\x14\x00\x00\x00\x16\x00\x01\x03\x49\x9e\xef\x4f\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20 <0.000072>
+2352       0.000249 recvmsg(61, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x93\xef\xff\xff\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168 <0.000064>
+2352       0.000383 recvmsg(61, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x93\xef\xff\xff\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192 <0.000062>
+2352       0.000344 recvmsg(61, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x49\x9e\xef\x4f\x93\xef\xff\xff\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20 <0.000058>
+2352       0.002845 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 61 <0.000063>
+2352       0.000178 connect(61, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0 <0.000064>
+2352       0.000452 send(61, "\x2d\x33\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x04\x73\x68\x6f\x70\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 33, MSG_NOSIGNAL) = 33 <0.000255>
+2351       0.000670 sendto(60, "\x14\x00\x00\x00\x16\x00\x01\x03\x49\x9e\xef\x4f\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20 <0.000064>
+2351       0.000249 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168 <0.000060>
+2351       0.000406 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192 <0.000060>
+2351       0.000348 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20 <0.000070>
+2351       0.003076 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 60 <0.000068>
+2351       0.000477 connect(60, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0 <0.000063>
+2351       0.000446 send(60, "\x54\x20\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x04\x68\x65\x6c\x70\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 33, MSG_NOSIGNAL) = 33 <0.000218>
+2343       0.032008 recvfrom(59, "\x2c\xee\x81\x80\x00\x01\x00\x07\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 148 <0.000065>
+2343       0.001170 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 59 <0.000078>
+2343       0.000195 connect(59, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.131.147")}, 16) = 0 <0.000068>
+2343       0.000227 getsockname(59, {sa_family=AF_INET, sin_port=htons(53062), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000061>
+2343       0.000312 connect(59, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000073>
+2343       0.000247 connect(59, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.131.105")}, 16) = 0 <0.000092>
+2343       0.000240 getsockname(59, {sa_family=AF_INET, sin_port=htons(52468), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000058>
+2343       0.000212 connect(59, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000077>
+2343       0.000253 connect(59, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.131.106")}, 16) = 0 <0.000065>
+2343       0.000204 getsockname(59, {sa_family=AF_INET, sin_port=htons(37750), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000057>
+2343       0.000216 connect(59, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000058>
+2343       0.000218 connect(59, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.131.104")}, 16) = 0 <0.000062>
+2343       0.000229 getsockname(59, {sa_family=AF_INET, sin_port=htons(41415), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000058>
+2343       0.000207 connect(59, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000084>
+2343       0.000627 connect(59, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.131.99")}, 16) = 0 <0.000417>
+2343       0.000908 getsockname(59, {sa_family=AF_INET, sin_port=htons(55993), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000575>
+2343       0.001075 connect(59, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0 <0.000589>
+2343       0.000817 connect(59, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.131.103")}, 16) = 0 <0.000102>
+2343       0.000333 getsockname(59, {sa_family=AF_INET, sin_port=htons(57651), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0 <0.000060>
+2343       0.000946 socket(PF_NETLINK, SOCK_RAW, 0) = 59 <0.000070>
+2343       0.000184 bind(59, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0 <0.000058>
+2343       0.000186 getsockname(59, {sa_family=AF_NETLINK, pid=2324, groups=00000000}, [12]) = 0 <0.000056>
+2343       0.000336 sendto(59, "\x14\x00\x00\x00\x16\x00\x01\x03\x49\x9e\xef\x4f\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20 <0.000066>
+2343       0.000272 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168 <0.000071>
+2343       0.000365 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192 <0.000059>
+2343       0.001100 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x49\x9e\xef\x4f\x14\x09\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20 <0.000086>
+2343       0.001778 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 59 <0.000062>
+2343       0.000179 connect(59, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0 <0.000070>
+2343       0.000444 send(59, "\x24\xca\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01\x00\x01", 32, MSG_NOSIGNAL) = 32 <0.000277>
+2352       0.003179 recvfrom(61, "\x2d\x33\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x04\x73\x68\x6f\x70\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 49 <0.000059>
+2351       0.001558 recvfrom(60, "\x54\x20\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x04\x68\x65\x6c\x70\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 49 <0.000058>
+2343       0.037883 recvfrom(59, "\x24\xca\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x03\x77\x77\x77\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01\x00\x01"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 48 <0.000068>
+2349      15.675506 send(55, "\x00\x00\x01\x48\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20, MSG_NOSIGNAL) = 20 <0.000143>
+2349       0.001298 send(55, "\x4c\x00\x00\x00\x12\x4c\x00\x00\x00\x04\x4c\xff\xff\xff\xff\x4e\x4c\xff\xff\xff\xff\x74\x77\x69\x6e\x64\x6f\x77\x2d\x63\x6c\x6f"..., 328, MSG_NOSIGNAL) = 328 <0.000151>
+2349       0.000744 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x00\x00\x00\x0f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 20 <0.000068>
+2349       0.000695 recvmsg(55, {msg_name(0)=NULL, msg_iov(1)=[{"\x4c\x00\x00\x00\x00\x4c\x00\x00\x00\x04\x4c\x00\x00\x00\x05", 15}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=1472, uid=1000, gid=1000}}, msg_flags=0}, 0) = 15 <0.000059>
+2324      39.329004 --- SIGINT (Interrupt) @ 0 (0) ---
+2324       0.001034 --- SIGINT (Interrupt) @ 0 (0) ---
+2350       0.008595 +++ killed by SIGINT +++
+2349       0.000009 +++ killed by SIGINT +++
+2346       0.000006 +++ killed by SIGINT +++
+2345       0.000005 +++ killed by SIGINT +++
+2344       0.000008 +++ killed by SIGINT +++
+2342       0.000007 +++ killed by SIGINT +++
+2341       0.000007 +++ killed by SIGINT +++
+2340       0.000006 +++ killed by SIGINT +++
+2339       0.000005 +++ killed by SIGINT +++
+2338       0.000006 +++ killed by SIGINT +++
+2337       0.000005 +++ killed by SIGINT +++
+2336       0.000005 +++ killed by SIGINT +++
+2334       0.000006 +++ killed by SIGINT +++
+2332       0.000005 +++ killed by SIGINT +++
+2331       0.000007 +++ killed by SIGINT +++
+2330       0.000005 +++ killed by SIGINT +++
+2348       0.014012 +++ killed by SIGINT +++

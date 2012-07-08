@@ -50,13 +50,14 @@ endif
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
 
-PROJECT_LIST = common capturer core wedge examples interceptor
+PROJECT_LIST = common capturer core wedge examples tests
+#interceptor #is deprecated
 
 TARGET_PLATFORM = "Linux x86"
 
 CC = gcc
 LD = gcc
-CCOPTS = -g -O0
+CCOPTS = -g -O0 #flags for valgrind
 INCLS =
 LDOPTS =
 LIBPATHS =
@@ -98,3 +99,6 @@ WEDGE_INC = -I. -I$(FINS_ROOT_DIR)/common
 
 #These are includes specifically for the Examples
 EXAMPLES_INC = -I. -I$(FINS_ROOT_DIR)/examples
+
+#These are includes specifically for the Tests
+TESTS_INC = -I. -I$(FINS_ROOT_DIR)/tests

@@ -1,0 +1,136 @@
+25003      0.000000 execve("/sbin/ifconfig", ["ifconfig"], ["ORBIT_SOCKETDIR=/tmp/orbit-root", "SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "WINDOWID=67108998", "OLDPWD=/home/bucknell/Jonathan/F"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "PATH=/usr/local/sbin:/usr/local/"..., "MAIL=/var/mail/root", "PWD=/home/bucknell/Jonathan/FINS"..., "LANG=en_US.UTF-8", "SHLVL=2", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace"]) = 0 <0.001253>
+25003      0.008065 brk(0)              = 0x81f9000 <0.000088>
+25003      0.003939 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory) <0.000210>
+25003      0.001340 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb77b9000 <0.000125>
+25003      0.005948 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory) <0.000080>
+25003      0.003954 open("/etc/ld.so.cache", O_RDONLY) = 3 <0.000088>
+25003      0.000400 fstat64(3, {st_dev=makedev(8, 1), st_ino=132735, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=136, st_size=68866, st_atime=2012/07/01-13:49:40, st_mtime=2012/06/10-05:58:10, st_ctime=2012/06/10-05:58:10}) = 0 <0.000062>
+25003      0.000761 mmap2(NULL, 68866, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb77a8000 <0.000063>
+25003      0.000300 close(3)            = 0 <0.000058>
+25003      0.000336 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory) <0.000060>
+25003      0.000419 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3 <0.000076>
+25003      0.000484 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512 <0.000073>
+25003      0.000414 fstat64(3, {st_dev=makedev(8, 1), st_ino=2363879, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2824, st_size=1442372, st_atime=2012/07/01-13:49:40, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/10-05:45:10}) = 0 <0.001430>
+25003      0.001903 mmap2(NULL, 1448456, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7646000 <0.000071>
+25003      0.000392 mmap2(0xb77a2000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15c) = 0xb77a2000 <0.000084>
+25003      0.000369 mmap2(0xb77a5000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb77a5000 <0.001041>
+25003      0.002234 close(3)            = 0 <0.000060>
+25003      0.001262 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7645000 <0.002507>
+25003      0.003335 set_thread_area({entry_number:-1 -> 6, base_addr:0xb76458d0, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0 <0.000796>
+25003      0.001797 mprotect(0xb77a2000, 8192, PROT_READ) = 0 <0.000089>
+25003      0.000355 mprotect(0x8057000, 4096, PROT_READ) = 0 <0.000105>
+25003      0.000435 mprotect(0xb77d8000, 4096, PROT_READ) = 0 <0.000097>
+25003      0.000353 munmap(0xb77a8000, 68866) = 0 <0.001085>
+25003      0.001819 brk(0)              = 0x81f9000 <0.000059>
+25003      0.002195 brk(0x821a000)      = 0x821a000 <0.000169>
+25003      0.000650 open("/usr/lib/locale/locale-archive", O_RDONLY|O_LARGEFILE) = 3 <0.003613>
+25003      0.004263 fstat64(3, {st_dev=makedev(8, 1), st_ino=2236270, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=16256, st_size=8322432, st_atime=2012/07/01-13:49:40, st_mtime=2011/09/12-19:58:37, st_ctime=2011/09/12-19:58:37}) = 0 <0.000060>
+25003      0.000542 mmap2(NULL, 2097152, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7445000 <0.000076>
+25003      0.000423 mmap2(NULL, 4096, PROT_READ, MAP_PRIVATE, 3, 0x2a1) = 0xb77b8000 <0.000060>
+25003      0.000330 close(3)            = 0 <0.000058>
+25003      0.000496 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-fins", version="#1 SMP Thu Oct 13 15:41:05 EDT 2011", machine="i686"}) = 0 <0.000064>
+25003      0.005898 access("/proc/net", R_OK) = 0 <0.000117>
+25003      0.000692 access("/proc/net/unix", R_OK) = 0 <0.000077>
+25003      0.000449 socket(PF_FILE, SOCK_DGRAM, 0) = 3 <0.000072>
+25003      0.000419 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 4 <0.026604>
+25003      0.027076 access("/proc/net/if_inet6", R_OK) = 0 <0.004107>
+25003      0.004817 socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP) = 5 <0.000075>
+25003      0.000366 access("/proc/net/ax25", R_OK) = -1 ENOENT (No such file or directory) <0.000072>
+25003      0.006041 access("/proc/net/nr", R_OK) = -1 ENOENT (No such file or directory) <0.000084>
+25003      0.000608 access("/proc/net/rose", R_OK) = -1 ENOENT (No such file or directory) <0.000077>
+25003      0.000505 access("/proc/net/ipx", R_OK) = -1 ENOENT (No such file or directory) <0.000075>
+25003      0.003643 access("/proc/net/appletalk", R_OK) = -1 ENOENT (No such file or directory) <0.000081>
+25003      0.000634 access("/proc/sys/net/econet", R_OK) = -1 ENOENT (No such file or directory) <0.000106>
+25003      0.000433 access("/proc/sys/net/ash", R_OK) = -1 ENOENT (No such file or directory) <0.000064>
+25003      0.000416 access("/proc/net/x25", R_OK) = -1 ENOENT (No such file or directory) <0.000115>
+25003      0.000645 open("/proc/net/dev", O_RDONLY) = 6 <0.000090>
+25003      0.000453 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026531957, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2012/07/01-23:37:06, st_mtime=2012/07/01-23:37:06, st_ctime=2012/07/01-23:37:06}) = 0 <0.000060>
+25003      0.000568 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb77b7000 <0.000337>
+25003      0.003993 read(6, "Inter-|   Receive               "..., 1024) = 569 <0.000143>
+25003      0.004633 read(6, "", 1024)   = 0 <0.000081>
+25003      0.001905 close(6)            = 0 <0.000077>
+25003      0.002815 munmap(0xb77b7000, 4096) = 0 <0.000107>
+25003      0.003117 open("/usr/share/locale/locale.alias", O_RDONLY) = 6 <0.000167>
+25003      0.002196 fstat64(6, {st_dev=makedev(8, 1), st_ino=131243, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=2570, st_atime=2012/07/01-13:49:40, st_mtime=2010/08/05-11:57:14, st_ctime=2011/06/10-10:45:09}) = 0 <0.000068>
+25003      0.000516 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb77b7000 <0.000061>
+25003      0.000331 read(6, "# Locale name alias data base.\n#"..., 4096) = 2570 <0.000127>
+25003      0.004508 read(6, "", 4096)   = 0 <0.000062>
+25003      0.000340 close(6)            = 0 <0.000067>
+25003      0.000298 munmap(0xb77b7000, 4096) = 0 <0.003339>
+25003      0.003673 open("/usr/share/locale/en_US/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000071>
+25003      0.000438 open("/usr/share/locale/en/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000081>
+25003      0.000393 open("/usr/share/locale-langpack/en_US/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000077>
+25003      0.000428 open("/usr/share/locale-langpack/en/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000066>
+25003      0.000406 ioctl(4, SIOCGIFCONF, {96, {{"lo", {AF_INET, inet_addr("127.0.0.1")}}, {"eth1", {AF_INET, inet_addr("192.168.1.13")}}, {"eth0", {AF_INET, inet_addr("10.0.2.15")}}}}) = 0 <0.019712>
+25003      0.020497 ioctl(5, SIOCGIFFLAGS, {ifr_name="eth0", ifr_flags=IFF_UP|IFF_BROADCAST|IFF_RUNNING|IFF_MULTICAST}) = 0 <0.000065>
+25003      0.000430 ioctl(5, SIOCGIFHWADDR, {ifr_name="eth0", ifr_hwaddr=08:00:27:16:c7:9b}) = 0 <0.000059>
+25003      0.000425 ioctl(5, SIOCGIFMETRIC, {ifr_name="eth0", ifr_metric=0}) = 0 <0.000058>
+25003      0.000383 ioctl(5, SIOCGIFMTU, {ifr_name="eth0", ifr_mtu=1500}) = 0 <0.000098>
+25003      0.001783 ioctl(5, SIOCGIFMAP, {ifr_name="eth0", ifr_map={mem_start=0, mem_end=0, base_addr=0xd240, irq=16, dma=0, port=0}}) = 0 <0.000060>
+25003      0.000382 ioctl(5, SIOCGIFMAP, {ifr_name="eth0", ifr_map={mem_start=0, mem_end=0, base_addr=0xd240, irq=16, dma=0, port=0}}) = 0 <0.000058>
+25003      0.000342 ioctl(5, SIOCGIFTXQLEN, {ifr_name="eth0", ifr_qlen=1000}) = 0 <0.002260>
+25003      0.002685 ioctl(4, SIOCGIFADDR, {ifr_name="eth0", ifr_addr={AF_INET, inet_addr("10.0.2.15")}}) = 0 <0.031835>
+25003      0.032392 ioctl(4, SIOCGIFDSTADDR, {ifr_name="eth0", ifr_dstaddr={AF_INET, inet_addr("10.0.2.15")}}) = 0 <0.023103>
+25003      0.023527 ioctl(4, SIOCGIFBRDADDR, {ifr_name="eth0", ifr_broadaddr={AF_INET, inet_addr("10.0.2.255")}}) = 0 <0.040995>
+25003      0.041391 ioctl(4, SIOCGIFNETMASK, {ifr_name="eth0", ifr_netmask={AF_INET, inet_addr("255.255.255.0")}}) = 0 <0.006109>
+25003      0.006596 fstat64(1, {st_dev=makedev(0, 11), st_ino=7, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=0, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 4), st_atime=2012/07/01-23:37:06, st_mtime=2012/07/01-23:37:06, st_ctime=2012/06/30-23:28:07}) = 0 <0.000069>
+25003      0.000483 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb77b7000 <0.000069>
+25003      0.000378 write(1, "eth0      Link encap:Ethernet  H"..., 58) = 58 <0.000259>
+25003      0.000642 write(1, "          inet addr:10.0.2.15  B"..., 68) = 68 <0.000248>
+25003      0.000558 open("/proc/net/if_inet6", O_RDONLY) = 6 <0.000082>
+25003      0.000369 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026532081, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2012/07/01-23:37:06, st_mtime=2012/07/01-23:37:06, st_ctime=2012/07/01-23:37:06}) = 0 <0.000057>
+25003      0.001907 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb77b6000 <0.002749>
+25003      0.009107 read(6, "fe800000000000000a0027fffea55f13"..., 1024) = 108 <0.008735>
+25003      0.010961 read(6, "", 1024)   = 0 <0.000080>
+25003      0.000489 write(1, "          inet6 addr: fe80::a00:"..., 61) = 61 <0.000311>
+25003      0.000726 read(6, "", 1024)   = 0 <0.000061>
+25003      0.000352 close(6)            = 0 <0.000067>
+25003      0.000423 munmap(0xb77b6000, 4096) = 0 <0.000094>
+25003      0.000382 write(1, "          UP BROADCAST RUNNING M"..., 61) = 61 <0.005235>
+25003      0.008522 write(1, "          RX packets:32812 error"..., 65) = 65 <0.000188>
+25003      0.001003 write(1, "          TX packets:16 errors:0"..., 64) = 64 <0.000244>
+25003      0.000608 write(1, "          collisions:0 txqueuele"..., 40) = 40 <0.000291>
+25003      0.000666 write(1, "          RX bytes:3445464 (3.4 "..., 60) = 60 <0.000269>
+25003      0.002109 write(1, "          Interrupt:16 Base addr"..., 44) = 44 <0.000887>
+25003      0.001330 write(1, "\n", 1)   = 1 <0.000095>
+25003      0.000351 ioctl(5, SIOCGIFFLAGS, {ifr_name="eth1", ifr_flags=IFF_UP|IFF_BROADCAST|IFF_RUNNING|IFF_MULTICAST}) = 0 <0.000209>
+25003      0.000519 ioctl(5, SIOCGIFHWADDR, {ifr_name="eth1", ifr_hwaddr=08:00:27:a5:5f:13}) = 0 <0.000059>
+25003      0.009344 ioctl(5, SIOCGIFMETRIC, {ifr_name="eth1", ifr_metric=0}) = 0 <0.000107>
+25003      0.000534 ioctl(5, SIOCGIFMTU, {ifr_name="eth1", ifr_mtu=1500}) = 0 <0.000060>
+25003      0.000360 ioctl(5, SIOCGIFMAP, {ifr_name="eth1", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0 <0.000069>
+25003      0.000359 ioctl(5, SIOCGIFMAP, {ifr_name="eth1", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0 <0.000059>
+25003      0.000379 ioctl(5, SIOCGIFTXQLEN, {ifr_name="eth1", ifr_qlen=1000}) = 0 <0.000058>
+25003      0.000354 ioctl(4, SIOCGIFADDR, {ifr_name="eth1", ifr_addr={AF_INET, inet_addr("192.168.1.13")}}) = 0 <0.001637>
+25003      0.003942 ioctl(4, SIOCGIFDSTADDR, {ifr_name="eth1", ifr_dstaddr={AF_INET, inet_addr("192.168.1.13")}}) = 0 <0.018573>
+25003      0.019476 ioctl(4, SIOCGIFBRDADDR, {ifr_name="eth1", ifr_broadaddr={AF_INET, inet_addr("192.168.1.255")}}) = 0 <0.001417>
+25003      0.001906 ioctl(4, SIOCGIFNETMASK, {ifr_name="eth1", ifr_netmask={AF_INET, inet_addr("255.255.255.0")}}) = 0 <0.017669>
+25003      0.018322 write(1, "eth1      Link encap:Ethernet  H"..., 58) = 58 <0.000089>
+25003      0.000529 write(1, "          inet addr:192.168.1.13"..., 74) = 74 <0.000110>
+25003      0.000698 open("/proc/net/if_inet6", O_RDONLY) = 6 <0.000086>
+25003      0.000423 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026532081, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2012/07/01-23:37:06, st_mtime=2012/07/01-23:37:06, st_ctime=2012/07/01-23:37:06}) = 0 <0.000060>
+25003      0.000512 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb77b6000 <0.000065>
+25003      0.001478 read(6, "fe800000000000000a0027fffea55f13"..., 1024) = 108 <0.002504>
+25003      0.002963 write(1, "          inet6 addr: fe80::a00:"..., 61) = 61 <0.000107>
+25003      0.000700 read(6, "", 1024)   = 0 <0.000059>
+25003      0.000361 read(6, "", 1024)   = 0 <0.000681>
+25003      0.006876 close(6)            = 0 <0.000071>
+25003      0.000730 munmap(0xb77b6000, 4096) = 0 <0.000100>
+25003      0.000761 write(1, "          UP BROADCAST RUNNING M"..., 61) = 61 <0.000116>
+25003      0.000842 write(1, "          RX packets:0 errors:0 "..., 61) = 61 <0.000109>
+25003      0.006456 write(1, "          TX packets:17 errors:0"..., 64) = 64 <0.001197>
+25003      0.003122 write(1, "          collisions:0 txqueuele"..., 40) = 40 <0.000140>
+25003      0.000578 write(1, "          RX bytes:0 (0.0 B)  TX"..., 53) = 53 <0.000114>
+25003      0.000544 write(1, "\n", 1)   = 1 <0.000085>
+25003      0.000354 ioctl(5, SIOCGIFFLAGS, {ifr_name="lo", ifr_flags=IFF_LOOPBACK}) = 0 <0.002819>
+25003      0.006490 ioctl(5, SIOCGIFHWADDR, {ifr_name="lo", ifr_hwaddr=00:00:00:00:00:00}) = 0 <0.000078>
+25003      0.001386 ioctl(5, SIOCGIFMETRIC, {ifr_name="lo", ifr_metric=0}) = 0 <0.000063>
+25003      0.000410 ioctl(5, SIOCGIFMTU, {ifr_name="lo", ifr_mtu=16436}) = 0 <0.000060>
+25003      0.000400 ioctl(5, SIOCGIFMAP, {ifr_name="lo", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0 <0.000059>
+25003      0.000366 ioctl(5, SIOCGIFMAP, {ifr_name="lo", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0 <0.000070>
+25003      0.000439 ioctl(5, SIOCGIFTXQLEN, {ifr_name="lo", ifr_qlen=0}) = 0 <0.000072>
+25003      0.000897 ioctl(4, SIOCGIFADDR, {ifr_name="lo", ifr_addr={AF_INET, inet_addr("127.0.0.1")}}) = 0 <0.009411>
+25003      0.009971 ioctl(4, SIOCGIFDSTADDR, {ifr_name="lo", ifr_dstaddr={AF_INET, inet_addr("127.0.0.1")}}) = 0 <0.004645>
+25003      0.005504 ioctl(4, SIOCGIFBRDADDR, {ifr_name="lo", ifr_broadaddr={AF_INET, inet_addr("0.0.0.0")}}) = 0 <0.004088>
+25003      0.005642 ioctl(4, SIOCGIFNETMASK, {ifr_name="lo", ifr_netmask={AF_INET, inet_addr("255.0.0.0")}}) = 0 <0.023963>
+25003      0.024576 close(5)            = 0 <0.000131>
+25003      0.000806 exit_group(0)       = ?
