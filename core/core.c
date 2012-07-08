@@ -684,6 +684,8 @@ void *Switch_to_Daemon() {
 				 * Blocking and Non-Blocking mode
 				 */
 				if (write_queue(ff, daemonSockets[index].dataQueue)) {
+					daemonSockets[index].buf_data += ff->dataFrame.pduLength;
+
 					PRINT_DEBUG("");
 					sem_post(&(daemonSockets[index].Qs));
 					PRINT_DEBUG("");
@@ -944,8 +946,8 @@ void *interceptor_to_daemon() {
 			case recvmsg_call:
 				recvmsg_call_handler(uniqueSockID, threads, msg_pt, msg_len); //only recv call from wedge
 				break;
-			case release_call:
-				release_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+			case ioctl_call:
+				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 			case getsockopt_call:
 				getsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); //Dummy response
@@ -953,15 +955,15 @@ void *interceptor_to_daemon() {
 			case setsockopt_call:
 				setsockopt_call_handler(uniqueSockID, threads, msg_pt, msg_len); // Dummy response
 				break;
-			case ioctl_call:
-				ioctl_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+			case release_call:
+				release_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
 				/*
 				 case getsockname_call:
-				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE //deprecated
 				 break;
 				 case getpeername_call:
-				 getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE
+				 getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE //deprecated
 				 break;
 				 */
 			case socketpair_call:
@@ -978,7 +980,7 @@ void *interceptor_to_daemon() {
 				 * TODO fix the problem into remove daemonsockets
 				 * the Queue Terminate function has a bug as explained into it
 				 */
-				close_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				close_call_handler(uniqueSockID, threads, msg_pt, msg_len); //wedge never calls
 				break;
 			default:
 				PRINT_DEBUG("unknown opcode received (%d), dropping", socketCallType);

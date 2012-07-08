@@ -41,7 +41,8 @@ int main(int argc, char *argv[]) {
 		port = 5000;
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}

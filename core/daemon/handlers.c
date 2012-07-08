@@ -201,7 +201,6 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 			daemonSockets[i].uniqueSockID = uniqueSockID;
 			sem_init(&daemonSockets[i].sem, 0, 1);
 
-			daemonSockets[i].blockingFlag = 1;
 			/**
 			 * bind the socket by default to the default IP which is assigned
 			 * to the Interface which was already started by the Capturing and Injecting process
@@ -220,12 +219,14 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 			 * it has nothing to do with layer 4 protocols like TCP, UDP , etc
 			 */
 
-			daemonSockets[i].type = type;
+			daemonSockets[i].type = type; // & (SOCK_DGRAM | SOCK_STREAM);
+			daemonSockets[i].blockingFlag = 1;
 
 			daemonSockets[i].protocol = protocol;
 			daemonSockets[i].backlog = DEFAULT_BACKLOG;
 			daemonSockets[i].controlQueue = init_queue(NULL, MAX_Queue_size);
 			daemonSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
+			daemonSockets[i].buf_data = 0;
 			sem_init(&daemonSockets[i].Qs, 0, 1);
 
 			sprintf(daemonSockets[i].name, "socket# %llu", daemonSockets[i].uniqueSockID);
@@ -405,8 +406,8 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 	return (1);
 }
 
-struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_flag) {
-	struct finsFrame *ff;
+struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_block_flag) {
+	struct finsFrame *ff = NULL;
 
 	/**
 	 * It keeps looping as a bad method to implement the blocking feature
@@ -419,13 +420,36 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_
 	}
 
 	PRINT_DEBUG("");
-	if (block_flag) {
+	if (non_block_flag) {
+
+		sem_wait(&daemonSockets_sem);
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling read block.");
+			sem_post(&daemonSockets_sem);
+			return NULL;
+		}
+		sem_wait(&(daemonSockets[index].Qs));
+		ff = read_queue(daemonSockets[index].dataQueue);
+		//ff = get_fake_frame();
+
+		if (ff) {
+			daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
+			//print_finsFrame(ff);
+			return ff;
+		} else {
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
+			return NULL;
+		}
+	} else {
 		/**
 		 * WE Must FINS another way to emulate the blocking.
 		 * The best suggestion is to use a pipeline to push the data in
 		 * instead of the data queue
 		 */
-		do {
+		while (1) {
 			sem_wait(&daemonSockets_sem);
 			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 				PRINT_DEBUG("Socket closed, canceling read block.");
@@ -436,26 +460,19 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_
 			sem_wait(&(daemonSockets[index].Qs));
 			ff = read_queue(daemonSockets[index].dataQueue);
 			//	ff = get_fake_frame();
-			sem_post(&(daemonSockets[index].Qs));
-			sem_post(&daemonSockets_sem);
-		} while (ff == NULL);
-	} else {
-		sem_wait(&daemonSockets_sem);
-		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-			PRINT_DEBUG("Socket closed, canceling read block.");
-			sem_post(&daemonSockets_sem);
-			return NULL;
-		}
-		sem_wait(&(daemonSockets[index].Qs));
-		ff = read_queue(daemonSockets[index].dataQueue);
-		//ff = get_fake_frame();
-		//print_finsFrame(ff);
-		sem_post(&(daemonSockets[index].Qs));
-		sem_post(&daemonSockets_sem);
-	}
-	PRINT_DEBUG("");
 
-	return ff;
+			if (ff) {
+				daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
+				sem_post(&(daemonSockets[index].Qs));
+				sem_post(&daemonSockets_sem);
+				//print_finsFrame(ff);
+				return ff;
+			} else {
+				sem_post(&(daemonSockets[index].Qs));
+				sem_post(&daemonSockets_sem);
+			}
+		}
+	}
 }
 
 struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag) {
@@ -545,9 +562,9 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	if (type == SOCK_DGRAM) {
 		socket_udp(domain, type, protocol, uniqueSockID);
-	} else if (type == SOCK_STREAM) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		socket_tcp(domain, type, protocol, uniqueSockID);
-	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
 		socket_icmp(domain, type, protocol, uniqueSockID);
 	} else {
 		PRINT_DEBUG("non supported socket type");
@@ -610,11 +627,12 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 	daemonSockets[index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		bind_udp(index, uniqueSockID, addr);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		bind_tcp(index, uniqueSockID, addr);
 	else
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -658,14 +676,15 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	}
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
 		listen_udp(index, uniqueSockID, backlog);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		listen_tcp(index, uniqueSockID, backlog);
-	else if (type == SOCK_RAW) {
+	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		listen_icmp(index, uniqueSockID, backlog);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -678,6 +697,7 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	int index;
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
+	int flags;
 	u_char *pt;
 
 	PRINT_DEBUG("connect_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
@@ -697,6 +717,9 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	memcpy(addr, pt, addrlen);
 	pt += addrlen;
 
+	flags = *(int *) pt;
+	pt += sizeof(int);
+
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
 		nack_send(uniqueSockID, connect_call, 0);
@@ -714,12 +737,13 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	}
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM) {
-		connect_udp(index, uniqueSockID, addr);
-	} else if (type == SOCK_STREAM) {
-		connect_tcp(index, uniqueSockID, addr);
+		connect_udp(index, uniqueSockID, addr, flags);
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
+		connect_tcp(index, uniqueSockID, addr, flags);
 	} else {
 		PRINT_DEBUG("This socket is of unknown type");
 		nack_send(uniqueSockID, connect_call, 0);
@@ -760,14 +784,15 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	}
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
 		accept_udp(index, uniqueSockID, uniqueSockID_new, flags);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		accept_tcp(index, uniqueSockID, uniqueSockID_new, flags);
-	else if (type == SOCK_RAW) {
+	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		accept_icmp(index, uniqueSockID, uniqueSockID_new, flags);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -805,14 +830,15 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 	}
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
 		getname_udp(index, uniqueSockID, peer);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		getname_tcp(index, uniqueSockID, peer);
-	else if (type == SOCK_RAW) {
+	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		getname_icmp(index, uniqueSockID, peer);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -909,7 +935,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	if (status > 0) {
 		if (type == SOCK_DGRAM) {
 			send_udp(index, uniqueSockID, data, data_len, msg_flags);
-		} else if (type == SOCK_STREAM) {
+		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 			send_tcp(index, uniqueSockID, data, data_len, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 			//TODO finish icmp case?
@@ -925,7 +951,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		if (symbol) { // check that the passed address is not NULL
 			if (type == SOCK_DGRAM) {
 				sendto_udp(index, uniqueSockID, data, data_len, msg_flags, addr, addrlen);
-			} else if (type == SOCK_STREAM) {
+			} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 				//TODO implement or error?
 				sendto_tcp(index, uniqueSockID, data, data_len, msg_flags, addr, addrlen);
 				//nack_send(uniqueSockID, sendmsg_call);
@@ -1000,7 +1026,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		return;
 	}
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("flags=0x%x msg_flags=0x%x", flags, msg_flags);
 
 	/** Notice that send is only used with tcp connections since
 	 * the receiver is already known
@@ -1027,7 +1053,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		if (type == SOCK_DGRAM) {
 			//recv_udp(index, uniqueSockID, datalen, data, flags);
 			recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
-		} else if (type == SOCK_STREAM) {
+		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 			//recv_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 			recvfrom_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1044,8 +1070,8 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		if (symbol) { // check that the passed address is not NULL
 			if (type == SOCK_DGRAM) {
 				recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
-			} else if (type == SOCK_STREAM) {
-				//sendto_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
+			} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
+				//recvfrom_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
 				nack_send(uniqueSockID, recvmsg_call, 0);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 				//sendto_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
@@ -1086,13 +1112,14 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	//daemonSockets[index].threads = threads;
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		release_udp(index, uniqueSockID);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		release_tcp(index, uniqueSockID);
-	else if (type == SOCK_RAW) {
+	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		release_icmp(index, uniqueSockID);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -1146,14 +1173,15 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		getsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		getsockopt_tcp(index, uniqueSockID, level, optname, optlen, optval);
-	else if (type == SOCK_RAW) {
+	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		getsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -1207,14 +1235,15 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	}
 
 	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		setsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
-	else if (type == SOCK_STREAM)
+	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		setsockopt_tcp(index, uniqueSockID, level, optname, optlen, optval);
-	else if (type == SOCK_RAW) {
+	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		setsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
@@ -1228,7 +1257,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 	u_char *temp;
 	int len;
 	int msg_len;
-	u_char *msg;
+	u_char *msg = NULL;
 	struct sockaddr_in addr;
 	struct ifreq ifr;
 	int total;
@@ -1380,6 +1409,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		memcpy(pt, &addr, sizeof(struct sockaddr_in));
 		pt += sizeof(struct sockaddr_in);
 
+		free(temp);
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
@@ -1441,6 +1471,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		memcpy(pt, &addr, sizeof(struct sockaddr_in));
 		pt += sizeof(struct sockaddr_in);
 
+		free(temp);
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
@@ -1502,6 +1533,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		memcpy(pt, &addr, sizeof(struct sockaddr_in));
 		pt += sizeof(struct sockaddr_in);
 
+		free(temp);
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
@@ -1563,6 +1595,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		memcpy(pt, &addr, sizeof(struct sockaddr_in));
 		pt += sizeof(struct sockaddr_in);
 
+		free(temp);
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
@@ -1570,8 +1603,11 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 			return;
 		}
 		break;
+	case FIONREAD:
+		msg_len = 0; //handle per socket/protocol
+		break;
 	case TIOCOUTQ:
-	case TIOCINQ:
+		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCADDRT:
 	case SIOCDELRT:
 	case SIOCSIFADDR:
@@ -1602,28 +1638,32 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 			PRINT_DEBUG("ioctl_call_handler: Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
 			nack_send(uniqueSockID, ioctl_call, 0);
 		}
+		free(msg);
 	} else {
-		PRINT_DEBUG("");
+		sem_wait(&daemonSockets_sem);
 		index = find_daemonSocket(uniqueSockID);
 		if (index == -1) {
-			PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is not found too ");
+			PRINT_DEBUG(" CRASH !socket descriptor not found into daemon sockets! ioctl failed on Daemon Side ");
+			sem_post(&daemonSockets_sem);
+
 			nack_send(uniqueSockID, ioctl_call, 0);
 			return;
 		}
-		PRINT_DEBUG("sock based ioctl: uniqueSockID=%llu, index=%d, cmd=%d", uniqueSockID, index, cmd);
 
-		/*
-		 if (daemonSockets[index].type == SOCK_DGRAM) {
-		 ioctl_udp(uniqueSockID, cmd, pt);
-		 } else if (daemonSockets[index].type == SOCK_STREAM) {
-		 ioctl_tcp(uniqueSockID, cmd, pt);
-		 } else if (daemonSockets[index].type == SOCK_RAW) {
-		 ioctl_icmp(uniqueSockID, cmd, pt);
-		 } else {
-		 PRINT_DEBUG("unknown socket type has been read !!!");
-		 nack_send(uniqueSockID, ioctl_call, 0);
-		 }*/
-		ack_send(uniqueSockID, ioctl_call, 0);
+		int type = daemonSockets[index].type;
+		int protocol = daemonSockets[index].protocol;
+		sem_post(&daemonSockets_sem);
+
+		if (type == SOCK_DGRAM) {
+			ioctl_udp(index, uniqueSockID, cmd, buf, buf_len);
+		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
+			ioctl_tcp(index, uniqueSockID, cmd, buf, buf_len);
+		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+			ioctl_icmp(index, uniqueSockID, cmd, buf, buf_len);
+		} else {
+			PRINT_DEBUG("unknown socket type has been read !!!");
+			nack_send(uniqueSockID, ioctl_call, 0);
+		}
 	}
 }
 

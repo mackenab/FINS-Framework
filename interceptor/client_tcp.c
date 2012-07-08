@@ -38,7 +38,8 @@ int main(int argc, char *argv[]) {
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
-	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);

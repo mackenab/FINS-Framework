@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
 		port = 5000;
 
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
+	//if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);

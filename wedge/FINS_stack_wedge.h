@@ -28,18 +28,20 @@
 #define accept_call 16
 #define accept4_call 17
 #define shutdown_call 18
+#define close_call 19
+#define release_call 20
+#define ioctl_call 21
+#define daemonconnect_call 22
+#define poll_call 23
+#define mmap_call 24
+#define sendpage_call 25
 /** Additional calls
  * To hande special cases
  * overwriting the generic functions which write to a socket descriptor
  * in order to make sure that we cover as many applications as possible
  * This range of these functions will start from 30
  */
-#define close_call 19
-#define release_call 20
-#define ioctl_call 21
-#define daemonconnect_call 22
-
-#define MAX_calls 23
+#define MAX_calls 26
 
 #define write_call 30
 
@@ -61,7 +63,7 @@ static struct net_proto_family FINS_net_proto;
 struct FINS_sock {
 	/* struct sock MUST be the first member of FINS_sock */
 	struct sock sk;
-/* Add the protocol implementation specific members per socket here from here on */
+	/* Add the protocol implementation specific members per socket here from here on */
 // Other stuff might go here, maybe look at IPX or IPv4 registration process
 };
 
@@ -71,8 +73,14 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len);
 static int FINS_listen(struct socket *sock, int backlog);
 static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
 static int FINS_accept(struct socket *sock, struct socket *newsock, int flags);
+static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer);
 static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len);
 static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags);
+static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
+static int FINS_release(struct socket *sock);
+
+static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
+static int FINS_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
 
 /* FINS netlink functions*/
 int nl_send(int pid, void *buf, ssize_t len, int flags);
@@ -83,7 +91,6 @@ void nl_data_ready(struct sk_buff *skb);
 inline unsigned long long getUniqueSockID(struct socket *sock);
 
 #define MAX_sockets 100
-#define MAX_calls 23
 
 struct finssocket {
 	unsigned long long uniqueSockID;
@@ -128,4 +135,4 @@ int checkConfirmation(int index);
 //static int inet_create(struct net *net, struct socket *sock, int protocol, int kern);
 /* This is a flag to enable or disable the FINS stack passthrough */
 int FINS_stack_passthrough_enabled;
-EXPORT_SYMBOL( FINS_stack_passthrough_enabled);
+EXPORT_SYMBOL (FINS_stack_passthrough_enabled);

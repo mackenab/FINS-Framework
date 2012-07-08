@@ -19,9 +19,10 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSockID);
 void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void listen_udp(int index, unsigned long long uniqueSockID, int backlog);
-void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
+void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags);
 void accept_udp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void getname_udp(int index, unsigned long long uniqueSockID, int peer);
+void ioctl_udp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len);
 void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
 void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);

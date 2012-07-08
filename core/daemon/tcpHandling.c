@@ -301,7 +301,7 @@ int daemon_TCP_to_fins_cntrl(uint16_t opcode, metadata *params) {
 void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID) {
 	int index;
 
-	PRINT_DEBUG("socket_tcp CALL");
+	PRINT_DEBUG("socket_tcp CALL uniqueSockID=%llu domain=%d type=%d protocol=%d", uniqueSockID, domain, type, protocol);
 	sem_wait(&daemonSockets_sem);
 	index = insert_daemonSocket(uniqueSockID, type, protocol);
 	PRINT_DEBUG("");
@@ -324,7 +324,7 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	uint32_t host_ip;
 	uint16_t host_port;
 
-	PRINT_DEBUG("bind_TCP CALL");
+	PRINT_DEBUG("bind_tcp CALL index=%d uniqueSockID=%llu", index, uniqueSockID);
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family=%d", addr->sin_family);
@@ -389,7 +389,7 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	uint32_t host_ip;
 	uint16_t host_port;
 
-	PRINT_DEBUG("listen_TCP CALL");
+	PRINT_DEBUG("listen_tcp CALL index=%d uniqueSockID=%llu backlog=%d", index, uniqueSockID, backlog);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -449,7 +449,7 @@ void *connect_tcp_thread(void *local) {
 	int flags = thread_data->flags;
 	free(thread_data);
 
-	int block_flag = 1; //TODO get from flags
+	int block_flag = !(SOCK_NONBLOCK & flags); //TODO get from flags
 	uint32_t exec_call = 0;
 	uint32_t ret_val = 0;
 
@@ -513,13 +513,17 @@ void *connect_tcp_thread(void *local) {
 	pthread_exit(NULL);
 }
 
-void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr) {
+void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags) {
 	uint32_t host_ip_netw;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip_netw;
 	uint32_t rem_ip;
 	uint16_t rem_port;
+
+	PRINT_DEBUG("connect_tcp CALL index=%d uniqueSockID=%llu flags=%d", index, uniqueSockID, flags);
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
+			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
@@ -634,6 +638,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
 	metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
+	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT);
 
 	if (daemon_TCP_to_fins_cntrl(CTRL_EXEC, params)) {
 		pthread_t thread;
@@ -641,6 +646,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 		thread_data->id = thread_count++;
 		thread_data->index = index;
 		thread_data->uniqueSockID = uniqueSockID;
+		thread_data->flags = flags;
 
 		//spin off thread to handle
 		if (pthread_create(&thread, NULL, connect_tcp_thread, (void *) thread_data)) {
@@ -749,6 +755,9 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 	int blocking_flag;
 
 	PRINT_DEBUG("accept_tcp: Entered: index=%d, uniqueSockID=%llu, uniqueSockID_new=%llu, flags=%d", index, uniqueSockID, uniqueSockID_new, flags);
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
+			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
+
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("socket removed/changed");
@@ -825,7 +834,8 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	uint32_t rem_ip = 0;
 	uint16_t rem_port = 0;
 
-	PRINT_DEBUG("getname_tcp CALL");
+	PRINT_DEBUG("getname_tcp CALL index=%d uniqueSockID=%llu peer=%d", index, uniqueSockID, peer);
+
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
@@ -909,6 +919,76 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 
 	free(msg);
+}
+
+void ioctl_tcp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len) {
+	u_int len;
+	int msg_len;
+	u_char *msg = NULL;
+	u_char *pt;
+
+	PRINT_DEBUG("ioctl_tcp CALL index=%d uniqueSockID=%llu cmd=%d len=%d", index, uniqueSockID, cmd, buf_len);
+
+	sem_wait(&daemonSockets_sem);
+	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket descriptor not found into daemon sockets");
+		sem_post(&daemonSockets_sem);
+
+		nack_send(uniqueSockID, ioctl_call, 0);
+		return;
+	}
+
+	len = daemonSockets[index].buf_data;
+
+	PRINT_DEBUG("");
+	sem_post(&daemonSockets_sem);
+
+	switch (cmd) {
+	case FIONREAD:
+		PRINT_DEBUG("FIONREAD cmd=%d", cmd);
+		//figure out buffered data
+
+		//send msg to wedge
+		msg_len = 4 * sizeof(u_int) + sizeof(unsigned long long);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = len;
+		pt += sizeof(u_int);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	default:
+		PRINT_DEBUG("default cmd=%d", cmd);
+		return;
+	}
+
+	if (msg_len) {
+		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+			PRINT_DEBUG("ioctl_tcp: Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
+			nack_send(uniqueSockID, ioctl_call, 0);
+		}
+		free(msg);
+	} else {
+		nack_send(uniqueSockID, ioctl_call, 0);
+	}
 }
 
 void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len) {
@@ -1043,9 +1123,9 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	uint16_t dst_port;
 	int len = data_len;
 
-	if (flags == -1000) {
-		return (write_tcp(index, uniqueSockID, data, data_len)); //TODO remove?
-	}
+	//if (flags == -1000) {
+	//return (write_tcp(index, uniqueSockID, data, data_len)); //TODO remove?
+	//}
 	/** TODO handle flags cases */
 	switch (flags) {
 	case MSG_CONFIRM:
@@ -1060,6 +1140,8 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	} // end of the switch clause
 
 	PRINT_DEBUG("send_tcp: Entered: index=%d, uniqueSockID=%llu, data_len=%d, flags=%d", index, uniqueSockID, data_len, flags);
+	PRINT_DEBUG("MSG_CONFIRM=%d (%d) MSG_DONTROUTE=%d (%d) MSG_DONTWAIT=%d (%d) MSG_EOR=%d (%d) MSG_MORE=%d (%d) MSG_NOSIGNAL=%d (%d) MSG_OOB=%d (%d)",
+			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -1156,7 +1238,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 
 	int len = data_len;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("sendto_tcp CALL index=%d uniqueSockID=%llu flags=%d len=%d", index, uniqueSockID, flags, data_len);
 
 	/** TODO handle flags cases */
 	switch (flags) {
@@ -1264,7 +1346,7 @@ void *recvfrom_tcp_thread(void *local) {
 
 	PRINT_DEBUG("recvfrom_tcp_thread: Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 
-	int blocking_flag = 1; //TODO get from flags
+	int non_blocking_flag = 0; //TODO get from flags
 	uint32_t status;
 	uint32_t host_ip;
 	uint16_t host_port;
@@ -1295,7 +1377,7 @@ void *recvfrom_tcp_thread(void *local) {
 	sem_post(&daemonSockets_sem);
 
 	PRINT_DEBUG();
-	struct finsFrame *ff = get_fdf(index, uniqueSockID, blocking_flag);
+	struct finsFrame *ff = get_fdf(index, uniqueSockID, non_blocking_flag);
 	PRINT_DEBUG("recvfrom_tcp_thread: after get_fdf uniqID=%llu ind=%d", uniqueSockID, index);
 
 	if (ff == NULL) { //TODO add check if nonblocking send
@@ -1419,7 +1501,17 @@ void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int 
 	int multi_flag;
 	int thread_flags;
 
-	PRINT_DEBUG("recvfrom_tcp: Entered: index=%d uniqueSockID=%llu data_len=%d flags=%d", index, uniqueSockID, data_len, flags);
+	PRINT_DEBUG("recvfrom_tcp: Entered: index=%d uniqueSockID=%llu data_len=%d flags=%d msg_flags=%d", index, uniqueSockID, data_len, flags, msg_flags);
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
+			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
+	PRINT_DEBUG(
+			"MSG_CMSG_CLOEXEC=%d (%d), MSG_DONTWAIT=%d (%d), MSG_ERRQUEUE=%d (%d), MSG_OOB=%d (%d), MSG_PEEK=%d (%d), MSG_TRUNC=%d (%d), MSG_WAITALL=%d (%d), MSG_EOR=%d (%d), MSG_CTRUNC=%d (%d), MSG_ERRQUEUE=%d (%d)",
+			MSG_CMSG_CLOEXEC & flags, MSG_CMSG_CLOEXEC, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_ERRQUEUE & flags, MSG_ERRQUEUE, MSG_OOB & flags, MSG_OOB, MSG_PEEK & flags, MSG_PEEK, MSG_TRUNC & flags, MSG_TRUNC, MSG_WAITALL & flags, MSG_WAITALL, MSG_EOR & flags, MSG_EOR, MSG_CTRUNC & flags, MSG_CTRUNC, MSG_ERRQUEUE & flags, MSG_ERRQUEUE);
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
+			SOCK_NONBLOCK & msg_flags, SOCK_NONBLOCK, SOCK_CLOEXEC & msg_flags, SOCK_CLOEXEC, O_NONBLOCK & msg_flags, O_NONBLOCK, O_ASYNC & msg_flags, O_ASYNC);
+	PRINT_DEBUG(
+			"MSG_CMSG_CLOEXEC=%d (%d), MSG_DONTWAIT=%d (%d), MSG_ERRQUEUE=%d (%d), MSG_OOB=%d (%d), MSG_PEEK=%d (%d), MSG_TRUNC=%d (%d), MSG_WAITALL=%d (%d), MSG_EOR=%d (%d), MSG_CTRUNC=%d (%d), MSG_ERRQUEUE=%d (%d)",
+			MSG_CMSG_CLOEXEC & msg_flags, MSG_CMSG_CLOEXEC, MSG_DONTWAIT & msg_flags, MSG_DONTWAIT, MSG_ERRQUEUE & msg_flags, MSG_ERRQUEUE, MSG_OOB & msg_flags, MSG_OOB, MSG_PEEK & msg_flags, MSG_PEEK, MSG_TRUNC & msg_flags, MSG_TRUNC, MSG_WAITALL & msg_flags, MSG_WAITALL, MSG_EOR & msg_flags, MSG_EOR, MSG_CTRUNC & msg_flags, MSG_CTRUNC, MSG_ERRQUEUE & msg_flags, MSG_ERRQUEUE);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {

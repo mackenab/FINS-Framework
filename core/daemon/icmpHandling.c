@@ -437,7 +437,7 @@ void recvfrom_icmp(void *threadData) {
 		pt += sizeof(int);
 
 		*(int *) pt = 0;
-			pt += sizeof(int);
+		pt += sizeof(int);
 
 		if (symbol) {
 			*(int *) pt = addressLen;
@@ -679,7 +679,7 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 	pt += sizeof(int);
 
 	*(int *) pt = 0;
-		pt += sizeof(int);
+	pt += sizeof(int);
 
 	*(int *) pt = peer;
 	pt += sizeof(int);
@@ -707,4 +707,73 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 
 	free(msg);
+}
+
+void ioctl_icmp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len) {
+	u_int len;
+	int msg_len;
+	u_char *msg = NULL;
+	u_char *pt;
+
+	PRINT_DEBUG("ioctl_icmp CALL");
+	sem_wait(&daemonSockets_sem);
+	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("socket descriptor not found into daemon sockets");
+		sem_post(&daemonSockets_sem);
+
+		nack_send(uniqueSockID, ioctl_call, 0);
+		return;
+	}
+
+	len = daemonSockets[index].buf_data;
+
+	PRINT_DEBUG("");
+	sem_post(&daemonSockets_sem);
+
+	switch (cmd) {
+	case FIONREAD:
+		PRINT_DEBUG("FIONREAD cmd=%d", cmd);
+		//figure out buffered data
+
+		//send msg to wedge
+		msg_len = 4 * sizeof(u_int) + sizeof(unsigned long long);
+		msg = (u_char *) malloc(msg_len);
+		pt = msg;
+
+		*(u_int *) pt = ioctl_call;
+		pt += sizeof(u_int);
+
+		*(unsigned long long *) pt = uniqueSockID;
+		pt += sizeof(unsigned long long);
+
+		*(u_int *) pt = ACK;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = 0;
+		pt += sizeof(u_int);
+
+		*(u_int *) pt = len;
+		pt += sizeof(u_int);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send(uniqueSockID, ioctl_call, 0);
+			return;
+		}
+		break;
+	default:
+		PRINT_DEBUG("default cmd=%d", cmd);
+		return;
+	}
+
+	if (msg_len) {
+		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+			PRINT_DEBUG("ioctl_icmp: Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
+			nack_send(uniqueSockID, ioctl_call, 0);
+		}
+		free(msg);
+	} else {
+		nack_send(uniqueSockID, ioctl_call, 0);
+	}
 }

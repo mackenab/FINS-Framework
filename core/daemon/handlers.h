@@ -79,15 +79,15 @@
 #define accept_call 16
 #define accept4_call 17
 #define shutdown_call 18
-/**
- *
- */
 #define close_call 19
 #define release_call 20
 #define ioctl_call 21
 #define daemonconnect_call 22
+#define poll_call 23
+#define mmap_call 24
+#define sendpage_call 25
 
-#define MAX_calls 23
+#define MAX_calls 26
 
 //fins netlink stuff
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
@@ -211,6 +211,7 @@ struct finssocket {
 	int data_pipe[2];
 	finsQueue controlQueue;
 	finsQueue dataQueue;
+	int buf_data;
 	sem_t Qs; /** The data Queue Semaphore Pointer*/
 
 	int recv_ind;
@@ -250,8 +251,8 @@ int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
-struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int block_flag);
-struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag);
+struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_block_flag);
+struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag); //blocking doesn't matter
 
 /** calls handling functions */
 void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
@@ -262,21 +263,22 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, u_char *b
 void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+
 void socketpair_call_handler();
-//void getsockname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void getpeername_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void send_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void recv_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void sendto_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void recvfrom_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void accept4_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void shutdown_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
 void close_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+//void getsockname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+//void getpeername_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+//void send_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+//void recv_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+//void sendto_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+//void recvfrom_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
 //######################### //TODO remove
 struct recvfrom_data {

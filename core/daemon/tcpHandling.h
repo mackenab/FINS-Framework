@@ -38,9 +38,10 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID);
 void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
 void listen_tcp(int index, unsigned long long uniqueSockID, int len);
-void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
+void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags);
 void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void getname_tcp(int index, unsigned long long uniqueSockID, int peer);
+void ioctl_tcp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len);
 void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len);
 void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags);
 void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
