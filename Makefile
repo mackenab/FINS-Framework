@@ -9,28 +9,24 @@ include settings.finsmk
 #### TARGETS ####
 .PHONY:all
 all:
-	@$(foreach project,$(PROJECT_LIST), cd $(project); $(MAKE) all; cd ../;)
+	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) all; cd ../;)
 
-.PHONY:capturer
-capturer:
+.PHONY:trunk
+trunk:
 	@cd $@; $(MAKE) all
 
-.PHONY:common
-common:
-	@cd $@; $(MAKE) all
-
-.PHONY:core
-core:
-	@cd $@; $(MAKE) all
-
-.PHONY:interceptor
-interceptor:
+.PHONY:prototypes
+prototypes:
 	@cd $@; $(MAKE) all
 
 .PHONY:examples
 examples:
 	@cd $@; $(MAKE) all
 
+.PHONY:tests
+tests:
+	@cd $@; $(MAKE) all
+
 .PHONY:clean
 clean:
-	@$(foreach project,$(PROJECT_LIST), cd $(project); $(MAKE) clean; cd ../;)
+	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) clean; cd ../;)

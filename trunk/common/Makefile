@@ -1,5 +1,5 @@
 # fins.mk contains the compiler and linker options for each target platform
-include ../settings.finsmk
+include $(FINS_ROOT_DIR)/settings.finsmk
 
 #This is the Module name. This MUST be that same as the current directory!!!
 PROJECT_NAME = common 

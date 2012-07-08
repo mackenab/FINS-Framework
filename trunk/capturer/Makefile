@@ -1,5 +1,5 @@
 # fins.mk contains the compiler and linker options for each target platform
-include ../settings.finsmk
+include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 PROJECT_NAME = capturer
