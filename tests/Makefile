@@ -19,7 +19,7 @@ INCLUDES = $(foreach DIR_NAME, $(subst -I,, $(strip $(TESTS_INC))), $(addprefix 
 
 ##### TARGETS #####
 .PHONY:all
-all:$(EXECUTABLES)
+all:$(EXECUTABLES) userspace_tests
 	@echo "$(PROJECT_NAME) is compiled\n"
 
 client:client.c $(INCLUDES)
@@ -42,7 +42,11 @@ server_tcp:server_tcp.c $(INCLUDES)
 	@$(CC) $(CFLAGS) $(INTERCEPTOR_INC) -c $< 
 	@$(LD) $(LDFLAGS) $@.o -o $@
 
+userspace_tests:
+	@cd Userspace_tests; make all
+
 .PHONY:clean
 clean:
 	@rm -f *.o 
 	@rm -f $(EXECUTABLES) 
+	@cd Userspace_tests; make clean

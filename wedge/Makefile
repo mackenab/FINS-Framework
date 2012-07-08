@@ -18,18 +18,14 @@ obj-m += FINS_stack_wedge.o			# build type hardcoded to module
 #	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 .PHONY:all
-all:userspace_tests $(PROJECT_NAME)
+all:$(PROJECT_NAME)
 	@echo "$(PROJECT_NAME) is compiled\n"
-
-userspace_tests:
-	@cd Userspace_tests; make all
 
 $(PROJECT_NAME):
 	@make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
 .PHONY:clean
 clean:
-	@cd Userspace_tests; make clean
 	@make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 		
 #### TARGETS #####

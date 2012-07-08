@@ -2558,7 +2558,11 @@ static struct net_proto_family FINS_net_proto = { .family = PF_FINS, .create = F
 	.owner = THIS_MODULE, };
 
 /* Defines which functions get called when corresponding calls are made from userspace */
-static struct proto_ops FINS_proto_ops = { .family = PF_FINS, .owner = THIS_MODULE, .release = FINS_release, .bind = FINS_bind, //sock_no_bind,
+static struct proto_ops FINS_proto_ops = {
+	.owner = THIS_MODULE,
+	.family = PF_FINS,
+	.release = FINS_release,
+	.bind = FINS_bind, //sock_no_bind,
 	.connect = FINS_connect, //sock_no_connect,
 	.socketpair = FINS_socketpair, //sock_no_socketpair,
 	.accept = FINS_accept, //sock_no_accept,
