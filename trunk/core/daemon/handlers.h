@@ -268,6 +268,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *bu
 void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void poll_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
 void socketpair_call_handler();
 void accept4_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);

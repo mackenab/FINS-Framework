@@ -1117,16 +1117,57 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM) {
 		release_udp(index, uniqueSockID);
-	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		release_tcp(index, uniqueSockID);
-	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		release_icmp(index, uniqueSockID);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, release_call, 0);
 	}
+}
+
+void poll_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
+	int index;
+	u_char *pt;
+	pt = buf;
+
+	PRINT_DEBUG("poll_call_handler: uniqueSockID=%llu threads=%d len=%d", uniqueSockID, threads, len);
+
+	if (pt - buf != len) {
+		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		nack_send(uniqueSockID, poll_call, 0);
+		return;
+	}
+
+	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
+	if (index == -1) {
+		PRINT_DEBUG("CRASH !!! socket descriptor not found into daemon sockets SO pipe descriptor to reply is notfound too ");
+		sem_post(&daemonSockets_sem);
+
+		nack_send(uniqueSockID, poll_call, 0);
+		return;
+	}
+	//daemonSockets[index].threads = threads;
+
+	int type = daemonSockets[index].type;
+	int protocol = daemonSockets[index].protocol;
+	sem_post(&daemonSockets_sem);
+
+	if (type == SOCK_DGRAM) {
+		//release_udp(index, uniqueSockID);
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
+		//release_tcp(index, uniqueSockID);
+	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+		//release_icmp(index, uniqueSockID);
+	} else {
+		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, poll_call, 0);
+	}
+	ack_send(uniqueSockID, poll_call, 0);
 }
 
 void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {

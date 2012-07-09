@@ -959,6 +959,9 @@ void *interceptor_to_daemon() {
 			case release_call:
 				release_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
+			case poll_call:
+				poll_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				break;
 				/*
 				 case getsockname_call:
 				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE //deprecated

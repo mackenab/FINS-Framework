@@ -2107,7 +2107,7 @@ static int FINS_release(struct socket *sock) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-// Build the message
+	// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
 	buf = kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
@@ -2225,10 +2225,13 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 }
 
 static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *pt) {
+	int rc;
 	unsigned long long uniqueSockID;
+	ssize_t buf_len; // used for test
+	void *buf; // used for test
+	u_char * pt;
 	int ret;
-	char *buf; // used for test
-	ssize_t buffer_length; // used for test
+	int index;
 
 	struct sock *sk = sock->sk;
 	lock_sock(sk);
@@ -2243,22 +2246,71 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	//TODO: finish this & daemon side
+	index = find_wedgeSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
 
 	// Build the message
-	buf = "FINS_poll() called.";
-	buffer_length = strlen(buf) + 1;
+	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
+	buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		PRINT_ERROR("buffer allocation error");
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	pt = buf;
+
+	*(u_int *) pt = poll_call;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(u_int *) pt = threads_incr(index);
+	pt += sizeof(u_int);
+
+	//TODO finish
+
+	if (pt - (u_char *) buf != buf_len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+		kfree(buf);
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", poll_call, uniqueSockID, buf_len);
 
 	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
+	index = wait_wedgeSocket(uniqueSockID, index, poll_call);
+	PRINT_DEBUG("after index=%d", index);
+	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("relocked my semaphore");
+
+	rc = checkConfirmation(index);
+	up(&wedgeSockets[index].reply_sem_r);
+
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
+
 	release_sock(sk);
-	return 0;
+	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
 //TODO figure out when this is called
