@@ -157,7 +157,7 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 		sem_post(&daemonSockets_sem);
 		return (0);
 	}
-	if (daemonSockets[index].connection_status > 0) {
+	if (daemonSockets[index].state > SS_UNCONNECTED) {
 
 		if ((srcport != daemonSockets[index].dstport) || (srcip != daemonSockets[index].dst_IP)) {
 
@@ -301,7 +301,7 @@ int daemon_TCP_to_fins_cntrl(uint16_t opcode, metadata *params) {
 void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID) {
 	int index;
 
-	PRINT_DEBUG("socket_tcp CALL uniqueSockID=%llu domain=%d type=%d protocol=%d", uniqueSockID, domain, type, protocol);
+	PRINT_DEBUG("socket_tcp: Entered: uniqueSockID=%llu domain=%d type=%d protocol=%d", uniqueSockID, domain, type, protocol);
 	sem_wait(&daemonSockets_sem);
 	index = insert_daemonSocket(uniqueSockID, type, protocol);
 	PRINT_DEBUG("");
@@ -324,7 +324,7 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	uint32_t host_ip;
 	uint16_t host_port;
 
-	PRINT_DEBUG("bind_tcp CALL index=%d uniqueSockID=%llu", index, uniqueSockID);
+	PRINT_DEBUG("bind_tcp: Entered: index=%d uniqueSockID=%llu", index, uniqueSockID);
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family=%d", addr->sin_family);
@@ -389,7 +389,7 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	uint32_t host_ip;
 	uint16_t host_port;
 
-	PRINT_DEBUG("listen_tcp CALL index=%d uniqueSockID=%llu backlog=%d", index, uniqueSockID, backlog);
+	PRINT_DEBUG("listen_tcp: Entered: index=%d uniqueSockID=%llu backlog=%d", index, uniqueSockID, backlog);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -400,6 +400,7 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 		return;
 	}
 
+	socket_state state = daemonSockets[index].state;
 	daemonSockets[index].listening = 1;
 	daemonSockets[index].backlog = backlog;
 
@@ -423,8 +424,7 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	}
 	metadata_create(params);
 
-	int status = 0;
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 
 	uint32_t exec_call = EXEC_TCP_LISTEN;
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
@@ -449,7 +449,7 @@ void *connect_tcp_thread(void *local) {
 	int flags = thread_data->flags;
 	free(thread_data);
 
-	int block_flag = !(SOCK_NONBLOCK & flags); //TODO get from flags
+	int block_flag = 1; //!(SOCK_NONBLOCK & flags); //TODO get from flags
 	uint32_t exec_call = 0;
 	uint32_t ret_val = 0;
 
@@ -501,7 +501,7 @@ void *connect_tcp_thread(void *local) {
 			freeFinsFrame(ff);
 			pthread_exit(NULL);
 		}
-		daemonSockets[index].connection_status = 2;
+		daemonSockets[index].state = SS_CONNECTED;
 		PRINT_DEBUG("");
 		sem_post(&daemonSockets_sem);
 
@@ -521,7 +521,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
-	PRINT_DEBUG("connect_tcp CALL index=%d uniqueSockID=%llu flags=%d", index, uniqueSockID, flags);
+	PRINT_DEBUG("connect_tcp: Entered: index=%d uniqueSockID=%llu flags=%d", index, uniqueSockID, flags);
 	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
 			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
 
@@ -569,7 +569,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * NOTICE THAT the relation between the host and the destined address is many to one.
 	 * more than one local socket maybe connected to the same destined address
 	 */
-	if (daemonSockets[index].connection_status > 0) {
+	if (daemonSockets[index].state > SS_UNCONNECTED) {
 		PRINT_DEBUG("old destined address %d, %d", daemonSockets[index].dst_IP, daemonSockets[index].dstport);
 		PRINT_DEBUG("new destined address %d, %d", rem_ip, rem_port);
 
@@ -583,7 +583,8 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	daemonSockets[index].listening = 0;
 	daemonSockets[index].dst_IP = rem_ip;
 	daemonSockets[index].dstport = rem_port;
-	daemonSockets[index].connection_status = 1;
+	daemonSockets[index].state = SS_CONNECTING;
+	socket_state state = daemonSockets[index].state;
 
 	/**
 	 * the current value of host_IP is zero but to be filled later with
@@ -629,8 +630,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	}
 	metadata_create(params);
 
-	int status = 1;
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 
 	uint32_t exec_call = EXEC_TCP_CONNECT;
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
@@ -725,8 +725,8 @@ void *accept_tcp_thread(void *local) {
 				daemonSockets[index_new].dst_IP = rem_ip;
 				daemonSockets[index_new].dstport = rem_port;
 
-				daemonSockets[index_new].connection_status = 2;
-				daemonSockets[index].connection_status = 0;
+				daemonSockets[index_new].state = SS_CONNECTED;
+				daemonSockets[index].state = SS_UNCONNECTED;
 
 				PRINT_DEBUG("");
 				sem_post(&daemonSockets_sem);
@@ -779,6 +779,8 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 	host_ip = daemonSockets[index].host_IP;
 	host_port = (uint32_t) daemonSockets[index].hostport;
 	blocking_flag = daemonSockets[index].blockingFlag;
+
+	socket_state state = daemonSockets[index].state;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
@@ -795,8 +797,7 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 	}
 	metadata_create(params);
 
-	int status = 0;
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 
 	uint32_t exec_call = EXEC_TCP_ACCEPT;
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
@@ -828,13 +829,13 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 }
 
 void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
-	int status;
+	int state;
 	uint32_t host_ip = 0;
 	uint16_t host_port = 0;
 	uint32_t rem_ip = 0;
 	uint16_t rem_port = 0;
 
-	PRINT_DEBUG("getname_tcp CALL index=%d uniqueSockID=%llu peer=%d", index, uniqueSockID, peer);
+	PRINT_DEBUG("getname_tcp: Entered: index=%d uniqueSockID=%llu peer=%d", index, uniqueSockID, peer);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -849,8 +850,8 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 		host_ip = daemonSockets[index].host_IP;
 		host_port = daemonSockets[index].hostport;
 	} else if (peer == 2) {
-		status = daemonSockets[index].connection_status;
-		if (status) {
+		state = daemonSockets[index].state;
+		if (state > SS_UNCONNECTED) {
 			rem_ip = daemonSockets[index].dst_IP;
 			rem_port = daemonSockets[index].dstport;
 		}
@@ -927,7 +928,7 @@ void ioctl_tcp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *bu
 	u_char *msg = NULL;
 	u_char *pt;
 
-	PRINT_DEBUG("ioctl_tcp CALL index=%d uniqueSockID=%llu cmd=%d len=%d", index, uniqueSockID, cmd, buf_len);
+	PRINT_DEBUG("ioctl_tcp: Entered: index=%d uniqueSockID=%llu cmd=%d len=%d", index, uniqueSockID, cmd, buf_len);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -1014,7 +1015,7 @@ void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 	PRINT_DEBUG("");
 	/** check if this socket already connected to a destined address or not */
 
-	if (daemonSockets[index].connection_status == 0) {
+	if (daemonSockets[index].state < SS_CONNECTING) {
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketdaemon failed to accomplish send");
@@ -1157,7 +1158,7 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	PRINT_DEBUG("");
 	/** check if this socket already connected to a destined address or not */
 
-	if (daemonSockets[index].connection_status == 0) {
+	if (daemonSockets[index].state < SS_CONNECTING) {
 		/** socket is not connected to an address. Send call will fail */
 
 		PRINT_DEBUG("socketdaemon failed to accomplish send, socket found unconnected !!!");
@@ -1238,7 +1239,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 
 	int len = data_len;
 
-	PRINT_DEBUG("sendto_tcp CALL index=%d uniqueSockID=%llu flags=%d len=%d", index, uniqueSockID, flags, data_len);
+	PRINT_DEBUG("sendto_tcp: Entered: index=%d uniqueSockID=%llu flags=%d len=%d", index, uniqueSockID, flags, data_len);
 
 	/** TODO handle flags cases */
 	switch (flags) {
@@ -1347,7 +1348,7 @@ void *recvfrom_tcp_thread(void *local) {
 	PRINT_DEBUG("recvfrom_tcp_thread: Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 
 	int non_blocking_flag = 0; //TODO get from flags
-	uint32_t status;
+	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip;
@@ -1363,10 +1364,10 @@ void *recvfrom_tcp_thread(void *local) {
 		pthread_exit(NULL);
 	}
 
-	status = daemonSockets[index].connection_status;
+	state = daemonSockets[index].state;
 	host_ip = daemonSockets[index].host_IP;
 	host_port = daemonSockets[index].hostport;
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		rem_ip = daemonSockets[index].dst_IP;
 		rem_port = daemonSockets[index].dstport;
 	}
@@ -1445,7 +1446,7 @@ void *recvfrom_tcp_thread(void *local) {
 		nack_send(uniqueSockID, recvmsg_call, 0);
 	} else {
 		//TODO send size back to TCP handlers
-		if (status) {
+		if (state > SS_UNCONNECTED) {
 			PRINT_DEBUG("recvfrom address: host=%u/%d rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
 		} else {
 			PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
@@ -1461,13 +1462,13 @@ void *recvfrom_tcp_thread(void *local) {
 		}
 		metadata_create(params);
 
-		metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+		metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 
 		uint32_t param_id = CTRL_SET_PARAM;
 		metadata_writeToElement(params, "param_id", &param_id, META_TYPE_INT);
 		metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
-		if (status) {
+		if (state > SS_UNCONNECTED) {
 			metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
 			metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 		}
@@ -1617,7 +1618,7 @@ void *release_tcp_thread(void *local) {
 }
 
 void release_tcp(int index, unsigned long long uniqueSockID) {
-	uint32_t status;
+	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip;
@@ -1633,10 +1634,10 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 		return;
 	}
 
-	status = daemonSockets[index].connection_status;
+	state = daemonSockets[index].state;
 	host_ip = daemonSockets[index].host_IP;
 	host_port = daemonSockets[index].hostport;
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		rem_ip = daemonSockets[index].dst_IP;
 		rem_port = daemonSockets[index].dstport;
 	}
@@ -1646,7 +1647,7 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 
 	//TODO process flags?
 
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		PRINT_DEBUG("release address: host=%u/%d rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
 	} else {
 		PRINT_DEBUG("release address: host=%u/%d", host_ip, host_port);
@@ -1661,13 +1662,13 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 	}
 	metadata_create(params);
 
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 
-	uint32_t exec_call = status ? EXEC_TCP_CLOSE : EXEC_TCP_CLOSE_STUB;
+	uint32_t exec_call = (state > SS_UNCONNECTED) ? EXEC_TCP_CLOSE : EXEC_TCP_CLOSE_STUB;
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
 	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 	}
@@ -2064,7 +2065,7 @@ void *getsockopt_tcp_thread(void *local) {
 void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
 	uint32_t host_ip;
 	uint16_t host_port;
-	int status;
+	socket_state state;
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
@@ -2078,10 +2079,10 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 		return;
 	}
 
-	status = daemonSockets[index].connection_status;
+	state = daemonSockets[index].state;
 	host_ip = daemonSockets[index].host_IP;
 	host_port = daemonSockets[index].hostport;
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		rem_ip = daemonSockets[index].dst_IP;
 		rem_port = daemonSockets[index].dstport;
 	}
@@ -2103,10 +2104,10 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	int len = 0;
 	uint8_t *val = NULL;
 
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 	}
@@ -2347,7 +2348,7 @@ void *setsockopt_tcp_thread(void *local) {
 }
 
 void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, u_char *optval) {
-	int status;
+	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip;
@@ -2363,10 +2364,10 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 		return;
 	}
 
-	status = daemonSockets[index].connection_status;
+	state = daemonSockets[index].state;
 	host_ip = daemonSockets[index].host_IP;
 	host_port = daemonSockets[index].hostport;
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		rem_ip = daemonSockets[index].dst_IP;
 		rem_port = daemonSockets[index].dstport;
 	}
@@ -2393,10 +2394,10 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	//if status == 1, & tcp handle tcp module
 	//if status == 2 & tcp handle tcp module
 
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 	}

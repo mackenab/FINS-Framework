@@ -179,7 +179,8 @@ struct finssocket {
 	 * check the address of the senders of the received datagrams against the address which this
 	 * socket is connected to it before approving or dropping any datagram
 	 */
-	int connection_status; //0=created, not connected to anything, 1=connecting/accepting, 2=established
+	//int connection_status; //0=created, not connected to anything, 1=connecting/accepting, 2=established
+	socket_state state;
 	unsigned long long uniqueSockID;
 	pid_t childrenList[MaxChildrenNumSharingSocket];
 	int type;

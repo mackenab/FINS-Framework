@@ -4,6 +4,8 @@ include ../settings.finsmk
 #This is the Module name. This MUST be that same as the current directory!!!
 PROJECT_NAME = tests
 
+TESTS_INC = 
+
 #Additional includes for FINS core modules
 CFLAGS += $(TESTS_INC)
 

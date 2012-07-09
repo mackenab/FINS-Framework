@@ -380,8 +380,8 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	}
 	metadata_create(params);
 
-	int status = 0;
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	socket_state state = SS_UNCONNECTED;
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
 	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 
@@ -563,7 +563,7 @@ void main_syn_recv(struct tcp_connection *conn) {
 			//TO, resend SYN, SYN_SENT (?) //TODO check if correct
 			conn->to_gbn_flag = 0;
 
-			conn->state = SYN_SENT;
+			conn->state = CS_SYN_SENT;
 			conn->issn = 0; //tcp_rand(); //TODO uncomment
 			conn->send_seq_num = conn->issn;
 			conn->send_seq_end = conn->send_seq_num;
@@ -612,7 +612,7 @@ void main_established(struct tcp_connection *conn) {
 
 		if (queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
-			if ((conn->state == FIN_WAIT_1 || conn->state == LAST_ACK) && queue_is_empty(conn->write_queue) && conn->fin_sent
+			if ((conn->state == CS_FIN_WAIT_1 || conn->state == CS_LAST_ACK) && queue_is_empty(conn->write_queue) && conn->fin_sent
 					&& conn->send_seq_num == conn->send_seq_end) {
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
@@ -632,17 +632,17 @@ void main_established(struct tcp_connection *conn) {
 
 			//cong control
 			switch (conn->cong_state) {
-			case SLOWSTART:
-				conn->cong_state = AVOIDANCE;
+			case CG_SLOWSTART:
+				conn->cong_state = CG_AVOIDANCE;
 				conn->threshhold = conn->cong_window / 2.0;
 				if (conn->threshhold < (double) conn->MSS) {
 					conn->threshhold = (double) conn->MSS;
 				}
 				conn->cong_window = conn->threshhold + 3.0 * conn->MSS;
 				break;
-			case AVOIDANCE:
-			case RECOVERY:
-				conn->cong_state = SLOWSTART;
+			case CG_AVOIDANCE:
+			case CG_RECOVERY:
+				conn->cong_state = CG_SLOWSTART;
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
@@ -716,7 +716,7 @@ void main_established(struct tcp_connection *conn) {
 		PRINT_DEBUG("Normal");
 
 		if (queue_is_empty(conn->write_queue)) {
-			if (!conn->fin_sent && (conn->state == FIN_WAIT_1 || conn->state == LAST_ACK)) {
+			if (!conn->fin_sent && (conn->state == CS_FIN_WAIT_1 || conn->state == CS_LAST_ACK)) {
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
 				conn->fin_ack = conn->send_seq_end + 1;
@@ -765,7 +765,7 @@ void main_established(struct tcp_connection *conn) {
 					conn->send_win = 0;
 				}
 
-				if ((conn->state == FIN_WAIT_1 || conn->state == LAST_ACK) && queue_is_empty(conn->write_queue)) {
+				if ((conn->state == CS_FIN_WAIT_1 || conn->state == CS_LAST_ACK) && queue_is_empty(conn->write_queue)) {
 					conn->fin_sent = 1;
 					conn->fin_sep = 0;
 					conn->fin_ack = conn->send_seq_end;
@@ -857,7 +857,7 @@ void main_time_wait(struct tcp_connection *conn) {
 
 		conn->to_gbn_flag = 0;
 		PRINT_DEBUG("main_time_wait: TO, CLOSE: state=%d conn=%d", conn->state, (int)conn);
-		conn->state = CLOSED;
+		conn->state = CS_CLOSED;
 
 		//send ACK to close handler
 		conn_send_daemon(conn, EXEC_TCP_CLOSE, 1); //TODO check move to end of last_ack/start of time_wait?
@@ -917,37 +917,37 @@ void *main_thread(void *local) {
 				conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag, conn->delayed_flag, conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
 
 		switch (conn->state) {
-		case CLOSED:
+		case CS_CLOSED:
 			main_closed(conn);
 			break;
-		case LISTEN:
+		case CS_LISTEN:
 			main_listen(conn);
 			break;
-		case SYN_SENT:
+		case CS_SYN_SENT:
 			main_syn_sent(conn);
 			break;
-		case SYN_RECV:
+		case CS_SYN_RECV:
 			main_syn_recv(conn);
 			break;
-		case ESTABLISHED:
+		case CS_ESTABLISHED:
 			main_established(conn);
 			break;
-		case FIN_WAIT_1:
+		case CS_FIN_WAIT_1:
 			main_fin_wait_1(conn);
 			break;
-		case FIN_WAIT_2:
+		case CS_FIN_WAIT_2:
 			main_fin_wait_2(conn);
 			break;
-		case CLOSING:
+		case CS_CLOSING:
 			main_closing(conn);
 			break;
-		case TIME_WAIT:
+		case CS_TIME_WAIT:
 			main_time_wait(conn);
 			break;
-		case CLOSE_WAIT:
+		case CS_CLOSE_WAIT:
 			main_close_wait(conn);
 			break;
-		case LAST_ACK:
+		case CS_LAST_ACK:
 			main_last_ack(conn);
 			break;
 		}
@@ -1041,7 +1041,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	sem_init(&conn->sem, 0, 1);
 	conn->running_flag = 1;
 	conn->threads = 1;
-	conn->state = CLOSED;
+	conn->state = CS_CLOSED;
 	PRINT_DEBUG("conn_create: create: state=%d conn=%d", conn->state, (int)conn);
 
 	conn->host_ip = host_ip;
@@ -1100,7 +1100,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
 
 	conn->MSS = TCP_MSS_DEFAULT;
-	conn->cong_state = SLOWSTART;
+	conn->cong_state = CG_SLOWSTART;
 	conn->cong_window = conn->MSS;
 
 	conn->rtt_flag = 0;
@@ -1271,8 +1271,8 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 	metadata_create(params);
 
 	int ret = 0;
-	int status = 1;
-	ret += metadata_writeToElement(params, "status", &status, META_TYPE_INT) == 0;
+	socket_state state = SS_CONNECTED;
+	ret += metadata_writeToElement(params, "state", &state, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT) == 0;
@@ -1727,7 +1727,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 	//add options //TODO implement options system
 	switch (conn->state) {
-	case SYN_SENT:
+	case CS_SYN_SENT:
 		PRINT_DEBUG("");
 		//add MSS to seg
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_attempt + TCP_TS_BYTES * conn->tsopt_attempt + TCP_WS_BYTES * conn->wsopt_attempt;
@@ -1785,7 +1785,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 			*pt++ = conn->ws_recv; //believe default is 6
 		}
 		break;
-	case SYN_RECV:
+	case CS_SYN_RECV:
 		PRINT_DEBUG("");
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_enabled + TCP_TS_BYTES * conn->tsopt_enabled + TCP_WS_BYTES * conn->wsopt_enabled;
 		//if (seg->opt_len % 4) {
@@ -1843,7 +1843,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 			*pt++ = conn->ws_recv; //believe default is 6
 		}
 		break;
-	case ESTABLISHED:
+	case CS_ESTABLISHED:
 		seg->opt_len = 0;
 		pt = seg->options;
 
@@ -1939,18 +1939,18 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 	seg->flags |= (flags & (FLAG_CONTROL | FLAG_ECN)); //TODO this is where FLAG_FIN, etc should be added
 
 	switch (conn->state) {
-	case CLOSED:
+	case CS_CLOSED:
 		break;
-	case LISTEN:
+	case CS_LISTEN:
 		break;
-	case SYN_SENT:
+	case CS_SYN_SENT:
 		break;
-	case SYN_RECV:
+	case CS_SYN_RECV:
 		break;
-	case ESTABLISHED:
+	case CS_ESTABLISHED:
 		seg_delayed_ack(seg, conn);
 		break;
-	case FIN_WAIT_1:
+	case CS_FIN_WAIT_1:
 		seg_delayed_ack(seg, conn);
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) { //TODO remove?
 		//send fin
@@ -1958,15 +1958,15 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 			seg->flags |= FLAG_FIN;
 		}
 		break;
-	case FIN_WAIT_2:
+	case CS_FIN_WAIT_2:
 		break;
-	case CLOSING:
+	case CS_CLOSING:
 		seg_delayed_ack(seg, conn);
 		break;
-	case CLOSE_WAIT:
+	case CS_CLOSE_WAIT:
 		seg_delayed_ack(seg, conn);
 		break;
-	case LAST_ACK:
+	case CS_LAST_ACK:
 		seg_delayed_ack(seg, conn); //TODO move outside of switch? get rid of switch
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) {
 			//send fin
@@ -1974,7 +1974,7 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 			seg->flags |= FLAG_FIN;
 		}
 		break;
-	case TIME_WAIT:
+	case CS_TIME_WAIT:
 		break;
 	}
 
@@ -2258,18 +2258,18 @@ int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 	}
 }
 
-int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
+int metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
 	uint32_t host_port_buf;
 	uint32_t rem_port_buf;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "status", status) == 0;
+	ret += metadata_readFromElement(params, "state", state) == 0;
 
 	ret += metadata_readFromElement(params, "host_ip", host_ip) == 0;
 	ret += metadata_readFromElement(params, "host_port", &host_port_buf) == 0;
 	*host_port = (uint16_t) host_port_buf;
 
-	if (ret && *status) {
+	if (ret && *state) {
 		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == 0;
 		ret += metadata_readFromElement(params, "rem_port", &rem_port_buf) == 0;
 		*rem_port = (uint16_t) rem_port_buf;
@@ -2278,16 +2278,16 @@ int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, ui
 	return !ret;
 }
 
-void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
+void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
 	uint32_t host_port_buf;
 	uint32_t rem_port_buf;
 
-	metadata_writeToElement(params, "status", status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", state, META_TYPE_INT);
 
 	metadata_writeToElement(params, "host_ip", host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", host_port, META_TYPE_INT);
 
-	if (*status) {
+	if (*state) {
 		metadata_writeToElement(params, "rem_ip", rem_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "rem_port", rem_port, META_TYPE_INT);
 	}
@@ -2502,7 +2502,7 @@ int tcp_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
+int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_ERROR("metadata creation failed");
@@ -2510,13 +2510,13 @@ int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uin
 	}
 	metadata_create(params);
 
-	metadata_writeToElement(params, "status", &status, META_TYPE_INT);
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
 	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 
 	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
-	if (status) {
+	if (state > SS_UNCONNECTED) {
 		metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 	}

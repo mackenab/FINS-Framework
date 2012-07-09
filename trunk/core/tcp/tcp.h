@@ -128,15 +128,13 @@ void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
-enum CONN_STATE /* Defines an enumeration type    */
-{
-	CLOSED, SYN_SENT, LISTEN, SYN_RECV, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, CLOSING, TIME_WAIT, CLOSE_WAIT, LAST_ACK
-};
+typedef enum {
+	CS_CLOSED = 0, CS_SYN_SENT, CS_LISTEN, CS_SYN_RECV, CS_ESTABLISHED, CS_FIN_WAIT_1, CS_FIN_WAIT_2, CS_CLOSING, CS_TIME_WAIT, CS_CLOSE_WAIT, CS_LAST_ACK
+} conn_state;
 
-enum CONG_STATE /* Defines an enumeration type    */
-{
-	INITIAL, SLOWSTART, AVOIDANCE, RECOVERY
-};
+typedef enum {
+	CG_INITIAL = 0, CG_SLOWSTART, CG_AVOIDANCE, CG_RECOVERY
+} cong_state;
 
 struct ipv4_header {
 	uint32_t src_ip; //Source ip
@@ -186,7 +184,7 @@ struct tcp_connection {
 	sem_t sem; //for next, state, write_threads
 	uint8_t running_flag; //signifies if it is running, 0 when shutting down
 	uint32_t threads; //Number of threads accessing this obj
-	enum CONN_STATE state;
+	conn_state state;
 
 	//some type of options state
 
@@ -254,7 +252,7 @@ struct tcp_connection {
 	uint32_t recv_seq_end; //seq of rem last sent
 
 	uint16_t MSS; //max segment size
-	enum CONG_STATE cong_state;
+	cong_state cong_state;
 	double cong_window;
 	double threshhold;
 

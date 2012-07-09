@@ -199,6 +199,8 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 	for (i = 0; i < MAX_sockets; i++) {
 		if (daemonSockets[i].uniqueSockID == -1) {
 			daemonSockets[i].uniqueSockID = uniqueSockID;
+			daemonSockets[i].state = SS_UNCONNECTED;
+
 			sem_init(&daemonSockets[i].sem, 0, 1);
 
 			/**
@@ -262,7 +264,7 @@ int remove_daemonSocket(unsigned long long targetID) {
 
 			//TODO stop all threads related to
 
-			daemonSockets[i].connection_status = 0;
+			daemonSockets[i].state = SS_FREE;
 			term_queue(daemonSockets[i].controlQueue);
 			term_queue(daemonSockets[i].dataQueue);
 			return (1);
@@ -923,7 +925,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		return;
 	}
 
-	int status = daemonSockets[index].connection_status;
+	int state = daemonSockets[index].state;
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
@@ -932,7 +934,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	/**
 	 * In case of connected sockets
 	 */
-	if (status > 0) {
+	if (state > SS_UNCONNECTED) {
 		if (type == SOCK_DGRAM) {
 			send_udp(index, uniqueSockID, data, data_len, msg_flags);
 		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
@@ -1044,12 +1046,12 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	daemonSockets[index].threads = threads;
 
-	int status = daemonSockets[index].connection_status;
+	int state = daemonSockets[index].state;
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 	sem_post(&daemonSockets_sem);
 
-	if (status > 0) {
+	if (state > SS_UNCONNECTED) {
 		if (type == SOCK_DGRAM) {
 			//recv_udp(index, uniqueSockID, datalen, data, flags);
 			recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
@@ -1344,7 +1346,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 			msg_len -= sizeof(struct ifreq);
 		}
 
-		*temp = total;
+		*(int *) temp = total;
 		PRINT_DEBUG("total=%d (%d)", total, total/32);
 
 		if (pt - msg != msg_len) {

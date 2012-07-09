@@ -164,7 +164,7 @@ void init_daemonSockets() {
 	sem_init(&daemonSockets_sem, 0, 1);
 	for (i = 0; i < MAX_sockets; i++) {
 		daemonSockets[i].uniqueSockID = -1;
-		daemonSockets[i].connection_status = 0;
+		daemonSockets[i].state = SS_FREE;
 	}
 
 	sem_init(&thread_sem, 0, 1);
@@ -253,7 +253,7 @@ void *Switch_to_Daemon() {
 	struct finsFrame *ff;
 	int protocol = 0;
 	int index = 0;
-	int status = 0;
+	socket_state state = 0;
 	uint32_t exec_call = 0;
 	uint16_t dstport, hostport = 0;
 	uint32_t dstport_buf = 0, hostport_buf = 0;
@@ -294,9 +294,9 @@ void *Switch_to_Daemon() {
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
 					int ret = 0;
-					ret += metadata_readFromElement(params, "status", &status) == 0;
+					ret += metadata_readFromElement(params, "state", &state) == 0;
 
-					if (status) {
+					if (state > SS_UNCONNECTED) {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
 						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
@@ -408,9 +408,9 @@ void *Switch_to_Daemon() {
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
 					int ret = 0;
-					ret += metadata_readFromElement(params, "status", &status) == 0;
+					ret += metadata_readFromElement(params, "state", &state) == 0;
 
-					if (status) {
+					if (state > SS_UNCONNECTED) {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
 						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
@@ -650,7 +650,8 @@ void *Switch_to_Daemon() {
 			} else { //udp
 				index = match_daemonSocket(dstport, dstip, protocol); //TODO change for multicast
 
-				if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
+				//if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
+				if (index != -1 && daemonSockets[index].state > SS_UNCONNECTED) { //TODO review this logic might be bad
 					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
 					if ((hostport != daemonSockets[index].dstport) || (hostip != daemonSockets[index].dst_IP)) {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");

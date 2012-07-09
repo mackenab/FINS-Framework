@@ -172,7 +172,7 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 		sem_post(&daemonSockets_sem);
 		return (0);
 	}
-	if (daemonSockets[index].connection_status > 0) {
+	if (daemonSockets[index].state > SS_UNCONNECTED) {
 
 		if ((srcport != daemonSockets[index].dstport) || (srcip != daemonSockets[index].dst_IP)) {
 			PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
@@ -612,7 +612,7 @@ void accept_icmp(int index, unsigned long long uniqueSockID, unsigned long long 
 }
 
 void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
-	int status;
+	int state;
 	uint32_t host_ip = 0;
 	uint16_t host_port = 0;
 	uint32_t rem_ip = 0;
@@ -632,8 +632,8 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 		host_ip = daemonSockets[index].host_IP;
 		host_port = daemonSockets[index].hostport;
 	} else if (peer == 2) {
-		status = daemonSockets[index].connection_status;
-		if (status) {
+		state = daemonSockets[index].state;
+		if (state > SS_UNCONNECTED) {
 			rem_ip = daemonSockets[index].dst_IP;
 			rem_port = daemonSockets[index].dstport;
 		}

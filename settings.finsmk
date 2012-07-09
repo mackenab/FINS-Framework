@@ -102,9 +102,3 @@ INTERCEPTOR_INC = -I. -I$(FINS_ROOT_DIR)/trunk/common
 
 #These are includes specifically for the Kernel Wedge
 WEDGE_INC = -I. -I$(FINS_ROOT_DIR)/trunk/common
-
-#These are includes specifically for the Examples
-EXAMPLES_INC = -I. -I$(FINS_ROOT_DIR)/trunk/examples
-
-#These are includes specifically for the Tests
-TESTS_INC = -I. -I$(FINS_ROOT_DIR)/trunk/tests

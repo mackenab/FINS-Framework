@@ -40,7 +40,7 @@ void *write_thread(void *local) {
 	}
 	if (conn->running_flag) {
 		PRINT_DEBUG("write_thread: state=%d", conn->state);
-		if (conn->state == SYN_SENT || conn->state == SYN_RECV) { //equiv to non blocking
+		if (conn->state == CS_SYN_SENT || conn->state == CS_SYN_RECV) { //equiv to non blocking
 			PRINT_DEBUG("write_thread: non-blocking");
 			if (conn->running_flag) {
 				space = conn->write_queue->max - conn->write_queue->len;
@@ -62,7 +62,7 @@ void *write_thread(void *local) {
 				conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
 				free(called_data);
 			}
-		} else if (conn->state == ESTABLISHED || conn->state == CLOSE_WAIT) { //essentially blocking
+		} else if (conn->state == CS_ESTABLISHED || conn->state == CS_CLOSE_WAIT) { //essentially blocking
 			PRINT_DEBUG("write_thread: blocking");
 			while (conn->running_flag && index < called_len) {
 				space = conn->write_queue->max - conn->write_queue->len;
@@ -310,7 +310,7 @@ void *connect_thread(void *local) {
 	if (conn->running_flag) {
 		//if CONNECT, send SYN, SYN_SENT
 		PRINT_DEBUG("connect_thread: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
-		conn->state = SYN_SENT;
+		conn->state = CS_SYN_SENT;
 		conn->active_open = 1;
 
 		conn->issn = 0; //tcp_rand(); //TODO uncomment
@@ -528,7 +528,7 @@ void *accept_thread(void *local) {
 						if (conn->running_flag) { //LISTENING state
 							//if SYN, send SYN ACK, SYN_RECV
 							PRINT_DEBUG("accept_thread: SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
-							conn->state = SYN_RECV;
+							conn->state = CS_SYN_RECV;
 							conn->active_open = 0;
 
 							conn->issn = 0; //tcp_rand(); //TODO uncomment
@@ -705,9 +705,9 @@ void *close_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		if (conn->state == ESTABLISHED) {
+		if (conn->state == CS_ESTABLISHED) {
 			PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%d", conn->state, (int) conn);
-			conn->state = FIN_WAIT_1;
+			conn->state = CS_FIN_WAIT_1;
 
 			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
@@ -726,9 +726,9 @@ void *close_thread(void *local) {
 				seg_free(seg);
 				//TODO add TO
 			} //else piggy back it
-		} else if (conn->state == CLOSE_WAIT) {
+		} else if (conn->state == CS_CLOSE_WAIT) {
 			PRINT_DEBUG("close_thread: CLOSE, send FIN, LAST_ACK: state=%d conn=%d", conn->state, (int) conn);
-			conn->state = LAST_ACK;
+			conn->state = CS_LAST_ACK;
 
 			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
 					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
@@ -820,7 +820,7 @@ void *read_param_conn_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
-	uint32_t status = thread_data->flags;
+	socket_state state = thread_data->flags;
 	free(thread_data);
 
 	PRINT_DEBUG("read_param_conn_thread: Entered: ff=%d", (int)ff);
@@ -895,7 +895,7 @@ void *read_param_conn_stub_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
-	uint32_t status = thread_data->flags;
+	socket_state state = thread_data->flags;
 	free(thread_data);
 
 	PRINT_DEBUG("read_param_conn_stub_thread: Entered: ff=%d", (int)ff);
@@ -981,7 +981,7 @@ void *read_param_conn_stub_thread(void *local) {
 void tcp_read_param(struct finsFrame *ff) {
 	int ret = 0;
 
-	uint32_t status;
+	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip;
@@ -994,8 +994,8 @@ void tcp_read_param(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 
 	metadata *params = ff->ctrlFrame.metaData;
-	if (metadata_read_conn(params, &status, &host_ip, &host_port, &rem_ip, &rem_port)) {
-		if (status) {
+	if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
+		if (state > SS_UNCONNECTED) {
 			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
 			if (sem_wait(&conn_list_sem)) {
 				PRINT_ERROR("conn_list_sem wait prob");
@@ -1068,7 +1068,7 @@ void *set_param_conn_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
-	uint32_t status = thread_data->flags;
+	socket_state state = thread_data->flags;
 	free(thread_data);
 
 	PRINT_DEBUG("set_param_conn_thread: Entered: ff=%d", (int)ff);
@@ -1155,7 +1155,7 @@ void *set_param_conn_stub_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
-	uint32_t status = thread_data->flags;
+	socket_state state = thread_data->flags;
 	free(thread_data);
 
 	PRINT_DEBUG("set_param_conn_stub_thread: Entered: ff=%d", (int)ff);
@@ -1241,7 +1241,7 @@ void *set_param_conn_stub_thread(void *local) {
 void tcp_set_param(struct finsFrame *ff) {
 	int ret = 0;
 
-	uint32_t status = 0;
+	socket_state state = 0;
 	uint32_t host_ip = 0;
 	uint16_t host_port = 0;
 	uint32_t rem_ip = 0;
@@ -1253,8 +1253,8 @@ void tcp_set_param(struct finsFrame *ff) {
 
 	metadata *params = ff->ctrlFrame.metaData;
 	if (params) {
-		if (metadata_read_conn(params, &status, &host_ip, &host_port, &rem_ip, &rem_port)) {
-			if (status) {
+		if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
+			if (state > SS_UNCONNECTED) {
 				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
 				if (sem_wait(&conn_list_sem)) {
 					PRINT_ERROR("conn_list_sem wait prob");
@@ -1271,7 +1271,7 @@ void tcp_set_param(struct finsFrame *ff) {
 						thread_data->id = tcp_thread_count++;
 						thread_data->conn = conn;
 						thread_data->ff = ff;
-						thread_data->flags = status;
+						thread_data->flags = state;
 
 						if (pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data)) {
 							PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
@@ -1310,7 +1310,7 @@ void tcp_set_param(struct finsFrame *ff) {
 						thread_data->id = tcp_thread_count++;
 						thread_data->conn_stub = conn_stub;
 						thread_data->ff = ff;
-						thread_data->flags = status;
+						thread_data->flags = state;
 
 						if (pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data)) {
 							PRINT_ERROR("ERROR: unable to create read_param_thread thread.");

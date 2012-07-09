@@ -19,7 +19,6 @@
 
 /* Include MetaData header File */
 #include "metadata.h"		//guicomm need this local
-
 /* Definition of the modules IDs */
 #define ARPID 66
 #define SOCKETSTUBID 55
@@ -53,7 +52,6 @@
 #define CTRL_EXEC 6				// telling a module to do something; module dependent
 #define CTRL_EXEC_REPLY 7		// a reply to the above, if necessary
 #define CTRL_ERROR 8 			// error message; ICMP msg for example
-
 /* frame type - finsframe.dataOrCtrl values */
 #define DATA 0
 #define CONTROL 1
@@ -61,7 +59,6 @@
 /* frame direction - finsDataFrame.directionFlag values */
 #define UP 0	// ingress network data (interface -> app)
 #define DOWN 1	// egress network data (app -> interface)
-
 /* this should be removed -MST */
 struct destinationList {
 	unsigned char id;
@@ -80,22 +77,22 @@ struct tableRecord {
 
 struct finsDataFrame {
 	/* Only for FINS DATA FRAMES */
-	unsigned char directionFlag;// ingress or egress network data; see above
-	unsigned int pduLength;		// length of pdu array
-	unsigned char *pdu;			// data!
-	metadata *metaData;			// metadata
+	unsigned char directionFlag; // ingress or egress network data; see above
+	unsigned int pduLength; // length of pdu array
+	unsigned char *pdu; // data!
+	metadata *metaData; // metadata
 };
 
 struct finsCtrlFrame {
 	/* only for FINS control frames */
-	unsigned char senderID;		// ID of the src module
-	unsigned short int opcode;	// type of control message, see CTRL_* values
-	unsigned int serialNum;		// unique identifier, varies by msg type
+	unsigned char senderID; // ID of the src module
+	unsigned short int opcode; // type of control message, see CTRL_* values
+	unsigned int serialNum; // unique identifier, varies by msg type
 
-	unsigned char * name ; 		// parameter/function/error name
-	void * data ; 				// pointer to relevant data; msg type dependent
-								// if using a struct for this, define elsewhere
-								// such as ICMP data information, define in ICMP
+	unsigned char * name; // parameter/function/error name
+	void * data; // pointer to relevant data; msg type dependent
+				 // if using a struct for this, define elsewhere
+				 // such as ICMP data information, define in ICMP
 	/* Special fields for control frames depending on the Opcode */
 
 	unsigned int paramterID;
@@ -103,14 +100,14 @@ struct finsCtrlFrame {
 	unsigned int paramterLen;
 
 	struct tableRecord *replyRecord;
-	metadata *metaData;			// metadata
+	metadata *metaData; // metadata
 };
 
 struct finsFrame {
 
 	/* Common Fields between data and control */
-	unsigned char dataOrCtrl;				// data frame or control frame; use #def values above
-	struct destinationList destinationID;	// destination module ID
+	unsigned char dataOrCtrl; // data frame or control frame; use #def values above
+	struct destinationList destinationID; // destination module ID
 	union {
 		struct finsDataFrame dataFrame;
 		struct finsCtrlFrame ctrlFrame;
@@ -178,7 +175,6 @@ struct finsFrame {
 //
 //	struct tableRecord *replyRecord;
 //};
-
 /* needed function defs */
 int serializeCtrlFrame(struct finsFrame *, unsigned char **);
 /* serializes a fins control frame for transmission to an external process
@@ -195,5 +191,13 @@ struct finsFrame * unserializeCtrlFrame(unsigned char *, int);
  * -- struct.
  * - called by the receiver
  */
+
+typedef enum {
+	SS_FREE = 0, /* not allocated                */
+	SS_UNCONNECTED, /* unconnected to any socket    */
+	SS_CONNECTING, /* in process of connecting     */
+	SS_CONNECTED, /* connected to socket          */
+	SS_DISCONNECTING /* in process of disconnecting  */
+} socket_state;
 
 #endif /* FINSTYPES_H_ */
