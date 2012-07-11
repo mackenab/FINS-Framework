@@ -900,7 +900,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	int ret;
 	int index;
 
-	struct sock *sk = sock->sk;
+	//struct sock *sk = sock->sk;
 	//lock_sock(sk);
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -2224,7 +2224,7 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	return 0;
 }
 
-static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *pt) {
+static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *table) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test

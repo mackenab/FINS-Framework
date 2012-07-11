@@ -114,8 +114,8 @@ void main() {
 	pid_t pID;
 	char device[20];
 	//strcpy(device, "lo"); //original !!!!!
-	strcpy(device, "eth0"); //changed to this !!!!! //on linux eth0 used for TCP
-	//strcpy(device, "eth1"); //changed to this !!!!! //on linux eth1 used for UDP
+	//strcpy(device, "eth0"); //changed to this !!!!! //on linux eth0 used for TCP
+	strcpy(device, "eth1"); //changed to this !!!!! //on linux eth1 used for UDP
 	//strcpy(device, "wlan0");
 
 	/** Time to split into two processes
