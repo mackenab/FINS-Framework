@@ -1825,8 +1825,8 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	//memset( addr, 0,addrlen);
 	addr->sin_family = AF_INET;
 
-	addr->sin_addr.s_addr = daemonSockets[index].host_IP;
-	addr->sin_port = daemonSockets[index].hostport;
+	addr->sin_addr.s_addr = htonl(daemonSockets[index].host_IP);
+	addr->sin_port = htons(daemonSockets[index].hostport);
 	PRINT_DEBUG("%d , %d", daemonSockets[index].host_IP, daemonSockets[index].hostport);
 
 	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;

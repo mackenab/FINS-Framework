@@ -329,6 +329,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	uint16_t hostport;
 	uint16_t dstport;
 	uint32_t host_IP_netformat;
+	uint32_t host_IP;
 	uint32_t dst_IP_netformat;
 
 	PRINT_DEBUG("bind_udp: Entered: index=%d uniqueSockID=%llu", index, uniqueSockID);
@@ -343,6 +344,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/** the check below is to make sure that the port is not previously allocated */
 	hostport = ntohs(addr->sin_port);
 	host_IP_netformat = addr->sin_addr.s_addr;
+	host_IP = ntohl(host_IP_netformat);
 
 	/**TODO check if the port is free for binding or previously allocated
 	 * Current code assume that the port is authorized to be accessed
@@ -380,7 +382,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	 * Binding
 	 */
 	daemonSockets[index].hostport = hostport;
-	daemonSockets[index].host_IP = host_IP_netformat;
+	daemonSockets[index].host_IP = host_IP;
 
 	PRINT_DEBUG("bind: index:%d, host:%d/%d, dst:%d/%d",
 			index, daemonSockets[index].host_IP, daemonSockets[index].hostport, daemonSockets[index].dst_IP, daemonSockets[index].dstport);
@@ -562,8 +564,7 @@ void getname_udp(int index, unsigned long long uniqueSockID, int peer) {
 	if (peer == 1) { //TODO find right number
 		//getsockname
 	} else if (peer == 2) {
-		addr->sin_addr.s_addr = host_ip;
-		//addr->sin_addr.s_addr = htonl(host_ip);
+		addr->sin_addr.s_addr = htonl(host_ip);
 		addr->sin_port = htons(host_port);
 	} else {
 		//TODO ??

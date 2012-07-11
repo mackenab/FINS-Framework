@@ -47,8 +47,10 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	metadata *ipv4_meta = (metadata *) malloc(sizeof(metadata));
 	metadata_create(ipv4_meta);
 
-	IP4addr srcaddress = ppacket->ip_src;
-	IP4addr dstaddress = ppacket->ip_dst;
+	//IP4addr srcaddress = ppacket->ip_src;
+	//IP4addr dstaddress = ppacket->ip_dst;
+	IP4addr srcaddress = pheader->source;
+	IP4addr dstaddress = pheader->destination;
 	PRINT_DEBUG("protocol # %d src=%u, dst=%u", ppacket->ip_proto, (uint32_t)srcaddress, (uint32_t)dstaddress);
 	uint16_t protocol = ppacket->ip_proto; /* protocol number should  be 17 from metadata */
 	/** Filling into the metadata with sourceIP, DestinationIP, and ProtocolNumber */

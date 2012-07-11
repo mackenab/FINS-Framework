@@ -199,6 +199,8 @@ void capture_init(char *interface) {
 		exit(EXIT_FAILURE);
 	}
 
+	//TODO recv MAC/ip address from Core?
+
 	/* Build the filter expression based on the mac address of the passed
 	 * device name
 	 */
@@ -212,7 +214,8 @@ void capture_init(char *interface) {
 	//strcat(filter_exp, "udp and port 5000");
 	//strcat(filter_exp, ""); //everything
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or arp"); //final?
+	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or arp"); //final?
+	strcat(filter_exp, "(ether dst 080027a55f13) or broadcast or multicast or arp"); //final?
 	//strcat(filter_exp, "((ether dst 001cbf871afd) or broadcast or multicast) and not icmp"); //works, no icmp
 	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or icmp[0] == 8 or icmp[0] == 0"); //broken, icmp request/reply
 	//strcat(filter_exp, "icmp");

@@ -9,7 +9,8 @@
 #include "IP4.h"
 
 
-IP4addr my_ip_addr = IP4_ADR_P2N(172,31,165,252);
+//IP4addr my_ip_addr = IP4_ADR_P2N(172,31,165,252);
+IP4addr my_ip_addr = IP4_ADR_P2N(127,0,0,1);
 IP4addr my_mask = IP4_ADR_P2N(255, 255, 255, 0);
 struct ip4_routing_table* routing_table;
 struct ip4_stats stats;

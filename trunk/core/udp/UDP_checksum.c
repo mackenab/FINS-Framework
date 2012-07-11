@@ -12,6 +12,10 @@
 #include <finstypes.h>
 #include "udp.h"
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 /**
  * @brief calculates the checksum for a UDP datagram.
  * @param pcket is the UDP packet containing both its header and the data
@@ -41,32 +45,55 @@
  *  If the datagram is correct, the returned value should be zero. However, this function can be used to calculate
  *  the true checksum by setting the checksum field to 0 and using the returned value as the checksum.
  */
-unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t dst_ip) {
+
+struct checksum_udp_hdr {
+	uint32_t src_addr;
+	uint32_t dst_addr;
+	uint8_t zeros;
+	uint8_t protocol;
+	uint16_t udp_len;
+	uint16_t src_port;
+	uint16_t dst_port;
+	uint16_t len;
+	uint16_t checksum;
+	uint8_t data[];
+};
+
+//assume all inputs are in network format, returns checksum in host format
+unsigned short UDP_checksum(struct udp_packet* pcket_netw, uint32_t src_ip_netw, uint32_t dst_ip_netw) {
 
 	int i;
 	uint8_t *ptr;
 	uint32_t sum = 0;
 
 	//packet is in network format
+	PRINT_DEBUG("UDP_checksum: Entered: (N) src_ip=%u (%x), dst_ip=%u (%x)", src_ip_netw, src_ip_netw, dst_ip_netw, dst_ip_netw);
+	struct in_addr temp_src;
+	temp_src.s_addr = src_ip_netw;
+	PRINT_DEBUG("src_ip=%s", inet_ntoa(temp_src));
+	struct in_addr temp_dst;
+	temp_dst.s_addr = dst_ip_netw;
+	PRINT_DEBUG("dst_ip=%s", inet_ntoa(temp_dst));
 
-	//fake IP header
-	ptr = (uint8_t *) &src_ip;
-	for (i = 0, ptr--; i < 4; i += 2) {
+	struct checksum_udp_hdr hdr;
+	hdr.src_addr = src_ip_netw;
+	hdr.dst_addr = dst_ip_netw;
+	hdr.zeros = 0;
+	hdr.protocol = UDP_PROTOCOL;
+	hdr.udp_len = pcket_netw->u_len;
+
+	ptr = (uint8_t *) &hdr;
+	for (i = 0, ptr--; i < 12; i += 2) {
+		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(ptr+1), *(ptr+1), i+1, *(ptr+2), *(ptr+2));
 		sum += (*++ptr << 8) + *++ptr;
 	}
 
-	ptr = (uint8_t *) &dst_ip;
-	for (i = 0, ptr--; i < 4; i += 2) {
-		sum += (*++ptr << 8) + *++ptr;
-	}
+	uint16_t len = ntohs(pcket_netw->u_len);
+	PRINT_DEBUG("len=%d", len);
 
-	sum += (UDP_PROTOCOL); //TODO check!
-	sum += pcket->u_len;
-
-	ptr = (uint8_t *) pcket;
-
-	uint16_t len = ntohs(pcket->u_len);
+	ptr = (uint8_t *) pcket_netw;
 	if (len & 0x1) {
+		//PRINT_DEBUG("uneven: %u=%2x (%u), %2x (%u)", len-1, ptr[len-1], ptr[len-1], 0, 0);
 		sum += ptr[--len] << 8;
 	}
 
@@ -81,6 +108,7 @@ unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t 
 	}
 
 	sum = ~sum;
-	return htons((uint16_t) sum);
+	//return htons((uint16_t) sum);
+	return (uint16_t) sum;
 }
 

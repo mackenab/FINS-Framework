@@ -51,6 +51,8 @@ void udp_in(struct finsFrame* ff) {
 	uint16_t protocol_type;
 	unsigned long srcip;
 	unsigned long dstip;
+	uint16_t src_port;
+	uint16_t dst_port;
 
 	metadata_readFromElement(meta, "protocol", &protocol_type);
 	metadata_readFromElement(meta, "src_ip", &srcip);
@@ -77,17 +79,21 @@ void udp_in(struct finsFrame* ff) {
 		PRINT_DEBUG("UDP_in");
 
 		return;
-	}PRINT_DEBUG("UDP_in");
+	}
+	PRINT_DEBUG("UDP_in");
 
 	/* the packet is does have an "Ignore checksum" value and fails the checksum, it is thrown away */
 	/** TODO Correct the implementation of the function UDP_checksum
 	 * Now it will be called as a dummy function
 	 * */
+
+	uint16_t checksum = UDP_checksum((struct udp_packet*) packet, htonl(srcip), htonl(dstip));
+
 	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip, (int)packet->u_dst, (int)packet->u_src);
-	PRINT_DEBUG("UDP_checksum=%u checksum=%u", UDP_checksum((struct udp_packet*)packet, srcip, dstip), ntohs(packet->u_cksum));
+	PRINT_DEBUG("UDP_checksum=%u checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
-		if (0 && UDP_checksum((struct udp_packet*) packet, srcip, dstip) != 0) { //TODO enable again
+		if (checksum != 0) {
 			udpStat.badChecksum++;
 			udpStat.totalBadDatagrams++;
 			PRINT_DEBUG("UDP_in");
@@ -99,14 +105,19 @@ void udp_in(struct finsFrame* ff) {
 		udpStat.noChecksum++;
 		PRINT_DEBUG("UDP_in");
 
-	}PRINT_DEBUG("UDP_in");
+	}
+	PRINT_DEBUG("UDP_in");
 
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
-	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip, (int)packet->u_dst, (int)packet->u_src);
 
-	metadata_writeToElement(meta, "dst_port", &packet->u_dst, META_TYPE_INT);
-	metadata_writeToElement(meta, "src_port", &packet->u_src, META_TYPE_INT);
+	src_port = ntohs(packet->u_src);
+	dst_port = ntohs(packet->u_dst);
+
+	PRINT_DEBUG("proto=%d , src=%d:%d, dst=%d:%d", (int)protocol_type, (int)srcip, (int)src_port, (int)dstip, (int)dst_port);
+
+	metadata_writeToElement(meta, "src_port", &src_port, META_TYPE_INT);
+	metadata_writeToElement(meta, "dst_port", &dst_port, META_TYPE_INT);
 
 	/* put the header into the meta data*/
 	//	meta->u_destPort = packet->u_dst;

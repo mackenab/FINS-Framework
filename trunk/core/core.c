@@ -608,30 +608,20 @@ void *Switch_to_Daemon() {
 			dstport = (uint16_t) dstport_buf;
 			hostport = (uint16_t) hostport_buf;
 
-			PRINT_DEBUG("NETFORMAT %d,%d,%d,%d,%d, ff=%d", protocol, hostip, dstip, hostport, dstport, (int)ff);
-
-			protocol = ntohs(protocol);
-			dstport = ntohs(dstport);
-			hostport = ntohs(hostport);
-			dstip = ntohl(dstip);
-			hostip = ntohl(hostip);
-
-			PRINT_DEBUG("HOSTFORMAT %d,%d,%d,%d,%d, ff=%d", protocol, hostip, dstip, hostport, dstport, (int)ff);
-			///*
 			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 			if (hostip) {
-				temp->s_addr = hostip;
+				temp->s_addr = htonl(hostip);
 			} else {
 				temp->s_addr = 0;
 			}
 			struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
 			if (dstip) {
-				temp2->s_addr = dstip;
+				temp2->s_addr = htonl(dstip);
 			} else {
 				temp2->s_addr = 0;
 			}
-			PRINT_DEBUG("NETFORMAT %d, host=%s/%d, dst=%s/%d,", protocol, inet_ntoa(*temp), (hostport), inet_ntoa(*temp2), (dstport));
-			PRINT_DEBUG("NETFORMAT %d, host=%d/%d, dst=%d/%d,", protocol, (*temp).s_addr, (hostport), (*temp2).s_addr, (dstport));
+			PRINT_DEBUG("prot=%d, host=%s:%d (%u), dst=%s:%d (%u), ff=%d",
+					protocol, inet_ntoa(*temp), (hostport), (*temp).s_addr, inet_ntoa(*temp2), (dstport), (*temp2).s_addr, (int)ff);
 			free(temp);
 			free(temp2);
 
@@ -1164,11 +1154,11 @@ void *Inject() {
 		//char dest[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		//char src[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		//char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
-
 		//char dest[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //same to itself
-		char src[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //jreed: HAF FINS-dev_env eth1 //can be anything
+		char dest[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 };
+		char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //jreed: HAF FINS-dev_env eth1 //can be anything
 
-		char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //jreed: HAF host
+		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //jreed: HAF host
 		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //jreed: HAF Vanilla-dev_env eth1
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
@@ -1277,17 +1267,26 @@ int main() {
 	 fclose(f);
 	 printf("i=%d\n", i);
 
-	 uint32_t src_ip = xxx(192,168,1,11);
-	 uint32_t dst_ip = xxx(66,69,232,38);
-	 src_ip = htonl(src_ip);
-	 dst_ip = htonl(dst_ip);
-	 struct udp_packet *pkt = (struct udp_packet *) num;
+	 //uint32_t src_ip = xxx(192,168,1,11);
+	 uint32_t src_ip = xxx(192,168,1,20);
+	 //uint32_t dst_ip = xxx(66,69,232,38);
+	 uint32_t dst_ip = xxx(192,168,1,11);
+	 //src_ip = htonl(src_ip);
+	 //dst_ip = htonl(dst_ip);
+	 //struct udp_packet *pkt = (struct udp_packet *) num;
+	 struct udp_packet *pkt = (struct udp_packet *) malloc(sizeof(struct udp_packet));
+	 pkt->u_src = (55555);
+	 pkt->u_dst = (44444);
+	 pkt->u_len = 8;
+	 pkt->u_cksum = 0;
+	 pkt->u_cksum = 0xf5cd;
+
 	 uint16_t checksum = pkt->u_cksum;
 	 uint16_t calc = UDP_checksum(pkt, (src_ip), (dst_ip));
-	 PRINT_DEBUG("checksum: %4x %4x", checksum, calc);
+	 PRINT_DEBUG("checksum (h): %4x %4x", (checksum), (calc));
 
 	 return 0;
-	 */
+	 //*/
 
 	//init the netlink socket connection to daemon
 	//int nl_sockfd;

@@ -41,21 +41,21 @@ int main(int argc, char *argv[]) {
 		port = 5000;
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
-	server_addr.sin_addr.s_addr = INADDR_ANY;
-	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
-	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	//server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
-	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 
+	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
 	//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
+	//server_addr.sin_addr.s_addr = INADDR_ANY;
+	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
+	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	bzero(&(server_addr.sin_zero), 8);
 
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
@@ -84,8 +84,11 @@ int main(int argc, char *argv[]) {
 			printf("\n(%s:%d, n=%u) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port), client_addr->sin_addr.s_addr);
 			//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
 			printf(" (%s) to the Server\n", recv_data);
+
+		} else if (errno == EWOULDBLOCK) {
+			i--;
 		} else {
-			printf("\n Error recv at the Server\n", recv_data);
+			printf("\n Error recv at the Server errno=%s\n", recv_data, strerror(errno));
 		}
 		fflush(stdout);
 

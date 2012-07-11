@@ -38,7 +38,7 @@ struct udp_packet {
 	uint16_t u_dst; /*UDP destination port */
 	uint16_t u_len; /*Length of UDP packet */
 	uint16_t u_cksum; /* UDP checksum all 1's means no checksum*/
-	u_char u_data[8]; /*Data in the packet*/
+	u_char u_data[]; /*Data in the packet*/
 };
 
 struct udp_metadata_parsed {
