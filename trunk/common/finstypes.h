@@ -200,4 +200,9 @@ typedef enum {
 	SS_DISCONNECTING /* in process of disconnecting  */
 } socket_state;
 
+#ifndef IP4_ADR_P2H
+/* macro to convert IPv4 address from human readable format Presentation to long int in Host format*/
+#define IP4_ADR_P2H(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
+#endif /* IP4_ADR_P2N */
+
 #endif /* FINSTYPES_H_ */

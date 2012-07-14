@@ -47,7 +47,7 @@ void udp_out(struct finsFrame* ff) {
 		return;
 	}
 
-	PRINT_DEBUG("UDP_out");
+	PRINT_DEBUG("UDP_out, ff=%d", (int)ff);
 
 	//print_finsFrame(ff);
 
@@ -67,7 +67,6 @@ void udp_out(struct finsFrame* ff) {
 	uint32_t dstip;
 	uint32_t srcip;
 
-	PRINT_DEBUG("UDP_out");
 	metadata* meta = (ff->dataFrame).metaData;
 	metadata_readFromElement(meta, "dst_port", &dstbuf);
 	metadata_readFromElement(meta, "src_port", &srcbuf);
@@ -166,14 +165,10 @@ void udp_out(struct finsFrame* ff) {
 	 */
 
 	//	packet.u_cksum = 30;
-	PRINT_DEBUG("UDP_out");
 	//memcpy(udp_dataunit, &packet_netw, U_HEADER_LEN); /* copies the UDP packet into the memory that has been allocated for the PDU */
 	//	PRINT_DEBUG("%d, %d",(ff->dataFrame).pdu, ff->dataFrame.pduLength);
-
 	//memcpy(udp_dataunit + U_HEADER_LEN, (ff->dataFrame).pdu, ff->dataFrame.pduLength); /* moves the pointer 8 bytes to account for those empty 8 bytes*/
-
 	//	PRINT_DEBUG("%d",packet.u_len);
-
 	/**
 	 memcpy(test, udp_dataunit, packet_length);
 	 test [packet_length] = '\0';
@@ -197,15 +192,12 @@ void udp_out(struct finsFrame* ff) {
 	PRINT_DEBUG("%d", (int)udp_dataunit);
 	//(int)ff->dataFrame.pdu);
 
-	PRINT_DEBUG("UDP_out");
-
 	newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, udp_dataunit, meta);
 
-	PRINT_DEBUG("%d", (int)newFF->dataFrame.pdu);
+	PRINT_DEBUG("newff=%d, pdu=%d", (int)newFF, (int)newFF->dataFrame.pdu);
 
 	print_finsFrame(newFF);
 	udpStat.totalSent++;
-	PRINT_DEBUG("UDP_out");
 
 	sendToSwitch(newFF);
 }

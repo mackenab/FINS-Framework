@@ -9,7 +9,7 @@
 #include <queueModule.h>
 
 IP4addr my_ip_addr;
-IP4addr loopback = IP4_ADR_P2N(127,0,0,1);
+IP4addr loopback = IP4_ADR_P2H(127, 0, 0, 1);
 IP4addr my_mask;
 struct ip4_routing_table* routing_table;
 struct ip4_packet *construct_packet_buffer;
@@ -22,10 +22,10 @@ void ipv4_init() {
 	 * or from a configuration file
 	 */
 
-	//my_ip_addr = IP4_ADR_P2N(192,168,1,20);
-	my_ip_addr = IP4_ADR_P2N(127,0,0,1);
-	//my_ip_addr = IP4_ADR_P2N(172,31,63,231 );
-	//my_ip_addr = IP4_ADR_P2N(172,31,53,114);
+	my_ip_addr = IP4_ADR_P2H(192, 168, 1, 20);
+	//my_ip_addr = IP4_ADR_P2H(127, 0, 0, 1);
+	//my_ip_addr = IP4_ADR_P2H(172, 31, 63, 231);
+	//my_ip_addr = IP4_ADR_P2H(172, 31, 53, 114);
 	/** TODO get the IP of the default interface from
 	 * the configuration file (To Be done by the initialization primary thread
 	 * before invokiung the IPv4 thread). Same for the mask value. It can be also
@@ -34,7 +34,7 @@ void ipv4_init() {
 	 *
 	 */
 	PRINT_DEBUG("%lu", my_ip_addr);
-	my_mask = IP4_ADR_P2N(255,255,255,0);
+	my_mask = IP4_ADR_P2H(255, 255, 255, 0);
 
 	//ADDED mrd015 !!!!!
 #ifndef BUILD_FOR_ANDROID

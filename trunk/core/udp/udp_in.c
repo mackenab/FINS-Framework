@@ -42,7 +42,7 @@ void udp_in(struct finsFrame* ff) {
 		return;
 	}
 
-	PRINT_DEBUG("UDP_in");
+	PRINT_DEBUG("UDP_in ff=%d", (int)ff);
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ((ff->dataFrame).pdu);
@@ -58,8 +58,6 @@ void udp_in(struct finsFrame* ff) {
 	metadata_readFromElement(meta, "src_ip", &srcip);
 	metadata_readFromElement(meta, "dst_ip", &dstip);
 
-	PRINT_DEBUG("UDP_in");
-
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */
 	/**
@@ -71,16 +69,13 @@ void udp_in(struct finsFrame* ff) {
 	 return;
 	 }
 	 */
-	PRINT_DEBUG("UDP_in");
-
 	if (protocol_type != UDP_PROTOCOL) {
 		udpStat.wrongProtocol++;
 		udpStat.totalBadDatagrams++;
-		PRINT_DEBUG("UDP_in");
+		PRINT_DEBUG("wrong proto=%d", protocol_type);
 
 		return;
 	}
-	PRINT_DEBUG("UDP_in");
 
 	/* the packet is does have an "Ignore checksum" value and fails the checksum, it is thrown away */
 	/** TODO Correct the implementation of the function UDP_checksum
@@ -89,24 +84,23 @@ void udp_in(struct finsFrame* ff) {
 
 	uint16_t checksum = UDP_checksum((struct udp_packet*) packet, htonl(srcip), htonl(dstip));
 
-	PRINT_DEBUG("%d , %d, %d, %d, %d", (int)protocol_type, (int)srcip, (int)dstip, (int)packet->u_dst, (int)packet->u_src);
+	PRINT_DEBUG("proto=%d , src=%lu:%u, dst=%lu:%u", (int)protocol_type, srcip, packet->u_dst, dstip, packet->u_src);
 	PRINT_DEBUG("UDP_checksum=%u checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
 			udpStat.badChecksum++;
 			udpStat.totalBadDatagrams++;
-			PRINT_DEBUG("UDP_in");
+			PRINT_DEBUG("bad checksum=%x, calc=%x", packet->u_cksum, checksum);
 
 			return;
 		}
 
 	} else {
 		udpStat.noChecksum++;
-		PRINT_DEBUG("UDP_in");
+		PRINT_DEBUG("ignore checksum=%d", udpStat.noChecksum);
 
 	}
-	PRINT_DEBUG("UDP_in");
 
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
@@ -124,20 +118,19 @@ void udp_in(struct finsFrame* ff) {
 	//	meta->u_srcPort = packet->u_src;
 	/* construct a FDF to send to the sockets */
 
-	ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN; //mem leak
-	PRINT_DEBUG("UDP_in");
+	ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
 	PRINT_DEBUG("PDU Length including UDP header %d", (ff->dataFrame).pduLength);
 	PRINT_DEBUG("PDU Length %d", ((ff->dataFrame).pduLength) - U_HEADER_LEN);
 
 	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
 	newFF = create_ff(DATA, UP, SOCKETSTUBID, ((ff->dataFrame).pduLength) - U_HEADER_LEN, ((ff->dataFrame).pdu), meta);
 
-	PRINT_DEBUG("PDU Length %d", (newFF->dataFrame).pduLength);
-
+	PRINT_DEBUG("newff=%d, PDU Len=%d", (int)newFF, (newFF->dataFrame).pduLength);
 	//print_finsFrame(newFF);
 
-	//freeFinsFrame(ff); //can't since using meta
-
 	sendToSwitch(newFF);
+
+	//freeFinsFrame(ff); //can't since using meta
+	free(ff);
 }
 

@@ -206,11 +206,6 @@ struct ip4_next_hop_info {
 /* macro to get datagram's flags							*/
 #define IP4_FLG(fragoff)		(fragoff>>13)&0x7)
 
-#ifndef IP4_ADR_P2N
-/* macro to convert IPv4 address from human readable format (_P_resentation) to long int (_N_etwork)*/
-#define IP4_ADR_P2N(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
-#endif /* IP4_ADR_P2N */
-
 /* macros to determine IP address class*/
 #define	IP4_CLASSA(x) (((x) & 0x80000000) == 0)		/* IP Class A */
 #define	IP4_CLASSB(x) (((x) & 0xc0000000) == 0x80000000)	/* IP Class B */

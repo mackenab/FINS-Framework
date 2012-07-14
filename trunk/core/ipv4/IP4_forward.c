@@ -14,7 +14,7 @@ int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest,
 
 	struct ip4_next_hop_info next_hop = IP4_next_hop(dest);
 	if (next_hop.interface >= 0) {
-		IP4_send_fdf_out(ff, ppacket, next_hop, length);
+		//IP4_send_fdf_out(ff, ppacket, next_hop, length); //TODO uncommenct/fix
 		return 1;
 	}
 	stats.cantforward++;

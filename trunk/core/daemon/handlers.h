@@ -45,8 +45,6 @@
 #include "tcpHandling.h"
 #include "icmpHandling.h"
 
-#define IP4_ADR_P2N(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
-
 /** FINS Sockets database related defined constants */
 #define MAX_sockets 100
 #define MaxChildrenNumSharingSocket 100
@@ -210,8 +208,12 @@ struct finssocket {
 	uint32_t dst_IP; //host format
 	char name[50];
 	int data_pipe[2];
+
 	finsQueue controlQueue;
+	sem_t control_sem;
+
 	finsQueue dataQueue;
+	sem_t data_sem;
 	int buf_data;
 	sem_t Qs; /** The data Queue Semaphore Pointer*/
 
@@ -243,7 +245,7 @@ void init_daemonSockets();
 int randoming(int min, int max);
 int check_daemonSocket(unsigned long long uniqueSockID);
 int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol);
-int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, int protocol);
 int find_daemonSocket(unsigned long long uniqueSockID);
 int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol);
 int remove_daemonSocket(unsigned long long uniqueSockID);
@@ -253,7 +255,7 @@ int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
 struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_block_flag);
-struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag); //blocking doesn't matter
+struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int non_block_flag); //blocking doesn't matter
 
 /** calls handling functions */
 void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);

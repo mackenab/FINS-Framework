@@ -15,7 +15,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 
 	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
-	PRINT_DEBUG("IP4_send_fdf_in() called");
+	PRINT_DEBUG("IP4_send_fdf_in() called, ff=%d", (int)fins_frame);
 	fins_frame->dataOrCtrl = DATA;
 	PRINT_DEBUG("protocol # %d", pheader->protocol);
 	switch (pheader->protocol) {
@@ -77,7 +77,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	//print_finsFrame(ff);
 	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
-	PRINT_DEBUG("IP4_send_fdf_out() called.");
+	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%d newff=%d", (int)ff, (int)fins_frame);
 	fins_frame->dataOrCtrl = DATA;
 	(fins_frame->destinationID).id = ETHERSTUBID;
 	(fins_frame->destinationID).next = NULL;

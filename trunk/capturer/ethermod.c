@@ -157,6 +157,9 @@ void main() {
 		 */
 		PRINT_DEBUG("parent started to Inject \n");
 		inject_init(device);
+		//char device2[] = "eth0";
+		//capture_init(device2);
+
 		// 	while (1);
 
 	}

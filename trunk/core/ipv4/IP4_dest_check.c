@@ -19,17 +19,17 @@ int IP4_dest_check(IP4addr destination) {
 	IP4addr network_broadcast;
 
 	if (IP4_CLASSA(my_ip_addr)) {
-		network_broadcast = my_ip_addr | (~IP4_ADR_P2N(255, 0, 0, 0));
+		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 0, 0, 0));
 	} else if (IP4_CLASSB(my_ip_addr)) {
-		network_broadcast = my_ip_addr | (~IP4_ADR_P2N(255, 255, 0, 0));
+		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 255, 0, 0));
 	} else if (IP4_CLASSC(my_ip_addr)) {
-		network_broadcast = my_ip_addr | (~IP4_ADR_P2N(255, 255, 255, 0));
+		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 255, 255, 0));
 	}
 
-	if (destination == my_ip_addr || destination == IP4_ADR_P2N(127,0,0,1)
+	if (destination == my_ip_addr || destination == IP4_ADR_P2H(127,0,0,1)
 			|| destination == subnet_broadcast || destination
-			== network_broadcast || destination == IP4_ADR_P2N(255,255,255,255)
-			|| destination == IP4_ADR_P2N(0,0,0,0)) {
+			== network_broadcast || destination == IP4_ADR_P2H(255,255,255,255)
+			|| destination == IP4_ADR_P2H(0,0,0,0)) {
 		return (1);
 	}
 	return (0);

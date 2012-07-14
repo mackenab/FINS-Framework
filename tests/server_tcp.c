@@ -41,11 +41,11 @@ int main(int argc, char *argv[]) {
 
 		port = atoi(argv[1]);
 	else
-		port = 5000;
+		port = 44444;
 
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
-	//if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	//if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
@@ -58,9 +58,13 @@ int main(int argc, char *argv[]) {
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	//server_addr.sin_addr.s_addr = INADDR_ANY;
-	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+
+	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
+	//server_addr.sin_addr.s_addr = xxx(192,168,1,11);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	//server_addr.sin_addr.s_addr = INADDR_ANY;
+	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
 
@@ -88,8 +92,14 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	sock_client = -1;
-	while ((sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len)) < 0)
-		;
+	while (1) {
+		sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len);
+		if (sock_client > 0) {
+			break;
+		} else {
+			printf("\n failed accept: sock_client=%d errno=%s", sock_client, strerror(errno));
+		}
+	}
 
 	printf("\n Connection establisehed sock_client=%d to (%s/%d) netw=%u", sock_client, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port),
 			client_addr.sin_addr.s_addr);

@@ -122,7 +122,7 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 	int i;
 
-	PRINT_DEBUG("matchdaemonSocket: %d/%d: %d, ", dstip, dstport, protocol);
+	PRINT_DEBUG("matchdaemonSocket: %u/%u: %d, ", dstip, dstport, protocol);
 
 	for (i = 0; i < MAX_sockets; i++) {
 		if (daemonSockets[i].uniqueSockID != -1) {
@@ -170,14 +170,14 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 }
 
-int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("match_daemon_socket: %d/%d to %d/%d", host_ip, host_port, rem_ip, rem_port);
+int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, int protocol) {
+	PRINT_DEBUG("match_daemon_socket: %u/%u to %u/%u", host_ip, host_port, rem_ip, rem_port);
 
 	int i;
 	for (i = 0; i < MAX_sockets; i++) {
 		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_IP == host_ip && daemonSockets[i].hostport == host_port
-				&& daemonSockets[i].dst_IP == rem_ip && daemonSockets[i].dstport == rem_port) {
-			PRINT_DEBUG("Matched connection");
+				&& daemonSockets[i].dst_IP == rem_ip && daemonSockets[i].dstport == rem_port && daemonSockets[i].protocol == protocol) {
+			PRINT_DEBUG("Matched connection index=%d", i);
 			return (i);
 		}
 	}
@@ -223,13 +223,17 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 
 			daemonSockets[i].type = type; // & (SOCK_DGRAM | SOCK_STREAM);
 			daemonSockets[i].blockingFlag = 1;
-
 			daemonSockets[i].protocol = protocol;
 			daemonSockets[i].backlog = DEFAULT_BACKLOG;
-			daemonSockets[i].controlQueue = init_queue(NULL, MAX_Queue_size);
-			daemonSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
-			daemonSockets[i].buf_data = 0;
+
 			sem_init(&daemonSockets[i].Qs, 0, 1);
+
+			daemonSockets[i].controlQueue = init_queue(NULL, MAX_Queue_size);
+			sem_init(&daemonSockets[i].control_sem, 0, 0);
+
+			daemonSockets[i].dataQueue = init_queue(NULL, MAX_Queue_size);
+			sem_init(&daemonSockets[i].data_sem, 0, 0);
+			daemonSockets[i].buf_data = 0;
 
 			sprintf(daemonSockets[i].name, "socket# %llu", daemonSockets[i].uniqueSockID);
 
@@ -257,12 +261,22 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 
 int remove_daemonSocket(unsigned long long targetID) {
 
-	int i = 0;
+	int i = 0, j = 0;
+	int THREADS = 100;
+
 	for (i = 0; i < MAX_sockets; i++) {
 		if (daemonSockets[i].uniqueSockID == targetID) {
 			daemonSockets[i].uniqueSockID = -1;
 
 			//TODO stop all threads related to
+
+			for (j = 0; j < THREADS; j++) {
+				sem_post(&daemonSockets[i].control_sem);
+			}
+
+			for (j = 0; j < THREADS; j++) {
+				sem_post(&daemonSockets[i].data_sem);
+			}
 
 			daemonSockets[i].state = SS_FREE;
 			term_queue(daemonSockets[i].controlQueue);
@@ -411,6 +425,60 @@ int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_block_flag) {
 	struct finsFrame *ff = NULL;
 
+	if (index < 0) {
+		return NULL;
+	}
+
+	if (non_block_flag) {
+		int val;
+		sem_getvalue(&daemonSockets[index].data_sem, &val);
+		//sem_trywait(daemonSockets[index].Qs);
+
+		if (val) {
+			sem_wait(&daemonSockets_sem);
+			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_DEBUG("Socket closed, canceling read block.");
+				sem_post(&daemonSockets_sem);
+				return NULL;
+			}
+			sem_wait(&(daemonSockets[index].Qs));
+			ff = read_queue(daemonSockets[index].dataQueue);
+			//ff = get_fake_frame();
+			if (ff) {
+				daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
+				//print_finsFrame(ff);
+			}
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
+		}
+	} else {
+		sem_wait(&daemonSockets[index].data_sem);
+
+		sem_wait(&daemonSockets_sem);
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling read block.");
+			sem_post(&daemonSockets_sem);
+			return NULL;
+		}
+
+		sem_wait(&(daemonSockets[index].Qs));
+		ff = read_queue(daemonSockets[index].dataQueue);
+		//ff = get_fake_frame();
+
+		if (ff) {
+			daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
+			//print_finsFrame(ff);
+		}
+		sem_post(&(daemonSockets[index].Qs));
+		sem_post(&daemonSockets_sem);
+	}
+
+	return ff;
+}
+
+struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag) {
+	struct finsFrame *ff = NULL;
+
 	/**
 	 * It keeps looping as a bad method to implement the blocking feature
 	 * of recvfrom. In case it is not blocking then the while loop should
@@ -436,15 +504,11 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_bl
 
 		if (ff) {
 			daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
-			sem_post(&(daemonSockets[index].Qs));
-			sem_post(&daemonSockets_sem);
 			//print_finsFrame(ff);
-			return ff;
-		} else {
-			sem_post(&(daemonSockets[index].Qs));
-			sem_post(&daemonSockets_sem);
-			return NULL;
 		}
+		sem_post(&(daemonSockets[index].Qs));
+		sem_post(&daemonSockets_sem);
+		return ff;
 	} else {
 		/**
 		 * WE Must FINS another way to emulate the blocking.
@@ -461,7 +525,7 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_bl
 
 			sem_wait(&(daemonSockets[index].Qs));
 			ff = read_queue(daemonSockets[index].dataQueue);
-			//	ff = get_fake_frame();
+			//ff = get_fake_frame();
 
 			if (ff) {
 				daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
@@ -477,23 +541,18 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_bl
 	}
 }
 
-struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_flag) {
-	struct finsFrame *ff;
+struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int non_block_flag) {
+	struct finsFrame *ff = NULL;
 
-	/**
-	 * It keeps looping as a bad method to implement the blocking feature
-	 * of recvfrom. In case it is not blocking then the while loop should
-	 * be replaced with only a single trial !
-	 *
-	 */
-	PRINT_DEBUG("");
-	if (block_flag) {
-		/**
-		 * WE Must FINS another way to emulate the blocking.
-		 * The best suggestion is to use a pipeline to push the data in
-		 * instead of the data queue
-		 */
-		do {
+	if (index < 0) {
+		return NULL;
+	}
+
+	if (non_block_flag) {
+		int val = 0;
+		sem_getvalue(&daemonSockets[index].control_sem, &val);
+
+		if (val) {
 			sem_wait(&daemonSockets_sem);
 			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 				PRINT_DEBUG("Socket closed, canceling read block.");
@@ -503,17 +562,21 @@ struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_
 
 			sem_wait(&(daemonSockets[index].Qs));
 			ff = read_queue(daemonSockets[index].controlQueue);
-			//	ff = get_fake_frame();
+			//ff = get_fake_frame();
+			//print_finsFrame(ff);
 			sem_post(&(daemonSockets[index].Qs));
 			sem_post(&daemonSockets_sem);
-		} while (ff == NULL);
+		}
 	} else {
+		sem_wait(&daemonSockets[index].control_sem);
+
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 			PRINT_DEBUG("Socket closed, canceling read block.");
 			sem_post(&daemonSockets_sem);
 			return NULL;
 		}
+
 		sem_wait(&(daemonSockets[index].Qs));
 		ff = read_queue(daemonSockets[index].controlQueue);
 		//ff = get_fake_frame();
@@ -521,8 +584,6 @@ struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int block_
 		sem_post(&(daemonSockets[index].Qs));
 		sem_post(&daemonSockets_sem);
 	}
-
-	PRINT_DEBUG("");
 
 	return ff;
 }
@@ -630,14 +691,18 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("bind_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
 		bind_udp(index, uniqueSockID, addr);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		bind_tcp(index, uniqueSockID, addr);
-	else
+	else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
+		nack_send(uniqueSockID, bind_call, 0);
+	}
 
 	return;
 
@@ -679,8 +744,9 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("listen_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
-	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
 		listen_udp(index, uniqueSockID, backlog);
@@ -740,6 +806,8 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("connect_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM) {
@@ -787,8 +855,9 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("accept_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
-	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
 		accept_udp(index, uniqueSockID, uniqueSockID_new, flags);
@@ -833,8 +902,9 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("getname_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
-	PRINT_DEBUG("");
 
 	if (type == SOCK_DGRAM)
 		getname_udp(index, uniqueSockID, peer);
@@ -875,7 +945,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		addr = (struct sockaddr_in *) malloc(addrlen);
 		memcpy(addr, pt, addrlen);
 		pt += addrlen;
-		PRINT_DEBUG("addr=%s/%d", inet_ntoa(addr->sin_addr), addr->sin_port);
+		PRINT_DEBUG("addr=%s/%d", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
 	}
 
 	msg_flags = *(int *) pt;
@@ -928,8 +998,9 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	int state = daemonSockets[index].state;
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("sendmsg_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
-	PRINT_DEBUG("");
 
 	/**
 	 * In case of connected sockets
@@ -1049,6 +1120,8 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	int state = daemonSockets[index].state;
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("recvmsg_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d state=%d", uniqueSockID, index, type, protocol, state);
 	sem_post(&daemonSockets_sem);
 
 	if (state > SS_UNCONNECTED) {
@@ -1059,6 +1132,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			//recv_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 			recvfrom_tcp(index, uniqueSockID, data_len, flags, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+			PRINT_DEBUG("recvfrom_icmp not implemented");
 			nack_send(uniqueSockID, recvmsg_call, 0); //TODO implement?
 		} else {
 			PRINT_DEBUG("unknown socket type has been read !!!");
@@ -1074,9 +1148,11 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 				recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
 			} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 				//recvfrom_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
+				PRINT_DEBUG("recvfrom_tcp not implemented");
 				nack_send(uniqueSockID, recvmsg_call, 0);
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-				//sendto_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
+				//recvfrom_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
+				PRINT_DEBUG("recvfrom_icmp not implemented");
 				nack_send(uniqueSockID, recvmsg_call, 0); //TODO what should this be?
 			} else {
 				PRINT_DEBUG("unknown target address !!!");
@@ -1115,6 +1191,8 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("release_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM) {
@@ -1155,19 +1233,26 @@ void poll_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
+
+	PRINT_DEBUG("release_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM) {
 		//release_udp(index, uniqueSockID);
+		PRINT_DEBUG("implement poll_udp");
+		ack_send(uniqueSockID, poll_call, 0);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		//release_tcp(index, uniqueSockID);
+		PRINT_DEBUG("implement poll_tcp");
+		ack_send(uniqueSockID, poll_call, 0);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		//release_icmp(index, uniqueSockID);
+		PRINT_DEBUG("implement poll_icmp");
+		ack_send(uniqueSockID, poll_call, 0);
 	} else {
 		PRINT_DEBUG("unknown socket type has been read !!!");
 		nack_send(uniqueSockID, poll_call, 0);
 	}
-	ack_send(uniqueSockID, poll_call, 0);
 }
 
 void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
@@ -1217,7 +1302,8 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
-	PRINT_DEBUG("");
+
+	PRINT_DEBUG("getsockopt_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
@@ -1279,7 +1365,8 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
-	PRINT_DEBUG("");
+
+	PRINT_DEBUG("setsockopt_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM)
@@ -1351,7 +1438,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		if (total + sizeof(struct ifreq) <= len) {
 			strcpy(ifr.ifr_name, "lo");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2N(127, 0, 0, 1));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(127, 0, 0, 1));
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
 
 			memcpy(pt, &ifr, sizeof(struct ifreq));
@@ -1364,7 +1451,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		if (total + sizeof(struct ifreq) <= len) {
 			strcpy(ifr.ifr_name, "eth1");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 20));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
 
 			memcpy(pt, &ifr, sizeof(struct ifreq));
@@ -1377,7 +1464,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		if (total + sizeof(struct ifreq) <= len) {
 			strcpy(ifr.ifr_name, "eth0");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 15));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
 
 			memcpy(pt, &ifr, sizeof(struct ifreq));
@@ -1417,15 +1504,15 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		//TODO get correct values from IP?
 		if (strcmp(temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 15));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 20));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(127, 0, 0, 1));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(127, 0, 0, 1));
 			addr.sin_port = 0;
 		} else {
 			PRINT_DEBUG("%s", temp);
@@ -1479,15 +1566,15 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		//TODO get correct values from IP?
 		if (strcmp(temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 15));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 20));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(127, 0, 0, 1));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(127, 0, 0, 1));
 			addr.sin_port = 0;
 		} else {
 			PRINT_DEBUG("%s", temp);
@@ -1541,15 +1628,15 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		//TODO get correct values from IP?
 		if (strcmp(temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(10, 0, 2, 255));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 255));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(192, 168, 1, 255));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 255));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(0, 0, 0, 0));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(0, 0, 0, 0));
 			addr.sin_port = 0;
 		} else {
 			PRINT_DEBUG("%s", temp);
@@ -1603,15 +1690,15 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		//TODO get correct values from IP?
 		if (strcmp(temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(255, 255, 255, 0));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(255, 255, 255, 0));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(255, 255, 255, 0));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(255, 255, 255, 0));
 			addr.sin_port = 0;
 		} else if (strcmp(temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2N(255, 0, 0, 0));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(255, 0, 0, 0));
 			addr.sin_port = 0;
 		} else {
 			PRINT_DEBUG("%s", temp);
@@ -1695,6 +1782,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 
 		int type = daemonSockets[index].type;
 		int protocol = daemonSockets[index].protocol;
+
+		PRINT_DEBUG("ioctl_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 		sem_post(&daemonSockets_sem);
 
 		if (type == SOCK_DGRAM) {

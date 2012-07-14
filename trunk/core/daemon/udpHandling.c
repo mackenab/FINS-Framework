@@ -311,6 +311,14 @@ void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSoc
 	PRINT_DEBUG("socket_udp: Entered: uniqueSockID=%llu domain=%d type=%d proto=%d", uniqueSockID, domain, type, protocol);
 
 	sem_wait(&daemonSockets_sem);
+	index = find_daemonSocket(uniqueSockID);
+	if (index != -1) {
+		nack_send(uniqueSockID, socket_call, 0);
+		PRINT_DEBUG("");
+		sem_post(&daemonSockets_sem);
+		return;
+	}
+
 	index = insert_daemonSocket(uniqueSockID, type, protocol);
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
@@ -320,6 +328,7 @@ void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSoc
 		nack_send(uniqueSockID, socket_call, 0);
 		return;
 	}
+	PRINT_DEBUG("index=%d", index);
 
 	ack_send(uniqueSockID, socket_call, 0);
 }
@@ -963,7 +972,8 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 
 	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 	temp->s_addr = host_IP;
-	PRINT_DEBUG("index=%d, dst=%s/%d, host=%s/%d", index, inet_ntoa(addr->sin_addr), dstport, inet_ntoa(*temp), hostport);
+	PRINT_DEBUG("index=%d, dst=%s/%d (%u)", index, inet_ntoa(addr->sin_addr), dstport, addr->sin_addr.s_addr);
+	PRINT_DEBUG("index=%d, host=%s/%d (%u)", index, inet_ntoa(*temp), hostport, (*temp).s_addr);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -1006,10 +1016,10 @@ void *recvfrom_udp_thread(void *local) {
 
 	PRINT_DEBUG();
 	struct finsFrame *ff = get_fdf(index, uniqueSockID, non_blocking_flag);
-	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d", uniqueSockID, index);
+	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%d", uniqueSockID, index, (int)ff);
 
 	if (ff == NULL) {
-		PRINT_DEBUG("recvfrom_udp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+		PRINT_DEBUG("recvfrom_udp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu ff=%d", id, index, uniqueSockID, (int)ff);
 		if (non_blocking_flag) {
 			nack_send(uniqueSockID, recvmsg_call, EWOULDBLOCK);
 		} else {
@@ -1023,7 +1033,7 @@ void *recvfrom_udp_thread(void *local) {
 	if (metadata_readFromElement(ff->dataFrame.metaData, "src_port", &src_port) == 0) {
 		addr.sin_port = 0;
 	} else {
-		addr.sin_port = (uint16_t) src_port;
+		addr.sin_port = htons((uint16_t) src_port);
 	}
 
 	uint32_t src_ip;
@@ -1034,8 +1044,7 @@ void *recvfrom_udp_thread(void *local) {
 	}
 
 	//#######
-	PRINT_DEBUG("address: %d/%d", addr.sin_addr.s_addr, ntohs(addr.sin_port));
-	PRINT_DEBUG("address: addr=%s/%d", inet_ntoa(addr.sin_addr), addr.sin_port);
+	PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), addr.sin_addr.s_addr);
 	//#######
 
 	int msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;

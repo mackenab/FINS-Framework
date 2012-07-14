@@ -82,7 +82,7 @@ COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)
 
 ####### FINS CORE MODULES #######
 # Add/remove module directory names to this space-separated list
-CORE_MODULE_LIST = arp data_structure icmp ipv4 daemon rtm switch tcp udp
+CORE_MODULE_LIST = data_structure icmp ipv4 daemon rtm switch tcp udp arp
 
 
 
@@ -97,8 +97,8 @@ FINS_CORE_INC = -I. $(foreach module, $(CORE_MODULE_LIST), $(addprefix -I, $(mod
 #These are includes specifically for each module in the FINS core
 CORE_MODULES_INC = -I. -I.. -I../data_structure -I$(FINS_ROOT_DIR)/trunk/common
 
-#These are includes specifically for the Socket Interceptor
-INTERCEPTOR_INC = -I. -I$(FINS_ROOT_DIR)/trunk/common
-
 #These are includes specifically for the Kernel Wedge
-WEDGE_INC = -I. -I$(FINS_ROOT_DIR)/trunk/common
+WEDGE_INC = 
+
+#These are includes specifically for the Socket Interceptor
+#INTERCEPTOR_INC = -I. -I$(FINS_ROOT_DIR)/trunk/common

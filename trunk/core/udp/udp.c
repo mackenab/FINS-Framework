@@ -48,7 +48,7 @@ void udp_get_FF() {
 	} while (ff == NULL);
 
 	udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d", udpStat.totalRecieved);
+	PRINT_DEBUG("UDP Total %d, ff=%d", udpStat.totalRecieved, (int)ff);
 	if (ff->dataOrCtrl == CONTROL) 
 	{
 		// send to something to deal with FCF

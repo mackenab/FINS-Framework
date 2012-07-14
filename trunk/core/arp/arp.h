@@ -4,8 +4,31 @@
  *@date  September 27, 2010
  */
 
-#include "finstypes.h"
+#ifndef ARP_H_
+#define ARP_H_
+
+
 #include <inttypes.h>
+
+#include <finstypes.h>
+#include <metadata.h>
+#include <finsdebug.h>
+
+//ADDED mrd015 !!!!!
+#ifdef BUILD_FOR_ANDROID
+#include <sys/endian.h>
+#endif
+
+#include <finstypes.h>
+#include <queueModule.h>
+
+extern sem_t ARP_to_Switch_Qsem;
+extern finsQueue ARP_to_Switch_Queue;
+
+extern sem_t Switch_to_ARP_Qsem;
+extern finsQueue Switch_to_ARP_Queue;
+
+
 
 #define ARPREQUESTOP 1
 #define ARPREPLYOP 2
@@ -19,6 +42,7 @@
 #define REPLYDATA 2
 #define REPLYCONTROL 3
 
+#define ARP_PROTOCOL 0x0806
 
 /**struct arp_hdr is used for use external to the ARP module. The zeroth element of both
  * the IP and MAC arrays (e.g. sender_MAC_addrs[0] or target_IP_addrs[0] etc.) is the
@@ -128,3 +152,5 @@ void arp_out(int response_type);
 
 void output_arp_queue(struct finsFrame *fins_arp_out);
 void ARP_init();
+
+#endif

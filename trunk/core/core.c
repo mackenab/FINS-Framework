@@ -269,12 +269,12 @@ void *Switch_to_Daemon() {
 
 			continue;
 		}
-		PRINT_DEBUG("");
+
 		if (ff->dataOrCtrl == CONTROL) {
-			host_ip = -1;
-			host_port = -1;
-			rem_ip = -1;
-			rem_port = -1;
+			host_ip = 0;
+			host_port = 0;
+			rem_ip = 0;
+			rem_port = 0;
 
 			PRINT_DEBUG("control ff: ff=%d meta=%d opcode=%d", (int)ff, (int)ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
@@ -301,10 +301,11 @@ void *Switch_to_Daemon() {
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
 						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
 						ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 
 						if (ret) {
 							//TODO error
-							PRINT_DEBUG("error");
+							PRINT_DEBUG("error ret=%d", ret);
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
@@ -312,10 +313,10 @@ void *Switch_to_Daemon() {
 
 						PRINT_DEBUG("");
 						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("");
-							sem_wait(&(daemonSockets[index].Qs));
+							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							sem_wait(&daemonSockets[index].Qs);
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
@@ -324,19 +325,21 @@ void *Switch_to_Daemon() {
 							 */
 							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].control_sem);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets[index].Qs);
+								PRINT_DEBUG("");
+								sem_post(&daemonSockets_sem);
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].Qs);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets_sem);
 								freeFinsFrame(ff);
 							}
 						} else {
 							PRINT_DEBUG("");
-							sem_post(&(daemonSockets_sem));
+							sem_post(&daemonSockets_sem);
 
 							PRINT_DEBUG("No socket found, dropping");
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -345,10 +348,11 @@ void *Switch_to_Daemon() {
 					} else {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 
 						if (ret) {
 							//TODO error
-							PRINT_DEBUG("error");
+							PRINT_DEBUG("error ret=%d", ret);
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
@@ -356,10 +360,10 @@ void *Switch_to_Daemon() {
 
 						PRINT_DEBUG("");
 						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("");
-							sem_wait(&(daemonSockets[index].Qs));
+							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							sem_wait(&daemonSockets[index].Qs);
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
@@ -368,19 +372,21 @@ void *Switch_to_Daemon() {
 							 */
 							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].control_sem);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets[index].Qs);
+								PRINT_DEBUG("");
+								sem_post(&daemonSockets_sem);
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].Qs);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets_sem);
 								freeFinsFrame(ff);
 							}
 						} else {
 							PRINT_DEBUG("");
-							sem_post(&(daemonSockets_sem));
+							sem_post(&daemonSockets_sem);
 
 							PRINT_DEBUG("No socket found, dropping");
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -415,10 +421,11 @@ void *Switch_to_Daemon() {
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
 						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
 						ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 
 						if (ret) {
 							//TODO error
-							PRINT_DEBUG("error");
+							PRINT_DEBUG("error ret=%d", ret);
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
@@ -441,18 +448,18 @@ void *Switch_to_Daemon() {
 							temp2->sin_addr.s_addr = 0;
 						}
 						//temp2->sin_port = 0;
-						PRINT_DEBUG("NETFORMAT host=%s/%d, dst=%s/%d,", inet_ntoa(temp->sin_addr), (host_port), inet_ntoa(temp2->sin_addr), (rem_port));
-						PRINT_DEBUG("NETFORMAT host=%u/%d, dst=%u/%d,", (temp->sin_addr), (host_port), (temp2->sin_addr), (rem_port));
+						PRINT_DEBUG("host=%s/%d (%u)", inet_ntoa(temp->sin_addr), (host_port), temp->sin_addr.s_addr);
+						PRINT_DEBUG("dst=%s/%d (%u)", inet_ntoa(temp2->sin_addr), (rem_port), temp2->sin_addr.s_addr);
 						free(temp);
 						free(temp2);
 						//##################
 
 						PRINT_DEBUG("");
 						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("");
-							sem_wait(&(daemonSockets[index].Qs));
+							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							sem_wait(&daemonSockets[index].Qs);
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
@@ -461,24 +468,27 @@ void *Switch_to_Daemon() {
 							 */
 							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].control_sem);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets[index].Qs);
+								PRINT_DEBUG("");
+								sem_post(&daemonSockets_sem);
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].Qs);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets_sem);
 								freeFinsFrame(ff);
 							}
 						} else {
 							ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+							ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 
 							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
-								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0);
+								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 								if (index != -1) {
-									PRINT_DEBUG("");
-									sem_wait(&(daemonSockets[index].Qs));
+									PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+									sem_wait(&daemonSockets[index].Qs);
 
 									/**
 									 * TODO Replace The data Queue with a pipeLine at least for
@@ -487,19 +497,21 @@ void *Switch_to_Daemon() {
 									 */
 									if (write_queue(ff, daemonSockets[index].controlQueue)) {
 										PRINT_DEBUG("");
-										sem_post(&(daemonSockets[index].Qs));
+										sem_post(&daemonSockets[index].control_sem);
 										PRINT_DEBUG("");
-										sem_post(&(daemonSockets_sem));
+										sem_post(&daemonSockets[index].Qs);
+										PRINT_DEBUG("");
+										sem_post(&daemonSockets_sem);
 									} else {
 										PRINT_DEBUG("");
-										sem_post(&(daemonSockets[index].Qs));
+										sem_post(&daemonSockets[index].Qs);
 										PRINT_DEBUG("");
-										sem_post(&(daemonSockets_sem));
+										sem_post(&daemonSockets_sem);
 										freeFinsFrame(ff);
 									}
 								} else {
 									PRINT_DEBUG("");
-									sem_post(&(daemonSockets_sem));
+									sem_post(&daemonSockets_sem);
 
 									PRINT_DEBUG("No socket found, dropping");
 									PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -507,7 +519,7 @@ void *Switch_to_Daemon() {
 								}
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets_sem);
 
 								PRINT_DEBUG("No socket found, dropping");
 								PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -517,10 +529,11 @@ void *Switch_to_Daemon() {
 					} else {
 						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
 						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
 
 						if (ret) {
 							//TODO error
-							PRINT_DEBUG("error");
+							PRINT_DEBUG("error ret=%d", ret);
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
@@ -539,10 +552,10 @@ void *Switch_to_Daemon() {
 
 						PRINT_DEBUG("");
 						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0);
+						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("");
-							sem_wait(&(daemonSockets[index].Qs));
+							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							sem_wait(&daemonSockets[index].Qs);
 
 							/**
 							 * TODO Replace The data Queue with a pipeLine at least for
@@ -551,19 +564,21 @@ void *Switch_to_Daemon() {
 							 */
 							if (write_queue(ff, daemonSockets[index].controlQueue)) {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].control_sem);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets[index].Qs);
+								PRINT_DEBUG("");
+								sem_post(&daemonSockets_sem);
 							} else {
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets[index].Qs));
+								sem_post(&daemonSockets[index].Qs);
 								PRINT_DEBUG("");
-								sem_post(&(daemonSockets_sem));
+								sem_post(&daemonSockets_sem);
 								freeFinsFrame(ff);
 							}
 						} else {
 							PRINT_DEBUG("");
-							sem_post(&(daemonSockets_sem));
+							sem_post(&daemonSockets_sem);
 
 							PRINT_DEBUG("No socket found, dropping");
 							PRINT_DEBUG("freeing ff=%d", (int)ff);
@@ -585,11 +600,13 @@ void *Switch_to_Daemon() {
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {
-			dstport = -1;
-			hostport = -1;
-			dstip = -1;
-			hostip = -1;
-			protocol = -1;
+			PRINT_DEBUG("data ff: ff=%d meta=%d len=%d", (int)ff, (int)ff->dataFrame.metaData, ff->dataFrame.pduLength);
+
+			dstport = 0;
+			hostport = 0;
+			dstip = 0;
+			hostip = 0;
+			protocol = 0;
 
 			int ret = 0;
 			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip) == 0;
@@ -599,7 +616,7 @@ void *Switch_to_Daemon() {
 			ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == 0;
 
 			if (ret) {
-				PRINT_ERROR("prob reading metadata");
+				PRINT_ERROR("prob reading metadata ret=%d", ret);
 				PRINT_DEBUG("freeing ff=%d", (int)ff);
 				freeFinsFrame(ff);
 				continue;
@@ -633,9 +650,9 @@ void *Switch_to_Daemon() {
 			if (protocol == IPPROTO_ICMP) {
 				index = match_daemonSocket(0, hostip, protocol);
 			} else if (protocol == TCP_PROTOCOL) {
-				index = match_daemon_connection(hostip, hostport, dstip, dstport);
+				index = match_daemon_connection(hostip, hostport, dstip, dstport, protocol);
 				if (index == -1) {
-					index = match_daemon_connection(hostip, hostport, 0, 0);
+					index = match_daemon_connection(hostip, hostport, 0, 0, protocol);
 				}
 			} else { //udp
 				index = match_daemonSocket(dstport, dstip, protocol); //TODO change for multicast
@@ -654,7 +671,7 @@ void *Switch_to_Daemon() {
 				}
 			}
 
-			PRINT_DEBUG("index %d", index);
+			PRINT_DEBUG("ff=%d index=%d", (int) ff, index);
 			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
 				PRINT_DEBUG( "Matched: host=%d/%d, dst=%d/%d, prot=%d",
 						daemonSockets[index].host_IP, daemonSockets[index].hostport, daemonSockets[index].dst_IP, daemonSockets[index].dstport, daemonSockets[index].protocol);
@@ -667,7 +684,7 @@ void *Switch_to_Daemon() {
 				int value;
 				sem_getvalue(&(daemonSockets[index].Qs), &value);
 				PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
-				sem_wait(&(daemonSockets[index].Qs));
+				sem_wait(&daemonSockets[index].Qs);
 
 				/**
 				 * TODO Replace The data Queue with a pipeLine at least for
@@ -676,11 +693,12 @@ void *Switch_to_Daemon() {
 				 */
 				if (write_queue(ff, daemonSockets[index].dataQueue)) {
 					daemonSockets[index].buf_data += ff->dataFrame.pduLength;
-
 					PRINT_DEBUG("");
-					sem_post(&(daemonSockets[index].Qs));
+					sem_post(&daemonSockets[index].data_sem);
 					PRINT_DEBUG("");
-					sem_post(&(daemonSockets_sem));
+					sem_post(&daemonSockets[index].Qs);
+					PRINT_DEBUG("");
+					sem_post(&daemonSockets_sem);
 
 					//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
 
@@ -694,9 +712,9 @@ void *Switch_to_Daemon() {
 					PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
 				} else {
 					PRINT_DEBUG("");
-					sem_post(&(daemonSockets[index].Qs));
+					sem_post(&daemonSockets[index].Qs);
 					PRINT_DEBUG("");
-					sem_post(&(daemonSockets_sem));
+					sem_post(&daemonSockets_sem);
 					freeFinsFrame(ff);
 				}
 			} else {
@@ -716,7 +734,7 @@ void *Switch_to_Daemon() {
 	} // end of while
 } // end of function
 
-void *interceptor_to_daemon() {
+void *wedge_to_daemon() {
 	int ret_val;
 	//int nl_sockfd;
 	/*
@@ -1075,17 +1093,39 @@ void *Capture() {
 				(uint8_t)ethersrc[0], (uint8_t )ethersrc[1], (uint8_t )ethersrc[2], (uint8_t )ethersrc[3], (uint8_t )ethersrc[4], (uint8_t )ethersrc[5], (uint8_t )etherdst[0], (uint8_t )etherdst[1], (uint8_t )etherdst[2], (uint8_t )etherdst[3], (uint8_t )etherdst[4], (uint8_t )etherdst[5], protocol_type);
 
 		ff->dataOrCtrl = DATA;
-		(ff->destinationID).id = IPV4ID;
-		(ff->destinationID).next = NULL;
+		ff->dataFrame.metaData = ether_meta;
+
+		if (protocol_type == 0x0800) { //0x0800 == 2048, IPv4
+			PRINT_DEBUG("IPv4: proto=%x (%u)", protocol_type, protocol_type);
+			(ff->destinationID).id = IPV4ID;
+			(ff->destinationID).next = NULL;
+		} else if (protocol_type == 0x0806) { //0x0806 == 2054, ARP
+			PRINT_DEBUG("ARP: proto=%x (%u)", protocol_type, protocol_type);
+			(ff->destinationID).id = ARPID;
+			(ff->destinationID).next = NULL;
+		} else if (protocol_type == 0x86dd) { //0x86dd == 34525, IPv6
+			PRINT_DEBUG("IPv6: proto=%x (%u)", protocol_type, protocol_type);
+			//drop, don't handle & don't catch sys calls
+			//freeFinsFrame(ff);
+			//continue;
+			(ff->destinationID).id = IPV4ID;
+			(ff->destinationID).next = NULL;
+		} else {
+			PRINT_DEBUG("default: proto=%x (%u)", protocol_type, protocol_type);
+			//drop
+			//freeFinsFrame(ff);
+			//continue;
+			(ff->destinationID).id = IPV4ID;
+			(ff->destinationID).next = NULL;
+		}
 
 		(ff->dataFrame).directionFlag = UP;
-		ff->dataFrame.metaData = ether_meta;
 		ff->dataFrame.pduLength = datalen - SIZE_ETHERNET;
 		ff->dataFrame.pdu = data + SIZE_ETHERNET;
 
 		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
 
-		PRINT_DEBUG("pdu=%d, data=%d", (int) &(ff->dataFrame).pdu, (int) data);
+		PRINT_DEBUG("ff=%d pdu=%d, data=%d", (int)ff, (int) &(ff->dataFrame).pdu, (int) data);
 
 		sem_wait(&EtherStub_to_Switch_Qsem);
 		write_queue(ff, EtherStub_to_Switch_Queue);
@@ -1131,7 +1171,7 @@ void *Inject() {
 		if (ff == NULL)
 			continue;
 
-		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub");
+		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%d", (int)ff);
 
 		//	metadata_readFromElement(ff->dataFrame.metaData,"dstip",&destination);
 		//	loop_host = (struct hostent *) gethostbyname((char *)"");
@@ -1155,20 +1195,38 @@ void *Inject() {
 		//char src[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		//char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
 		//char dest[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //same to itself
-		char dest[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 };
-		char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //jreed: HAF FINS-dev_env eth1 //can be anything
+		//jreed MAC addresses
+		//char src[] = { 0x08, 0x00, 0x27, 0x12, 0x34, 0x56 }; //made up
+		char src[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+		//char src[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
+		//char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
+		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
 
-		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //jreed: HAF host
-		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //jreed: HAF Vanilla-dev_env eth1
+		char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
+		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
 		memcpy(((struct sniff_ethernet *) frame)->ether_shost, src, ETHER_ADDR_LEN);
-		((struct sniff_ethernet *) frame)->ether_type = htons(0x0800);
+
+		int ret = 0;
+		int protocol = 0;
+		ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == 0;
+
+		if (protocol == 0x0806) {
+			((struct sniff_ethernet *) frame)->ether_type = htons(0x0806);
+		} else {
+			((struct sniff_ethernet *) frame)->ether_type = htons(0x0800);
+		}
 
 		memcpy(frame + SIZE_ETHERNET, (ff->dataFrame).pdu, framelen);
 		datalen = framelen + SIZE_ETHERNET;
 		//	print_finsFrame(ff);
 		PRINT_DEBUG("daemon inject to ethernet stub \n");
+
+		//numBytes = 1;
+
 		numBytes = write(inject_pipe_fd, &datalen, sizeof(int));
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
@@ -1178,7 +1236,6 @@ void *Inject() {
 		}
 
 		numBytes = write(inject_pipe_fd, frame, datalen);
-
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
 			freeFinsFrame(ff);
@@ -1344,7 +1401,7 @@ int main() {
 
 	cap_inj_init();
 
-	pthread_t interceptor_to_daemon_thread;
+	pthread_t wedge_to_daemon_thread;
 	pthread_t Switch_to_daemon_thread;
 
 	pthread_t udp_thread;
@@ -1366,7 +1423,7 @@ int main() {
 	pthread_t switch_thread;
 
 	/* original !!!!!
-	 pthread_create(&interceptor_to_daemon_thread, NULL, interceptor_to_daemon, NULL);
+	 pthread_create(&wedge_to_daemon_thread, NULL, wedge_to_daemon, NULL);
 	 pthread_create(&Switch_to_daemon_thread, NULL, Switch_to_Daemon, NULL);
 
 	 pthread_create(&udp_thread, NULL, UDP, NULL);
@@ -1387,11 +1444,12 @@ int main() {
 	// ADDED !!!!! start
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
-	pthread_create(&interceptor_to_daemon_thread, &fins_pthread_attr, interceptor_to_daemon, NULL); //this has named pipe input from interceptor
+	pthread_create(&wedge_to_daemon_thread, &fins_pthread_attr, wedge_to_daemon, NULL); //this has named pipe input from wedge
 	pthread_create(&Switch_to_daemon_thread, &fins_pthread_attr, Switch_to_Daemon, NULL);
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
 	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
 	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
+	pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
 	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
 	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
 	pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
@@ -1402,7 +1460,7 @@ int main() {
 	/**
 	 *************************************************************
 	 */
-	pthread_join(interceptor_to_daemon_thread, NULL);
+	pthread_join(wedge_to_daemon_thread, NULL);
 	pthread_join(Switch_to_daemon_thread, NULL);
 	pthread_join(etherStub_capturing, NULL);
 	pthread_join(etherStub_injecting, NULL);
@@ -1411,7 +1469,7 @@ int main() {
 	pthread_join(tcp_thread, NULL);
 	//	//	pthread_join(icmp_thread, NULL);
 	pthread_join(ipv4_thread, NULL);
-	//	//	pthread_join(arp_thread, NULL);
+	pthread_join(arp_thread, NULL);
 
 	while (1) {
 

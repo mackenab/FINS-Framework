@@ -208,13 +208,7 @@ int threads_decr(int index) {
 int wait_wedgeSocket(unsigned long long uniqueSockID, int index, u_int calltype) {
 	int error = 0;
 
-	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
-
-	index = find_wedgeSocket(uniqueSockID);
-	PRINT_DEBUG("index=%d", index);
-	if (index == -1) {
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
+	PRINT_DEBUG("Entered for sock=%llu index=%d call=%u", uniqueSockID, index, calltype);
 
 	if (down_interruptible(&wedgeSockets[index].call_sems[calltype])) { // block until daemon replies
 		PRINT_ERROR("call aquire fail, throwing error: sem[%d]=%d", calltype, wedgeSockets[index].call_sems[calltype].count);
@@ -233,12 +227,12 @@ int wait_wedgeSocket(unsigned long long uniqueSockID, int index, u_int calltype)
 	threads_decr(index);
 
 	if (error) {
-		PRINT_ERROR("wait fail");
+		PRINT_ERROR("wait fail: sock=%llu index=%d call=%u", uniqueSockID, index, calltype);
 		up(&wedgeSockets[index].reply_sem_r);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	return print_exit(__FUNCTION__, __LINE__, index);
+	return print_exit(__FUNCTION__, __LINE__, 0);
 }
 
 int checkConfirmation(int index) {
@@ -669,9 +663,13 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 		goto removeSocket;
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, socket_call);
-	PRINT_DEBUG("after index=%d", index);
+	index = find_wedgeSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		goto removeSocket;
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, socket_call)) {
 		goto removeSocket;
 	}
 
@@ -780,9 +778,14 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, bind_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, bind_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -870,9 +873,14 @@ static int FINS_listen(struct socket *sock, int backlog) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, listen_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, listen_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -967,9 +975,14 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, connect_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		//release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, connect_call)) {
 		//release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1083,9 +1096,14 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, accept_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		//release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, accept_call)) {
 		//release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1199,9 +1217,14 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, getname_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, getname_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1388,9 +1411,14 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		// pick an appropriate errno
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, sendmsg_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, sendmsg_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1511,9 +1539,14 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		// pick an appropriate errno
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, recvmsg_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, recvmsg_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1842,9 +1875,14 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, ioctl_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, ioctl_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -2146,11 +2184,16 @@ static int FINS_release(struct socket *sock) {
 
 	wedgeSockets[index].release_flag = 1;
 
-	index = wait_wedgeSocket(uniqueSockID, index, release_call);
-	PRINT_DEBUG("after index=%d", index);
+	index = find_wedgeSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
 		//release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit(__FUNCTION__, __LINE__, 0); //TODO should be -1, done to prevent stalls
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, release_call)) {
+		//release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, 0); //TODO should be -1, done to prevent stalls
 	}
 
 	PRINT_DEBUG("relocked my semaphore");
@@ -2292,9 +2335,14 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, poll_call);
-	PRINT_DEBUG("after index=%d", index);
+	index = find_wedgeSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, poll_call)) {
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -2323,18 +2371,23 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	int ret;
 	int index;
 
+	struct sock *sk = sock->sk;
+	lock_sock(sk);
+
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
 
 // Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
+		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
 	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -2362,6 +2415,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	if (pt - (u_char *) buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
 		kfree(buf);
+		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -2372,12 +2426,19 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
+		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, shutdown_call);
+	index = find_wedgeSocket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
 	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, shutdown_call)) {
+		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
@@ -2391,6 +2452,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	up(&wedgeSockets[index].reply_sem_w);
 	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
+	release_sock(sk);
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
@@ -2477,12 +2539,17 @@ release_sock(sk);
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	index = wait_wedgeSocket(uniqueSockID, index, setsockopt_call);
-	PRINT_DEBUG("index=%d", index);
+	index = find_wedgeSocket(uniqueSockID);
+		PRINT_DEBUG("index=%d", index);
 if (index == -1) {
-	release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
-	}
+			release_sock(sk);
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+
+		if (wait_wedgeSocket(uniqueSockID, index, setsockopt_call)) {
+			release_sock(sk);
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
 
 	PRINT_DEBUG("relocked my semaphore");
 
@@ -2600,10 +2667,15 @@ release_sock(sk);
 return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 
-		index = wait_wedgeSocket(uniqueSockID, index, getsockopt_call);
+		index = find_wedgeSocket(uniqueSockID);
 		PRINT_DEBUG("index=%d", index);
-if (index == -1) {
-	release_sock(sk);
+		if (index == -1) {
+			release_sock(sk);
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+
+		if (wait_wedgeSocket(uniqueSockID, index, getsockopt_call)) {
+			release_sock(sk);
 			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 

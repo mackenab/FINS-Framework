@@ -21,7 +21,7 @@ INCLUDES = $(foreach DIR_NAME, $(subst -I,, $(strip $(CORE_MODULES_INC))), $(add
 
 ##### TARGETS #####
 .PHONY:all
-all:$(MODULE_NAME) test_arp
+all:$(MODULE_NAME)
 	@echo "$(MODULE_NAME) is compiled\n"
 
 $(MODULE_NAME):$(OBJS)

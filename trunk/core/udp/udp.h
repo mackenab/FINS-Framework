@@ -80,11 +80,6 @@ struct udp_statistics {
 #define UP_RWHO			513						/* remote who server (ruptime) */
 #define UP_RIP			520						/* route information exchange (RIP) */
 
-#ifndef IP4_ADR_P2N
-/* macro to convert IPv4 address from human readable format (_P_resentation) to long int (_N_etwork)*/
-#define IP4_ADR_P2N(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
-#endif /* IP4_ADR_P2N */
-
 void udp_init();
 
 //unsigned short UDP_checksum(struct udp_packet* pcket, struct udp_metadata_parsed* meta);

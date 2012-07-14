@@ -332,7 +332,7 @@ void *connect_thread(void *local) {
 		seg_free(temp_seg);
 
 		conn->timeout = TCP_GBN_TO_DEFAULT;
-		startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
+		//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
 	} else {
 		//send NACK to connect handler
 		conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 1);
@@ -705,7 +705,7 @@ void *close_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		if (conn->state == CS_ESTABLISHED) {
+		if (conn->state == CS_ESTABLISHED || conn->state == CS_SYN_RECV) {
 			PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%d", conn->state, (int) conn);
 			conn->state = CS_FIN_WAIT_1;
 
@@ -747,6 +747,14 @@ void *close_thread(void *local) {
 				seg_free(seg);
 				//TODO add TO
 			} //else piggy back it
+		} else if (conn->state == CS_SYN_SENT) {
+			//if CLOSE, send -, CLOSED
+			PRINT_DEBUG("close_thread: CLOSE, send -, CLOSED: state=%d conn=%d", conn->state, (int) conn);
+			conn->state = CS_CLOSED;
+
+			conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
+
+			conn_shutdown(conn);
 		} else {
 			//TODO figure out:
 			PRINT_DEBUG("");

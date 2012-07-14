@@ -38,17 +38,18 @@ int main(int argc, char *argv[]) {
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
-	if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
-	//if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
 	}
 
-	if (argc > 1)
+	if (argc > 1) {
 		port = atoi(argv[1]);
-	else
-		port = 5000;
+	} else {
+		port = 44444;
+	}
 
 	int optval = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
@@ -60,24 +61,30 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,11);
+	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
+	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	//bzero(&(server_addr.sin_zero), 8);
 
-	//if (argc > 2) {
-	//client_port = atoi(argv[2]);
-	client_port = 5050;
+	if (argc > 2) {
+		client_port = atoi(argv[2]);
+	} else {
+		client_port = 55555;
+	}
 
 	memset(&client_addr, 0, sizeof(client_addr));
 	client_addr.sin_family = AF_INET;
 	client_addr.sin_port = htons(client_port);
 	//client_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	client_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//client_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//client_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
+	client_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//client_addr.sin_addr.s_addr = INADDR_ANY;
+	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
+	client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
 
 	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	//bzero(&(client_addr.sin_zero), 8); //TODO what's this for?

@@ -11,7 +11,18 @@
 #include "finsdebug.h"
 #include "metadata.h"
 
+#include <stdint.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <queueModule.h>
+
 #define DEBUG
+
+sem_t ARP_to_Switch_Qsem;
+finsQueue ARP_to_Switch_Queue;
+
+sem_t Switch_to_ARP_Qsem;
+finsQueue Switch_to_ARP_Queue;
 
 struct node *ptr_neighbor_list;
 int num_hosts; /*<the number of neighbors to be generated*/
@@ -22,7 +33,7 @@ uint32_t host_IP_addrs;/**<IP address of current interface; sent to the arp modu
 unsigned char *IP_addrs; /**<This contains an IP address (from heap) which is used by the paramValue of a FINS control frame*/
 struct arp_hdr *arp_net;
 
-struct node *ptr_neighbor_list; /**<pointer the first element of a list of 'neighbors'*/
+//struct node *ptr_neighbor_list; /**<pointer the first element of a list of 'neighbors'*/
 FILE *ptr_file; /**<file pointer to the file which contains a list of neighbors*/
 
 /**

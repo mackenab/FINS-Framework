@@ -100,7 +100,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 							dst_temp[0] & 0xFF, dst_temp[1] & 0xFF, dst_temp[2]
 									& 0xFF, dst_temp[3] & 0xFF);
 					table_pointer->dst
-							= IP4_ADR_P2N(dst_temp[0]&0xFF, dst_temp[1]&0xFF, dst_temp[2]&0xFF, dst_temp[3]&0xFF);
+							= IP4_ADR_P2H(dst_temp[0]&0xFF, dst_temp[1]&0xFF, dst_temp[2]&0xFF, dst_temp[3]&0xFF);
 					break;
 				case RTA_GATEWAY: //next hop
 					table_pointer->mask = rtm->rtm_dst_len;
@@ -110,7 +110,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 							& 0xFF, gw_temp[1] & 0xFF, gw_temp[2] & 0xFF,
 							gw_temp[3] & 0xFF);
 					table_pointer->gw
-							= IP4_ADR_P2N(gw_temp[0]&0xFF, gw_temp[1]&0xFF, gw_temp[2]&0xFF, gw_temp[3]&0xFF);
+							= IP4_ADR_P2H(gw_temp[0]&0xFF, gw_temp[1]&0xFF, gw_temp[2]&0xFF, gw_temp[3]&0xFF);
 					break;
 				case RTA_OIF: //interface
 					memcpy(&table_pointer->interface, RTA_DATA(rta),
@@ -212,22 +212,22 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 
-	row0->dst = IP4_ADR_P2N(10,0,2,0);
-	row0->gw = IP4_ADR_P2N(0,0,0,0);
+	row0->dst = IP4_ADR_P2H(10,0,2,0);
+	row0->gw = IP4_ADR_P2H(0,0,0,0);
 	row0->mask = 24;
 	row0->metric = 1;
 	row0->interface = 3;
 	row0->next_entry = row1;
 
-	row1->dst = IP4_ADR_P2N(169,254,0,0);
-	row1->gw = IP4_ADR_P2N(0,0,0,0);
+	row1->dst = IP4_ADR_P2H(169,254,0,0);
+	row1->gw = IP4_ADR_P2H(0,0,0,0);
 	row1->mask = 16;
 	row1->metric = 1000;
 	row1->interface = 3;
 	row1->next_entry = row2;
 
-	row2->dst = IP4_ADR_P2N(0,0,0,0);
-	row2->gw = IP4_ADR_P2N(10,0,2,2);
+	row2->dst = IP4_ADR_P2H(0,0,0,0);
+	row2->gw = IP4_ADR_P2H(10,0,2,2);
 	row2->mask = 0;
 	row2->metric = 0;
 	row2->interface = 3;

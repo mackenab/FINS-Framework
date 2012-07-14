@@ -235,13 +235,9 @@ void socket_icmp(int domain, int type, int protocol, unsigned long long uniqueSo
 		nack_send(uniqueSockID, socket_call, 0);
 		return;
 	}
-	PRINT_DEBUG("0000");
+	PRINT_DEBUG("index=%d", index);
 
 	ack_send(uniqueSockID, socket_call, 0);
-	PRINT_DEBUG("0003");
-
-	return;
-
 }
 
 void write_icmp(unsigned long long uniqueSockID, int datalen, u_char *data) {

@@ -388,6 +388,9 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	metadata_writeToElement(params, "host_ip", &conn_stub->host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", &conn_stub->host_port, META_TYPE_INT);
 
+	int protocol = TCP_PROTOCOL;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
 		PRINT_ERROR("ff creation failed, freeing meta=%d", (int) params);
@@ -447,6 +450,8 @@ void conn_stub_shutdown(struct tcp_connection_stub *conn_stub) {
 			exit(-1);
 		}
 	}
+
+	PRINT_DEBUG("conn_stub_shutdown: Exited: conn_stub=%d", (int) conn_stub);
 }
 
 void conn_stub_free(struct tcp_connection_stub *conn_stub) {
@@ -1278,12 +1283,15 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 	ret += metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT) == 0;
 
+	int protocol = TCP_PROTOCOL;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+
 	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("meta write failed, meta=%d", (int) params);
+		PRINT_ERROR("meta write failed, meta=%d ret=%d", (int) params, ret);
 		metadata_destroy(params);
 		return 0;
 	}
@@ -1446,11 +1454,11 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ret += metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT) == 0; //Write the source port in
 	ret += metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT) == 0; //And the destination port
 
-	uint32_t protocol = (uint32_t) TCP_PROTOCOL;
+	int protocol = TCP_PROTOCOL;
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("seg_to_fdf: failed matadata write: seg=%d meta=%d", (int)seg, (int)params);
+		PRINT_ERROR("seg_to_fdf: failed matadata write: seg=%d meta=%d ret=%d", (int)seg, (int)params, ret);
 		metadata_destroy(params);
 		return NULL;
 	}
@@ -1478,19 +1486,6 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 		return NULL;
 	}
 
-	//For big-vs-little endian issues, I shall shift everything and deal with it manually here
-	/*
-	 uint8_t *ptr = ff->dataFrame.pdu;
-	 ptr = copy_uint16(ptr, seg->src_port);
-	 ptr = copy_uint16(ptr, seg->dst_port);
-	 ptr = copy_uint32(ptr, seg->seq_num);
-	 ptr = copy_uint32(ptr, seg->ack_num);
-	 ptr = copy_uint16(ptr, seg->flags);
-	 ptr = copy_uint16(ptr, seg->win_size);
-	 ptr = copy_uint16(ptr, seg->checksum);
-	 ptr = copy_uint16(ptr, seg->urg_pointer);
-	 */
-
 	struct tcpv4_header *hdr = (struct tcpv4_header *) ff->dataFrame.pdu;
 	hdr->src_port = htons(seg->src_port);
 	hdr->dst_port = htons(seg->dst_port);
@@ -1504,14 +1499,12 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 
 	if (seg->opt_len > 0) {
 		memcpy(hdr->options, seg->options, seg->opt_len);
-		//ptr += seg->opt_len;
-	}
 
-	if (seg->data_len > 0) {
-		//uint8_t *ptr = hdr->options + seg->opt_len;
-		//memcpy(ptr, seg->data, seg->data_len);
-		memcpy(hdr->options + seg->opt_len, seg->data, seg->data_len);
-		//ptr += seg->data_len;
+		if (seg->data_len > 0) {
+			memcpy(hdr->options + seg->opt_len, seg->data, seg->data_len);
+		}
+	} else if (seg->data_len > 0) {
+		memcpy(hdr->options, seg->data, seg->data_len);
 	}
 
 	uint32_t sum = 0;
@@ -1523,18 +1516,21 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ip_hdr.dst_ip = htonl(seg->dst_ip);
 	ip_hdr.zeros = 0;
 	ip_hdr.protocol = TCP_PROTOCOL;
-	ip_hdr.tcp_len = htons(ff->dataFrame.pdu);
+	ip_hdr.tcp_len = htons((uint16_t) ff->dataFrame.pduLength);
 
 	pt = (uint8_t *) &ip_hdr;
 	for (i = 0, pt--; i < IP_HEADER_BYTES; i += 2) {
+		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(pt+1), *(pt+1), i+1, *(pt+2), *(pt+2));
 		sum += (*++pt << 8) + *++pt;
 	}
 
 	pt = (uint8_t *) ff->dataFrame.pdu;
 	for (i = 1, pt--; i < ff->dataFrame.pduLength; i += 2) {
+		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(pt+1), *(pt+1), i+1, *(pt+2), *(pt+2));
 		sum += (*++pt << 8) + *++pt;
 	}
 	if (ff->dataFrame.pduLength & 0x1) {
+		//PRINT_DEBUG("%u=%2x (%u), uneven", ff->dataFrame.pduLength-1, *(pt+1), *(pt+1));
 		sum += *++pt << 8;
 	}
 
@@ -1542,6 +1538,9 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 		sum = (sum & 0xFFFF) + (sum >> 16);
 	}
 	sum = ~sum;
+
+	PRINT_DEBUG("checksum=%x", (uint16_t) sum);
+
 	hdr->checksum = htons((uint16_t) sum);
 
 	PRINT_DEBUG("seg_to_fdf: Exited: seg=%d ff=%d meta=%d", (int)seg, (int)ff, (int) ff->dataFrame.metaData);
@@ -1998,6 +1997,7 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 	} else {
 		seg_add_options(seg, conn);
 	}
+	//seg->opt_len = 0;
 
 	//TODO PAWS
 
@@ -2521,6 +2521,9 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 	}
 
+	int protocol = TCP_PROTOCOL;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
 		PRINT_ERROR("ff creation failed, meta=%d", (int)params);
@@ -2573,12 +2576,11 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	ret += metadata_writeToElement(params, "dst_ip", &dst_ip_netw, META_TYPE_INT) == 0;
 	ret += metadata_writeToElement(params, "dst_port", &dst_port_netw, META_TYPE_INT) == 0;
 
-	uint16_t protocol = TCP_PROTOCOL;
-	protocol = htons(protocol);
+	int protocol = TCP_PROTOCOL;
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("tcp_fdf_to_daemon: failed matadata write, meta=%d", (int)params);
+		PRINT_ERROR("tcp_fdf_to_daemon: failed matadata write, meta=%d ret=%d", (int)params, ret);
 		metadata_destroy(params);
 		return 0;
 	}

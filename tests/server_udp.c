@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 
 		port = atoi(argv[1]);
 	else
-		port = 5000;
+		port = 45454;
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
@@ -50,9 +50,10 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
-	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
+	//server_addr.sin_addr.s_addr = xxx(172,31,54,87);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
