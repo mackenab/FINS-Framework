@@ -260,7 +260,7 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	PRINT_DEBUG("tcp_exec_close_stub: Entered: host=%u/%d", host_ip, host_port);
+	PRINT_DEBUG("tcp_exec_close_stub: Entered: host=%u/%u", host_ip, host_port);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -308,31 +308,42 @@ void *connect_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		//if CONNECT, send SYN, SYN_SENT
-		PRINT_DEBUG("connect_thread: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
-		conn->state = CS_SYN_SENT;
-		conn->active_open = 1;
+		if (conn->state == CS_CLOSED || conn->state == CS_LISTEN) {
+			//if CONNECT, send SYN, SYN_SENT
+			if (conn->state == CS_CLOSED) {
+				PRINT_DEBUG("connect_thread: CLOSED: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
+			} else {
+				PRINT_DEBUG("connect_thread: LISTEN: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
+			}
+			conn->state = CS_SYN_SENT;
+			conn->active_open = 1;
 
-		conn->issn = 0; //tcp_rand(); //TODO uncomment
-		conn->send_seq_num = conn->issn;
-		conn->send_seq_end = conn->send_seq_num;
+			conn->issn = tcp_rand(); //TODO uncomment
+			conn->send_seq_num = conn->issn;
+			conn->send_seq_end = conn->send_seq_num;
 
-		PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-				conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
-		//TODO add options, for: MSS, max window size!!
-		//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+			//TODO add options, for: MSS, max window size!!
+			//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
 
-		//conn_change_options(conn, tcp->options, SYN);
+			//conn_change_options(conn, tcp->options, SYN);
 
-		//send SYN
-		temp_seg = seg_create(conn);
-		seg_update(temp_seg, conn, FLAG_SYN);
-		seg_send(temp_seg);
-		seg_free(temp_seg);
+			//send SYN
+			temp_seg = seg_create(conn);
+			seg_update(temp_seg, conn, FLAG_SYN);
+			seg_send(temp_seg);
+			seg_free(temp_seg);
 
-		conn->timeout = TCP_GBN_TO_DEFAULT;
-		//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
+			conn->timeout = TCP_GBN_TO_DEFAULT;
+			//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
+		} else {
+			//TODO error
+			PRINT_DEBUG("todo error");
+			conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 0);
+		}
 	} else {
 		//send NACK to connect handler
 		conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 1);
@@ -365,7 +376,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
-	PRINT_DEBUG("tcp_exec_connect: Entered: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("tcp_exec_connect: Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -444,7 +455,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 	struct tcp_connection_stub *conn_stub;
 
-	PRINT_DEBUG("tcp_exec_listen: Entered: addr=%u/%d, backlog=%d", host_ip, host_port, backlog);
+	PRINT_DEBUG("tcp_exec_listen: Entered: addr=%u/%u, backlog=%u", host_ip, host_port, backlog);
 	if (sem_wait(&conn_stub_list_sem)) { //TODO change from conn_stub to conn in listen
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
@@ -531,17 +542,19 @@ void *accept_thread(void *local) {
 							conn->state = CS_SYN_RECV;
 							conn->active_open = 0;
 
-							conn->issn = 0; //tcp_rand(); //TODO uncomment
+							conn->issn = tcp_rand(); //TODO uncomment
 							conn->send_seq_num = conn->issn;
 							conn->send_seq_end = conn->send_seq_num;
 							conn->send_win = (uint32_t) seg->win_size;
 							conn->send_max_win = conn->send_win;
 
+							conn->irsn = seg->seq_num;
 							conn->recv_seq_num = seg->seq_num + 1;
 							conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
 
-							PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-									conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+							PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+									conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+							//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 							//TODO process options, decide: MSS, max window size!!
 							//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
@@ -652,7 +665,7 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 	struct tcp_connection *conn;
 	struct tcp_segment *temp_seg;
 
-	PRINT_DEBUG("tcp_exec_accept: Entered: host=%u/%d, flags=%d", host_ip, host_port, flags);
+	PRINT_DEBUG("tcp_exec_accept: Entered: host=%u/%u, flags=%x", host_ip, host_port, flags);
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
@@ -709,29 +722,41 @@ void *close_thread(void *local) {
 			PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%d", conn->state, (int) conn);
 			conn->state = CS_FIN_WAIT_1;
 
-			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			//if CLOSE, send FIN, FIN_WAIT_1
-			if (!conn->fin_sent && queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
+			if (queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
 				//send FIN
-				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
+				if (conn->state == CS_ESTABLISHED) {
+					PRINT_DEBUG("close_thread: ESTABLISHED: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
+				} else {
+					PRINT_DEBUG("close_thread: SYN_RECV: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
+				}
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
+				conn->fssn = conn->send_seq_num;
 				conn->fin_ack = conn->send_seq_end + 1;
 
 				seg = seg_create(conn);
-				seg_update(seg, conn, FLAG_FIN);
+				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
 				seg_send(seg);
 				seg_free(seg);
+
+				conn->send_seq_end++;
+
 				//TODO add TO
-			} //else piggy back it
+			} else {
+				//else piggy back it
+			}
 		} else if (conn->state == CS_CLOSE_WAIT) {
-			PRINT_DEBUG("close_thread: CLOSE, send FIN, LAST_ACK: state=%d conn=%d", conn->state, (int) conn);
+			PRINT_DEBUG("close_thread: CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d conn=%d", conn->state, (int) conn);
 			conn->state = CS_LAST_ACK;
 
-			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			//if CLOSE, send FIN, FIN_WAIT_1
 			if (queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
@@ -739,17 +764,23 @@ void *close_thread(void *local) {
 				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%d", conn->state, (int)conn);
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
+				conn->fssn = conn->send_seq_num;
 				conn->fin_ack = conn->send_seq_end + 1;
 
 				seg = seg_create(conn);
-				seg_update(seg, conn, FLAG_FIN);
+				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
 				seg_send(seg);
 				seg_free(seg);
+
+				conn->send_seq_end++;
+
 				//TODO add TO
-			} //else piggy back it
+			} else {
+				//else piggy back it
+			}
 		} else if (conn->state == CS_SYN_SENT) {
 			//if CLOSE, send -, CLOSED
-			PRINT_DEBUG("close_thread: CLOSE, send -, CLOSED: state=%d conn=%d", conn->state, (int) conn);
+			PRINT_DEBUG("close_thread: SYN_SENT: CLOSE, send -, CLOSED: state=%d conn=%d", conn->state, (int) conn);
 			conn->state = CS_CLOSED;
 
 			conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
@@ -793,7 +824,7 @@ void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint1
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	PRINT_DEBUG("tcp_exec_close: Entered: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("tcp_exec_close: Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
@@ -1004,7 +1035,7 @@ void tcp_read_param(struct finsFrame *ff) {
 	metadata *params = ff->ctrlFrame.metaData;
 	if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
 		if (state > SS_UNCONNECTED) {
-			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 			if (sem_wait(&conn_list_sem)) {
 				PRINT_ERROR("conn_list_sem wait prob");
 				exit(-1);
@@ -1035,7 +1066,7 @@ void tcp_read_param(struct finsFrame *ff) {
 				//TODO error
 			}
 		} else {
-			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d", host_ip, host_port);
+			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%u", host_ip, host_port);
 			if (sem_wait(&conn_stub_list_sem)) {
 				PRINT_ERROR("conn_stub_list_sem wait prob");
 				exit(-1);
@@ -1263,7 +1294,7 @@ void tcp_set_param(struct finsFrame *ff) {
 	if (params) {
 		if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
 			if (state > SS_UNCONNECTED) {
-				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 				if (sem_wait(&conn_list_sem)) {
 					PRINT_ERROR("conn_list_sem wait prob");
 					exit(-1);
@@ -1302,7 +1333,7 @@ void tcp_set_param(struct finsFrame *ff) {
 					tcp_to_switch(ff);
 				}
 			} else {
-				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%d", host_ip, host_port);
+				PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%u", host_ip, host_port);
 				if (sem_wait(&conn_stub_list_sem)) {
 					PRINT_ERROR("conn_stub_list_sem wait prob");
 					exit(-1);

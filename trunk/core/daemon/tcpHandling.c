@@ -159,7 +159,7 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 	}
 	if (daemonSockets[index].state > SS_UNCONNECTED) {
 
-		if ((srcport != daemonSockets[index].dstport) || (srcip != daemonSockets[index].dst_IP)) {
+		if ((srcport != daemonSockets[index].dst_port) || (srcip != daemonSockets[index].dst_ip)) {
 
 			PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 			sem_post(&daemonSockets_sem);
@@ -320,7 +320,6 @@ void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSoc
 
 void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
-	uint32_t host_ip_netw;
 	uint32_t host_ip;
 	uint16_t host_port;
 
@@ -334,11 +333,10 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	host_ip_netw = addr->sin_addr.s_addr;
 	host_ip = ntohl(addr->sin_addr.s_addr);
 	host_port = ntohs(addr->sin_port);
 
-	PRINT_DEBUG("bind address: host=%u (%s):%d host_IP_netformat=%u", host_ip, inet_ntoa(addr->sin_addr), host_port, host_ip_netw);
+	PRINT_DEBUG("bind address: host=%u (%s):%d host_IP_netformat=%u", host_ip, inet_ntoa(addr->sin_addr), host_port, htonl(host_ip));
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -352,7 +350,7 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!check_daemon_ports(host_port, host_ip_netw) && !daemonSockets[index].sockopts.FSO_REUSEADDR) { //change, need to check if in TIME_WAIT state
+	if (!check_daemon_ports(host_port, host_ip) && !daemonSockets[index].sockopts.FSO_REUSEADDR) { //change, need to check if in TIME_WAIT state
 		PRINT_DEBUG("this port is not free");
 		sem_post(&daemonSockets_sem);
 
@@ -365,10 +363,14 @@ void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	 * any modifications to the contents of the daemonSockets database
 	 */
 
-	//daemonSockets[index].host_IP = host_IP_netw;
-	daemonSockets[index].host_IP = host_ip;
-	daemonSockets[index].hostport = host_port;
-	PRINT_DEBUG("");
+	if (host_ip == any_ip_addr) {
+		daemonSockets[index].host_ip = my_host_ip_addr;
+	} else {
+		daemonSockets[index].host_ip = host_ip;
+	}
+
+	daemonSockets[index].host_port = host_port;
+	PRINT_DEBUG("bind address: host=%u:%u (%u)", daemonSockets[index].host_ip, host_port, htonl(daemonSockets[index].host_ip));
 	sem_post(&daemonSockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
@@ -404,8 +406,8 @@ void listen_tcp(int index, unsigned long long uniqueSockID, int backlog) {
 	daemonSockets[index].listening = 1;
 	daemonSockets[index].backlog = backlog;
 
-	host_ip = daemonSockets[index].host_IP;
-	host_port = daemonSockets[index].hostport;
+	host_ip = daemonSockets[index].host_ip;
+	host_port = daemonSockets[index].host_port;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
@@ -514,10 +516,8 @@ void *connect_tcp_thread(void *local) {
 }
 
 void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags) {
-	uint32_t host_ip_netw;
 	uint32_t host_ip;
 	uint16_t host_port;
-	uint32_t rem_ip_netw;
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
@@ -533,7 +533,6 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	rem_ip_netw = addr->sin_addr.s_addr;
 	rem_ip = ntohl((addr->sin_addr).s_addr);
 	rem_port = ntohs(addr->sin_port);
 
@@ -554,7 +553,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * any modifications to the contents of the daemonSockets database
 	 */
 	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
-	PRINT_DEBUG("connect_tcp address: rem=%u (%s):%d rem_IP_netformat=%u", rem_ip, inet_ntoa(addr->sin_addr), rem_port, rem_ip_netw);
+	PRINT_DEBUG("connect_tcp address: rem=%u (%s):%d rem_IP_netformat=%u", rem_ip, inet_ntoa(addr->sin_addr), rem_port, htonl(rem_ip));
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -570,7 +569,7 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * more than one local socket maybe connected to the same destined address
 	 */
 	if (daemonSockets[index].state > SS_UNCONNECTED) {
-		PRINT_DEBUG("old destined address %d, %d", daemonSockets[index].dst_IP, daemonSockets[index].dstport);
+		PRINT_DEBUG("old destined address %d, %d", daemonSockets[index].dst_ip, daemonSockets[index].dst_port);
 		PRINT_DEBUG("new destined address %d, %d", rem_ip, rem_port);
 
 	}
@@ -581,8 +580,8 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * */
 
 	daemonSockets[index].listening = 0;
-	daemonSockets[index].dst_IP = rem_ip;
-	daemonSockets[index].dstport = rem_port;
+	daemonSockets[index].dst_ip = rem_ip;
+	daemonSockets[index].dst_port = rem_port;
 	daemonSockets[index].state = SS_CONNECTING;
 	socket_state state = daemonSockets[index].state;
 
@@ -590,7 +589,10 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_ip = daemonSockets[index].host_IP;
+	if (daemonSockets[index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+		daemonSockets[index].host_ip = my_host_ip_addr;
+	}
+	host_ip = daemonSockets[index].host_ip;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -600,17 +602,17 @@ void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	host_port = daemonSockets[index].hostport;
+	host_port = daemonSockets[index].host_port;
 	if (host_port == 0) {
 		PRINT_DEBUG("");
 		while (1) {
 			host_port = (uint16_t) randoming(MIN_port, MAX_port);
-			if (check_daemon_ports(host_port, host_ip_netw)) {
+			if (check_daemon_ports(host_port, host_ip)) {
 				break;
 			}
 		}
 		PRINT_DEBUG("");
-		daemonSockets[index].hostport = host_port;
+		daemonSockets[index].host_port = host_port;
 	}
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
@@ -720,10 +722,10 @@ void *accept_tcp_thread(void *local) {
 						id, index, uniqueSockID, uniqueSockID_new);
 				nack_send(uniqueSockID, accept_call, 0);
 			} else {
-				daemonSockets[index_new].host_IP = daemonSockets[index].host_IP;
-				daemonSockets[index_new].hostport = daemonSockets[index].hostport;
-				daemonSockets[index_new].dst_IP = rem_ip;
-				daemonSockets[index_new].dstport = rem_port;
+				daemonSockets[index_new].host_ip = daemonSockets[index].host_ip;
+				daemonSockets[index_new].host_port = daemonSockets[index].host_port;
+				daemonSockets[index_new].dst_ip = rem_ip;
+				daemonSockets[index_new].dst_port = rem_port;
 
 				daemonSockets[index_new].state = SS_CONNECTED;
 				daemonSockets[index].state = SS_UNCONNECTED;
@@ -776,8 +778,8 @@ void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long u
 
 	}
 
-	host_ip = daemonSockets[index].host_IP;
-	host_port = (uint32_t) daemonSockets[index].hostport;
+	host_ip = daemonSockets[index].host_ip;
+	host_port = (uint32_t) daemonSockets[index].host_port;
 	blocking_flag = daemonSockets[index].blockingFlag;
 
 	socket_state state = daemonSockets[index].state;
@@ -847,13 +849,13 @@ void getname_tcp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 
 	if (peer == 1) { //TODO find right number
-		host_ip = daemonSockets[index].host_IP;
-		host_port = daemonSockets[index].hostport;
+		host_ip = daemonSockets[index].host_ip;
+		host_port = daemonSockets[index].host_port;
 	} else if (peer == 2) {
 		state = daemonSockets[index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemonSockets[index].dst_IP;
-			rem_port = daemonSockets[index].dstport;
+			rem_ip = daemonSockets[index].dst_ip;
+			rem_port = daemonSockets[index].dst_port;
 		}
 	}
 
@@ -1023,9 +1025,9 @@ void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
-	dstport = daemonSockets[index].dstport;
+	dstport = daemonSockets[index].dst_port;
 
-	dst_IP = daemonSockets[index].dst_IP;
+	dst_IP = daemonSockets[index].dst_ip;
 
 	//hostport = daemonSockets[index].hostport;
 	//hostport = 3000;
@@ -1042,12 +1044,12 @@ void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 	 * The value has been chosen randomly when the socket firsly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	hostport = daemonSockets[index].hostport;
+	hostport = daemonSockets[index].host_port;
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = daemonSockets[index].host_IP;
+	host_IP = daemonSockets[index].host_ip;
 	int block_flag = daemonSockets[index].blockingFlag;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
@@ -1171,9 +1173,9 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	/** Keep all ports and addresses in host order until later  action taken
 	 * in IPv4 module
 	 *  */
-	dst_port = daemonSockets[index].dstport;
+	dst_port = daemonSockets[index].dst_port;
 
-	dst_ip = daemonSockets[index].dst_IP;
+	dst_ip = daemonSockets[index].dst_ip;
 
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
@@ -1186,12 +1188,12 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	host_port = daemonSockets[index].hostport;
+	host_port = daemonSockets[index].host_port;
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_ip = daemonSockets[index].host_IP;
+	host_ip = daemonSockets[index].host_ip;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
@@ -1296,7 +1298,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = daemonSockets[index].host_IP;
+	host_IP = daemonSockets[index].host_ip;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -1306,7 +1308,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	hostport = daemonSockets[index].hostport;
+	hostport = daemonSockets[index].host_port;
 	if (hostport == 0) {
 		while (1) {
 			hostport = randoming(MIN_port, MAX_port);
@@ -1314,7 +1316,7 @@ void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int da
 				break;
 			}
 		}
-		daemonSockets[index].hostport = hostport;
+		daemonSockets[index].host_port = hostport;
 	}
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
@@ -1365,11 +1367,11 @@ void *recvfrom_tcp_thread(void *local) {
 	}
 
 	state = daemonSockets[index].state;
-	host_ip = daemonSockets[index].host_IP;
-	host_port = daemonSockets[index].hostport;
+	host_ip = daemonSockets[index].host_ip;
+	host_port = daemonSockets[index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemonSockets[index].dst_IP;
-		rem_port = daemonSockets[index].dstport;
+		rem_ip = daemonSockets[index].dst_ip;
+		rem_port = daemonSockets[index].dst_port;
 	}
 
 	/** TODO handle flags cases, convert flags/msg_flags to */
@@ -1635,11 +1637,11 @@ void release_tcp(int index, unsigned long long uniqueSockID) {
 	}
 
 	state = daemonSockets[index].state;
-	host_ip = daemonSockets[index].host_IP;
-	host_port = daemonSockets[index].hostport;
+	host_ip = daemonSockets[index].host_ip;
+	host_port = daemonSockets[index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemonSockets[index].dst_IP;
-		rem_port = daemonSockets[index].dstport;
+		rem_ip = daemonSockets[index].dst_ip;
+		rem_port = daemonSockets[index].dst_port;
 	}
 
 	PRINT_DEBUG("");
@@ -2080,11 +2082,11 @@ void getsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	}
 
 	state = daemonSockets[index].state;
-	host_ip = daemonSockets[index].host_IP;
-	host_port = daemonSockets[index].hostport;
+	host_ip = daemonSockets[index].host_ip;
+	host_port = daemonSockets[index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemonSockets[index].dst_IP;
-		rem_port = daemonSockets[index].dstport;
+		rem_ip = daemonSockets[index].dst_ip;
+		rem_port = daemonSockets[index].dst_port;
 	}
 
 	PRINT_DEBUG("");
@@ -2365,11 +2367,11 @@ void setsockopt_tcp(int index, unsigned long long uniqueSockID, int level, int o
 	}
 
 	state = daemonSockets[index].state;
-	host_ip = daemonSockets[index].host_IP;
-	host_port = daemonSockets[index].hostport;
+	host_ip = daemonSockets[index].host_ip;
+	host_port = daemonSockets[index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemonSockets[index].dst_IP;
-		rem_port = daemonSockets[index].dstport;
+		rem_ip = daemonSockets[index].dst_ip;
+		rem_port = daemonSockets[index].dst_port;
 	}
 
 	PRINT_DEBUG("");

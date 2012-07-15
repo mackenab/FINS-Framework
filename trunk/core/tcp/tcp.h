@@ -215,9 +215,6 @@ struct tcp_connection {
 	uint8_t first_flag;
 	uint32_t duplicate;
 	uint8_t fast_flag;
-	uint8_t fin_sent;
-	uint8_t fin_sep; //TODO replace with fin_seq
-	uint32_t fin_ack;
 
 	int to_msl_fd; //MSL timeout occurred
 	pthread_t to_msl_thread;
@@ -238,19 +235,26 @@ struct tcp_connection {
 
 	//host:send_win == rem:recv_win, host:recv_win == rem:send_win
 
+	uint8_t fin_sent;
+	uint8_t fin_sep; //TODO replace with fin_seq
+	uint32_t fin_ack;
+
 	uint32_t issn; //initial send seq num
+	uint32_t fssn; //final send seq num, seq of FIN
 	//uint32_t fsse; //final send seq end, so fsse == final ACK
+	uint32_t irsn; //initial recv seq num
+
 	uint32_t send_max_win; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint32_t send_win; //avail bytes in rem recv buffer
 	uint32_t send_win_seq; //TODO shorten to send_last_seq & send_last_ack
 	uint32_t send_win_ack;
 	uint32_t send_seq_num; //seq of host sendbase, tied with send_queue, seq of unACKed data
-	uint32_t send_seq_end; //1+seq of last sent byte by host
+	uint32_t send_seq_end; //1+seq of last sent byte by host, == send_next
 
 	uint32_t recv_max_win; //max bytes in host recv buffer, tied with rem_seq_num/recv_queue
 	uint32_t recv_win; //avail bytes in host recv buffer
 	uint32_t recv_seq_num; //seq of rem sendbase, tied with recv_queue
-	uint32_t recv_seq_end; //seq of rem last sent
+	uint32_t recv_seq_end; //seq of last inside rem window
 
 	uint16_t MSS; //max segment size
 	cong_state cong_state;

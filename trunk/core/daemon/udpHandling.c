@@ -197,7 +197,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	PRINT_DEBUG("Rest of read for index=%d.", index);
 
 	if (daemonSockets[index].state > SS_UNCONNECTED) {
-		if ((srcport != daemonSockets[index].dstport) || (srcip != daemonSockets[index].dst_IP)) {
+		if ((srcport != daemonSockets[index].dst_port) || (srcip != daemonSockets[index].dst_ip)) {
 			PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 			sem_post(&daemonSockets_sem);
 			return (0);
@@ -335,11 +335,8 @@ void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSoc
 
 void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr) {
 
-	uint16_t hostport;
-	uint16_t dstport;
-	uint32_t host_IP_netformat;
-	uint32_t host_IP;
-	uint32_t dst_IP_netformat;
+	uint16_t host_port;
+	uint32_t host_ip;
 
 	PRINT_DEBUG("bind_udp: Entered: index=%d uniqueSockID=%llu", index, uniqueSockID);
 
@@ -351,9 +348,8 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	hostport = ntohs(addr->sin_port);
-	host_IP_netformat = addr->sin_addr.s_addr;
-	host_IP = ntohl(host_IP_netformat);
+	host_port = ntohs(addr->sin_port);
+	host_ip = ntohl(addr->sin_addr.s_addr);
 
 	/**TODO check if the port is free for binding or previously allocated
 	 * Current code assume that the port is authorized to be accessed
@@ -364,7 +360,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the daemonSockets database
 	 */
-	PRINT_DEBUG("bind address: host=%s/%d host_IP_netformat=%d", inet_ntoa(addr->sin_addr), hostport, host_IP_netformat);
+	PRINT_DEBUG("bind address: host=%s/%d host_IP_netformat=%d", inet_ntoa(addr->sin_addr), host_port, addr->sin_addr.s_addr);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -378,7 +374,7 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!check_daemon_ports(hostport, host_IP_netformat) && !daemonSockets[index].sockopts.FSO_REUSEADDR) {
+	if (!check_daemon_ports(host_port, host_ip) && !daemonSockets[index].sockopts.FSO_REUSEADDR) {
 		PRINT_DEBUG("this port is not free");
 		sem_post(&daemonSockets_sem);
 
@@ -390,11 +386,16 @@ void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *ad
 	/**
 	 * Binding
 	 */
-	daemonSockets[index].hostport = hostport;
-	daemonSockets[index].host_IP = host_IP;
+	daemonSockets[index].host_port = host_port;
+
+	if (host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+		daemonSockets[index].host_ip = my_host_ip_addr;
+	} else {
+		daemonSockets[index].host_ip = host_ip;
+	}
 
 	PRINT_DEBUG("bind: index:%d, host:%d/%d, dst:%d/%d",
-			index, daemonSockets[index].host_IP, daemonSockets[index].hostport, daemonSockets[index].dst_IP, daemonSockets[index].dstport);
+			index, daemonSockets[index].host_ip, daemonSockets[index].host_port, daemonSockets[index].dst_ip, daemonSockets[index].dst_port);
 	sem_post(&daemonSockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
@@ -431,8 +432,8 @@ void listen_udp(int index, unsigned long long uniqueSockID, int backlog) {
 
 void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags) {
 
-	uint16_t dstport;
-	uint32_t dst_IP;
+	uint32_t dst_ip;
+	uint16_t dst_port;
 
 	PRINT_DEBUG("connect_udp: Entered: index=%d uniqueSockID=%llu flags=%d", index, uniqueSockID, flags);
 	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
@@ -446,8 +447,8 @@ void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	dstport = ntohs(addr->sin_port);
-	dst_IP = ntohl((addr->sin_addr).s_addr);
+	dst_port = ntohs(addr->sin_port);
+	dst_ip = ntohl((addr->sin_addr).s_addr);
 
 	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
@@ -477,8 +478,8 @@ void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	 * more than one local socket maybe connected to the same destined address
 	 */
 	if (daemonSockets[index].state > SS_UNCONNECTED) {
-		PRINT_DEBUG("old destined address %d, %d", daemonSockets[index].dst_IP, daemonSockets[index].dstport);
-		PRINT_DEBUG("new destined address %d, %d", dst_IP, dstport);
+		PRINT_DEBUG("old destined address %d, %d", daemonSockets[index].dst_ip, daemonSockets[index].dst_port);
+		PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
 
 	}
 
@@ -491,8 +492,8 @@ void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the daemonSockets database
 	 */
-	daemonSockets[index].dst_IP = dst_IP;
-	daemonSockets[index].dstport = dstport;
+	daemonSockets[index].dst_ip = dst_ip;
+	daemonSockets[index].dst_port = dst_port;
 	daemonSockets[index].state = SS_CONNECTING;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
@@ -550,13 +551,13 @@ void getname_udp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 
 	if (peer == 1) { //TODO find right number
-		host_ip = daemonSockets[index].host_IP;
-		host_port = daemonSockets[index].hostport;
+		host_ip = daemonSockets[index].host_ip;
+		host_port = daemonSockets[index].host_port;
 	} else if (peer == 2) {
 		state = daemonSockets[index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemonSockets[index].dst_IP;
-			rem_port = daemonSockets[index].dstport;
+			rem_ip = daemonSockets[index].dst_ip;
+			rem_port = daemonSockets[index].dst_port;
 		}
 	}
 
@@ -730,9 +731,9 @@ void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
-	dstport = daemonSockets[index].dstport;
+	dstport = daemonSockets[index].dst_port;
 
-	dst_IP = daemonSockets[index].dst_IP;
+	dst_IP = daemonSockets[index].dst_ip;
 
 	//hostport = daemonSockets[index].hostport;
 	//hostport = 3000;
@@ -749,12 +750,12 @@ void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 	 * The value has been chosen randomly when the socket firsly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	hostport = daemonSockets[index].hostport;
+	hostport = daemonSockets[index].host_port;
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = daemonSockets[index].host_IP;
+	host_IP = daemonSockets[index].host_ip;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
@@ -781,13 +782,14 @@ void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int dat
 
 void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags) {
 
-	uint16_t hostport;
-	uint16_t dstport;
-	uint32_t host_IP;
-	uint32_t dst_IP;
+	uint32_t host_ip;
+	uint16_t host_port;
+	uint32_t dst_ip;
+	uint16_t dst_port;
 	int len = datalen;
 
-	if (flags == -1000) {
+	if (flags == -1000) { //TODO what is this??
+		PRINT_DEBUG("write_udp???");
 		return write_udp(index, uniqueSockID, data, datalen);
 	}
 	/** TODO handle flags cases */
@@ -829,9 +831,9 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	}
 
 	/** Keep all ports and addresses in host order until later  action taken */
-	dstport = daemonSockets[index].dstport;
+	dst_port = daemonSockets[index].dst_port;
 
-	dst_IP = daemonSockets[index].dst_IP;
+	dst_ip = daemonSockets[index].dst_ip;
 
 	//hostport = daemonSockets[index].hostport;
 	//hostport = 3000;
@@ -843,7 +845,11 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = daemonSockets[index].host_IP;
+
+	if (daemonSockets[index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+		daemonSockets[index].host_ip = my_host_ip_addr;
+	}
+	host_ip = daemonSockets[index].host_ip;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -853,11 +859,11 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	hostport = daemonSockets[index].hostport;
+	host_port = daemonSockets[index].host_port;
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
-	PRINT_DEBUG("addr %d,%d,%d,%d", dst_IP, dstport, host_IP, hostport);
+	PRINT_DEBUG("addr %d,%d,%d,%d", dst_ip, dst_port, host_ip, host_port);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -867,7 +873,7 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	/** the meta-data paraters are all passes by copy starting from this point
 	 *
 	 */
-	if (daemon_UDP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)
+	if (daemon_UDP_to_fins(data, len, dst_port, dst_ip, host_port, host_ip) == 1)
 
 	{
 		PRINT_DEBUG("");
@@ -885,10 +891,10 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags, struct sockaddr_in *addr, socklen_t addrlen) {
 
-	uint16_t hostport;
-	uint16_t dstport;
-	uint32_t host_IP;
-	uint32_t dst_IP;
+	uint32_t host_ip;
+	uint16_t host_port;
+	uint32_t dst_ip;
+	uint16_t dst_port;
 
 	int len = data_len;
 	int i;
@@ -924,12 +930,12 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	 * the new created location is the one to be included into the newly created finsFrame*/
 	PRINT_DEBUG("");
 
-	dst_IP = ntohl(addr->sin_addr.s_addr);/** it is in network format since application used htonl */
+	dst_ip = ntohl(addr->sin_addr.s_addr);/** it is in network format since application used htonl */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 
 	/** Keep all ports and addresses in host order until later  action taken */
-	dstport = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
+	dst_port = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
 
 	PRINT_DEBUG("");
 	sem_wait(&daemonSockets_sem);
@@ -945,7 +951,11 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = daemonSockets[index].host_IP;
+	if (daemonSockets[index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+		daemonSockets[index].host_ip = my_host_ip_addr;
+	}
+
+	host_ip = daemonSockets[index].host_ip;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -955,25 +965,25 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	hostport = daemonSockets[index].hostport;
-	if (hostport == 0) {
+	host_port = daemonSockets[index].host_port;
+	if (host_port == 0) {
 		while (1) {
-			hostport = randoming(MIN_port, MAX_port);
-			if (check_daemon_ports(hostport, host_IP)) {
+			host_port = randoming(MIN_port, MAX_port);
+			if (check_daemon_ports(host_port, host_ip)) {
 				break;
 			}
 		}
-		daemonSockets[index].hostport = hostport;
+		daemonSockets[index].host_port = host_port;
 	}
 	PRINT_DEBUG("");
 	sem_post(&daemonSockets_sem);
 
-	PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", index, dst_IP, dstport, host_IP, hostport);
+	PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", index, dst_ip, dst_port, host_ip, host_port);
 
 	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
-	temp->s_addr = host_IP;
-	PRINT_DEBUG("index=%d, dst=%s/%d (%u)", index, inet_ntoa(addr->sin_addr), dstport, addr->sin_addr.s_addr);
-	PRINT_DEBUG("index=%d, host=%s/%d (%u)", index, inet_ntoa(*temp), hostport, (*temp).s_addr);
+	temp->s_addr = host_ip;
+	PRINT_DEBUG("index=%d, dst=%s/%d (%u)", index, inet_ntoa(addr->sin_addr), dst_port, addr->sin_addr.s_addr);
+	PRINT_DEBUG("index=%d, host=%s/%d (%u)", index, inet_ntoa(*temp), host_port, (*temp).s_addr);
 	//free(data);
 	//free(addr);
 	PRINT_DEBUG("");
@@ -983,7 +993,7 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	/** the meta-data parameters are all passes by copy starting from this point
 	 *
 	 */
-	if (daemon_UDP_to_fins(data, len, dstport, dst_IP, hostport, host_IP) == 1)
+	if (daemon_UDP_to_fins(data, len, dst_port, dst_ip, host_port, host_ip) == 1)
 
 	{
 		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
@@ -1534,8 +1544,8 @@ void getpeername_udp(unsigned long long uniqueSockID, int addrlen) {
 	index = find_daemonSocket(uniqueSockID);
 
 	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = daemonSockets[index].dst_IP;
-	address.sin_port = daemonSockets[index].dstport;
+	address.sin_addr.s_addr = daemonSockets[index].dst_ip;
+	address.sin_port = daemonSockets[index].dst_port;
 	memset(address.sin_zero, 0, 8);
 
 	PRINT_DEBUG("*****%d*********%d , %d*************", sizeof(struct sockaddr_in), address.sin_addr.s_addr, address.sin_port)

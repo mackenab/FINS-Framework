@@ -24,7 +24,7 @@ int tcp_serial_num = 0;
 int tcp_thread_count = 0;
 
 struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end) {
-	PRINT_DEBUG("node_create: Entered: data=%d, len=%d, seq_num=%d, seq_end=%d", (int)data, len, seq_num, seq_end);
+	PRINT_DEBUG("node_create: Entered: data=%d, len=%d, seq_num=%u, seq_end=%u", (int)data, len, seq_num, seq_end);
 
 	struct tcp_node *node = (struct tcp_node *) malloc(sizeof(struct tcp_node));
 	if (node == NULL) {
@@ -140,11 +140,11 @@ void node_free(struct tcp_node *node) {
 }
 
 struct tcp_queue *queue_create(uint32_t max) {
-	PRINT_DEBUG("queue_create: Entered: max=%d", max);
+	PRINT_DEBUG("queue_create: Entered: max=%u", max);
 
 	struct tcp_queue *queue = (struct tcp_queue *) malloc(sizeof(struct tcp_queue));
 	if (queue == NULL) {
-		PRINT_ERROR("Unable to create queue: max=%d", max);
+		PRINT_ERROR("Unable to create queue: max=%u", max);
 		exit(-1);
 	}
 
@@ -227,7 +227,7 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	}
 
 	//TODO unable to insert, but didn't trip any overlaps - big error/not possible?
-	PRINT_DEBUG("unreachable insert location: (%d, %d) [%d, %d]", node->seq_num, node->seq_end, win_seq_num, win_seq_end);
+	PRINT_DEBUG("unreachable insert location: (%u, %u) [%u, %u]", node->seq_num, node->seq_end, win_seq_num, win_seq_end);
 	return 0;
 }
 
@@ -277,11 +277,11 @@ void queue_free(struct tcp_queue *queue) {
 }
 
 struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
-	PRINT_DEBUG("conn_stub_create: Entered: host=%u/%d, backlog=%d", host_ip, host_port, backlog);
+	PRINT_DEBUG("conn_stub_create: Entered: host=%u/%u, backlog=%u", host_ip, host_port, backlog);
 
 	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) malloc(sizeof(struct tcp_connection_stub));
 	if (conn_stub == NULL) {
-		PRINT_ERROR("Unable to create conn_stub: host=%u/%d, backlog=%d", host_ip, host_port, backlog);
+		PRINT_ERROR("Unable to create conn_stub: host=%u/%u, backlog=%u", host_ip, host_port, backlog);
 		exit(-1);
 	}
 
@@ -325,18 +325,18 @@ int conn_stub_insert(struct tcp_connection_stub *conn_stub) { //TODO change from
 }
 
 struct tcp_connection_stub *conn_stub_find(uint32_t host_ip, uint16_t host_port) {
-	PRINT_DEBUG("conn_stub_find: Entered: host=%u/%d", host_ip, host_port);
+	PRINT_DEBUG("conn_stub_find: Entered: host=%u/%u", host_ip, host_port);
 
 	struct tcp_connection_stub *temp = conn_stub_list;
 	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
 		if (temp->host_ip == host_ip && temp->host_port == host_port) {
-			PRINT_DEBUG("conn_stub_find: Exited: host=%u/%d, conn_stub=%d", host_ip, host_port, (int)temp);
+			PRINT_DEBUG("conn_stub_find: Exited: host=%u/%u, conn_stub=%u", host_ip, host_port, (int)temp);
 			return temp;
 		}
 		temp = temp->next;
 	}
 
-	PRINT_DEBUG("conn_stub_find: Exited: host=%u/%d, conn_stub=%d", host_ip, host_port, (int)NULL);
+	PRINT_DEBUG("conn_stub_find: Exited: host=%u/%u, conn_stub=%u", host_ip, host_port, (int)NULL);
 	return NULL;
 }
 
@@ -523,12 +523,13 @@ void main_syn_sent(struct tcp_connection *conn) {
 		//TO, resend SYN, -
 		conn->to_gbn_flag = 0;
 
-		conn->issn = 0; //tcp_rand(); //TODO uncomment
+		conn->issn = tcp_rand(); //TODO uncomment
 		conn->send_seq_num = conn->issn;
 		conn->send_seq_end = conn->send_seq_num;
 
-		PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-				conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+		PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+		//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 		//TODO add options, for: MSS, max window size!!
 		//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
@@ -569,12 +570,13 @@ void main_syn_recv(struct tcp_connection *conn) {
 			conn->to_gbn_flag = 0;
 
 			conn->state = CS_SYN_SENT;
-			conn->issn = 0; //tcp_rand(); //TODO uncomment
+			conn->issn = tcp_rand(); //TODO uncomment
 			conn->send_seq_num = conn->issn;
 			conn->send_seq_end = conn->send_seq_num;
 
-			PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-					conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			//send SYN
 			temp_seg = seg_create(conn);
@@ -784,7 +786,7 @@ void main_established(struct tcp_connection *conn) {
 					gettimeofday(&conn->rtt_stamp, 0);
 					conn->rtt_flag = 1;
 					conn->rtt_seq_end = conn->send_seq_end;
-					PRINT_DEBUG("setting seqEndRTT=%d stampRTT=(%d, %d)\n", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
+					PRINT_DEBUG("setting seqEndRTT=%u stampRTT=(%d, %d)\n", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
 				}
 
 				if (conn->first_flag) {
@@ -916,8 +918,9 @@ void *main_thread(void *local) {
 		exit(-1);
 	}
 	while (conn->running_flag) {
-		PRINT_DEBUG( "host: seqs=(%d, %d) win=(%d/%d), rem: seqs=(%d, %d) win=(%d/%d)",
-				conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+		PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
+				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+		//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 		PRINT_DEBUG("flags: to_gbn=%d fast=%d gbn=%d delayed=%d to_delay=%d first=%d wait=%d ",
 				conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag, conn->delayed_flag, conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
 
@@ -1034,11 +1037,11 @@ void startTimer(int fd, double millis) {
 }
 
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("conn_create: Entered: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("conn_create: Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 
 	struct tcp_connection *conn = (struct tcp_connection *) malloc(sizeof(struct tcp_connection));
 	if (conn == NULL) {
-		PRINT_ERROR("Unable to create conn: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+		PRINT_ERROR("Unable to create conn: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 		exit(-1);
 	}
 
@@ -1163,7 +1166,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	gbn_data->flag = &conn->to_gbn_flag;
 	gbn_data->waiting = &conn->main_wait_flag;
 	gbn_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("conn_create: to_gbn_fd: host=%u/%d, rem=%u/%d conn=%d id=%d to_gbn_fd=%d",
+	PRINT_DEBUG("conn_create: to_gbn_fd: host=%u/%u, rem=%u/%u conn=%d id=%d to_gbn_fd=%d",
 			host_ip, host_port, rem_ip, rem_port, (int)conn, gbn_data->id, conn->to_gbn_fd);
 	if (pthread_create(&conn->to_gbn_thread, NULL, to_thread, (void *) gbn_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
@@ -1177,7 +1180,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	delayed_data->flag = &conn->to_delayed_flag;
 	delayed_data->waiting = &conn->main_wait_flag;
 	delayed_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("conn_create: to_gbn_fd: host=%u/%d, rem=%u/%d conn=%d id=%d to_gbn_fd=%d",
+	PRINT_DEBUG("conn_create: to_gbn_fd: host=%u/%u, rem=%u/%u conn=%d id=%d to_gbn_fd=%d",
 			host_ip, host_port, rem_ip, rem_port, (int)conn, delayed_data->id, conn->to_delayed_fd);
 	if (pthread_create(&conn->to_delayed_thread, NULL, to_thread, (void *) delayed_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
@@ -1194,7 +1197,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 		exit(-1);
 	}
 
-	PRINT_DEBUG("conn_create: Exited: host=%u/%d, rem=%u/%d conn=%d", host_ip, host_port, rem_ip, rem_port, (int)conn);
+	PRINT_DEBUG("conn_create: Exited: host=%u/%u, rem=%u/%u conn=%d", host_ip, host_port, rem_ip, rem_port, (int)conn);
 	return conn;
 }
 
@@ -1220,18 +1223,18 @@ int conn_insert(struct tcp_connection *conn) { //TODO change from append to inse
 //find a TCP connection with given host addr/port and remote addr/port
 //NOTE: this means for incoming IP FF call with (dst_ip, src_ip, dst_p, src_p)
 struct tcp_connection *conn_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("conn_find: Entered: host=%u/%d, rem=%u/%d", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("conn_find: Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 
 	struct tcp_connection *temp = conn_list;
 	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
 		if (temp->rem_port == rem_port && /*temp->rem_ip == rem_ip && temp->host_ip == host_ip &&*/temp->host_port == host_port) {
-			PRINT_DEBUG("conn_find: Exited: host=%u/%d, rem=%u/%d, conn=%d", host_ip, host_port, rem_ip, rem_port, (int)temp);
+			PRINT_DEBUG("conn_find: Exited: host=%u/%u, rem=%u/%u, conn=%d", host_ip, host_port, rem_ip, rem_port, (int)temp);
 			return temp;
 		}
 		temp = temp->next;
 	}
 
-	PRINT_DEBUG("conn_find: Exited: host=%u/%d, rem=%u/%d, conn=%d", host_ip, host_port, rem_ip, rem_port, 0);
+	PRINT_DEBUG("conn_find: Exited: host=%u/%u, rem=%u/%u, conn=%d", host_ip, host_port, rem_ip, rem_port, 0);
 	return NULL;
 }
 
@@ -1436,10 +1439,8 @@ uint8_t *copy_uint64(uint8_t *ptr, uint64_t val) {
 struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	PRINT_DEBUG("seg_to_fdf: Entered: seg=%d", (int)seg);
 
-	PRINT_DEBUG( "seg_to_fdf: info: src=%u/%d, dst=%u/%d, seq=%d, len=%d, opts=%d, ack=%d, flags=%d, win=%d, checksum=%d F=%d, S=%d R=%d A=%d",
+	PRINT_DEBUG( "seg_to_fdf: info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=%x, win=%u, checksum=%x, F=%d, S=%d, R=%d, A=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
-	PRINT_DEBUG( "seg_to_fdf: info: host: src=%u/%d, dst=%u/%d, netw: src=%u/%d, dst=%u/%d",
-			ntohl(seg->src_ip), ntohs(seg->src_port), ntohl(seg->dst_ip), ntohs(seg->dst_port), htonl(seg->src_ip), htons(seg->src_port), htonl(seg->dst_ip), htons(seg->dst_port));
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -1581,50 +1582,6 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 		return NULL;
 	}
 
-	/*
-	 uint8_t *ptr = ff->dataFrame.pdu;
-
-	 //For big-vs-little endian issues, I shall shift everything and deal with it manually here
-	 seg->src_port = (uint16_t)(*ptr++) << 8;
-	 seg->src_port += *ptr++;
-
-	 seg->dst_port = (uint16_t)(*ptr++) << 8;
-	 seg->dst_port += *ptr++;
-
-	 seg->seq_num = (uint32_t)(*ptr++) << 24;
-	 seg->seq_num += (uint32_t)(*ptr++) << 16;
-	 seg->seq_num += (uint32_t)(*ptr++) << 8;
-	 seg->seq_num += *ptr++;
-
-	 seg->ack_num = (uint32_t)(*ptr++) << 24;
-	 seg->ack_num += (uint32_t)(*ptr++) << 16;
-	 seg->ack_num += (uint32_t)(*ptr++) << 8;
-	 seg->ack_num += *ptr++;
-
-	 seg->flags = (uint16_t)(*ptr++) << 8;
-	 seg->flags += *ptr++;
-
-	 seg->win_size = (uint16_t)(*ptr++) << 8;
-	 seg->win_size += *ptr++;
-
-	 seg->checksum = (uint16_t)(*ptr++) << 8;
-	 seg->checksum += *ptr++;
-
-	 seg->urg_pointer = (uint16_t)(*ptr++) << 8;
-	 seg->urg_pointer += *ptr++;
-
-	 //host_IP_netformat = addr->sin_addr.s_addr;
-	 //PRINT_DEBUG("bind address: host=%s/%d host_IP_netformat=%d", inet_ntoa(addr->sin_addr), hostport, host_IP_netformat);
-
-	 //Now copy the rest of the data, starting with the options
-	 seg->opt_len = TCP_OPTIONS_BYTES(seg->flags);
-	 if (seg->opt_len > 0) {
-	 //seg->options = (uint8_t *) malloc(MAX_TCP_OPTIONS_BYTES);
-	 memcpy(seg->options, ptr, seg->opt_len);
-	 ptr += seg->opt_len;
-	 }
-	 */
-
 	struct tcpv4_header *hdr = (struct tcpv4_header *) ff->dataFrame.pdu;
 	seg->src_port = ntohs(hdr->src_port);
 	seg->dst_port = ntohs(hdr->dst_port);
@@ -1651,11 +1608,10 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 
 	seg->seq_end = seg->seq_num + seg->data_len;
 
-	PRINT_DEBUG( "fdf_to_seg: info: src=%u/%d, dst=%u/%d, seq=%d, len=%d, opts=%d, ack=%d, flags=%d, win=%d, checksum=%d F=%d, S=%d R=%d A=%d",
+	PRINT_DEBUG( "fdf_to_seg: info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=%x, win=%u, checksum=%x, F=%d, S=%d, R=%d, A=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
-	PRINT_DEBUG( "fdf_to_seg: info: host: src=%u/%d, dst=%u/%d, netw: src=%u/%d, dst=%u/%d",
-			ntohl(seg->src_ip), ntohs(seg->src_port), ntohl(seg->dst_ip), ntohs(seg->dst_port), htonl(seg->src_ip), htons(seg->src_port), htonl(seg->dst_ip), htons(seg->dst_port));
 
+	PRINT_DEBUG("seg_to_fdf: Exited: ff=%d meta=%d seg=%d", (int)ff, (int) ff->dataFrame.metaData, (int)seg);
 	return seg;
 }
 
@@ -2086,23 +2042,23 @@ int seg_send(struct tcp_segment *seg) {
 	 struct tcp_segment *seg_test = fdf_to_seg(ff);
 	 if (seg_test) {
 	 if (seg->src_ip != seg_test->src_ip)
-	 PRINT_DEBUG("diff: src_ip: seg=%d, test=%d", seg->src_ip, seg_test->src_ip);
+	 PRINT_DEBUG("diff: src_ip: seg=%u, test=%u", seg->src_ip, seg_test->src_ip);
 	 if (seg->dst_ip != seg_test->dst_ip)
-	 PRINT_DEBUG("diff: dst_ip: seg=%d, test=%d", seg->dst_ip, seg_test->dst_ip);
+	 PRINT_DEBUG("diff: dst_ip: seg=%u, test=%u", seg->dst_ip, seg_test->dst_ip);
 	 if (seg->src_port != seg_test->src_port)
-	 PRINT_DEBUG("diff: src_port: seg=%d, test=%d", seg->src_port, seg_test->src_port);
+	 PRINT_DEBUG("diff: src_port: seg=%u, test=%u", seg->src_port, seg_test->src_port);
 	 if (seg->dst_port != seg_test->dst_port)
-	 PRINT_DEBUG("diff: dst_port: seg=%d, test=%d", seg->dst_port, seg_test->dst_port);
+	 PRINT_DEBUG("diff: dst_port: seg=%u, test=%u", seg->dst_port, seg_test->dst_port);
 	 if (seg->seq_num != seg_test->seq_num)
-	 PRINT_DEBUG("diff: seq_num: seg=%d, test=%d", seg->seq_num, seg_test->seq_num);
+	 PRINT_DEBUG("diff: seq_num: seg=%u, test=%u", seg->seq_num, seg_test->seq_num);
 	 if (seg->ack_num != seg_test->ack_num)
-	 PRINT_DEBUG("diff: ack_num: seg=%d, test=%d", seg->ack_num, seg_test->ack_num);
+	 PRINT_DEBUG("diff: ack_num: seg=%u, test=%u", seg->ack_num, seg_test->ack_num);
 	 if (seg->flags != seg_test->flags)
-	 PRINT_DEBUG("diff: flags: seg=%d, test=%d", seg->flags, seg_test->flags);
+	 PRINT_DEBUG("diff: flags: seg=%x, test=%x", seg->flags, seg_test->flags);
 	 if (seg->win_size != seg_test->win_size)
-	 PRINT_DEBUG("diff: win_size: seg=%d, test=%d", seg->win_size, seg_test->win_size);
+	 PRINT_DEBUG("diff: win_size: seg=%u, test=%u", seg->win_size, seg_test->win_size);
 	 if (seg->checksum != seg_test->checksum)
-	 PRINT_DEBUG("diff: checksum: seg=%d, test=%d", seg->checksum, seg_test->checksum);
+	 PRINT_DEBUG("diff: checksum: seg=%x, test=%x", seg->checksum, seg_test->checksum);
 	 if (seg->urg_pointer != seg_test->urg_pointer)
 	 PRINT_DEBUG("diff: urg_pointer: seg=%d, test=%d", seg->urg_pointer, seg_test->urg_pointer);
 	 if (seg->opt_len != seg_test->opt_len)
@@ -2552,12 +2508,14 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 }
 
 int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("tcp_fdf_to_daemon: Entered: host=%u/%d, rem=%u/%d, len=%d", host_ip, host_port, rem_ip, rem_port, len);
+	PRINT_DEBUG("tcp_fdf_to_daemon: Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, len);
 
-	uint32_t src_ip_netw = htonl(host_ip);
-	uint32_t src_port_netw = (uint32_t) htons(host_port);
-	uint32_t dst_ip_netw = htonl(rem_ip);
-	uint32_t dst_port_netw = (uint32_t) htons(rem_port);
+	/*
+	 uint32_t src_ip_netw = htonl(host_ip);
+	 uint32_t src_port_netw = (uint32_t) htons(host_port);
+	 uint32_t dst_ip_netw = htonl(rem_ip);
+	 uint32_t dst_port_netw = (uint32_t) htons(rem_port);
+	 */
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -2571,10 +2529,10 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	 */
 
 	int ret = 0;
-	ret += metadata_writeToElement(params, "src_ip", &src_ip_netw, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "src_port", &src_port_netw, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "dst_ip", &dst_ip_netw, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "dst_port", &dst_port_netw, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "dst_ip", &rem_ip, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "dst_port", &rem_port, META_TYPE_INT) == 0;
 
 	int protocol = TCP_PROTOCOL;
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
@@ -2592,7 +2550,7 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 		return 0;
 	}
 
-	PRINT_DEBUG("tcp_fdf_to_daemon: src=%u/%d, dst=%u/%d, ff=%d", src_ip_netw, src_port_netw, dst_ip_netw, dst_port_netw, (int)ff);
+	PRINT_DEBUG("tcp_fdf_to_daemon: src=%u/%u, dst=%u/%u, ff=%d", host_ip, host_port, rem_ip, rem_port, (int)ff);
 
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table

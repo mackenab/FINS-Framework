@@ -172,6 +172,11 @@ struct tcp_Parameters {
 
 };
 
+//TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
+uint32_t my_host_ip_addr;// = IP4_ADR_P2H(192,168,1,20);
+uint32_t loopback_ip_addr;// = IP4_ADR_P2H(127,0,0,1);
+uint32_t any_ip_addr;// = IP4_ADR_P2H(0,0,0,0);
+
 struct finssocket {
 	/** variables tells a connect call has been called over this socket or not in order to
 	 * check the address of the senders of the received datagrams against the address which this
@@ -202,20 +207,20 @@ struct finssocket {
 
 	/** All the above already initialized using the insert function
 	 * the remaining below is handled using the update function*/
-	uint16_t hostport; //host format
-	uint16_t dstport; //host format
-	uint32_t host_IP; //host format
-	uint32_t dst_IP; //host format
+	uint32_t host_ip; //host format
+	uint16_t host_port; //host format
+	uint32_t dst_ip; //host format
+	uint16_t dst_port; //host format
 	char name[50];
 	int data_pipe[2];
 
+	sem_t Qs; /** The data Queue Semaphore Pointer*/
 	finsQueue controlQueue;
 	sem_t control_sem;
 
 	finsQueue dataQueue;
 	sem_t data_sem;
 	int buf_data;
-	sem_t Qs; /** The data Queue Semaphore Pointer*/
 
 	int recv_ind;
 	int threads;

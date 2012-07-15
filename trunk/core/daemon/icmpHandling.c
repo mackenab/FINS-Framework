@@ -174,7 +174,7 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	}
 	if (daemonSockets[index].state > SS_UNCONNECTED) {
 
-		if ((srcport != daemonSockets[index].dstport) || (srcip != daemonSockets[index].dst_IP)) {
+		if ((srcport != daemonSockets[index].dst_port) || (srcip != daemonSockets[index].dst_ip)) {
 			PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 			sem_post(&daemonSockets_sem);
 			return (0);
@@ -310,12 +310,12 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int d
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
-	hostport = daemonSockets[index].hostport;
+	hostport = daemonSockets[index].host_port;
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	host_IP = daemonSockets[index].host_IP;
+	host_IP = daemonSockets[index].host_ip;
 	sem_post(&daemonSockets_sem);
 	PRINT_DEBUG("");
 
@@ -625,13 +625,13 @@ void getname_icmp(int index, unsigned long long uniqueSockID, int peer) {
 	}
 
 	if (peer == 1) { //TODO find right number
-		host_ip = daemonSockets[index].host_IP;
-		host_port = daemonSockets[index].hostport;
+		host_ip = daemonSockets[index].host_ip;
+		host_port = daemonSockets[index].host_port;
 	} else if (peer == 2) {
 		state = daemonSockets[index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemonSockets[index].dst_IP;
-			rem_port = daemonSockets[index].dstport;
+			rem_ip = daemonSockets[index].dst_ip;
+			rem_port = daemonSockets[index].dst_port;
 		}
 	}
 

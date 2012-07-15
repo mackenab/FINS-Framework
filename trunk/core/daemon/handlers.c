@@ -127,17 +127,17 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 	for (i = 0; i < MAX_sockets; i++) {
 		if (daemonSockets[i].uniqueSockID != -1) {
 			if (protocol == IPPROTO_ICMP) {
-				if ((daemonSockets[i].protocol == protocol) && (daemonSockets[i].dst_IP == dstip)) {
+				if ((daemonSockets[i].protocol == protocol) && (daemonSockets[i].dst_ip == dstip)) {
 					PRINT_DEBUG("ICMP");
 					return (i);
 				}
 			} else {
-				if (daemonSockets[i].host_IP == INADDR_ANY) {
-					if (daemonSockets[i].hostport == dstport) {
+				if (daemonSockets[i].host_ip == INADDR_ANY) {
+					if (daemonSockets[i].host_port == dstport) {
 						PRINT_DEBUG("hostport == dstport");
 						return (i);
 					}
-				} else if ((daemonSockets[i].hostport == dstport) && (daemonSockets[i].host_IP == dstip)/** && (daemonSockets[i].protocol == protocol)*/) {
+				} else if ((daemonSockets[i].host_port == dstport) && (daemonSockets[i].host_ip == dstip)/** && (daemonSockets[i].protocol == protocol)*/) {
 					PRINT_DEBUG("host_IP == dstip");
 					return (i);
 				} else {
@@ -146,10 +146,10 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 			}
 
 			if (0) {
-				if (daemonSockets[i].host_IP == INADDR_ANY && (protocol != IPPROTO_ICMP)) {
-					if ((daemonSockets[i].hostport == dstport))
+				if (daemonSockets[i].host_ip == INADDR_ANY && (protocol != IPPROTO_ICMP)) {
+					if ((daemonSockets[i].host_port == dstport))
 						return (i);
-				} else if ((daemonSockets[i].hostport == dstport) && (daemonSockets[i].host_IP == dstip) && ((protocol != IPPROTO_ICMP))
+				} else if ((daemonSockets[i].host_port == dstport) && (daemonSockets[i].host_ip == dstip) && ((protocol != IPPROTO_ICMP))
 				/** && (daemonSockets[i].protocol == protocol)*/) {
 					return (i);
 				}
@@ -157,7 +157,7 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 				/** Matching for ICMP incoming datagrams
 				 * In this case the IP passes is actually the source IP of that incoming message (Or called the host)
 				 */
-				else if ((daemonSockets[i].protocol == protocol) && (protocol == IPPROTO_ICMP) && (daemonSockets[i].dst_IP == dstip)) {
+				else if ((daemonSockets[i].protocol == protocol) && (protocol == IPPROTO_ICMP) && (daemonSockets[i].dst_ip == dstip)) {
 					return (i);
 
 				} else {
@@ -175,8 +175,8 @@ int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_i
 
 	int i;
 	for (i = 0; i < MAX_sockets; i++) {
-		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_IP == host_ip && daemonSockets[i].hostport == host_port
-				&& daemonSockets[i].dst_IP == rem_ip && daemonSockets[i].dstport == rem_port && daemonSockets[i].protocol == protocol) {
+		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port
+				&& daemonSockets[i].dst_ip == rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
 			PRINT_DEBUG("Matched connection index=%d", i);
 			return (i);
 		}
@@ -209,14 +209,14 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol)
 			 * The IP default value it supposed to be acquired from the configuration file
 			 * The allowable ports range is supposed also to be aquired the same way
 			 */
-			daemonSockets[i].host_IP = 0;
+			daemonSockets[i].host_ip = 0;
 			/**
 			 * The host port is initially assigned randomly and stay the same unless
 			 * binding explicitly later
 			 */
-			daemonSockets[i].hostport = 0;
-			daemonSockets[i].dst_IP = 0;
-			daemonSockets[i].dstport = 0;
+			daemonSockets[i].host_port = 0;
+			daemonSockets[i].dst_ip = 0;
+			daemonSockets[i].dst_port = 0;
 			/** Transport protocol SUBTYPE SOCK_DGRAM , SOCK_RAW, SOCK_STREAM
 			 * it has nothing to do with layer 4 protocols like TCP, UDP , etc
 			 */
@@ -300,12 +300,12 @@ int check_daemon_ports(uint16_t hostport, uint32_t hostip) {
 	int i = 0;
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if (daemonSockets[i].host_IP == INADDR_ANY) {
-			if (daemonSockets[i].hostport == hostport)
+		if (daemonSockets[i].host_ip == INADDR_ANY) {
+			if (daemonSockets[i].host_port == hostport)
 				return (0);
 
 		} else {
-			if ((daemonSockets[i].hostport == hostport) && (daemonSockets[i].host_IP == hostip))
+			if ((daemonSockets[i].host_port == hostport) && (daemonSockets[i].host_ip == hostip))
 				return (0);
 
 		}
@@ -327,7 +327,7 @@ int check_daemon_dstports(uint16_t dstport, uint32_t dstip) {
 	int i = 0;
 
 	for (i = 0; i < MAX_sockets; i++) {
-		if ((daemonSockets[i].dstport == dstport) && (daemonSockets[i].dst_IP == dstip))
+		if ((daemonSockets[i].dst_port == dstport) && (daemonSockets[i].dst_ip == dstip))
 			return (-1);
 
 	}
@@ -623,14 +623,14 @@ void socket_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 		return;
 	}
 
-	if (type == SOCK_DGRAM) {
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		socket_udp(domain, type, protocol, uniqueSockID);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		socket_tcp(domain, type, protocol, uniqueSockID);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
 		socket_icmp(domain, type, protocol, uniqueSockID);
 	} else {
-		PRINT_DEBUG("non supported socket type");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, socket_call, 0);
 	}
 }
@@ -695,12 +695,12 @@ void bind_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 	PRINT_DEBUG("bind_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP)
 		bind_udp(index, uniqueSockID, addr);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		bind_tcp(index, uniqueSockID, addr);
 	else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, bind_call, 0);
 	}
 
@@ -748,14 +748,14 @@ void listen_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	PRINT_DEBUG("listen_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP)
 		listen_udp(index, uniqueSockID, backlog);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		listen_tcp(index, uniqueSockID, backlog);
 	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		listen_icmp(index, uniqueSockID, backlog);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, listen_call, 0);
 	}
 }
@@ -810,12 +810,12 @@ void connect_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	PRINT_DEBUG("connect_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM) {
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		connect_udp(index, uniqueSockID, addr, flags);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		connect_tcp(index, uniqueSockID, addr, flags);
 	} else {
-		PRINT_DEBUG("This socket is of unknown type");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, connect_call, 0);
 	}
 }
@@ -859,14 +859,14 @@ void accept_call_handler(unsigned long long uniqueSockID, int threads, unsigned 
 	PRINT_DEBUG("accept_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP)
 		accept_udp(index, uniqueSockID, uniqueSockID_new, flags);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		accept_tcp(index, uniqueSockID, uniqueSockID_new, flags);
 	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		accept_icmp(index, uniqueSockID, uniqueSockID_new, flags);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, accept_call, 0);
 	}
 }
@@ -906,14 +906,14 @@ void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *
 	PRINT_DEBUG("getname_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP)
 		getname_udp(index, uniqueSockID, peer);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		getname_tcp(index, uniqueSockID, peer);
 	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		getname_icmp(index, uniqueSockID, peer);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, getname_call, 0);
 	}
 }
@@ -1006,14 +1006,14 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	 * In case of connected sockets
 	 */
 	if (state > SS_UNCONNECTED) {
-		if (type == SOCK_DGRAM) {
+		if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 			send_udp(index, uniqueSockID, data, data_len, msg_flags);
 		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 			send_tcp(index, uniqueSockID, data, data_len, msg_flags);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 			//TODO finish icmp case?
 		} else {
-			PRINT_DEBUG("unknown socket type has been read !!!");
+			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 			nack_send(uniqueSockID, sendmsg_call, 0);
 		}
 	} else {
@@ -1022,7 +1022,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		 * Process. Check if an address has been passed or not is required
 		 */
 		if (symbol) { // check that the passed address is not NULL
-			if (type == SOCK_DGRAM) {
+			if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 				sendto_udp(index, uniqueSockID, data, data_len, msg_flags, addr, addrlen);
 			} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 				//TODO implement or error?
@@ -1031,7 +1031,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 				sendto_icmp(index, uniqueSockID, data, data_len, msg_flags, addr, addrlen);
 			} else {
-				PRINT_DEBUG("unknown target address !!!");
+				PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 				nack_send(uniqueSockID, sendmsg_call, 0);
 			}
 		} else {
@@ -1125,7 +1125,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	sem_post(&daemonSockets_sem);
 
 	if (state > SS_UNCONNECTED) {
-		if (type == SOCK_DGRAM) {
+		if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 			//recv_udp(index, uniqueSockID, datalen, data, flags);
 			recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
 		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
@@ -1135,7 +1135,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			PRINT_DEBUG("recvfrom_icmp not implemented");
 			nack_send(uniqueSockID, recvmsg_call, 0); //TODO implement?
 		} else {
-			PRINT_DEBUG("unknown socket type has been read !!!");
+			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 			nack_send(uniqueSockID, recvmsg_call, 0);
 		}
 	} else {
@@ -1144,7 +1144,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		 * Process. Check if an address has been passed or not is required
 		 */
 		if (symbol) { // check that the passed address is not NULL
-			if (type == SOCK_DGRAM) {
+			if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 				recvfrom_udp(index, uniqueSockID, data_len, flags, msg_flags);
 			} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 				//recvfrom_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
@@ -1155,7 +1155,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 				PRINT_DEBUG("recvfrom_icmp not implemented");
 				nack_send(uniqueSockID, recvmsg_call, 0); //TODO what should this be?
 			} else {
-				PRINT_DEBUG("unknown target address !!!");
+				PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 				nack_send(uniqueSockID, recvmsg_call, 0);
 			}
 		} else {
@@ -1195,14 +1195,14 @@ void release_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	PRINT_DEBUG("release_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM) {
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		release_udp(index, uniqueSockID);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		release_tcp(index, uniqueSockID);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		release_icmp(index, uniqueSockID);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, release_call, 0);
 	}
 }
@@ -1237,7 +1237,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 	PRINT_DEBUG("release_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM) {
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		//release_udp(index, uniqueSockID);
 		PRINT_DEBUG("implement poll_udp");
 		ack_send(uniqueSockID, poll_call, 0);
@@ -1250,7 +1250,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 		PRINT_DEBUG("implement poll_icmp");
 		ack_send(uniqueSockID, poll_call, 0);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, poll_call, 0);
 	}
 }
@@ -1306,14 +1306,14 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	PRINT_DEBUG("getsockopt_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP)
 		getsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		getsockopt_tcp(index, uniqueSockID, level, optname, optlen, optval);
 	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		getsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, getsockopt_call, 0);
 	}
 }
@@ -1369,14 +1369,14 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, unsig
 	PRINT_DEBUG("setsockopt_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (type == SOCK_DGRAM)
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP)
 		setsockopt_udp(index, uniqueSockID, level, optname, optlen, optval);
 	else if (type == SOCK_STREAM && protocol == IPPROTO_TCP)
 		setsockopt_tcp(index, uniqueSockID, level, optname, optlen, optval);
 	else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		setsockopt_icmp(index, uniqueSockID, level, optname, optlen, optval);
 	} else {
-		PRINT_DEBUG("unknown socket type has been read !!!");
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send(uniqueSockID, setsockopt_call, 0);
 	}
 }
@@ -1786,14 +1786,14 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		PRINT_DEBUG("ioctl_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 		sem_post(&daemonSockets_sem);
 
-		if (type == SOCK_DGRAM) {
+		if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 			ioctl_udp(index, uniqueSockID, cmd, buf, buf_len);
 		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 			ioctl_tcp(index, uniqueSockID, cmd, buf, buf_len);
 		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 			ioctl_icmp(index, uniqueSockID, cmd, buf, buf_len);
 		} else {
-			PRINT_DEBUG("unknown socket type has been read !!!");
+			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 			nack_send(uniqueSockID, ioctl_call, 0);
 		}
 	}
@@ -1914,9 +1914,9 @@ void getsockname_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	//memset( addr, 0,addrlen);
 	addr->sin_family = AF_INET;
 
-	addr->sin_addr.s_addr = htonl(daemonSockets[index].host_IP);
-	addr->sin_port = htons(daemonSockets[index].hostport);
-	PRINT_DEBUG("%d , %d", daemonSockets[index].host_IP, daemonSockets[index].hostport);
+	addr->sin_addr.s_addr = htonl(daemonSockets[index].host_ip);
+	addr->sin_port = htons(daemonSockets[index].host_port);
+	PRINT_DEBUG("%d , %d", daemonSockets[index].host_ip, daemonSockets[index].host_port);
 
 	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
 	msg = malloc(msg_len);
@@ -1985,9 +1985,9 @@ void getpeername_call_handler(unsigned long long uniqueSockID, int threads, unsi
 	//memset( addr, 0,addrlen);
 	addr->sin_family = AF_INET;
 
-	addr->sin_addr.s_addr = ntohl(daemonSockets[index].dst_IP);
-	addr->sin_port = daemonSockets[index].dstport;
-	PRINT_DEBUG("%d , %d", daemonSockets[index].dst_IP, daemonSockets[index].dstport);
+	addr->sin_addr.s_addr = ntohl(daemonSockets[index].dst_ip);
+	addr->sin_port = daemonSockets[index].dst_port;
+	PRINT_DEBUG("%d , %d", daemonSockets[index].dst_ip, daemonSockets[index].dst_port);
 
 	msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addrlen;
 	msg = malloc(msg_len);

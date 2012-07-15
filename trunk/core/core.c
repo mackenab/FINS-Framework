@@ -660,7 +660,7 @@ void *Switch_to_Daemon() {
 				//if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
 				if (index != -1 && daemonSockets[index].state > SS_UNCONNECTED) { //TODO review this logic might be bad
 					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
-					if ((hostport != daemonSockets[index].dstport) || (hostip != daemonSockets[index].dst_IP)) {
+					if ((hostport != daemonSockets[index].dst_port) || (hostip != daemonSockets[index].dst_ip)) {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 						sem_post(&daemonSockets_sem);
 
@@ -674,7 +674,7 @@ void *Switch_to_Daemon() {
 			PRINT_DEBUG("ff=%d index=%d", (int) ff, index);
 			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
 				PRINT_DEBUG( "Matched: host=%d/%d, dst=%d/%d, prot=%d",
-						daemonSockets[index].host_IP, daemonSockets[index].hostport, daemonSockets[index].dst_IP, daemonSockets[index].dstport, daemonSockets[index].protocol);
+						daemonSockets[index].host_ip, daemonSockets[index].host_port, daemonSockets[index].dst_ip, daemonSockets[index].dst_port, daemonSockets[index].protocol);
 
 				/**
 				 * check if this datagram comes from the address this socket has been previously
@@ -1202,9 +1202,10 @@ void *Inject() {
 		//char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
 		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
 
-		char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
 		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
+		char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
 		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
@@ -1363,6 +1364,11 @@ int main() {
 	}
 	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
+	//set ip, loopback, etc //TODO move?
+	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
+	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);
+	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
+
 	//added to include code from fins_daemon.sh -- mrd015 !!!!!
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
 		if (errno == EEXIST) {
@@ -1402,7 +1408,7 @@ int main() {
 	cap_inj_init();
 
 	pthread_t wedge_to_daemon_thread;
-	pthread_t Switch_to_daemon_thread;
+	pthread_t Switch_to_daemon_thread; //TODO move to "Daemon" module
 
 	pthread_t udp_thread;
 	pthread_t icmp_thread;

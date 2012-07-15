@@ -31,7 +31,7 @@ void udp_out(struct finsFrame* ff) {
 
 	//struct udp_packet packet_host;
 	struct udp_packet *packet_netw;
-	int packet_length;
+	uint16_t packet_length;
 
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != DATA) {
