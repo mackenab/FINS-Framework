@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <poll.h>
 
 #include <linux/netlink.h>
 #include <linux/if_ether.h>
@@ -241,7 +242,7 @@ struct finssocket {
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 int init_fins_nl();
-int send_wedge(int sockfd, void *buf, size_t len, int flags);
+int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
 
 int nack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
 int ack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
@@ -276,6 +277,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_cha
 void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void poll_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void mmap_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 
 void socketpair_call_handler();
 void accept4_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);

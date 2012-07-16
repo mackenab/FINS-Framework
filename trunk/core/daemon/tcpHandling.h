@@ -20,6 +20,7 @@
 #define EXEC_TCP_CLOSE 5
 #define EXEC_TCP_CLOSE_STUB 6
 #define EXEC_TCP_OPT 7
+#define EXEC_TCP_POLL 8
 
 struct daemon_tcp_thread_data {
 	int id;
@@ -47,6 +48,8 @@ void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data
 void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
 void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags); //TODO need symbol?
 void release_tcp(int index, unsigned long long uniqueSockID);
+void poll_tcp(int index, unsigned long long uniqueSockID);
+void mmap_tcp(int index, unsigned long long uniqueSockID);
 
 void recv_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags);
 

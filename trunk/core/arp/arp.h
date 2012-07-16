@@ -7,7 +7,6 @@
 #ifndef ARP_H_
 #define ARP_H_
 
-
 #include <inttypes.h>
 
 #include <finstypes.h>
@@ -28,8 +27,6 @@ extern finsQueue ARP_to_Switch_Queue;
 extern sem_t Switch_to_ARP_Qsem;
 extern finsQueue Switch_to_ARP_Queue;
 
-
-
 #define ARPREQUESTOP 1
 #define ARPREPLYOP 2
 #define NULLADDRESS 0
@@ -47,8 +44,7 @@ extern finsQueue Switch_to_ARP_Queue;
 /**struct arp_hdr is used for use external to the ARP module. The zeroth element of both
  * the IP and MAC arrays (e.g. sender_MAC_addrs[0] or target_IP_addrs[0] etc.) is the
  * most significant byte while the last element is the least significant.*/
-struct arp_hdr
-{
+struct arp_hdr {
 	uint16_t hardware_type;
 	uint16_t protocol_type;
 	unsigned char hardware_addrs_length;
@@ -64,8 +60,7 @@ struct arp_hdr
 /**struct ARP_message is used for internal use for the module and stores all the traditional
  * fields in more convenient format (e.g. uint64_t instead of unsigned char array[6] etc.).
  * This struct has to be converted into an 'external' format once pushed outside the ARP module*/
-struct ARP_message
-{
+struct ARP_message {
 	uint16_t hardware_type;
 	uint16_t protocol_type;
 	uint8_t hardware_addrs_length;
@@ -78,7 +73,7 @@ struct ARP_message
 };
 
 /**This struct is used to store information about neighboring nodes of the host interface*/
-struct node{
+struct node {
 
 	uint64_t MAC_addrs;
 	uint32_t IP_addrs;
@@ -106,7 +101,7 @@ uint64_t search_MAC_addrs(uint32_t IP_addrs, struct node *ptr);
 
 void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins);
 
-void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp);//, int size_of_finsFrame);
+void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp); //, int size_of_finsFrame);
 
 void init_arp_intface(uint64_t MAC_address, uint32_t IP_address);
 

@@ -306,7 +306,6 @@ void *Switch_to_Daemon() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error ret=%d", ret);
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -342,7 +341,6 @@ void *Switch_to_Daemon() {
 							sem_post(&daemonSockets_sem);
 
 							PRINT_DEBUG("No socket found, dropping");
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 						}
 					} else {
@@ -353,7 +351,6 @@ void *Switch_to_Daemon() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error ret=%d", ret);
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -389,13 +386,13 @@ void *Switch_to_Daemon() {
 							sem_post(&daemonSockets_sem);
 
 							PRINT_DEBUG("No socket found, dropping");
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 						}
 					}
 				} else {
 					//TODO error
 					PRINT_DEBUG("error");
+					freeFinsFrame(ff);
 				}
 				break;
 			case CTRL_SET_PARAM:
@@ -426,7 +423,6 @@ void *Switch_to_Daemon() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error ret=%d", ret);
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -514,7 +510,6 @@ void *Switch_to_Daemon() {
 									sem_post(&daemonSockets_sem);
 
 									PRINT_DEBUG("No socket found, dropping");
-									PRINT_DEBUG("freeing ff=%d", (int)ff);
 									freeFinsFrame(ff);
 								}
 							} else {
@@ -522,7 +517,6 @@ void *Switch_to_Daemon() {
 								sem_post(&daemonSockets_sem);
 
 								PRINT_DEBUG("No socket found, dropping");
-								PRINT_DEBUG("freeing ff=%d", (int)ff);
 								freeFinsFrame(ff);
 							}
 						}
@@ -534,7 +528,6 @@ void *Switch_to_Daemon() {
 						if (ret) {
 							//TODO error
 							PRINT_DEBUG("error ret=%d", ret);
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 							continue;
 						}
@@ -548,6 +541,7 @@ void *Switch_to_Daemon() {
 						}
 						PRINT_DEBUG("NETFORMAT host=%s/%d", inet_ntoa(*temp), (host_port));
 						PRINT_DEBUG("NETFORMAT host=%u/%d", (*temp).s_addr, (host_port));
+						free(temp);
 						//##################
 
 						PRINT_DEBUG("");
@@ -581,13 +575,13 @@ void *Switch_to_Daemon() {
 							sem_post(&daemonSockets_sem);
 
 							PRINT_DEBUG("No socket found, dropping");
-							PRINT_DEBUG("freeing ff=%d", (int)ff);
 							freeFinsFrame(ff);
 						}
 					}
 				} else {
 					//TODO error
 					PRINT_DEBUG("error");
+					freeFinsFrame(ff);
 				}
 				break;
 			case CTRL_ERROR:
@@ -617,7 +611,6 @@ void *Switch_to_Daemon() {
 
 			if (ret) {
 				PRINT_ERROR("prob reading metadata ret=%d", ret);
-				PRINT_DEBUG("freeing ff=%d", (int)ff);
 				freeFinsFrame(ff);
 				continue;
 			}
@@ -625,6 +618,7 @@ void *Switch_to_Daemon() {
 			dstport = (uint16_t) dstport_buf;
 			hostport = (uint16_t) hostport_buf;
 
+			//##############################################
 			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 			if (hostip) {
 				temp->s_addr = htonl(hostip);
@@ -641,6 +635,7 @@ void *Switch_to_Daemon() {
 					protocol, inet_ntoa(*temp), (hostport), (*temp).s_addr, inet_ntoa(*temp2), (dstport), (*temp2).s_addr, (int)ff);
 			free(temp);
 			free(temp2);
+			//##############################################
 
 			/**
 			 * check if this received datagram destIP and destport matching which socket hostIP
@@ -664,7 +659,6 @@ void *Switch_to_Daemon() {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 						sem_post(&daemonSockets_sem);
 
-						PRINT_DEBUG("freeing ff=%d", (int)ff);
 						freeFinsFrame(ff);
 						continue;
 					}
@@ -721,7 +715,6 @@ void *Switch_to_Daemon() {
 				PRINT_DEBUG("No match, freeing ff");
 				sem_post(&daemonSockets_sem);
 
-				PRINT_DEBUG("freeing ff=%d", (int)ff);
 				freeFinsFrame(ff);
 			}
 		} else {
@@ -730,7 +723,6 @@ void *Switch_to_Daemon() {
 			freeFinsFrame(ff);
 
 		} // end of if , else if , else statement
-
 	} // end of while
 } // end of function
 
@@ -970,6 +962,9 @@ void *wedge_to_daemon() {
 			case poll_call:
 				poll_call_handler(uniqueSockID, threads, msg_pt, msg_len);
 				break;
+			case mmap_call:
+				mmap_call_handler(uniqueSockID, threads, msg_pt, msg_len);
+				break;
 				/*
 				 case getsockname_call:
 				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE //deprecated
@@ -1055,11 +1050,13 @@ void *Capture() {
 
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			free(data);
 			break;
 		}
 
 		if (numBytes != datalen) {
 			PRINT_DEBUG("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
+			free(data);
 			continue;
 		}
 
@@ -1121,18 +1118,19 @@ void *Capture() {
 
 		(ff->dataFrame).directionFlag = UP;
 		ff->dataFrame.pduLength = datalen - SIZE_ETHERNET;
-		ff->dataFrame.pdu = data + SIZE_ETHERNET;
+		ff->dataFrame.pdu = data + SIZE_ETHERNET; //mem leak
 
 		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
 
 		PRINT_DEBUG("ff=%d pdu=%d, data=%d", (int)ff, (int) &(ff->dataFrame).pdu, (int) data);
 
 		sem_wait(&EtherStub_to_Switch_Qsem);
-		write_queue(ff, EtherStub_to_Switch_Queue);
-		PRINT_DEBUG();
+		if (!write_queue(ff, EtherStub_to_Switch_Queue)) {
+			freeFinsFrame(ff);
+		}
+		PRINT_DEBUG("");
 		sem_post(&EtherStub_to_Switch_Qsem);
 	} // end of while loop
-
 }
 
 void *Inject() {
@@ -1202,11 +1200,12 @@ void *Inject() {
 		//char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
 		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
 
-		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+		char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
 		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
-		char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
-		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1
+		//char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
+		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
+		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
 		memcpy(((struct sniff_ethernet *) frame)->ether_shost, src, ETHER_ADDR_LEN);
@@ -1244,7 +1243,6 @@ void *Inject() {
 			return (0);
 		}
 
-		PRINT_DEBUG("freeing ff=%d", (int)ff);
 		freeFinsFrame(ff);
 		free(frame);
 	} // end of while loop
@@ -1357,7 +1355,7 @@ int main() {
 	//prime the kernel to establish daemon's PID
 	int daemoncode = daemonconnect_call;
 	int ret_val;
-	ret_val = send_wedge(nl_sockfd, &daemoncode, sizeof(int), 0);
+	ret_val = send_wedge(nl_sockfd, (u_char *) &daemoncode, sizeof(int), 0);
 	if (ret_val != 0) {
 		perror("sendfins() caused an error");
 		exit(-1);

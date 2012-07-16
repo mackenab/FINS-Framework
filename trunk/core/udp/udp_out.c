@@ -200,4 +200,6 @@ void udp_out(struct finsFrame* ff) {
 	udpStat.totalSent++;
 
 	sendToSwitch(newFF);
+
+	free(ff);
 }

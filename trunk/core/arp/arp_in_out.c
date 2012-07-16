@@ -28,6 +28,14 @@ void arp_in(struct finsFrame *fins_received) {
 	if (fins_arp_in->dataOrCtrl == DATA && (fins_arp_in->destinationID.id == (unsigned char) ARPID)) {
 		PRINT_DEBUG("ARP Data, ff=%d", (int)fins_received);
 
+		if (fins_arp_in->dataFrame.pduLength < sizeof(struct arp_hdr)) {
+			PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", sizeof(struct arp_hdr), fins_arp_in->dataFrame.pduLength);
+			freeFinsFrame(fins_arp_in);
+			return;
+		} else if (fins_arp_in->dataFrame.pduLength > sizeof(struct arp_hdr)) {
+			PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", sizeof(struct arp_hdr), fins_arp_in->dataFrame.pduLength);
+		}
+
 		fins_to_arp(fins_arp_in, packet); //extract arp hdr from the fins frame
 		host_to_net(packet); //convert it into the right format (e.g. htons issue etc.)
 		arp_msg_ptr = &arp_msg;

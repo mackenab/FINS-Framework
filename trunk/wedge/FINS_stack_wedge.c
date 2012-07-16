@@ -278,7 +278,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 
 	PRINT_DEBUG("pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
 
-	print_buf = kmalloc(5 * len, GFP_KERNEL);
+	print_buf = (u_char *)kmalloc(5 * len, GFP_KERNEL);
 	if (!print_buf) {
 		PRINT_ERROR("print_buf allocation fail");
 	} else {
@@ -351,7 +351,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	}
 
 //####################
-	print_buf = kmalloc(5 * msg_len, GFP_KERNEL);
+	print_buf = (u_char *)kmalloc(5 * msg_len, GFP_KERNEL);
 	if (!print_buf) {
 		PRINT_ERROR("print_buf allocation fail");
 	} else {
@@ -374,7 +374,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	}
 //####################
 
-	part_buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
+	part_buf = (u_char *)kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
 	if (!part_buf) {
 		PRINT_ERROR("part_buf allocation fail");
 		up(&link_sem);
@@ -586,7 +586,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 	struct sock *sk;
 	int index;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 
@@ -623,7 +623,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 // Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		goto removeSocket;
@@ -706,7 +706,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -734,7 +734,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 // Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addr_len;
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -808,7 +808,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -835,7 +835,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -903,7 +903,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -931,7 +931,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int) + addr_len;
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		//release_sock(sk);
@@ -1008,7 +1008,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	struct sock *sk_new;
 	int index, index_new;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 
@@ -1053,7 +1053,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + 2 * sizeof(unsigned long long) + sizeof(int);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		//release_sock(sk);
@@ -1148,7 +1148,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -1177,7 +1177,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -1231,11 +1231,11 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
-		pt = wedgeSockets[index].reply_buf;
+	if (wedgeSockets[index].reply_ret == ACK) {
+		PRINT_DEBUG("recv ACK");
 
-		if (wedgeSockets[index].reply_ret == ACK) {
-			PRINT_DEBUG("recv ACK");
+		if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
+			pt = wedgeSockets[index].reply_buf;
 
 			//TODO: find out if this is right! udpHandling writes sockaddr_in here
 			ret = *(int *) pt;
@@ -1264,15 +1264,15 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 				PRINT_DEBUG("different peer value=%d", ret);
 				rc = -1;
 			}
-		} else if (wedgeSockets[index].reply_ret == NACK) {
-			PRINT_DEBUG("recv NACK");
-			rc = -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
+			PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 			rc = -1;
 		}
+	} else if (wedgeSockets[index].reply_ret == NACK) {
+		PRINT_DEBUG("recv NACK");
+		rc = -1;
 	} else {
-		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 		rc = -1;
 	}
 	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -1296,7 +1296,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	int symbol = 1; //default value unless passes address equal NULL //TODO remove?
 
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -1335,7 +1335,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 // Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 3 * sizeof(int) + (symbol ? sizeof(u_int) + msg->msg_namelen : 0)
 			+ (controlFlag ? sizeof(u_int) + msg->msg_controllen : 0) + data_len;
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buf allocation failed");
 		release_sock(sk);
@@ -1446,7 +1446,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	int symbol = 1; //default value unless passes msg->msg_name equal NULL
 	int controlFlag = 0;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -1481,7 +1481,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(ssize_t) + 4 * sizeof(int) + (controlFlag ? sizeof(u_int) + msg->msg_controllen : 0);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buf allocation failed");
 		release_sock(sk);
@@ -1553,11 +1553,11 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= 0)) {
-		pt = wedgeSockets[index].reply_buf;
+	if (wedgeSockets[index].reply_ret == ACK) {
+		PRINT_DEBUG("recv ACK");
 
-		if (wedgeSockets[index].reply_ret == ACK) {
-			PRINT_DEBUG("recv ACK");
+		if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= 0)) {
+			pt = wedgeSockets[index].reply_buf;
 
 			if (symbol == 1) {
 				//TODO: find out if this is right! udpHandling writes sockaddr_in here
@@ -1614,15 +1614,15 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
 				rc = -1;
 			}
-		} else if (wedgeSockets[index].reply_ret == NACK) {
-			PRINT_DEBUG("recv NACK");
-			rc = -1;
 		} else {
-			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
+			PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
 			rc = -1;
 		}
+	} else if (wedgeSockets[index].reply_ret == NACK) {
+		PRINT_DEBUG("recv NACK");
+		rc = -1;
 	} else {
-		PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 		rc = -1;
 	}
 	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -1641,7 +1641,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	int rc = 0;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
-	void *buf; // used for test
+	u_char *buf; // used for test
 	u_char *pt;
 	int ret;
 	int index;
@@ -1705,7 +1705,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		// Build the message
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-		buf = kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -1750,7 +1750,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		// Build the message
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + IFNAMSIZ;
-		buf = kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -1788,7 +1788,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		// Build the message
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
-		buf = kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -1831,7 +1831,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		//TODO implement
 		PRINT_DEBUG("cmd=%d not implemented", cmd);
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
-		buf = kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -2120,7 +2120,7 @@ static int FINS_release(struct socket *sock) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
-	void *buf; // used for test
+	u_char *buf; // used for test
 	u_char *pt;
 	int ret;
 	int index;
@@ -2147,7 +2147,7 @@ static int FINS_release(struct socket *sock) {
 
 	// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		//release_sock(sk);
@@ -2268,10 +2268,10 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 }
 
 static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *table) {
-	int rc;
+	u_int rc = 0;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len; // used for test
-	void *buf; // used for test
+	u_char *buf; // used for test
 	u_char * pt;
 	int ret;
 	int index;
@@ -2298,7 +2298,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 	// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -2314,8 +2314,6 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 	*(u_int *) pt = threads_incr(index);
 	pt += sizeof(u_int);
-
-	//TODO finish
 
 	if (pt - (u_char *) buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
@@ -2349,7 +2347,30 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 	PRINT_DEBUG("relocked my semaphore");
 
-	rc = checkConfirmation(index);
+	if (wedgeSockets[index].reply_ret == ACK) {
+		PRINT_DEBUG("recv ACK");
+
+		if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len == sizeof(u_int))) {
+			pt = wedgeSockets[index].reply_buf;
+
+			rc = *(u_int *) pt;
+			pt += sizeof(u_int);
+
+			if (pt - buf != wedgeSockets[index].reply_len) {
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, wedgeSockets[index].reply_len);
+				rc = 0;
+			}
+		} else {
+			PRINT_ERROR("wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p", wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+			rc = 0;
+		}
+	} else if (wedgeSockets[index].reply_ret == NACK) {
+		PRINT_DEBUG("recv NACK");
+		rc = 0;
+	} else {
+		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
+		rc = 0;
+	}
 	up(&wedgeSockets[index].reply_sem_r);
 
 	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -2366,7 +2387,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -2393,7 +2414,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -2456,11 +2477,102 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
+static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma) {
+	int rc;
+	unsigned long long uniqueSockID;
+	ssize_t buf_len;
+	u_char *buf;
+	u_char *pt;
+	int ret;
+	int index;
+
+	struct sock *sk = sock->sk;
+	lock_sock(sk);
+
+	uniqueSockID = getUniqueSockID(sock);
+	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
+
+	// Notify FINS daemon
+	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
+		PRINT_ERROR("daemon not connected");
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	index = find_wedgeSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	// Build the message
+	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	if (!buf) {
+		PRINT_ERROR("buffer allocation error");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	pt = buf;
+
+	*(u_int *) pt = mmap_call;
+	pt += sizeof(u_int);
+
+	*(unsigned long long *) pt = uniqueSockID;
+	pt += sizeof(unsigned long long);
+
+	*(u_int *) pt = threads_incr(index);
+	pt += sizeof(u_int);
+
+	if (pt - (u_char *) buf != buf_len) {
+		PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
+		kfree(buf);
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", mmap_call, uniqueSockID, buf_len);
+
+	// Send message to FINS_daemon
+	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	kfree(buf);
+	if (ret) {
+		PRINT_ERROR("nl_send failed");
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	index = find_wedgeSocket(uniqueSockID);
+	PRINT_DEBUG("index=%d", index);
+	if (index == -1) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	if (wait_wedgeSocket(uniqueSockID, index, mmap_call)) {
+		release_sock(sk);
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+
+	PRINT_DEBUG("relocked my semaphore");
+
+	rc = checkConfirmation(index);
+	up(&wedgeSockets[index].reply_sem_r);
+
+	PRINT_DEBUG("shared consumed: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
+	wedgeSockets[index].reply_call = 0;
+	up(&wedgeSockets[index].reply_sem_w);
+	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
+
+	release_sock(sk);
+	return print_exit(__FUNCTION__, __LINE__, rc);
+}
+
 static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int index;
@@ -2487,7 +2599,7 @@ if (index == -1) {
 
 	// Build the message
 	buf_len = 3*sizeof(u_int) + sizeof(unsigned long long) + 2*sizeof(int) + optlen;
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 release_sock(sk);
@@ -2570,7 +2682,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	int rc;
 	unsigned long long uniqueSockID;
 	ssize_t buf_len;
-	void *buf;
+	u_char *buf;
 	u_char *pt;
 	int ret;
 	int len;
@@ -2612,7 +2724,7 @@ return print_exit(__FUNCTION__, __LINE__, -1);
 
 // Build the message
 buf_len = 2*sizeof(u_int) + sizeof(unsigned long long) + 3*sizeof(int) + (len>0?len:0);
-	buf = kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 release_sock(sk);
@@ -2652,8 +2764,8 @@ return print_exit(__FUNCTION__, __LINE__, -1);
 		if (pt - (u_char *)buf != buf_len) {
 			PRINT_ERROR("write error: diff=%d len=%d", pt-(u_char *)buf, buf_len);
 kfree(buf);
-release_sock(sk);
-return print_exit(__FUNCTION__, __LINE__, -1);
+			release_sock(sk);
+			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 
 		PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", getsockopt_call, uniqueSockID, buf_len);
@@ -2664,12 +2776,12 @@ ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 		if (ret) {
 			PRINT_ERROR("nl_send failed");
 release_sock(sk);
-return print_exit(__FUNCTION__, __LINE__, -1);
+			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 
 		index = find_wedgeSocket(uniqueSockID);
 		PRINT_DEBUG("index=%d", index);
-		if (index == -1) {
+if (index == -1) {
 			release_sock(sk);
 			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
@@ -2682,10 +2794,11 @@ return print_exit(__FUNCTION__, __LINE__, -1);
 		PRINT_DEBUG("relocked my semaphore");
 
 //exract msg from wedgeSockets[index].reply_buf
-if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
-			if (wedgeSockets[index].reply_ret == ACK) {
+if (wedgeSockets[index].reply_ret == ACK) {
 				PRINT_DEBUG("recv ACK");
-pt = wedgeSockets[index].reply_buf;
+
+if (wedgeSockets[index].reply_buf && (wedgeSockets[index].reply_len >= sizeof(int))) {
+				pt = wedgeSockets[index].reply_buf;
 				rc = 0;
 
 				//re-using len var
@@ -2704,6 +2817,11 @@ rc = -1;
 rc = -1;
 					}
 				}
+				} else {
+							PRINT_ERROR( "wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p",
+		wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
+rc = -1;
+						}
 			} else if (wedgeSockets[index].reply_ret == NACK) {
 				PRINT_DEBUG("recv NACK");
 rc = -1;
@@ -2711,11 +2829,6 @@ rc = -1;
 				PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 rc = -1;
 			}
-		} else {
-			PRINT_ERROR( "wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p",
-		wedgeSockets[index].reply_len, wedgeSockets[index].reply_buf);
-rc = -1;
-		}
 		PRINT_DEBUG( "shared used: call=%d, sockID=%llu, ret=%d, len=%d",
 		wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
 up(&wedgeSockets[index].reply_sem_r);
@@ -2728,45 +2841,6 @@ wedgeSockets[index].reply_call = 0;
 
 release_sock(sk);
 return print_exit(__FUNCTION__, __LINE__, rc);
-}
-
-static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma) {
-unsigned long long uniqueSockID;
-int index;
-int ret;
-char *buf; // used for test
-ssize_t buffer_length; // used for test
-
-uniqueSockID = getUniqueSockID(sock);
-PRINT_DEBUG("Entered for %llu.", uniqueSockID);
-
-// Notify FINS daemon
-if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
-	PRINT_ERROR("daemon not connected");
-	return print_exit(__FUNCTION__, __LINE__, -1);
-}
-
-index = find_wedgeSocket(uniqueSockID);
-PRINT_DEBUG("index=%d", index);
-if (index == -1) {
-	return print_exit(__FUNCTION__, __LINE__, -1);
-}
-
-//TODO: finish this & daemon side
-
-// Build the message
-buf = "FINS_mmap() called.";
-buffer_length = strlen(buf) + 1;
-
-// Send message to FINS_daemon
-ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
-if (ret) {
-	PRINT_ERROR("nl_send failed");
-	return print_exit(__FUNCTION__, __LINE__, -1);
-}
-
-/* Mirror missing mmap method error code */
-return -ENODEV;
 }
 
 static ssize_t FINS_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags) {

@@ -316,7 +316,9 @@ void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
  */
 void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp) {
 
-	memcpy(pckt_arp, pckt_fins->dataFrame.pdu, pckt_fins->dataFrame.pduLength);
+	//memcpy(pckt_arp, pckt_fins->dataFrame.pdu, pckt_fins->dataFrame.pduLength);
+	memcpy(pckt_arp, pckt_fins->dataFrame.pdu, sizeof(struct arp_hdr));
+
 }
 
 /**

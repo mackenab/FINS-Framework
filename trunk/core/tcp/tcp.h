@@ -124,18 +124,19 @@ struct tcp_connection_stub *conn_stub_find(uint32_t host_ip, uint16_t host_port)
 void conn_stub_remove(struct tcp_connection_stub *conn_stub);
 int conn_stub_is_empty(void);
 int conn_stub_has_space(uint32_t len);
-int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val);
+//int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val);
+int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
 void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 typedef enum {
-	CS_CLOSED = 0, CS_SYN_SENT, CS_LISTEN, CS_SYN_RECV, CS_ESTABLISHED, CS_FIN_WAIT_1, CS_FIN_WAIT_2, CS_CLOSING, CS_TIME_WAIT, CS_CLOSE_WAIT, CS_LAST_ACK
-} conn_state;
+	TCP_CLOSED = 0, TCP_SYN_SENT, TCP_LISTEN, TCP_SYN_RECV, TCP_ESTABLISHED, TCP_FIN_WAIT_1, TCP_FIN_WAIT_2, TCP_CLOSING, TCP_TIME_WAIT, TCP_CLOSE_WAIT, TCP_LAST_ACK
+} tcp_state;
 
 typedef enum {
-	CG_INITIAL = 0, CG_SLOWSTART, CG_AVOIDANCE, CG_RECOVERY
-} cong_state;
+	RENO_INITIAL = 0, RENO_SLOWSTART, RENO_AVOIDANCE, RENO_RECOVERY
+} reno_state;
 
 struct ipv4_header {
 	uint32_t src_ip; //Source ip
@@ -185,7 +186,7 @@ struct tcp_connection {
 	sem_t sem; //for next, state, write_threads
 	uint8_t running_flag; //signifies if it is running, 0 when shutting down
 	uint32_t threads; //Number of threads accessing this obj
-	conn_state state;
+	tcp_state state;
 
 	//some type of options state
 
@@ -257,7 +258,7 @@ struct tcp_connection {
 	uint32_t recv_seq_end; //seq of last inside rem window
 
 	uint16_t MSS; //max segment size
-	cong_state cong_state;
+	reno_state cong_state;
 	double cong_window;
 	double threshhold;
 
@@ -360,7 +361,8 @@ struct tcp_connection *conn_find(uint32_t host_ip, uint16_t host_port, uint32_t 
 void conn_remove(struct tcp_connection *conn);
 int conn_is_empty(void);
 int conn_has_space(uint32_t len);
-int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
+//int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
+int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
 void conn_shutdown(struct tcp_connection *conn);
 void conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
 void conn_free(struct tcp_connection *conn);
@@ -443,6 +445,8 @@ int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host
 #define EXEC_TCP_RECV 4
 #define EXEC_TCP_CLOSE 5
 #define EXEC_TCP_CLOSE_STUB 6
+#define EXEC_TCP_OPT 7
+#define EXEC_TCP_POLL 8
 
 #define SET_PARAM_TCP_HOST_WINDOW 0
 #define SET_PARAM_TCP_SOCK_OPT 1
@@ -463,6 +467,7 @@ void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
 void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags);
 void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port);
+void tcp_exec_poll(socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 
 void tcp_set_param(struct finsFrame *ff);
 void tcp_read_param(struct finsFrame *ff);

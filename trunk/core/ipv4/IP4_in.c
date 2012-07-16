@@ -39,7 +39,8 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		PRINT_ERROR("Packet ID %d has a wrong IP version (%d)", header.id, header.version);
 		//free ppacket
 		return;
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	/* Check minimum header length */
 	if (header.header_length < IP4_MIN_HLEN) {
@@ -48,7 +49,8 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		PRINT_ERROR("Packet header length (%d) in packet ID %d is smaller than the defined minimum (20).", header.header_length, header.id);
 		//free ppacket
 		return;
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	/* Check the integrity of the header. Drop the packet if corrupted header.*/
 	if (IP4_checksum(ppacket, IP4_HLEN(ppacket)) != 0) {
@@ -57,21 +59,23 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, IP4_checksum(ppacket, IP4_HLEN(ppacket)));
 		//free ppacket
 		return;
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	/* Check the length of the packet. If physical shorter than the declared in the header
 	 * drop the packet
 	 */
 	if (header.packet_length != len) {
 		stats.badlen++;
-		PRINT_DEBUG("The declared length is not equal to the actual length.");
+		PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", header.packet_length, len);
 		if (header.packet_length > len) {
 			PRINT_DEBUG("The header length is even longer than the len");
 			stats.droppedtotal++;
 			//free ppacket
 			return;
 		}
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	PRINT_DEBUG("src=%lu dst=%lu (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
@@ -86,7 +90,8 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.droppedtotal++;
 		//free ppacket
 		return;
-	}PRINT_DEBUG();
+	}
+	PRINT_DEBUG();
 
 	/* Check fragmentation errors */
 	if ((header.flags & (IP4_DF | IP4_MF)) == (IP4_DF | IP4_MF)) {

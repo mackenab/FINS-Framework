@@ -364,7 +364,7 @@ void recvfrom_icmp(void *threadData) {
 	int blocking_flag;
 	int addressLen = sizeof(struct sockaddr_in);
 
-	void *msg;
+	u_char *msg;
 	u_char *pt;
 	int msg_len;
 	int ret_val;
@@ -449,13 +449,13 @@ void recvfrom_icmp(void *threadData) {
 		memcpy(pt, buf, buflen);
 		pt += buflen;
 
-		if (pt - (u_char *) msg != msg_len) {
-			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - (u_char *) msg, msg_len);
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
 			recvthread_exit(thread_data);
 		}
 
-		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, (char *) msg);
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 		free(msg);
 

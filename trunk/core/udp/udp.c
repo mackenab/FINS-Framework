@@ -97,7 +97,7 @@ void udp_get_FF() {
 		sem_post(&UDP_to_Switch_Qsem);																	///KEVINS CODE THIS IS A TEST
 		PRINT_DEBUG("UDP: sent data ");																	///KEVINS CODE THIS IS A TEST
 
-
+		freeFinsFrame(ff);
 	}
 	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == UP)) {
 		udp_in(ff);

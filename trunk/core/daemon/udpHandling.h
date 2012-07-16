@@ -28,6 +28,8 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);
 void recvfrom_udp(int index, unsigned long long uniqueSockID, int datalen, int flags, int msgFlags);
 void release_udp(int index, unsigned long long uniqueSockID);
+void poll_udp(int index, unsigned long long uniqueSockID);
+void mmap_udp(int index, unsigned long long uniqueSockID);
 
 void recv_udp(unsigned long long uniqueSockID, int datalen, int flags); /** UDP DOESN NOT IMPLEMENT recv without sender */
 void socketpair_udp();
