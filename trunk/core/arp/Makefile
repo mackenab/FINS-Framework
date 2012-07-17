@@ -29,11 +29,10 @@ $(MODULE_NAME):$(OBJS)
 	@echo $(addprefix "$(shell pwd)/", $(OBJS)) > OBJS.finsmk 
 
 test_arp:$(TEST_OBJS) test_arp.o
-	@$(LD) $(LDFLAGS) $(TEST_OBJS) $^ -o $@
+	@$(LD) $(LDFLAGS) $^ -o $@
 	@echo "test_arp is compiled"
 
 %.o:%.c $(INCLUDES)
-	@echo $(CC) $(CFLAGS) -c $<
 	@$(CC) $(CFLAGS) -c $<	
 
 .PHONY:clean
