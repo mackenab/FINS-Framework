@@ -8,6 +8,7 @@
 #include <queueModule.h>
 #include "tcp.h"
 
+int tcp_running;
 extern sem_t TCP_to_Switch_Qsem;
 extern finsQueue TCP_to_Switch_Queue;
 
@@ -2266,6 +2267,7 @@ void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_i
 void tcp_init() {
 
 	PRINT_DEBUG("TCP started");
+	tcp_running = 1;
 
 	conn_stub_list = NULL;
 	conn_stub_num = 0;
@@ -2276,11 +2278,13 @@ void tcp_init() {
 	sem_init(&conn_list_sem, 0, 1);
 
 	tcp_srand();
-	while (1) {
+	while (tcp_running) {
 		tcp_get_FF();
 		PRINT_DEBUG("");
 		//	free(pff);
 	}
+
+	PRINT_DEBUG("TCP Terminating");
 }
 
 void tcp_get_FF() {
@@ -2292,8 +2296,12 @@ void tcp_get_FF() {
 		sem_wait(&Switch_to_TCP_Qsem);
 		ff = read_queue(Switch_to_TCP_Queue);
 		sem_post(&Switch_to_TCP_Qsem);
-	} while (ff == NULL);
+	} while (tcp_running && ff == NULL);
 	PRINT_DEBUG("");
+
+	if (!tcp_running) {
+		return;
+	}
 
 	if (ff->dataOrCtrl == CONTROL) {
 		tcp_fcf(ff);
@@ -2307,6 +2315,10 @@ void tcp_get_FF() {
 			PRINT_DEBUG("");
 		}
 	}
+}
+
+void tcp_term() {
+	tcp_running = 0;
 }
 
 void tcp_fcf(struct finsFrame *ff) {

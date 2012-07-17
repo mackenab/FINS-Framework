@@ -22,11 +22,11 @@ all:$(PROJECT_NAME)
 	@echo "$(PROJECT_NAME) is compiled\n"
 
 $(PROJECT_NAME):
-	@make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
 .PHONY:clean
 clean:
-	@make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 		
 #### TARGETS #####
 #%.o:%.c $(INCLUDES) 

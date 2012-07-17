@@ -7,11 +7,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include<inttypes.h>
-#include "finstypes.h"
+#include <inttypes.h>
+#include <finstypes.h>
+#include <finsdebug.h>
+#include <metadata.h>
 #include "arp.h"
-#include "finsdebug.h"
-#include "metadata.h"
 
 struct finsFrame *fins_arp_in; /**<This is the pointer to the fins frame received by the ARP module*/
 

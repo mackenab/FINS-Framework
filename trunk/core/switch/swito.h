@@ -8,6 +8,6 @@
 #ifndef SWITO_H_
 #define SWITO_H_
 
-void init_switch();
+void switch_init();
 
 #endif /* SWITO_H_ */

@@ -6,7 +6,7 @@
  */
 
 #include "icmp.h"
-#include "ipv4.h"
+#include <ipv4.h>
 
 extern sem_t ICMP_to_Switch_Qsem;
 extern finsQueue ICMP_to_Switch_Queue;
@@ -254,7 +254,7 @@ void ICMP_send_FF(struct finsFrame *ff)
 //-------------------------
 // Start our main ICMP loop
 //-------------------------
-void ICMP_init()
+void icmp_init()
 {
 	PRINT_DEBUG("ICMP Started");
 	struct finsFrame *pff = NULL;

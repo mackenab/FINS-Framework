@@ -89,13 +89,16 @@ int main(int argc, char *argv[]) {
 	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	//bzero(&(client_addr.sin_zero), 8); //TODO what's this for?
 
-	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
-		perror("Bind");
-		printf("Failure");
-		exit(1);
-	}
-	//}
+	/*
+	 printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	 if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
+	 perror("Bind");
+	 printf("Failure");
+	 exit(1);
+	 }
+	 //*/
 
+	printf("Connecting to server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
 		perror("Connect");
 		printf("Failure");

@@ -74,7 +74,7 @@ void ICMP_out(struct finsFrame *ff);					//Processes an ICMP message that's head
 void ICMP_get_FF(struct finsFrame *ff);					//Gets a finsFrame from the queue and starts processing
 void ICMP_send_FF(struct finsFrame *ff);				//Put a finsFrame onto the queue to go out
 
-void			ICMP_init();							//Get our ICMP engine up and running
+void			icmp_init();							//Get our ICMP engine up and running
 unsigned short 	ICMP_checksum(struct finsFrame * ff);	//Calculate a checksum for an ICMP package
 void			ICMP_ping_reply(struct finsFrame* ff);	//Create a ping reply from a ping request package
 void			IMCP_create_unreach(struct finsFrame* ff);	//Create a "destination unreachable" message from data we receive from the UDP //removed in vt_mark?

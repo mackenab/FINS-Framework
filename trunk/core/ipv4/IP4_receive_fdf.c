@@ -21,7 +21,11 @@ void IP4_receive_fdf() {
 		sem_wait(&Switch_to_IPv4_Qsem);
 		pff = read_queue(Switch_to_IPv4_Queue);
 		sem_post(&Switch_to_IPv4_Qsem);
-	} while (pff == NULL);
+	} while (ipv4_running && pff == NULL);
+
+	if (!ipv4_running) {
+		return;
+	}
 
 	if (pff->dataOrCtrl == CONTROL) {
 		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%d meta=%d", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->ctrlFrame.metaData);

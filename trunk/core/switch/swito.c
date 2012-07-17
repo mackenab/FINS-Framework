@@ -11,6 +11,7 @@
 #include <queueModule.h>
 #include <arpa/inet.h>
 
+int switch_running;
 #define MAX_modules 16
 extern finsQueue Daemon_to_Switch_Queue;
 extern finsQueue Switch_to_Daemon_Queue;
@@ -63,9 +64,10 @@ extern sem_t EtherStub_to_Switch_Qsem;
 extern finsQueue modules_IO_queues[MAX_modules];
 extern sem_t *IO_queues_sem[MAX_modules];
 
-void init_switch() {
+void switch_init() {
+	PRINT_DEBUG("Switch Started");
+	switch_running = 1;
 
-	PRINT_DEBUG("SWITCH Module started");
 	int i;
 	struct finsFrame *ff;
 	int protocol;
@@ -76,7 +78,7 @@ void init_switch() {
 
 	int counter = 0;
 
-	while (1) {
+	while (switch_running) {
 		/** the receiving Queues are only the even numbers
 		 * 0,2,4,6,8,10,12,14. This is why we increase the counter by 2
 		 */
@@ -154,4 +156,9 @@ void init_switch() {
 
 	} // end of while loop
 
+	PRINT_DEBUG("Switch Terminating");
 } // end of switch_init Function
+
+void switch_term() {
+	switch_running = 0;
+}

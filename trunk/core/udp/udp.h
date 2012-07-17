@@ -81,6 +81,7 @@ struct udp_statistics {
 #define UP_RIP			520						/* route information exchange (RIP) */
 
 void udp_init();
+void udp_term();
 
 //unsigned short UDP_checksum(struct udp_packet* pcket, struct udp_metadata_parsed* meta);
 unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t dst_ip);

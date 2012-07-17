@@ -12,6 +12,8 @@
 #include <string.h>
 #include "arp.h"
 
+int arp_running;
+
 //struct udp_statistics arpStat;
 
 //#define DEBUG
@@ -429,7 +431,11 @@ void arp_get_FF() {
 		sem_wait(&Switch_to_ARP_Qsem);
 		ff = read_queue(Switch_to_ARP_Queue);
 		sem_post(&Switch_to_ARP_Qsem);
-	} while (ff == NULL);
+	} while (arp_running && ff == NULL);
+
+	if (!arp_running) {
+		return;
+	}
 
 	//udpStat.totalRecieved++;
 	//PRINT_DEBUG("UDP Total %d", udpStat.totalRecieved);
@@ -437,8 +443,9 @@ void arp_get_FF() {
 
 }
 
-void ARP_init() {
-	PRINT_DEBUG("ARP STARTED");
+void arp_init() {
+	PRINT_DEBUG("ARP Started");
+	arp_running = 1;
 
 	//uint64_t MACADDRESS = 9890190479;/**<MAC address of host; sent to the arp module*/
 	uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
@@ -450,9 +457,15 @@ void ARP_init() {
 
 	init_arp_intface(MACADDRESS, IPADDRESS);
 
-	while (1) {
+	while (arp_running) {
 		arp_get_FF();
 		PRINT_DEBUG();
 		//	free(pff);
 	}
+
+	PRINT_DEBUG("ARP Terminating");
+}
+
+void arp_term() {
+	arp_running = 0;
 }

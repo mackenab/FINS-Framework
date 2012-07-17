@@ -19,8 +19,11 @@
 #include <tcp.h>
 #include <arp.h>
 #include "switch/swito.h"		//was <swito.h>
+//#include <swito.h>
 #include "RTM/rtm.h"	//was <rtm.h>
+//#include <rtm.h>
 #include <sys/types.h>
+#include <signal.h>
 //#include <stdlib.h> //added
 //#include <stdio.h> //added
 //kernel stuff
@@ -631,8 +634,10 @@ void *Switch_to_Daemon() {
 			} else {
 				temp2->s_addr = 0;
 			}
-			PRINT_DEBUG("prot=%d, host=%s:%d (%u), dst=%s:%d (%u), ff=%d",
-					protocol, inet_ntoa(*temp), (hostport), (*temp).s_addr, inet_ntoa(*temp2), (dstport), (*temp2).s_addr, (int)ff);
+			PRINT_DEBUG("prot=%d, ff=%d", protocol, (int)ff);
+			PRINT_DEBUG("host=%s:%d (%u)", inet_ntoa(*temp), (hostport), (*temp).s_addr);
+			PRINT_DEBUG("dst=%s:%d (%u)", inet_ntoa(*temp2), (dstport), (*temp2).s_addr);
+
 			free(temp);
 			free(temp2);
 			//##############################################
@@ -1253,47 +1258,70 @@ void *UDP() {
 
 	udp_init();
 
+	pthread_exit(NULL);
 }
 
 void *RTM() {
 
 	rtm_init();
 
+	pthread_exit(NULL);
 }
 
 void *TCP() {
+
 	tcp_init();
 
+	pthread_exit(NULL);
 }
 
 void *IPv4() {
+
 	ipv4_init();
 
+	pthread_exit(NULL);
 }
 
 void *ICMP() {
 
-	ICMP_init();
+	icmp_init();
 
+	pthread_exit(NULL);
 }
 
 void *ARP() {
 
-	ARP_init();
+	arp_init();
 
+	pthread_exit(NULL);
 }
 
 void *fins_switch() {
 
-	init_switch();
+	switch_init();
 
+	pthread_exit(NULL);
 }
 
 void cap_inj_init() {
 
 }
 
-#define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
+void termination_handler(int sig) {
+	printf("\n**********Terminating *******\n");
+
+	udp_term();
+	tcp_term();
+	ipv4_term();
+	arp_term();
+
+	//pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
+	//pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
+	//pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
+	//pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
+	printf("\n FIN");
+	exit(2);
+}
 
 int main() {
 
@@ -1405,6 +1433,8 @@ int main() {
 
 	cap_inj_init();
 
+	(void) signal(SIGINT, termination_handler);
+
 	pthread_t wedge_to_daemon_thread;
 	pthread_t Switch_to_daemon_thread; //TODO move to "Daemon" module
 
@@ -1450,13 +1480,13 @@ int main() {
 	pthread_attr_init(&fins_pthread_attr);
 	pthread_create(&wedge_to_daemon_thread, &fins_pthread_attr, wedge_to_daemon, NULL); //this has named pipe input from wedge
 	pthread_create(&Switch_to_daemon_thread, &fins_pthread_attr, Switch_to_Daemon, NULL);
+	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
+	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
+	pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
 	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
 	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
 	pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
-	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
-	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
-	pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
 	//^^^^^ end added !!!!!
 
 	PRINT_DEBUG("created all threads\n");
@@ -1464,16 +1494,16 @@ int main() {
 	/**
 	 *************************************************************
 	 */
-	pthread_join(wedge_to_daemon_thread, NULL);
-	pthread_join(Switch_to_daemon_thread, NULL);
+	pthread_join(arp_thread, NULL);
+	pthread_join(ipv4_thread, NULL);
+	pthread_join(tcp_thread, NULL);
+	pthread_join(udp_thread, NULL);
 	pthread_join(etherStub_capturing, NULL);
 	pthread_join(etherStub_injecting, NULL);
 	pthread_join(switch_thread, NULL);
-	pthread_join(udp_thread, NULL);
-	pthread_join(tcp_thread, NULL);
+	pthread_join(Switch_to_daemon_thread, NULL);
+	pthread_join(wedge_to_daemon_thread, NULL);
 	//	//	pthread_join(icmp_thread, NULL);
-	pthread_join(ipv4_thread, NULL);
-	pthread_join(arp_thread, NULL);
 
 	while (1) {
 

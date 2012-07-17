@@ -6,11 +6,11 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include<inttypes.h>
-#include "finstypes.h"
+#include <inttypes.h>
+#include <finstypes.h>
+#include <finsdebug.h>
+#include <metadata.h>
 #include "arp.h"
-#include "finsdebug.h"
-#include "metadata.h"
 
 /**
  * @brief this function initializes a cache for the host's interface. Note that an interface is the first element/header of

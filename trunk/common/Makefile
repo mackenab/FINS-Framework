@@ -35,19 +35,6 @@ clean:
 	@rm -f OBJS.finsmk
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #not so phony in my book...
 .PHONY:stu
 stu:

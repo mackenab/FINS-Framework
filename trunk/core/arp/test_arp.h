@@ -3,9 +3,13 @@
  *@author Syed Amaar Ahmad
  *@date  September 27, 2010
  */
+#ifndef TEST_ARP_H_
+#define TEST_ARP_H_
+
 #include "arp.h"
 #include "finstypes.h"
 #include <inttypes.h>
+#include <metadata.h>
 
 void gen_neighbor_list(char* fileName);
 
@@ -25,5 +29,5 @@ void fins_from_stub(struct finsFrame *fins_frame);
 
 void arp_test_harness();
 
-
+#endif
 

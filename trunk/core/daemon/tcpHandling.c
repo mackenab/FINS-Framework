@@ -6,7 +6,7 @@
  */
 
 #include "tcpHandling.h"
-#include "finstypes.h"
+#include <finstypes.h>
 
 extern sem_t daemonSockets_sem;
 extern struct finssocket daemonSockets[MAX_sockets];
@@ -283,7 +283,7 @@ int daemon_TCP_to_fins_cntrl(uint16_t opcode, metadata *params) {
 	//ff->ctrlFrame.paramterValue = data;
 	//ff->ctrlFrame.paramterLen = len;
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("daemon_TCP_to_fins_cntrl: ff=%d, meta=%d", (int)ff, (int)params);
 	sem_wait(&Daemon_to_Switch_Qsem);
 	if (write_queue(ff, Daemon_to_Switch_Queue)) {
 		sem_post(&Daemon_to_Switch_Qsem);

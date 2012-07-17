@@ -6,7 +6,7 @@
  */
 
 #include "udpHandling.h"
-#include "finstypes.h"
+#include <finstypes.h>
 
 #define	IP4_PT_UDP		17
 

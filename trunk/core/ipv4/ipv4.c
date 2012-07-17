@@ -16,8 +16,9 @@ struct ip4_packet *construct_packet_buffer;
 struct ip4_stats stats;
 
 void ipv4_init() {
-
 	PRINT_DEBUG("IPv4 Started");
+	ipv4_running = 1;
+
 	/* find a way to get the IP of the desired interface automatically from the system
 	 * or from a configuration file
 	 */
@@ -41,12 +42,17 @@ void ipv4_init() {
 	IP4_init();
 #endif
 
-	while (1) {
+	while (ipv4_running) {
 		IP4_receive_fdf();
 		PRINT_DEBUG();
 		//	free(ff);
 
 	}
 
+	PRINT_DEBUG("IPv4 Terminating");
+}
+
+void ipv4_term() {
+	ipv4_running = 0;
 }
 

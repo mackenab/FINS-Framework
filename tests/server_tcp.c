@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <poll.h>
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
@@ -33,6 +34,7 @@ int main(int argc, char *argv[]) {
 	int bytes_read;
 	int recv_buf_size = 4000;
 	char recv_data[4000];
+	int ret;
 
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
@@ -74,6 +76,7 @@ int main(int argc, char *argv[]) {
 //	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
 	//bzero(&(server_addr.sin_zero), 8); //TODO is for what?
 
+	printf("Binding to server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
 		perror("Bind");
 		printf("Failure");
@@ -108,7 +111,15 @@ int main(int argc, char *argv[]) {
 
 	i = 0;
 
+	int nfds = 1;
+	struct pollfd fds[nfds];
+	fds[1].fd = sock;
+	fds[1].events = POLLIN | POLLPRI;
+	int time = 1000;
+
 	while (1) {
+		ret = poll(fds, nfds, time);
+
 		bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
 		//bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
 		//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);

@@ -146,6 +146,7 @@ void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out);
 void arp_out(int response_type);
 
 void output_arp_queue(struct finsFrame *fins_arp_out);
-void ARP_init();
+void arp_init();
+void arp_term();
 
 #endif

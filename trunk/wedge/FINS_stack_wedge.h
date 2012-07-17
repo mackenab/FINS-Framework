@@ -1,3 +1,6 @@
+#ifndef FINS_STACK_WEDGE_H_
+#define FINS_STACK_WEDGE_H_
+
 /*
  * NETLINK_FINS must match a corresponding constant in the userspace daemon program that is to talk to this module.  
  * NETLINK_ constants are normally defined in <linux/netlink.h> although adding a constant here would necessitate a 
@@ -136,3 +139,5 @@ int checkConfirmation(int index);
 /* This is a flag to enable or disable the FINS stack passthrough */
 int FINS_stack_passthrough_enabled;
 EXPORT_SYMBOL (FINS_stack_passthrough_enabled);
+
+#endif /* FINS_STACK_WEDGE_H_ */
