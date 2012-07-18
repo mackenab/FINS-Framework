@@ -278,7 +278,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 
 	PRINT_DEBUG("pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
 
-	print_buf = (u_char *)kmalloc(5 * len, GFP_KERNEL);
+	print_buf = (u_char *) kmalloc(5 * len, GFP_KERNEL);
 	if (!print_buf) {
 		PRINT_ERROR("print_buf allocation fail");
 	} else {
@@ -351,7 +351,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	}
 
 //####################
-	print_buf = (u_char *)kmalloc(5 * msg_len, GFP_KERNEL);
+	print_buf = (u_char *) kmalloc(5 * msg_len, GFP_KERNEL);
 	if (!print_buf) {
 		PRINT_ERROR("print_buf allocation fail");
 	} else {
@@ -374,7 +374,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	}
 //####################
 
-	part_buf = (u_char *)kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
+	part_buf = (u_char *) kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
 	if (!part_buf) {
 		PRINT_ERROR("part_buf allocation fail");
 		up(&link_sem);
@@ -623,7 +623,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 // Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		goto removeSocket;
@@ -734,7 +734,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 // Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + addr_len;
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -835,7 +835,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -931,7 +931,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + 2 * sizeof(int) + addr_len;
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		//release_sock(sk);
@@ -1053,7 +1053,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + 2 * sizeof(unsigned long long) + sizeof(int);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		//release_sock(sk);
@@ -1177,7 +1177,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -1335,7 +1335,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 // Build the message
 	buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + 3 * sizeof(int) + (symbol ? sizeof(u_int) + msg->msg_namelen : 0)
 			+ (controlFlag ? sizeof(u_int) + msg->msg_controllen : 0) + data_len;
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buf allocation failed");
 		release_sock(sk);
@@ -1481,7 +1481,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(ssize_t) + 4 * sizeof(int) + (controlFlag ? sizeof(u_int) + msg->msg_controllen : 0);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buf allocation failed");
 		release_sock(sk);
@@ -1705,7 +1705,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		// Build the message
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -1750,7 +1750,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		// Build the message
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + IFNAMSIZ;
-		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -1788,7 +1788,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 		// Build the message
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
-		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -1831,7 +1831,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		//TODO implement
 		PRINT_DEBUG("cmd=%d not implemented", cmd);
 		buf_len = 3 * sizeof(u_int) + sizeof(unsigned long long);
-		buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 		if (!buf) {
 			PRINT_ERROR("buffer allocation error");
 			release_sock(sk);
@@ -2147,7 +2147,7 @@ static int FINS_release(struct socket *sock) {
 
 	// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		//release_sock(sk);
@@ -2276,11 +2276,18 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 	int ret;
 	int index;
 
+	//struct socket *sock = file->private_data;
 	struct sock *sk = sock->sk;
 	lock_sock(sk);
 
 	uniqueSockID = getUniqueSockID(sock);
 	PRINT_DEBUG("Entered for %llu.", uniqueSockID);
+
+	if (table) {
+		PRINT_DEBUG("file=%d sock=%d table=%d key=%lu", (int)file, (int)sock, (int)table, table->key);
+	} else {
+		PRINT_DEBUG("file=%d sock=%d table=%d key=NULL", (int)file, (int)sock, (int)table);
+	}
 
 	// Notify FINS daemon
 	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
@@ -2298,7 +2305,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 	// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		release_sock(sk);
@@ -2356,8 +2363,14 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 			rc = *(u_int *) pt;
 			pt += sizeof(u_int);
 
-			if (pt - buf != wedgeSockets[index].reply_len) {
-				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, wedgeSockets[index].reply_len);
+			PRINT_DEBUG("rc=%x", rc);
+
+			rc |= POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+
+			PRINT_DEBUG("rc=%x", rc);
+
+			if (pt - wedgeSockets[index].reply_buf != wedgeSockets[index].reply_len) {
+				PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - wedgeSockets[index].reply_buf, wedgeSockets[index].reply_len);
 				rc = 0;
 			}
 		} else {
@@ -2414,7 +2427,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -2508,7 +2521,7 @@ static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 
 	// Build the message
 	buf_len = 2 * sizeof(u_int) + sizeof(unsigned long long);
-	buf = (u_char *)kmalloc(buf_len, GFP_KERNEL);
+	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (!buf) {
 		PRINT_ERROR("buffer allocation error");
 		return print_exit(__FUNCTION__, __LINE__, -1);

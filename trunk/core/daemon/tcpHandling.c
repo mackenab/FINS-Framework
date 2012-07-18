@@ -1691,7 +1691,7 @@ void *poll_tcp_thread(void *local) {
 
 	uint32_t exec_call = 0;
 	uint32_t ret_val = 0;
-	u_int mask = 0;
+	uint32_t ret_msg = 0;
 
 	PRINT_DEBUG("poll_tcp_thread: Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 	struct finsFrame *ff = get_fcf(index, uniqueSockID, non_block_flag);
@@ -1706,7 +1706,8 @@ void *poll_tcp_thread(void *local) {
 	int ret = 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == 0;
 	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "mask", &mask) == 0;
+	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_msg", &ret_msg) == 0;
+	//ret += metadata_readFromElement(ff->ctrlFrame.metaData, "mask", &mask) == 0;
 
 	if (ret || (exec_call != EXEC_TCP_POLL) || ret_val == 0) {
 		PRINT_DEBUG("poll_tcp_thread: Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
@@ -1741,7 +1742,7 @@ void *poll_tcp_thread(void *local) {
 			*(u_int *) pt = 0;
 			pt += sizeof(u_int);
 
-			*(u_int *) pt = mask;
+			*(u_int *) pt = ret_msg;
 			pt += sizeof(u_int);
 
 			PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
