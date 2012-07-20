@@ -216,7 +216,8 @@ struct ip4_next_hop_info {
 int ipv4_running;
 
 void ipv4_init();
-void ipv4_term();
+void ipv4_shutdown();
+void ipv4_free();
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);
 unsigned short IP4_checksum(struct ip4_packet* ptr, int length);
 int IP4_dest_check(IP4addr destination);

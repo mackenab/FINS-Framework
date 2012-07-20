@@ -57,6 +57,27 @@ sem_t thread_sem;
  * The list of Semaphores which protect the Queues
  */
 
+pthread_t wedge_to_daemon_thread;
+pthread_t Switch_to_daemon_thread; //TODO move to "Daemon" module
+
+pthread_t udp_thread;
+pthread_t icmp_thread;
+pthread_t rtm_thread;
+//	pthread_t udp_outgoing;
+
+pthread_t tcp_thread;
+//	pthread_t tcp_outgoing;
+
+pthread_t ipv4_thread;
+//	pthread_t ip_outgoing;
+
+pthread_t arp_thread;
+//	pthread_t arp_outgoing;
+
+pthread_t etherStub_capturing;
+pthread_t etherStub_injecting;
+pthread_t switch_thread;
+
 finsQueue Daemon_to_Switch_Queue;
 finsQueue Switch_to_Daemon_Queue;
 
@@ -279,7 +300,7 @@ void *Switch_to_Daemon() {
 			rem_ip = 0;
 			rem_port = 0;
 
-			PRINT_DEBUG("control ff: ff=%d meta=%d opcode=%d", (int)ff, (int)ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
+			PRINT_DEBUG("control ff: ff=%x meta=%x opcode=%d", (int)ff, (int)ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
 				PRINT_DEBUG("Not yet implmented");
@@ -317,7 +338,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -362,7 +383,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -457,7 +478,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -486,7 +507,7 @@ void *Switch_to_Daemon() {
 							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
 								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 								if (index != -1) {
-									PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+									PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
 									sem_wait(&daemonSockets[index].Qs);
 
 									/**
@@ -551,7 +572,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%d index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -597,7 +618,7 @@ void *Switch_to_Daemon() {
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {
-			PRINT_DEBUG("data ff: ff=%d meta=%d len=%d", (int)ff, (int)ff->dataFrame.metaData, ff->dataFrame.pduLength);
+			PRINT_DEBUG("data ff: ff=%x meta=%x len=%d", (int)ff, (int)ff->dataFrame.metaData, ff->dataFrame.pduLength);
 
 			dstport = 0;
 			hostport = 0;
@@ -634,7 +655,7 @@ void *Switch_to_Daemon() {
 			} else {
 				temp2->s_addr = 0;
 			}
-			PRINT_DEBUG("prot=%d, ff=%d", protocol, (int)ff);
+			PRINT_DEBUG("prot=%d, ff=%x", protocol, (int)ff);
 			PRINT_DEBUG("host=%s:%d (%u)", inet_ntoa(*temp), (hostport), (*temp).s_addr);
 			PRINT_DEBUG("dst=%s:%d (%u)", inet_ntoa(*temp2), (dstport), (*temp2).s_addr);
 
@@ -659,7 +680,7 @@ void *Switch_to_Daemon() {
 
 				//if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
 				if (index != -1 && daemonSockets[index].state > SS_UNCONNECTED) { //TODO review this logic might be bad
-					PRINT_DEBUG("ICMP should not enter here at all ff=%d", (int)ff);
+					PRINT_DEBUG("ICMP should not enter here at all ff=%x", (int)ff);
 					if ((hostport != daemonSockets[index].dst_port) || (hostip != daemonSockets[index].dst_ip)) {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 						sem_post(&daemonSockets_sem);
@@ -670,9 +691,9 @@ void *Switch_to_Daemon() {
 				}
 			}
 
-			PRINT_DEBUG("ff=%d index=%d", (int) ff, index);
+			PRINT_DEBUG("ff=%x index=%d", (int) ff, index);
 			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
-				PRINT_DEBUG( "Matched: host=%d/%d, dst=%d/%d, prot=%d",
+				PRINT_DEBUG( "Matched: host=%u/%u, dst=%u/%u, prot=%u",
 						daemonSockets[index].host_ip, daemonSockets[index].host_port, daemonSockets[index].dst_ip, daemonSockets[index].dst_port, daemonSockets[index].protocol);
 
 				/**
@@ -1127,7 +1148,7 @@ void *Capture() {
 
 		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
 
-		PRINT_DEBUG("ff=%d pdu=%d, data=%d", (int)ff, (int) &(ff->dataFrame).pdu, (int) data);
+		PRINT_DEBUG("ff=%x pdu=%x, data=%x", (int)ff, (int) &(ff->dataFrame).pdu, (int) data);
 
 		sem_wait(&EtherStub_to_Switch_Qsem);
 		if (!write_queue(ff, EtherStub_to_Switch_Queue)) {
@@ -1174,7 +1195,7 @@ void *Inject() {
 		if (ff == NULL)
 			continue;
 
-		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%d", (int)ff);
+		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%x", (int)ff);
 
 		//	metadata_readFromElement(ff->dataFrame.metaData,"dstip",&destination);
 		//	loop_host = (struct hostent *) gethostbyname((char *)"");
@@ -1205,10 +1226,10 @@ void *Inject() {
 		//char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
 		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
 
-		char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
 		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
-		//char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
+		char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
 		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
 		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
 
@@ -1308,18 +1329,56 @@ void cap_inj_init() {
 }
 
 void termination_handler(int sig) {
-	printf("\n**********Terminating *******\n");
+	PRINT_DEBUG("**********Terminating *******");
 
-	udp_term();
-	tcp_term();
-	ipv4_term();
-	arp_term();
+	//TODO shutdown all module threads
+	udp_shutdown();
+	tcp_shutdown();
+	ipv4_shutdown();
+	arp_shutdown();
 
-	//pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
-	//pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
-	//pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
-	//pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
-	printf("\n FIN");
+	//join driving thread for each module
+	pthread_join(arp_thread, NULL);
+	pthread_join(ipv4_thread, NULL);
+	pthread_join(tcp_thread, NULL);
+	pthread_join(udp_thread, NULL);
+	//pthread_join(etherStub_capturing, NULL);
+	//pthread_join(etherStub_injecting, NULL);
+	//pthread_join(switch_thread, NULL);
+	//pthread_join(Switch_to_daemon_thread, NULL);
+	//pthread_join(wedge_to_daemon_thread, NULL);
+
+	//TODO move que/sem free to module
+	udp_free();
+	tcp_free();
+	ipv4_free();
+	arp_free();
+
+	//free daemonSockets
+	int i = 0, j = 0;
+	int THREADS = 100;
+
+	for (i = 0; i < MAX_sockets; i++) {
+		if (daemonSockets[i].uniqueSockID != -1) {
+			daemonSockets[i].uniqueSockID = -1;
+
+			//TODO stop all threads related to
+
+			for (j = 0; j < THREADS; j++) {
+				sem_post(&daemonSockets[i].control_sem);
+			}
+
+			for (j = 0; j < THREADS; j++) {
+				sem_post(&daemonSockets[i].data_sem);
+			}
+
+			daemonSockets[i].state = SS_FREE;
+			term_queue(daemonSockets[i].controlQueue);
+			term_queue(daemonSockets[i].dataQueue);
+		}
+	}
+
+	PRINT_DEBUG("FIN");
 	exit(2);
 }
 
@@ -1374,6 +1433,7 @@ int main() {
 
 	//init the netlink socket connection to daemon
 	//int nl_sockfd;
+	//sem_init();
 	nl_sockfd = init_fins_nl();
 	if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
 		perror("init_fins_nl() caused an error");
@@ -1428,54 +1488,16 @@ int main() {
 	 * 3.
 	 */
 	//	read_configurations();
-	init_daemonSockets();
-	Queues_init();
+	init_daemonSockets(); //TODO move to daemon module?
+	Queues_init(); //TODO split & move to each module
 
+	//initialize capturer and injecter
 	cap_inj_init();
 
-	(void) signal(SIGINT, termination_handler);
+	//register termination handler
+	signal(SIGINT, termination_handler);
 
-	pthread_t wedge_to_daemon_thread;
-	pthread_t Switch_to_daemon_thread; //TODO move to "Daemon" module
-
-	pthread_t udp_thread;
-	pthread_t icmp_thread;
-	pthread_t rtm_thread;
-	//	pthread_t udp_outgoing;
-
-	pthread_t tcp_thread;
-	//	pthread_t tcp_outgoing;
-
-	pthread_t ipv4_thread;
-	//	pthread_t ip_outgoing;
-
-	pthread_t arp_thread;
-	//	pthread_t arp_outgoing;
-
-	pthread_t etherStub_capturing;
-	pthread_t etherStub_injecting;
-	pthread_t switch_thread;
-
-	/* original !!!!!
-	 pthread_create(&wedge_to_daemon_thread, NULL, wedge_to_daemon, NULL);
-	 pthread_create(&Switch_to_daemon_thread, NULL, Switch_to_Daemon, NULL);
-
-	 pthread_create(&udp_thread, NULL, UDP, NULL);
-	 //	pthread_create(&rtm_thread, NULL, RTM, NULL);
-
-	 //	pthread_create(&icmp_thread,NULL,ICMP,NULL);
-	 //	pthread_create(&tcp_thread,NULL,TCP,NULL);
-
-	 pthread_create(&ipv4_thread, NULL, IPv4, NULL);
-	 //pthread_create(&arp_thread,NULL,ARP,NULL);
-
-	 pthread_create(&switch_thread, NULL, fins_switch, NULL);
-
-	 pthread_create(&etherStub_capturing, NULL, Capture, NULL);
-	 pthread_create(&etherStub_injecting, NULL, Inject, NULL);
-	 */
-
-	// ADDED !!!!! start
+	// Start the driving thread of each module
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 	pthread_create(&wedge_to_daemon_thread, &fins_pthread_attr, wedge_to_daemon, NULL); //this has named pipe input from wedge

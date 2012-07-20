@@ -433,7 +433,8 @@ struct tcp_to_thread_data {
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init();
-void tcp_term();
+void tcp_shutdown();
+void tcp_free();
 void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);

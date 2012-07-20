@@ -42,7 +42,7 @@ void udp_in(struct finsFrame* ff) {
 		return;
 	}
 
-	PRINT_DEBUG("UDP_in ff=%d", (int)ff);
+	PRINT_DEBUG("UDP_in ff=%x", (int)ff);
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ((ff->dataFrame).pdu);
@@ -118,19 +118,30 @@ void udp_in(struct finsFrame* ff) {
 	//	meta->u_srcPort = packet->u_src;
 	/* construct a FDF to send to the sockets */
 
-	ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
 	PRINT_DEBUG("PDU Length including UDP header %d", (ff->dataFrame).pduLength);
 	PRINT_DEBUG("PDU Length %d", ((ff->dataFrame).pduLength) - U_HEADER_LEN);
+
+	ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
+
+	//#########################
+	u_char *temp = (u_char *) malloc(ff->dataFrame.pduLength - U_HEADER_LEN + 1);
+	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength - U_HEADER_LEN);
+	temp[ff->dataFrame.pduLength - U_HEADER_LEN] = '\0';
+	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength-U_HEADER_LEN, temp);
+	free(temp);
+	//#########################
 
 	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
 	newFF = create_ff(DATA, UP, SOCKETSTUBID, ((ff->dataFrame).pduLength) - U_HEADER_LEN, ((ff->dataFrame).pdu), meta);
 
-	PRINT_DEBUG("newff=%d, PDU Len=%d", (int)newFF, (newFF->dataFrame).pduLength);
+	PRINT_DEBUG("newff=%x, PDU Len=%d", (int)newFF, (newFF->dataFrame).pduLength);
 	//print_finsFrame(newFF);
 
 	sendToSwitch(newFF);
 
+	PRINT_DEBUG("freeing: ff=%x", (int) ff);
 	//freeFinsFrame(ff); //can't since using meta
+	//free(ff->dataFrame.pdu); //TODO fix free problem right here
 	free(ff);
 }
 

@@ -21,6 +21,8 @@ extern finsQueue Switch_to_Daemon_Queue;
 extern sem_t Daemon_to_Switch_Qsem;
 extern sem_t Switch_to_Daemon_Qsem;
 
+//#include <unistd.h> //TODO remove
+
 struct finsFrame *get_fake_frame() {
 
 	struct finsFrame *f = (struct finsFrame *) malloc(sizeof(struct finsFrame));
@@ -250,7 +252,7 @@ int daemon_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t ds
 	PRINT_DEBUG();
 
 	if (udpout_meta == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_DEBUG("metadata creation failed, freeing: ff=%x", (int) ff);
 		free(ff);
 		return 0;
 	}
@@ -447,8 +449,8 @@ void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in 
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	dst_port = ntohs(addr->sin_port);
 	dst_ip = ntohl((addr->sin_addr).s_addr);
+	dst_port = ntohs(addr->sin_port);
 
 	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
@@ -789,8 +791,8 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 	int len = datalen;
 
 	if (flags == -1000) { //TODO what is this??
-		PRINT_DEBUG("write_udp???");
-		return write_udp(index, uniqueSockID, data, datalen);
+		//PRINT_DEBUG("write_udp???");
+		//return write_udp(index, uniqueSockID, data, datalen);
 	}
 	/** TODO handle flags cases */
 	switch (flags) {
@@ -813,6 +815,7 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, sendmsg_call, 0);
+		free(data);
 		return;
 	}
 
@@ -827,6 +830,7 @@ void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int data
 		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, sendmsg_call, 0);
+		free(data);
 		return;
 	}
 
@@ -923,6 +927,9 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
 		nack_send(uniqueSockID, sendmsg_call, 0);
+
+		free(data);
+		free(addr);
 		return;
 	}
 
@@ -944,6 +951,9 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 		sem_post(&daemonSockets_sem);
 
 		nack_send(uniqueSockID, sendmsg_call, 0);
+
+		free(data);
+		free(addr);
 		return;
 	}
 
@@ -1007,6 +1017,7 @@ void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int da
 		nack_send(uniqueSockID, sendmsg_call, 0);
 	}
 
+	free(addr);
 	return;
 
 } //end of sendto_udp
@@ -1022,18 +1033,27 @@ void *recvfrom_udp_thread(void *local) {
 
 	PRINT_DEBUG("recvfrom_udp_thread: Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 
-	int non_blocking_flag = flags & SOCK_NONBLOCK; //TODO get from flags
+	int non_blocking_flag = flags & (SOCK_NONBLOCK | O_NONBLOCK | MSG_DONTWAIT); //TODO get from flags
+	int ret;
 
 	PRINT_DEBUG();
-	struct finsFrame *ff = get_fdf(index, uniqueSockID, non_blocking_flag);
-	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%d", uniqueSockID, index, (int)ff);
+	struct finsFrame *ff = NULL;
+	ret = get_fdf(index, uniqueSockID, &ff, non_blocking_flag);
+	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%x", uniqueSockID, index, (int)ff);
+	if (ret == 0) {
+		nack_send(uniqueSockID, recvmsg_call, EBADF); //TODO socket closed/invalid
+		pthread_exit(NULL);
+	}
 
 	if (ff == NULL) {
-		PRINT_DEBUG("recvfrom_udp_thread: Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu ff=%d", id, index, uniqueSockID, (int)ff);
+		PRINT_DEBUG("recvfrom_udp_thread: Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send(uniqueSockID, recvmsg_call, EWOULDBLOCK);
+			//sleep(1);
+			nack_send(uniqueSockID, recvmsg_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
-			nack_send(uniqueSockID, recvmsg_call, 0); //TODO check return of nack on blocking send
+			//TODO error case
+			PRINT_DEBUG("todo error");
+			nack_send(uniqueSockID, recvmsg_call, 0);
 		}
 		pthread_exit(NULL);
 	}
@@ -1055,6 +1075,11 @@ void *recvfrom_udp_thread(void *local) {
 
 	//#######
 	PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), addr.sin_addr.s_addr);
+	u_char *temp = (u_char *) malloc(ff->dataFrame.pduLength + 1);
+	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	temp[ff->dataFrame.pduLength] = '\0';
+	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
+	free(temp);
 	//#######
 
 	int msg_len = 3 * sizeof(u_int) + sizeof(unsigned long long) + sizeof(int) + sizeof(struct sockaddr_in) + ff->dataFrame.pduLength;
@@ -1120,16 +1145,16 @@ void recvfrom_udp(int index, unsigned long long uniqueSockID, int data_len, int 
 	int thread_flags;
 
 	PRINT_DEBUG("recvfrom_udp: Entered: index=%d uniqueSockID=%llu data_len=%d flags=%d msg_flags=%d", index, uniqueSockID, data_len, flags, msg_flags);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
-			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
-	PRINT_DEBUG(
-			"MSG_CMSG_CLOEXEC=%d (%d), MSG_DONTWAIT=%d (%d), MSG_ERRQUEUE=%d (%d), MSG_OOB=%d (%d), MSG_PEEK=%d (%d), MSG_TRUNC=%d (%d), MSG_WAITALL=%d (%d), MSG_EOR=%d (%d), MSG_CTRUNC=%d (%d), MSG_ERRQUEUE=%d (%d)",
-			MSG_CMSG_CLOEXEC & flags, MSG_CMSG_CLOEXEC, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_ERRQUEUE & flags, MSG_ERRQUEUE, MSG_OOB & flags, MSG_OOB, MSG_PEEK & flags, MSG_PEEK, MSG_TRUNC & flags, MSG_TRUNC, MSG_WAITALL & flags, MSG_WAITALL, MSG_EOR & flags, MSG_EOR, MSG_CTRUNC & flags, MSG_CTRUNC, MSG_ERRQUEUE & flags, MSG_ERRQUEUE);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
-			SOCK_NONBLOCK & msg_flags, SOCK_NONBLOCK, SOCK_CLOEXEC & msg_flags, SOCK_CLOEXEC, O_NONBLOCK & msg_flags, O_NONBLOCK, O_ASYNC & msg_flags, O_ASYNC);
-	PRINT_DEBUG(
-			"MSG_CMSG_CLOEXEC=%d (%d), MSG_DONTWAIT=%d (%d), MSG_ERRQUEUE=%d (%d), MSG_OOB=%d (%d), MSG_PEEK=%d (%d), MSG_TRUNC=%d (%d), MSG_WAITALL=%d (%d), MSG_EOR=%d (%d), MSG_CTRUNC=%d (%d), MSG_ERRQUEUE=%d (%d)",
-			MSG_CMSG_CLOEXEC & msg_flags, MSG_CMSG_CLOEXEC, MSG_DONTWAIT & msg_flags, MSG_DONTWAIT, MSG_ERRQUEUE & msg_flags, MSG_ERRQUEUE, MSG_OOB & msg_flags, MSG_OOB, MSG_PEEK & msg_flags, MSG_PEEK, MSG_TRUNC & msg_flags, MSG_TRUNC, MSG_WAITALL & msg_flags, MSG_WAITALL, MSG_EOR & msg_flags, MSG_EOR, MSG_CTRUNC & msg_flags, MSG_CTRUNC, MSG_ERRQUEUE & msg_flags, MSG_ERRQUEUE);
+
+	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
+			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0);
+	PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
+			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
+
+	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
+			(SOCK_NONBLOCK & msg_flags)>0, (SOCK_CLOEXEC & msg_flags)>0, (O_NONBLOCK & msg_flags)>0, (O_ASYNC & msg_flags)>0);
+	PRINT_DEBUG( "MSG_EOR=%d, MSG_TRUNC=%d, MSG_CTRUNC=%d, MSG_OOB=%d, MSG_ERRQUEUE=%d",
+			(MSG_EOR & msg_flags)>0, (MSG_TRUNC & msg_flags)>0, (MSG_CTRUNC & msg_flags)>0, (MSG_OOB & msg_flags)>0, (MSG_ERRQUEUE & msg_flags)>0);
 
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -1156,7 +1181,7 @@ void recvfrom_udp(int index, unsigned long long uniqueSockID, int data_len, int 
 		thread_data->index = index;
 		thread_data->uniqueSockID = uniqueSockID;
 		thread_data->data_len = data_len;
-		thread_data->flags = msg_flags;
+		thread_data->flags = flags;
 
 		//spin off thread to handle
 		if (pthread_create(&thread, NULL, recvfrom_udp_thread, (void *) thread_data)) {
@@ -1164,6 +1189,8 @@ void recvfrom_udp(int index, unsigned long long uniqueSockID, int data_len, int 
 			nack_send(uniqueSockID, recvmsg_call, 0);
 
 			free(thread_data);
+		} else {
+			pthread_detach(thread);
 		}
 	}
 }

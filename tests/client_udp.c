@@ -37,10 +37,9 @@ int main(int argc, char *argv[]) {
 	send_data[1000] = '\0';
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
-	printf("SOCK_NONBLOCK=%d SOCK_STREAM=%d SOCK_DGRAM=%d SOCK_RAW=%d \n", SOCK_NONBLOCK, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW);
 
-	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+		//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
@@ -58,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,13);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -100,7 +99,6 @@ int main(int argc, char *argv[]) {
 		printf("%s", send_data);
 		sleep(1);
 		numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-		//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
 		printf("\n %d", numbytes);
 		fflush(stdout);
 

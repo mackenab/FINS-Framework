@@ -87,7 +87,7 @@ void init_wedgeSockets(void) {
 	PRINT_DEBUG("Exited.");
 }
 
-int insert_wedgeSocket(unsigned long long uniqueSockID, int type, int protocol) {
+int insert_wedgeSocket(unsigned long long uniqueSockID, struct socket *sock, int type, int protocol) {
 	int i;
 	int j;
 
@@ -97,6 +97,7 @@ int insert_wedgeSocket(unsigned long long uniqueSockID, int type, int protocol) 
 	for (i = 0; i < MAX_sockets; i++) {
 		if ((wedgeSockets[i].uniqueSockID == -1)) {
 			wedgeSockets[i].uniqueSockID = uniqueSockID;
+			wedgeSockets[i].sock = sock;
 			wedgeSockets[i].type = type;
 			wedgeSockets[i].protocol = protocol;
 
@@ -243,8 +244,8 @@ int checkConfirmation(int index) {
 			PRINT_DEBUG("recv ACK");
 			return 0;
 		} else if (wedgeSockets[index].reply_ret == NACK) {
-			PRINT_DEBUG("recv NACK");
-			return -1;
+			PRINT_DEBUG("recv NACK msg=%u", wedgeSockets[index].reply_msg);
+			return -wedgeSockets[index].reply_msg;
 		} else {
 			PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 			return -1;
@@ -615,7 +616,7 @@ static int FINS_create_socket(struct net *net, struct socket *sock, int protocol
 
 	uniqueSockID = getUniqueSockID(sock);
 
-	index = insert_wedgeSocket(uniqueSockID, sock->type, protocol);
+	index = insert_wedgeSocket(uniqueSockID, sock, sock->type, protocol);
 	PRINT_DEBUG("insert index=%d", index);
 	if (index == -1) {
 		goto removeSocket;
@@ -1035,21 +1036,20 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 // Required stuff for kernel side
 	rc = -ENOMEM;
 	sk_new = sk_alloc(sock_net(sock->sk), PF_FINS, GFP_KERNEL, &FINS_proto);
-
 	if (!sk_new) {
 		PRINT_ERROR("allocation failed");
 		//release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, rc);
 		// if allocation failed
 	}
+
 	sk_refcnt_debug_inc(sk_new);
 	sock_init_data(newsock, sk_new);
-
 	sk_new->sk_no_check = 1;
 	newsock->ops = &FINS_proto_ops;
 
 	uniqueSockID_new = getUniqueSockID(newsock);
-	PRINT_DEBUG("Entered for new=%llu", uniqueSockID_new);
+	PRINT_DEBUG("Created new=%llu", uniqueSockID_new);
 
 // Build the message
 	buf_len = 2 * sizeof(u_int) + 2 * sizeof(unsigned long long) + sizeof(int);
@@ -1119,7 +1119,7 @@ static int FINS_accept(struct socket *sock, struct socket *newsock, int flags) {
 	PRINT_DEBUG("wedgeSockets[%d].reply_sem_w=%d", index, wedgeSockets[index].reply_sem_w.count);
 
 	if (rc == 0) {
-		index_new = insert_wedgeSocket(uniqueSockID_new, newsock->type, wedgeSockets[index].protocol);
+		index_new = insert_wedgeSocket(uniqueSockID_new, newsock, newsock->type, wedgeSockets[index].protocol);
 		PRINT_DEBUG("insert index_new=%d", index_new);
 		if (index == -1) {
 			rc = -1;
@@ -1269,8 +1269,9 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 			rc = -1;
 		}
 	} else if (wedgeSockets[index].reply_ret == NACK) {
-		PRINT_DEBUG("recv NACK");
-		rc = -1;
+		PRINT_DEBUG("recv NACK msg=%u", wedgeSockets[index].reply_msg);
+		//rc = -1;
+		rc = -wedgeSockets[index].reply_msg;
 	} else {
 		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 		rc = -1;
@@ -1619,10 +1620,11 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 			rc = -1;
 		}
 	} else if (wedgeSockets[index].reply_ret == NACK) {
-		PRINT_DEBUG("recv NACK");
-		rc = -1;
+		PRINT_DEBUG("recv NACK msg=%u", wedgeSockets[index].reply_msg);
+		//rc = -1;
+		rc = -wedgeSockets[index].reply_msg;
 	} else {
-		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
+		PRINT_ERROR("error, acknowledgement: %u %u", wedgeSockets[index].reply_ret, wedgeSockets[index].reply_msg);
 		rc = -1;
 	}
 	PRINT_DEBUG("shared used: call=%d, sockID=%llu, ret=%d, len=%d", wedgeSockets[index].reply_call, wedgeSockets[index].uniqueSockID, wedgeSockets[index].reply_ret, wedgeSockets[index].reply_len);
@@ -2093,8 +2095,9 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			break;
 		}
 	} else if (wedgeSockets[index].reply_ret == NACK) {
-		PRINT_DEBUG("ioctl NACK");
-		rc = -1;
+		PRINT_DEBUG("recv NACK msg=%u", wedgeSockets[index].reply_msg);
+		//rc = -1;
+		rc = -wedgeSockets[index].reply_msg;
 	} else {
 		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 		rc = -1;
@@ -2278,6 +2281,9 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 	//struct socket *sock = file->private_data;
 	struct sock *sk = sock->sk;
+
+	poll_wait(file, sk_sleep(sk), table);
+
 	lock_sock(sk);
 
 	uniqueSockID = getUniqueSockID(sock);
@@ -2378,8 +2384,9 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 			rc = 0;
 		}
 	} else if (wedgeSockets[index].reply_ret == NACK) {
-		PRINT_DEBUG("recv NACK");
-		rc = 0;
+		PRINT_DEBUG("recv NACK msg=%u", wedgeSockets[index].reply_msg);
+		//rc = -1;
+		rc = -wedgeSockets[index].reply_msg;
 	} else {
 		PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 		rc = 0;
@@ -2836,8 +2843,9 @@ rc = -1;
 rc = -1;
 						}
 			} else if (wedgeSockets[index].reply_ret == NACK) {
-				PRINT_DEBUG("recv NACK");
-rc = -1;
+				PRINT_DEBUG("recv NACK msg=%u", wedgeSockets[index].reply_msg);
+//rc = -1;
+rc = -wedgeSockets[index].reply_msg;
 			} else {
 				PRINT_ERROR("error, acknowledgement: %d", wedgeSockets[index].reply_ret);
 rc = -1;

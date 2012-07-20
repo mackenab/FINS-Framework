@@ -97,6 +97,7 @@ inline unsigned long long getUniqueSockID(struct socket *sock);
 
 struct finssocket {
 	unsigned long long uniqueSockID;
+	struct socket *sock;
 	int type;
 	int protocol;
 
@@ -116,7 +117,7 @@ struct finssocket {
 };
 
 void init_wedgesockets(void);
-int insert_wedgeSocket(unsigned long long uniqueSockID, int type, int protocol);
+int insert_wedgeSocket(unsigned long long uniqueSockID, struct socket *sock, int type, int protocol);
 int find_wedgeSocket(unsigned long long uniqueSockID);
 int remove_wedgeSocket(unsigned long long uniqueSockID);
 int wait_wedgeSocket(unsigned long long uniqueSockID, int index, u_int calltype);

@@ -283,7 +283,7 @@ uint64_t search_MAC_addrs(uint32_t IP_addrs, struct node *ptr_list_neighbors) {
 void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("arp_to_fins: failed to create matadata: ff=%d", (int)pckt_fins);
+		PRINT_ERROR("arp_to_fins: failed to create matadata: ff=%x", (int)pckt_fins);
 		return;
 	}
 	metadata_create(params);
@@ -298,7 +298,7 @@ void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
 	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
 
 	if (ret) {
-		PRINT_ERROR("arp_to_fins: failed matadata write: ff=%d meta=%d ret=%d", (int)pckt_fins, (int)params, ret);
+		PRINT_ERROR("arp_to_fins: failed matadata write: ff=%x meta=%x ret=%d", (int)pckt_fins, (int)params, ret);
 		metadata_destroy(params);
 		return;
 	}
@@ -466,6 +466,12 @@ void arp_init() {
 	PRINT_DEBUG("ARP Terminating");
 }
 
-void arp_term() {
+void arp_shutdown() {
 	arp_running = 0;
+
+	//TODO fill this out
+}
+
+void arp_free() {
+	//TODO free all module related mem
 }

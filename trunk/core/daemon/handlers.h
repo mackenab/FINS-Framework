@@ -93,6 +93,7 @@
 struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
 struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destination)
 int nl_sockfd; //temp for now
+sem_t nl_sem;
 
 enum sockOptions {
 
@@ -174,9 +175,9 @@ struct tcp_Parameters {
 };
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
-uint32_t my_host_ip_addr;// = IP4_ADR_P2H(192,168,1,20);
-uint32_t loopback_ip_addr;// = IP4_ADR_P2H(127,0,0,1);
-uint32_t any_ip_addr;// = IP4_ADR_P2H(0,0,0,0);
+uint32_t my_host_ip_addr; // = IP4_ADR_P2H(192,168,1,20);
+uint32_t loopback_ip_addr; // = IP4_ADR_P2H(127,0,0,1);
+uint32_t any_ip_addr; // = IP4_ADR_P2H(0,0,0,0);
 
 struct finssocket {
 	/** variables tells a connect call has been called over this socket or not in order to
@@ -260,8 +261,11 @@ int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 int nack_write(int pipe_desc, unsigned long long uniqueSockID);
 int ack_write(int pipe_desc, unsigned long long uniqueSockID);
 
-struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_block_flag);
-struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int non_block_flag); //blocking doesn't matter
+struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag); //deprecated
+struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int non_block_flag); //deprecated //blocking doesn't matter
+
+int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag);
+int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
 
 /** calls handling functions */
 void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);

@@ -15,7 +15,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 
 	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
-	PRINT_DEBUG("IP4_send_fdf_in() called, ff=%d", (int)fins_frame);
+	PRINT_DEBUG("IP4_send_fdf_in() called, ff=%x", (int)fins_frame);
 	fins_frame->dataOrCtrl = DATA;
 	PRINT_DEBUG("protocol # %d", pheader->protocol);
 	switch (pheader->protocol) {
@@ -35,6 +35,12 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	fins_frame->destinationID.next = NULL;
 	fins_frame->dataFrame.directionFlag = UP;
 	fins_frame->dataFrame.pduLength = pheader->packet_length - pheader->header_length;
+	if (fins_frame->dataFrame.pduLength < 0) {
+		PRINT_DEBUG("pduLen error, dropping");
+		free(fins_frame);
+		return;
+	}
+
 	//	fins_frame->dataFrame.pduLength = pheader->packet_length - 20;
 	data = (char *) malloc(pheader->packet_length - pheader->header_length);
 	memcpy(data, ppacket->ip_data, pheader->packet_length - pheader->header_length);
@@ -77,7 +83,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	//print_finsFrame(ff);
 	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
-	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%d newff=%d", (int)ff, (int)fins_frame);
+	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%x newff=%x", (int)ff, (int)fins_frame);
 	fins_frame->dataOrCtrl = DATA;
 	(fins_frame->destinationID).id = ETHERSTUBID;
 	(fins_frame->destinationID).next = NULL;
@@ -95,7 +101,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	//print_finsFrame(fins_frame);
 	sendToSwitch_IPv4(fins_frame);
 
-	PRINT_DEBUG("Freeing ff=%d", (int)ff);
+	PRINT_DEBUG("Freeing ff=%x", (int)ff);
 	free(ff);
 
 }

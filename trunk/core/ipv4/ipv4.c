@@ -52,7 +52,12 @@ void ipv4_init() {
 	PRINT_DEBUG("IPv4 Terminating");
 }
 
-void ipv4_term() {
+void ipv4_shutdown() {
 	ipv4_running = 0;
+
+	//TODO expand this
 }
 
+void ipv4_free() {
+	//TODO free all module related mem
+}

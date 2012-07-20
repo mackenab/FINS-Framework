@@ -32,7 +32,7 @@ int daemon_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t d
 	metadata_create(udpout_meta);
 
 	if (udpout_meta == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_DEBUG("metadata creation failed, freeing: ff=%x", (int) ff);
 		free(ff);
 		exit(1);
 

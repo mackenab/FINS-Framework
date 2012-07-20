@@ -15,7 +15,6 @@
 #include <string.h>
 #include <queueModule.h>
 #include "test_arp.h" //this header file already contains #include "arp.h"
-
 #define DEBUG
 
 sem_t ARP_to_Switch_Qsem;
@@ -266,14 +265,52 @@ void fins_from_stub(struct finsFrame *fins_frame) {
 	fins_frame->ctrlFrame.paramterValue = IP_addrs;
 }
 
+void test_to_arp(struct finsFrame *fins_frame) {
+	if (fins_frame->dataOrCtrl == CONTROL) {
+		PRINT_DEBUG("test_to_arp: Entered: ff=%x meta=%x", (int)fins_frame, (int) fins_frame->ctrlFrame.metaData);
+	} else if (fins_frame->dataOrCtrl == DATA) {
+		PRINT_DEBUG("test_to_arp: Entered: ff=%x meta=%x", (int)fins_frame, (int) fins_frame->dataFrame.metaData);
+	} else {
+		PRINT_DEBUG("test_to_arp: Entered: ff=%x type=%d", (int)fins_frame, fins_frame->dataOrCtrl);
+	}
+
+	if (sem_wait(&Switch_to_ARP_Qsem)) {
+		PRINT_ERROR("Switch_to_ARP_Qsem wait prob");
+		exit(-1);
+	}
+	if (write_queue(fins_frame, Switch_to_ARP_Queue)) {
+		/*#*/PRINT_DEBUG("");
+		sem_post(&Switch_to_ARP_Qsem);
+		return;
+	}
+
+	PRINT_DEBUG("");
+	sem_post(&Switch_to_ARP_Qsem);
+}
+
+void *ARP() {
+
+	arp_init();
+
+	pthread_exit(NULL);
+}
+
 void arp_test_harness() {
-	struct finsFrame fins_frame;
+	struct finsFrame *fins_frame = malloc(sizeof(struct finsFrame));
 	int task;
 
 	IP_addrs = (unsigned char *) malloc(sizeof(unsigned char) * PROTOCOLADDRSLEN);
 	arp_net = (struct arp_hdr*) malloc(sizeof(struct arp_hdr));
 
 	init_arp_intface(host_MAC_addrs, host_IP_addrs); //necessary to initialize the arp module
+
+	pthread_t thread;
+	//spin off thread to handle
+	if (pthread_create(&thread, NULL, ARP, NULL)) {
+		PRINT_ERROR("ERROR: unable to create thread thread.");
+	} else {
+		//pthread_detach(thread);
+	}
 
 	task = 1;
 	while (task != 0) {
@@ -282,12 +319,16 @@ void arp_test_harness() {
 		scanf("%d", &task);
 
 		if ((task == 1) || (task == 2))
-			fins_from_net(&fins_frame, task);
+			fins_from_net(fins_frame, task);
 		else if (task == 3)
-			fins_from_stub(&fins_frame);
+			fins_from_stub(fins_frame);
 
-		if (task == 1 || task == 2 || task == 3)
-			arp_in(&fins_frame); //necessary to run the arp module
+		if (task == 1 || task == 2 || task == 3) {
+			//arp_in(&fins_frame); //necessary to run the arp module
+			test_to_arp(fins_frame);
+		}
+
+		//TODO wait on the outcoming FF and test to see if it's right
 	}
 
 	term_arp_intface(); //necessary to terminate the arp module
@@ -296,12 +337,19 @@ void arp_test_harness() {
 
 }
 
+#define MAX_Queue_size 100000
+
 int main(int argc, char *argv[]) {
 	uint64_t MACADDRESS = 9890190479;/**<MAC address of host; sent to the arp module*/
 	uint32_t IPADDRESS = 672121;/**<IP address of host; sent to the arp module*/
 
 	host_MAC_addrs = MACADDRESS;
 	host_IP_addrs = IPADDRESS;
+
+	ARP_to_Switch_Queue = init_queue("arp2switch", MAX_Queue_size);
+	Switch_to_ARP_Queue = init_queue("switch2arp", MAX_Queue_size);
+	sem_init(&ARP_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_ARP_Qsem, 0, 1);
 
 	gen_neighbor_list(argv[1]);
 

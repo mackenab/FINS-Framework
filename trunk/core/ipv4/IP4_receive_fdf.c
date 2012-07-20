@@ -28,11 +28,11 @@ void IP4_receive_fdf() {
 	}
 
 	if (pff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%d meta=%d", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->ctrlFrame.metaData);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%x meta=%x", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->ctrlFrame.metaData);
 		/** TODO:  Here goes code for control messages */
 
 	} else if (pff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%d meta=%d", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->dataFrame.metaData);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%x meta=%x", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->dataFrame.metaData);
 		PRINT_DEBUG("PDU Length: %d", pff->dataFrame.pduLength);
 		PRINT_DEBUG("Data direction: %d", pff->dataFrame.directionFlag);
 		PRINT_DEBUG("");

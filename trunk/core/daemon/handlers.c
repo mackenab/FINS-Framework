@@ -29,6 +29,8 @@ int init_fins_nl() {
 	int sockfd;
 	int ret_val;
 
+	sem_init(&nl_sem, 0, 1);
+
 	// Get a netlink socket descriptor
 	sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_FINS);
 	if (sockfd == -1) {
@@ -95,13 +97,16 @@ int send_wedge(int sockfd, u_char *buf, size_t len, int flags) {
 
 	// Send the message
 	PRINT_DEBUG("Sending message to kernel\n");
+	sem_wait(&nl_sem);
 	ret_val = sendmsg(sockfd, &msg, 0);
+	sem_post(&nl_sem);
+	free(nlh);
+
 	if (ret_val == -1) {
 		return -1;
+	} else {
+		return 0;
 	}
-
-	free(nlh);
-	return 0;
 }
 
 /**
@@ -421,8 +426,59 @@ int nack_write(int pipe_desc, unsigned long long uniqueSockID) {
 int ack_write(int pipe_desc, unsigned long long uniqueSockID) {
 	return (1);
 }
+int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
+	if (index < 0) {
+		return 0;
+	}
 
-struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_block_flag) {
+	if (non_blocking_flag) {
+		int val;
+		sem_getvalue(&daemonSockets[index].data_sem, &val);
+		//sem_trywait(daemonSockets[index].Qs);
+
+		if (val) {
+			sem_wait(&daemonSockets_sem);
+			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_DEBUG("Socket closed, canceling read block.");
+				sem_post(&daemonSockets_sem);
+				return 0;
+			}
+			sem_wait(&(daemonSockets[index].Qs));
+			*ff = read_queue(daemonSockets[index].dataQueue);
+			//ff = get_fake_frame();
+			if (*ff) {
+				daemonSockets[index].buf_data -= (*ff)->dataFrame.pduLength;
+				//print_finsFrame(ff);
+			}
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
+		}
+	} else {
+		sem_wait(&daemonSockets[index].data_sem);
+
+		sem_wait(&daemonSockets_sem);
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling read block.");
+			sem_post(&daemonSockets_sem);
+			return 0;
+		}
+
+		sem_wait(&(daemonSockets[index].Qs));
+		*ff = read_queue(daemonSockets[index].dataQueue);
+		//ff = get_fake_frame();
+
+		if (*ff) {
+			daemonSockets[index].buf_data -= (*ff)->dataFrame.pduLength;
+			//print_finsFrame(ff);
+		}
+		sem_post(&(daemonSockets[index].Qs));
+		sem_post(&daemonSockets_sem);
+	}
+
+	return 1;
+}
+
+struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag) {
 	struct finsFrame *ff = NULL;
 
 	if (index < 0) {
@@ -475,73 +531,52 @@ struct finsFrame *get_fdf(int index, unsigned long long uniqueSockID, int non_bl
 
 	return ff;
 }
-
-struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag) {
-	struct finsFrame *ff = NULL;
-
-	/**
-	 * It keeps looping as a bad method to implement the blocking feature
-	 * of recvfrom. In case it is not blocking then the while loop should
-	 * be replaced with only a single trial !
-	 *
-	 */
+int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
 	if (index < 0) {
-		return NULL;
+		return 0;
 	}
 
-	PRINT_DEBUG("");
-	if (non_block_flag) {
+	if (non_blocking_flag) {
+		int val = 0;
+		sem_getvalue(&daemonSockets[index].control_sem, &val);
+
+		if (val) {
+			sem_wait(&daemonSockets_sem);
+			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+				PRINT_DEBUG("Socket closed, canceling read block.");
+				sem_post(&daemonSockets_sem);
+				return 0;
+			}
+
+			sem_wait(&(daemonSockets[index].Qs));
+			*ff = read_queue(daemonSockets[index].controlQueue);
+			//ff = get_fake_frame();
+			//print_finsFrame(ff);
+			sem_post(&(daemonSockets[index].Qs));
+			sem_post(&daemonSockets_sem);
+		}
+	} else {
+		sem_wait(&daemonSockets[index].control_sem);
 
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 			PRINT_DEBUG("Socket closed, canceling read block.");
 			sem_post(&daemonSockets_sem);
-			return NULL;
+			return 0;
 		}
-		sem_wait(&(daemonSockets[index].Qs));
-		ff = read_queue(daemonSockets[index].dataQueue);
-		//ff = get_fake_frame();
 
-		if (ff) {
-			daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
-			//print_finsFrame(ff);
-		}
+		sem_wait(&(daemonSockets[index].Qs));
+		*ff = read_queue(daemonSockets[index].controlQueue);
+		//ff = get_fake_frame();
+		//print_finsFrame(ff);
 		sem_post(&(daemonSockets[index].Qs));
 		sem_post(&daemonSockets_sem);
-		return ff;
-	} else {
-		/**
-		 * WE Must FINS another way to emulate the blocking.
-		 * The best suggestion is to use a pipeline to push the data in
-		 * instead of the data queue
-		 */
-		while (1) {
-			sem_wait(&daemonSockets_sem);
-			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-				PRINT_DEBUG("Socket closed, canceling read block.");
-				sem_post(&daemonSockets_sem);
-				return NULL;
-			}
-
-			sem_wait(&(daemonSockets[index].Qs));
-			ff = read_queue(daemonSockets[index].dataQueue);
-			//ff = get_fake_frame();
-
-			if (ff) {
-				daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
-				sem_post(&(daemonSockets[index].Qs));
-				sem_post(&daemonSockets_sem);
-				//print_finsFrame(ff);
-				return ff;
-			} else {
-				sem_post(&(daemonSockets[index].Qs));
-				sem_post(&daemonSockets_sem);
-			}
-		}
 	}
+
+	return 1;
 }
 
-struct finsFrame *get_fcf(int index, unsigned long long uniqueSockID, int non_block_flag) {
+struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int non_block_flag) {
 	struct finsFrame *ff = NULL;
 
 	if (index < 0) {
@@ -1002,6 +1037,22 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 	PRINT_DEBUG("sendmsg_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
+	//#########################
+	u_char *temp = (u_char *) malloc(data_len + 1);
+	memcpy(temp, data, data_len);
+	temp[data_len] = '\0';
+	PRINT_DEBUG("data='%s'", temp);
+	free(temp);
+	//#########################
+	if (controlFlag) {
+		u_char *temp2 = (u_char *) malloc(msg_controlLength + 1);
+		memcpy(temp2, msg_control, msg_controlLength);
+		temp2[msg_controlLength] = '\0';
+		PRINT_DEBUG("msg_control='%s'", temp2);
+		free(temp2);
+	}
+	//#########################
+
 	/**
 	 * In case of connected sockets
 	 */
@@ -1016,6 +1067,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 			nack_send(uniqueSockID, sendmsg_call, 0);
 		}
+		free(addr);
 	} else {
 		/**
 		 * In case of NON-connected sockets, WE USE THE ADDRESS GIVEN BY the APPlication
@@ -1234,7 +1286,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int threads, unsigned ch
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 
-	PRINT_DEBUG("release_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
+	PRINT_DEBUG("poll_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
@@ -1546,15 +1598,15 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
-		if (strcmp(temp, "eth0") == 0) {
+		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			addr.sin_port = 0;
-		} else if (strcmp(temp, "eth1") == 0) {
+		} else if (strcmp((char *) temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			addr.sin_port = 0;
-		} else if (strcmp(temp, "lo") == 0) {
+		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(127, 0, 0, 1));
 			addr.sin_port = 0;
@@ -1670,15 +1722,15 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int threads, unsigned c
 		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
-		if (strcmp(temp, "eth0") == 0) {
+		if (strcmp((char *)temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 255));
 			addr.sin_port = 0;
-		} else if (strcmp(temp, "eth1") == 0) {
+		} else if (strcmp((char *)temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 255));
 			addr.sin_port = 0;
-		} else if (strcmp(temp, "lo") == 0) {
+		} else if (strcmp((char *)temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(0, 0, 0, 0));
 			addr.sin_port = 0;

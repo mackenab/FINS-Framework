@@ -52,7 +52,7 @@ void udp_get_FF() {
 	}
 
 	udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%d", udpStat.totalRecieved, (int)ff);
+	PRINT_DEBUG("UDP Total %d, ff=%x", udpStat.totalRecieved, (int)ff);
 	if (ff->dataOrCtrl == CONTROL) {
 		// send to something to deal with FCF
 		PRINT_DEBUG("UDP: CONTROL HANDLER !");
@@ -131,6 +131,13 @@ void udp_init() {
 	PRINT_DEBUG("UDP Terminating");
 }
 
-void udp_term() {
+void udp_shutdown() {
 	udp_running = 0;
+
+	//TODO expand this
 }
+
+void udp_free() {
+	//TODO free all module related mem
+}
+

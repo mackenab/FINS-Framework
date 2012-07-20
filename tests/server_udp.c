@@ -22,26 +22,12 @@ void termination_handler(int sig) {
 	exit(2);
 }
 
-void *poll_thread(void *local) {
-	/*
-	 int nfds = 1;
-	 struct pollfd fds[nfds];
-	 fds[0].fd = sock;
-	 fds[0].events = POLLIN | POLLPRI | POLLPRI | POLLRDNORM | POLLWRNORM;
-	 int time = -1;
-
-	 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLRDNORM=%x POLLWRNORM=%x", POLLIN, POLLPRI, POLLOUT, POLLRDNORM, POLLWRNORM);
-	 fflush(stdout);
-
-	 ret = poll(fds, nfds, time);
-	 printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
-	 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLRDNORM=%x POLLWRNORM=%x", (fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0,
-	 (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLWRNORM) > 0);
-	 fflush(stdout);
-	 */
-}
-
 int main(int argc, char *argv[]) {
+
+	printf(
+			"EACCES=%d EACCES=%d EPERM=%d EADDRINUSE=%d EAFNOSUPPORT=%d EAGAIN=%d EALREADY=%d EBADF=%d ECONNREFUSED=%d EFAULT=%d EINPROGRESS=%d EINTR=%d EISCONN=%d ENETUNREACH=%d ENOTSOCK=%d ETIMEDOUT=%d\n",
+			EACCES, EACCES, EPERM, EADDRINUSE, EAFNOSUPPORT, EAGAIN, EALREADY, EBADF, ECONNREFUSED, EFAULT, EINPROGRESS, EINTR, EISCONN, ENETUNREACH, ENOTSOCK,
+			ETIMEDOUT);
 
 	uint16_t port;
 
@@ -62,11 +48,13 @@ int main(int argc, char *argv[]) {
 		port = 45454;
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+		//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}
+
+	printf("Provided with sock=%d\n", sock);
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
@@ -95,27 +83,39 @@ int main(int argc, char *argv[]) {
 
 	i = 0;
 
-	int nfds = 1;
+	int nfds = 2;
 	struct pollfd fds[nfds];
-	fds[0].fd = sock;
+	fds[0].fd = -1;
 	fds[0].events = POLLIN | POLLPRI | POLLRDNORM;
+	fds[1].fd = sock;
+	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
 	int time = -1;
 
 	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ", POLLIN, POLLPRI,
 			POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
 	fflush(stdout);
 
+	struct timeval tv;
+
+	tv.tv_sec = 0; /* 30 Secs Timeout */
+	tv.tv_usec = 0; // Not init'ing this can cause strange errors
+
+	//ret = getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *) &tv, sizeof(struct timeval));
+	//printf("\n ret=%d tv.tv_sec=%d tv.tv_usec=%d", ret, tv.tv_sec, tv.tv_usec);
+	fflush(stdout);
+
 	while (1) {
 		ret = poll(fds, nfds, time);
-		if (ret) {
-			printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
-			printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
-					(fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0, (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLERR) > 0,
-					(fds[0].revents & POLLHUP) > 0, (fds[0].revents & POLLNVAL) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLRDBAND) > 0,
-					(fds[0].revents & POLLWRNORM) > 0, (fds[0].revents & POLLWRBAND) > 0);
-			fflush(stdout);
-
-			if (fds[0].revents & (POLLIN | POLLRDNORM)) {
+		if (ret || 1) {
+			/*
+			 printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
+			 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
+			 (fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0, (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLERR) > 0,
+			 (fds[0].revents & POLLHUP) > 0, (fds[0].revents & POLLNVAL) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLRDBAND) > 0,
+			 (fds[0].revents & POLLWRNORM) > 0, (fds[0].revents & POLLWRBAND) > 0);
+			 fflush(stdout);
+			 */
+			if ((fds[0].revents & (POLLIN | POLLRDNORM)) || 1) {
 				bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
 				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 				//bytes_read = recv(sock,recv_data,1024,0);
@@ -130,8 +130,9 @@ int main(int argc, char *argv[]) {
 					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
 						break;
 					}
-				} else if (errno != EWOULDBLOCK) {
-					printf("\n Error recv at the Server errno=%s\n", recv_data, strerror(errno));
+				} else if (errno != EWOULDBLOCK && errno != EAGAIN) {
+					printf("\n Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
+					perror("Error:");
 					fflush(stdout);
 					break;
 				}

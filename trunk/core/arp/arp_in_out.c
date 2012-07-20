@@ -26,7 +26,7 @@ void arp_in(struct finsFrame *fins_received) {
 
 	/**request or reply received from the network and as transmitted by the ethernet stub*/
 	if (fins_arp_in->dataOrCtrl == DATA && (fins_arp_in->destinationID.id == (unsigned char) ARPID)) {
-		PRINT_DEBUG("ARP Data, ff=%d", (int)fins_received);
+		PRINT_DEBUG("ARP Data, ff=%x", (int)fins_received);
 
 		if (fins_arp_in->dataFrame.pduLength < sizeof(struct arp_hdr)) {
 			PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", sizeof(struct arp_hdr), fins_arp_in->dataFrame.pduLength);
@@ -57,7 +57,7 @@ void arp_in(struct finsFrame *fins_received) {
 		}
 	} else if ((fins_arp_in->dataOrCtrl == CONTROL) && (fins_arp_in->ctrlFrame.opcode == WRITEREQUEST)
 			&& (fins_arp_in->destinationID.id == (unsigned char) ARPID)) {/**as a request received from the ethernet stub-- IP address is provided in this fins control frame*/
-		PRINT_DEBUG("ARP Control, ff=%d", (int)fins_received);
+		PRINT_DEBUG("ARP Control, ff=%x", (int)fins_received);
 
 		memcpy(fins_IP_address, fins_arp_in->ctrlFrame.paramterValue, PROTOCOLADDRSLEN);
 		target_IP_addrs = gen_IP_addrs(fins_IP_address[0], fins_IP_address[1], fins_IP_address[2], fins_IP_address[3]);
@@ -101,7 +101,7 @@ void arp_out(int response) {
  * @param fins_arp_out points to the fins frame which will be sent from the module
  * */
 void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
-	PRINT_DEBUG("arp_out_request: sought_IP_addrs=%u ff=%d", sought_IP_addrs, (int)fins_arp_out);
+	PRINT_DEBUG("arp_out_request: sought_IP_addrs=%u ff=%x", sought_IP_addrs, (int)fins_arp_out);
 
 	fins_arp_out->destinationID.id = ETHERSTUBID;
 	fins_arp_out->dataOrCtrl = CONTROL;
@@ -117,7 +117,7 @@ void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
  * */
 void arp_out_request(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
 
-	PRINT_DEBUG("arp_out_request: sought_IP_addrs=%u ff=%d", sought_IP_addrs, (int)fins_arp_out);
+	PRINT_DEBUG("arp_out_request: sought_IP_addrs=%u ff=%x", sought_IP_addrs, (int)fins_arp_out);
 
 	gen_requestARP(sought_IP_addrs, &arp_msg);
 	arp_msg_to_hdr(&arp_msg, packet);
@@ -131,7 +131,7 @@ void arp_out_request(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
  * @param fins_arp_out points to the fins frame which will be sent from the module
  * */
 void arp_out_reply(struct finsFrame *fins_arp_out) {
-	PRINT_DEBUG("arp_out_reply: ff=%d", (int)fins_arp_out);
+	PRINT_DEBUG("arp_out_reply: ff=%x", (int)fins_arp_out);
 
 	struct ARP_message arp_msg_reply;
 
@@ -145,11 +145,11 @@ void arp_out_reply(struct finsFrame *fins_arp_out) {
 /**@brief to be completed. A fins frame is written to the 'wire'*/
 void output_arp_queue(struct finsFrame *fins_arp_out) {
 	if (fins_arp_out->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("output_arp_queue: Entered: ff=%d meta=%d", (int)fins_arp_out, (int) fins_arp_out->ctrlFrame.metaData);
+		PRINT_DEBUG("output_arp_queue: Entered: ff=%x meta=%x", (int)fins_arp_out, (int) fins_arp_out->ctrlFrame.metaData);
 	} else if (fins_arp_out->dataOrCtrl == DATA) {
-		PRINT_DEBUG("output_arp_queue: Entered: ff=%d meta=%d", (int)fins_arp_out, (int) fins_arp_out->dataFrame.metaData);
+		PRINT_DEBUG("output_arp_queue: Entered: ff=%x meta=%x", (int)fins_arp_out, (int) fins_arp_out->dataFrame.metaData);
 	} else {
-		PRINT_DEBUG("output_arp_queue: Entered: ff=%d type=%d", (int)fins_arp_out, fins_arp_out->dataOrCtrl);
+		PRINT_DEBUG("output_arp_queue: Entered: ff=%x type=%d", (int)fins_arp_out, fins_arp_out->dataOrCtrl);
 	}
 
 	if (sem_wait(&ARP_to_Switch_Qsem)) {

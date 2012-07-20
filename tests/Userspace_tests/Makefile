@@ -62,5 +62,5 @@ pthread_stream_test:
 
 .PHONY: clean
 clean:
-	/bin/rm -rf $(BIN)/* core* *~
+	/bin/rm -rf $(BIN)/*_test core* *~
 

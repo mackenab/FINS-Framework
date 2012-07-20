@@ -95,49 +95,49 @@ void switch_init() {
 				switch (ff->destinationID.id) {
 
 				case ARPID:
-					PRINT_DEBUG("ARP Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("ARP Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_ARP_Qsem);
 					write_queue(ff, Switch_to_ARP_Queue);
 					sem_post(&Switch_to_ARP_Qsem);
 					break;
 				case RTMID:
-					PRINT_DEBUG("RTM Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("RTM Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_RTM_Qsem);
 					write_queue(ff, Switch_to_RTM_Queue);
 					sem_post(&Switch_to_RTM_Qsem);
 					break;
 				case DAEMONID:
-					PRINT_DEBUG("Daemon Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("Daemon Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_Daemon_Qsem);
 					write_queue(ff, Switch_to_Daemon_Queue);
 					sem_post(&Switch_to_Daemon_Qsem);
 					break;
 				case UDPID:
-					PRINT_DEBUG("UDP Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("UDP Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_UDP_Qsem);
 					write_queue(ff, Switch_to_UDP_Queue);
 					sem_post(&Switch_to_UDP_Qsem);
 					break;
 				case TCPID:
-					PRINT_DEBUG("TCP Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("TCP Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_TCP_Qsem);
 					write_queue(ff, Switch_to_TCP_Queue);
 					sem_post(&Switch_to_TCP_Qsem);
 					break;
 				case IPV4ID:
-					PRINT_DEBUG("IP Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("IP Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_IPv4_Qsem);
 					write_queue(ff, Switch_to_IPv4_Queue);
 					sem_post(&Switch_to_IPv4_Qsem);
 					break;
 				case ETHERSTUBID:
-					PRINT_DEBUG("EtherStub Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("EtherStub Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_EtherStub_Qsem);
 					write_queue(ff, Switch_to_EtherStub_Queue);
 					sem_post(&Switch_to_EtherStub_Qsem);
 					break;
 				case ICMPID:
-					PRINT_DEBUG("ICMP Queue +1, ff=%d", (int) ff);
+					PRINT_DEBUG("ICMP Queue +1, ff=%x", (int) ff);
 					sem_wait(&Switch_to_ICMP_Qsem);
 					write_queue(ff, Switch_to_ICMP_Queue);
 					sem_post(&Switch_to_ICMP_Qsem);

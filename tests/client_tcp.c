@@ -98,29 +98,52 @@ int main(int argc, char *argv[]) {
 	 }
 	 //*/
 
+	printf(
+			"EACCES=%d EPERM=%d EADDRINUSE=%d EAFNOSUPPORT=%d EAGAIN=%d EALREADY=%d EBADF=%d ECONNREFUSED=%d EFAULT=%d EINPROGRESS=%d EINTR=%d EISCONN=%d ENETUNREACH=%d ENOTSOCK=%d ETIMEDOUT=%d\n",
+			EACCES, EPERM, EADDRINUSE, EAFNOSUPPORT, EAGAIN, EALREADY, EBADF, ECONNREFUSED, EFAULT, EINPROGRESS, EINTR, EISCONN, ENETUNREACH, ENOTSOCK,
+			ETIMEDOUT);
+
 	printf("Connecting to server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
-	if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
-		perror("Connect");
-		printf("Failure");
-		exit(1);
+	while (1) {
+		if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
+			printf("\n failed connect: errno=%d errno='%s'", errno, strerror(errno));
+			if (errno == EINPROGRESS || errno == EALREADY) {
+			} else if (errno == EINPROGRESS) {
+				break;
+			} else {
+				exit(1);
+			}
+			sleep(1);
+			//exit(1);
+		} else {
+			break;
+		}
 	}
 
 	printf("\n Connection establisehed sock=%d to (%s/%d) netw=%u", sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
 			server_addr.sin_addr.s_addr);
 
 	int i = 0;
-	while (1) {
-		printf("(%d) Input msg (q or Q to quit):", i++);
-		gets(send_data);
-		printf("%s", send_data);
-		sleep(1);
-		numbytes = send(sock, send_data, strlen(send_data), 0);
-		//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
-		printf("\n %d", numbytes);
-		fflush(stdout);
+	while (i < 1000) {
+		if (1) {
+			printf("(%d) Input msg (q or Q to quit):", i++);
+			gets(send_data);
+			printf("%s", send_data);
+			numbytes = send(sock, send_data, strlen(send_data), 0);
+		} else {
+			sleep(1);
+			numbytes = send(sock, send_data, 1, 0);
+		}
+		if (numbytes > 0) {
+			//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+			printf("\n %d", numbytes);
+			fflush(stdout);
 
-		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
-			break;
+			if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
+				break;
+			}
+		} else {
+			printf("\n failed send: errno=%d errno='%s'", errno, strerror(errno));
 		}
 	}
 
