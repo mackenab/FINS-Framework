@@ -24,8 +24,11 @@
 
 struct daemon_tcp_thread_data {
 	int id;
-	int index;
 	unsigned long long uniqueSockID;
+	int index;
+	u_int call_id;
+	int call_index;
+
 	int data_len;
 	int flags;
 	unsigned long long uniqueSockID_new;
@@ -36,18 +39,23 @@ struct daemon_tcp_thread_data {
 int daemon_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat, int block_flag);
 int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag);
 
-void socket_tcp(int domain, int type, int protocol, unsigned long long uniqueSockID);
-void bind_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
-void listen_tcp(int index, unsigned long long uniqueSockID, int len);
-void connect_tcp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags);
+void socket_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
+void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
+void listen_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int backlog);
+void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr, int flags);
+
 void accept_tcp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void getname_tcp(int index, unsigned long long uniqueSockID, int peer);
-void ioctl_tcp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len);
+
+void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
+
 void write_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len);
 void send_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags);
 void sendto_tcp(int index, unsigned long long uniqueSockID, u_char *data, int data_len, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
 void recvfrom_tcp(int index, unsigned long long uniqueSockID, int data_len, int flags, int msg_flags); //TODO need symbol?
-void release_tcp(int index, unsigned long long uniqueSockID);
+
+void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+
 void poll_tcp(int index, unsigned long long uniqueSockID);
 void mmap_tcp(int index, unsigned long long uniqueSockID);
 

@@ -224,11 +224,11 @@ void *close_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
-	uint32_t send_ack = thread_data->flags;
+	//uint32_t send_ack = thread_data->flags;
 	free(thread_data);
 
-	struct tcp_segment *temp_seg;
-	struct tcp_node *temp_node;
+	//struct tcp_segment *temp_seg;
+	//struct tcp_node *temp_node;
 
 	PRINT_DEBUG("close_stub_thread: Entered: id=%d", id);
 
@@ -298,7 +298,7 @@ void *poll_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
-	uint32_t send_ack = thread_data->flags;
+	//uint32_t send_ack = thread_data->flags;
 	free(thread_data);
 
 	uint32_t mask = 0;
@@ -339,7 +339,7 @@ void *poll_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
-	uint32_t send_ack = thread_data->flags;
+	//uint32_t send_ack = thread_data->flags;
 	free(thread_data);
 
 	uint32_t mask = 0;
@@ -560,7 +560,7 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 
 					if (start) {
 						stub_thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-						thread_data->id = tcp_thread_count++;
+						stub_thread_data->id = tcp_thread_count++;
 						stub_thread_data->conn_stub = conn_stub;
 						stub_thread_data->flags = 0;
 
@@ -651,13 +651,13 @@ void *accept_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
-	uint32_t flags = thread_data->flags;
+	//uint32_t flags = thread_data->flags;
 	free(thread_data);
 
 	struct tcp_node *node;
 	struct tcp_segment *seg;
 	struct tcp_connection *conn;
-	int start;
+	//int start;
 	struct tcp_segment *temp_seg;
 
 	PRINT_DEBUG("accept_thread: Entered: id=%d", id);
@@ -818,10 +818,10 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
-	struct tcp_node *node;
-	struct tcp_segment *seg;
-	struct tcp_connection *conn;
-	struct tcp_segment *temp_seg;
+	//struct tcp_node *node;
+	//struct tcp_segment *seg;
+	//struct tcp_connection *conn;
+	//struct tcp_segment *temp_seg;
 
 	PRINT_DEBUG("tcp_exec_accept: Entered: host=%u/%u, flags=%x", host_ip, host_port, flags);
 	if (sem_wait(&conn_stub_list_sem)) {
@@ -846,7 +846,7 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 			}
 			pthread_detach(thread);
 		} else {
-			PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+			PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
 		}
 	} else {
 		PRINT_DEBUG("");
@@ -1019,10 +1019,10 @@ void *read_param_conn_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
-	socket_state state = thread_data->flags;
+	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("read_param_conn_thread: Entered: ff=%x", (int)ff);
+	PRINT_DEBUG("read_param_conn_thread: Entered: ff=%x id=%d", (int)ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1094,10 +1094,10 @@ void *read_param_conn_stub_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
-	socket_state state = thread_data->flags;
+	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("read_param_conn_stub_thread: Entered: ff=%x", (int)ff);
+	PRINT_DEBUG("read_param_conn_stub_thread: Entered: ff=%x id=%d", (int)ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1147,7 +1147,7 @@ void *read_param_conn_stub_thread(void *local) {
 			value = 0;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
-			/*//fill in with switch of opts? or have them separate?
+			//fill in with switch of opts? or have them separate?
 			 /*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 			if (sem_wait(&conn_stub->sem)) {
 				PRINT_ERROR("conn_stub->sem wait prob");
@@ -1178,7 +1178,7 @@ void *read_param_conn_stub_thread(void *local) {
 }
 
 void tcp_read_param(struct finsFrame *ff) {
-	int ret = 0;
+	//int ret = 0;
 
 	socket_state state;
 	uint32_t host_ip;
@@ -1269,10 +1269,10 @@ void *set_param_conn_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
-	socket_state state = thread_data->flags;
+	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("set_param_conn_thread: Entered: ff=%x", (int)ff);
+	PRINT_DEBUG("set_param_conn_thread: Entered: ff=%x id=%d", (int)ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1356,10 +1356,10 @@ void *set_param_conn_stub_thread(void *local) {
 	int id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
-	socket_state state = thread_data->flags;
+	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("set_param_conn_stub_thread: Entered: ff=%x", (int)ff);
+	PRINT_DEBUG("set_param_conn_stub_thread: Entered: ff=%x id=%d", (int)ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1440,7 +1440,7 @@ void *set_param_conn_stub_thread(void *local) {
 }
 
 void tcp_set_param(struct finsFrame *ff) {
-	int ret = 0;
+	//int ret = 0;
 
 	socket_state state = 0;
 	uint32_t host_ip = 0;

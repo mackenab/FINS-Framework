@@ -33,10 +33,11 @@ int main(int argc, char *argv[]) {
 
 	(void) signal(SIGINT, termination_handler);
 	int sock;
-	int addr_len = sizeof(struct sockaddr);
+	socklen_t addr_len = sizeof(struct sockaddr);
 	int bytes_read;
 	char recv_data[4000];
 	int ret;
+	pid_t pID = 0;
 
 	struct sockaddr_in server_addr;
 	struct sockaddr_in *client_addr;
@@ -68,7 +69,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	bzero(&(server_addr.sin_zero), 8);
 
-	printf("Binding to server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	printf("Binding to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
 		perror("Bind");
 		printf("Failure");
@@ -104,6 +105,25 @@ int main(int argc, char *argv[]) {
 	//printf("\n ret=%d tv.tv_sec=%d tv.tv_usec=%d", ret, tv.tv_sec, tv.tv_usec);
 	fflush(stdout);
 
+	int j = 0;
+	while (++j <= 10) {
+		pID = fork();
+		if (pID == 0) { // child -- Capture process
+			continue;
+		} else if (pID < 0) { // failed to fork
+			printf("Failed to Fork \n");
+			fflush(stdout);
+			exit(1);
+		} else { // parent
+			port += j - 1;
+			break;
+		}
+	}
+
+	if (pID == 0) {
+		//while (1);
+	}
+
 	while (1) {
 		ret = poll(fds, nfds, time);
 		if (ret || 1) {
@@ -120,12 +140,12 @@ int main(int argc, char *argv[]) {
 				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 				//bytes_read = recv(sock,recv_data,1024,0);
 				if (bytes_read > 0) {
-					printf("\n (%d) frame number", ++i);
 					recv_data[bytes_read] = '\0';
-					printf("\n(%s:%d, n=%u) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port), client_addr->sin_addr.s_addr);
-					//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
-					printf(" (%s) to the Server\n", recv_data);
+					printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++i, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),
+							recv_data);
 					fflush(stdout);
+
+					//bytes_read = sendto(sock, recv_data, 1, 0, (struct sockaddr *) client_addr, sizeof(struct sockaddr_in));
 
 					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
 						break;

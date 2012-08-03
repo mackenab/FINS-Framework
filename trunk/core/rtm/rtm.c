@@ -94,7 +94,7 @@ void rtm_init() {
 	int numBytes;
 	//int val_len;
 	int temp_serial_cntr = 0;
-	unsigned char* serialized_FCF;
+	unsigned char* serialized_FCF = NULL;
 	int length_serialized_FCF;
 
 	//create a finsframe to be sent tover the queue

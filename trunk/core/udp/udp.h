@@ -11,6 +11,8 @@
 #include <finstypes.h>
 #include <metadata.h>
 #include <finsdebug.h>
+#include <queueModule.h>
+#include <netinet/in.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
@@ -93,7 +95,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 void udp_get_FF();
 void sendToSwitch(struct finsFrame *ff);
-static inline unsigned short from64to16(unsigned long x);
+//static inline unsigned short from64to16(unsigned long x);
 
 unsigned short UDP_checkSeparate(uint32_t src, uint32_t dest, unsigned short len, unsigned short protocol, uint16_t wsum);
 

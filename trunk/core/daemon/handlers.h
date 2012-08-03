@@ -47,7 +47,7 @@
 #include "icmpHandling.h"
 
 /** FINS Sockets database related defined constants */
-#define MAX_sockets 100
+#define MAX_SOCKETS 100
 #define MaxChildrenNumSharingSocket 100
 #define MAX_parallel_threads 10
 #define MAX_Queue_size 100000
@@ -86,7 +86,7 @@
 #define mmap_call 24
 #define sendpage_call 25
 
-#define MAX_calls 26
+#define MAX_CALL_TYPES 26
 
 //fins netlink stuff
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
@@ -179,7 +179,30 @@ uint32_t my_host_ip_addr; // = IP4_ADR_P2H(192,168,1,20);
 uint32_t loopback_ip_addr; // = IP4_ADR_P2H(127,0,0,1);
 uint32_t any_ip_addr; // = IP4_ADR_P2H(0,0,0,0);
 
-struct finssocket {
+struct nl_wedge_to_daemon {
+	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index, prob uID
+	int index;
+
+	u_int call_type;
+	int call_threads;
+
+	u_int call_id; //TODO when ironed out remove id or index
+	int call_index;
+};
+
+struct nl_daemon_to_wedge {
+	u_int call_type;
+	u_int call_id; //TODO when ironed out remove id or index
+	int call_index;
+
+	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index
+	int index;
+
+	u_int ret;
+	u_int msg;
+};
+
+struct fins_daemon_socket {
 	/** variables tells a connect call has been called over this socket or not in order to
 	 * check the address of the senders of the received datagrams against the address which this
 	 * socket is connected to it before approving or dropping any datagram
@@ -245,7 +268,9 @@ struct finssocket {
 int init_fins_nl();
 int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
 
+int nack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
 int nack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
+int ack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
 int ack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
 
 void init_daemonSockets();
@@ -254,12 +279,12 @@ int check_daemonSocket(unsigned long long uniqueSockID);
 int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol);
 int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, int protocol);
 int find_daemonSocket(unsigned long long uniqueSockID);
+int insert_daemonSocket_new(unsigned long long uniqueSockID, int index, int type, int protocol);
 int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol);
+int remove_daemonSocket_new(unsigned long long uniqueSockID, int index);
 int remove_daemonSocket(unsigned long long uniqueSockID);
-int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 
-int nack_write(int pipe_desc, unsigned long long uniqueSockID);
-int ack_write(int pipe_desc, unsigned long long uniqueSockID);
+int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 
 struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag); //deprecated
 struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int non_block_flag); //deprecated //blocking doesn't matter
@@ -268,18 +293,23 @@ int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, i
 int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
 
 /** calls handling functions */
-void socket_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void bind_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void listen_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void connect_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void socket_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void bind_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void listen_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void connect_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+
 void accept_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void ioctl_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+
+void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+
 void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void release_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+
+void release_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+
 void poll_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 void mmap_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
 

@@ -32,6 +32,7 @@ int main(int argc, char *argv[]) {
 	char send_data[1024];
 	int port;
 	int client_port;
+	pid_t pID = 0;
 
 	memset(send_data, 89, 1000);
 	send_data[1000] = '\0';
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,13);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,11);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -103,15 +104,32 @@ int main(int argc, char *argv[]) {
 			EACCES, EPERM, EADDRINUSE, EAFNOSUPPORT, EAGAIN, EALREADY, EBADF, ECONNREFUSED, EFAULT, EINPROGRESS, EINTR, EISCONN, ENETUNREACH, ENOTSOCK,
 			ETIMEDOUT);
 
-	printf("Connecting to server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	//pID = fork();
+	if (pID == 0) { // child -- Capture process
+		//server_addr.sin_port = htons(port + j - 1);
+		printf("\n child pID=%d", pID);
+		fflush(stdout);
+	} else if (pID < 0) { // failed to fork
+		printf("Failed to Fork \n");
+		fflush(stdout);
+		exit(1);
+	} else { //parent
+		server_addr.sin_port = htons(port + 1);
+		printf("\n parent pID=%d", pID);
+		fflush(stdout);
+	}
+
+	printf("\n Connecting to server: pID=%d addr=%s:%d, netw=%u", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
+			server_addr.sin_addr.s_addr);
 	while (1) {
 		if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
-			printf("\n failed connect: errno=%d errno='%s'", errno, strerror(errno));
+			printf("\n failed connect: pID=%d errno=%d errno='%s'", pID, errno, strerror(errno));
 			if (errno == EINPROGRESS || errno == EALREADY) {
-			} else if (errno == EINPROGRESS) {
+			} else if (errno == EISCONN) {
 				break;
 			} else {
-				exit(1);
+				//exit(1);
+				sleep(5);
 			}
 			sleep(1);
 			//exit(1);
@@ -120,8 +138,13 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	printf("\n Connection establisehed sock=%d to (%s/%d) netw=%u", sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
+	printf("\n Connection establisehed pID=%d sock=%d to (%s/%d) netw=%u", pID, sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
 			server_addr.sin_addr.s_addr);
+	fflush(stdout);
+
+	return;
+
+	//while (1);
 
 	int i = 0;
 	while (i < 1000) {

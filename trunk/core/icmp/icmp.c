@@ -428,33 +428,33 @@ void ICMP_control_handler(struct finsFrame *ff)
 {
 	uint8_t Type, Code;
 	//Figure out what message we've received and create the appropriate message accordingly.
-	if(strncmp(ff->ctrlFrame.name, "DU", 2) == 0)			//Destination unreachable
+	if(strncmp((char *)ff->ctrlFrame.name, "DU", 2) == 0)			//Destination unreachable
 	{
 		ff->ctrlFrame.name = &(ff->ctrlFrame.name[2]);	//Pass along only the "protounreach" or whatever
 		PRINT_DEBUG("");
 		Type = TYPE_DESTUNREACH;	//Set the error type
 		//And find the right error code
-		if(strcmp(ff->ctrlFrame.name, "netunreach") == 0)
+		if(strcmp((char *)ff->ctrlFrame.name, "netunreach") == 0)
 		{
 			Code = CODE_NETUNREACH;
 		}
-		else if(strcmp(ff->ctrlFrame.name, "hostunreach") == 0)
+		else if(strcmp((char *)ff->ctrlFrame.name, "hostunreach") == 0)
 		{
 			Code = CODE_HOSTUNREACH;
 		}
-		else if(strcmp(ff->ctrlFrame.name, "protounreach") == 0)
+		else if(strcmp((char *)ff->ctrlFrame.name, "protounreach") == 0)
 		{
 			Code = CODE_PROTOUNREACH;
 		}
-		else if(strcmp(ff->ctrlFrame.name, "portunreach") == 0)
+		else if(strcmp((char *)ff->ctrlFrame.name, "portunreach") == 0)
 		{
 			Code = CODE_PORTUNREACH;
 		}
-		else if(strcmp(ff->ctrlFrame.name, "fragneeded") == 0)
+		else if(strcmp((char *)ff->ctrlFrame.name, "fragneeded") == 0)
 		{
 			Code = CODE_FRAGNEEDED;
 		}
-		else if(strcmp(ff->ctrlFrame.name, "srcroute") == 0)
+		else if(strcmp((char *)ff->ctrlFrame.name, "srcroute") == 0)
 		{
 			Code = CODE_SRCROUTEFAIL;
 		}
@@ -464,17 +464,17 @@ void ICMP_control_handler(struct finsFrame *ff)
 			return;
 		}
 	}
-	else if(strncmp(ff->ctrlFrame.name, "TTL", 3) == 0)		//Time to live exceeded
+	else if(strncmp((char *)ff->ctrlFrame.name, "TTL", 3) == 0)		//Time to live exceeded
 	{
 		ff->ctrlFrame.name = &(ff->ctrlFrame.name[3]);	//Pass along only the "exceeded" or "fragtime"
 		PRINT_DEBUG("");
 		Type = TYPE_TTLEXCEED;	//Set the error type
 		//And find the right error code
-		if(strcmp(ff->ctrlFrame.name, "exceeded") == 0)
+		if(strcmp((char *)ff->ctrlFrame.name, "exceeded") == 0)
 		{
 			Code = CODE_TTLEXCEEDED;
 		}
-		else if(strcmp(ff->ctrlFrame.name, "fragtime") == 0)
+		else if(strcmp((char *)ff->ctrlFrame.name, "fragtime") == 0)
 		{
 			Code = CODE_DEFRAGTIMEEXCEEDED;
 		}
@@ -553,7 +553,7 @@ void ICMP_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code)
 void ICMP_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code)
 {
 	struct finsFrame* ffout = (struct finsFrame* )(malloc(sizeof(struct finsFrame)));
-	int checksum = 0;
+	//int checksum = 0;
 	unsigned char* cName = NULL;
 	unsigned char* cData = NULL;
 	int iLen = 0;
@@ -570,32 +570,32 @@ void ICMP_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code)
 		if(Code == CODE_NETUNREACH)
 		{
 			cName = (unsigned char*) malloc(strlen("DUnetunreach") + 1);
-			strcpy(cName, "DUnetunreach");
+			strcpy((char *)cName, "DUnetunreach");
 		}
 		else if(Code == CODE_HOSTUNREACH)
 		{
 			cName = (unsigned char*) malloc(strlen("DUhostunreach") + 1);
-			strcpy(cName, "DUhostunreach");
+			strcpy((char *)cName, "DUhostunreach");
 		}
 		else if(Code == CODE_PROTOUNREACH)
 		{
 			cName = (unsigned char*) malloc(strlen("DUprotounreach") + 1);
-			strcpy(cName, "DUprotounreach");
+			strcpy((char *)cName, "DUprotounreach");
 		}
 		else if(Code == CODE_PORTUNREACH)
 		{
 			cName = (unsigned char*) malloc(strlen("DUportunreach") + 1);
-			strcpy(cName, "DUportunreach");
+			strcpy((char *)cName, "DUportunreach");
 		}
 		else if(Code == CODE_FRAGNEEDED)
 		{
 			cName = (unsigned char*) malloc(strlen("DUfragneeded") + 1);
-			strcpy(cName, "DUfragneeded");
+			strcpy((char *)cName, "DUfragneeded");
 		}
 		else if(Code == CODE_SRCROUTEFAIL)
 		{
 			cName = (unsigned char*) malloc(strlen("DUsrcroute") + 1);
-			strcpy(cName, "DUsrcroute");
+			strcpy((char *)cName, "DUsrcroute");
 		}
 		else
 		{
@@ -608,12 +608,12 @@ void ICMP_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code)
 		if(Code == CODE_TTLEXCEEDED)
 		{
 			cName = (unsigned char*) malloc(strlen("TTLexceeded") + 1);
-			strcpy(cName, "TTLexceeded");
+			strcpy((char *)cName, "TTLexceeded");
 		}
 		else if(Code == CODE_DEFRAGTIMEEXCEEDED)
 		{
 			cName = (unsigned char*) malloc(strlen("TTLfragtime") + 1);
-			strcpy(cName, "TTLfragtime");
+			strcpy((char *)cName, "TTLfragtime");
 		}
 		else
 		{
@@ -678,7 +678,7 @@ void IMCP_create_unreach(struct finsFrame* ff)
 	ffout->destinationID.next = NULL;	//TODO: Still no idea what this does
 	ffout->dataFrame.directionFlag = DOWN;	//Out
 	ffout->dataFrame.pduLength = totallen;	//Make the total length correct
-	ffout->dataFrame.pdu = (char *)malloc(totallen);	//Allocate memory for the data we'll be sticking in
+	ffout->dataFrame.pdu = (u_char *)malloc(totallen);	//Allocate memory for the data we'll be sticking in
 	metadata_create(ffout->dataFrame.metaData);	//TODO: Right?
 
 	//I treat all the ICMP stuff as raw data, rather than encapsulating it in structs, due to working with such structs earlier this summer

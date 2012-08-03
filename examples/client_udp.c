@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
 	int numbytes;
-	struct hostent *host;
+	//struct hostent *host;
 	char send_data[1024];
 	int port;
 	int client_port;
@@ -100,5 +100,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	return 0;
 }
 

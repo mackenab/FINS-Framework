@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 	int recv_buf_size = 4000;
 	char recv_data[4000];
 	int ret;
-	pid_t pID;
+	pid_t pID = 0;
 
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
@@ -69,6 +69,25 @@ int main(int argc, char *argv[]) {
 		port = atoi(argv[1]);
 	else
 		port = 44444;
+
+	int j = 0;
+	while (++j <= 10) {
+		//pID = fork();
+		if (pID == 0) { // child -- Capture process
+			continue;
+		} else if (pID < 0) { // failed to fork
+			printf("Failed to Fork \n");
+			fflush(stdout);
+			exit(1);
+		} else { // parent
+			port += j - 1;
+			break;
+		}
+	}
+
+	if (pID == 0) {
+		//while (1);
+	}
 
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	//if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
@@ -101,14 +120,26 @@ int main(int argc, char *argv[]) {
 //	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
 	//bzero(&(server_addr.sin_zero), 8); //TODO is for what?
 
-	printf("Binding to server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	printf("Binding to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
 		perror("Bind");
 		printf("Failure");
 		exit(1);
 	}
 
-	if (listen(sock, 10) < 0) {
+	//pID = fork();
+	if (pID == 0) { // child -- Capture process
+	} else if (pID < 0) { // failed to fork
+		printf("Failed to Fork \n");
+		fflush(stdout);
+		exit(1);
+	} else { // parent
+	}
+
+	int backlog = (pID ? 1 : 0) + 10;
+
+	printf("Listening to server: pID=%d backlog=%d\n", pID, backlog);
+	if (listen(sock, backlog) < 0) {
 		perror("Listen");
 		printf("Failure");
 		exit(1);
@@ -116,17 +147,11 @@ int main(int argc, char *argv[]) {
 
 	//addr_len = sizeof(struct sockaddr);
 
-	printf("\n TCP Server waiting for client on port %d", ntohs(server_addr.sin_port));
+	gets(recv_data);
+
+	printf("\n TCP Server waiting for client: pID=%d port %d", pID, ntohs(server_addr.sin_port));
 	fflush(stdout);
 
-	//pID = fork();
-	if (pID < 0) { // failed to fork
-		printf("Failed to Fork \n");
-		fflush(stdout);
-		exit(1);
-	}
-
-	//while (1) {
 	while (1) {
 		sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len);
 		if (sock_client > 0) {
@@ -137,24 +162,11 @@ int main(int argc, char *argv[]) {
 			sleep(1);
 		}
 	}
-	/*
-	 pID = fork();
-	 if (pID == 0) { // child -- Capture process
-	 break;
-	 } else if (pID < 0) { // failed to fork
-	 printf("Failed to Fork \n");
-	 fflush(stdout);
-	 exit(1);
-	 } else { // parent
-	 continue;
-	 }
-	 }*/
+	//*/
 
-	printf("\n Connection establisehed sock_client=%d to (%s/%d) netw=%u", sock_client, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port),
-			client_addr.sin_addr.s_addr);
+	printf("\n Connection establisehed pID=%d sock_client=%d to (%s/%d) netw=%u", pID, sock_client, inet_ntoa(client_addr.sin_addr),
+			ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	fflush(stdout);
-
-	i = 0;
 
 	int nfds = 1;
 	struct pollfd fds[nfds];
@@ -167,6 +179,21 @@ int main(int argc, char *argv[]) {
 	 POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
 	 fflush(stdout);
 	 */
+
+	//pID = fork();
+	if (pID == 0) { // child -- Capture process
+		printf("\n child pID=%d", pID);
+		fflush(stdout);
+	} else if (pID < 0) { // failed to fork
+		printf("Failed to Fork \n");
+		fflush(stdout);
+		exit(1);
+	} else { //parent
+		printf("\n parent pID=%d", pID);
+		fflush(stdout);
+	}
+
+	i = 0;
 	while (1) {
 		ret = poll(fds, nfds, time);
 		if (ret || 1) {
@@ -179,26 +206,30 @@ int main(int argc, char *argv[]) {
 			 fflush(stdout);
 			 */
 			if ((fds[0].revents & (POLLIN | POLLRDNORM)) || 1) {
-				bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
+				if (pID) {
+					bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
+				} else {
+					sleep(2);
+					bytes_read = recv(sock_client, recv_data, recv_buf_size, MSG_DONTWAIT);
+				}
 				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 				//bytes_read = recv(sock,recv_data,1024,0);
 				if (bytes_read > 0) {
-					printf("\n (%d) frame number", ++i);
 					recv_data[bytes_read] = '\0';
 					//printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 					//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
-					printf("\n");
-					printf(" (%u) said:'%s'\n", ntohs(client_addr.sin_port), recv_data);
+					printf("\n frame=%d, pID=%d, client_port=%u: said='%s'\n", ++i, pID, ntohs(client_addr.sin_port), recv_data);
 					fflush(stdout);
 
 					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
 						break;
 					}
-				} else if (errno != EWOULDBLOCK && errno != EAGAIN) {
-					printf("\n Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
+				} else /*if (errno != EWOULDBLOCK && errno != EAGAIN)*/{
+					printf("\n Error recv at the Server: pID=%d ret=%d errno='%s' (%d)\n", pID, bytes_read, strerror(errno), errno);
 					perror("Error:");
 					fflush(stdout);
-					break;
+					if (errno != EWOULDBLOCK && errno != EAGAIN)
+						break;
 				}
 			}
 		}

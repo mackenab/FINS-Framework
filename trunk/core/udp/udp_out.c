@@ -27,7 +27,7 @@ extern struct udp_statistics udpStat;
 void udp_out(struct finsFrame* ff) {
 
 	struct finsFrame* newFF;
-	struct udp_metadata_parsed parsed_meta;
+	//struct udp_metadata_parsed parsed_meta;
 
 	//struct udp_packet packet_host;
 	struct udp_packet *packet_netw;

@@ -5,7 +5,6 @@
  */
 
 //#include <arpa/inet.h>
-#include <queueModule.h>
 #include "tcp.h"
 
 int tcp_running;
@@ -1530,15 +1529,15 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ip_hdr.tcp_len = htons((uint16_t) ff->dataFrame.pduLength);
 
 	pt = (uint8_t *) &ip_hdr;
-	for (i = 0, pt--; i < IP_HEADER_BYTES; i += 2) {
+	for (i = 0; i < IP_HEADER_BYTES; i += 2, pt += 2) {
 		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(pt+1), *(pt+1), i+1, *(pt+2), *(pt+2));
-		sum += (*++pt << 8) + *++pt;
+		sum += (*pt << 8) + *(pt + 1);
 	}
 
 	pt = (uint8_t *) ff->dataFrame.pdu;
-	for (i = 1, pt--; i < ff->dataFrame.pduLength; i += 2) {
+	for (i = 1; i < ff->dataFrame.pduLength; i += 2, pt += 2) {
 		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(pt+1), *(pt+1), i+1, *(pt+2), *(pt+2));
-		sum += (*++pt << 8) + *++pt;
+		sum += (*pt << 8) + *(pt + 1);
 	}
 	if (ff->dataFrame.pduLength & 0x1) {
 		//PRINT_DEBUG("%u=%2x (%u), uneven", ff->dataFrame.pduLength-1, *(pt+1), *(pt+1));
@@ -1688,8 +1687,8 @@ void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data
 void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 	PRINT_DEBUG("seg_add_options: Entered: conn=%x, seg=%x", (int)conn, (int)seg);
 
-	uint32_t i;
-	uint32_t len;
+	//uint32_t i;
+	//uint32_t len;
 	uint8_t *pt;
 	struct tcp_node *node;
 	uint32_t left;
@@ -2002,8 +2001,8 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	pkt.urg_pointer = htons(seg->urg_pointer);
 
 	uint8_t *pt = (uint8_t *) &pkt;
-	for (i = 0, pt--; i < IP_HEADER_BYTES + MIN_TCP_HEADER_BYTES; i += 2) {
-		sum += (*++pt << 8) + *++pt;
+	for (i = 0; i < IP_HEADER_BYTES + MIN_TCP_HEADER_BYTES; i += 2, pt += 2) {
+		sum += (*pt << 8) + *(pt + 1);
 	}
 
 	/*
@@ -2026,14 +2025,14 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 
 	//options, opt_len always has to be a factor of 2
 	pt = (uint8_t *) seg->options;
-	for (i = 0, pt--; i < seg->opt_len; i += 2) {
-		sum += (*++pt << 8) + *++pt;
+	for (i = 0; i < seg->opt_len; i += 2, pt += 2) {
+		sum += (*pt << 8) + *(pt + 1);
 	}
 
 	//data
 	pt = (uint8_t *) seg->data;
-	for (i = 1, pt--; i < seg->data_len; i += 2) {
-		sum += (*++pt << 8) + *++pt;
+	for (i = 1; i < seg->data_len; i += 2, pt += 2) {
+		sum += (*pt << 8) + *(pt + 1);
 	}
 
 	if (seg->data_len & 0x1) {
@@ -2250,8 +2249,8 @@ int metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip,
 }
 
 void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
-	uint32_t host_port_buf;
-	uint32_t rem_port_buf;
+	//uint32_t host_port_buf;
+	//uint32_t rem_port_buf;
 
 	metadata_writeToElement(params, "state", state, META_TYPE_INT);
 

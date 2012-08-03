@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 		
    	 (void) signal(SIGINT, termination_handler);
         int sock;
-        int addr_len = sizeof (struct sockaddr);
+        socklen_t addr_len = sizeof (struct sockaddr);
 	int bytes_read;
         char recv_data[4000];
 

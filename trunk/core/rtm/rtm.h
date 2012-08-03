@@ -6,8 +6,8 @@
  */
 
 
-#ifndef TCP_H_
-#define TCP_H_
+#ifndef RTM_H_
+#define RTM_H_
 
 #include <stdio.h>
 #include <string.h>
@@ -27,7 +27,6 @@ void rtm_in(struct finsFrame *ff);
 
 void rtm_get_FF();
 
-
 void rtm_init();
 
-#endif /* TCP_H_ */
+#endif /* RTM_H_ */

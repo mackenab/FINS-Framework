@@ -17,7 +17,9 @@
 #include <math.h>
 #include <time.h>
 #include <netinet/in.h>
-
+#include <unistd.h>
+#include <pthread.h>
+#include <queueModule.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.
@@ -131,11 +133,21 @@ void conn_stub_free(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 typedef enum {
-	TCP_CLOSED = 0, TCP_SYN_SENT, TCP_LISTEN, TCP_SYN_RECV, TCP_ESTABLISHED, TCP_FIN_WAIT_1, TCP_FIN_WAIT_2, TCP_CLOSING, TCP_TIME_WAIT, TCP_CLOSE_WAIT, TCP_LAST_ACK
+	TCP_CLOSED = 0,
+	TCP_SYN_SENT,
+	TCP_LISTEN,
+	TCP_SYN_RECV,
+	TCP_ESTABLISHED,
+	TCP_FIN_WAIT_1,
+	TCP_FIN_WAIT_2,
+	TCP_CLOSING,
+	TCP_TIME_WAIT,
+	TCP_CLOSE_WAIT,
+	TCP_LAST_ACK
 } tcp_state;
 
 typedef enum {
-	RENO_INITIAL = 0, RENO_SLOWSTART, RENO_AVOIDANCE, RENO_RECOVERY
+	RENO_SLOWSTART = 0, RENO_AVOIDANCE, RENO_RECOVERY
 } reno_state;
 
 struct ipv4_header {
@@ -410,6 +422,7 @@ void seg_free(struct tcp_segment *seg);
 void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn);
 
 int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
+int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
 struct tcp_thread_data {
 	int id;
@@ -437,8 +450,8 @@ void tcp_shutdown();
 void tcp_free();
 void tcp_get_FF();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
-int tcp_fcf_to_jinni(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
-int tcp_fdf_to_jinni(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
+int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 
 #define EXEC_TCP_CONNECT 0
 #define EXEC_TCP_LISTEN 1

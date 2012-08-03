@@ -63,9 +63,9 @@ TARGET_PLATFORM = "Linux x86"
 
 CC = gcc
 LD = gcc
-CCOPTS = -g -O0 #flags for valgrind
+CCOPTS = -g -O0 -Wall #flags for valgrind
 INCLS =
-LDOPTS = -g -O0 #flags for valgrind
+LDOPTS = -g -O0 -Wall #flags for valgrind
 LIBPATHS =
 LIBS = -lpthread -lconfig -lpcap -lc -ldl -lm
 endif

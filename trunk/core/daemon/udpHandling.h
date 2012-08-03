@@ -16,18 +16,23 @@ int daemon_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t ds
 int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag,
 		int multi_flag);
 
-void socket_udp(int domain, int type, int protocol, unsigned long long uniqueSockID);
-void bind_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr);
-void listen_udp(int index, unsigned long long uniqueSockID, int backlog);
-void connect_udp(int index, unsigned long long uniqueSockID, struct sockaddr_in *addr, int flags);
+void socket_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
+void bind_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
+void listen_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int backlog);
+void connect_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr, int flags);
+
 void accept_udp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
 void getname_udp(int index, unsigned long long uniqueSockID, int peer);
-void ioctl_udp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len);
+
+void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
+
 void write_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen);
 void send_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags);
 void sendto_udp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *addr, socklen_t addrlen);
 void recvfrom_udp(int index, unsigned long long uniqueSockID, int datalen, int flags, int msgFlags);
-void release_udp(int index, unsigned long long uniqueSockID);
+
+void release_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+
 void poll_udp(int index, unsigned long long uniqueSockID);
 void mmap_udp(int index, unsigned long long uniqueSockID);
 

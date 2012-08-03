@@ -63,7 +63,7 @@ struct checksum_udp_hdr {
 unsigned short UDP_checksum(struct udp_packet* pcket_netw, uint32_t src_ip_netw, uint32_t dst_ip_netw) {
 
 	int i;
-	uint8_t *ptr;
+	uint8_t *pt;
 	uint32_t sum = 0;
 
 	//packet is in network format
@@ -82,24 +82,24 @@ unsigned short UDP_checksum(struct udp_packet* pcket_netw, uint32_t src_ip_netw,
 	hdr.protocol = UDP_PROTOCOL;
 	hdr.udp_len = pcket_netw->u_len;
 
-	ptr = (uint8_t *) &hdr;
-	for (i = 0, ptr--; i < 12; i += 2) {
+	pt = (uint8_t *) &hdr;
+	for (i = 0; i < 12; i += 2, pt += 2) {
 		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(ptr+1), *(ptr+1), i+1, *(ptr+2), *(ptr+2));
-		sum += (*++ptr << 8) + *++ptr;
+		sum += (*pt << 8) + *(pt + 1);
 	}
 
 	uint16_t len = ntohs(pcket_netw->u_len);
 	PRINT_DEBUG("len=%d", len);
 
-	ptr = (uint8_t *) pcket_netw;
+	pt = (uint8_t *) pcket_netw;
 	if (len & 0x1) {
 		//PRINT_DEBUG("uneven: %u=%2x (%u), %2x (%u)", len-1, ptr[len-1], ptr[len-1], 0, 0);
-		sum += ptr[--len] << 8;
+		sum += pt[--len] << 8;
 	}
 
-	for (i = 0, ptr--; i < len; i += 2) {
+	for (i = 0; i < len; i += 2, pt += 2) {
 		//PRINT_DEBUG("%u=%2x (%u), %u=%2x (%u)", i, *(ptr+1), *(ptr+1), i+1, *(ptr+2), *(ptr+2));
-		sum += (*++ptr << 8) + *++ptr;
+		sum += (*pt << 8) + *(pt + 1);
 		//if (sum >> 16) {sum = ++sum & 0xFFFF;} //alternative to while loop
 	}
 

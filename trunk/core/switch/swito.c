@@ -70,11 +70,6 @@ void switch_init() {
 
 	int i;
 	struct finsFrame *ff;
-	int protocol;
-	int index;
-	int status;
-	uint16_t dstport, hostport;
-	uint32_t dstip, hostip;
 
 	int counter = 0;
 

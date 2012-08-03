@@ -845,7 +845,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	PRINT_DEBUG("handle_data: Entered: conn=%x, seg=%x, state=%d", (int) conn, (int)seg, conn->state);
 
 	int ret;
-	uint16_t flags = 0;
+	//uint16_t flags = 0;
 	uint16_t send_flags = 0;
 
 	//data handling
@@ -1154,7 +1154,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//send ACK
 				temp_seg = seg_create(conn);
 				seg_update(temp_seg, conn, FLAG_ACK);
-				//seg_send(temp_seg); //TODO uncomment
+				seg_send(temp_seg);
 				seg_free(temp_seg);
 
 				//send ACK to handler, prob connect
@@ -1215,7 +1215,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_segment *temp_seg;
 	uint16_t flags;
-	uint8_t reply;
+	//uint8_t reply;
 
 	PRINT_DEBUG("tcp_recv_syn_recv: Entered: conn=%x, seg=%x, state=%d", (int) conn, (int)seg, conn->state);
 
@@ -1869,6 +1869,9 @@ int handle_rst(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *r
 		case TCP_TIME_WAIT:
 			//TODO CLOSED, del conn
 			break;
+		default:
+			//TODO
+			break;
 		}
 	}
 
@@ -1888,6 +1891,9 @@ int handle_syn(struct tcp_connection *conn, struct tcp_segment *seg) {
 	case TCP_LAST_ACK:
 	case TCP_TIME_WAIT:
 		//TODO if SYN in win, send RST, similar to above
+		break;
+	default:
+		//TODO
 		break;
 	}
 	return 1;
@@ -1967,6 +1973,9 @@ int handle_ack_test(struct tcp_connection *conn, struct tcp_segment *seg, uint16
 			break;
 		case TCP_TIME_WAIT:
 			//TODO if rem fin, ack it, restart TO=2 MSL
+			break;
+		default:
+			//TODO
 			break;
 		}
 	}

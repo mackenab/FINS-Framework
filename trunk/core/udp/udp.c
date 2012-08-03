@@ -38,7 +38,9 @@ void sendToSwitch(struct finsFrame *ff) {
 
 void udp_get_FF() {
 
-	int dummy_a, dummy_b, dummy_c; ///KEVINS CODE THIS IS A TEST
+	int dummy_a = 0; //KEVINS CODE THIS IS A TEST
+	int dummy_b = 0;
+	int dummy_c = 0;
 
 	struct finsFrame *ff;
 	do {

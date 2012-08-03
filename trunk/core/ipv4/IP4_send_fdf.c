@@ -44,7 +44,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	//	fins_frame->dataFrame.pduLength = pheader->packet_length - 20;
 	data = (char *) malloc(pheader->packet_length - pheader->header_length);
 	memcpy(data, ppacket->ip_data, pheader->packet_length - pheader->header_length);
-	fins_frame->dataFrame.pdu = data;
+	fins_frame->dataFrame.pdu = (u_char *) data;
 	/**	char ssss[20];
 	 memcpy(ssss,(ppacket->ip_data)+ 8, (pheader->packet_length - pheader->header_length) -8);
 	 ssss [(pheader->packet_length - pheader->header_length) -8 ];
@@ -96,7 +96,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 
 	memcpy(data, ppacket, IP4_MIN_HLEN);
 	memcpy(data + IP4_MIN_HLEN, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	(fins_frame->dataFrame).pdu = data;
+	(fins_frame->dataFrame).pdu = (u_char *) data;
 
 	//print_finsFrame(fins_frame);
 	sendToSwitch_IPv4(fins_frame);

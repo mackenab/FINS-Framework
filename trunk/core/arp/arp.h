@@ -148,5 +148,6 @@ void arp_out(int response_type);
 void output_arp_queue(struct finsFrame *fins_arp_out);
 void arp_init();
 void arp_shutdown();
+void arp_free();
 
 #endif

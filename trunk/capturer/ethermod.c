@@ -80,7 +80,7 @@ void termination_handler(int sig) {
  * Continue Forever
  * */
 
-void main() {
+int main() {
 
 	(void) signal(SIGINT, termination_handler);
 	print_app_banner();
@@ -172,7 +172,7 @@ void main() {
 	 pcap_close(capture_handle);
 	 */
 
-//	return;
+	return 0;
 }
 
 // end of main function

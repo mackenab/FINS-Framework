@@ -6,6 +6,7 @@
  */
 
 #include "ipv4.h"
+#include <queueModule.h>
 
 extern struct ip4_stats stats;
 
@@ -15,15 +16,15 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
 
 	PRINT_DEBUG("");
 	//print_finsFrame(ff);
-	char *data = (char *) ((ff->dataFrame).pdu);
+	//char *data = (char *) ((ff->dataFrame).pdu);
 	PRINT_DEBUG("");
 
-	uint8_t more_fragments = 1;
-	uint16_t offset = 0;
+	//uint8_t more_fragments = 1;
+	//uint16_t offset = 0;
 	IP4addr destination;
 
 	struct ip4_next_hop_info next_hop;
-	struct ip4_fragment fragment;
+	//struct ip4_fragment fragment;
 	struct ip4_packet_header construct_packet;
 	struct ip4_packet *construct_packet_buffer;
 

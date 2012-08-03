@@ -119,8 +119,8 @@ void print_frame(const u_char *payload, int len) {
 /** ----------------------------------------------------------------------------------*/
 /*int*/void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packetReceived) { //TODO: pcap_handlers must be of void type. This method of returning data will have to be amended
 	static int count = 1; /* packet counter */
-	u_char * packet; /* Packet Pointer */
-	struct data_to_pass data;
+	//u_char * packet; /* Packet Pointer */
+	//struct data_to_pass data;
 	u_int numBytes;
 	u_int dataLength;
 	PRINT_DEBUG("Packet number %d: has been captured \n", count);
@@ -167,7 +167,7 @@ void capture_init(char *interface) {
 
 	strcpy(device, interface);
 	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
-	unsigned char dev_macAddress[17];
+	//unsigned char dev_macAddress[17];
 	char *filter_exp;
 	unsigned char *dev;
 	filter_exp = (char *) malloc(200);
@@ -215,15 +215,15 @@ void capture_init(char *interface) {
 	//strcat(filter_exp, "udp and port 5000");
 	//strcat(filter_exp, ""); //everything
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	strcat(filter_exp, "(ether dst 080027445566) or (broadcast and (not ether src 080027445566)) or (dst 192.168.20)"); //final? eth0, bridged
-	//strcat(filter_exp, "(ether dst 080027112233) or (broadcast and (not ether src 080027112233)) or (dst 192.168.20)"); //final? eth1, nat
-	//strcat(filter_exp, "(ether dst 080027123456) or (broadcast and (not ether src 080027123456)) or (dst 192.168.20)"); //final? made up
+	strcat(filter_exp, "(ether dst 080027445566) or (broadcast and (not ether src 080027445566)) or (dst 192.168.1.20)"); //final? eth0, bridged
+	//strcat(filter_exp, "(ether dst 080027112233) or (broadcast and (not ether src 080027112233)) or (dst 192.168.1.20)"); //final? eth1, nat
+	//strcat(filter_exp, "(ether dst 080027123456) or (broadcast and (not ether src 080027123456)) or (dst 192.168.1.20)"); //final? made up
 
 	//strcat(filter_exp, "(ether dst 080027a55f13) or (broadcast and (not ether src 080027a55f13)) or multicast or (dst 192.168.20)"); //final? eth1
 	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or icmp[0] == 8 or icmp[0] == 0"); //broken, icmp request/reply
 	//strcat(filter_exp, "((ether dst 001cbf871afd) or broadcast or multicast) and (not icmp src and dst host)"); //192.168.1.12
 	/* get network number and mask associated with capture device */
-	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
+	if (pcap_lookupnet((char *)dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
 		net = 0;
 		mask = 0;
@@ -234,7 +234,7 @@ void capture_init(char *interface) {
 	printf("Filter expression: %s\n", filter_exp);
 
 	/* open capture device */
-	capture_handle = pcap_open_live(dev, SNAP_LEN, 1, 1000, errbuf);
+	capture_handle = pcap_open_live((char *)dev, SNAP_LEN, 1, 1000, errbuf);
 	if (capture_handle == NULL) {
 		fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
 		exit(EXIT_FAILURE);
@@ -293,8 +293,8 @@ void inject_init(char *interface) {
 	 } */
 //	static int count = 1;
 	unsigned char device[20];
-	unsigned char dev_macAddress[17];
-	strcpy(device, interface);
+	//unsigned char dev_macAddress[17];
+	strcpy((char *)device, interface);
 
 	int framelen;
 	//char *frame;
@@ -317,7 +317,7 @@ void inject_init(char *interface) {
 	}
 
 	/** Setup the Injection Interface */
-	if ((inject_handle = pcap_open_live(dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
+	if ((inject_handle = pcap_open_live((char *)dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
 		PRINT_DEBUG( "\nError: %s\n", errbuf);
 		exit(1);
 	}
@@ -340,7 +340,7 @@ void inject_init(char *interface) {
 
 		PRINT_DEBUG("A frame of length %d will be injected-----", framelen);
 
-		print_frame(frame, framelen);
+		print_frame((u_char *)frame, framelen);
 		/**
 		 * Inject the Ethernet Frame into the Device
 		 */

@@ -35,7 +35,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 
 		ff->dataFrame.directionFlag = direction;
 		ff->dataFrame.pduLength = PDU_length;
-		ff->dataFrame.pdu = data;
+		ff->dataFrame.pdu = (u_char *)data;
 		ff->dataFrame.metaData = meta;
 		//	memcpy(&ff.dataFrame.metaData, metadata, MAX_METADATASIZE);
 	}

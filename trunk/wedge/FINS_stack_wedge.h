@@ -34,7 +34,7 @@
 #define close_call 19
 #define release_call 20
 #define ioctl_call 21
-#define daemonconnect_call 22
+#define daemonconnect_call 22 //TODO change to 0?
 #define poll_call 23
 #define mmap_call 24
 #define sendpage_call 25
@@ -44,14 +44,14 @@
  * in order to make sure that we cover as many applications as possible
  * This range of these functions will start from 30
  */
-#define MAX_calls 26
+#define MAX_CALL_TYPES 26
 
-#define write_call 30
+//#define write_call 30
 
 #define ACK 	200
 #define NACK 	6666
 
-#define LOOP_LIMIT 10
+//#define LOOP_LIMIT 10
 
 // Data declarations
 /* Data for netlink sockets */
@@ -93,20 +93,73 @@ void nl_data_ready(struct sk_buff *skb);
 // This function extracts a unique ID from the kernel-space perspective for each socket
 inline unsigned long long getUniqueSockID(struct socket *sock);
 
-#define MAX_sockets 100
+#define MAX_SOCKETS 100
+#define MAX_CALLS 500
 
-struct finssocket {
+struct nl_wedge_to_daemon {
+	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index, prob uID
+	int index;
+
+	u_int call_type;
+	int call_threads;
+
+	u_int call_id; //TODO when ironed out remove id or index
+	int call_index;
+};
+
+struct nl_daemon_to_wedge {
+	u_int call_type;
+	u_int call_id; //TODO when ironed out remove id or index
+	int call_index;
+
+	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index
+	int index;
+
+	u_int ret;
+	u_int msg;
+};
+
+struct fins_call {
+	int running; //TODO remove?
+
+	u_int id;
+	unsigned long long uniqueSockID;
+	int index;
+	u_int type;
+	//TODO timestamp?
+
+	//struct semaphore sem; //TODO remove? might be unnecessary
+	struct semaphore wait_sem;
+
+	u_char reply;
+	u_int ret;
+	u_int msg;
+	u_char *buf;
+	int len;
+};
+
+void init_wedge_calls(void);
+int insert_wedge_call(u_int id, unsigned long long uniqueSockID, int index, u_int type);
+int find_wedge_call(u_int id);
+int remove_wedge_call(u_int id);
+
+struct fins_wedge_socket {
+	int running; //TODO remove? merge with release_flag
+
 	unsigned long long uniqueSockID;
 	struct socket *sock;
-	int type;
-	int protocol;
+	struct sock *sk;
 
-	struct semaphore call_sems[MAX_calls];
+	//struct semaphore call_sems[MAX_CALL_TYPES];
+	int threads[MAX_CALL_TYPES];
 
 	int release_flag;
-	int threads;
-	struct semaphore threads_sem;
+	struct socket *sock_new;
+	struct sock *sk_new;
 
+	//struct semaphore threads_sem;
+
+	///* //TODO remove all this
 	struct semaphore reply_sem_w;
 	struct semaphore reply_sem_r; //reassuring, but might not be necessary
 	u_int reply_call;
@@ -114,13 +167,14 @@ struct finssocket {
 	u_int reply_msg;
 	u_char *reply_buf;
 	int reply_len;
+	//*/
 };
 
-void init_wedgesockets(void);
-int insert_wedgeSocket(unsigned long long uniqueSockID, struct socket *sock, int type, int protocol);
-int find_wedgeSocket(unsigned long long uniqueSockID);
-int remove_wedgeSocket(unsigned long long uniqueSockID);
-int wait_wedgeSocket(unsigned long long uniqueSockID, int index, u_int calltype);
+void init_wedge_sockets(void);
+int insert_wedge_socket(unsigned long long uniqueSockID, struct socket *sock);
+int find_wedge_socket(unsigned long long uniqueSockID);
+int remove_wedge_socket(unsigned long long uniqueSockID);
+int wait_wedge_socket(unsigned long long uniqueSockID, int index, u_int calltype);
 int checkConfirmation(int index);
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */

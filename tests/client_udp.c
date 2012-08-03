@@ -27,19 +27,21 @@ int main(int argc, char *argv[]) {
 	int sock;
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
+	int addr_len = sizeof(struct sockaddr);
 	int numbytes;
-	struct hostent *host;
+	//struct hostent *host;
 	char send_data[1024];
 	int port;
 	int client_port;
+	pid_t pID;
 
 	memset(send_data, 89, 1000);
 	send_data[1000] = '\0';
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
-	if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-		//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
@@ -57,7 +59,7 @@ int main(int argc, char *argv[]) {
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,13);
 	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -91,15 +93,35 @@ int main(int argc, char *argv[]) {
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 
-	int i = 0;
-	while (1) {
+	pID = fork();
+	if (pID == 0) { // child -- Capture process
+		send_data[0] = 65;
+	} else if (pID < 0) { // failed to fork
+		printf("Failed to Fork \n");
+		fflush(stdout);
+		exit(1);
+	} else { //parent
+		send_data[0] = 89;
+	}
 
-		printf("(%d) Input msg (q or Q to quit):", i++);
-		gets(send_data);
-		printf("%s", send_data);
-		sleep(1);
-		numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-		printf("\n %d", numbytes);
+	int i = 0;
+	while (i < 10) {
+		/*
+		 printf("(%d) Input msg (q or Q to quit):", i++);
+		 gets(send_data);
+		 printf("%s", send_data);*/
+		i++;
+		//sleep(1);
+		//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+		if (pID == 0) {
+			numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+			printf("\n sent=%d", numbytes);
+			numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+			printf("\n sent=%d", numbytes);
+		} else {
+			numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
+			printf("\n read=%d", numbytes);
+		}
 		fflush(stdout);
 
 		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {

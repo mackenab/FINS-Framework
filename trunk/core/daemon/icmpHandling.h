@@ -13,7 +13,7 @@
 int daemon_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
 int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag);
 
-void socket_icmp(int domain, int type, int protocol, unsigned long long uniqueSockID);
+void socket_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
 
 void write_icmp(unsigned long long uniqueSockID, int datalen, u_char *data);
 

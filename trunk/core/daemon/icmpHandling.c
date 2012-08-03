@@ -11,7 +11,7 @@
 #define	IP4_PT_ICMP		1
 
 extern sem_t daemonSockets_sem;
-extern struct finssocket daemonSockets[MAX_sockets];
+extern struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
 
 extern int recv_thread_count;
 extern sem_t recv_thread_sem;
@@ -219,12 +219,12 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 
 }
 
-void socket_icmp(int domain, int type, int protocol, unsigned long long uniqueSockID) {
+void socket_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol) {
 
-	char clientName[200];
-	int index;
-	int pipe_desc;
-	int tester;
+	//char clientName[200];
+	//int index_new;
+	//int pipe_desc;
+	//int tester;
 
 	sem_wait(&daemonSockets_sem);
 	index = insert_daemonSocket(uniqueSockID, type, protocol);
@@ -324,7 +324,7 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int d
 	//free(addr);
 	PRINT_DEBUG("");
 
-	int blocking_flag = 1; //TODO get from flags
+	//int blocking_flag = 1; //TODO get from flags
 
 	/** the meta-data paraters are all passes by copy starting from this point
 	 *
@@ -360,7 +360,7 @@ void recvfrom_icmp(void *threadData) {
 	struct sockaddr_in *address;
 	int buflen = 0;
 	int index;
-	int i;
+	//int i;
 	int blocking_flag;
 	int addressLen = sizeof(struct sockaddr_in);
 
@@ -374,7 +374,7 @@ void recvfrom_icmp(void *threadData) {
 
 	unsigned long long uniqueSockID = thread_data->uniqueSockID;
 	int socketCallType = thread_data->socketCallType;
-	int datalen = thread_data->datalen;
+	//int datalen = thread_data->datalen;
 	int flags = thread_data->flags;
 	int symbol = thread_data->symbol;
 

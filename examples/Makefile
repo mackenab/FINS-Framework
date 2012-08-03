@@ -24,14 +24,25 @@ INCLUDES = $(foreach DIR_NAME, $(subst -I,, $(strip $(EXAMPLES_INC))), $(addpref
 all: $(EXECUTABLES)
 	@echo "$(PROJECT_NAME) is compiled\n"
 
-client_udp:client_udp.c $(INCLUDES)
-	@$(CC) $(CFLAGS) $(EXAMPLES_INC) -c $< 
-	@$(LD) $(LDFLAGS) $@.o -o $@ 
+client_udp:client_udp.c
+	@$(CC) -c $< 
+	@$(LD) $@.o -o $@
 
-server_udp:server_udp.c $(INCLUDES)
-	@$(CC) $(CFLAGS) $(EXAMPLES_INC) -c $< 
-	@$(LD) $(LDFLAGS) $@.o -o $@
+client_tcp:client_tcp.c
+	@$(CC) -c $< 
+	@$(LD) $@.o -o $@
+	
+server_udp:server_udp.c
+	@$(CC) -c $< 
+	@$(LD) $@.o -o $@
 
+server_forks:server_forks.c
+	@$(CC) -c $< 
+	@$(LD) $@.o -o $@
+
+server_tcp:server_tcp.c
+	@$(CC) -c $< 
+	@$(LD) $@.o -o $@
 
 .PHONY:clean
 clean:
