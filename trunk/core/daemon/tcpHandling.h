@@ -12,6 +12,23 @@
 
 #include "handlers.h"
 
+//This was added in to provide stopgap compatibility when building for android, taken from usr/include/x86_64-linux-gnu/bits
+#ifdef BUILD_FOR_ANDROID
+  /* Flags to be ORed into the type parameter of socket and socketpair and
+     used for the flags parameter of paccept.  */
+
+ 	/* Atomically set close-on-exec flag for the
+				   new descriptor(s).  */
+#define SOCK_CLOEXEC 02000000
+  	/* Atomically mark descriptor(s) as
+				   non-blocking.  */
+#define SOCK_NONBLOCK 04000
+
+#define MSG_CMSG_CLOEXEC 0x40000000 /* Set close_on_exit for file
+					   descriptor received through
+					   SCM_RIGHTS.  */
+#endif
+
 #define EXEC_TCP_CONNECT 0
 #define EXEC_TCP_LISTEN 1
 #define EXEC_TCP_ACCEPT 2

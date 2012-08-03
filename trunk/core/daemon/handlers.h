@@ -231,7 +231,7 @@ struct finssocket {
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif

@@ -20,6 +20,9 @@
 
 #include "wifistub.h"
 #include <signal.h>
+#ifdef BUILD_FOR_ANDROID
+#include <sys/prctl.h>
+#endif
 
 #define APP_NAME		"sniffex"
 #define APP_DESC		"Sniffer example using libpcap"
@@ -62,11 +65,17 @@ int capture_count = 0;
 
 /** handling termination ctrl+c signal
  * */
-
+#ifndef BUILD_FOR_ANDROID
 void termination_handler(int sig) {
 	printf("\n**Number of captured frames = %d \n ****Number of Injected frames = %d\n", capture_count, inject_count);
 	exit(2);
 }
+#else
+void capturer_termination_handler(int sig) {
+	printf("\n**Number of captured frames = %d \n ****Number of Injected frames = %d\n", capture_count, inject_count);
+	exit(2);
+}
+#endif
 
 /** @brief open the incoming and outgoing NAMED PIPES
  *
@@ -80,9 +89,18 @@ void termination_handler(int sig) {
  * Continue Forever
  * */
 
-void main() {
-
+#ifndef BUILD_FOR_ANDROID
+void  main()
+#else
+#warning "builing capturermain() method for android"
+void capturermain()
+#endif
+{
+#ifndef BUILD_FOR_ANDROID
 	(void) signal(SIGINT, termination_handler);
+#else
+        (void) signal(SIGINT, capturer_termination_handler);
+#endif
 	print_app_banner();
 
 	// ADDED mrd015 !!!!! 
@@ -127,6 +145,9 @@ void main() {
 	if (pID == 0) // child -- Capture process
 
 			{
+#ifdef BUILD_FOR_ANDROID //atm011
+		prctl(PR_SET_PDEATHSIG, SIGHUP);
+#endif
 
 		// Code only executed by child process
 		PRINT_DEBUG("child started to capture \n");

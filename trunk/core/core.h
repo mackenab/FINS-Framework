@@ -44,7 +44,7 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset);
 //begin: interceptor merge
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif

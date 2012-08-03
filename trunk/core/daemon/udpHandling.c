@@ -85,9 +85,9 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	 *
 	 */
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	if (block_flag == 1) {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		int value;
 		sem_getvalue(&(daemonSockets[index].Qs), &value);
@@ -129,10 +129,10 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
 		} while (ff == NULL);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 	} else {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -213,17 +213,17 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	*buflen = ff->dataFrame.pduLength;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (symbol == 0) {
 		//		address = NULL;
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	freeFinsFrame(ff);
 
 		return (1);
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	addr_in->sin_port = srcport;
 	addr_in->sin_addr.s_addr = srcip;
@@ -232,7 +232,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	 * This is the final consumer
 	 * call finsFrame_free(Struct finsFrame** ff)
 	 */
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	//freeFinsFrame(ff);
 
@@ -249,7 +249,7 @@ int daemon_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t ds
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (udpout_meta == NULL) {
 		PRINT_DEBUG("metadata creation failed, freeing: ff=%x", (int) ff);
@@ -1036,7 +1036,7 @@ void *recvfrom_udp_thread(void *local) {
 	int non_blocking_flag = flags & (SOCK_NONBLOCK | O_NONBLOCK | MSG_DONTWAIT); //TODO get from flags
 	int ret;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	struct finsFrame *ff = NULL;
 	ret = get_fdf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%x", uniqueSockID, index, (int)ff);
@@ -1318,7 +1318,7 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/** the meta-data parameters are all passed by copy starting from this point
 	 *
@@ -1370,17 +1370,17 @@ void recv_udp(unsigned long long uniqueSockID, int datalen, int flags) {
 			nack_send(uniqueSockID, recv_call, 0);
 		}
 
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		//	free(buf);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish recv_udp");
 		nack_send(uniqueSockID, recv_call, 0);
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
 	 */
@@ -1448,8 +1448,10 @@ void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 		PRINT_DEBUG("FSO_REUSEADDR=%d", daemonSockets[index].sockopts.FSO_REUSEADDR);
 		break;
 	case SO_TYPE:
+#ifndef BUILD_FOR_ANDROID
 	case SO_PROTOCOL:
 	case SO_DOMAIN:
+#endif
 	case SO_ERROR:
 	case SO_DONTROUTE:
 	case SO_BROADCAST:
@@ -1464,8 +1466,10 @@ void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	case SO_LINGER:
 	case SO_BSDCOMPAT:
 	case SO_TIMESTAMP:
+#ifndef BUILD_FOR_ANDROID
 	case SO_TIMESTAMPNS:
 	case SO_TIMESTAMPING:
+#endif
 	case SO_RCVTIMEO:
 	case SO_SNDTIMEO:
 	case SO_RCVLOWAT:
@@ -1476,8 +1480,10 @@ void setsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	case SO_ACCEPTCONN:
 	case SO_PASSSEC:
 	case SO_PEERSEC:
+#ifndef BUILD_FOR_ANDROID
 	case SO_MARK:
 	case SO_RXQ_OVFL:
+#endif
 	case SO_ATTACH_FILTER:
 	case SO_DETACH_FILTER:
 	default:
@@ -1539,8 +1545,10 @@ void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 		val = (char *) &(daemonSockets[index].sockopts.FSO_REUSEADDR);
 		break;
 	case SO_TYPE:
+#ifndef BUILD_FOR_ANDROID
 	case SO_PROTOCOL:
 	case SO_DOMAIN:
+#endif
 	case SO_ERROR:
 	case SO_DONTROUTE:
 	case SO_BROADCAST:
@@ -1555,8 +1563,10 @@ void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	case SO_LINGER:
 	case SO_BSDCOMPAT:
 	case SO_TIMESTAMP:
+#ifndef BUILD_FOR_ANDROID
 	case SO_TIMESTAMPNS:
 	case SO_TIMESTAMPING:
+#endif
 	case SO_RCVTIMEO:
 	case SO_SNDTIMEO:
 	case SO_RCVLOWAT:
@@ -1567,8 +1577,10 @@ void getsockopt_udp(int index, unsigned long long uniqueSockID, int level, int o
 	case SO_ACCEPTCONN:
 	case SO_PASSSEC:
 	case SO_PEERSEC:
+#ifndef BUILD_FOR_ANDROID
 	case SO_MARK:
 	case SO_RXQ_OVFL:
+#endif
 	case SO_ATTACH_FILTER:
 	case SO_DETACH_FILTER:
 	default:

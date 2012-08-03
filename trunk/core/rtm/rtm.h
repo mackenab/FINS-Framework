@@ -25,7 +25,9 @@ void rtm_out(struct finsFrame *ff);
 
 void rtm_in(struct finsFrame *ff);
 
-void rtm_get_FF();
+void rtm_send_FF(int socket, struct finsFrame *ff);
+
+void* rtm_get_FF(void* socket);
 
 
 void rtm_init();

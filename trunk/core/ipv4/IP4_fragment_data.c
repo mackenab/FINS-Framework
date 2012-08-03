@@ -9,7 +9,7 @@ struct ip4_fragment IP4_fragment_data(void *data, uint16_t length,
 		fragment.data_length = length - offset;
 		fragment.more_fragments = 0;
 		fragment.data = data + offset;
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		return (fragment);
 	}
 
@@ -42,7 +42,7 @@ struct ip4_fragment IP4_fragment_data(void *data, uint16_t length,
 	}
 #endif
 	fragment.more_fragments = 1;
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	return (fragment);
 }

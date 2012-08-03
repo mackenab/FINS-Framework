@@ -58,11 +58,12 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 	/* ascii (if printable) */
 	ch = payload;
 	for (i = 0; i < len; i++) {
-		if (isprint(*ch))
+		if (isprint(*ch)){
 			printf("%c", *ch);
-		else
+		} else {
 			printf(".");
 		ch++;
+		}
 	}
 
 	printf("\n");

@@ -20,7 +20,11 @@
 #include <arp.h>
 #include "switch/swito.h"		//was <swito.h>
 //#include <swito.h>
+#ifndef BUILD_FOR_ANDROID
 #include "RTM/rtm.h"	//was <rtm.h>
+#else
+#include <rtm.h>
+#endif
 //#include <rtm.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -139,7 +143,7 @@ int rtm_out_fd;
 
 /** Ethernet Stub Variables  */
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
 #define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
 #else
@@ -1179,7 +1183,7 @@ void *Inject() {
 		exit(EXIT_FAILURE);
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	while (1) {
 

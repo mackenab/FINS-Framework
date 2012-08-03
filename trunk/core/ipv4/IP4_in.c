@@ -31,7 +31,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	PRINT_DEBUG("protocol number is %d", header.protocol);
 	header.checksum = ntohs(ppacket->ip_cksum);
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	/** Check packet version */
 	if (header.version != IP4_VERSION) {
 		stats.badver++;
@@ -40,7 +40,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		//free ppacket
 		return;
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/* Check minimum header length */
 	if (header.header_length < IP4_MIN_HLEN) {
@@ -50,7 +50,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		//free ppacket
 		return;
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/* Check the integrity of the header. Drop the packet if corrupted header.*/
 	if (IP4_checksum(ppacket, IP4_HLEN(ppacket)) != 0) {
@@ -60,7 +60,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		//free ppacket
 		return;
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/* Check the length of the packet. If physical shorter than the declared in the header
 	 * drop the packet
@@ -75,15 +75,15 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 			return;
 		}
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	PRINT_DEBUG("src=%lu dst=%lu (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
 	if (IP4_dest_check(header.destination) == 0) {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		if (IP4_forward(ff, ppacket, header.destination, len)) {
-			PRINT_DEBUG();
+			PRINT_DEBUG("");
 
 			return;
 		}
@@ -91,7 +91,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		//free ppacket
 		return;
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/* Check fragmentation errors */
 	if ((header.flags & (IP4_DF | IP4_MF)) == (IP4_DF | IP4_MF)) {
@@ -105,11 +105,11 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	 * If reassembly of an entire packet completed by this frame, pass out.
 	 * Otherwise return.
 	 */
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (((header.flags & IP4_MF) | header.fragmentation_offset) == 0) {
 		stats.delivered++;
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		IP4_send_fdf_in(&header, ppacket);
 		//free ppacket

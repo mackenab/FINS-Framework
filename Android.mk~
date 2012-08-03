@@ -1,0 +1,31 @@
+
+
+LOCAL_PATH:=$(call my-dir)
+include $(CLEAR_VARS)
+LOCAL_MODULE := FINS-Framework
+LOCAL_SRC_FILES := wifistub/lib/libconfig/lib/grammar.c wifistub/lib/libconfig/lib/libconfig.c wifistub/lib/libconfig/lib/scanner.c wifistub/lib/libconfig/lib/strbuf.c wifistub/lib/libconfig/lib/scanctx.c
+LOCAL_CFLAGS := -DBUILD_FOR_ANDROID
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
+LOCAL_EXPORT_LDLIBS := -llog
+include $(BUILD_STATIC_LIBRARY)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

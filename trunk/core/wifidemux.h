@@ -206,7 +206,7 @@ void parse_frame (int framelength,u_char *packet);
 
 
 /*--------------------------------------------------------------------*/
-
+#ifndef BUILD_FOR_ANDROID
 /** special functions to print the data within a frame for testing*/
 void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 
@@ -238,7 +238,7 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 		}
 	}
 	printf("   ");
-#ifndef BUILD_FOR_ANDROID
+
 	/* ascii (if printable)*/
 	ch = payload;
 	for (i = 0; i < len; i++) {
@@ -249,7 +249,7 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 		ch++;
 	}
 	printf("\n");
-#endif
+
 	return;
 
 } //end of print_hex_ascii_line()
@@ -297,7 +297,7 @@ void print_frame(const u_char *payload, int len) {
 	return;
 } // end of print_frame
 /** ---------------------------------------------------------*/
-
+#endif
 
 
 #endif /* WIFIDEMUX_H_ */

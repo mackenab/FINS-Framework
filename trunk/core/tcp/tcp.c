@@ -1023,11 +1023,12 @@ void stopTimer(int fd) {
 	its.it_value.tv_nsec = 0;
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
-
+#ifndef BUILD_FOR_ANDROID
 	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
 		PRINT_ERROR("Error setting timer.");
 		exit(-1);
 	}
+#endif
 }
 
 void startTimer(int fd, double millis) {
@@ -1038,11 +1039,12 @@ void startTimer(int fd, double millis) {
 	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
-
+#ifndef BUILD_FOR_ANDROID
 	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
 		PRINT_ERROR("Error setting timer.");
 		exit(-1);
 	}
+#endif
 }
 
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
@@ -1089,20 +1091,24 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	conn->to_gbn_flag = 0;
 	conn->gbn_flag = 0;
+#ifndef BUILD_FOR_ANDROID
 	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
 	if (conn->to_gbn_fd == -1) {
 		PRINT_ERROR("ERROR: unable to create to_fd.");
 		exit(-1);
 	}
+#endif
 
 	conn->delayed_flag = 0;
 	conn->delayed_ack_flags = 0;
 	conn->to_delayed_flag = 0;
+#ifndef BUILD_FOR_ANDROID
 	conn->to_delayed_fd = timerfd_create(CLOCK_REALTIME, 0);
 	if (conn->to_delayed_fd == -1) {
 		PRINT_ERROR("ERROR: unable to create delayed_fd.");
 		exit(-1);
 	}
+#endif
 
 	conn->send_max_win = TCP_MAX_WINDOW_DEFAULT;
 	conn->send_win = conn->send_max_win;

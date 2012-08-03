@@ -12,7 +12,16 @@
 #include <finsdebug.h>
 #include <stdint.h>
 #include <sys/time.h>
+#ifndef BUILD_FOR_ANDROID
 #include <sys/timerfd.h>
+#else
+#warning "Omitting timerfd, building for android"
+#include <sys/time.h>
+#include <linux/time.h>
+#include <pthread.h>
+#include <sys/endian.h>
+//#include <sys/linux-unistd.h>
+#endif
 #include <semaphore.h>
 #include <math.h>
 #include <time.h>

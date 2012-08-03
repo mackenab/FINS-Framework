@@ -1092,7 +1092,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned
 		}
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 }
 
 void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, unsigned char *buf, ssize_t len) {
