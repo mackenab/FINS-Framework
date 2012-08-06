@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,13);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 
-	pID = fork();
+	//pID = fork();
 	if (pID == 0) { // child -- Capture process
 		send_data[0] = 65;
 	} else if (pID < 0) { // failed to fork
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 		i++;
 		//sleep(1);
 		//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-		if (pID == 0) {
+		if (pID == 0 && 0) {
 			numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			printf("\n sent=%d", numbytes);
 			numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));

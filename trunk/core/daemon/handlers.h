@@ -60,33 +60,32 @@
 
 /** Socket related calls and their codes */
 #define socket_call 1
-#define socketpair_call 2
-#define bind_call 3
-//#define getsockname_call 4
-#define getname_call 4
-#define connect_call 5
-//#define getpeername_call 6
-#define send_call 7
-#define recv_call 8
-#define sendto_call 9
-#define recvfrom_call 10
-#define sendmsg_call 11
-#define recvmsg_call 12
-#define getsockopt_call 13
-#define setsockopt_call 14
-#define listen_call 15
-#define accept_call 16
-#define accept4_call 17
-#define shutdown_call 18
-#define close_call 19
-#define release_call 20
-#define ioctl_call 21
-#define daemonconnect_call 22
-#define poll_call 23
-#define mmap_call 24
-#define sendpage_call 25
-
-#define MAX_CALL_TYPES 26
+#define bind_call 2
+#define listen_call 3
+#define connect_call 4
+#define accept_call 5
+#define getname_call 6
+#define ioctl_call 7
+#define sendmsg_call 8
+#define recvmsg_call 9
+#define getsockopt_call 10
+#define setsockopt_call 11
+#define release_call 12
+#define poll_call 13
+#define mmap_call 14
+#define socketpair_call 15
+#define shutdown_call 16
+#define close_call 17
+#define sendpage_call 18
+#define daemon_start_call 19
+#define daemon_stop_call 20
+/** Additional calls
+ * To hande special cases
+ * overwriting the generic functions which write to a socket descriptor
+ * in order to make sure that we cover as many applications as possible
+ * This range of these functions will start from 30
+ */
+#define MAX_CALL_TYPES 21
 
 //fins netlink stuff
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
@@ -297,33 +296,20 @@ void socket_call_handler(unsigned long long uniqueSockID, int index, int call_th
 void bind_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
 void listen_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
 void connect_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-
-void accept_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void getname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void sendmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void recvmsg_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-
+void accept_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void getname_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
 void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-
-void getsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void setsockopt_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-
+void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
 void release_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-
-void poll_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void mmap_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-
-void socketpair_call_handler();
-void accept4_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-void shutdown_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-
-void close_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void getsockname_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void getpeername_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void send_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void recv_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void sendto_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
-//void recvfrom_call_handler(unsigned long long uniqueSockID, int threads, u_char *buf, ssize_t len);
+void poll_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void mmap_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void socketpair_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void shutdown_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void close_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void sendpage_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
 
 //######################### //TODO remove
 struct recvfrom_data {
@@ -334,7 +320,6 @@ struct recvfrom_data {
 	int flags;
 	int symbol;
 };
-void recvthread_exit(struct recvfrom_data *thread_data);
 //#########################
 
 #endif /* HANDLERS_H_ */

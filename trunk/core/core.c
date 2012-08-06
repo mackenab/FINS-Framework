@@ -18,9 +18,7 @@
 #include <udp.h>
 #include <tcp.h>
 #include <arp.h>
-//#include "switch/swito.h"		//was <swito.h>
 #include <swito.h>
-//#include "RTM/rtm.h"	//was <rtm.h>
 #include <rtm.h>
 #include <icmp.h>
 #include <sys/types.h>
@@ -28,7 +26,6 @@
 //#include <stdlib.h> //added
 //#include <stdio.h> //added
 //kernel stuff
-
 
 int CORE_TEMP = 0;
 
@@ -728,6 +725,10 @@ void *Switch_to_Daemon() {
 
 					char *buf;
 					buf = (char *) malloc(ff->dataFrame.pduLength + 1);
+					if (buf == NULL) {
+						PRINT_ERROR("error allocation");
+						exit(1);
+					}
 					memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 					buf[ff->dataFrame.pduLength] = '\0';
 					PRINT_DEBUG("pdu='%s'", buf);
@@ -773,7 +774,7 @@ void *wedge_to_daemon() {
 	void *recv_buf;
 	recv_buf = malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
 	if (recv_buf == NULL) {
-		fprintf(stderr, "buffer allocation failed\n");
+		PRINT_ERROR("buffer allocation failed");
 		exit(-1);
 	}
 
@@ -883,7 +884,7 @@ void *wedge_to_daemon() {
 					}
 					msg_buf = (u_char *) malloc(msg_len);
 					if (msg_buf == NULL) {
-						fprintf(stderr, "msg buffer allocation failed\n");
+						PRINT_ERROR("msg buffer allocation failed");
 						exit(-1);
 					}
 					msg_pt = msg_buf;
@@ -945,13 +946,13 @@ void *wedge_to_daemon() {
 			int i;
 			for (i = 0; i < msg_len; i++) {
 				if (i == 0) {
-					sprintf((char *)pt, "%02x", msg_pt[i]);
+					sprintf((char *) pt, "%02x", msg_pt[i]);
 					pt += 2;
 				} else if (i % 4 == 0) {
-					sprintf((char *)pt, ":%02x", msg_pt[i]);
+					sprintf((char *) pt, ":%02x", msg_pt[i]);
 					pt += 3;
 				} else {
-					sprintf((char *)pt, " %02x", msg_pt[i]);
+					sprintf((char *) pt, " %02x", msg_pt[i]);
 					pt += 3;
 				}
 			}
@@ -976,58 +977,50 @@ void *wedge_to_daemon() {
 				connect_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case accept_call:
-				accept_call_handler(uniqueSockID, call_threads, msg_pt, msg_len);
+				accept_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case getname_call:
-				getname_call_handler(uniqueSockID, call_threads, msg_pt, msg_len);
-				break;
-			case sendmsg_call:
-				sendmsg_call_handler(uniqueSockID, call_threads, msg_pt, msg_len); //only send call from wedge
-				break;
-			case recvmsg_call:
-				recvmsg_call_handler(uniqueSockID, call_threads, msg_pt, msg_len); //only recv call from wedge
+				getname_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case ioctl_call:
 				ioctl_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
+			case sendmsg_call:
+				sendmsg_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len); //TODO finish
+				break;
+			case recvmsg_call:
+				recvmsg_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
+				break;
 			case getsockopt_call:
-				getsockopt_call_handler(uniqueSockID, call_threads, msg_pt, msg_len); //Dummy response
+				getsockopt_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case setsockopt_call:
-				setsockopt_call_handler(uniqueSockID, call_threads, msg_pt, msg_len); // Dummy response
+				setsockopt_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case release_call:
 				release_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case poll_call:
-				poll_call_handler(uniqueSockID, call_threads, msg_pt, msg_len);
+				poll_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case mmap_call:
-				mmap_call_handler(uniqueSockID, call_threads, msg_pt, msg_len);
+				mmap_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
-				/*
-				 case getsockname_call:
-				 getsockname_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE //deprecated
-				 break;
-				 case getpeername_call:
-				 getpeername_call_handler(uniqueSockID, threads, msg_pt, msg_len); //DONE //deprecated
-				 break;
-				 */
 			case socketpair_call:
-				socketpair_call_handler(uniqueSockID, call_threads, msg_pt, msg_len);
-				break;
-			case accept4_call:
-				accept4_call_handler(uniqueSockID, call_threads, msg_pt, msg_len);
+				socketpair_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case shutdown_call:
-				shutdown_call_handler(uniqueSockID, call_threads, msg_pt, msg_len); //DONE
+				shutdown_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case close_call:
 				/**
 				 * TODO fix the problem into remove daemonsockets
 				 * the Queue Terminate function has a bug as explained into it
 				 */
-				close_call_handler(uniqueSockID, call_threads, msg_pt, msg_len); //wedge never calls
+				close_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
+				break;
+			case sendpage_call:
+				sendpage_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			default:
 				PRINT_DEBUG("unknown opcode received (%d), dropping", call_type);
@@ -1085,6 +1078,10 @@ void *Capture() {
 			break;
 		}
 		data = (char *) malloc(datalen);
+		if (data == NULL) {
+			PRINT_ERROR("allocation fail");
+			exit(1);
+		}
 
 		numBytes = read(capture_pipe_fd, data, datalen);
 
@@ -1242,8 +1239,8 @@ void *Inject() {
 		//char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
 		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
 
-		char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
-		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+		char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
 		//char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
 		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
@@ -1458,7 +1455,7 @@ int main() {
 	}
 
 	//prime the kernel to establish daemon's PID
-	int daemoncode = daemonconnect_call;
+	int daemoncode = daemon_start_call;
 	int ret_val;
 	ret_val = send_wedge(nl_sockfd, (u_char *) &daemoncode, sizeof(int), 0);
 	if (ret_val != 0) {
@@ -1530,8 +1527,9 @@ int main() {
 
 	PRINT_DEBUG("created all threads\n");
 
-	char recv_data[4000];
-	gets(recv_data);
+	//TODO custom test, remove later
+	//char recv_data[4000];
+	//gets(recv_data);
 	CORE_TEMP = 1;
 
 	/**

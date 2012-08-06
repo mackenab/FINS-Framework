@@ -385,7 +385,6 @@ void recvfrom_icmp(void *threadData) {
 	if (index == -1) {
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
-		recvthread_exit(thread_data);
 	}
 
 	PRINT_DEBUG("index = %d", index);
@@ -452,7 +451,6 @@ void recvfrom_icmp(void *threadData) {
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
-			recvthread_exit(thread_data);
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
@@ -470,7 +468,6 @@ void recvfrom_icmp(void *threadData) {
 
 		if (index == -1) {
 			PRINT_DEBUG("socket descriptor not found into daemon sockets");
-			recvthread_exit(thread_data);
 		} else {
 			nack_send(uniqueSockID, socketCallType, 0);
 		}
@@ -482,7 +479,6 @@ void recvfrom_icmp(void *threadData) {
 	 */
 	//free(address);
 	//free(buf);
-	recvthread_exit(thread_data);
 }
 void sendmsg_icmp() {
 

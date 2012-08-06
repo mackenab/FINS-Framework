@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
 		port = 45454;
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-		//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 
 	int j = 0;
 	while (++j <= 10) {
-		pID = fork();
+		//pID = fork();
 		if (pID == 0) { // child -- Capture process
 			continue;
 		} else if (pID < 0) { // failed to fork
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	while (1) {
-		ret = poll(fds, nfds, time);
+		//ret = poll(fds, nfds, time);
 		if (ret || 1) {
 			/*
 			 printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);

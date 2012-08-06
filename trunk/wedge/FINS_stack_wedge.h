@@ -13,44 +13,37 @@
 #define KERNEL_PID      0	// This is used to identify netlink traffic into and out of the kernel
 /** Socket related calls and their codes */
 #define socket_call 1
-#define socketpair_call 2
-#define bind_call 3
-//#define getsockname_call 4
-#define getname_call 4
-#define connect_call 5
-//#define getpeername_call 6
-#define send_call 7
-#define recv_call 8
-#define sendto_call 9
-#define recvfrom_call 10
-#define sendmsg_call 11
-#define recvmsg_call 12
-#define getsockopt_call 13
-#define setsockopt_call 14
-#define listen_call 15
-#define accept_call 16
-#define accept4_call 17
-#define shutdown_call 18
-#define close_call 19
-#define release_call 20
-#define ioctl_call 21
-#define daemonconnect_call 22 //TODO change to 0?
-#define poll_call 23
-#define mmap_call 24
-#define sendpage_call 25
+#define bind_call 2
+#define listen_call 3
+#define connect_call 4
+#define accept_call 5
+#define getname_call 6
+#define ioctl_call 7
+#define sendmsg_call 8
+#define recvmsg_call 9
+#define getsockopt_call 10
+#define setsockopt_call 11
+#define release_call 12
+#define poll_call 13
+#define mmap_call 14
+#define socketpair_call 15
+#define shutdown_call 16
+#define close_call 17
+#define sendpage_call 18
+#define daemon_start_call 19
+#define daemon_stop_call 20
 /** Additional calls
  * To hande special cases
  * overwriting the generic functions which write to a socket descriptor
  * in order to make sure that we cover as many applications as possible
  * This range of these functions will start from 30
  */
-#define MAX_CALL_TYPES 26
-
-//#define write_call 30
+#define MAX_CALL_TYPES 21
 
 #define ACK 	200
 #define NACK 	6666
-
+#define MAX_SOCKETS 100
+#define MAX_CALLS 500
 //#define LOOP_LIMIT 10
 
 // Data declarations
@@ -81,9 +74,11 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags);
 static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
 static int FINS_release(struct socket *sock);
+static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *table);
+static int FINS_shutdown(struct socket *sock, int how);
 
-static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
 static int FINS_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
+static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
 
 /* FINS netlink functions*/
 int nl_send(int pid, void *buf, ssize_t len, int flags);
@@ -91,10 +86,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 void nl_data_ready(struct sk_buff *skb);
 
 // This function extracts a unique ID from the kernel-space perspective for each socket
-inline unsigned long long getUniqueSockID(struct socket *sock);
-
-#define MAX_SOCKETS 100
-#define MAX_CALLS 500
+inline unsigned long long getUniqueSockID(struct sock *sk);
 
 struct nl_wedge_to_daemon {
 	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index, prob uID
@@ -171,7 +163,7 @@ struct fins_wedge_socket {
 };
 
 void init_wedge_sockets(void);
-int insert_wedge_socket(unsigned long long uniqueSockID, struct socket *sock);
+int insert_wedge_socket(unsigned long long uniqueSockID, struct sock *sk);
 int find_wedge_socket(unsigned long long uniqueSockID);
 int remove_wedge_socket(unsigned long long uniqueSockID);
 int wait_wedge_socket(unsigned long long uniqueSockID, int index, u_int calltype);

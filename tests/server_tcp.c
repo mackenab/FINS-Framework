@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 
 	//addr_len = sizeof(struct sockaddr);
 
-	gets(recv_data);
+	//gets(recv_data);
 
 	printf("\n TCP Server waiting for client: pID=%d port %d", pID, ntohs(server_addr.sin_port));
 	fflush(stdout);
@@ -192,6 +192,9 @@ int main(int argc, char *argv[]) {
 		printf("\n parent pID=%d", pID);
 		fflush(stdout);
 	}
+
+	while (1)
+		;
 
 	i = 0;
 	while (1) {
