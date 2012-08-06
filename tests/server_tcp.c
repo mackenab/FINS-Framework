@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 
 	int optval = 1;
 	//fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK);
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	//setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	//setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -114,10 +114,10 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
 
-//	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
-//          server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
+	//	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	//          server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 
-//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
+	//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
 	//bzero(&(server_addr.sin_zero), 8); //TODO is for what?
 
 	printf("Binding to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
@@ -193,12 +193,11 @@ int main(int argc, char *argv[]) {
 		fflush(stdout);
 	}
 
-	while (1)
-		;
+	//while (1);
 
 	i = 0;
 	while (1) {
-		ret = poll(fds, nfds, time);
+		//ret = poll(fds, nfds, time);
 		if (ret || 1) {
 			/*
 			 printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
@@ -209,7 +208,7 @@ int main(int argc, char *argv[]) {
 			 fflush(stdout);
 			 */
 			if ((fds[0].revents & (POLLIN | POLLRDNORM)) || 1) {
-				if (pID) {
+				if (pID || 1) {
 					bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
 				} else {
 					sleep(2);

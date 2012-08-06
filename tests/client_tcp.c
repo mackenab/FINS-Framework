@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	int optval = 1;
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	//setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
 
 	//return;
 
-	while (1);
+	//while (1);
 
 	int i = 0;
 	while (i < 1000) {

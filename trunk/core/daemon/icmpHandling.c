@@ -27,7 +27,7 @@ int daemon_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t d
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	metadata_create(udpout_meta);
 
@@ -106,9 +106,9 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	 *
 	 */
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	if (block_flag == 1) {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		do {
 			sem_wait(&daemonSockets_sem);
@@ -118,19 +118,19 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 				return (0);
 			}
 			sem_wait(&(daemonSockets[index].Qs));
-			//		PRINT_DEBUG();
+			//		PRINT_DEBUG("");
 
 			ff = read_queue(daemonSockets[index].dataQueue);
 			//	ff = get_fake_frame();
-			//					PRINT_DEBUG();
+			//					PRINT_DEBUG("");
 
 			sem_post(&(daemonSockets[index].Qs));
 			sem_post(&daemonSockets_sem);
 		} while (ff == NULL);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 	} else {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 			PRINT_DEBUG("Socket closed, canceling read block.");
@@ -189,16 +189,16 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	*buflen = ff->dataFrame.pduLength;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (symbol == 0) {
 		//		address = NULL;
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	freeFinsFrame(ff);
 
 		return (1);
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	addr_in->sin_family = AF_INET;
 	addr_in->sin_port = srcport;
@@ -208,7 +208,7 @@ int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen,
 	 * This is the final consumer
 	 * call finsFrame_free(Struct finsFrame** ff)
 	 */
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	//freeFinsFrame(ff);
 
@@ -256,7 +256,7 @@ void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int d
 
 	int len = datalen;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/** TODO handle flags cases */
 	switch (flags) {
@@ -392,7 +392,7 @@ void recvfrom_icmp(void *threadData) {
 	if (daemonSockets[index].protocol == IPPROTO_ICMP)
 		symbol = 1;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	blocking_flag = daemonSockets[index].blockingFlag;
 	sem_post(&daemonSockets_sem);
 
@@ -458,7 +458,7 @@ void recvfrom_icmp(void *threadData) {
 		free(msg);
 
 		//free(buf);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish recvfrom");
@@ -472,7 +472,7 @@ void recvfrom_icmp(void *threadData) {
 			nack_send(uniqueSockID, socketCallType, 0);
 		}
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	/** TODO find a way to release these buffers later
 	 * using free here causing a segmentation fault
@@ -499,7 +499,7 @@ void getsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int 
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	//ack_write(daemonSockets[index].daemonside_pipe_ds, uniqueSockID);
 	//write(daemonSockets[index].daemonside_pipe_ds, &optlen, sizeof(socklen_t));
@@ -534,7 +534,7 @@ void setsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int 
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	ack_send(uniqueSockID, setsockopt_call, 0);
 

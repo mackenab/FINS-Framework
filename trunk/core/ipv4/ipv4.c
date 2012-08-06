@@ -44,7 +44,7 @@ void ipv4_init() {
 
 	while (ipv4_running) {
 		IP4_receive_fdf();
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	free(ff);
 
 	}

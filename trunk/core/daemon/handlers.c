@@ -180,8 +180,8 @@ int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_i
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port
-				&& daemonSockets[i].dst_ip == rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
+		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port && daemonSockets[i].dst_ip
+				== rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
 			PRINT_DEBUG("Matched connection index=%d", i);
 			return (i);
 		}
@@ -799,7 +799,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int index, int call_th
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		socket_tcp(uniqueSockID, index, call_id, call_index, domain, type, protocol);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
-	//socket_icmp(uniqueSockID, index, call_id, call_index, domain, type, protocol);
+		//socket_icmp(uniqueSockID, index, call_id, call_index, domain, type, protocol);
 		nack_send_new(uniqueSockID, index, call_id, call_index, socket_call, 0);
 	} else {
 		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
@@ -869,7 +869,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		bind_tcp(uniqueSockID, index, call_id, call_index, addr);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
-	//bind_icmp(uniqueSockID, index, call_id, call_index, addr);
+		//bind_icmp(uniqueSockID, index, call_id, call_index, addr);
 		nack_send_new(uniqueSockID, index, call_id, call_index, bind_call, 0);
 	} else {
 		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
@@ -1115,7 +1115,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 
 	switch (cmd) {
 	case SIOCGIFCONF:
-//TODO implement: http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L3919, http://lxr.linux.no/linux+v2.6.39.4/net/ipv4/devinet.c#L926
+		//TODO implement: http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L3919, http://lxr.linux.no/linux+v2.6.39.4/net/ipv4/devinet.c#L926
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1125,7 +1125,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 3 * sizeof(struct ifreq);
 		msg = (u_char *) malloc(msg_len);
@@ -1190,7 +1191,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		}
 
 		*(int *) temp = total;
-		PRINT_DEBUG("total=%d (%d)", total, total/32);
+		PRINT_DEBUG("total=%d (%d)", total, total/32)
+		;
 
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
@@ -1213,9 +1215,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp)
+		;
 
-//TODO get correct values from IP?
+		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
@@ -1232,7 +1235,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1277,9 +1281,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp)
+		;
 
-//TODO get correct values from IP?
+		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
@@ -1296,7 +1301,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1341,9 +1347,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp)
+		;
 
-//TODO get correct values from IP?
+		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 255));
@@ -1360,7 +1367,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1405,9 +1413,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp)
+		;
 
-//TODO get correct values from IP?
+		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(255, 255, 255, 0));
@@ -1424,7 +1433,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1459,20 +1469,21 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		msg_len = 0; //handle per socket/protocol
 		break;
 	case TIOCOUTQ:
-//case TIOCINQ: //equiv to FIONREAD??
+		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCADDRT:
 	case SIOCDELRT:
 	case SIOCSIFADDR:
-//case SIOCAIPXITFCRT:
-//case SIOCAIPXPRISLT:
-//case SIOCIPXCFGDATA:
-//case SIOCIPXNCPCONN:
+		//case SIOCAIPXITFCRT:
+		//case SIOCAIPXPRISLT:
+		//case SIOCIPXCFGDATA:
+		//case SIOCIPXNCPCONN:
 	case SIOCGSTAMP:
 	case SIOCSIFDSTADDR:
 	case SIOCSIFBRDADDR:
 	case SIOCSIFNETMASK:
-//TODO
-		PRINT_DEBUG("not implemented: cmd=%d", cmd);
+		//TODO
+		PRINT_DEBUG("not implemented: cmd=%d", cmd)
+		;
 		if (pt - buf != buf_len) {
 			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
 			nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
@@ -1480,7 +1491,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		}
 		break;
 	default:
-		PRINT_DEBUG("cmd=%d default", cmd);
+		PRINT_DEBUG("cmd=%d default", cmd)
+		;
 		break;
 	}
 
@@ -1623,7 +1635,21 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	free(temp2);
 	//#########################
 
-	//TODO chang efrom send_up & sendto_udp to just sendmsg_udp and handle address issues there
+	//TODO change from send_up & sendto_udp to just sendmsg_udp and handle address issues there
+
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+		sendmsg_udp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addr_len);
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
+		sendmsg_tcp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addr_len);
+	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+		//sendmsg_icmp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addr_len);
+		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+	} else {
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
+		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+	}
+	return;
+
 	/**
 	 * In case of connected sockets
 	 */
@@ -1698,7 +1724,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 		return;
 	}
 
-	memcpy(msg_control, pt, msg_controllen); //??? originally had &msgControl
+	memcpy(msg_control, pt, msg_controllen);
 	pt += msg_controllen;
 
 	if (pt - buf != len) {
@@ -1949,7 +1975,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		return;
 	}
-//daemonSockets[index].threads = threads;
+	//daemonSockets[index].threads = threads;
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
@@ -1962,7 +1988,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		poll_tcp(uniqueSockID, index, call_id, call_index);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-//poll_icmp(index, uniqueSockID);
+		//poll_icmp(index, uniqueSockID);
 		PRINT_DEBUG("poll_icmp not implemented yet");
 		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
 	} else {
@@ -1991,7 +2017,7 @@ void mmap_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 		nack_send_new(uniqueSockID, index, call_id, call_index, mmap_call, 0);
 		return;
 	}
-//daemonSockets[index].threads = threads;
+	//daemonSockets[index].threads = threads;
 
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
@@ -2000,15 +2026,15 @@ void mmap_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-//release_udp(index, uniqueSockID);
+		//release_udp(index, uniqueSockID);
 		PRINT_DEBUG("implement mmap_udp");
 		ack_send_new(uniqueSockID, index, call_id, call_index, mmap_call, 0);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-//release_tcp(index, uniqueSockID);
+		//release_tcp(index, uniqueSockID);
 		PRINT_DEBUG("implement mmap_tcp");
 		ack_send_new(uniqueSockID, index, call_id, call_index, mmap_call, 0);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-//release_icmp(index, uniqueSockID);
+		//release_icmp(index, uniqueSockID);
 		PRINT_DEBUG("implement mmap_icmp");
 		ack_send_new(uniqueSockID, index, call_id, call_index, mmap_call, 0);
 	} else {

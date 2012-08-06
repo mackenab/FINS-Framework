@@ -111,11 +111,11 @@ void udp_get_FF() {
 	}
 	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == UP)) {
 		udp_in(ff);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 	}
 	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == DOWN)) {
 		udp_out(ff);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 	}
 
 }
@@ -126,7 +126,7 @@ void udp_init() {
 
 	while (udp_running) {
 		udp_get_FF();
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	free(pff);
 	}
 

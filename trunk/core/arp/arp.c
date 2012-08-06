@@ -459,7 +459,7 @@ void arp_init() {
 
 	while (arp_running) {
 		arp_get_FF();
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	free(pff);
 	}
 

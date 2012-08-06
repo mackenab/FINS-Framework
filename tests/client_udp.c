@@ -106,20 +106,21 @@ int main(int argc, char *argv[]) {
 
 	int i = 0;
 	while (i < 10) {
-		/*
-		 printf("(%d) Input msg (q or Q to quit):", i++);
-		 gets(send_data);
-		 printf("%s", send_data);*/
 		i++;
-		//sleep(1);
-		//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-		if (pID == 0 && 0) {
+		if (1) {
+			printf("(%d) Input msg (q or Q to quit):", i);
+			gets(send_data);
+			printf("%s", send_data);
+			numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+			//sleep(1);
+		}
+		if (pID == 0) {
 			numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			printf("\n sent=%d", numbytes);
 			numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			printf("\n sent=%d", numbytes);
 		} else {
-			numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
+			//numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
 			printf("\n read=%d", numbytes);
 		}
 		fflush(stdout);

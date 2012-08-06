@@ -1118,9 +1118,9 @@ void *Capture() {
 		metadata_create(ether_meta);
 
 		memcpy(ethersrc, ((struct sniff_ethernet *) data)->ether_shost, ETHER_ADDR_LEN);
-		//PRINT_DEBUG();
+		//PRINT_DEBUG("");
 		memcpy(etherdst, ((struct sniff_ethernet *) data)->ether_dhost, ETHER_ADDR_LEN);
-		//PRINT_DEBUG();
+		//PRINT_DEBUG("");
 		protocol_type = ntohs(((struct sniff_ethernet *) data)->ether_type);
 
 		PRINT_DEBUG("Capture: got frame: ethersrc=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, etherdst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, proto=%d",
@@ -1192,7 +1192,7 @@ void *Inject() {
 		exit(EXIT_FAILURE);
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	while (1) {
 

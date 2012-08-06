@@ -52,9 +52,9 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 	 *
 	 */
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	if (block_flag == 1) {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		/**
 		 * WE Must FINS another way to emulate the blocking.
 		 * The best suggestion is to use a pipeline to push the data in
@@ -69,20 +69,20 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 				return (0);
 			}
 			sem_wait(&(daemonSockets[index].Qs));
-			//		PRINT_DEBUG();
+			//		PRINT_DEBUG("");
 
 			ff = read_queue(daemonSockets[index].dataQueue);
 			//	ff = get_fake_frame();
-			//					PRINT_DEBUG();
+			//					PRINT_DEBUG("");
 
 			sem_post(&(daemonSockets[index].Qs));
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
 		} while (ff == NULL);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 	} else {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -141,16 +141,16 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 	memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	*buflen = ff->dataFrame.pduLength;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (symbol == 0) {
 		//		address = NULL;
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	freeFinsFrame(ff);
 
 		return (1);
 	}
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	addr_in->sin_port = srcport;
 	addr_in->sin_addr.s_addr = srcip;
@@ -159,7 +159,7 @@ int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, 
 	 * This is the final consumer
 	 * call finsFrame_free(Struct finsFrame** ff)
 	 */
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	//freeFinsFrame(ff);
 
@@ -176,7 +176,7 @@ int daemon_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t ds
 
 	metadata *tcpout_meta = (metadata *) malloc(sizeof(metadata));
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	metadata_create(tcpout_meta);
 
@@ -768,7 +768,7 @@ void *accept_tcp_thread(void *local) {
 	 * This is the final consumer
 	 * call finsFrame_free(Struct finsFrame** ff)
 	 */
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
@@ -1659,7 +1659,7 @@ void *release_tcp_thread(void *local) {
 		}
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	freeFinsFrame(ff);
 	pthread_exit(NULL);
@@ -1944,7 +1944,7 @@ void shutdown_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int
 	}
 
 	PRINT_DEBUG("index = %d", index);
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	ack_send(uniqueSockID, shutdown_call, 0);
 }
@@ -1978,7 +1978,7 @@ void *getsockopt_tcp_thread(void *local) {
 	sem_post(&daemonSockets_sem);
 //##############################
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("getsockopt_tcp_thread: after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
@@ -2326,7 +2326,7 @@ void *setsockopt_tcp_thread(void *local) {
 	sem_post(&daemonSockets_sem);
 //##############################
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("setsockopt_tcp_thread: after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);

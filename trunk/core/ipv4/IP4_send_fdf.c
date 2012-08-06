@@ -31,7 +31,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket) {
 		break;
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	fins_frame->destinationID.next = NULL;
 	fins_frame->dataFrame.directionFlag = UP;
 	fins_frame->dataFrame.pduLength = pheader->packet_length - pheader->header_length;

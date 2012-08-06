@@ -23,9 +23,13 @@ void connect_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 void accept_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, unsigned long long uniqueSockID_new, int index_new, int flags);
 void getname_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int peer);
 void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
+
+void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
+		struct sockaddr_in *dest_addr, socklen_t addrlen);
 void send_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags);
 void sendto_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
 		struct sockaddr_in *dest_addr, socklen_t addrlen);
+
 void recvfrom_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
 void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
@@ -46,8 +50,8 @@ struct daemon_udp_thread_data {
 
 	int data_len;
 	int flags;
-	//int socketCallType; //TODO remove?
-	//int symbol; //TODO remove?
+//int socketCallType; //TODO remove?
+//int symbol; //TODO remove?
 };
 #define MAX_recv_threads 100
 

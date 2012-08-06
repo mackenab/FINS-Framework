@@ -85,9 +85,9 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	 *
 	 */
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	if (block_flag == 1) {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		int value;
 		sem_getvalue(&(daemonSockets[index].Qs), &value);
@@ -103,10 +103,10 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 				return (0);
 			}
 			sem_wait(&(daemonSockets[index].Qs));
-			//		PRINT_DEBUG();
+			//		PRINT_DEBUG("");
 			ff = read_queue(daemonSockets[index].dataQueue);
 			//	ff = get_fake_frame();
-			//					PRINT_DEBUG();
+			//					PRINT_DEBUG("");
 
 			if (ff && multi_flag) {
 				PRINT_DEBUG("index=%d threads=%d replies=%d", index, daemonSockets[index].threads, daemonSockets[index].replies);
@@ -129,10 +129,10 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
 		} while (ff == NULL);
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 	} else {
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
@@ -213,17 +213,17 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	*buflen = ff->dataFrame.pduLength;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (symbol == 0) {
 		//		address = NULL;
-		PRINT_DEBUG();
+		PRINT_DEBUG("");
 		//	freeFinsFrame(ff);
 
 		return (1);
 	}
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	addr_in->sin_port = srcport;
 	addr_in->sin_addr.s_addr = srcip;
@@ -232,7 +232,7 @@ int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, in
 	 * This is the final consumer
 	 * call finsFrame_free(Struct finsFrame** ff)
 	 */
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	//freeFinsFrame(ff);
 
@@ -249,7 +249,7 @@ int daemon_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t ds
 
 	metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	if (udpout_meta == NULL) {
 		PRINT_DEBUG("metadata creation failed, freeing: ff=%x", (int) ff);
@@ -662,7 +662,8 @@ void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 
 	switch (cmd) {
 	case FIONREAD:
-		PRINT_DEBUG("FIONREAD cmd=%d", cmd);
+		PRINT_DEBUG("FIONREAD cmd=%d", cmd)
+		;
 		//figure out buffered data
 
 		//send msg to wedge
@@ -695,7 +696,8 @@ void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		}
 		break;
 	default:
-		PRINT_DEBUG("default cmd=%d", cmd);
+		PRINT_DEBUG("default cmd=%d", cmd)
+		;
 		return;
 	}
 
@@ -709,6 +711,126 @@ void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 	}
 }
+
+void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
+		struct sockaddr_in *addr, socklen_t addrlen) {
+
+	uint32_t host_ip;
+	uint16_t host_port;
+	uint32_t dst_ip;
+	uint16_t dst_port;
+
+	int len = data_len;
+
+	struct in_addr *temp;
+
+	PRINT_DEBUG("Entered: index=%d, uniqueSockID=%llu, data_len=%d, flags=%d", index, uniqueSockID, data_len, flags);
+	PRINT_DEBUG("MSG_CONFIRM=%d (%d) MSG_DONTROUTE=%d (%d) MSG_DONTWAIT=%d (%d) MSG_EOR=%d (%d) MSG_MORE=%d (%d) MSG_NOSIGNAL=%d (%d) MSG_OOB=%d (%d)",
+			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
+
+	/** TODO handle flags cases */
+	switch (flags) {
+	case MSG_CONFIRM:
+	case MSG_DONTROUTE:
+	case MSG_DONTWAIT:
+	case MSG_EOR:
+	case MSG_MORE:
+	case MSG_NOSIGNAL:
+	case MSG_OOB: /** case of recieving a (write call)*/
+	default:
+		break;
+
+	}
+	PRINT_DEBUG("");
+
+	if (addr->sin_family != AF_INET) {
+		PRINT_DEBUG("Wrong address family");
+		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+
+		free(data);
+		free(addr);
+		return;
+	}
+
+	/** copying the data passed to be able to free the old memory location
+	 * the new created location is the one to be included into the newly created finsFrame*/
+	PRINT_DEBUG("");
+
+	dst_ip = ntohl(addr->sin_addr.s_addr);/** it is in network format since application used htonl */
+	/** addresses are in host format given that there are by default already filled
+	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
+
+	/** Keep all ports and addresses in host order until later  action taken */
+	dst_port = ntohs(addr->sin_port); /** reverse it since it is in network order after application used htons */
+
+	PRINT_DEBUG("");
+	sem_wait(&daemonSockets_sem);
+	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+		PRINT_DEBUG("CRASH !! socket descriptor not found into daemon sockets");
+		sem_post(&daemonSockets_sem);
+
+		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+
+		free(data);
+		free(addr);
+		return;
+	}
+
+	/**
+	 * the current value of host_IP is zero but to be filled later with
+	 * the current IP using the IPv4 modules unless a binding has occured earlier
+	 */
+	if (daemonSockets[index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+		daemonSockets[index].host_ip = my_host_ip_addr;
+	}
+
+	host_ip = daemonSockets[index].host_ip;
+
+	/**
+	 * Default current host port to be assigned is 58088
+	 * It is supposed to be randomly selected from the range found in
+	 * /proc/sys/net/ipv4/ip_local_port_range
+	 * default range in Ubuntu is 32768 - 61000
+	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
+	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
+	 */
+	host_port = daemonSockets[index].host_port;
+	if (host_port == 0) {
+		while (1) {
+			host_port = randoming(MIN_port, MAX_port);
+			if (check_daemon_ports(host_port, host_ip)) {
+				break;
+			}
+		}
+		daemonSockets[index].host_port = host_port;
+	}
+	PRINT_DEBUG("");
+	sem_post(&daemonSockets_sem);
+
+	PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", index, dst_ip, dst_port, host_ip, host_port);
+
+	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+	temp->s_addr = host_ip;
+	PRINT_DEBUG("index=%d, dst=%s/%d (%u)", index, inet_ntoa(addr->sin_addr), dst_port, addr->sin_addr.s_addr);
+	PRINT_DEBUG("index=%d, host=%s/%d (%u)", index, inet_ntoa(*temp), host_port, (*temp).s_addr);
+	//free(data);
+	//free(addr);
+	PRINT_DEBUG("");
+
+	//int blocking_flag = 1; //TODO get from flags
+
+	/** the meta-data parameters are all passes by copy starting from this point
+	 *
+	 */
+	if (daemon_UDP_to_fins(data, len, dst_port, dst_ip, host_port, host_ip) == 1) {
+		/** TODO prevent the socket interceptor from holding this semaphore before we reach this point */
+		ack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+	} else {
+		PRINT_DEBUG("socketdaemon failed to accomplish sendto");
+		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+	}
+	free(addr);
+} //end of sendto_udp
 
 void send_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int datalen, u_int flags) {
 
@@ -821,7 +943,7 @@ void sendto_udp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 
 	struct in_addr *temp;
 
-	PRINT_DEBUG("sendto_udp: Entered: index=%d, uniqueSockID=%llu, data_len=%d, flags=%d", index, uniqueSockID, data_len, flags);
+	PRINT_DEBUG("Entered: index=%d, uniqueSockID=%llu, data_len=%d, flags=%d", index, uniqueSockID, data_len, flags);
 	PRINT_DEBUG("MSG_CONFIRM=%d (%d) MSG_DONTROUTE=%d (%d) MSG_DONTWAIT=%d (%d) MSG_EOR=%d (%d) MSG_MORE=%d (%d) MSG_NOSIGNAL=%d (%d) MSG_OOB=%d (%d)",
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
@@ -945,7 +1067,7 @@ void *recvfrom_udp_thread(void *local) {
 	int non_blocking_flag = flags & (SOCK_NONBLOCK | O_NONBLOCK | MSG_DONTWAIT); //TODO get from flags
 	int ret;
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	struct finsFrame *ff = NULL;
 	ret = get_fdf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%x", uniqueSockID, index, (int)ff);
@@ -1252,11 +1374,13 @@ void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	switch (optname) {
 	case SO_DEBUG:
 		daemonSockets[index].sockopts.FSO_DEBUG = *(int *) optval;
-		PRINT_DEBUG("FSO_DEBUG=%d", daemonSockets[index].sockopts.FSO_DEBUG);
+		PRINT_DEBUG("FSO_DEBUG=%d", daemonSockets[index].sockopts.FSO_DEBUG)
+		;
 		break;
 	case SO_REUSEADDR:
 		daemonSockets[index].sockopts.FSO_REUSEADDR = *(int *) optval;
-		PRINT_DEBUG("FSO_REUSEADDR=%d", daemonSockets[index].sockopts.FSO_REUSEADDR);
+		PRINT_DEBUG("FSO_REUSEADDR=%d", daemonSockets[index].sockopts.FSO_REUSEADDR)
+		;
 		break;
 	case SO_TYPE:
 	case SO_PROTOCOL:
@@ -1292,7 +1416,8 @@ void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	case SO_ATTACH_FILTER:
 	case SO_DETACH_FILTER:
 	default:
-		PRINT_DEBUG("default=%d", optname);
+		PRINT_DEBUG("default=%d", optname)
+		;
 		break;
 	}
 

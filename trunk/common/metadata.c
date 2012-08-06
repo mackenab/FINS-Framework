@@ -46,9 +46,9 @@
 
 void metadata_create(metadata *mptr) {
 
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 	config_init(mptr);
-	PRINT_DEBUG();
+	PRINT_DEBUG("");
 
 	return;
 
