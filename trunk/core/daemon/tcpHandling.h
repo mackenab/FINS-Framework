@@ -37,8 +37,8 @@ struct daemon_tcp_thread_data {
 	//int symbol; //TODO remove?
 };
 
-int daemon_TCP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat, int block_flag);
-int TCPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag);
+int daemon_fdf_to_tcp(u_char *data, u_int data_len, metadata *params);
+int daemon_fcf_to_tcp(uint16_t opcode, metadata *params);
 
 void socket_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
 void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
@@ -47,10 +47,9 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, unsigned long long uniqueSockID_new, int index_new, int flags);
 void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int peer);
 void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
-void send_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags);
-void sendto_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags, struct sockaddr_in *dest_addr,
-		socklen_t addrlen);
-void recvfrom_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
+void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
+		struct sockaddr_in *dest_addr, int addr_len);
+void recvmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
 void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);

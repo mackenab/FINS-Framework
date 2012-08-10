@@ -48,7 +48,7 @@ void IP4_receive_fdf() {
 			 * now it will be set by default to UDP
 			 */
 			int ret = 0;
-			ret += metadata_readFromElement(pff->dataFrame.metaData, "protocol", &protocol) == 0;
+			ret += metadata_readFromElement(pff->dataFrame.metaData, "protocol", &protocol) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_DEBUG("metadata read error: ret=%d", ret);

@@ -12,9 +12,7 @@
 
 #include "handlers.h"
 
-int daemon_UDP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
-int UDPreadFrom_fins(int index, unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag,
-		int multi_flag);
+int daemon_fdf_to_udp(u_char *data, u_int data_len, metadata *params);
 
 void socket_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
 void bind_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
@@ -23,14 +21,9 @@ void connect_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 void accept_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, unsigned long long uniqueSockID_new, int index_new, int flags);
 void getname_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int peer);
 void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
-
 void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
-		struct sockaddr_in *dest_addr, socklen_t addrlen);
-void send_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags);
-void sendto_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
-		struct sockaddr_in *dest_addr, socklen_t addrlen);
-
-void recvfrom_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
+		struct sockaddr_in *dest_addr, int addr_len);
+void recvmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
 void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void release_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);

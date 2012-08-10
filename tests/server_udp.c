@@ -125,16 +125,16 @@ int main(int argc, char *argv[]) {
 	}
 
 	while (1) {
-		//ret = poll(fds, nfds, time);
+		ret = poll(fds, nfds, time);
 		if (ret || 1) {
-			/*
-			 printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
-			 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
-			 (fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0, (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLERR) > 0,
-			 (fds[0].revents & POLLHUP) > 0, (fds[0].revents & POLLNVAL) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLRDBAND) > 0,
-			 (fds[0].revents & POLLWRNORM) > 0, (fds[0].revents & POLLWRBAND) > 0);
-			 fflush(stdout);
-			 */
+			///*
+			printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
+			printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
+					(fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0, (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLERR) > 0,
+					(fds[0].revents & POLLHUP) > 0, (fds[0].revents & POLLNVAL) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLRDBAND) > 0,
+					(fds[0].revents & POLLWRNORM) > 0, (fds[0].revents & POLLWRBAND) > 0);
+			fflush(stdout);
+			//*/
 			if ((fds[0].revents & (POLLIN | POLLRDNORM)) || 1) {
 				bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
 				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);

@@ -117,27 +117,13 @@ int insert_wedge_call(u_int id, unsigned long long uniqueSockID, int index, u_in
 	return print_exit(__FUNCTION__, __LINE__, -1);
 }
 
-int find_wedge_call_new(unsigned long long uniqueSockID, u_int type) {
+int find_wedge_call_new(unsigned long long uniqueSockID, int index, u_int type) {
 	u_int i;
 
 	//PRINT_DEBUG("Entered: id=%u", id);
 
 	for (i = 0; i < MAX_CALLS; i++) {
-		if (wedge_calls[i].id != -1 && wedge_calls[i].uniqueSockID == uniqueSockID && wedge_calls[i].type == type) {
-			return print_exit(__FUNCTION__, __LINE__, i);
-		}
-	}
-
-	return print_exit(__FUNCTION__, __LINE__, -1);
-}
-
-int find_wedge_call(u_int id) {
-	int i;
-
-	//PRINT_DEBUG("Entered: id=%u", id);
-
-	for (i = 0; i < MAX_CALLS; i++) {
-		if (wedge_calls[i].id == id) {
+		if (wedge_calls[i].id != -1 && wedge_calls[i].uniqueSockID == uniqueSockID && wedge_calls[i].index == index && wedge_calls[i].type == type) { //TODO remove index? maybe unnecessary
 			return print_exit(__FUNCTION__, __LINE__, i);
 		}
 	}
@@ -239,14 +225,14 @@ int remove_wedge_socket_new(unsigned long long uniqueSockID, int index, u_int ty
 				PRINT_ERROR("calls_sem acquire fail");
 				//TODO error
 			}
-			call_index = find_wedge_call_new(uniqueSockID, i);
+			call_index = find_wedge_call_new(uniqueSockID, index, i);
 			up(&calls_sem);
 			if (call_index == -1) {
 				break;
 			}
 			up(&wedge_calls[call_index].wait_sem);
 
-			//msleep(10); //TODO may need to change
+			msleep(1); //TODO may need to change
 
 			if (down_interruptible(&sockets_sem)) {
 				PRINT_ERROR("sockets_sem acquire fail");
@@ -562,53 +548,61 @@ void nl_data_ready(struct sk_buff *skb) {
 					hdr->call_type, hdr->call_id, hdr->call_index, hdr->uniqueSockID, hdr->index, hdr->ret, hdr->msg, len);
 
 			if (hdr->call_type < MAX_CALL_TYPES) {
-				if (hdr->index == -1 || hdr->index > MAX_SOCKETS) {
-					PRINT_ERROR("invalid index: index=%d", hdr->index);
-					goto end;
-				}
-				if (down_interruptible(&sockets_sem)) {
-					PRINT_ERROR("sockets_sem acquire fail");
-					//TODO error
-				}
-				if (wedge_sockets[hdr->index].uniqueSockID != hdr->uniqueSockID) {
-					up(&sockets_sem);
-					PRINT_ERROR("socket removed: index=%d uniqueSockID=%llu", hdr->index, hdr->uniqueSockID);
-					goto end;
-				}
+				/*
+				 if (hdr->index == -1 || hdr->index > MAX_SOCKETS) {
+				 PRINT_ERROR("invalid index: index=%d", hdr->index);
+				 goto end;
+				 }
+				 if (down_interruptible(&sockets_sem)) {
+				 PRINT_ERROR("sockets_sem acquire fail");
+				 //TODO error
+				 }
+				 if (wedge_sockets[hdr->index].uniqueSockID != hdr->uniqueSockID) {
+				 up(&sockets_sem);
+				 PRINT_ERROR("socket removed: index=%d uniqueSockID=%llu", hdr->index, hdr->uniqueSockID);
+				 goto end;
+				 }
 
-				PRINT_DEBUG("index=%d type=%u threads=%d", hdr->index, hdr->call_type, wedge_sockets[hdr->index].threads[hdr->call_type]);
-				if (wedge_sockets[hdr->index].threads[hdr->call_type] < 1) { //TODO may be unnecessary, since have call_index/call_id
-					up(&sockets_sem);
-					PRINT_ERROR("Exiting: no waiting threads found: index=%d type=%u", hdr->index, hdr->call_type);
-					goto end;
-				}
-				up(&sockets_sem);
+				 PRINT_DEBUG("index=%d type=%u threads=%d", hdr->index, hdr->call_type, wedge_sockets[hdr->index].threads[hdr->call_type]);
+				 if (wedge_sockets[hdr->index].threads[hdr->call_type] < 1) { //TODO may be unnecessary, since have call_index/call_id
+				 up(&sockets_sem);
+				 PRINT_ERROR("Exiting: no waiting threads found: index=%d type=%u", hdr->index, hdr->call_type);
+				 goto end;
+				 }
+				 up(&sockets_sem);
 
-				if (wedge_sockets[hdr->index].release_flag && (hdr->call_type != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
-					PRINT_DEBUG("socket released, dropping for index=%d uniqueSockID=%llu type=%d", hdr->index, hdr->uniqueSockID, hdr->call_type);
-					//goto end; //TODO uncomment or remove
-				}
-
+				 if (wedge_sockets[hdr->index].release_flag && (hdr->call_type != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
+				 PRINT_DEBUG("socket released, dropping for index=%d uniqueSockID=%llu type=%d", hdr->index, hdr->uniqueSockID, hdr->call_type);
+				 //goto end; //TODO uncomment or remove
+				 }
+				 */
 				//This wedge version relies on the fact that each call gets a unique call ID and that value is only sent to the wedge once
 				//Under this assumption a lock-less implementation can be used
 				if (hdr->call_index == -1 || hdr->call_index > MAX_CALLS) {
 					PRINT_ERROR("invalid call_index: call_index=%d", hdr->call_index);
 					goto end;
 				}
-				if (wedge_calls[hdr->call_index].id == hdr->call_id && wedge_calls[hdr->call_index].type == hdr->call_type) { //TODO remove type check ~ unnecessary?
-					wedge_calls[hdr->call_index].ret = hdr->ret;
-					wedge_calls[hdr->call_index].msg = hdr->msg;
-					wedge_calls[hdr->call_index].buf = buf + sizeof(struct nl_daemon_to_wedge);
-					wedge_calls[hdr->call_index].len = len;
-					wedge_calls[hdr->call_index].reply = 1;
-					PRINT_DEBUG("shared created: sockID=%llu, call_id=%d, ret=%u, msg=%u, len=%d",
-							wedge_calls[hdr->call_index].uniqueSockID, wedge_calls[hdr->call_index].id, wedge_calls[hdr->call_index].ret, wedge_calls[hdr->call_index].msg, wedge_calls[hdr->call_index].len);
-					up(&wedge_calls[hdr->call_index].wait_sem); //DON"T reference wedge_calls[hdr->call_index] after this
-				} else if (wedge_calls[hdr->call_index].id != hdr->call_id) {
-					PRINT_ERROR("call mismatched: call_index=%d id=%u hdr->id=%u", hdr->call_index, wedge_calls[hdr->call_index].id, hdr->call_id);
-				} else {
-					PRINT_ERROR("call mismatched: call_index=%d type=%u hdr->type=%u", hdr->call_index, wedge_calls[hdr->call_index].type, hdr->call_type);
+				if (down_interruptible(&calls_sem)) {
+					PRINT_ERROR("calls_sem acquire fail");
+					//TODO error
 				}
+				if (wedge_calls[hdr->call_index].id == hdr->call_id) {
+					if (wedge_calls[hdr->call_index].type == hdr->call_type) { //TODO remove type check ~ unnecessary?
+						wedge_calls[hdr->call_index].ret = hdr->ret;
+						wedge_calls[hdr->call_index].msg = hdr->msg;
+						wedge_calls[hdr->call_index].buf = buf + sizeof(struct nl_daemon_to_wedge);
+						wedge_calls[hdr->call_index].len = len;
+						wedge_calls[hdr->call_index].reply = 1;
+						PRINT_DEBUG("shared created: sockID=%llu, call_id=%d, ret=%u, msg=%u, len=%d",
+								wedge_calls[hdr->call_index].uniqueSockID, wedge_calls[hdr->call_index].id, wedge_calls[hdr->call_index].ret, wedge_calls[hdr->call_index].msg, wedge_calls[hdr->call_index].len);
+						up(&wedge_calls[hdr->call_index].wait_sem); //DON"T reference wedge_calls[hdr->call_index] after this
+					} else {
+						PRINT_ERROR("call mismatched: call_index=%d type=%u hdr->type=%u", hdr->call_index, wedge_calls[hdr->call_index].type, hdr->call_type);
+					}
+				} else {
+					PRINT_ERROR("call mismatched: call_index=%d id=%u hdr->id=%u", hdr->call_index, wedge_calls[hdr->call_index].id, hdr->call_id);
+				}
+				up(&calls_sem);
 			} else {
 				//TODO error
 			}
@@ -1940,10 +1934,12 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				pt += sizeof(int);
 
 				if (buf_len >= 0) {
+					//########
 					u_char *temp = (u_char *) kmalloc(buf_len + 1, GFP_KERNEL);
 					memcpy(temp, pt, buf_len);
 					temp[buf_len] = '\0';
 					PRINT_DEBUG("msg='%s'", temp);
+					//########
 
 					ret = buf_len; //reuse as counter
 					i = 0;
@@ -2074,8 +2070,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	switch (cmd) {
 	case SIOCGIFCONF:
-		PRINT_DEBUG("cmd=%d ==SIOCGIFCONF", cmd)
-		;
+		PRINT_DEBUG("cmd=%d ==SIOCGIFCONF", cmd);
 
 		if (copy_from_user(&ifc, arg_pt, sizeof(struct ifconf))) {
 			PRINT_ERROR("ERROR: cmd=%d ==SIOCGIFDSTADDR", cmd);
@@ -2092,8 +2087,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		}
 		ifr_pt = ifc.ifc_req; //TODO figure out what this is used for
 
-		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (int)pos, (int)ifr_pt)
-		;
+		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (int)pos, (int)ifr_pt);
 
 		// Build the message
 		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int) + sizeof(int);
@@ -2139,8 +2133,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 
-		PRINT_DEBUG("cmd=%d name='%s'", cmd, ifr.ifr_name)
-		;
+		PRINT_DEBUG("cmd=%d name='%s'", cmd, ifr.ifr_name);
 
 		// Build the message
 		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int) + sizeof(int) + IFNAMSIZ;
@@ -2179,8 +2172,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		}
 		break;
 	case FIONREAD:
-		PRINT_DEBUG("cmd=FIONREAD")
-		;
+		PRINT_DEBUG("cmd=FIONREAD");
 
 		// Build the message
 		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int);
@@ -2226,8 +2218,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	case SIOCSIFBRDADDR:
 	case SIOCSIFNETMASK:
 		//TODO implement
-		PRINT_DEBUG("cmd=%d not implemented", cmd)
-		;
+		PRINT_DEBUG("cmd=%d not implemented", cmd);
 
 		// Build the message
 		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int);
@@ -2260,8 +2251,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		}
 		break;
 	default:
-		PRINT_DEBUG("cmd=%d default", cmd)
-		;
+		PRINT_DEBUG("cmd=%d default", cmd);
 		wedge_calls[call_index].id = -1;
 		rc = -1;
 		goto end;
@@ -2503,8 +2493,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			}
 			break;
 		default:
-			PRINT_DEBUG("cmd=%d default", cmd)
-			;
+			PRINT_DEBUG("cmd=%d default", cmd);
 			rc = -1;
 			break;
 		}
@@ -2798,7 +2787,8 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 				PRINT_DEBUG("rc=%x", rc);
 
-				rc |= POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+				//rc |= POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+				rc |= POLLIN; // | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 
 				PRINT_DEBUG("rc=%x", rc);
 
@@ -3286,26 +3276,26 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
 	uniqueSockID = getUniqueSockID(sk);
 	PRINT_DEBUG("Entered: uniqueSockID=%llu", uniqueSockID);
 
-	if (down_interruptible(&sockets_sem)) {
+if (down_interruptible(&sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-		//TODO error
-	}
+//TODO error
+}
 	index = find_wedge_socket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
-	if (index == -1) {
+if (index == -1) {
 		up(&sockets_sem);
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -3316,13 +3306,13 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (down_interruptible(&calls_sem)) {
 		PRINT_ERROR("calls_sem acquire fail");
-		//TODO error
-	}
+//TODO error
+}
 	call_id = call_count++;
 	call_index = insert_wedge_call(call_id, uniqueSockID, index, getsockopt_call);
 	up(&calls_sem);
 	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
-	if (call_index == -1) {
+if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
 	}
@@ -3330,16 +3320,16 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	ret = copy_from_user(&len, optlen, sizeof(int));
 	if (ret) {
 		PRINT_ERROR("copy_from_user fail ret=%d", ret);
-		goto end;
+goto end;
 	}
 	PRINT_DEBUG("len=%d", len);
 
-	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(int) + (len > 0 ? len : 0);
+// Build the message
+buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(int) + (len > 0 ? len : 0);
 	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
-		wedge_calls[call_index].id = -1;
+wedge_calls[call_index].id = -1;
 		rc = -ENOMEM;
 		goto end;
 	}
@@ -3367,7 +3357,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 		pt += len;
 		if (ret) {
 			PRINT_ERROR("copy_from_user fail ret=%d", ret);
-			kfree(buf);
+kfree(buf);
 			wedge_calls[call_index].id = -1;
 			rc = -1;
 			goto end;
@@ -3376,7 +3366,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (pt - buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
-		kfree(buf);
+kfree(buf);
 		wedge_calls[call_index].id = -1;
 		rc = -1;
 		goto end;
@@ -3384,31 +3374,31 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", getsockopt_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+// Send message to FINS_daemon
+ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
-		wedge_calls[call_index].id = -1;
+wedge_calls[call_index].id = -1;
 		rc = -1;
 		goto end;
 	}
 	release_sock(sk);
 
 	PRINT_DEBUG("waiting for reply: sk=%p, uniqueSockID=%llu, index=%d, call_id=%u, call_index=%d", sk, uniqueSockID, index, call_id, call_index);
-	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
+if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
-		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
-	}
+//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
+}
 	PRINT_DEBUG("relocked my semaphore");
 
-	lock_sock(sk);
+lock_sock(sk);
 	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
-			wedge_calls[call_index].uniqueSockID, wedge_calls[call_index].id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
-	if (wedge_calls[call_index].reply) {
+		wedge_calls[call_index].uniqueSockID, wedge_calls[call_index].id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
+if (wedge_calls[call_index].reply) {
 		if (wedge_calls[call_index].ret == ACK) {
 			PRINT_DEBUG("recv ACK");
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(int)) {
+if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(int)) {
 				pt = wedge_calls[call_index].buf;
 				rc = 0;
 
@@ -3418,7 +3408,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 				ret = copy_to_user(optlen, &len, sizeof(int));
 				if (ret) {
 					PRINT_ERROR("copy_from_user fail ret=%d", ret);
-					rc = -1;
+rc = -1;
 				}
 
 				if (len > 0) {
@@ -3426,25 +3416,25 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 					pt += len;
 					if (ret) {
 						PRINT_ERROR("copy_from_user fail ret=%d", ret);
-						rc = -1;
+rc = -1;
 					}
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
 					PRINT_ERROR("write error: diff=%d len=%d", pt-wedge_calls[call_index].buf, wedge_calls[call_index].len);
-					rc = -1;
+rc = -1;
 				}
 			} else {
 				PRINT_ERROR( "wedgeSockets[index].reply_buf error, wedgeSockets[index].reply_len=%d wedgeSockets[index].reply_buf=%p",
-						wedge_calls[call_index].len, wedge_calls[call_index].buf);
-				rc = -1;
+		wedge_calls[call_index].len, wedge_calls[call_index].buf);
+rc = -1;
 			}
 		} else if (wedge_calls[call_index].ret == NACK) {
 			PRINT_DEBUG("recv NACK msg=%u", wedge_calls[call_index].msg);
-			rc = -wedge_calls[call_index].msg;
+rc = -wedge_calls[call_index].msg;
 		} else {
 			PRINT_ERROR("error, acknowledgement: %d", wedge_calls[call_index].ret);
-			rc = -1;
+rc = -1;
 		}
 	} else {
 		rc = -1;
@@ -3454,11 +3444,11 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	end: //
 	if (down_interruptible(&sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-		//TODO error
-	}
+//TODO error
+}
 	wedge_sockets[index].threads[getsockopt_call]--;
 	PRINT_DEBUG("wedge_sockets[%d].threads[%u]=%u", index, getsockopt_call, wedge_sockets[index].threads[getsockopt_call]);
-	up(&sockets_sem);
+up(&sockets_sem);
 
 	release_sock(sk);
 	return print_exit(__FUNCTION__, __LINE__, rc);
@@ -3481,26 +3471,26 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
 	uniqueSockID = getUniqueSockID(sk);
 	PRINT_DEBUG("Entered: uniqueSockID=%llu", uniqueSockID);
 
-	if (down_interruptible(&sockets_sem)) {
+if (down_interruptible(&sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-		//TODO error
-	}
+//TODO error
+}
 	index = find_wedge_socket(uniqueSockID);
 	PRINT_DEBUG("index=%d", index);
-	if (index == -1) {
+if (index == -1) {
 		up(&sockets_sem);
 		release_sock(sk);
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -3511,13 +3501,13 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (down_interruptible(&calls_sem)) {
 		PRINT_ERROR("calls_sem acquire fail");
-		//TODO error
-	}
+//TODO error
+}
 	call_id = call_count++;
 	call_index = insert_wedge_call(call_id, uniqueSockID, index, setsockopt_call);
 	up(&calls_sem);
 	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
-	if (call_index == -1) {
+if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
 	}
@@ -3527,7 +3517,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
-		wedge_calls[call_index].id = -1;
+wedge_calls[call_index].id = -1;
 		rc = -ENOMEM;
 		goto end;
 	}
@@ -3554,7 +3544,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	pt += optlen;
 	if (ret) {
 		PRINT_ERROR("copy_from_user fail ret=%d", ret);
-		kfree(buf);
+kfree(buf);
 		wedge_calls[call_index].id = -1;
 		rc = -1;
 		goto end;
@@ -3562,7 +3552,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (pt - buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
-		kfree(buf);
+kfree(buf);
 		wedge_calls[call_index].id = -1;
 		rc = -1;
 		goto end;
@@ -3570,28 +3560,28 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	PRINT_DEBUG("socket_call=%d uniqueSockID=%llu buf_len=%d", setsockopt_call, uniqueSockID, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+// Send message to FINS_daemon
+ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
-		wedge_calls[call_index].id = -1;
+wedge_calls[call_index].id = -1;
 		rc = -1;
 		goto end;
 	}
 	release_sock(sk);
 
 	PRINT_DEBUG("waiting for reply: sk=%p, uniqueSockID=%llu, index=%d, call_id=%u, call_index=%d", sk, uniqueSockID, index, call_id, call_index);
-	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
+if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
-		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
-	}
+//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
+}
 	PRINT_DEBUG("relocked my semaphore");
 
-	lock_sock(sk);
+lock_sock(sk);
 	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
-			wedge_calls[call_index].uniqueSockID, wedge_calls[call_index].id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
-	if (wedge_calls[call_index].reply) {
+		wedge_calls[call_index].uniqueSockID, wedge_calls[call_index].id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
+if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
 		rc = -1;
@@ -3601,14 +3591,14 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	end: //
 	if (down_interruptible(&sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-		//TODO error
-	}
+//TODO error
+}
 	wedge_sockets[index].threads[setsockopt_call]--;
 	PRINT_DEBUG("wedge_sockets[%d].threads[%u]=%u", index, setsockopt_call, wedge_sockets[index].threads[setsockopt_call]);
-	up(&sockets_sem);
+up(&sockets_sem);
 
-	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+release_sock(sk);
+return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
 /* Data structures needed for protocol registration */
@@ -3617,79 +3607,79 @@ static struct proto FINS_proto = { .name = "FINS_PROTO", .owner = THIS_MODULE, .
 
 /* see IPX struct net_proto_family ipx_family_ops for comparison */
 static struct net_proto_family FINS_net_proto = { .family = PF_FINS, .create = FINS_wedge_create_socket, // This function gets called when socket() is called from userspace
-		.owner = THIS_MODULE, };
+	.owner = THIS_MODULE, };
 
 /* Defines which functions get called when corresponding calls are made from userspace */
 static struct proto_ops FINS_proto_ops = { .owner = THIS_MODULE, .family = PF_FINS, .release = FINS_release, .bind = FINS_bind, //sock_no_bind,
-		.connect = FINS_connect, //sock_no_connect,
-		.socketpair = FINS_socketpair, //sock_no_socketpair,
-		.accept = FINS_accept, //sock_no_accept,
-		.getname = FINS_getname, //sock_no_getname,
-		.poll = FINS_poll, //sock_no_poll,
-		.ioctl = FINS_ioctl, //sock_no_ioctl,
-		.listen = FINS_listen, //sock_no_listen,
-		.shutdown = FINS_shutdown, //sock_no_shutdown,
-		.setsockopt = FINS_setsockopt, //sock_no_setsockopt,
-		.getsockopt = FINS_getsockopt, //sock_no_getsockopt,
-		.sendmsg = FINS_sendmsg, //sock_no_sendmsg,
-		.recvmsg = FINS_recvmsg, //sock_no_recvmsg,
-		.mmap = FINS_mmap, //sock_no mmap,
-		.sendpage = FINS_sendpage, //sock_no_sendpage,
-		};
+	.connect = FINS_connect, //sock_no_connect,
+	.socketpair = FINS_socketpair, //sock_no_socketpair,
+	.accept = FINS_accept, //sock_no_accept,
+	.getname = FINS_getname, //sock_no_getname,
+	.poll = FINS_poll, //sock_no_poll,
+	.ioctl = FINS_ioctl, //sock_no_ioctl,
+	.listen = FINS_listen, //sock_no_listen,
+	.shutdown = FINS_shutdown, //sock_no_shutdown,
+	.setsockopt = FINS_setsockopt, //sock_no_setsockopt,
+	.getsockopt = FINS_getsockopt, //sock_no_getsockopt,
+	.sendmsg = FINS_sendmsg, //sock_no_sendmsg,
+	.recvmsg = FINS_recvmsg, //sock_no_recvmsg,
+	.mmap = FINS_mmap, //sock_no mmap,
+	.sendpage = FINS_sendpage, //sock_no_sendpage,
+	};
 
 /* Helper function to extract a unique socket ID from a given struct sock */
 inline unsigned long long getUniqueSockID(struct sock *sk) {
-	return (unsigned long long) &(sk->__sk_common); // Pointer to sock_common struct as unique ident
+return (unsigned long long) &(sk->__sk_common); // Pointer to sock_common struct as unique ident
 }
 
 /* Functions to initialize and teardown the protocol */
 static void setup_FINS_protocol(void) {
-	int rc; // used for reporting return value
+int rc; // used for reporting return value
 
-	// Changing this value to 0 disables the FINS passthrough by default
-	// Changing this value to 1 enables the FINS passthrough by default
-	FINS_stack_passthrough_enabled = 1; // Initialize kernel wide FINS data passthrough
+// Changing this value to 0 disables the FINS passthrough by default
+// Changing this value to 1 enables the FINS passthrough by default
+FINS_stack_passthrough_enabled = 1; // Initialize kernel wide FINS data passthrough
 
-	/* Call proto_register and report debugging info */
-	rc = proto_register(&FINS_proto, 1);
-	PRINT_DEBUG("proto_register returned: %d", rc);
-	PRINT_DEBUG("Made it through FINS proto_register()");
+/* Call proto_register and report debugging info */
+rc = proto_register(&FINS_proto, 1);
+PRINT_DEBUG("proto_register returned: %d", rc);
+PRINT_DEBUG("Made it through FINS proto_register()");
 
-	/* Call sock_register to register the handler with the socket layer */
-	rc = sock_register(&FINS_net_proto);
-	PRINT_DEBUG("sock_register returned: %d", rc);
-	PRINT_DEBUG("Made it through FINS sock_register()");
+/* Call sock_register to register the handler with the socket layer */
+rc = sock_register(&FINS_net_proto);
+PRINT_DEBUG("sock_register returned: %d", rc);
+PRINT_DEBUG("Made it through FINS sock_register()");
 }
 
 static void teardown_FINS_protocol(void) {
-	/* Call sock_unregister to unregister the handler with the socket layer */
-	sock_unregister(FINS_net_proto.family);
-	PRINT_DEBUG("Made it through FINS sock_unregister()");
+/* Call sock_unregister to unregister the handler with the socket layer */
+sock_unregister(FINS_net_proto.family);
+PRINT_DEBUG("Made it through FINS sock_unregister()");
 
-	/* Call proto_unregister and report debugging info */
-	proto_unregister(&FINS_proto);
-	PRINT_DEBUG("Made it through FINS proto_unregister()");
+/* Call proto_unregister and report debugging info */
+proto_unregister(&FINS_proto);
+PRINT_DEBUG("Made it through FINS proto_unregister()");
 }
 
 /* Functions to initialize and teardown the netlink socket */
 static int setup_FINS_netlink(void) {
-	// nl_data_ready is the name of the function to be called when the kernel receives a datagram on this netlink socket.
-	FINS_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, 0, nl_data_ready, NULL, THIS_MODULE);
-	if (FINS_nl_sk == NULL) {
-		PRINT_ERROR("Error creating socket.");
-		return -10;
-	}
+// nl_data_ready is the name of the function to be called when the kernel receives a datagram on this netlink socket.
+FINS_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, 0, nl_data_ready, NULL, THIS_MODULE);
+if (FINS_nl_sk == NULL) {
+	PRINT_ERROR("Error creating socket.");
+	return -10;
+}
 
-	sema_init(&link_sem, 1);
+sema_init(&link_sem, 1);
 
-	return 0;
+return 0;
 }
 
 static void teardown_FINS_netlink(void) {
-	// closes the netlink socket
-	if (FINS_nl_sk != NULL) {
-		sock_release(FINS_nl_sk->sk_socket);
-	}
+// closes the netlink socket
+if (FINS_nl_sk != NULL) {
+	sock_release(FINS_nl_sk->sk_socket);
+}
 }
 
 /* LKM specific functions */
@@ -3698,21 +3688,21 @@ static void teardown_FINS_netlink(void) {
  */
 static int __init FINS_stack_wedge_init(void) {
 	PRINT_DEBUG("############################################");
-	PRINT_DEBUG("Loading the FINS_stack_wedge module");
-	setup_FINS_protocol();
+PRINT_DEBUG("Loading the FINS_stack_wedge module");
+setup_FINS_protocol();
 	setup_FINS_netlink();
 	init_wedge_calls();
 	init_wedge_sockets();
 	PRINT_DEBUG("Made it through the FINS_stack_wedge initialization");
-	return 0;
+return 0;
 }
 
 static void __exit FINS_stack_wedge_exit(void) {
 	PRINT_DEBUG("Unloading the FINS_stack_wedge module");
-	teardown_FINS_netlink();
+teardown_FINS_netlink();
 	teardown_FINS_protocol();
 	PRINT_DEBUG("Made it through the FINS_stack_wedge removal");
-	// the system call wrapped by rmmod frees all memory that is allocated in the module
+ // the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
 /* Macros defining the init and exit functions */

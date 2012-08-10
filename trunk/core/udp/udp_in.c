@@ -54,9 +54,14 @@ void udp_in(struct finsFrame* ff) {
 	uint16_t src_port;
 	uint16_t dst_port;
 
-	metadata_readFromElement(meta, "protocol", &protocol_type);
-	metadata_readFromElement(meta, "src_ip", &srcip);
-	metadata_readFromElement(meta, "dst_ip", &dstip);
+	int ret = 0;
+	ret += metadata_readFromElement(meta, "protocol", &protocol_type) == CONFIG_FALSE;
+	ret += metadata_readFromElement(meta, "src_ip", &srcip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(meta, "dst_ip", &dstip) == CONFIG_FALSE;
+
+	if (ret) {
+		//TODO error
+	}
 
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */

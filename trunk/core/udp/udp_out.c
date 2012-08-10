@@ -75,10 +75,17 @@ void udp_out(struct finsFrame* ff) {
 	uint32_t srcip;
 
 	metadata* meta = (ff->dataFrame).metaData;
-	metadata_readFromElement(meta, "dst_port", &dstbuf);
-	metadata_readFromElement(meta, "src_port", &srcbuf);
-	metadata_readFromElement(meta, "dst_ip", &dstip);
-	metadata_readFromElement(meta, "src_ip", &srcip);
+
+	int ret = 0;
+	ret += metadata_readFromElement(meta, "dst_port", &dstbuf) == CONFIG_FALSE;
+	ret += metadata_readFromElement(meta, "src_port", &srcbuf) == CONFIG_FALSE;
+	ret += metadata_readFromElement(meta, "dst_ip", &dstip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(meta, "src_ip", &srcip) == CONFIG_FALSE;
+
+	if (ret) {
+		//TODO error
+	}
+
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
 	 */

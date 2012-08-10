@@ -5,8 +5,8 @@
  *      Author: rado
  */
 
-#ifndef IP4_H_
-#define IP4_H_
+#ifndef IPV4_H_
+#define IPV4_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -248,4 +248,4 @@ void IP4_receive_fdf();
 int InputQueue_Read_local(struct finsFrame *pff);
 void sendToSwitch_IPv4(struct finsFrame *fins_frame);
 void IP4_exit();
-#endif /* IP4_H_ */
+#endif /* IPV4_H_ */

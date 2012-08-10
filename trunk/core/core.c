@@ -319,14 +319,14 @@ void *Switch_to_Daemon() {
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
 					int ret = 0;
-					ret += metadata_readFromElement(params, "state", &state) == 0;
+					ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
 
 					if (state > SS_UNCONNECTED) {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
-						ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
 						if (ret) {
 							//TODO error
@@ -369,9 +369,9 @@ void *Switch_to_Daemon() {
 							freeFinsFrame(ff);
 						}
 					} else {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
 						if (ret) {
 							//TODO error
@@ -436,14 +436,14 @@ void *Switch_to_Daemon() {
 				if (ff->ctrlFrame.metaData) {
 					metadata *params = ff->ctrlFrame.metaData;
 					int ret = 0;
-					ret += metadata_readFromElement(params, "state", &state) == 0;
+					ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
 
 					if (state > SS_UNCONNECTED) {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
-						ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
 						if (ret) {
 							//TODO error
@@ -502,8 +502,8 @@ void *Switch_to_Daemon() {
 								freeFinsFrame(ff);
 							}
 						} else {
-							ret += metadata_readFromElement(params, "exec_call", &exec_call) == 0;
-							ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
+							ret += metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
+							ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
 							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
 								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
@@ -546,9 +546,9 @@ void *Switch_to_Daemon() {
 							}
 						}
 					} else {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
+						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
 						if (ret) {
 							//TODO error
@@ -628,11 +628,11 @@ void *Switch_to_Daemon() {
 			protocol = 0;
 
 			int ret = 0;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip) == 0;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_port", &hostport_buf) == 0;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &dstip) == 0;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_port", &dstport_buf) == 0;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == 0;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_port", &hostport_buf) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &dstip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_port", &dstport_buf) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("prob reading metadata ret=%d", ret);
@@ -1251,7 +1251,7 @@ void *Inject() {
 
 		int ret = 0;
 		int protocol = 0;
-		ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == 0;
+		ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == CONFIG_FALSE;
 
 		if (protocol == 0x0806) {
 			((struct sniff_ethernet *) frame)->ether_type = htons(0x0806);

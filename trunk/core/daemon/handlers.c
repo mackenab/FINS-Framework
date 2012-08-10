@@ -180,8 +180,8 @@ int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_i
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port && daemonSockets[i].dst_ip
-				== rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
+		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port
+				&& daemonSockets[i].dst_ip == rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
 			PRINT_DEBUG("Matched connection index=%d", i);
 			return (i);
 		}
@@ -441,26 +441,23 @@ int randoming(int min, int max) {
 }
 
 int nack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int msg) {
-	int buf_len;
-	u_char *buf;
-	struct nl_daemon_to_wedge *hdr;
 	int ret_val;
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d nack %d", uniqueSockID, call_type, NACK);
 
-	buf_len = sizeof(struct nl_daemon_to_wedge);
-	buf = (u_char *) malloc(buf_len);
+	int buf_len = sizeof(struct nl_daemon_to_wedge);
+	u_char *buf = (u_char *) malloc(buf_len);
 	if (buf == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
 		exit(0);
 	}
 
-	hdr = (struct nl_daemon_to_wedge *) buf;
+	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
 	hdr->call_type = call_type;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	hdr->uniqueSockID = uniqueSockID;
-	hdr->index = index;
+	//hdr->uniqueSockID = uniqueSockID;
+	//hdr->index = index;
 	hdr->ret = NACK;
 	hdr->msg = msg;
 
@@ -502,26 +499,23 @@ int nack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_m
 }
 
 int ack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int msg) {
-	int buf_len;
-	u_char *buf;
-	struct nl_daemon_to_wedge *hdr;
 	int ret_val;
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d ack %d", uniqueSockID, call_type, ACK);
 
-	buf_len = sizeof(struct nl_daemon_to_wedge);
-	buf = (u_char *) malloc(buf_len);
+	int buf_len = sizeof(struct nl_daemon_to_wedge);
+	u_char *buf = (u_char *) malloc(buf_len);
 	if (buf == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
 		exit(0);
 	}
 
-	hdr = (struct nl_daemon_to_wedge *) buf;
+	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
 	hdr->call_type = call_type;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	hdr->uniqueSockID = uniqueSockID;
-	hdr->index = index;
+	//hdr->uniqueSockID = uniqueSockID;
+	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = msg;
 
@@ -799,7 +793,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int index, int call_th
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		socket_tcp(uniqueSockID, index, call_id, call_index, domain, type, protocol);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
-		//socket_icmp(uniqueSockID, index, call_id, call_index, domain, type, protocol);
+	//socket_icmp(uniqueSockID, index, call_id, call_index, domain, type, protocol);
 		nack_send_new(uniqueSockID, index, call_id, call_index, socket_call, 0);
 	} else {
 		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
@@ -869,7 +863,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		bind_tcp(uniqueSockID, index, call_id, call_index, addr);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
-		//bind_icmp(uniqueSockID, index, call_id, call_index, addr);
+	//bind_icmp(uniqueSockID, index, call_id, call_index, addr);
 		nack_send_new(uniqueSockID, index, call_id, call_index, bind_call, 0);
 	} else {
 		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
@@ -1125,8 +1119,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 3 * sizeof(struct ifreq);
 		msg = (u_char *) malloc(msg_len);
@@ -1140,8 +1133,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		hdr->uniqueSockID = uniqueSockID;
-		hdr->index = index;
+		//hdr->uniqueSockID = uniqueSockID;
+		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1191,8 +1184,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		}
 
 		*(int *) temp = total;
-		PRINT_DEBUG("total=%d (%d)", total, total/32)
-		;
+		PRINT_DEBUG("total=%d (%d)", total, total/32);
 
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
@@ -1215,8 +1207,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1235,8 +1226,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1250,8 +1240,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		hdr->uniqueSockID = uniqueSockID;
-		hdr->index = index;
+		//hdr->uniqueSockID = uniqueSockID;
+		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1281,8 +1271,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1301,8 +1290,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1316,8 +1304,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		hdr->uniqueSockID = uniqueSockID;
-		hdr->index = index;
+		//hdr->uniqueSockID = uniqueSockID;
+		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1347,8 +1335,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1367,8 +1354,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1382,8 +1368,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		hdr->uniqueSockID = uniqueSockID;
-		hdr->index = index;
+		//hdr->uniqueSockID = uniqueSockID;
+		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1413,8 +1399,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1433,8 +1418,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
@@ -1448,8 +1432,8 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		hdr->uniqueSockID = uniqueSockID;
-		hdr->index = index;
+		//hdr->uniqueSockID = uniqueSockID;
+		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1482,8 +1466,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 	case SIOCSIFBRDADDR:
 	case SIOCSIFNETMASK:
 		//TODO
-		PRINT_DEBUG("not implemented: cmd=%d", cmd)
-		;
+		PRINT_DEBUG("not implemented: cmd=%d", cmd);
 		if (pt - buf != buf_len) {
 			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
 			nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
@@ -1491,8 +1474,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		}
 		break;
 	default:
-		PRINT_DEBUG("cmd=%d default", cmd)
-		;
+		PRINT_DEBUG("cmd=%d default", cmd);
 		break;
 	}
 
@@ -1614,7 +1596,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 		return;
 	}
 
-	int state = daemonSockets[index].state;
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 
@@ -1635,8 +1616,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	free(temp2);
 	//#########################
 
-	//TODO change from send_up & sendto_udp to just sendmsg_udp and handle address issues there
-
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		sendmsg_udp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addr_len);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
@@ -1647,49 +1626,6 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	} else {
 		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
 		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-	}
-	return;
-
-	/**
-	 * In case of connected sockets
-	 */
-	if (state > SS_UNCONNECTED) {
-		if (type == SOCK_DGRAM && protocol == IPPROTO_IP) { //TODO finish
-			send_udp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags);
-		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-			send_tcp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags);
-		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //TODO figure out
-			nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		} else {
-			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
-			nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		}
-		if (addr_len > 0) {
-			free(addr);
-		}
-	} else {
-		/**
-		 * In case of NON-connected sockets, WE USE THE ADDRESS GIVEN BY the APPlication
-		 * Process. Check if an address has been passed or not is required
-		 */
-		if (1 /*change to check addr type etc*/) { // check that the passed address is not NULL
-			if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-				sendto_udp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addr_len);
-			} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-				//TODO implement, buffer data
-				//sendto_tcp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addrlen);
-				nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-			} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-				//sendto_icmp(uniqueSockID, index, call_id, call_index, data, data_len, msg_flags, addr, addrlen);
-				nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-			} else {
-				PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
-				nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-			}
-		} else {
-			PRINT_DEBUG("unknown target address !!!");
-			nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		}
 	}
 }
 
@@ -1748,44 +1684,22 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 		return;
 	}
 
-	int state = daemonSockets[index].state;
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 
-	PRINT_DEBUG("uniqueSockID=%llu, index=%d, type=%d, proto=%d state=%d", uniqueSockID, index, type, protocol, state);
+	PRINT_DEBUG("uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
-	if (state > SS_UNCONNECTED) {
-		if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-			recvfrom_udp(uniqueSockID, index, call_id, call_index, data_len, flags, msg_flags);
-		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-			recvfrom_tcp(uniqueSockID, index, call_id, call_index, data_len, flags, msg_flags);
-		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-			PRINT_DEBUG("recvfrom_icmp not implemented");
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
-		} else {
-			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
-		}
+	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+		recvmsg_udp(uniqueSockID, index, call_id, call_index, data_len, flags, msg_flags);
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
+		recvmsg_tcp(uniqueSockID, index, call_id, call_index, data_len, flags, msg_flags);
+	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
+		PRINT_DEBUG("recvfrom_icmp not implemented");
+		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 	} else {
-		/**
-		 * In case of NON-connected sockets, WE USE THE ADDRESS GIVEN BY the APPlication
-		 * Process. Check if an address has been passed or not is required
-		 */
-		if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-			recvfrom_udp(uniqueSockID, index, call_id, call_index, data_len, flags, msg_flags);
-		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-			//recvfrom_tcp(index, uniqueSockID, datalen, data, flags, addr, addrlen);
-			PRINT_DEBUG("recvfrom_tcp not implemented");
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
-		} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-			//recvfrom_icmp(uniqueSockID, datalen, data, flags, addr, addrlen);
-			PRINT_DEBUG("recvfrom_icmp not implemented");
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
-		} else {
-			PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
-		}
+		PRINT_DEBUG("non supported socket type=%d protocol=%d", type, protocol);
+		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 	}
 }
 

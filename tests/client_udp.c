@@ -40,17 +40,18 @@ int main(int argc, char *argv[]) {
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
+	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
 	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
 
-	if (argc > 1)
-
+	if (argc > 1) {
 		port = atoi(argv[1]);
-	else
+	} else {
 		port = 45454;
+	}
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));

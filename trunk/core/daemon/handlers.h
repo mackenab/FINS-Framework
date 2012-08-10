@@ -191,11 +191,16 @@ struct nl_wedge_to_daemon {
 
 struct nl_daemon_to_wedge {
 	u_int call_type;
-	u_int call_id; //TODO when ironed out remove id or index
-	int call_index;
 
-	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index
-	int index;
+	union {
+		u_int call_id; //TODO when ironed out remove id or index
+		unsigned long long uniqueSockID; //TODO when ironed out remove uID & index
+
+	};
+	union {
+		int call_index;
+		int index;
+	};
 
 	u_int ret;
 	u_int msg;

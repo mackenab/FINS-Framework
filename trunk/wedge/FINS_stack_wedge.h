@@ -101,11 +101,16 @@ struct nl_wedge_to_daemon {
 
 struct nl_daemon_to_wedge {
 	u_int call_type;
-	u_int call_id; //TODO when ironed out remove id or index
-	int call_index;
 
-	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index
-	int index;
+	union {
+		u_int call_id; //TODO when ironed out remove id or index
+		unsigned long long uniqueSockID; //TODO when ironed out remove uID & index
+
+	};
+	union {
+		int call_index;
+		int index;
+	};
 
 	u_int ret;
 	u_int msg;
@@ -151,15 +156,15 @@ struct fins_wedge_socket {
 
 	//struct semaphore threads_sem;
 
-	///* //TODO remove all this
-	struct semaphore reply_sem_w;
-	struct semaphore reply_sem_r; //reassuring, but might not be necessary
-	u_int reply_call;
-	u_int reply_ret;
-	u_int reply_msg;
-	u_char *reply_buf;
-	int reply_len;
-	//*/
+	/* //TODO remove all this
+	 struct semaphore reply_sem_w;
+	 struct semaphore reply_sem_r; //reassuring, but might not be necessary
+	 u_int reply_call;
+	 u_int reply_ret;
+	 u_int reply_msg;
+	 u_char *reply_buf;
+	 int reply_len;
+	 //*/
 };
 
 void init_wedge_sockets(void);

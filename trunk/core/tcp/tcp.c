@@ -389,9 +389,9 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	int protocol = TCP_PROTOCOL;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
-	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT) == CONFIG_FALSE;
 
 	if (ret) {
 		PRINT_ERROR("meta write failed, meta=%x ret=%d", (int) params, ret);
@@ -1289,18 +1289,18 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 
 	int ret = 0;
 	socket_state state = SS_CONNECTED;
-	ret += metadata_writeToElement(params, "state", &state, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "state", &state, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT) == CONFIG_FALSE;
 
 	int protocol = TCP_PROTOCOL;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
-	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT) == CONFIG_FALSE;
 
 	if (ret) {
 		PRINT_ERROR("meta write failed, meta=%x ret=%d", (int) params, ret);
@@ -1459,13 +1459,13 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	metadata_create(params);
 
 	int ret = 0;
-	ret += metadata_writeToElement(params, "src_ip", &seg->src_ip, META_TYPE_INT) == 0; //Write the source ip in
-	ret += metadata_writeToElement(params, "dst_ip", &seg->dst_ip, META_TYPE_INT) == 0; //And the destination ip
-	ret += metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT) == 0; //Write the source port in
-	ret += metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT) == 0; //And the destination port
+	ret += metadata_writeToElement(params, "src_ip", &seg->src_ip, META_TYPE_INT) == CONFIG_FALSE; //Write the source ip in
+	ret += metadata_writeToElement(params, "dst_ip", &seg->dst_ip, META_TYPE_INT) == CONFIG_FALSE; //And the destination ip
+	ret += metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT) == CONFIG_FALSE; //Write the source port in
+	ret += metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT) == CONFIG_FALSE; //And the destination port
 
 	int protocol = TCP_PROTOCOL;
-	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == CONFIG_FALSE;
 
 	if (ret) {
 		PRINT_ERROR("seg_to_fdf: failed matadata write: seg=%x meta=%x ret=%d", (int)seg, (int)params, ret);
@@ -1579,11 +1579,11 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 	}
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "src_ip", &seg->src_ip) == 0; //host
-	ret += metadata_readFromElement(params, "dst_ip", &seg->dst_ip) == 0; //remote
+	ret += metadata_readFromElement(params, "src_ip", &seg->src_ip) == CONFIG_FALSE; //host
+	ret += metadata_readFromElement(params, "dst_ip", &seg->dst_ip) == CONFIG_FALSE; //remote
 
 	uint32_t protocol;
-	ret += metadata_readFromElement(params, "protocol", &protocol) == 0;
+	ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
 	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {
 		PRINT_DEBUG("fdf_to_seg: error: ret=%d, protocol=%d", ret, protocol);
@@ -2233,15 +2233,15 @@ int metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip,
 	uint32_t rem_port_buf;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "state", state) == 0;
+	ret += metadata_readFromElement(params, "state", state) == CONFIG_FALSE;
 
-	ret += metadata_readFromElement(params, "host_ip", host_ip) == 0;
-	ret += metadata_readFromElement(params, "host_port", &host_port_buf) == 0;
+	ret += metadata_readFromElement(params, "host_ip", host_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "host_port", &host_port_buf) == CONFIG_FALSE;
 	*host_port = (uint16_t) host_port_buf;
 
 	if (ret && *state) {
-		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == 0;
-		ret += metadata_readFromElement(params, "rem_port", &rem_port_buf) == 0;
+		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == CONFIG_FALSE;
+		ret += metadata_readFromElement(params, "rem_port", &rem_port_buf) == CONFIG_FALSE;
 		*rem_port = (uint16_t) rem_port_buf;
 	}
 
@@ -2382,14 +2382,14 @@ void tcp_exec(struct finsFrame *ff) {
 
 	metadata *params = ff->ctrlFrame.metaData;
 	if (params) {
-		ret = metadata_readFromElement(params, "exec_call", &exec_call) == 0;
+		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
 		switch (exec_call) {
 		case EXEC_TCP_LISTEN:
 			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_LISTEN (%d)", exec_call);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-			ret += metadata_readFromElement(params, "backlog", &backlog) == 0;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "backlog", &backlog) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("tcp_exec: ret=%d", ret);
@@ -2401,10 +2401,10 @@ void tcp_exec(struct finsFrame *ff) {
 		case EXEC_TCP_CONNECT:
 			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CONNECT (%d)", exec_call);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
-			ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("tcp_exec: ret=%d", ret);
@@ -2416,9 +2416,9 @@ void tcp_exec(struct finsFrame *ff) {
 		case EXEC_TCP_ACCEPT:
 			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_ACCEPT (%d)", exec_call);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-			ret += metadata_readFromElement(params, "flags", &flags) == 0;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("tcp_exec: ret=%d", ret);
@@ -2430,10 +2430,10 @@ void tcp_exec(struct finsFrame *ff) {
 		case EXEC_TCP_CLOSE:
 			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CLOSE (%d)", exec_call);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
-			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
-			ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("tcp_exec: ret=%d", ret);
@@ -2445,8 +2445,8 @@ void tcp_exec(struct finsFrame *ff) {
 		case EXEC_TCP_CLOSE_STUB:
 			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_CLOSE_STUB (%d)", exec_call);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("tcp_exec: ret=%d", ret);
@@ -2457,13 +2457,13 @@ void tcp_exec(struct finsFrame *ff) {
 			break;
 		case EXEC_TCP_POLL:
 			PRINT_DEBUG("tcp_exec: exec_call=EXEC_TCP_POLL (%d)", exec_call);
-			ret += metadata_readFromElement(params, "state", &state) == 0;
+			ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == 0;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == 0;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
 			if (state > SS_UNCONNECTED) {
-				ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == 0;
-				ret += metadata_readFromElement(params, "rem_port", &rem_port) == 0;
+				ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
+				ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
 			}
 
 			if (ret) {
@@ -2579,13 +2579,13 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	 */
 
 	int ret = 0;
-	ret += metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "dst_ip", &rem_ip, META_TYPE_INT) == 0;
-	ret += metadata_writeToElement(params, "dst_port", &rem_port, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "dst_ip", &rem_ip, META_TYPE_INT) == CONFIG_FALSE;
+	ret += metadata_writeToElement(params, "dst_port", &rem_port, META_TYPE_INT) == CONFIG_FALSE;
 
 	int protocol = TCP_PROTOCOL;
-	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == 0;
+	ret += metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT) == CONFIG_FALSE;
 
 	if (ret) {
 		PRINT_ERROR("tcp_fdf_to_daemon: failed matadata write, meta=%x ret=%d", (int)params, ret);

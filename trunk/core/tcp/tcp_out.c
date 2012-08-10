@@ -173,10 +173,17 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	PRINT_DEBUG("tcp_out_fdf: Entered");
 
 	metadata* meta = (ff->dataFrame).metaData;
-	metadata_readFromElement(meta, "src_ip", &src_ip); //host
-	metadata_readFromElement(meta, "dst_ip", &dst_ip); //remote
-	metadata_readFromElement(meta, "src_port", &src_port_buf);
-	metadata_readFromElement(meta, "dst_port", &dst_port_buf);
+
+	int ret = 0;
+	ret += metadata_readFromElement(meta, "src_ip", &src_ip) == CONFIG_FALSE; //host
+	ret += metadata_readFromElement(meta, "dst_ip", &dst_ip) == CONFIG_FALSE; //remote
+	ret += metadata_readFromElement(meta, "src_port", &src_port_buf) == CONFIG_FALSE;
+	ret += metadata_readFromElement(meta, "dst_port", &dst_port_buf) == CONFIG_FALSE;
+
+	if (ret) {
+		//TODO error
+	}
+
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
 	 */
@@ -1029,7 +1036,7 @@ void *read_param_conn_thread(void *local) {
 
 	int ret = 0;
 	metadata *params = ff->ctrlFrame.metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == 0;
+	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case READ_PARAM_TCP_HOST_WINDOW:
 		PRINT_DEBUG("read_param_conn_thread: param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
@@ -1104,11 +1111,11 @@ void *read_param_conn_stub_thread(void *local) {
 
 	int ret = 0;
 	metadata *params = ff->ctrlFrame.metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == 0;
+	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case READ_PARAM_TCP_HOST_WINDOW:
 		PRINT_DEBUG("read_param_conn_stub_thread: param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
-		ret = metadata_readFromElement(params, "value", &value) == 0;
+		ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 		if (ret) {
 			PRINT_DEBUG("read_param_conn_stub_thread: ret=%d", ret);
 			//TODO send nack
@@ -1139,7 +1146,7 @@ void *read_param_conn_stub_thread(void *local) {
 		break;
 	case READ_PARAM_TCP_SOCK_OPT:
 		PRINT_DEBUG("read_param_conn_stub_thread: param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
-		ret = metadata_readFromElement(params, "value", &value) == 0;
+		ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 		if (ret) {
 			PRINT_DEBUG("read_param_conn_stub_thread: ret=%d", ret);
 			//TODO send nack
@@ -1148,7 +1155,7 @@ void *read_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//fill in with switch of opts? or have them separate?
-			 /*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
 			if (sem_wait(&conn_stub->sem)) {
 				PRINT_ERROR("conn_stub->sem wait prob");
 				exit(-1);
@@ -1279,11 +1286,11 @@ void *set_param_conn_thread(void *local) {
 
 	int ret = 0;
 	metadata *params = ff->ctrlFrame.metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == 0;
+	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case SET_PARAM_TCP_HOST_WINDOW:
 		PRINT_DEBUG("set_param_conn_thread: param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
-		ret = metadata_readFromElement(params, "value", &value) == 0;
+		ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 		if (ret) {
 			PRINT_DEBUG("set_param_conn_thread: ret=%d", ret);
 			//TODO send nack
@@ -1313,7 +1320,7 @@ void *set_param_conn_thread(void *local) {
 		break;
 	case SET_PARAM_TCP_SOCK_OPT:
 		PRINT_DEBUG("set_param_conn_thread: param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
-		ret = metadata_readFromElement(params, "value", &value) == 0;
+		ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 		if (ret) {
 			PRINT_DEBUG("set_param_conn_thread: ret=%d", ret);
 			//TODO send nack
@@ -1366,11 +1373,11 @@ void *set_param_conn_stub_thread(void *local) {
 
 	int ret = 0;
 	metadata *params = ff->ctrlFrame.metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == 0;
+	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case SET_PARAM_TCP_HOST_WINDOW:
 		PRINT_DEBUG("set_param_conn_stub_thread: param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
-		ret = metadata_readFromElement(params, "value", &value) == 0;
+		ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 		if (ret) {
 			PRINT_DEBUG("set_param_conn_stub_thread: ret=%d", ret);
 			//TODO send nack
@@ -1401,7 +1408,7 @@ void *set_param_conn_stub_thread(void *local) {
 		break;
 	case SET_PARAM_TCP_SOCK_OPT:
 		PRINT_DEBUG("set_param_conn_thread: param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
-		ret = metadata_readFromElement(params, "value", &value) == 0;
+		ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 		if (ret) {
 			PRINT_DEBUG("set_param_conn_thread: ret=%d", ret);
 			//TODO send nack

@@ -42,7 +42,7 @@ void ICMP_in(struct finsFrame *ff)
 	uint16_t protocol = 0;
 
 	//Make sure this protocol is correct ( == ICMP)
-	if(metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) != CONFIG_FALSE)
+	if (metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) != CONFIG_FALSE)
 	{ //If this fails, we'll assume that the protocol is correct
 		if(ntohl(protocol) != ICMP_PROTOCOL)
 		{

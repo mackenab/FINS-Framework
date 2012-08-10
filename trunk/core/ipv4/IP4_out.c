@@ -11,8 +11,7 @@
 extern struct ip4_stats stats;
 
 //extern struct ip4_packet *construct_packet_buffer;
-void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
-		uint8_t protocol) {
+void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t protocol) {
 
 	PRINT_DEBUG("");
 	//print_finsFrame(ff);
@@ -29,10 +28,15 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
 	struct ip4_packet *construct_packet_buffer;
 
 	//construct_packet_buffer = &construct_packet;
-	construct_packet_buffer = (struct ip4_packet *)&construct_packet;
+	construct_packet_buffer = (struct ip4_packet *) &construct_packet;
 	PRINT_DEBUG("");
 
-	metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &destination);
+	int ret = 0;
+	ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &destination) == CONFIG_FALSE;
+
+	if (ret) {
+		//TODO error
+	}
 
 	PRINT_DEBUG("");
 
@@ -77,8 +81,7 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source,
 	construct_packet_buffer->ip_id = htons(0);
 	construct_packet_buffer->ip_len = htons(length + IP4_MIN_HLEN);
 	construct_packet_buffer->ip_cksum = 0;
-	construct_packet_buffer->ip_cksum = IP4_checksum(construct_packet_buffer,
-			IP4_MIN_HLEN);
+	construct_packet_buffer->ip_cksum = IP4_checksum(construct_packet_buffer, IP4_MIN_HLEN);
 
 	next_hop = IP4_next_hop(destination);
 	if (next_hop.interface >= 0) {
