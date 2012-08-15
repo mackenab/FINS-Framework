@@ -32,7 +32,7 @@ int daemon_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t d
 	metadata_create(udpout_meta);
 
 	if (udpout_meta == NULL) {
-		PRINT_DEBUG("metadata creation failed, freeing: ff=%x", (int) ff);
+		PRINT_DEBUG("metadata creation failed, freeing: ff=%p", ff);
 		free(ff);
 		exit(1);
 
@@ -45,12 +45,12 @@ int daemon_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t d
 
 	uint32_t dstprt = dstport;
 	uint32_t hostprt = hostport;
-	int protocol = IP4_PT_ICMP;
+	//int protocol = IP4_PT_ICMP;
 	metadata_writeToElement(udpout_meta, "dst_port", &dstprt, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "src_port", &hostprt, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "dst_ip", &dst_IP_netformat, META_TYPE_INT);
 	metadata_writeToElement(udpout_meta, "src_ip", &host_IP_netformat, META_TYPE_INT);
-	metadata_writeToElement(udpout_meta, "protocol", &protocol, META_TYPE_INT);
+	//metadata_writeToElement(udpout_meta, "protocol", &protocol, META_TYPE_INT);
 	ff->dataOrCtrl = DATA;
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table

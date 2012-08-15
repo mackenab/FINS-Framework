@@ -36,30 +36,34 @@ void udp_out(struct finsFrame* ff) {
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != DATA) {
 		// release FDF here
+		PRINT_ERROR("shouldn't reach here");
 		return;
 	}
 	if (ff->dataFrame.directionFlag != DOWN) {
 		// release FDF here
+		PRINT_ERROR("shouldn't reach here");
 		return;
 	}
 	if (ff->destinationID.id != UDPID) {
 		// release FDF here
+		PRINT_ERROR("shouldn't reach here");
 		return;
 	}
 
-	PRINT_DEBUG("UDP_out, ff=%x", (int)ff);
+	PRINT_DEBUG("UDP_out, ff=%p", ff);
 
 	//print_finsFrame(ff);
 
-	packet_length = (ff->dataFrame).pduLength + U_HEADER_LEN;
+	packet_length = ff->dataFrame.pduLength + U_HEADER_LEN;
 	u_char *udp_dataunit = (u_char *) malloc(packet_length);
 	packet_netw = (struct udp_packet *) udp_dataunit;
+	u_char *pdu = ff->dataFrame.pdu;
 
 	/** constructs the UDP packet from the FDF and the meta data */
 
 	//#########################
 	u_char *temp = (u_char *) malloc(ff->dataFrame.pduLength + 1);
-	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	memcpy(temp, pdu, ff->dataFrame.pduLength);
 	temp[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
 	free(temp);
@@ -74,7 +78,7 @@ void udp_out(struct finsFrame* ff) {
 	uint32_t dstip;
 	uint32_t srcip;
 
-	metadata* meta = (ff->dataFrame).metaData;
+	metadata* meta = ff->dataFrame.metaData;
 
 	int ret = 0;
 	ret += metadata_readFromElement(meta, "dst_port", &dstbuf) == CONFIG_FALSE;
@@ -84,7 +88,11 @@ void udp_out(struct finsFrame* ff) {
 
 	if (ret) {
 		//TODO error
+		PRINT_DEBUG("todo error");
 	}
+
+	int protocol = UDP_PROTOCOL;
+	metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT);
 
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
@@ -101,14 +109,14 @@ void udp_out(struct finsFrame* ff) {
 	packet_netw->u_dst = htons(dstbuf16);
 	packet_netw->u_len = htons(packet_length);
 	packet_netw->u_cksum = 0;
-	memcpy(packet_netw->u_data, (ff->dataFrame).pdu, (ff->dataFrame).pduLength);
+	memcpy(packet_netw->u_data, pdu, ff->dataFrame.pduLength);
 
 	PRINT_DEBUG("pkt_host: %d,%d,%d,%d", srcbuf16, dstbuf16, packet_length, 0);
 
 	/*
 	 int i=0;
-	 PRINT_DEBUG("%d",(ff->dataFrame).pduLength);
-	 while (i < (ff->dataFrame).pduLength)
+	 PRINT_DEBUG("%d",ff->dataFrame.pduLength);
+	 while (i < ff->dataFrame.pduLength)
 	 {
 	 PRINT_DEBUG("%c,%d",packet_noninversed.u_data[i],i);
 
@@ -119,7 +127,7 @@ void udp_out(struct finsFrame* ff) {
 	//(packet.u_dst) = htons(dstbuf16);
 	//(packet.u_src) = htons(srcbuf16);
 	/* calculates the UDP length by adding the UDP header length to the length of the data */
-	//packet.u_len = htons(((ff->dataFrame).pduLength) + U_HEADER_LEN);
+	//packet.u_len = htons((ff->dataFrame.pduLength) + U_HEADER_LEN);
 	/** TODO ignore the checksum for now
 	 * Will be fixed later
 	 */
@@ -171,7 +179,7 @@ void udp_out(struct finsFrame* ff) {
 	 int i=0;
 	 while (i < ff->dataFrame.pduLength)
 	 {
-	 PRINT_DEBUG("%d",ff->dataFrame.pdu[i]);
+	 PRINT_DEBUG("%d",pdu[i]);
 	 i++;
 
 	 }
@@ -180,8 +188,8 @@ void udp_out(struct finsFrame* ff) {
 
 	//	packet.u_cksum = 30;
 	//memcpy(udp_dataunit, &packet_netw, U_HEADER_LEN); /* copies the UDP packet into the memory that has been allocated for the PDU */
-	//	PRINT_DEBUG("%d, %d",(ff->dataFrame).pdu, ff->dataFrame.pduLength);
-	//memcpy(udp_dataunit + U_HEADER_LEN, (ff->dataFrame).pdu, ff->dataFrame.pduLength); /* moves the pointer 8 bytes to account for those empty 8 bytes*/
+	//	PRINT_DEBUG("%d, %d",pdu, ff->dataFrame.pduLength);
+	//memcpy(udp_dataunit + U_HEADER_LEN, pdu, ff->dataFrame.pduLength); /* moves the pointer 8 bytes to account for those empty 8 bytes*/
 	//	PRINT_DEBUG("%d",packet.u_len);
 	/**
 	 memcpy(test, udp_dataunit, packet_length);
@@ -196,26 +204,39 @@ void udp_out(struct finsFrame* ff) {
 
 
 
-	 //free (ff->dataFrame.pdu);
+	 //free (pdu);
 	 PRINT_DEBUG("%s",test);
 	 PRINT_DEBUG("%d",udp_dataunit);
 	 */
 
 	//ff->dataFrame.pdu = udp_dataunit;
 	/* creates a new FDF to be sent out */
-	PRINT_DEBUG("%d", (int)udp_dataunit);
+	PRINT_DEBUG("%p", udp_dataunit);
 	//(int)ff->dataFrame.pdu);
 
-	newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, udp_dataunit, meta);
+	//newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, udp_dataunit, meta);
 
-	PRINT_DEBUG("newff=%x, pdu=%x", (int)newFF, (int)newFF->dataFrame.pdu);
+	//ff->dataOrCtrl = DATA;
+	ff->destinationID.id = IPV4ID;
+	ff->destinationID.next = NULL;
 
-	print_finsFrame(newFF);
+	//ff->dataFrame.directionFlag = DOWN;
+	ff->dataFrame.pduLength = packet_length;
+	ff->dataFrame.pdu = udp_dataunit;
+	//ff->dataFrame.metaData = params;
+
+	//PRINT_DEBUG("newff=%x, pdu=%x", (int)newFF, (int)newFF->dataFrame.pdu);
+
+	//print_finsFrame(newFF);
+	print_finsFrame(ff);
 	udpStat.totalSent++;
 
-	sendToSwitch(newFF);
+	//sendToSwitch(newFF);
+	sendToSwitch(ff);
 
-	PRINT_DEBUG("freeing: ff=%x", (int) ff);
-	free(udp_dataunit);
-	free(ff);
+	//PRINT_DEBUG("freeing: ff=%p", ff);
+	PRINT_DEBUG("freeing: pdu=%p", pdu);
+	free(pdu);
+	//free(udp_dataunit);
+	//free(ff);
 }

@@ -278,7 +278,7 @@ void ICMP_init_old()
 		//Note that we always clean up the frame, no matter what we do with it. If the frame needs to go somewhere else also, we make a copy.
 		//Shouldn't we use freeFinsFrame() instead of just free()? I think so, so I will here
 		free(pff->dataFrame.pdu); //AVOID PDU MEMORY LEAK WITH freeFinsFrame()! TODO: Comment this out if the memory leak problem gets fixed.
-		PRINT_DEBUG("freeing ff=%x", (int)pff);
+		PRINT_DEBUG("freeing ff=%p", pff);
 		freeFinsFrame(pff);
 	}
 }

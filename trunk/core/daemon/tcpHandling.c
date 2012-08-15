@@ -52,7 +52,7 @@ int daemon_fdf_to_tcp(u_char *data, u_int data_len, metadata *params) {
 		return 1;
 	} else {
 		sem_post(&Daemon_to_Switch_Qsem);
-		PRINT_DEBUG("freeing: ff=%x", (int) ff);
+		PRINT_DEBUG("freeing: ff=%p", ff);
 		free(ff);
 
 		return 0;
@@ -76,7 +76,7 @@ int daemon_fcf_to_tcp(uint16_t opcode, metadata *params) {
 	ff->ctrlFrame.opcode = opcode;
 	ff->ctrlFrame.metaData = params;
 
-	PRINT_DEBUG("daemon_TCP_to_fins_cntrl: ff=%x, meta=%x", (int)ff, (int)params);
+	PRINT_DEBUG("daemon_TCP_to_fins_cntrl: ff=%p, meta=%p", ff, params);
 	sem_wait(&Daemon_to_Switch_Qsem);
 	if (write_queue(ff, Daemon_to_Switch_Queue)) {
 		sem_post(&Daemon_to_Switch_Qsem);
@@ -85,7 +85,7 @@ int daemon_fcf_to_tcp(uint16_t opcode, metadata *params) {
 		return (1);
 	} else {
 		sem_post(&Daemon_to_Switch_Qsem);
-		PRINT_DEBUG("freeing: ff=%x", (int) ff);
+		PRINT_DEBUG("freeing: ff=%p", ff);
 		free(ff);
 
 		return (0);
@@ -258,7 +258,7 @@ void *connect_tcp_thread(void *local) {
 
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -522,7 +522,7 @@ void *accept_tcp_thread(void *local) {
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -770,8 +770,6 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	hdr->call_type = getname_call;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = 0;
 	pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -841,8 +839,6 @@ void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -893,7 +889,7 @@ void *sendmsg_tcp_thread(void *local) {
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -1021,10 +1017,10 @@ void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	}
 	metadata_create(params);
 
-	int protocol = IP4_PT_TCP;
+	//int protocol = IP4_PT_TCP;
 	metadata_writeToElement(params, "call_id", &call_id, META_TYPE_INT);
 	metadata_writeToElement(params, "call_index", &call_index, META_TYPE_INT);
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	//metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT);
 
 	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
@@ -1115,7 +1111,7 @@ void *recvmsg_tcp_thread(void *local) {
 	PRINT_DEBUG("");
 	struct finsFrame *ff = NULL;
 	ret = get_fdf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ret=%d ff=%x", uniqueSockID, index, ret, (int)ff);
+	PRINT_DEBUG("after get_fdf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, EBADF); //TODO socket closed/invalid
@@ -1176,8 +1172,6 @@ void *recvmsg_tcp_thread(void *local) {
 	hdr->call_type = recvmsg_call;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = 0;
 	u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1339,7 +1333,8 @@ void *release_tcp_thread(void *local) {
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
+
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -1494,7 +1489,7 @@ void *poll_tcp_thread(void *local) {
 	int index = thread_data->index;
 	u_int call_id = thread_data->call_id;
 	int call_index = thread_data->call_index;
-	int flags = thread_data->flags;
+	int flags = thread_data->flags; //has events
 	free(thread_data);
 
 	int non_blocking_flag = flags & 0; //TODO get from flags
@@ -1507,7 +1502,7 @@ void *poll_tcp_thread(void *local) {
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -1567,8 +1562,6 @@ void *poll_tcp_thread(void *local) {
 			hdr->call_type = poll_call;
 			hdr->call_id = call_id;
 			hdr->call_index = call_index;
-			//hdr->uniqueSockID = uniqueSockID;
-			//hdr->index = index;
 			hdr->ret = ACK;
 			hdr->msg = 0;
 			u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1598,14 +1591,14 @@ void *poll_tcp_thread(void *local) {
 	pthread_exit(NULL);
 }
 
-void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index) {
+void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events) {
 	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
-	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d", uniqueSockID, index, call_id, call_index);
+	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d events=%x", uniqueSockID, index, call_id, call_index, events);
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("Socket closed, canceling poll_tcp.");
@@ -1645,7 +1638,7 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	metadata_writeToElement(params, "call_id", &call_id, META_TYPE_INT);
 	metadata_writeToElement(params, "call_index", &call_index, META_TYPE_INT);
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
-	//metadata_writeToElement(params, "flags", &flags, META_TYPE_INT);
+	metadata_writeToElement(params, "flags", &events, META_TYPE_INT);
 
 	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
 	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
@@ -1662,7 +1655,7 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		thread_data->index = index;
 		thread_data->call_id = call_id;
 		thread_data->call_index = call_index;
-		thread_data->flags = 0; //TODO implement
+		thread_data->flags = events; //TODO implement
 
 		//spin off thread to handle
 		pthread_t thread;
@@ -1720,7 +1713,7 @@ void *getsockopt_tcp_thread(void *local) {
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -1773,8 +1766,6 @@ void *getsockopt_tcp_thread(void *local) {
 		hdr->call_type = getsockopt_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1959,11 +1950,11 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	}
 
 	if (send_dst == -1) {
-		PRINT_DEBUG("freeing meta=%x", (int)params);
+		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
 		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 	} else if (send_dst == 0) {
-		PRINT_DEBUG("freeing meta=%x", (int)params);
+		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
 
 		//send msg to wedge
@@ -1979,8 +1970,6 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 		hdr->call_type = getsockopt_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -2055,7 +2044,7 @@ void *setsockopt_tcp_thread(void *local) {
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 	struct finsFrame *ff = NULL;
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%x", id, index, uniqueSockID, (int)ff);
+	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
@@ -2239,56 +2228,13 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	}
 
 	if (send_dst == -1) {
-		PRINT_DEBUG("freeing meta=%x", (int)params);
+		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
 		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 	} else if (send_dst == 0) {
-		PRINT_DEBUG("freeing meta=%x", (int)params);
+		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
 		ack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
-		/*
-		 //send msg to wedge
-		 int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
-		 u_char *msg = (u_char *) malloc(msg_len);
-		 if (msg == NULL) {
-		 PRINT_ERROR("ERROR: buf alloc fail");
-		 nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
-		 return;
-		 }
-
-		 struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
-		 hdr->call_type = getsockopt_call;
-		 hdr->call_id = call_id;
-		 hdr->call_index = call_index;
-		 //hdr->uniqueSockID = uniqueSockID;
-		 //hdr->index = index;
-		 hdr->ret = ACK;
-		 hdr->msg = 0;
-		 u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
-
-		 *(int *) pt = len;
-		 pt += sizeof(int);
-
-		 if (len > 0) {
-		 memcpy(pt, val, len);
-		 pt += len;
-		 }
-
-		 if (pt - msg != msg_len) {
-		 PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
-		 free(msg);
-		 PRINT_DEBUG("Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		 nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
-		 return;
-		 }
-
-		 PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
-		 if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
-		 PRINT_DEBUG("Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		 nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
-		 } else {
-		 PRINT_DEBUG("Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		 }*/
 	} else {
 		if (daemon_fcf_to_tcp(CTRL_READ_PARAM, params)) {
 			struct daemon_tcp_thread_data *thread_data = (struct daemon_tcp_thread_data *) malloc(sizeof(struct daemon_tcp_thread_data));
@@ -2315,12 +2261,6 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 		}
 	}
 
-	/*
-	 metadata *udpout_meta = (metadata *) malloc(sizeof(metadata));
-	 metadata_create(udpout_meta);
-	 metadata_writeToElement(udpout_meta, "dstport", &dstprt, META_TYPE_INT);
-	 */
-
 	/** check the opt_name to find which bit to access in the options variable then use
 	 * the following code to handle the bits individually
 	 * setting a bit   number |= 1 << x;  That will set bit x.
@@ -2328,5 +2268,5 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	 * The XOR operator (^) can be used to toggle a bit. number ^= 1 << x; That will toggle bit x.
 	 * Checking a bit      value = number & (1 << x);
 	 */
-//uint32_t socketoptions;
+	//uint32_t socketoptions;
 }

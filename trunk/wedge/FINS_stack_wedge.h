@@ -64,7 +64,7 @@ struct FINS_sock {
 };
 
 // Function prototypes:
-static int FINS_create_socket(struct net *net, struct socket *sock, int protocol, int kern);
+static int FINS_create(struct net *net, struct socket *sock, int protocol, int kern);
 static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len);
 static int FINS_listen(struct socket *sock, int backlog);
 static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
@@ -89,13 +89,13 @@ void nl_data_ready(struct sk_buff *skb);
 inline unsigned long long getUniqueSockID(struct sock *sk);
 
 struct nl_wedge_to_daemon {
-	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index, prob uID
-	int index;
+	unsigned long long sock_id; //TODO when ironed out remove uID or sock_index, prob uID
+	int sock_index;
 
 	u_int call_type;
 	int call_threads;
 
-	u_int call_id; //TODO when ironed out remove id or index
+	u_int call_id; //TODO when ironed out remove id or sock_index
 	int call_index;
 };
 
@@ -103,13 +103,13 @@ struct nl_daemon_to_wedge {
 	u_int call_type;
 
 	union {
-		u_int call_id; //TODO when ironed out remove id or index
-		unsigned long long uniqueSockID; //TODO when ironed out remove uID & index
+		u_int call_id; //TODO when ironed out remove id or sock_index
+		unsigned long long sock_id; //TODO when ironed out remove uID & sock_index
 
 	};
 	union {
 		int call_index;
-		int index;
+		int sock_index;
 	};
 
 	u_int ret;
@@ -119,11 +119,11 @@ struct nl_daemon_to_wedge {
 struct fins_call {
 	int running; //TODO remove?
 
-	u_int id;
-	unsigned long long uniqueSockID;
-	int index;
+	u_int call_id;
+	unsigned long long sock_id;
+	int sock_index;
 	u_int type;
-	//TODO timestamp?
+	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 
 	//struct semaphore sem; //TODO remove? might be unnecessary
 	struct semaphore wait_sem;
@@ -136,14 +136,14 @@ struct fins_call {
 };
 
 void init_wedge_calls(void);
-int insert_wedge_call(u_int id, unsigned long long uniqueSockID, int index, u_int type);
+int insert_wedge_call(u_int id, unsigned long long sock_id, int sock_index, u_int type);
 int find_wedge_call(u_int id);
 int remove_wedge_call(u_int id);
 
 struct fins_wedge_socket {
 	int running; //TODO remove? merge with release_flag
 
-	unsigned long long uniqueSockID;
+	unsigned long long sock_id;
 	struct socket *sock;
 	struct sock *sk;
 
@@ -168,17 +168,17 @@ struct fins_wedge_socket {
 };
 
 void init_wedge_sockets(void);
-int insert_wedge_socket(unsigned long long uniqueSockID, struct sock *sk);
-int find_wedge_socket(unsigned long long uniqueSockID);
-int remove_wedge_socket(unsigned long long uniqueSockID);
-int wait_wedge_socket(unsigned long long uniqueSockID, int index, u_int calltype);
-int checkConfirmation(int index);
+int insert_wedge_socket(unsigned long long sock_id, struct sock *sk);
+int find_wedge_socket(unsigned long long sock_id);
+int remove_wedge_socket(unsigned long long sock_id);
+int wait_wedge_socket(unsigned long long sock_id, int sock_index, u_int calltype);
+int checkConfirmation(int sock_index);
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */
 //struct FINS_nl_dgram {
 //	int socketCallType;	// used for identifying what socketcall was made and who the response is intended for
-//	unsigned long long uniqueSockID1;
-//	unsigned long long uniqueSockID2;	// some calls need to pass second ID such as accept and socketpair 
+//	unsigned long long sock_id1;
+//	unsigned long long sock_id2;	// some calls need to pass second ID such as accept and socketpair
 //	void *buf;	// pointer to a buffer with whatever other data is important
 //	ssize_t len;	// length of the buffer	
 //};

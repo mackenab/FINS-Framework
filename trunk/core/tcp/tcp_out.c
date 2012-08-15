@@ -34,7 +34,7 @@ void *write_thread(void *local) {
 		exit(-1);
 	}
 
-	/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -86,10 +86,10 @@ void *write_thread(void *local) {
 						sem_post(&conn->main_wait_sem);
 					}
 
-					/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+					/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 					sem_post(&conn->sem);
 				} else {
-					/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+					/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 					sem_post(&conn->sem);
 
 					/*#*/PRINT_DEBUG("");
@@ -101,7 +101,7 @@ void *write_thread(void *local) {
 					PRINT_DEBUG("left conn->send_wait_sem\n");
 				}
 
-				/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+				/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 				if (sem_wait(&conn->sem)) {
 					PRINT_ERROR("conn->sem prod");
 					exit(-1);
@@ -147,10 +147,10 @@ void *write_thread(void *local) {
 		exit(-1);
 	}
 	conn->threads--;
-	PRINT_DEBUG("write_thread: leaving thread: conn=%x, threads=%d", (int)conn, conn->threads);
+	PRINT_DEBUG("write_thread: leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
 
-	/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("write_thread: Exited: id=%d", id);
@@ -239,7 +239,7 @@ void *close_stub_thread(void *local) {
 
 	PRINT_DEBUG("close_stub_thread: Entered: id=%d", id);
 
-	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -312,7 +312,7 @@ void *poll_thread(void *local) {
 
 	PRINT_DEBUG("poll_thread: Entered: id=%d", id);
 
-	/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -332,10 +332,10 @@ void *poll_thread(void *local) {
 		exit(-1);
 	}
 	conn->threads--;
-	PRINT_DEBUG("poll_thread: leaving thread: conn=%x, threads=%d", (int)conn, conn->threads);
+	PRINT_DEBUG("poll_thread: leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
 
-	/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("poll_thread: Exited: id=%d", id);
@@ -353,7 +353,7 @@ void *poll_stub_thread(void *local) {
 
 	PRINT_DEBUG("poll_stub_thread: Entered: id=%d", id);
 
-	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -373,10 +373,10 @@ void *poll_stub_thread(void *local) {
 		exit(-1);
 	}
 	conn_stub->threads--;
-	PRINT_DEBUG("poll_stub_thread: leaving thread: conn_stub=%d, threads=%d", (int)conn_stub, conn_stub->threads);
+	PRINT_DEBUG("poll_stub_thread: leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
 
-	/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+	/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("poll_stub_thread: Exited: id=%d", id);
@@ -466,7 +466,7 @@ void *connect_thread(void *local) {
 
 	PRINT_DEBUG("connect_thread: Entered: id=%d", id);
 
-	/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
@@ -519,10 +519,10 @@ void *connect_thread(void *local) {
 		exit(-1);
 	}
 	conn->threads--;
-	PRINT_DEBUG("connect_thread: leaving thread: conn=%x, threads=%d", (int)conn, conn->threads);
+	PRINT_DEBUG("connect_thread: leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
 
-	/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("connect_thread: Exited: id=%d", id);
@@ -669,7 +669,7 @@ void *accept_thread(void *local) {
 
 	PRINT_DEBUG("accept_thread: Entered: id=%d", id);
 
-	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
@@ -677,7 +677,7 @@ void *accept_thread(void *local) {
 	while (conn_stub->running_flag) {
 		if (!queue_is_empty(conn_stub->syn_queue)) {
 			node = queue_remove_front(conn_stub->syn_queue);
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
 			seg = (struct tcp_segment *) node->data;
@@ -696,7 +696,7 @@ void *accept_thread(void *local) {
 						/*#*/PRINT_DEBUG("");
 						sem_post(&conn_list_sem);
 
-						/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+						/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 						if (sem_wait(&conn->sem)) {
 							PRINT_ERROR("conn->sem wait prob");
 							exit(-1);
@@ -745,10 +745,10 @@ void *accept_thread(void *local) {
 							exit(-1);
 						}
 						conn->threads--;
-						PRINT_DEBUG("accept_thread: leaving thread: conn=%x, threads=%d", (int)conn, conn->threads);
+						PRINT_DEBUG("accept_thread: leaving thread: conn=%p, threads=%d", conn, conn->threads);
 						sem_post(&conn_list_sem);
 
-						/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+						/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 						sem_post(&conn->sem);
 
 						seg_free(seg);
@@ -779,7 +779,7 @@ void *accept_thread(void *local) {
 			seg_free(seg);
 			free(node);
 		} else {
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
 			/*#*/PRINT_DEBUG("");
@@ -791,7 +791,7 @@ void *accept_thread(void *local) {
 			PRINT_DEBUG("left conn_stub->accept_wait_sem\n");
 		}
 
-		/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+		/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 		if (sem_wait(&conn_stub->sem)) {
 			PRINT_ERROR("conn_stub->sem prod");
 			exit(-1);
@@ -808,10 +808,10 @@ void *accept_thread(void *local) {
 		exit(-1);
 	}
 	conn_stub->threads--;
-	PRINT_DEBUG("accept_thread: leaving thread: conn_stub=%d, threads=%d", (int)conn_stub, conn_stub->threads);
+	PRINT_DEBUG("accept_thread: leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
 
-	/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+	/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("accept_thread: Exited: id=%d", id);
@@ -879,14 +879,14 @@ void *close_thread(void *local) {
 		exit(-1);
 	}
 
-	/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
 	}
 	if (conn->running_flag) {
 		if (conn->state == TCP_ESTABLISHED || conn->state == TCP_SYN_RECV) {
-			PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%x", conn->state, (int) conn);
+			PRINT_DEBUG("close_thread: CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%p", conn->state, conn);
 			conn->state = TCP_FIN_WAIT_1;
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
@@ -897,9 +897,9 @@ void *close_thread(void *local) {
 			if (queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
 				//send FIN
 				if (conn->state == TCP_ESTABLISHED) {
-					PRINT_DEBUG("close_thread: ESTABLISHED: done, send FIN: state=%d conn=%x", conn->state, (int)conn);
+					PRINT_DEBUG("close_thread: ESTABLISHED: done, send FIN: state=%d conn=%p", conn->state, conn);
 				} else {
-					PRINT_DEBUG("close_thread: SYN_RECV: done, send FIN: state=%d conn=%x", conn->state, (int)conn);
+					PRINT_DEBUG("close_thread: SYN_RECV: done, send FIN: state=%d conn=%p", conn->state, conn);
 				}
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
@@ -918,7 +918,7 @@ void *close_thread(void *local) {
 				//else piggy back it
 			}
 		} else if (conn->state == TCP_CLOSE_WAIT) {
-			PRINT_DEBUG("close_thread: CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d conn=%x", conn->state, (int) conn);
+			PRINT_DEBUG("close_thread: CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d conn=%p", conn->state, conn);
 			conn->state = TCP_LAST_ACK;
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
@@ -928,7 +928,7 @@ void *close_thread(void *local) {
 			//if CLOSE, send FIN, FIN_WAIT_1
 			if (queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
 				//send FIN
-				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%x", conn->state, (int)conn);
+				PRINT_DEBUG("close_thread: done, send FIN: state=%d conn=%p", conn->state, conn);
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
 				conn->fssn = conn->send_seq_num;
@@ -947,7 +947,7 @@ void *close_thread(void *local) {
 			}
 		} else if (conn->state == TCP_SYN_SENT) {
 			//if CLOSE, send -, CLOSED
-			PRINT_DEBUG("close_thread: SYN_SENT: CLOSE, send -, CLOSED: state=%d conn=%x", conn->state, (int) conn);
+			PRINT_DEBUG("close_thread: SYN_SENT: CLOSE, send -, CLOSED: state=%d conn=%p", conn->state, conn);
 			conn->state = TCP_CLOSED;
 
 			conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
@@ -972,10 +972,10 @@ void *close_thread(void *local) {
 			exit(-1);
 		}
 		conn->threads--;
-		PRINT_DEBUG("close_thread: leaving thread: conn=%x, threads=%d", (int)conn, conn->threads);
+		PRINT_DEBUG("close_thread: leaving thread: conn=%p, threads=%d", conn, conn->threads);
 		sem_post(&conn_list_sem);
 
-		/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+		/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 		sem_post(&conn->sem);
 	}
 
@@ -1029,7 +1029,7 @@ void *read_param_conn_thread(void *local) {
 	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("read_param_conn_thread: Entered: ff=%x id=%d", (int)ff, id);
+	PRINT_DEBUG("read_param_conn_thread: Entered: ff=%p id=%d", ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1047,13 +1047,13 @@ void *read_param_conn_thread(void *local) {
 			value = 0;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
-			/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
 			}
 			value = conn->recv_win;
-			/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 			sem_post(&conn->sem);
 
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
@@ -1072,13 +1072,13 @@ void *read_param_conn_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//fill in with switch of opts? or have them separate?
-			/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
 			}
 			//TODO read sock opts
-			/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 			sem_post(&conn->sem);
 			value = 1;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
@@ -1104,7 +1104,7 @@ void *read_param_conn_stub_thread(void *local) {
 	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("read_param_conn_stub_thread: Entered: ff=%x id=%d", (int)ff, id);
+	PRINT_DEBUG("read_param_conn_stub_thread: Entered: ff=%p id=%d", ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1124,7 +1124,7 @@ void *read_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//TODO do something? error?
-			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 			if (sem_wait(&conn_stub->sem)) {
 				PRINT_ERROR("conn_stub->write_sem wait prob");
 				exit(-1);
@@ -1134,7 +1134,7 @@ void *read_param_conn_stub_thread(void *local) {
 			//} else {
 			//conn_stub->host_window = 0;
 			//}
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
 			value = 1;
@@ -1155,7 +1155,7 @@ void *read_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//fill in with switch of opts? or have them separate?
-			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 			if (sem_wait(&conn_stub->sem)) {
 				PRINT_ERROR("conn_stub->sem wait prob");
 				exit(-1);
@@ -1165,7 +1165,7 @@ void *read_param_conn_stub_thread(void *local) {
 			//} else {
 			//	conn_stub->host_window = 0;
 			//}
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
 			value = 1;
@@ -1279,7 +1279,7 @@ void *set_param_conn_thread(void *local) {
 	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("set_param_conn_thread: Entered: ff=%x id=%d", (int)ff, id);
+	PRINT_DEBUG("set_param_conn_thread: Entered: ff=%p id=%d", ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1298,7 +1298,7 @@ void *set_param_conn_thread(void *local) {
 			value = 0;
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
-			/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
@@ -1308,7 +1308,7 @@ void *set_param_conn_thread(void *local) {
 			} else {
 				conn->recv_win += value;
 			}/*#*/
-			PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+			PRINT_DEBUG("sem_post: conn=%p", conn);
 			sem_post(&conn->sem);
 
 			value = 1;
@@ -1329,7 +1329,7 @@ void *set_param_conn_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//fill in with switch of opts? or have them separate?
-			/*#*/PRINT_DEBUG("sem_wait: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 			if (sem_wait(&conn->sem)) {
 				PRINT_ERROR("conn->sem wait prob");
 				exit(-1);
@@ -1339,7 +1339,7 @@ void *set_param_conn_thread(void *local) {
 			} else {
 				conn->recv_win = 0;
 			}
-			/*#*/PRINT_DEBUG("sem_post: conn=%x", (int) conn);
+			/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 			sem_post(&conn->sem);
 
 			value = 1;
@@ -1366,7 +1366,7 @@ void *set_param_conn_stub_thread(void *local) {
 	//socket_state state = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("set_param_conn_stub_thread: Entered: ff=%x id=%d", (int)ff, id);
+	PRINT_DEBUG("set_param_conn_stub_thread: Entered: ff=%p id=%d", ff, id);
 
 	uint32_t param_id;
 	uint32_t value;
@@ -1386,7 +1386,7 @@ void *set_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//TODO do something? error?
-			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 			if (sem_wait(&conn_stub->sem)) {
 				PRINT_ERROR("conn_stub->write_sem wait prob");
 				exit(-1);
@@ -1396,7 +1396,7 @@ void *set_param_conn_stub_thread(void *local) {
 			//} else {
 			//conn_stub->host_window = 0;
 			//}
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
 			value = 1;
@@ -1417,7 +1417,7 @@ void *set_param_conn_stub_thread(void *local) {
 			metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
 		} else {
 			//fill in with switch of opts? or have them separate?
-			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 			if (sem_wait(&conn_stub->sem)) {
 				PRINT_ERROR("conn_stub->sem wait prob");
 				exit(-1);
@@ -1427,7 +1427,7 @@ void *set_param_conn_stub_thread(void *local) {
 			//} else {
 			//	conn_stub->host_window = 0;
 			//}
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%d", (int) conn_stub);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
 			value = 1;

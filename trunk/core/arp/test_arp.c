@@ -267,11 +267,11 @@ void fins_from_stub(struct finsFrame *fins_frame) {
 
 void test_to_arp(struct finsFrame *fins_frame) {
 	if (fins_frame->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("test_to_arp: Entered: ff=%x meta=%x", (int)fins_frame, (int) fins_frame->ctrlFrame.metaData);
+		PRINT_DEBUG("test_to_arp: Entered: ff=%p meta=%p", fins_frame, fins_frame->ctrlFrame.metaData);
 	} else if (fins_frame->dataOrCtrl == DATA) {
-		PRINT_DEBUG("test_to_arp: Entered: ff=%x meta=%x", (int)fins_frame, (int) fins_frame->dataFrame.metaData);
+		PRINT_DEBUG("test_to_arp: Entered: ff=%p meta=%p", fins_frame, fins_frame->dataFrame.metaData);
 	} else {
-		PRINT_DEBUG("test_to_arp: Entered: ff=%x type=%d", (int)fins_frame, fins_frame->dataOrCtrl);
+		PRINT_DEBUG("test_to_arp: Entered: ff=%p type=%d", fins_frame, fins_frame->dataOrCtrl);
 	}
 
 	if (sem_wait(&Switch_to_ARP_Qsem)) {

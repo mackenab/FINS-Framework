@@ -301,7 +301,7 @@ void *Switch_to_Daemon() {
 			rem_ip = 0;
 			rem_port = 0;
 
-			PRINT_DEBUG("control ff: ff=%x meta=%x opcode=%d", (int)ff, (int)ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
+			PRINT_DEBUG("control ff: ff=%p meta=%p opcode=%d", ff, ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
 				PRINT_DEBUG("Not yet implmented");
@@ -339,7 +339,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -384,7 +384,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -479,7 +479,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -508,7 +508,7 @@ void *Switch_to_Daemon() {
 							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
 								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 								if (index != -1) {
-									PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
+									PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
 									sem_wait(&daemonSockets[index].Qs);
 
 									/**
@@ -573,7 +573,7 @@ void *Switch_to_Daemon() {
 						sem_wait(&daemonSockets_sem);
 						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
 						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%x index=%d", (int)ff, index);
+							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
 							sem_wait(&daemonSockets[index].Qs);
 
 							/**
@@ -619,7 +619,7 @@ void *Switch_to_Daemon() {
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {
-			PRINT_DEBUG("data ff: ff=%x meta=%x len=%d", (int)ff, (int)ff->dataFrame.metaData, ff->dataFrame.pduLength);
+			PRINT_DEBUG("data ff: ff=%p meta=%p len=%d", ff, ff->dataFrame.metaData, ff->dataFrame.pduLength);
 
 			dstport = 0;
 			hostport = 0;
@@ -656,7 +656,7 @@ void *Switch_to_Daemon() {
 			} else {
 				temp2->s_addr = 0;
 			}
-			PRINT_DEBUG("prot=%d, ff=%x", protocol, (int)ff);
+			PRINT_DEBUG("prot=%d, ff=%p", protocol, ff);
 			PRINT_DEBUG("host=%s:%d (%u)", inet_ntoa(*temp), (hostport), (*temp).s_addr);
 			PRINT_DEBUG("dst=%s:%d (%u)", inet_ntoa(*temp2), (dstport), (*temp2).s_addr);
 
@@ -681,7 +681,7 @@ void *Switch_to_Daemon() {
 
 				//if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
 				if (index != -1 && daemonSockets[index].state > SS_UNCONNECTED) { //TODO review this logic might be bad
-					PRINT_DEBUG("ICMP should not enter here at all ff=%x", (int)ff);
+					PRINT_DEBUG("ICMP should not enter here at all ff=%p", ff);
 					if ((hostport != daemonSockets[index].dst_port) || (hostip != daemonSockets[index].dst_ip)) {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 						sem_post(&daemonSockets_sem);
@@ -692,7 +692,7 @@ void *Switch_to_Daemon() {
 				}
 			}
 
-			PRINT_DEBUG("ff=%x index=%d", (int) ff, index);
+			PRINT_DEBUG("ff=%p index=%d", ff, index);
 			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
 				PRINT_DEBUG( "Matched: host=%u/%u, dst=%u/%u, prot=%u",
 						daemonSockets[index].host_ip, daemonSockets[index].host_port, daemonSockets[index].dst_ip, daemonSockets[index].dst_port, daemonSockets[index].protocol);
@@ -919,8 +919,8 @@ void *wedge_to_daemon() {
 			}
 
 			hdr = (struct nl_wedge_to_daemon *) msg_buf;
-			uniqueSockID = hdr->uniqueSockID;
-			index = hdr->index;
+			uniqueSockID = hdr->sock_id;
+			index = hdr->sock_index;
 			call_type = hdr->call_type;
 			call_threads = hdr->call_threads;
 			call_id = hdr->call_id;
@@ -1046,8 +1046,8 @@ void *wedge_to_daemon() {
 
 void *Capture() {
 
-	char *data;
-	int datalen;
+	u_char *frame;
+	int frame_len;
 	int numBytes;
 	int capture_pipe_fd;
 	struct finsFrame *ff = NULL;
@@ -1057,7 +1057,7 @@ void *Capture() {
 	//struct sniff_ethernet *ethernet_header;
 	u_char ethersrc[ETHER_ADDR_LEN + 1];
 	u_char etherdst[ETHER_ADDR_LEN + 1];
-	u_short protocol_type;
+	u_short ether_type;
 
 	//####
 	ethersrc[ETHER_ADDR_LEN] = '\0';
@@ -1071,29 +1071,28 @@ void *Capture() {
 	}
 
 	while (1) {
-
-		numBytes = read(capture_pipe_fd, &datalen, sizeof(int));
+		numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
 			break;
 		}
-		data = (char *) malloc(datalen);
-		if (data == NULL) {
+		frame = (u_char *) malloc(frame_len);
+		if (frame == NULL) {
 			PRINT_ERROR("allocation fail");
 			exit(1);
 		}
 
-		numBytes = read(capture_pipe_fd, data, datalen);
+		numBytes = read(capture_pipe_fd, frame, frame_len);
 
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
-			free(data);
+			free(frame);
 			break;
 		}
 
-		if (numBytes != datalen) {
+		if (numBytes != frame_len) {
 			PRINT_DEBUG("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
-			free(data);
+			free(frame);
 			continue;
 		}
 
@@ -1101,13 +1100,13 @@ void *Capture() {
 
 		}
 
-		PRINT_DEBUG("A frame of length %d has been written-----", datalen);
+		PRINT_DEBUG("A frame of length %d has been written-----", frame_len);
 
 		//print_frame(data,datalen);
 
 		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 
-		PRINT_DEBUG("%d", (int) ff);
+		PRINT_DEBUG("ff=%p", ff);
 
 		/** TODO
 		 * 1. extract the Ethernet Frame
@@ -1117,35 +1116,38 @@ void *Capture() {
 		ether_meta = (metadata *) malloc(sizeof(metadata));
 		metadata_create(ether_meta);
 
-		memcpy(ethersrc, ((struct sniff_ethernet *) data)->ether_shost, ETHER_ADDR_LEN);
+		memcpy(ethersrc, ((struct sniff_ethernet *) frame)->ether_shost, ETHER_ADDR_LEN);
 		//PRINT_DEBUG("");
-		memcpy(etherdst, ((struct sniff_ethernet *) data)->ether_dhost, ETHER_ADDR_LEN);
+		memcpy(etherdst, ((struct sniff_ethernet *) frame)->ether_dhost, ETHER_ADDR_LEN);
 		//PRINT_DEBUG("");
-		protocol_type = ntohs(((struct sniff_ethernet *) data)->ether_type);
+		ether_type = ntohs(((struct sniff_ethernet *) frame)->ether_type);
+
+		//TODO as data peeled off, add to metadata?
+		metadata_writeToElement(ether_meta, "ether_type", &ether_type, META_TYPE_INT);
 
 		PRINT_DEBUG("Capture: got frame: ethersrc=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, etherdst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, proto=%d",
-				(uint8_t)ethersrc[0], (uint8_t )ethersrc[1], (uint8_t )ethersrc[2], (uint8_t )ethersrc[3], (uint8_t )ethersrc[4], (uint8_t )ethersrc[5], (uint8_t )etherdst[0], (uint8_t )etherdst[1], (uint8_t )etherdst[2], (uint8_t )etherdst[3], (uint8_t )etherdst[4], (uint8_t )etherdst[5], protocol_type);
+				(uint8_t)ethersrc[0], (uint8_t )ethersrc[1], (uint8_t )ethersrc[2], (uint8_t )ethersrc[3], (uint8_t )ethersrc[4], (uint8_t )ethersrc[5], (uint8_t )etherdst[0], (uint8_t )etherdst[1], (uint8_t )etherdst[2], (uint8_t )etherdst[3], (uint8_t )etherdst[4], (uint8_t )etherdst[5], ether_type);
 
 		ff->dataOrCtrl = DATA;
 		ff->dataFrame.metaData = ether_meta;
 
-		if (protocol_type == 0x0800) { //0x0800 == 2048, IPv4
-			PRINT_DEBUG("IPv4: proto=%x (%u)", protocol_type, protocol_type);
+		if (ether_type == 0x0800) { //0x0800 == 2048, IPv4
+			PRINT_DEBUG("IPv4: proto=%x (%u)", ether_type, ether_type);
 			(ff->destinationID).id = IPV4ID;
 			(ff->destinationID).next = NULL;
-		} else if (protocol_type == 0x0806) { //0x0806 == 2054, ARP
-			PRINT_DEBUG("ARP: proto=%x (%u)", protocol_type, protocol_type);
+		} else if (ether_type == 0x0806) { //0x0806 == 2054, ARP
+			PRINT_DEBUG("ARP: proto=%x (%u)", ether_type, ether_type);
 			(ff->destinationID).id = ARPID;
 			(ff->destinationID).next = NULL;
-		} else if (protocol_type == 0x86dd) { //0x86dd == 34525, IPv6
-			PRINT_DEBUG("IPv6: proto=%x (%u)", protocol_type, protocol_type);
+		} else if (ether_type == 0x86dd) { //0x86dd == 34525, IPv6
+			PRINT_DEBUG("IPv6: proto=%x (%u)", ether_type, ether_type);
 			//drop, don't handle & don't catch sys calls
 			//freeFinsFrame(ff);
 			//continue;
 			(ff->destinationID).id = IPV4ID;
 			(ff->destinationID).next = NULL;
 		} else {
-			PRINT_DEBUG("default: proto=%x (%u)", protocol_type, protocol_type);
+			PRINT_DEBUG("default: proto=%x (%u)", ether_type, ether_type);
 			//drop
 			//freeFinsFrame(ff);
 			//continue;
@@ -1154,19 +1156,25 @@ void *Capture() {
 		}
 
 		(ff->dataFrame).directionFlag = UP;
-		ff->dataFrame.pduLength = datalen - SIZE_ETHERNET;
-		ff->dataFrame.pdu = (u_char *) data + SIZE_ETHERNET; //mem leak
+		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
+		//ff->dataFrame.pdu = frame + SIZE_ETHERNET;
 
-		//memcpy( ff->dataFrame.pdu , data + SIZE_ETHERNET ,datalen- SIZE_ETHERNET);
+		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
+		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		PRINT_DEBUG("ff=%x pdu=%x, data=%x", (int)ff, (int) &(ff->dataFrame).pdu, (int) data);
+		PRINT_DEBUG("ff=%p pdu=%p, frame=%p", ff, ff->dataFrame.pdu, frame);
 
 		sem_wait(&EtherStub_to_Switch_Qsem);
 		if (!write_queue(ff, EtherStub_to_Switch_Queue)) {
+			sem_post(&EtherStub_to_Switch_Qsem);
+
+			free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
+		} else {
+			sem_post(&EtherStub_to_Switch_Qsem);
 		}
-		PRINT_DEBUG("");
-		sem_post(&EtherStub_to_Switch_Qsem);
+
+		free(frame);
 	} // end of while loop
 
 	pthread_exit(NULL);
@@ -1176,7 +1184,7 @@ void *Inject() {
 
 	//char data[]="loloa7aa7a";
 	char *frame;
-	int datalen = 10;
+	int datalen;
 	int framelen;
 	int inject_pipe_fd;
 	int numBytes;
@@ -1208,7 +1216,7 @@ void *Inject() {
 		if (ff == NULL)
 			continue;
 
-		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%x", (int)ff);
+		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%p", ff);
 
 		//	metadata_readFromElement(ff->dataFrame.metaData,"dstip",&destination);
 		//	loop_host = (struct hostent *) gethostbyname((char *)"");
@@ -1240,20 +1248,21 @@ void *Inject() {
 		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
 
 		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
-		char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
 		//char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
 		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
 		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
+		char dest[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; //eth broadcast
 
 		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
 		memcpy(((struct sniff_ethernet *) frame)->ether_shost, src, ETHER_ADDR_LEN);
 
 		int ret = 0;
-		int protocol = 0;
-		ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == CONFIG_FALSE;
+		int ether_type = 0;
+		ret += metadata_readFromElement(ff->dataFrame.metaData, "ether_type", &ether_type) == CONFIG_FALSE;
 
-		if (protocol == 0x0806) {
+		if (ether_type == 0x0806) {
 			((struct sniff_ethernet *) frame)->ether_type = htons(0x0806);
 		} else {
 			((struct sniff_ethernet *) frame)->ether_type = htons(0x0800);

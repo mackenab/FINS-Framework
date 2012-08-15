@@ -9,7 +9,6 @@
 #include <finstypes.h>
 
 //#include <ipv4.h>
-#define	IP4_PT_UDP		17		/* protocol type for UDP packets	*/
 
 extern sem_t daemonSockets_sem;
 extern struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
@@ -85,7 +84,7 @@ int daemon_fdf_to_udp(u_char *data, u_int data_len, metadata *params) {
 		return 1;
 	} else {
 		sem_post(&Daemon_to_Switch_Qsem);
-		PRINT_DEBUG("freeing: ff=%x", (int) ff);
+		PRINT_DEBUG("freeing: ff=%p", ff);
 		free(ff);
 
 		return 0;
@@ -118,7 +117,7 @@ void bind_udp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	uint16_t host_port;
 	uint32_t host_ip;
 
-	PRINT_DEBUG("socket_udp: Entered: uniqueSockID=%llu index=%d id=%u index=%d", uniqueSockID, index, call_id, call_index);
+	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d", uniqueSockID, index, call_id, call_index);
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family=%d", addr->sin_family);
@@ -395,8 +394,6 @@ void getname_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	hdr->call_type = getname_call;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = 0;
 	pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -465,8 +462,6 @@ void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -617,10 +612,10 @@ void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	}
 	metadata_create(params);
 
-	int protocol = IP4_PT_UDP;
+	//int protocol = IP4_PT_UDP;
 	metadata_writeToElement(params, "call_id", &call_id, META_TYPE_INT);
 	metadata_writeToElement(params, "call_index", &call_index, META_TYPE_INT);
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	//metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT);
 
 	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
@@ -650,7 +645,7 @@ void *recvmsg_udp_thread(void *local) {
 	int flags = thread_data->flags;
 	free(thread_data);
 
-	PRINT_DEBUG("Entered: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
+	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
 
 	int non_blocking_flag = flags & (SOCK_NONBLOCK | O_NONBLOCK | MSG_DONTWAIT); //TODO get from flags
 	int ret;
@@ -658,7 +653,7 @@ void *recvmsg_udp_thread(void *local) {
 	PRINT_DEBUG("");
 	struct finsFrame *ff = NULL;
 	ret = get_fdf(index, uniqueSockID, &ff, non_blocking_flag);
-	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%x", uniqueSockID, index, (int)ff);
+	PRINT_DEBUG("after get_fdf uniqID=%llu ind=%d ff=%p", uniqueSockID, index, ff);
 	if (ret == 0) {
 		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, EBADF); //TODO socket closed/invalid
 
@@ -719,8 +714,6 @@ void *recvmsg_udp_thread(void *local) {
 	hdr->call_type = recvmsg_call;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = 0;
 	u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -852,69 +845,112 @@ void release_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	}
 }
 
-void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index) {
-	socket_state state;
+void *poll_udp_thread(void *local) {
+	struct daemon_udp_thread_data *thread_data = (struct daemon_udp_thread_data *) local;
+	int id = thread_data->id;
+	unsigned long long uniqueSockID = thread_data->uniqueSockID;
+	int index = thread_data->index;
+	u_int call_id = thread_data->call_id;
+	int call_index = thread_data->call_index;
+	int events = thread_data->flags; //has events
+	free(thread_data);
+
+	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d id=%d", uniqueSockID, index, call_id, call_index, id);
+
+	if (events & POLLIN) {
+
+	}
+
+	//TODO finish
+
+	nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+	pthread_exit(NULL);
+}
+
+void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events) {
+	//socket_state state;
 	uint32_t mask = 0;
 
-	PRINT_DEBUG("poll_udp: index=%d uniqueSockID=%llu", index, uniqueSockID);
-	sem_wait(&daemonSockets_sem);
-	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-		PRINT_DEBUG("Socket closed, canceling poll_udp.");
+	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d events=%x", uniqueSockID, index, call_id, call_index, events);
+
+	if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
+		sem_wait(&daemonSockets_sem);
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling poll_udp.");
+			sem_post(&daemonSockets_sem);
+
+			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			return;
+		}
+
+		sem_wait(&daemonSockets[index].Qs);
+		if (daemonSockets[index].buf_data > 0) {
+			mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+		}
+		sem_post(&daemonSockets[index].Qs);
+
+		PRINT_DEBUG("");
 		sem_post(&daemonSockets_sem);
-
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
-		return;
 	}
 
-	state = daemonSockets[index].state;
-
-	sem_wait(&daemonSockets[index].Qs);
-	if (daemonSockets[index].buf_data) {
-		mask |= POLLIN;
-	}
-	sem_post(&daemonSockets[index].Qs);
-
-	PRINT_DEBUG("");
-	sem_post(&daemonSockets_sem);
-
-	//TODO finish creating mask
-
-	int ret_val;
-
-	//send msg to wedge
-	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(u_int);
-	u_char *msg = (u_char *) malloc(msg_len);
-	if (msg == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
-		return;
+	if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 	}
 
-	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
-	hdr->call_type = poll_call;
-	hdr->call_id = call_id;
-	//hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	hdr->index = index;
-	hdr->ret = ACK;
-	hdr->msg = 0;
-	u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
+	if (mask & events) {
+		int ret_val;
+		//send msg to wedge
+		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(u_int);
+		u_char *msg = (u_char *) malloc(msg_len);
+		if (msg == NULL) {
+			PRINT_ERROR("ERROR: buf alloc fail");
+			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			return;
+		}
 
-	*(u_int *) pt = mask;
-	pt += sizeof(u_int);
+		struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
+		hdr->call_type = poll_call;
+		hdr->call_id = call_id;
+		hdr->call_index = call_index;
+		hdr->ret = ACK;
+		hdr->msg = 0;
+		u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-	if (pt - msg != msg_len) {
-		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		*(u_int *) pt = mask;
+		pt += sizeof(u_int);
+
+		if (pt - msg != msg_len) {
+			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			free(msg);
+			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			return;
+		}
+
+		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+		ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
 		free(msg);
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
-		return;
-	}
+		if (ret_val) {
+			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		}
+	} else {
+		struct daemon_udp_thread_data *thread_data = (struct daemon_udp_thread_data *) malloc(sizeof(struct daemon_udp_thread_data));
+		thread_data->id = thread_count++;
+		thread_data->uniqueSockID = uniqueSockID;
+		thread_data->index = index;
+		thread_data->call_id = call_id;
+		thread_data->call_index = call_index;
+		thread_data->flags = events;
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
-	ret_val = send_wedge(nl_sockfd, msg, msg_len, 0);
-	free(msg);
-	if (ret_val) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		//spin off thread to handle
+		pthread_t thread;
+		if (pthread_create(&thread, NULL, poll_udp_thread, (void *) thread_data)) {
+			PRINT_ERROR("ERROR: unable to create recvfrom_udp_thread thread.");
+			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+
+			free(thread_data);
+		} else {
+			pthread_detach(thread);
+		}
 	}
 }
 
@@ -942,7 +978,7 @@ void shutdown_udp(unsigned long long uniqueSockID, int index, u_int call_id, int
 
 void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval) {
 
-	PRINT_DEBUG("setsockopt_udp: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
+	PRINT_DEBUG("Entered: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("Socket closed, canceling getsockopt_udp.");
@@ -1036,7 +1072,7 @@ void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	char *val;
 	int ret_val;
 
-	PRINT_DEBUG("getsockopt_udp: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
+	PRINT_DEBUG("Entered: index=%d, uniqueSockID=%llu, level=%d, optname=%d, optlen=%d", index, uniqueSockID, level, optname, optlen);
 	sem_wait(&daemonSockets_sem);
 	if (daemonSockets[index].uniqueSockID != uniqueSockID) {
 		PRINT_DEBUG("Socket closed, canceling getsockopt_udp.");
@@ -1114,8 +1150,6 @@ void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	hdr->call_type = getsockopt_call;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = 0;
 	u_char *pt = msg + sizeof(struct nl_daemon_to_wedge);

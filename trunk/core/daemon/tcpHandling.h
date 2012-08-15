@@ -53,7 +53,7 @@ void recvmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events);
 void mmap_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
 void socketpair_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
 void shutdown_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int how);

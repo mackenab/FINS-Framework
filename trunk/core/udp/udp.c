@@ -54,7 +54,7 @@ void udp_get_FF() {
 	}
 
 	udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%x", udpStat.totalRecieved, (int)ff);
+	PRINT_DEBUG("UDP Total %d, ff=%p", udpStat.totalRecieved, ff);
 	if (ff->dataOrCtrl == CONTROL) {
 		// send to something to deal with FCF
 		PRINT_DEBUG("UDP: CONTROL HANDLER !");

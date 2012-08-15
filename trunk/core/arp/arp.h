@@ -39,7 +39,7 @@ extern finsQueue Switch_to_ARP_Queue;
 #define REPLYDATA 2
 #define REPLYCONTROL 3
 
-#define ARP_PROTOCOL 0x0806
+#define ARP_TYPE 0x0806
 
 /**struct arp_hdr is used for use external to the ARP module. The zeroth element of both
  * the IP and MAC arrays (e.g. sender_MAC_addrs[0] or target_IP_addrs[0] etc.) is the

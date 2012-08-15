@@ -179,8 +179,8 @@ uint32_t loopback_ip_addr; // = IP4_ADR_P2H(127,0,0,1);
 uint32_t any_ip_addr; // = IP4_ADR_P2H(0,0,0,0);
 
 struct nl_wedge_to_daemon {
-	unsigned long long uniqueSockID; //TODO when ironed out remove uID or index, prob uID
-	int index;
+	unsigned long long sock_id; //TODO when ironed out remove uID or index, prob uID
+	int sock_index;
 
 	u_int call_type;
 	int call_threads;
@@ -194,12 +194,11 @@ struct nl_daemon_to_wedge {
 
 	union {
 		u_int call_id; //TODO when ironed out remove id or index
-		unsigned long long uniqueSockID; //TODO when ironed out remove uID & index
-
+		unsigned long long sock_id; //TODO when ironed out remove uID & index
 	};
 	union {
 		int call_index;
-		int index;
+		int sock_index;
 	};
 
 	u_int ret;

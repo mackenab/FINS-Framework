@@ -23,7 +23,7 @@ extern struct udp_statistics udpStat;
 
 void udp_in(struct finsFrame* ff) {
 
-	struct finsFrame *newFF;
+	//struct finsFrame *newFF;
 
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != DATA) {
@@ -42,10 +42,10 @@ void udp_in(struct finsFrame* ff) {
 		return;
 	}
 
-	PRINT_DEBUG("UDP_in ff=%x", (int)ff);
+	PRINT_DEBUG("UDP_in ff=%p", ff);
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
-	struct udp_header* packet = (struct udp_header*) ((ff->dataFrame).pdu);
+	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
 	metadata* meta = ff->dataFrame.metaData;
 
 	uint16_t protocol_type;
@@ -61,6 +61,7 @@ void udp_in(struct finsFrame* ff) {
 
 	if (ret) {
 		//TODO error
+		PRINT_DEBUG("todo error")
 	}
 
 	/* begins checking the UDP packets integrity */
@@ -100,11 +101,9 @@ void udp_in(struct finsFrame* ff) {
 
 			return;
 		}
-
 	} else {
 		udpStat.noChecksum++;
 		PRINT_DEBUG("ignore checksum=%d", udpStat.noChecksum);
-
 	}
 
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
@@ -123,30 +122,45 @@ void udp_in(struct finsFrame* ff) {
 	//	meta->u_srcPort = packet->u_src;
 	/* construct a FDF to send to the sockets */
 
-	PRINT_DEBUG("PDU Length including UDP header %d", (ff->dataFrame).pduLength);
-	PRINT_DEBUG("PDU Length %d", ((ff->dataFrame).pduLength) - U_HEADER_LEN);
+	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength);
+	PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
 
-	ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
+	//ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
+
+	int leng = ff->dataFrame.pduLength;
+	ff->dataFrame.pduLength = leng - U_HEADER_LEN;
+
+	u_char *pdu = ff->dataFrame.pdu;
+	u_char *data = (u_char *) malloc(ff->dataFrame.pduLength);
+	memcpy(data, pdu + U_HEADER_LEN, ff->dataFrame.pduLength);
+	ff->dataFrame.pdu = data;
 
 	//#########################
-	u_char *temp = (u_char *) malloc(ff->dataFrame.pduLength - U_HEADER_LEN + 1);
-	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength - U_HEADER_LEN);
-	temp[ff->dataFrame.pduLength - U_HEADER_LEN] = '\0';
-	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength-U_HEADER_LEN, temp);
+	u_char *temp = (u_char *) malloc(ff->dataFrame.pduLength + 1);
+	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	temp[ff->dataFrame.pduLength] = '\0';
+	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
 	free(temp);
 	//#########################
 
-	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
-	newFF = create_ff(DATA, UP, SOCKETSTUBID, ((ff->dataFrame).pduLength) - U_HEADER_LEN, ((ff->dataFrame).pdu), meta);
+	ff->destinationID.id = SOCKETSTUBID;
+	ff->destinationID.next = NULL;
 
-	PRINT_DEBUG("newff=%x, PDU Len=%d", (int)newFF, (newFF->dataFrame).pduLength);
+	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
+	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ff->dataFrame.pduLength - U_HEADER_LEN, ff->dataFrame.pdu, meta);
+
+	//PRINT_DEBUG("newff=%p, PDU Len=%d", newFF, (newFF->dataFrame).pduLength);
 	//print_finsFrame(newFF);
 
-	sendToSwitch(newFF);
+	//sendToSwitch(newFF);
+	sendToSwitch(ff);
 
-	PRINT_DEBUG("freeing: ff=%x", (int) ff);
+	//PRINT_DEBUG("freeing: ff=%p", ff);
 	//freeFinsFrame(ff); //can't since using meta
 	//free(ff->dataFrame.pdu); //TODO fix free problem right here
-	free(ff);
+	//free(ff);
+
+	PRINT_DEBUG("Freeing pdu=%p", pdu);
+	free(pdu);
 }
 

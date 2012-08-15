@@ -456,8 +456,6 @@ int nack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int
 	hdr->call_type = call_type;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = NACK;
 	hdr->msg = msg;
 
@@ -514,8 +512,6 @@ int ack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	hdr->call_type = call_type;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	//hdr->uniqueSockID = uniqueSockID;
-	//hdr->index = index;
 	hdr->ret = ACK;
 	hdr->msg = msg;
 
@@ -1133,8 +1129,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1160,7 +1154,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		if (total + sizeof(struct ifreq) <= len) {
 			strcpy(ifr.ifr_name, "eth1");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
 
 			memcpy(pt, &ifr, sizeof(struct ifreq));
@@ -1173,7 +1167,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		if (total + sizeof(struct ifreq) <= len) {
 			strcpy(ifr.ifr_name, "eth0");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
+			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
 
 			memcpy(pt, &ifr, sizeof(struct ifreq));
@@ -1212,11 +1206,11 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
@@ -1240,8 +1234,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1276,11 +1268,11 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 20));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 15));
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
@@ -1304,8 +1296,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1340,11 +1330,11 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 255));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 255));
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "eth1") == 0) {
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(192, 168, 1, 255));
+			addr.sin_addr.s_addr = htonl(IP4_ADR_P2H(10, 0, 2, 255));
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
@@ -1368,8 +1358,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1432,8 +1420,6 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		hdr->call_type = ioctl_call;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		//hdr->uniqueSockID = uniqueSockID;
-		//hdr->index = index;
 		hdr->ret = ACK;
 		hdr->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
@@ -1871,9 +1857,13 @@ void release_call_handler(unsigned long long uniqueSockID, int index, int call_t
 
 void poll_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
 	u_char * pt;
-	pt = buf;
+	int events;
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d threads=%d id=%u index=%d len=%d", uniqueSockID, index, call_threads, call_id, call_index, len);
+	pt = buf;
+
+	events = *(int *) pt;
+	pt += sizeof(int);
 
 	if (pt - buf != len) {
 		PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
@@ -1898,9 +1888,9 @@ void poll_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-		poll_udp(uniqueSockID, index, call_id, call_index);
+		poll_udp(uniqueSockID, index, call_id, call_index, events);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		poll_tcp(uniqueSockID, index, call_id, call_index);
+		poll_tcp(uniqueSockID, index, call_id, call_index, events);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		//poll_icmp(index, uniqueSockID);
 		PRINT_DEBUG("poll_icmp not implemented yet");

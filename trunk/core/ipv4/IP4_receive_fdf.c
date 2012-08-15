@@ -28,11 +28,11 @@ void IP4_receive_fdf() {
 	}
 
 	if (pff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%x meta=%x", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->ctrlFrame.metaData);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->ctrlFrame.metaData);
 		/** TODO:  Here goes code for control messages */
 
 	} else if (pff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%x meta=%x", pff->dataOrCtrl, pff->destinationID.id, (int) pff, (int)pff->dataFrame.metaData);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->dataFrame.metaData);
 		PRINT_DEBUG("PDU Length: %d", pff->dataFrame.pduLength);
 		PRINT_DEBUG("Data direction: %d", pff->dataFrame.directionFlag);
 		PRINT_DEBUG("");
@@ -58,13 +58,13 @@ void IP4_receive_fdf() {
 			PRINT_DEBUG("Transport protocol going out passes to IPv4 is %d", protocol);
 			switch (protocol) {
 			case IP4_PT_UDP:
-				IP4_out(pff, (pff->dataFrame).pduLength, my_ip_addr, IP4_PT_UDP);
+				IP4_out(pff, pff->dataFrame.pduLength, my_ip_addr, IP4_PT_UDP);
 				break;
 			case IP4_PT_ICMP:
-				IP4_out(pff, (pff->dataFrame).pduLength, my_ip_addr, IP4_PT_ICMP);
+				IP4_out(pff, pff->dataFrame.pduLength, my_ip_addr, IP4_PT_ICMP);
 				break;
 			case IP4_PT_TCP:
-				IP4_out(pff, (pff->dataFrame).pduLength, my_ip_addr, IP4_PT_TCP);
+				IP4_out(pff, pff->dataFrame.pduLength, my_ip_addr, IP4_PT_TCP);
 				break;
 			default:
 				PRINT_DEBUG("invalid protocol neither UDP nor ICMP !!!!!! protocol=%d", protocol);

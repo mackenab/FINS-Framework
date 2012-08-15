@@ -206,6 +206,9 @@ struct ip4_next_hop_info {
 /* macro to get datagram's flags							*/
 #define IP4_FLG(fragoff)		(fragoff>>13)&0x7)
 
+
+#define IP4_ETH_TYPE  0x0800
+
 /* macros to determine IP address class*/
 #define	IP4_CLASSA(x) (((x) & 0x80000000) == 0)		/* IP Class A */
 #define	IP4_CLASSB(x) (((x) & 0xc0000000) == 0x80000000)	/* IP Class B */
@@ -222,7 +225,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);
 unsigned short IP4_checksum(struct ip4_packet* ptr, int length);
 int IP4_dest_check(IP4addr destination);
 //void IP4_reass(void);
-void IP4_send_fdf_in(struct ip4_header*, struct ip4_packet*);
+void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header*, struct ip4_packet*);
 
 void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length);
 

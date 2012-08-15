@@ -42,11 +42,11 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in server_addr;
 	struct sockaddr_in *client_addr;
 
-	if (argc > 1)
-
+	if (argc > 1) {
 		port = atoi(argv[1]);
-	else
+	} else {
 		port = 45454;
+	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
@@ -90,11 +90,18 @@ int main(int argc, char *argv[]) {
 	fds[0].events = POLLIN | POLLPRI | POLLRDNORM;
 	fds[1].fd = sock;
 	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
+	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
 	int time = -1;
 
 	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ", POLLIN, POLLPRI,
 			POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
 	fflush(stdout);
+
+	int temp = fds[1].events;
+	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)",
+			(temp & POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0,
+			(temp & POLLRDNORM) > 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
 
 	struct timeval tv;
 
@@ -106,8 +113,8 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	int j = 0;
-	while (++j <= 10) {
-		//pID = fork();
+	while (++j <= 1) {
+		pID = fork();
 		if (pID == 0) { // child -- Capture process
 			continue;
 		} else if (pID < 0) { // failed to fork
@@ -115,7 +122,7 @@ int main(int argc, char *argv[]) {
 			fflush(stdout);
 			exit(1);
 		} else { // parent
-			port += j - 1;
+			//port += j - 1;
 			break;
 		}
 	}
@@ -125,37 +132,66 @@ int main(int argc, char *argv[]) {
 	}
 
 	while (1) {
-		ret = poll(fds, nfds, time);
-		if (ret || 1) {
-			///*
-			printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
-			printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
-					(fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0, (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLERR) > 0,
-					(fds[0].revents & POLLHUP) > 0, (fds[0].revents & POLLNVAL) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLRDBAND) > 0,
-					(fds[0].revents & POLLWRNORM) > 0, (fds[0].revents & POLLWRBAND) > 0);
-			fflush(stdout);
-			//*/
-			if ((fds[0].revents & (POLLIN | POLLRDNORM)) || 1) {
-				bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
-				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
-				//bytes_read = recv(sock,recv_data,1024,0);
-				if (bytes_read > 0) {
-					recv_data[bytes_read] = '\0';
-					printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++i, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),
-							recv_data);
-					fflush(stdout);
+		if (pID == 0) {
+			//printf("\n pID=%d poll before", pID);
+			//fflush(stdout);
+			ret = poll(fds, nfds, time);
+			//	printf("\n pID=%d poll after", pID);
+			//	fflush(stdout);
+			if (ret || 1) {
+				printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
+				printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
+						(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
+						(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+				fflush(stdout);
 
-					//bytes_read = sendto(sock, recv_data, 1, 0, (struct sockaddr *) client_addr, sizeof(struct sockaddr_in));
+				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+					bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
+					//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
+					//bytes_read = recv(sock,recv_data,1024,0);
+					if (bytes_read > 0) {
+						recv_data[bytes_read] = '\0';
+						printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++i, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),
+								recv_data);
+						fflush(stdout);
 
-					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
+						//bytes_read = sendto(sock, recv_data, 1, 0, (struct sockaddr *) client_addr, sizeof(struct sockaddr_in));
+
+						if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
+							break;
+						}
+					} else if (errno != EWOULDBLOCK && errno != EAGAIN) {
+						printf("\n Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
+						perror("Error:");
+						fflush(stdout);
 						break;
 					}
-				} else if (errno != EWOULDBLOCK && errno != EAGAIN) {
-					printf("\n Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
-					perror("Error:");
-					fflush(stdout);
+				}
+			}
+		} else {
+			//printf("\n pID=%d recvfrom before", pID);
+			//fflush(stdout);
+			bytes_read = recvfrom(sock, recv_data, 2000, 0, (struct sockaddr *) client_addr, &addr_len);
+			//printf("\n pID=%d recvfrom after", pID);
+			//fflush(stdout);
+			//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
+			//bytes_read = recv(sock,recv_data,1024,0);
+			if (bytes_read > 0) {
+				recv_data[bytes_read] = '\0';
+				printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++i, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port), recv_data);
+				fflush(stdout);
+
+				//bytes_read = sendto(sock, recv_data, 1, 0, (struct sockaddr *) client_addr, sizeof(struct sockaddr_in));
+
+				if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
 					break;
 				}
+			} else if (errno != EWOULDBLOCK && errno != EAGAIN) {
+				printf("\n Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
+				perror("Error:");
+				fflush(stdout);
+				break;
 			}
 		}
 	}

@@ -82,7 +82,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	if (IP4_dest_check(header.destination) == 0) {
 		PRINT_DEBUG("");
 
-		if (IP4_forward(ff, ppacket, header.destination, len)) {
+		if (IP4_forward(ff, ppacket, header.destination, len)) { //TODO disabled atm
 			PRINT_DEBUG("");
 
 			return;
@@ -111,7 +111,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.delivered++;
 		PRINT_DEBUG("");
 
-		IP4_send_fdf_in(&header, ppacket);
+		IP4_send_fdf_in(ff, &header, ppacket);
 		//free ppacket
 		return;
 	} else {
@@ -121,7 +121,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		if (ppacket_reassembled != NULL) {
 			stats.delivered++;
 			stats.reassembled++;
-			IP4_send_fdf_in(&header, ppacket_reassembled);
+			IP4_send_fdf_in(ff, &header, ppacket_reassembled);
 		}
 		return;
 	}
