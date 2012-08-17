@@ -208,7 +208,7 @@ void parse_frame (int framelength,u_char *packet);
 /*--------------------------------------------------------------------*/
 
 /** special functions to print the data within a frame for testing*/
-void print_hex_ascii_line(const u_char *payload, int len, int offset) {
+void print_hex_ascii_line_old(const u_char *payload, int len, int offset) {
 
 	int i;
 	int gap;
@@ -255,7 +255,7 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 } //end of print_hex_ascii_line()
 
 
-void print_frame(const u_char *payload, int len) {
+void print_frame_old(const u_char *payload, int len) {
 
 	PRINT_DEBUG("passed len = %d", len);
 	int len_rem = len;

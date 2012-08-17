@@ -12,6 +12,7 @@
 #include <finstypes.h>
 #include <metadata.h>
 #include <finsdebug.h>
+#include <stdint.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
@@ -20,12 +21,6 @@
 
 #include <finstypes.h>
 #include <queueModule.h>
-
-extern sem_t ARP_to_Switch_Qsem;
-extern finsQueue ARP_to_Switch_Queue;
-
-extern sem_t Switch_to_ARP_Qsem;
-extern finsQueue Switch_to_ARP_Queue;
 
 #define ARPREQUESTOP 1
 #define ARPREPLYOP 2
@@ -145,9 +140,21 @@ void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out);
 
 void arp_out(int response_type);
 
-void output_arp_queue(struct finsFrame *fins_arp_out);
-void arp_init();
+void arp_init(pthread_attr_t *fins_pthread_attr);
 void arp_shutdown();
 void arp_free();
+
+void arp_get_FF();
+void arp_to_switch(struct finsFrame *fins_arp_out);
+
+#define EXEC_ARP_GET_ADDR 0
+//#define EXEC_ARP_GET_ADDR 0
+
+void arp_out_fdf(struct finsFrame *ff);
+void arp_in_fdf(struct finsFrame *ff);
+void arp_fcf(struct finsFrame *ff);
+
+void arp_exec(struct finsFrame *ff);
+void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip);
 
 #endif

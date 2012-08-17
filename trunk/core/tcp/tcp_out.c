@@ -172,7 +172,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 
 	PRINT_DEBUG("tcp_out_fdf: Entered");
 
-	metadata* meta = (ff->dataFrame).metaData;
+	metadata* meta = ff->metaData;
 
 	int ret = 0;
 	ret += metadata_readFromElement(meta, "src_ip", &src_ip) == CONFIG_FALSE; //host
@@ -1035,7 +1035,7 @@ void *read_param_conn_thread(void *local) {
 	uint32_t value;
 
 	int ret = 0;
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case READ_PARAM_TCP_HOST_WINDOW:
@@ -1110,7 +1110,7 @@ void *read_param_conn_stub_thread(void *local) {
 	uint32_t value;
 
 	int ret = 0;
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case READ_PARAM_TCP_HOST_WINDOW:
@@ -1199,7 +1199,7 @@ void tcp_read_param(struct finsFrame *ff) {
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
 		if (state > SS_UNCONNECTED) {
 			PRINT_DEBUG("tcp_read_param_host_window: searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
@@ -1285,7 +1285,7 @@ void *set_param_conn_thread(void *local) {
 	uint32_t value;
 
 	int ret = 0;
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case SET_PARAM_TCP_HOST_WINDOW:
@@ -1372,7 +1372,7 @@ void *set_param_conn_stub_thread(void *local) {
 	uint32_t value;
 
 	int ret = 0;
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 	switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case SET_PARAM_TCP_HOST_WINDOW:
@@ -1459,7 +1459,7 @@ void tcp_set_param(struct finsFrame *ff) {
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	if (params) {
 		if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
 			if (state > SS_UNCONNECTED) {

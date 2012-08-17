@@ -58,7 +58,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 
 	//metadata *ipv4_meta = (metadata *) malloc(sizeof(metadata));
 	//metadata_create(ipv4_meta);
-	metadata *ipv4_meta = ff->dataFrame.metaData;
+	metadata *ipv4_meta = ff->metaData;
 
 	//IP4addr srcaddress = ppacket->ip_src;
 	//IP4addr dstaddress = ppacket->ip_dst;
@@ -71,7 +71,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	metadata_writeToElement(ipv4_meta, "src_ip", &srcaddress, META_TYPE_INT);
 	metadata_writeToElement(ipv4_meta, "dst_ip", &dstaddress, META_TYPE_INT);
 	metadata_writeToElement(ipv4_meta, "protocol", &protocol, META_TYPE_INT);
-	//ff->dataFrame.metaData = ipv4_meta;
+	//ff->metaData = ipv4_meta;
 	PRINT_DEBUG("protocol %d, srcip %lu, dstip %lu", protocol, srcaddress, dstaddress);
 
 	sendToSwitch_IPv4(ff);
@@ -98,7 +98,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	 (fins_frame->destinationID).id = ETHERSTUBID;
 	 (fins_frame->destinationID).next = NULL;
 	 (fins_frame->dataFrame).directionFlag = DOWN;
-	 (fins_frame->dataFrame.metaData) = ff->dataFrame.metaData;
+	 (fins_frame->metaData) = ff->metaData;
 	 (fins_frame->dataFrame).pduLength = length + IP4_MIN_HLEN;
 	 //(fins_frame->dataFrame).pdu = (unsigned char *)ppacket;
 
@@ -112,7 +112,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	 sendToSwitch_IPv4(fins_frame);
 	 */
 
-	metadata *params = ff->dataFrame.metaData;
+	metadata *params = ff->metaData;
 
 	uint32_t type = (uint32_t) IP4_ETH_TYPE;
 	metadata_writeToElement(params, "ether_type", &type, META_TYPE_INT);
@@ -123,7 +123,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	ff->destinationID.id = ETHERSTUBID;
 	ff->destinationID.next = NULL;
 	//ff->dataFrame.directionFlag = DOWN;
-	//ff->dataFrame.metaData = ff->dataFrame.metaData;
+	//ff->metaData = ff->metaData;
 	ff->dataFrame.pduLength = length + IP4_MIN_HLEN;
 
 	u_char *data = (u_char *) malloc(length + IP4_MIN_HLEN);

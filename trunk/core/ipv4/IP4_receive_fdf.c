@@ -28,11 +28,11 @@ void IP4_receive_fdf() {
 	}
 
 	if (pff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->ctrlFrame.metaData);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->metaData);
 		/** TODO:  Here goes code for control messages */
 
 	} else if (pff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->dataFrame.metaData);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->metaData);
 		PRINT_DEBUG("PDU Length: %d", pff->dataFrame.pduLength);
 		PRINT_DEBUG("Data direction: %d", pff->dataFrame.directionFlag);
 		PRINT_DEBUG("");
@@ -48,7 +48,7 @@ void IP4_receive_fdf() {
 			 * now it will be set by default to UDP
 			 */
 			int ret = 0;
-			ret += metadata_readFromElement(pff->dataFrame.metaData, "protocol", &protocol) == CONFIG_FALSE;
+			ret += metadata_readFromElement(pff->metaData, "protocol", &protocol) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_DEBUG("metadata read error: ret=%d", ret);

@@ -120,7 +120,7 @@ void udp_get_FF() {
 
 }
 
-void udp_init() {
+void udp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("UDP Started");
 	udp_running = 1;
 
@@ -142,4 +142,3 @@ void udp_shutdown() {
 void udp_free() {
 	//TODO free all module related mem
 }
-

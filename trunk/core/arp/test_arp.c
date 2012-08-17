@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <queueModule.h>
+#include <pthread.h>
 #include "test_arp.h" //this header file already contains #include "arp.h"
 #define DEBUG
 
@@ -259,20 +260,14 @@ void fins_from_stub(struct finsFrame *fins_frame) {
 	IP_addrs_conversion(IP_addrs_read, IP_addrs);
 	fins_frame->dataOrCtrl = CONTROL;
 	fins_frame->destinationID.id = ARPID;
-	fins_frame->ctrlFrame.opcode = WRITEREQUEST;
+	fins_frame->ctrlFrame.opcode = 333/*WRITEREQUEST*/;
 	fins_frame->ctrlFrame.serialNum = 123;
 	fins_frame->ctrlFrame.senderID = (unsigned char) ETHERSTUBID;
 	fins_frame->ctrlFrame.paramterValue = IP_addrs;
 }
 
 void test_to_arp(struct finsFrame *fins_frame) {
-	if (fins_frame->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("test_to_arp: Entered: ff=%p meta=%p", fins_frame, fins_frame->ctrlFrame.metaData);
-	} else if (fins_frame->dataOrCtrl == DATA) {
-		PRINT_DEBUG("test_to_arp: Entered: ff=%p meta=%p", fins_frame, fins_frame->dataFrame.metaData);
-	} else {
-		PRINT_DEBUG("test_to_arp: Entered: ff=%p type=%d", fins_frame, fins_frame->dataOrCtrl);
-	}
+	PRINT_DEBUG("Entered: ff=%p meta=%p", fins_frame, fins_frame->metaData);
 
 	if (sem_wait(&Switch_to_ARP_Qsem)) {
 		PRINT_ERROR("Switch_to_ARP_Qsem wait prob");
@@ -290,7 +285,7 @@ void test_to_arp(struct finsFrame *fins_frame) {
 
 void *ARP() {
 
-	arp_init();
+	arp_init(NULL);
 
 	pthread_exit(NULL);
 }

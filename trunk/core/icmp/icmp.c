@@ -42,7 +42,7 @@ void ICMP_in(struct finsFrame *ff)
 	uint16_t protocol = 0;
 
 	//Make sure this protocol is correct ( == ICMP)
-	if (metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) != CONFIG_FALSE)
+	if (metadata_readFromElement(ff->metaData, "protocol", &protocol) != CONFIG_FALSE)
 	{ //If this fails, we'll assume that the protocol is correct
 		if(ntohl(protocol) != ICMP_PROTOCOL)
 		{
@@ -144,7 +144,7 @@ void ICMP_out_old(struct finsFrame *ff)
 	struct finsFrame* ffForward = NULL;
 
 	//Make sure this protocol is correct ( == ICMP)
-	if(metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) != CONFIG_FALSE)
+	if(metadata_readFromElement(ff->metaData, "protocol", &protocol) != CONFIG_FALSE)
 	{ //If this fails, we'll assume that the protocol is = ICMP
 		if(ntohl(protocol) != ICMP_PROTOCOL)
 		{
@@ -165,7 +165,7 @@ void ICMP_out_old(struct finsFrame *ff)
 			//Get the type and code from the ICMP message
 			//Check the ICMP command to be sure that it's == unreachable
 			/*
-			if(metadata_readFromElement(ff->dataFrame.metadata, "ICMP Command", &IP_Dest) == CONFIG_FALSE)
+			if(metadata_readFromElement(ff->metaData, "ICMP Command", &IP_Dest) == CONFIG_FALSE)
 			{
 				PRINT_DEBUG("Missing data in FINS frame: no destination IP");
 				return; //Stop here
@@ -254,7 +254,7 @@ void ICMP_send_FF(struct finsFrame *ff)
 //-------------------------
 // Start our main ICMP loop
 //-------------------------
-void icmp_init()
+void icmp_init(pthread_attr_t *fins_pthread_attr)
 {
 	PRINT_DEBUG("ICMP Started");
 	struct finsFrame *pff = NULL;
@@ -338,12 +338,12 @@ void ICMP_ping_reply(struct finsFrame* ff)
 
 	//Get source and destination IP's from finsFrame
 	IP4addr IP_Dest, IP_Src;
-	if(metadata_readFromElement(ffout->dataFrame.metaData, "src_ip", &IP_Src) == CONFIG_FALSE)
+	if(metadata_readFromElement(ffout->metaData, "src_ip", &IP_Src) == CONFIG_FALSE)
 	{
 		PRINT_DEBUG("ICMP_ping_reply(): Missing data in FINS frame metadata: no source IP");
 		return; //Stop here
 	}
-	if(metadata_readFromElement(ffout->dataFrame.metaData, "dst_ip", &IP_Dest) == CONFIG_FALSE)
+	if(metadata_readFromElement(ffout->metaData, "dst_ip", &IP_Dest) == CONFIG_FALSE)
 	{
 		PRINT_DEBUG("ICMP_ping_reply(): Missing data in FINS frame metadata: no destination IP");
 		return; //Stop here
@@ -351,10 +351,10 @@ void ICMP_ping_reply(struct finsFrame* ff)
 
 	//Write our IP to the "ipsrc". Do we actually care about doing this? Or will the ethernet stub handle this properly anyhow? Oh, well.
 	//I shall do it.
-	metadata_writeToElement(ffout->dataFrame.metaData, "src_ip", &IP_Dest, META_TYPE_INT);
+	metadata_writeToElement(ffout->metaData, "src_ip", &IP_Dest, META_TYPE_INT);
 
 	//Write the original "src IP" to the data as the destination IP
-	metadata_writeToElement(ffout->dataFrame.metaData, "dst_ip", &IP_Src, META_TYPE_INT);
+	metadata_writeToElement(ffout->metaData, "dst_ip", &IP_Src, META_TYPE_INT);
 
 	PRINT_DEBUG("Source IP: %lu, Dest IP: %lu", IP_Dest, IP_Src);
 	//Make sure this goes to the right place. Is this what we have to do to send out an ICMP packet?
@@ -396,7 +396,7 @@ int ICMP_copy_finsFrame(struct finsFrame* src, struct finsFrame* dst)
 		dst->dataFrame.pduLength = src->dataFrame.pduLength;
 		dst->dataFrame.pdu = (unsigned char *)malloc(src->dataFrame.pduLength);
 		memcpy(dst->dataFrame.pdu,src->dataFrame.pdu,src->dataFrame.pduLength);
-		dst->dataFrame.metaData = src->dataFrame.metaData;	//TODO Duz this work?
+		dst->metaData = src->metaData;	//TODO Duz this work?
 	}
 	//CONTROL frame
 	else if(dst->dataOrCtrl == CONTROL)
@@ -519,9 +519,9 @@ void ICMP_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code)
 	ffout->dataFrame.directionFlag = DOWN;	//Out
 	ffout->dataFrame.pduLength = totallen;	//Make the total length correct
 	ffout->dataFrame.pdu = (unsigned char *)malloc(totallen);	//Allocate memory for the data we'll be sticking in
-	metadata_create(ffout->dataFrame.metaData);
+	metadata_create(ffout->metaData);
 	//Fill the metadata with dest IP.
-	metadata_writeToElement(ffout->dataFrame.metaData, "dst_ip", &(((struct ip4_packet*) ff->ctrlFrame.data)->ip_src), META_TYPE_INT);
+	metadata_writeToElement(ffout->metaData, "dst_ip", &(((struct ip4_packet*) ff->ctrlFrame.data)->ip_src), META_TYPE_INT);
 	//I treat all the ICMP stuff as raw data, rather than encapsulating it in structs, due to working with such structs earlier this summer
 	//and running into a ton of little-vs-big-endian issues. Handling the raw data this way is easier for me than remembering to htons()
 	//everything, especially because most ICMP headers contain variable-sized data anyway.
@@ -679,7 +679,7 @@ void IMCP_create_unreach(struct finsFrame* ff)
 	ffout->dataFrame.directionFlag = DOWN;	//Out
 	ffout->dataFrame.pduLength = totallen;	//Make the total length correct
 	ffout->dataFrame.pdu = (u_char *)malloc(totallen);	//Allocate memory for the data we'll be sticking in
-	metadata_create(ffout->dataFrame.metaData);	//TODO: Right?
+	metadata_create(ffout->metaData);	//TODO: Right?
 
 	//I treat all the ICMP stuff as raw data, rather than encapsulating it in structs, due to working with such structs earlier this summer
 	//and running into a ton of little-vs-big-endian issues. Handling the raw data this way is easier for me than remembering to htons()

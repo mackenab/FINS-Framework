@@ -137,7 +137,7 @@ struct fins_call {
 
 void init_wedge_calls(void);
 int insert_wedge_call(u_int id, unsigned long long sock_id, int sock_index, u_int type);
-int find_wedge_call(u_int id);
+int find_wedge_call(unsigned long long sock_id, int sock_index, u_int type);
 int remove_wedge_call(u_int id);
 
 struct fins_wedge_socket {
@@ -170,7 +170,7 @@ struct fins_wedge_socket {
 void init_wedge_sockets(void);
 int insert_wedge_socket(unsigned long long sock_id, struct sock *sk);
 int find_wedge_socket(unsigned long long sock_id);
-int remove_wedge_socket(unsigned long long sock_id);
+int remove_wedge_socket(unsigned long long sock_id, int sock_index, u_int type);
 int wait_wedge_socket(unsigned long long sock_id, int sock_index, u_int calltype);
 int checkConfirmation(int sock_index);
 

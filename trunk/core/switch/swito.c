@@ -31,8 +31,8 @@ extern finsQueue ARP_to_Switch_Queue;
 extern finsQueue Switch_to_IPv4_Queue;
 extern finsQueue IPv4_to_Switch_Queue;
 
-extern finsQueue Switch_to_EtherStub_Queue;
-extern finsQueue EtherStub_to_Switch_Queue;
+extern finsQueue Switch_to_Interface_Queue;
+extern finsQueue Interface_to_Switch_Queue;
 
 extern finsQueue Switch_to_ICMP_Queue;
 extern finsQueue ICMP_to_Switch_Queue;
@@ -58,13 +58,13 @@ extern sem_t IPv4_to_Switch_Qsem;
 extern sem_t Switch_to_ARP_Qsem;
 extern sem_t ARP_to_Switch_Qsem;
 
-extern sem_t Switch_to_EtherStub_Qsem;
-extern sem_t EtherStub_to_Switch_Qsem;
+extern sem_t Switch_to_Interface_Qsem;
+extern sem_t Interface_to_Switch_Qsem;
 
 extern finsQueue modules_IO_queues[MAX_modules];
 extern sem_t *IO_queues_sem[MAX_modules];
 
-void switch_init() {
+void switch_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("Switch Started");
 	switch_running = 1;
 
@@ -127,9 +127,9 @@ void switch_init() {
 					break;
 				case ETHERSTUBID:
 					PRINT_DEBUG("EtherStub Queue +1, ff=%p", ff);
-					sem_wait(&Switch_to_EtherStub_Qsem);
-					write_queue(ff, Switch_to_EtherStub_Queue);
-					sem_post(&Switch_to_EtherStub_Qsem);
+					sem_wait(&Switch_to_Interface_Qsem);
+					write_queue(ff, Switch_to_Interface_Queue);
+					sem_post(&Switch_to_Interface_Qsem);
 					break;
 				case ICMPID:
 					PRINT_DEBUG("ICMP Queue +1, ff=%p", ff);
@@ -154,6 +154,12 @@ void switch_init() {
 	PRINT_DEBUG("Switch Terminating");
 } // end of switch_init Function
 
-void switch_term() {
+void switch_shutdown() {
 	switch_running = 0;
+
+	//TODO expand this
+}
+
+void switch_free() {
+	//TODO free all module related mem
 }

@@ -271,10 +271,8 @@ struct fins_daemon_socket {
 int init_fins_nl();
 int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
 
-int nack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
-int nack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
-int ack_send_new(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
-int ack_send(unsigned long long uniqueSockID, u_int socketCallType, u_int ret_msg);
+int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
+int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
 
 void init_daemonSockets();
 int randoming(int min, int max);
@@ -282,10 +280,8 @@ int check_daemonSocket(unsigned long long uniqueSockID);
 int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol);
 int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, int protocol);
 int find_daemonSocket(unsigned long long uniqueSockID);
-int insert_daemonSocket_new(unsigned long long uniqueSockID, int index, int type, int protocol);
-int insert_daemonSocket(unsigned long long uniqueSockID, int type, int protocol);
-int remove_daemonSocket_new(unsigned long long uniqueSockID, int index);
-int remove_daemonSocket(unsigned long long uniqueSockID);
+int insert_daemonSocket(unsigned long long uniqueSockID, int index, int type, int protocol);
+int remove_daemonSocket(unsigned long long uniqueSockID, int index);
 
 int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 

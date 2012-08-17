@@ -22,7 +22,7 @@
 	#include  <sys/sem.h> 
 #endif
 
-#include <pthread.h>    /* POSIX Threads */
+//#include <pthread.h>    /* POSIX Threads */
 
 typedef Queue finsQueue;
 

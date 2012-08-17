@@ -42,7 +42,7 @@ int daemon_fdf_to_tcp(u_char *data, u_int data_len, metadata *params) {
 	ff->dataFrame.directionFlag = DOWN;
 	ff->dataFrame.pduLength = data_len;
 	ff->dataFrame.pdu = data;
-	ff->dataFrame.metaData = params;
+	ff->metaData = params;
 
 	sem_wait(&Daemon_to_Switch_Qsem);
 	if (write_queue(ff, Daemon_to_Switch_Queue)) {
@@ -74,7 +74,7 @@ int daemon_fcf_to_tcp(uint16_t opcode, metadata *params) {
 	ff->ctrlFrame.senderID = DAEMONID;
 	ff->ctrlFrame.serialNum = serial_num++;
 	ff->ctrlFrame.opcode = opcode;
-	ff->ctrlFrame.metaData = params;
+	ff->metaData = params;
 
 	PRINT_DEBUG("daemon_TCP_to_fins_cntrl: ff=%p, meta=%p", ff, params);
 	sem_wait(&Daemon_to_Switch_Qsem);
@@ -99,14 +99,14 @@ void socket_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 			uniqueSockID, index, call_id, call_index, domain, type, protocol);
 
 	sem_wait(&daemonSockets_sem);
-	ret = insert_daemonSocket_new(uniqueSockID, index, type, protocol);
+	ret = insert_daemonSocket(uniqueSockID, index, type, protocol);
 	PRINT_DEBUG("index=%d ret=%d", index, ret);
 	sem_post(&daemonSockets_sem);
 
 	if (ret) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, socket_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, socket_call, 0);
 	} else {
-		ack_send_new(uniqueSockID, index, call_id, call_index, socket_call, 0);
+		ack_send(uniqueSockID, index, call_id, call_index, socket_call, 0);
 	}
 }
 
@@ -119,7 +119,7 @@ void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family=%d", addr->sin_family);
-		nack_send_new(uniqueSockID, index, call_id, call_index, bind_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, bind_call, 0);
 		return;
 	}
 
@@ -135,7 +135,7 @@ void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, bind_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, bind_call, 0);
 		return;
 	}
 
@@ -148,7 +148,7 @@ void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		PRINT_DEBUG("this port is not free");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, bind_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, bind_call, 0);
 		free(addr);
 		return;
 	}
@@ -174,7 +174,7 @@ void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	 * sending to the fins core
 	 */
 
-	ack_send_new(uniqueSockID, index, call_id, call_index, bind_call, 0);
+	ack_send(uniqueSockID, index, call_id, call_index, bind_call, 0);
 
 	free(addr);
 	return;
@@ -192,7 +192,7 @@ void listen_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, listen_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, listen_call, 0);
 		return;
 	}
 
@@ -215,7 +215,7 @@ void listen_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		nack_send_new(uniqueSockID, index, call_id, call_index, listen_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, listen_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -231,10 +231,10 @@ void listen_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
 
 	if (daemon_fcf_to_tcp(CTRL_EXEC, params)) {
-		ack_send_new(uniqueSockID, index, call_id, call_index, listen_call, 0);
+		ack_send(uniqueSockID, index, call_id, call_index, listen_call, 0);
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish listen");
-		nack_send_new(uniqueSockID, index, call_id, call_index, listen_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, listen_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -260,38 +260,38 @@ void *connect_tcp_thread(void *local) {
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, EINPROGRESS); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, connect_call, EINPROGRESS); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
+	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->metaData == NULL) {
 		PRINT_DEBUG("Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
-				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->metaData==NULL);
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "exec_call", &exec_call) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
 
 	if (ret || (exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT)) {
 		PRINT_DEBUG("Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 	} else {
 		PRINT_DEBUG("Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		sem_wait(&daemonSockets_sem);
@@ -308,14 +308,14 @@ void *connect_tcp_thread(void *local) {
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
 
-			ack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+			ack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 		} else {
 			daemonSockets[index].state = SS_UNCONNECTED;
 
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
 
-			nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, ECONNREFUSED); //TODO change based off of timeout, refused etc
+			nack_send(uniqueSockID, index, call_id, call_index, connect_call, ECONNREFUSED); //TODO change based off of timeout, refused etc
 		}
 	}
 
@@ -335,7 +335,7 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_DEBUG("Wrong address family");
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, EAFNOSUPPORT);
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, EAFNOSUPPORT);
 		free(addr);
 		return;
 	}
@@ -368,7 +368,7 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		PRINT_DEBUG("socket removed/changed");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, ENOTSOCK); //TODO check?
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, ENOTSOCK); //TODO check?
 		free(addr);
 		return;
 	}
@@ -382,20 +382,20 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
 			sem_post(&daemonSockets_sem);
 
-			nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, EALREADY);
+			nack_send(uniqueSockID, index, call_id, call_index, connect_call, EALREADY);
 			free(addr);
 			return;
 		} else {
 			sem_post(&daemonSockets_sem);
 
-			nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0); //TODO EADDRINUSE, check?
+			nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0); //TODO EADDRINUSE, check?
 			free(addr);
 			return;
 		}
 	} else if (state > SS_CONNECTING) {
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, EISCONN);
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, EISCONN);
 		free(addr);
 		return;
 	}
@@ -453,7 +453,7 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 		free(addr);
 		return;
 	}
@@ -484,7 +484,7 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		pthread_t thread;
 		if (pthread_create(&thread, NULL, connect_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create connect_tcp_thread thread.");
-			nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		} else {
@@ -492,7 +492,7 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish connect");
-		nack_send_new(uniqueSockID, index, call_id, call_index, connect_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 		metadata_destroy(params);
 	}
 
@@ -524,38 +524,38 @@ void *accept_tcp_thread(void *local) {
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, EAGAIN); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, accept_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
+	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->metaData == NULL) {
 		PRINT_DEBUG("Exiting, No fdf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "rem_ip", &rem_ip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "rem_port", &rem_port) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "exec_call", &exec_call) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "rem_ip", &rem_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "rem_port", &rem_port) == CONFIG_FALSE;
 
 	if (ret || exec_call != EXEC_TCP_ACCEPT || ret_val == 0) {
 		PRINT_DEBUG("Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d", id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 	} else {
 		PRINT_DEBUG("");
 		sem_wait(&daemonSockets_sem);
@@ -564,16 +564,16 @@ void *accept_tcp_thread(void *local) {
 			sem_post(&daemonSockets_sem);
 
 			PRINT_DEBUG("Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		} else {
 			//int index_new = insert_daemonSocket(uniqueSockID_new, daemonSockets[index].type, daemonSockets[index].protocol);
-			ret = insert_daemonSocket_new(uniqueSockID_new, index_new, daemonSockets[index].type, daemonSockets[index].protocol);
+			ret = insert_daemonSocket(uniqueSockID_new, index_new, daemonSockets[index].type, daemonSockets[index].protocol);
 			if (ret) {
 				PRINT_DEBUG("incorrect index !! Crash");
 				sem_post(&daemonSockets_sem);
 
 				PRINT_DEBUG("Exiting, insert faile: id=%d, index=%d, uniqueSockID=%llu, uniqueSockID_new=%llu", id, index, uniqueSockID, uniqueSockID_new);
-				nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 			} else {
 				daemonSockets[index_new].host_ip = daemonSockets[index].host_ip;
 				daemonSockets[index_new].host_port = daemonSockets[index].host_port;
@@ -587,7 +587,7 @@ void *accept_tcp_thread(void *local) {
 				sem_post(&daemonSockets_sem);
 
 				PRINT_DEBUG("Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu, uniqueSockID_new=%llu", id, index, uniqueSockID, uniqueSockID_new);
-				ack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+				ack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 			}
 		}
 	}
@@ -617,7 +617,7 @@ void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 		PRINT_DEBUG("socket removed/changed");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		return;
 	}
 
@@ -625,7 +625,7 @@ void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 		PRINT_DEBUG("socket not listening");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		return;
 	}
 
@@ -645,7 +645,7 @@ void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -675,7 +675,7 @@ void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 		pthread_t thread;
 		if (pthread_create(&thread, NULL, accept_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
-			nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		} else {
@@ -683,7 +683,7 @@ void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish accept");
-		nack_send_new(uniqueSockID, index, call_id, call_index, accept_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -703,7 +703,7 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, getname_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
 		return;
 	}
 
@@ -738,7 +738,7 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if (addr == NULL) {
 		PRINT_DEBUG("addr creation failed");
-		nack_send_new(uniqueSockID, index, call_id, call_index, getname_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
 		return;
 	}
 
@@ -762,7 +762,7 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
-		nack_send_new(uniqueSockID, index, call_id, call_index, getname_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
 		return;
 	}
 
@@ -783,14 +783,14 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	if (pt - msg != msg_len) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 		free(msg);
-		nack_send_new(uniqueSockID, index, call_id, call_index, getname_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_DEBUG("Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-		nack_send_new(uniqueSockID, index, call_id, call_index, getname_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
 	} else {
 		PRINT_DEBUG("Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
 	}
@@ -812,7 +812,7 @@ void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		PRINT_DEBUG("socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 		return;
 	}
 
@@ -831,7 +831,7 @@ void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
-			nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 			return;
 		}
 
@@ -849,7 +849,7 @@ void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
-			nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 			return;
 		}
 		break;
@@ -861,11 +861,11 @@ void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_DEBUG("Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 		}
 		free(msg);
 	} else {
-		nack_send_new(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 	}
 }
 
@@ -891,36 +891,36 @@ void *sendmsg_tcp_thread(void *local) {
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, EAGAIN); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0); //TODO check return of nonblocking send
+	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->metaData == NULL) {
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0); //TODO check return of nonblocking send
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "exec_call", &exec_call) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
 
 	if (ret || exec_call != EXEC_TCP_SEND || ret_val == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 	} else {
-		ack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+		ack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 	}
 
 	freeFinsFrame(ff);
@@ -943,7 +943,7 @@ void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		PRINT_DEBUG("CRASH !! socket descriptor not found into daemon sockets");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 		if (data_len) {
 			free(data);
 		}
@@ -966,7 +966,7 @@ void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 		//TODO buffer data & send ACK
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 		if (data_len) {
 			free(data);
 		}
@@ -1012,7 +1012,7 @@ void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -1043,16 +1043,16 @@ void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, sendmsg_tcp_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create accept_tcp_thread thread.");
-				nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 			} else {
 				pthread_detach(thread);
 			}
 		} else {
-			ack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+			ack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish send");
-		nack_send_new(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
 		metadata_destroy(params);
 		if (data_len) {
 			free(data);
@@ -1091,7 +1091,7 @@ void *recvmsg_tcp_thread(void *local) {
 		PRINT_DEBUG("Socket closed, canceling release_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 		pthread_exit(NULL);
 	}
 
@@ -1114,32 +1114,32 @@ void *recvmsg_tcp_thread(void *local) {
 	PRINT_DEBUG("after get_fdf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, EAGAIN);
+			nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, EAGAIN);
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
 	struct sockaddr_in addr;
 	uint32_t src_port;
-	if (metadata_readFromElement(ff->dataFrame.metaData, "src_port", &src_port) == CONFIG_FALSE) {
+	if (metadata_readFromElement(ff->metaData, "src_port", &src_port) == CONFIG_FALSE) {
 		addr.sin_port = 0;
 	} else {
 		addr.sin_port = (uint16_t) src_port;
 	}
 
 	uint32_t src_ip;
-	if (metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &src_ip) == CONFIG_FALSE) {
+	if (metadata_readFromElement(ff->metaData, "src_ip", &src_ip) == CONFIG_FALSE) {
 		addr.sin_addr.s_addr = 0;
 	} else {
 		addr.sin_addr.s_addr = (uint32_t) src_ip;
@@ -1164,7 +1164,7 @@ void *recvmsg_tcp_thread(void *local) {
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
-		nack_send_new(uniqueSockID, index, call_id, call_index, getname_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
 		pthread_exit(NULL);
 	}
 
@@ -1192,7 +1192,7 @@ void *recvmsg_tcp_thread(void *local) {
 		PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 		free(msg);
 		PRINT_DEBUG("Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
@@ -1200,7 +1200,7 @@ void *recvmsg_tcp_thread(void *local) {
 	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_DEBUG("Exiting, fail send_wedge: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 	} else {
 		//TODO send size back to TCP handlers
 		if (state > SS_UNCONNECTED) {
@@ -1213,7 +1213,7 @@ void *recvmsg_tcp_thread(void *local) {
 		if (params == NULL) {
 			PRINT_ERROR("metadata creation failed");
 
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 			freeFinsFrame(ff);
 			pthread_exit(NULL);
 		}
@@ -1276,7 +1276,7 @@ void recvmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		PRINT_DEBUG("Socket closed, canceling read block.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 		return;
 	}
 
@@ -1303,7 +1303,7 @@ void recvmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		pthread_t thread;
 		if (pthread_create(&thread, NULL, recvmsg_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create recvfrom_udp_thread thread.");
-			nack_send_new(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
 
 			free(thread_data);
 		} else {
@@ -1336,36 +1336,36 @@ void *release_tcp_thread(void *local) {
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, release_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, release_call, EAGAIN); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, release_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
+	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->metaData == NULL) {
 		PRINT_DEBUG("Exiting, No fdf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "exec_call", &exec_call) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
 
 	if (ret || (exec_call != EXEC_TCP_CLOSE && exec_call != EXEC_TCP_CLOSE_STUB) || ret_val == 0) {
 		PRINT_DEBUG("Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d", id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 	} else {
 		PRINT_DEBUG("");
 		sem_wait(&daemonSockets_sem);
@@ -1374,18 +1374,18 @@ void *release_tcp_thread(void *local) {
 			sem_post(&daemonSockets_sem);
 
 			PRINT_DEBUG("Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 		} else {
-			if (remove_daemonSocket(uniqueSockID)) {
+			if (remove_daemonSocket(uniqueSockID, index)) {
 				PRINT_DEBUG("Exiting, ACK: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				sem_post(&daemonSockets_sem);
 
-				ack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+				ack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 			} else {
 				PRINT_DEBUG("Exiting, remove fail: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				sem_post(&daemonSockets_sem);
 
-				nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 			}
 
 		}
@@ -1410,7 +1410,7 @@ void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		PRINT_DEBUG("Socket closed, canceling release_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 		return;
 	}
 
@@ -1437,7 +1437,7 @@ void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -1469,7 +1469,7 @@ void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		pthread_t thread;
 		if (pthread_create(&thread, NULL, release_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create release_tcp_thread thread.");
-			nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		} else {
@@ -1477,7 +1477,7 @@ void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish release");
-		nack_send_new(uniqueSockID, index, call_id, call_index, release_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -1504,38 +1504,38 @@ void *poll_tcp_thread(void *local) {
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, poll_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, EAGAIN); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, poll_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->ctrlFrame.metaData == NULL) {
+	if (ff->ctrlFrame.opcode != CTRL_EXEC_REPLY || ff->metaData == NULL) {
 		PRINT_DEBUG("Exiting, No fcf/opcode/metadata: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "exec_call", &exec_call) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_msg", &ret_msg) == CONFIG_FALSE;
-	//ret += metadata_readFromElement(ff->ctrlFrame.metaData, "mask", &mask) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "exec_call", &exec_call) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg) == CONFIG_FALSE;
+	//ret += metadata_readFromElement(ff->metaData, "mask", &mask) == CONFIG_FALSE;
 
 	if (ret || (exec_call != EXEC_TCP_POLL) || ret_val == 0) {
 		PRINT_DEBUG("Exiting, NACK: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d", id, index, uniqueSockID, ret, exec_call, ret_val);
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 	} else {
 		PRINT_DEBUG("");
 		sem_wait(&daemonSockets_sem);
@@ -1544,7 +1544,7 @@ void *poll_tcp_thread(void *local) {
 			sem_post(&daemonSockets_sem);
 
 			PRINT_DEBUG("Exiting, socket closed: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		} else {
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
@@ -1554,7 +1554,7 @@ void *poll_tcp_thread(void *local) {
 			u_char *msg = (u_char *) malloc(msg_len);
 			if (msg == NULL) {
 				PRINT_ERROR("ERROR: buf alloc fail");
-				nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 				pthread_exit(NULL);
 			}
 
@@ -1572,14 +1572,14 @@ void *poll_tcp_thread(void *local) {
 			if (pt - msg != msg_len) {
 				PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 				free(msg);
-				nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 				pthread_exit(NULL);
 			}
 
 			PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 				PRINT_DEBUG("Exiting, fail send_wedge: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-				nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 			} else {
 				PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 			}
@@ -1604,7 +1604,7 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		PRINT_DEBUG("Socket closed, canceling poll_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		return;
 	}
 
@@ -1629,7 +1629,7 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -1661,7 +1661,7 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		pthread_t thread;
 		if (pthread_create(&thread, NULL, poll_tcp_thread, (void *) thread_data)) {
 			PRINT_ERROR("ERROR: unable to create poll_tcp_thread thread.");
-			nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 			free(thread_data);
 			metadata_destroy(params);
 		} else {
@@ -1669,7 +1669,7 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		}
 	} else {
 		PRINT_DEBUG("socketdaemon failed to accomplish poll_tcp");
-		nack_send_new(uniqueSockID, index, call_id, call_index, poll_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		metadata_destroy(params);
 	}
 }
@@ -1691,7 +1691,7 @@ void shutdown_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int
 	PRINT_DEBUG("index = %d", index);
 	PRINT_DEBUG("");
 
-	ack_send(uniqueSockID, shutdown_call, 0);
+	ack_send(uniqueSockID, index, call_id, call_index, shutdown_call, 0);
 }
 
 void *getsockopt_tcp_thread(void *local) {
@@ -1715,38 +1715,38 @@ void *getsockopt_tcp_thread(void *local) {
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, EAGAIN); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_READ_PARAM_REPLY || ff->ctrlFrame.metaData == NULL) {
+	if (ff->ctrlFrame.opcode != CTRL_READ_PARAM_REPLY || ff->metaData == NULL) {
 		PRINT_DEBUG("Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
-				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
-		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->metaData==NULL);
+		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "param_id", &param_id) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "param_id", &param_id) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
 
 	if (ret || /*(exec_call != EXEC_TCP_CONNECT && exec_call != EXEC_TCP_ACCEPT) ||*/ret_val == 0) {
 		PRINT_DEBUG("Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, exec_call=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, param_id, ret_val);
-		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 	} else {
 		//TODO switch by param_id, convert into val/len
 		int len = 0;
@@ -1758,7 +1758,7 @@ void *getsockopt_tcp_thread(void *local) {
 		u_char *msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 			pthread_exit(NULL);
 		}
 
@@ -1782,7 +1782,7 @@ void *getsockopt_tcp_thread(void *local) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
 			PRINT_DEBUG("Exiting, No fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 			freeFinsFrame(ff);
 			pthread_exit(NULL);
 		}
@@ -1790,7 +1790,7 @@ void *getsockopt_tcp_thread(void *local) {
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_DEBUG("Exiting, fail send_wedge: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 		} else {
 			PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		}
@@ -1815,7 +1815,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 		PRINT_DEBUG("Socket closed, canceling getsockopt_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 		return;
 	}
 
@@ -1834,7 +1834,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -1952,7 +1952,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	if (send_dst == -1) {
 		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
-		nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
@@ -1962,7 +1962,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 		u_char *msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 			return;
 		}
 
@@ -1986,14 +1986,14 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
 			free(msg);
 			PRINT_DEBUG("Exiting, No fdf: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 			return;
 		}
 
 		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_DEBUG("Exiting, fail send_wedge: index=%d, uniqueSockID=%llu", index, uniqueSockID);
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 		} else {
 			PRINT_DEBUG("Exiting, normal: index=%d, uniqueSockID=%llu", index, uniqueSockID);
 		}
@@ -2011,7 +2011,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, getsockopt_tcp_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create getsockopt_tcp_thread thread.");
-				nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 				free(thread_data);
 				metadata_destroy(params);
 			} else {
@@ -2019,7 +2019,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 			}
 		} else {
 			PRINT_DEBUG("socketdaemon failed to accomplish accept");
-			nack_send_new(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
 			metadata_destroy(params);
 		}
 	}
@@ -2046,41 +2046,41 @@ void *setsockopt_tcp_thread(void *local) {
 	ret = get_fcf(index, uniqueSockID, &ff, non_blocking_flag);
 	PRINT_DEBUG("after get_fcf: id=%d index=%d uniqueSockID=%llu ff=%p", id, index, uniqueSockID, ff);
 	if (ret == 0) {
-		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, EBADF); //TODO socket closed/invalid
+		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, EBADF); //TODO socket closed/invalid
 		pthread_exit(NULL);
 	}
 
 	if (ff == NULL) {
 		PRINT_DEBUG("Exiting, NULL fdf: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 		if (non_blocking_flag) {
-			nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, EAGAIN); //TODO or EWOULDBLOCK?
+			nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, EAGAIN); //TODO or EWOULDBLOCK?
 		} else {
 			//TODO error case
 			PRINT_DEBUG("todo error");
-			nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 		}
 		pthread_exit(NULL);
 	}
 
-	if (ff->ctrlFrame.opcode != CTRL_READ_PARAM_REPLY || ff->ctrlFrame.metaData == NULL) {
+	if (ff->ctrlFrame.opcode != CTRL_READ_PARAM_REPLY || ff->metaData == NULL) {
 		PRINT_DEBUG("Exiting, fcf errors: id=%d, index=%d, uniqueSockID=%llu opcode=%d, metaData=%d",
-				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->ctrlFrame.metaData==NULL);
-		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+				id, index, uniqueSockID, ff->ctrlFrame.opcode, ff->metaData==NULL);
+		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 		freeFinsFrame(ff);
 		pthread_exit(NULL);
 	}
 
 	ret = 0;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "param_id", &param_id) == CONFIG_FALSE;
-	ret += metadata_readFromElement(ff->ctrlFrame.metaData, "ret_val", &ret_val) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "param_id", &param_id) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "ret_val", &ret_val) == CONFIG_FALSE;
 
 	if (ret /*|| (param_id != EXEC_TCP_CONNECT && param_id != EXEC_TCP_ACCEPT)*/|| ret_val == 0) {
 		PRINT_DEBUG("Exiting, meta errors: id=%d, index=%d, uniqueSockID=%llu, ret=%d, param_id=%d, ret_val=%d",
 				id, index, uniqueSockID, ret, param_id, ret_val);
-		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 	} else {
 		PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
-		ack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+		ack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 	}
 
 	freeFinsFrame(ff);
@@ -2100,7 +2100,7 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 		PRINT_DEBUG("Socket closed, canceling setsockopt_tcp.");
 		sem_post(&daemonSockets_sem);
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 		return;
 	}
 
@@ -2119,7 +2119,7 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	if (params == NULL) {
 		PRINT_DEBUG("metadata creation failed");
 
-		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 		return;
 	}
 	metadata_create(params);
@@ -2230,11 +2230,11 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	if (send_dst == -1) {
 		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
-		nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("freeing meta=%p", params);
 		metadata_destroy(params);
-		ack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+		ack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 	} else {
 		if (daemon_fcf_to_tcp(CTRL_READ_PARAM, params)) {
 			struct daemon_tcp_thread_data *thread_data = (struct daemon_tcp_thread_data *) malloc(sizeof(struct daemon_tcp_thread_data));
@@ -2248,7 +2248,7 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, setsockopt_tcp_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create setsockopt_tcp_thread thread.");
-				nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+				nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 				free(thread_data);
 				metadata_destroy(params);
 			} else {
@@ -2256,7 +2256,7 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 			}
 		} else {
 			PRINT_DEBUG("socketdaemon failed to accomplish accept");
-			nack_send_new(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+			nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
 			metadata_destroy(params);
 		}
 	}

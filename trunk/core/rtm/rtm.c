@@ -86,7 +86,7 @@ void rtm_get_FF() {
 //RTM's main function
 //Gets information from RTM_IN pipe
 //Is started as a thread in core.c
-void rtm_init() {
+void rtm_init(pthread_attr_t *fins_pthread_attr) {
 
 	PRINT_DEBUG("RTM: RTM has started");
 

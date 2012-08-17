@@ -46,6 +46,5 @@ struct daemon_udp_thread_data {
 //int socketCallType; //TODO remove?
 //int symbol; //TODO remove?
 };
-#define MAX_recv_threads 100
 
 #endif /* UDPHANDLING_H_ */

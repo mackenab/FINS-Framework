@@ -32,7 +32,7 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t prot
 	PRINT_DEBUG("");
 
 	int ret = 0;
-	ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &destination) == CONFIG_FALSE;
+	ret += metadata_readFromElement(ff->metaData, "dst_ip", &destination) == CONFIG_FALSE;
 
 	if (ret) {
 		//TODO error

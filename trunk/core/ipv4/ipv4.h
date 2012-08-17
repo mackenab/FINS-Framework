@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <netinet/in.h>
 //#include <stdarg.h>
+#include <pthread.h>
 #include <finstypes.h>
 #include <finsdebug.h>
 
@@ -218,7 +219,7 @@ struct ip4_next_hop_info {
 
 int ipv4_running;
 
-void ipv4_init();
+void ipv4_init(pthread_attr_t *fins_pthread_attr);
 void ipv4_shutdown();
 void ipv4_free();
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);

@@ -46,7 +46,7 @@ void udp_in(struct finsFrame* ff) {
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
-	metadata* meta = ff->dataFrame.metaData;
+	metadata* meta = ff->metaData;
 
 	uint16_t protocol_type;
 	unsigned long srcip;

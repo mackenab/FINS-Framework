@@ -24,9 +24,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "wifidemux.h"
-#include "daemon/handlers.h"
-//#include <handlers.h>
+//#include "wifidemux.h"
+//#include "daemon/handlers.h"
+#include <handlers.h>
 
 #define MAX_modules	16
 #define SNAP_LEN 		4096
@@ -34,12 +34,6 @@
 int read_configurations();
 void commChannel_init();
 void Queues_init();
-
-/*-----------------------------------------------------------------------------
- *-----------------------------------------------------------------------------
- */
-void print_frame(const u_char *payload, int len);
-void print_hex_ascii_line(const u_char *payload, int len, int offset);
 
 //begin: interceptor merge
 //ADDED mrd015 !!!!!
@@ -53,6 +47,5 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset);
  * interceptor and the socket daemon until they exchange the socket UNIQUE ID, then a separate
  * named pipe gets opened for the newly created socket */
 //end: interceptor merge
-
 #endif /* SOCKETGENI_H_ */
 

@@ -26,7 +26,7 @@ extern struct udp_statistics udpStat;
 
 void udp_out(struct finsFrame* ff) {
 
-	struct finsFrame* newFF;
+	//struct finsFrame* newFF;
 	//struct udp_metadata_parsed parsed_meta;
 
 	//struct udp_packet packet_host;
@@ -78,7 +78,7 @@ void udp_out(struct finsFrame* ff) {
 	uint32_t dstip;
 	uint32_t srcip;
 
-	metadata* meta = ff->dataFrame.metaData;
+	metadata* meta = ff->metaData;
 
 	int ret = 0;
 	ret += metadata_readFromElement(meta, "dst_port", &dstbuf) == CONFIG_FALSE;
@@ -223,7 +223,7 @@ void udp_out(struct finsFrame* ff) {
 	//ff->dataFrame.directionFlag = DOWN;
 	ff->dataFrame.pduLength = packet_length;
 	ff->dataFrame.pdu = udp_dataunit;
-	//ff->dataFrame.metaData = params;
+	//ff->metaData = params;
 
 	//PRINT_DEBUG("newff=%x, pdu=%x", (int)newFF, (int)newFF->dataFrame.pdu);
 

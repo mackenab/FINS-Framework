@@ -190,7 +190,7 @@ int insert_wedge_call(u_int id, unsigned long long sock_id, int sock_index, u_in
 	return print_exit(__FUNCTION__, __LINE__, -1);
 }
 
-int find_wedge_call_new(unsigned long long sock_id, int sock_index, u_int type) {
+int find_wedge_call(unsigned long long sock_id, int sock_index, u_int type) {
 	u_int i;
 
 	//PRINT_DEBUG("Entered: id=%u", id);
@@ -204,7 +204,7 @@ int find_wedge_call_new(unsigned long long sock_id, int sock_index, u_int type) 
 	return print_exit(__FUNCTION__, __LINE__, -1);
 }
 
-int remove_wedge_call(u_int id) {
+int remove_wedge_call(u_int id) { //TODO remove? not used since id/index typicall tied, & removal doesn't need locking
 	int i;
 
 	PRINT_DEBUG("Entered: id=%u.", id);
@@ -283,7 +283,7 @@ int find_wedge_socket(unsigned long long sock_id) {
 	return print_exit(__FUNCTION__, __LINE__, -1);
 }
 
-int remove_wedge_socket_new(unsigned long long sock_id, int sock_index, u_int type) {
+int remove_wedge_socket(unsigned long long sock_id, int sock_index, u_int type) {
 	u_int i;
 	int call_index;
 
@@ -298,7 +298,7 @@ int remove_wedge_socket_new(unsigned long long sock_id, int sock_index, u_int ty
 				PRINT_ERROR("calls_sem acquire fail");
 				//TODO error
 			}
-			call_index = find_wedge_call_new(sock_id, sock_index, i);
+			call_index = find_wedge_call(sock_id, sock_index, i);
 			up(&calls_sem);
 			if (call_index == -1) {
 				break;
@@ -317,39 +317,6 @@ int remove_wedge_socket_new(unsigned long long sock_id, int sock_index, u_int ty
 	wedge_sockets[sock_index].sock_id = -1;
 
 	return 0;
-}
-
-int remove_wedge_socket(unsigned long long sock_id) {
-	int i;
-	int j;
-	int threads = 0;
-
-	PRINT_DEBUG("Entered for %llu.", sock_id);
-
-	if (down_interruptible(&sockets_sem)) {
-		PRINT_ERROR("sockets_sem acquire fail");
-		//TODO error
-	}
-	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (wedge_sockets[i].sock_id == sock_id) {
-			wedge_sockets[i].sock_id = -1;
-
-			for (j = 0; j < MAX_CALL_TYPES; j++) {
-				threads += wedge_sockets[i].threads[j] + 1;
-			}
-			up(&sockets_sem);
-			PRINT_DEBUG("wedgeSocket[%d] removed.", i);
-
-			PRINT_DEBUG("wedgeSocket[%d].threads=%d", i, threads);
-			for (j = 0; j < threads; j++) {
-				//up(&wedge_sockets[i].reply_sem_w);
-				msleep(50); //TODO may need to change
-			}
-			return (1);
-		}
-	}
-	up(&sockets_sem);
-	return (-1);
 }
 
 int threads_incr(int sock_index, u_int call) {
@@ -748,9 +715,9 @@ void FINS_sk_destroy(struct socket *sock) {
  * (specified in struct net_proto_family FINS_net_proto)
  */
 static int FINS_wedge_create(struct net *net, struct socket *sock, int protocol, int kern) {
-	int err;
-	const struct net_proto_family *pf;
-	int family = AF_INET;
+	//int err;
+	//const struct net_proto_family *pf;
+	//int family = AF_INET;
 
 	if (FINS_stack_passthrough_enabled == 1) {
 		return FINS_create(net, sock, protocol, kern);
@@ -909,7 +876,7 @@ static int FINS_create(struct net *net, struct socket *sock, int protocol, int k
 			PRINT_ERROR("sockets_sem acquire fail");
 			//TODO error
 		}
-		ret = remove_wedge_socket_new(sock_id, sock_index, socket_call);
+		ret = remove_wedge_socket(sock_id, sock_index, socket_call);
 		up(&sockets_sem);
 
 		FINS_sk_destroy(sock);
@@ -2741,7 +2708,7 @@ static int FINS_release(struct socket *sock) {
 		PRINT_ERROR("sockets_sem acquire fail");
 		//TODO error
 	}
-	ret = remove_wedge_socket_new(sock_id, sock_index, release_call);
+	ret = remove_wedge_socket(sock_id, sock_index, release_call);
 	up(&sockets_sem);
 
 	FINS_sk_destroy(sock);
@@ -2816,7 +2783,9 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 	if (table) {
 		events = table->key;
 	} else {
-		events = 0;
+		//events = 0;
+		rc = 0;
+		goto end;
 	}
 
 	// Build the message

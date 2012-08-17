@@ -15,7 +15,7 @@ struct ip4_routing_table* routing_table;
 struct ip4_packet *construct_packet_buffer;
 struct ip4_stats stats;
 
-void ipv4_init() {
+void ipv4_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("IPv4 Started");
 	ipv4_running = 1;
 

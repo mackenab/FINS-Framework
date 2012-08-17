@@ -445,7 +445,7 @@ struct tcp_to_thread_data {
 };
 
 //General functions for dealing with the incoming and outgoing frames
-void tcp_init();
+void tcp_init(pthread_attr_t *fins_pthread_attr);
 void tcp_shutdown();
 void tcp_free();
 void tcp_get_FF();

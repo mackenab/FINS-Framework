@@ -408,7 +408,7 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	ff->ctrlFrame.senderID = TCPID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
-	ff->ctrlFrame.metaData = params;
+	ff->metaData = params;
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -1310,7 +1310,7 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 	ff->ctrlFrame.senderID = TCPID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
-	ff->ctrlFrame.metaData = params;
+	ff->metaData = params;
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -1463,11 +1463,11 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ff->destinationID.id = IPV4ID; // destination module ID
 	ff->destinationID.next = NULL;
 	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
-	ff->dataFrame.metaData = params;
+	ff->metaData = params;
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
 	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
 	PRINT_DEBUG("seg_to_fdf: seg=%p ff=%p meta=%p data_len=%d hdr=%d pduLength=%d",
-			seg, ff, ff->dataFrame.metaData, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
+			seg, ff, ff->metaData, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
 
 	if (ff->dataFrame.pdu == NULL) {
 		PRINT_ERROR("seg_to_fdf: failed to create pdu: seg=%p meta=%p", seg, params);
@@ -1532,7 +1532,7 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 
 	hdr->checksum = htons((uint16_t) sum);
 
-	PRINT_DEBUG("seg_to_fdf: Exited: seg=%p ff=%p meta=%p", seg, ff, ff->dataFrame.metaData);
+	PRINT_DEBUG("seg_to_fdf: Exited: seg=%p ff=%p meta=%p", seg, ff, ff->metaData);
 	return ff;
 }
 
@@ -1550,7 +1550,7 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 		return NULL;
 	}
 
-	metadata *params = ff->dataFrame.metaData;
+	metadata *params = ff->metaData;
 	if (params == NULL) {
 		PRINT_ERROR("metadata NULL");
 		free(seg);
@@ -1604,7 +1604,7 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 	PRINT_DEBUG( "fdf_to_seg: info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=%x, win=%u, checksum=%x, F=%d, S=%d, R=%d, A=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
 
-	PRINT_DEBUG("fdf_to_seg: Exited: ff=%p meta=%p seg=%p", ff, ff->dataFrame.metaData, seg);
+	PRINT_DEBUG("fdf_to_seg: Exited: ff=%p meta=%p seg=%p", ff, ff->metaData, seg);
 	return seg;
 }
 
@@ -2064,10 +2064,10 @@ int seg_send(struct tcp_segment *seg) {
 
 	if (ff) {
 		if (tcp_to_switch(ff)) {
-			PRINT_DEBUG("seg_send: Exited, normal: seg=%p ff=%p meta=%p", seg, ff, ff->dataFrame.metaData);
+			PRINT_DEBUG("seg_send: Exited, normal: seg=%p ff=%p meta=%p", seg, ff, ff->metaData);
 			return 1;
 		} else {
-			PRINT_DEBUG("seg_send: Exited, failed: seg=%p ff=%p meta=%p", seg, ff, ff->dataFrame.metaData);
+			PRINT_DEBUG("seg_send: Exited, failed: seg=%p ff=%p meta=%p", seg, ff, ff->metaData);
 			freeFinsFrame(ff);
 			return 0;
 		}
@@ -2242,7 +2242,7 @@ void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_i
 	}
 }
 
-void tcp_init() {
+void tcp_init(pthread_attr_t *fins_pthread_attr) {
 
 	PRINT_DEBUG("TCP started");
 	tcp_running = 1;
@@ -2292,6 +2292,8 @@ void tcp_get_FF() {
 			tcp_out_fdf(ff);
 			PRINT_DEBUG("");
 		}
+	} else {
+		PRINT_DEBUG("todo error");
 	}
 }
 
@@ -2359,7 +2361,7 @@ void tcp_exec(struct finsFrame *ff) {
 
 	PRINT_DEBUG("tcp_exec: Entered: ff=%p", ff);
 
-	metadata *params = ff->ctrlFrame.metaData;
+	metadata *params = ff->metaData;
 	if (params) {
 		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
 		switch (exec_call) {
@@ -2467,9 +2469,9 @@ void tcp_exec(struct finsFrame *ff) {
 
 int tcp_to_switch(struct finsFrame *ff) {
 	if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->ctrlFrame.metaData);
+		PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->metaData);
 	} else {
-		PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->dataFrame.metaData);
+		PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->metaData);
 	}
 	if (sem_wait(&TCP_to_Switch_Qsem)) {
 		PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
@@ -2525,7 +2527,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 	ff->ctrlFrame.senderID = TCPID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
-	ff->ctrlFrame.metaData = params;
+	ff->metaData = params;
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -2583,7 +2585,7 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	ff->dataFrame.directionFlag = UP;
 	ff->dataFrame.pduLength = len;
 	ff->dataFrame.pdu = dataLocal;
-	ff->dataFrame.metaData = params;
+	ff->metaData = params;
 
 	/**TODO insert the frame into daemon_to_switch queue
 	 * check if insertion succeeded or not then

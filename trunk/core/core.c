@@ -21,6 +21,7 @@
 #include <swito.h>
 #include <rtm.h>
 #include <icmp.h>
+#include <interface.h>
 #include <sys/types.h>
 #include <signal.h>
 //#include <stdlib.h> //added
@@ -59,7 +60,7 @@ sem_t thread_sem;
  */
 
 pthread_t wedge_to_daemon_thread;
-pthread_t Switch_to_daemon_thread; //TODO move to "Daemon" module
+pthread_t switch_to_daemon_thread; //TODO move to "Daemon" module
 
 pthread_t udp_thread;
 pthread_t icmp_thread;
@@ -75,8 +76,8 @@ pthread_t ipv4_thread;
 pthread_t arp_thread;
 //	pthread_t arp_outgoing;
 
-pthread_t etherStub_capturing;
-pthread_t etherStub_injecting;
+pthread_t interface_thread;
+
 pthread_t switch_thread;
 
 finsQueue Daemon_to_Switch_Queue;
@@ -97,8 +98,8 @@ finsQueue ARP_to_Switch_Queue;
 finsQueue Switch_to_IPv4_Queue;
 finsQueue IPv4_to_Switch_Queue;
 
-finsQueue Switch_to_EtherStub_Queue;
-finsQueue EtherStub_to_Switch_Queue;
+finsQueue Switch_to_Interface_Queue;
+finsQueue Interface_to_Switch_Queue;
 
 finsQueue Switch_to_ICMP_Queue;
 finsQueue ICMP_to_Switch_Queue;
@@ -125,8 +126,8 @@ sem_t IPv4_to_Switch_Qsem;
 sem_t Switch_to_ARP_Qsem;
 sem_t ARP_to_Switch_Qsem;
 
-sem_t Switch_to_EtherStub_Qsem;
-sem_t EtherStub_to_Switch_Qsem;
+sem_t Switch_to_Interface_Qsem;
+sem_t Interface_to_Switch_Qsem;
 
 finsQueue modules_IO_queues[MAX_modules];
 sem_t *IO_queues_sem[MAX_modules];
@@ -137,18 +138,6 @@ int capture_pipe_fd; /** capture file descriptor to read from capturer */
 int inject_pipe_fd; /** inject file descriptor to read from capturer */
 int rtm_in_fd;
 int rtm_out_fd;
-
-/** Ethernet Stub Variables  */
-#ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
-#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
-#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
-#else
-#define FINS_TMP_ROOT "/tmp/fins"
-#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
-#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
-#define SEMAPHORE_ROOT "/dev/shm"
-#endif
 
 //bu_mark kernel stuff
 #define RECV_BUFFER_SIZE	1024// Pick an appropriate value here
@@ -244,14 +233,14 @@ void Queues_init() {
 	IO_queues_sem[8] = &ARP_to_Switch_Qsem;
 	IO_queues_sem[9] = &Switch_to_ARP_Qsem;
 
-	EtherStub_to_Switch_Queue = init_queue("etherstub2switch", MAX_Queue_size);
-	Switch_to_EtherStub_Queue = init_queue("switch2etherstub", MAX_Queue_size);
-	modules_IO_queues[10] = EtherStub_to_Switch_Queue;
-	modules_IO_queues[11] = Switch_to_EtherStub_Queue;
-	sem_init(&EtherStub_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_EtherStub_Qsem, 0, 1);
-	IO_queues_sem[10] = &EtherStub_to_Switch_Qsem;
-	IO_queues_sem[11] = &Switch_to_EtherStub_Qsem;
+	Interface_to_Switch_Queue = init_queue("etherstub2switch", MAX_Queue_size);
+	Switch_to_Interface_Queue = init_queue("switch2etherstub", MAX_Queue_size);
+	modules_IO_queues[10] = Interface_to_Switch_Queue;
+	modules_IO_queues[11] = Switch_to_Interface_Queue;
+	sem_init(&Interface_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_Interface_Qsem, 0, 1);
+	IO_queues_sem[10] = &Interface_to_Switch_Qsem;
+	IO_queues_sem[11] = &Switch_to_Interface_Qsem;
 
 	ICMP_to_Switch_Queue = init_queue("icmp2switch", MAX_Queue_size);
 	Switch_to_ICMP_Queue = init_queue("switch2icmp", MAX_Queue_size);
@@ -273,7 +262,7 @@ void Queues_init() {
 
 }
 
-void *Switch_to_Daemon() {
+void *Switch_to_Daemon(void *local) {
 
 	struct finsFrame *ff;
 	int protocol = 0;
@@ -301,7 +290,7 @@ void *Switch_to_Daemon() {
 			rem_ip = 0;
 			rem_port = 0;
 
-			PRINT_DEBUG("control ff: ff=%p meta=%p opcode=%d", ff, ff->ctrlFrame.metaData, ff->ctrlFrame.opcode);
+			PRINT_DEBUG("control ff: ff=%p meta=%p opcode=%d", ff, ff->metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
 				PRINT_DEBUG("Not yet implmented");
@@ -316,8 +305,8 @@ void *Switch_to_Daemon() {
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM_REPLY:
-				if (ff->ctrlFrame.metaData) {
-					metadata *params = ff->ctrlFrame.metaData;
+				if (ff->metaData) {
+					metadata *params = ff->metaData;
 					int ret = 0;
 					ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
 
@@ -433,8 +422,8 @@ void *Switch_to_Daemon() {
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC_REPLY:
-				if (ff->ctrlFrame.metaData) {
-					metadata *params = ff->ctrlFrame.metaData;
+				if (ff->metaData) {
+					metadata *params = ff->metaData;
 					int ret = 0;
 					ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
 
@@ -619,7 +608,7 @@ void *Switch_to_Daemon() {
 				break;
 			}
 		} else if (ff->dataOrCtrl == DATA) {
-			PRINT_DEBUG("data ff: ff=%p meta=%p len=%d", ff, ff->dataFrame.metaData, ff->dataFrame.pduLength);
+			PRINT_DEBUG("data ff: ff=%p meta=%p len=%d", ff, ff->metaData, ff->dataFrame.pduLength);
 
 			dstport = 0;
 			hostport = 0;
@@ -628,11 +617,11 @@ void *Switch_to_Daemon() {
 			protocol = 0;
 
 			int ret = 0;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_ip", &hostip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "src_port", &hostport_buf) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_ip", &dstip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "dst_port", &dstport_buf) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->dataFrame.metaData, "protocol", &protocol) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->metaData, "src_ip", &hostip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->metaData, "src_port", &hostport_buf) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->metaData, "dst_ip", &dstip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->metaData, "dst_port", &dstport_buf) == CONFIG_FALSE;
+			ret += metadata_readFromElement(ff->metaData, "protocol", &protocol) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("prob reading metadata ret=%d", ret);
@@ -759,7 +748,7 @@ void *Switch_to_Daemon() {
 	pthread_exit(NULL);
 } // end of function
 
-void *wedge_to_daemon() {
+void *Wedge_to_Daemon(void *local) {
 	int ret_val;
 	//int nl_sockfd;
 	/*
@@ -1004,13 +993,13 @@ void *wedge_to_daemon() {
 				poll_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			case mmap_call:
-				mmap_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
+				mmap_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len); //TODO dummy
 				break;
 			case socketpair_call:
-				socketpair_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
+				socketpair_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len); //TODO dummy
 				break;
 			case shutdown_call:
-				shutdown_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
+				shutdown_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len); //TODO dummy
 				break;
 			case close_call:
 				/**
@@ -1044,311 +1033,68 @@ void *wedge_to_daemon() {
 	pthread_exit(NULL);
 }
 
-void *Capture() {
+void *Interface(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
 
-	u_char *frame;
-	int frame_len;
-	int numBytes;
-	int capture_pipe_fd;
-	struct finsFrame *ff = NULL;
-
-	metadata *ether_meta;
-
-	//struct sniff_ethernet *ethernet_header;
-	u_char ethersrc[ETHER_ADDR_LEN + 1];
-	u_char etherdst[ETHER_ADDR_LEN + 1];
-	u_short ether_type;
-
-	//####
-	ethersrc[ETHER_ADDR_LEN] = '\0';
-	etherdst[ETHER_ADDR_LEN] = '\0';
-	//####
-
-	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
-	if (capture_pipe_fd == -1) {
-		PRINT_DEBUG("opening capture_pipe did not work");
-		exit(EXIT_FAILURE);
-	}
-
-	while (1) {
-		numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
-		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
-			break;
-		}
-		frame = (u_char *) malloc(frame_len);
-		if (frame == NULL) {
-			PRINT_ERROR("allocation fail");
-			exit(1);
-		}
-
-		numBytes = read(capture_pipe_fd, frame, frame_len);
-
-		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
-			free(frame);
-			break;
-		}
-
-		if (numBytes != frame_len) {
-			PRINT_DEBUG("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
-			free(frame);
-			continue;
-		}
-
-		if (numBytes < sizeof(struct sniff_ethernet)) {
-
-		}
-
-		PRINT_DEBUG("A frame of length %d has been written-----", frame_len);
-
-		//print_frame(data,datalen);
-
-		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-
-		PRINT_DEBUG("ff=%p", ff);
-
-		/** TODO
-		 * 1. extract the Ethernet Frame
-		 * 2. pre-process the frame in order to extract the metadata
-		 * 3. build a finsFrame and insert it into EtherStub_to_Switch_Queue
-		 */
-		ether_meta = (metadata *) malloc(sizeof(metadata));
-		metadata_create(ether_meta);
-
-		memcpy(ethersrc, ((struct sniff_ethernet *) frame)->ether_shost, ETHER_ADDR_LEN);
-		//PRINT_DEBUG("");
-		memcpy(etherdst, ((struct sniff_ethernet *) frame)->ether_dhost, ETHER_ADDR_LEN);
-		//PRINT_DEBUG("");
-		ether_type = ntohs(((struct sniff_ethernet *) frame)->ether_type);
-
-		//TODO as data peeled off, add to metadata?
-		metadata_writeToElement(ether_meta, "ether_type", &ether_type, META_TYPE_INT);
-
-		PRINT_DEBUG("Capture: got frame: ethersrc=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, etherdst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, proto=%d",
-				(uint8_t)ethersrc[0], (uint8_t )ethersrc[1], (uint8_t )ethersrc[2], (uint8_t )ethersrc[3], (uint8_t )ethersrc[4], (uint8_t )ethersrc[5], (uint8_t )etherdst[0], (uint8_t )etherdst[1], (uint8_t )etherdst[2], (uint8_t )etherdst[3], (uint8_t )etherdst[4], (uint8_t )etherdst[5], ether_type);
-
-		ff->dataOrCtrl = DATA;
-		ff->dataFrame.metaData = ether_meta;
-
-		if (ether_type == 0x0800) { //0x0800 == 2048, IPv4
-			PRINT_DEBUG("IPv4: proto=%x (%u)", ether_type, ether_type);
-			(ff->destinationID).id = IPV4ID;
-			(ff->destinationID).next = NULL;
-		} else if (ether_type == 0x0806) { //0x0806 == 2054, ARP
-			PRINT_DEBUG("ARP: proto=%x (%u)", ether_type, ether_type);
-			(ff->destinationID).id = ARPID;
-			(ff->destinationID).next = NULL;
-		} else if (ether_type == 0x86dd) { //0x86dd == 34525, IPv6
-			PRINT_DEBUG("IPv6: proto=%x (%u)", ether_type, ether_type);
-			//drop, don't handle & don't catch sys calls
-			//freeFinsFrame(ff);
-			//continue;
-			(ff->destinationID).id = IPV4ID;
-			(ff->destinationID).next = NULL;
-		} else {
-			PRINT_DEBUG("default: proto=%x (%u)", ether_type, ether_type);
-			//drop
-			//freeFinsFrame(ff);
-			//continue;
-			(ff->destinationID).id = IPV4ID;
-			(ff->destinationID).next = NULL;
-		}
-
-		(ff->dataFrame).directionFlag = UP;
-		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
-		//ff->dataFrame.pdu = frame + SIZE_ETHERNET;
-
-		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
-		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
-
-		PRINT_DEBUG("ff=%p pdu=%p, frame=%p", ff, ff->dataFrame.pdu, frame);
-
-		sem_wait(&EtherStub_to_Switch_Qsem);
-		if (!write_queue(ff, EtherStub_to_Switch_Queue)) {
-			sem_post(&EtherStub_to_Switch_Qsem);
-
-			free(ff->dataFrame.pdu);
-			freeFinsFrame(ff);
-		} else {
-			sem_post(&EtherStub_to_Switch_Qsem);
-		}
-
-		free(frame);
-	} // end of while loop
+	interface_init(fins_pthread_attr);
 
 	pthread_exit(NULL);
 }
 
-void *Inject() {
+void *UDP(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
 
-	//char data[]="loloa7aa7a";
-	char *frame;
-	int datalen;
-	int framelen;
-	int inject_pipe_fd;
-	int numBytes;
-	struct finsFrame *ff;
-	//struct ipv4_packet *packet;
-	//IP4addr destination;
-	//struct hostent *loop_host;
-	//uint32_t dstip;
-
-	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
-	if (inject_pipe_fd == -1) {
-		PRINT_DEBUG("opening inject_pipe did not work");
-		exit(EXIT_FAILURE);
-	}
-
-	PRINT_DEBUG("");
-
-	while (1) {
-
-		/** TO DO
-		 * 1) read fins frames from the Switch_EthernetStub_queue
-		 * 2) extract the data (Ethernet Frame) to be sent
-		 * 3) Inject the Ethernet Frame into the injection Pipe
-		 */
-		sem_wait(&Switch_to_EtherStub_Qsem);
-		ff = read_queue(Switch_to_EtherStub_Queue);
-		sem_post(&Switch_to_EtherStub_Qsem);
-		/** ff->finsDataFrame is an IPv4 packet */
-		if (ff == NULL)
-			continue;
-
-		PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%p", ff);
-
-		//	metadata_readFromElement(ff->dataFrame.metaData,"dstip",&destination);
-		//	loop_host = (struct hostent *) gethostbyname((char *)"");
-		//	if ( destination !=  ((struct in_addr *)(loop_host->h_addr))->s_addr )
-		//	{
-		/* TODO send ARP REQUEST TO GET THE CORRESPONDING MAC ADDRESS
-		 * *
-		 */
-		//		PRINT_DEBUG("NEED MAC ADDRESS");
-		//		freeFinsFrame(ff);
-		//		continue;
-		//	}
-		framelen = ff->dataFrame.pduLength;
-		PRINT_DEBUG("framelen=%d", framelen);
-		frame = (char *) malloc(framelen + SIZE_ETHERNET);
-		PRINT_DEBUG("");
-		/** TODO Fill the dest and src with the correct MAC addresses
-		 * you receive from the ARP module
-		 */
-		//char dest[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-		//char src[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-		//char dest[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
-		//char dest[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //same to itself
-		//jreed MAC addresses
-		//char src[] = { 0x08, 0x00, 0x27, 0x12, 0x34, 0x56 }; //made up
-		char src[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
-		//char src[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
-		//char src[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
-		//char src[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
-
-		//char dest[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
-		//char dest[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
-		//char dest[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
-		//char dest[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
-		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
-		//char dest[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
-		char dest[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; //eth broadcast
-
-		memcpy(((struct sniff_ethernet *) frame)->ether_dhost, dest, ETHER_ADDR_LEN);
-		memcpy(((struct sniff_ethernet *) frame)->ether_shost, src, ETHER_ADDR_LEN);
-
-		int ret = 0;
-		int ether_type = 0;
-		ret += metadata_readFromElement(ff->dataFrame.metaData, "ether_type", &ether_type) == CONFIG_FALSE;
-
-		if (ether_type == 0x0806) {
-			((struct sniff_ethernet *) frame)->ether_type = htons(0x0806);
-		} else {
-			((struct sniff_ethernet *) frame)->ether_type = htons(0x0800);
-		}
-
-		memcpy(frame + SIZE_ETHERNET, (ff->dataFrame).pdu, framelen);
-		datalen = framelen + SIZE_ETHERNET;
-		//	print_finsFrame(ff);
-		PRINT_DEBUG("daemon inject to ethernet stub \n");
-
-		//numBytes = 1;
-
-		numBytes = write(inject_pipe_fd, &datalen, sizeof(int));
-		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
-			freeFinsFrame(ff);
-			free(frame);
-			return (0);
-		}
-
-		numBytes = write(inject_pipe_fd, frame, datalen);
-		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
-			freeFinsFrame(ff);
-			free(frame);
-			return (0);
-		}
-
-		freeFinsFrame(ff);
-		free(frame);
-	} // end of while loop
-
-	pthread_exit(NULL);
-} // end of Inject Function
-
-void *UDP() {
-
-	udp_init();
+	udp_init(fins_pthread_attr);
 
 	pthread_exit(NULL);
 }
 
-void *RTM() {
+void *RTM(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
 
-	rtm_init();
-
-	pthread_exit(NULL);
-}
-
-void *TCP() {
-
-	tcp_init();
+	rtm_init(fins_pthread_attr);
 
 	pthread_exit(NULL);
 }
 
-void *IPv4() {
+void *TCP(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
 
-	ipv4_init();
-
-	pthread_exit(NULL);
-}
-
-void *ICMP() {
-
-	icmp_init();
+	tcp_init(fins_pthread_attr);
 
 	pthread_exit(NULL);
 }
 
-void *ARP() {
+void *IPv4(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
 
-	arp_init();
-
-	pthread_exit(NULL);
-}
-
-void *fins_switch() {
-
-	switch_init();
+	ipv4_init(fins_pthread_attr);
 
 	pthread_exit(NULL);
 }
 
-void cap_inj_init() {
+void *ICMP(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
 
+	icmp_init(fins_pthread_attr);
+
+	pthread_exit(NULL);
+}
+
+void *ARP(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
+
+	arp_init(fins_pthread_attr);
+
+	pthread_exit(NULL);
+}
+
+void *FINS_Switch(void *local) {
+	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
+
+	switch_init(fins_pthread_attr);
+
+	pthread_exit(NULL);
 }
 
 void termination_handler(int sig) {
@@ -1478,7 +1224,7 @@ int main() {
 	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 
-	//added to include code from fins_daemon.sh -- mrd015 !!!!!
+	//added to include code from fins_daemon.sh -- mrd015 !!!!! //TODO move this to RTM module
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
@@ -1514,24 +1260,26 @@ int main() {
 	init_daemonSockets(); //TODO move to daemon module?
 	Queues_init(); //TODO split & move to each module
 
-	//initialize capturer and injecter
-	cap_inj_init();
-
 	//register termination handler
 	signal(SIGINT, termination_handler);
 
 	// Start the driving thread of each module
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
-	pthread_create(&wedge_to_daemon_thread, &fins_pthread_attr, wedge_to_daemon, NULL); //this has named pipe input from wedge
-	pthread_create(&Switch_to_daemon_thread, &fins_pthread_attr, Switch_to_Daemon, NULL);
-	pthread_create(&switch_thread, &fins_pthread_attr, fins_switch, NULL);
-	pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, NULL);
-	pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, NULL);
-	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
-	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
-	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
-	pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
+
+	pthread_create(&wedge_to_daemon_thread, &fins_pthread_attr, Wedge_to_Daemon, &fins_pthread_attr); //this has named pipe input from wedge
+	pthread_create(&switch_to_daemon_thread, &fins_pthread_attr, Switch_to_Daemon, &fins_pthread_attr);
+
+	pthread_create(&switch_thread, &fins_pthread_attr, FINS_Switch, &fins_pthread_attr);
+
+	//pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, &fins_pthread_attr);
+	//pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, &fins_pthread_attr);
+	pthread_create(&interface_thread, &fins_pthread_attr, Interface, &fins_pthread_attr);
+
+	pthread_create(&udp_thread, &fins_pthread_attr, UDP, &fins_pthread_attr);
+	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, &fins_pthread_attr);
+	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, &fins_pthread_attr);
+	pthread_create(&arp_thread, &fins_pthread_attr, ARP, &fins_pthread_attr);
 	//^^^^^ end added !!!!!
 
 	PRINT_DEBUG("created all threads\n");
@@ -1548,12 +1296,13 @@ int main() {
 	pthread_join(ipv4_thread, NULL);
 	pthread_join(tcp_thread, NULL);
 	pthread_join(udp_thread, NULL);
-	pthread_join(etherStub_capturing, NULL);
-	pthread_join(etherStub_injecting, NULL);
+	//pthread_join(etherStub_capturing, NULL);
+	//pthread_join(etherStub_injecting, NULL);
+	pthread_join(interface_thread, NULL);
 	pthread_join(switch_thread, NULL);
-	pthread_join(Switch_to_daemon_thread, NULL);
+	pthread_join(switch_to_daemon_thread, NULL);
 	pthread_join(wedge_to_daemon_thread, NULL);
-	//	//	pthread_join(icmp_thread, NULL);
+	//pthread_join(icmp_thread, NULL);
 
 	while (1) {
 

@@ -13,6 +13,7 @@
 #include <finsdebug.h>
 #include <queueModule.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
@@ -82,7 +83,7 @@ struct udp_statistics {
 #define UP_RWHO			513						/* remote who server (ruptime) */
 #define UP_RIP			520						/* route information exchange (RIP) */
 
-void udp_init();
+void udp_init(pthread_attr_t *fins_pthread_attr);
 void udp_shutdown();
 void udp_free();
 

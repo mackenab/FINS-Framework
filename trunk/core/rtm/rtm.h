@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <finstypes.h>
 #include <metadata.h>
@@ -27,6 +28,6 @@ void rtm_in(struct finsFrame *ff);
 
 void rtm_get_FF();
 
-void rtm_init();
+void rtm_init(pthread_attr_t *fins_pthread_attr);
 
 #endif /* RTM_H_ */

@@ -188,7 +188,7 @@ void cpy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 		dst->dataFrame.directionFlag = src->dataFrame.directionFlag;
 		dst->dataFrame.pdu = src->dataFrame.pdu;
 		dst->dataFrame.pduLength = src->dataFrame.pduLength;
-		dst->dataFrame.metaData = src->dataFrame.metaData;
+		dst->metaData = src->metaData;
 
 	} else if (src->dataOrCtrl == CONTROL) {
 
@@ -227,7 +227,7 @@ void print_finsFrame(struct finsFrame *fins_in) {
 	if (fins_in->dataOrCtrl == DATA) {
 		PRINT_DEBUG("\nData fins %d \n", fins_in->dataOrCtrl);
 		PRINT_DEBUG("Direction flag %d\n", fins_in->dataFrame.directionFlag);
-		//PRINT_DEBUG("Meta data (first element) %x\n", fins_in->dataFrame.metaData);
+		//PRINT_DEBUG("Meta data (first element) %x\n", fins_in->metaData);
 		PRINT_DEBUG("PDU size (bytes) %d\n", fins_in->dataFrame.pduLength);
 		int i = 0;
 		while (i < fins_in->dataFrame.pduLength) {
@@ -276,10 +276,10 @@ struct finsFrame * buildFinsFrame(void) {
 	f->destinationID.id = (unsigned char) 200;
 	f->destinationID.next = NULL;
 
-	(f->dataFrame).directionFlag = UP;
-	(f->dataFrame).metaData = metaptr;
-	(f->dataFrame).pdu = fakeData;
-	(f->dataFrame).pduLength = 10;
+	f->dataFrame.directionFlag = UP;
+	f->metaData = metaptr;
+	f->dataFrame.pdu = fakeData;
+	f->dataFrame.pduLength = 10;
 
 	return (f);
 }
@@ -288,17 +288,17 @@ int freeFinsFrame(struct finsFrame *f) {
 	if (f == NULL)
 		return (0);
 	if (f->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("freeFinsFrame: Entered: ff=%p meta=%p", f, f->ctrlFrame.metaData);
-		if ((f->ctrlFrame).metaData != NULL) {
-			metadata_destroy((f->ctrlFrame).metaData);
+		PRINT_DEBUG("freeFinsFrame: Entered: ff=%p meta=%p", f, f->metaData);
+		if (f->metaData != NULL) {
+			metadata_destroy(f->metaData);
 			PRINT_DEBUG("5555");
 
 		}PRINT_DEBUG("7777");
 
 	} else if (f->dataOrCtrl == DATA) {
-		PRINT_DEBUG("freeFinsFrame: Entered: ff=%p meta=%p", f, f->dataFrame.metaData);
-		if ((f->dataFrame).metaData != NULL) {
-			metadata_destroy((f->dataFrame).metaData);
+		PRINT_DEBUG("freeFinsFrame: Entered: ff=%p meta=%p", f, f->metaData);
+		if (f->metaData != NULL) {
+			metadata_destroy(f->metaData);
 			PRINT_DEBUG("5555");
 
 		}PRINT_DEBUG("7777");

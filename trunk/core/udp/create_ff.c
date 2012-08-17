@@ -36,8 +36,8 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 		ff->dataFrame.directionFlag = direction;
 		ff->dataFrame.pduLength = PDU_length;
 		ff->dataFrame.pdu = (u_char *)data;
-		ff->dataFrame.metaData = meta;
-		//	memcpy(&ff.dataFrame.metaData, metadata, MAX_METADATASIZE);
+		ff->metaData = meta;
+		//	memcpy(&ff.metaData, metadata, MAX_METADATASIZE);
 	}
 
 	if (dataOrCtrl == CONTROL) {
@@ -45,7 +45,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 		ff->destinationID.id = destID;
 
 		ff->destinationID.next = NULL;
-		ff->ctrlFrame.metaData = meta;
+		ff->metaData = meta;
 		// fill the important FCF data in here
 	}
 	//print_finsFrame(ff);

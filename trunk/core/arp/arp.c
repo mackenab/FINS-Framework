@@ -13,6 +13,11 @@
 #include "arp.h"
 
 int arp_running;
+extern sem_t ARP_to_Switch_Qsem;
+extern finsQueue ARP_to_Switch_Queue;
+
+extern sem_t Switch_to_ARP_Qsem;
+extern finsQueue Switch_to_ARP_Queue;
 
 //struct udp_statistics arpStat;
 
@@ -296,12 +301,12 @@ void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
 	uint32_t type = (uint32_t) ARP_TYPE;
 	metadata_writeToElement(params, "ether_type", &type, META_TYPE_INT);
 
-	pckt_fins->destinationID.id = (unsigned char) ETHERSTUBID;
+	pckt_fins->destinationID.id = ETHERSTUBID;
 	pckt_fins->dataOrCtrl = DATA;
 	pckt_fins->dataFrame.pdu = (unsigned char *) (pckt_arp);
 	pckt_fins->dataFrame.directionFlag = DOWN;
 	pckt_fins->dataFrame.pduLength = sizeof(struct arp_hdr);
-	pckt_fins->dataFrame.metaData = params;
+	pckt_fins->metaData = params;
 }
 
 /**
@@ -381,7 +386,7 @@ void arp_msg_to_hdr(struct ARP_message *ptr_msg, struct arp_hdr *ptr_hdr) {
 
 	ptr_hdr->hardware_type = ptr_msg->hardware_type;
 	ptr_hdr->protocol_type = ptr_msg->protocol_type;
-	;
+
 	ptr_hdr->hardware_addrs_length = ptr_msg->hardware_addrs_length;
 	ptr_hdr->protocol_addrs_length = ptr_msg->protocol_addrs_length;
 	ptr_hdr->operation = ptr_msg->operation;
@@ -430,13 +435,125 @@ void arp_get_FF() {
 		return;
 	}
 
-	//udpStat.totalRecieved++;
-	//PRINT_DEBUG("UDP Total %d", udpStat.totalRecieved);
-	arp_in(ff);
-
+	//arp_in(ff);
+	if (ff->dataOrCtrl == CONTROL) {
+		arp_fcf(ff);
+		PRINT_DEBUG("");
+	} else if (ff->dataOrCtrl == DATA) {
+		if ((ff->dataFrame).directionFlag == UP) {
+			arp_in_fdf(ff);
+			PRINT_DEBUG("");
+		} else { //directionFlag==DOWN
+			//arp_out_fdf(ff); //TODO remove?
+			PRINT_DEBUG("todo error");
+		}
+	} else {
+		PRINT_DEBUG("todo error");
+	}
 }
 
-void arp_init() {
+void arp_fcf(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p", ff);
+
+	//TODO fill out
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_ALERT:
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		break;
+	case CTRL_ALERT_REPLY:
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		break;
+	case CTRL_READ_PARAM:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		//arp_read_param(ff);
+		break;
+	case CTRL_READ_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		break;
+	case CTRL_SET_PARAM:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		//arp_set_param(ff);
+		break;
+	case CTRL_SET_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		break;
+	case CTRL_EXEC:
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		arp_exec(ff);
+		break;
+	case CTRL_EXEC_REPLY:
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		break;
+	case CTRL_ERROR:
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		break;
+	default:
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		break;
+	}
+}
+
+void arp_exec(struct finsFrame *ff) {
+	int ret = 0;
+	uint32_t exec_call = 0;
+	uint32_t dst_ip = 0;
+
+	PRINT_DEBUG("Entered: ff=%p", ff);
+
+	metadata *params = ff->metaData;
+	if (params) {
+		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
+		switch (exec_call) {
+		case EXEC_ARP_GET_ADDR:
+			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call);
+
+			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
+
+			if (ret) {
+				PRINT_ERROR("ret=%d", ret);
+				//TODO send nack
+			} else {
+				arp_exec_get_addr(ff, dst_ip);
+			}
+			break;
+		default:
+			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
+			//TODO implement?
+			freeFinsFrame(ff);
+			break;
+		}
+	} else {
+		//TODO send nack
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		freeFinsFrame(ff);
+	}
+}
+
+/**@brief to be completed. A fins frame is written to the 'wire'*/
+void arp_to_switch(struct finsFrame *ff) {
+	if (ff->dataOrCtrl == CONTROL) {
+		PRINT_DEBUG("output_arp_queue: Entered: ff=%p meta=%p", ff, ff->metaData);
+	} else if (ff->dataOrCtrl == DATA) {
+		PRINT_DEBUG("output_arp_queue: Entered: ff=%p meta=%p", ff, ff->metaData);
+	} else {
+		PRINT_DEBUG("output_arp_queue: Entered: ff=%p type=%d", ff, ff->dataOrCtrl);
+	}
+
+	if (sem_wait(&ARP_to_Switch_Qsem)) {
+		PRINT_ERROR("ARP_to_Switch_Qsem wait prob");
+		exit(-1);
+	}
+	if (write_queue(ff, ARP_to_Switch_Queue)) {
+		/*#*/PRINT_DEBUG("");
+		sem_post(&ARP_to_Switch_Qsem);
+		return;
+	}
+
+	PRINT_DEBUG("");
+	sem_post(&ARP_to_Switch_Qsem);
+}
+
+void arp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("ARP Started");
 	arp_running = 1;
 

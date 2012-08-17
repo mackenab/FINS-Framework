@@ -10,25 +10,39 @@
 
 #include "handlers.h"
 
-int daemon_ICMP_to_fins(u_char *dataLocal, int len, uint16_t dstport, uint32_t dst_IP_netformat, uint16_t hostport, uint32_t host_IP_netformat);
-int ICMPreadFrom_fins(unsigned long long uniqueSockID, u_char *buf, int *buflen, int symbol, struct sockaddr_in *address, int block_flag);
+int daemon_fdf_to_icmp(u_char *data, u_int data_len, metadata *params);
 
 void socket_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
+void bind_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
+void listen_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int backlog);
+void connect_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr, int flags);
+void accept_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, unsigned long long uniqueSockID_new, int index_new, int flags);
+void getname_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int peer);
+void ioctl_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
+void sendmsg_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
+		struct sockaddr_in *dest_addr, int addr_len);
+void recvmsg_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
+void getsockopt_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
+void setsockopt_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
+void release_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void poll_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events);
+void mmap_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void socketpair_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void shutdown_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int how);
+void close_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void sendpage_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
 
-void write_icmp(unsigned long long uniqueSockID, int datalen, u_char *data);
+struct daemon_icmp_thread_data {
+	int id;
+	unsigned long long uniqueSockID;
+	int index;
+	u_int call_id;
+	int call_index;
 
-void listen_icmp(int index, unsigned long long uniqueSockID, int backlog);
-void accept_icmp(int index, unsigned long long uniqueSockID, unsigned long long uniqueSockID_new, int flags);
-void getname_icmp(int index, unsigned long long uniqueSockID, int peer);
-void ioctl_icmp(int index, unsigned long long uniqueSockID, u_int cmd, u_char *buf, ssize_t buf_len);
-void sendto_icmp(int index, unsigned long long uniqueSockID, u_char *data, int datalen, int flags, struct sockaddr_in *dest_addr, socklen_t addrlen);
-void recv_icmp(unsigned long long uniqueSockID, int datalen, int flags);
-void recvfrom_icmp(void *threadData);
-void sendmsg_icmp();
-void recvmsg_icmp();
-void getsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
-void setsockopt_icmp(int index, unsigned long long uniqueSockID, int level, int optname, int optlen, void *optval);
-void shutdown_icmp(unsigned long long uniqueSockID, int how);
-void release_icmp(int index, unsigned long long uniqueSockID);
+	int data_len;
+	int flags;
+//int socketCallType; //TODO remove?
+//int symbol; //TODO remove?
+};
 
 #endif /* ICMPHANDLING_H_ */

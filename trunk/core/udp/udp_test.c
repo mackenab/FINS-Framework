@@ -76,7 +76,7 @@
 //
 //	ff.dataFrame.pdu = &packet2;
 //
-//	memcpy(&ff.dataFrame.metaData, &pseudoheader2, 16);
+//	memcpy(&ff.metaData, &pseudoheader2, 16);
 //
 //	ff.dataFrame.pduLength = packet2.u_len;
 //	ff.dataOrCtrl = DATA;
@@ -122,7 +122,7 @@ int main() {
 	ff.dataFrame.directionFlag = DOWN;
 
 
-	memcpy(&ff.dataFrame.metaData, &meta, 16);
+	memcpy(&ff.metaData, &meta, 16);
 	pff = &ff;
 
 //	printf("The metadata's value for the length is %d\n", pseudoheader2.u_pslen);

@@ -35,12 +35,14 @@
 
 //following block excluded in vt_mark's code, temp. included for ARP code
 /* Definition of the possible Opcodes */
-#define READREQUEST 111
-#define READREPLY 222
-#define WRITEREQUEST 333
-#define WRITECONF 444
-#define QUERYREQUEST 555
-#define QUERYREPLY 666
+/*
+ #define READREQUEST 111
+ #define READREPLY 222
+ #define WRITEREQUEST 333
+ #define WRITECONF 444
+ #define QUERYREQUEST 555
+ #define QUERYREPLY 666
+ */
 
 /* control message types - finsCtrlFrame.opcode values */
 #define CTRL_ALERT 	0			// "pushed" messages; not error messages
@@ -80,7 +82,6 @@ struct finsDataFrame {
 	unsigned char directionFlag; // ingress or egress network data; see above
 	unsigned int pduLength; // length of pdu array
 	unsigned char *pdu; // data!
-	metadata *metaData; // metadata
 };
 
 struct finsCtrlFrame {
@@ -100,7 +101,6 @@ struct finsCtrlFrame {
 	unsigned int paramterLen;
 
 	struct tableRecord *replyRecord;
-	metadata *metaData; // metadata
 };
 
 struct finsFrame {
@@ -108,6 +108,7 @@ struct finsFrame {
 	/* Common Fields between data and control */
 	unsigned char dataOrCtrl; // data frame or control frame; use #def values above
 	struct destinationList destinationID; // destination module ID
+	metadata *metaData; // metadata
 	union {
 		struct finsDataFrame dataFrame;
 		struct finsCtrlFrame ctrlFrame;
