@@ -2468,11 +2468,8 @@ void tcp_exec(struct finsFrame *ff) {
 }
 
 int tcp_to_switch(struct finsFrame *ff) {
-	if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->metaData);
-	} else {
-		PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->metaData);
-	}
+	PRINT_DEBUG("tcp_to_switch: Entered: ff=%p meta=%p", ff, ff->metaData);
+
 	if (sem_wait(&TCP_to_Switch_Qsem)) {
 		PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
 		exit(-1);

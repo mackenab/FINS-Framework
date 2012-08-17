@@ -65,7 +65,16 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip) {
 	if (search_list(ptr_cacheHeader, target_IP_addrs) == 0) { //i.e. not found
 		arp_out(REQUESTDATA); //generate arp request for MAC address and send out to the network
 	} else {
-		arp_out(REPLYCONTROL); //generate fins control carrying MAC address foe ethernet
+		//arp_out(REPLYCONTROL); //generate fins control carrying MAC address foe ethernet
+		//arp_out_ctrl(target_IP_addrs, ff);
+
+		ff->destinationID.id = ff->ctrlFrame.senderID;
+		ff->ctrlFrame.senderID = ARPID;
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		MAC_addrs_conversion(search_MAC_addrs(target_IP_addrs, ptr_cacheHeader), fins_MAC_address);
+		ff->ctrlFrame.paramterValue = fins_MAC_address;
+
+		arp_to_switch(ff);
 	}
 	freeFinsFrame(ff);
 }

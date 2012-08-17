@@ -145,7 +145,7 @@ void arp_shutdown();
 void arp_free();
 
 void arp_get_FF();
-void arp_to_switch(struct finsFrame *fins_arp_out);
+int arp_to_switch(struct finsFrame *ff);
 
 #define EXEC_ARP_GET_ADDR 0
 //#define EXEC_ARP_GET_ADDR 0
