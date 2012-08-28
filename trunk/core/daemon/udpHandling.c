@@ -873,6 +873,10 @@ void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d events=%x", uniqueSockID, index, call_id, call_index, events);
 
+	/*
+	 * Convert to flow based: events come, wait poll_sem (?),
+	 */
+
 	if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 		sem_wait(&daemonSockets_sem);
 		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
