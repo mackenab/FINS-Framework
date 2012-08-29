@@ -250,6 +250,6 @@ struct ip4_next_hop_info IP4_next_hop(IP4addr dst);
 int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length);
 void IP4_receive_fdf();
 int InputQueue_Read_local(struct finsFrame *pff);
-void sendToSwitch_IPv4(struct finsFrame *fins_frame);
+int ipv4_to_switch(struct finsFrame *fins_frame);
 void IP4_exit();
 #endif /* IPV4_H_ */

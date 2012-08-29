@@ -36,7 +36,7 @@ void sendToSwitch(struct finsFrame *ff) {
 
 }
 
-void udp_get_FF() {
+void udp_get_ff() {
 
 	int dummy_a = 0; //KEVINS CODE THIS IS A TEST
 	int dummy_b = 0;
@@ -57,39 +57,39 @@ void udp_get_FF() {
 	PRINT_DEBUG("UDP Total %d, ff=%p", udpStat.totalRecieved, ff);
 	if (ff->dataOrCtrl == CONTROL) {
 		// send to something to deal with FCF
-		PRINT_DEBUG("UDP: CONTROL HANDLER !");
+		PRINT_DEBUG("CONTROL HANDLER !");
 
 		//dummy = (int)(ff->ctrlFrame.paramterValue);
 
 //CHANGEME	if(ff->ctrlFrame.paramterID == DUMMYA)
 		{
 //CHANGEME		dummy_a = (int)(ff->ctrlFrame.paramterValue);
-			PRINT_DEBUG("UDP: Dummy parameter A has been set to %d", dummy_a);
+			PRINT_DEBUG("Dummy parameter A has been set to %d", dummy_a);
 
 		}
 //CHANGEME		else if(ff->ctrlFrame.paramterID == DUMMYB)
 		{
 //CHANGEME		dummy_b = (int)(ff->ctrlFrame.paramterValue);
-			PRINT_DEBUG("UDP: Dummy parameter B has been set to %d", dummy_b);
+			PRINT_DEBUG("Dummy parameter B has been set to %d", dummy_b);
 		}
 //CHANGEME		else if(ff->ctrlFrame.paramterID == DUMMYC)
 		{
 //CHANGEME			dummy_c = (int)(ff->ctrlFrame.paramterValue);
-			PRINT_DEBUG("UDP: Dummy parameter C has been set to %d", dummy_c);
+			PRINT_DEBUG("Dummy parameter C has been set to %d", dummy_c);
 		}
 
 		//DEBUG Statements
-		PRINT_DEBUG("UDP: dataOrCtrl parameter has been set to %d", (int)(ff->dataOrCtrl));
+		PRINT_DEBUG("dataOrCtrl parameter has been set to %d", (int)(ff->dataOrCtrl));
 		///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("UDP: destinationID parameter has been set to %d", (int)(ff->destinationID.id));
+		PRINT_DEBUG("destinationID parameter has been set to %d", (int)(ff->destinationID.id));
 		///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("UDP: opcode parameter has been set to %d", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode parameter has been set to %d", ff->ctrlFrame.opcode);
 		///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("UDP: senderID parameter has been set to %d", (int)(ff->ctrlFrame.senderID));
+		PRINT_DEBUG("senderID parameter has been set to %d", (int)(ff->ctrlFrame.senderID));
 		///KEVINS CODE THIS IS A TEST
-//CHANGEME		PRINT_DEBUG("UDP: parameterID parameter has been set to %d",ff->ctrlFrame.paramterID);			///KEVINS CODE THIS IS A TEST
+//CHANGEME		PRINT_DEBUG("parameterID parameter has been set to %d",ff->ctrlFrame.paramterID);			///KEVINS CODE THIS IS A TEST
 
-		//	PRINT_DEBUG("UDP: serialNum has been set to %d",ff->ctrlFrame.serialNum);
+		//	PRINT_DEBUG("serialNum has been set to %d",ff->ctrlFrame.serialNum);
 
 		//CONSTRUCTION OF A WRITE_CONFIRMATION FRAME
 		//|| Data/Control | Destination_IDs_List | SenderID | Write_parameter_Confirmation_Code | Serial_Number ||
@@ -104,7 +104,7 @@ void udp_get_FF() {
 		sem_wait(&UDP_to_Switch_Qsem); ///KEVINS CODE THIS IS A TEST
 		write_queue(ff_confirmation, UDP_to_Switch_Queue); ///KEVINS CODE THIS IS A TEST
 		sem_post(&UDP_to_Switch_Qsem); ///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("UDP: sent data ");
+		PRINT_DEBUG("sent data ");
 		///KEVINS CODE THIS IS A TEST
 
 		freeFinsFrame(ff);
@@ -125,7 +125,7 @@ void udp_init(pthread_attr_t *fins_pthread_attr) {
 	udp_running = 1;
 
 	while (udp_running) {
-		udp_get_FF();
+		udp_get_ff();
 		PRINT_DEBUG("");
 		//	free(pff);
 	}

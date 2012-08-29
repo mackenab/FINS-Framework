@@ -27,8 +27,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 		ff->destinationID.next = NULL;
 		break;
 	case IP4_PT_ICMP:
-		//ff->destinationID.id = SOCKETSTUBID;
-		ff->destinationID.id = ICMPID; // todo: ICMPID should be decided
+		ff->destinationID.id = ICMPID;
 		ff->destinationID.next = NULL;
 		break;
 	default:
@@ -74,7 +73,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	//ff->metaData = ipv4_meta;
 	PRINT_DEBUG("protocol %d, srcip %lu, dstip %lu", protocol, srcaddress, dstaddress);
 
-	sendToSwitch_IPv4(ff);
+	ipv4_to_switch(ff);
 
 	PRINT_DEBUG("Freeing pdu=%p", pdu);
 	free(pdu);
@@ -112,10 +111,36 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	 sendToSwitch_IPv4(fins_frame);
 	 */
 
+	//char dst_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	//char src_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	//char dst_mac[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
+	//char dst_mac[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //same to itself
+	//jreed MAC addresses
+	//char src_mac[] = { 0x08, 0x00, 0x27, 0x12, 0x34, 0x56 }; //made up
+	char src_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+	//char src_mac[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
+	//char src_mac[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
+	//char src_mac[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
+
+	char dst_mac[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
+	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
+	//char dst_mac[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
+	//char dst_mac[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
+	//char dst_mac[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; //eth broadcast
+
+	//TODO get mac addr from ARP, by sending FCF
+
 	metadata *params = ff->metaData;
 
-	uint32_t type = (uint32_t) IP4_ETH_TYPE;
-	metadata_writeToElement(params, "ether_type", &type, META_TYPE_INT);
+	uint32_t ether_type = (uint32_t) IP4_ETH_TYPE;
+	metadata_writeToElement(params, "src_mac", src_mac, META_TYPE_STRING);
+	metadata_writeToElement(params, "dst_mac", dst_mac, META_TYPE_STRING);
+	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
+
+	PRINT_DEBUG("send frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x",
+			(uint8_t) dst_mac[0], (uint8_t) dst_mac[1], (uint8_t) dst_mac[2], (uint8_t) dst_mac[3], (uint8_t) dst_mac[4], (uint8_t) dst_mac[5], (uint8_t) src_mac[0], (uint8_t) src_mac[1], (uint8_t) src_mac[2], (uint8_t) src_mac[3], (uint8_t) src_mac[4], (uint8_t) src_mac[5], ether_type);
 
 	u_char *pdu = ff->dataFrame.pdu;
 	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p", ff);
@@ -132,19 +157,27 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	ff->dataFrame.pdu = data;
 
 	//print_finsFrame(fins_frame);
-	sendToSwitch_IPv4(ff);
+	ipv4_to_switch(ff);
 
 	//PRINT_DEBUG("Freeing ff=%p", ff);
 	PRINT_DEBUG("Freeing pdu=%p", pdu);
 	free(pdu);
 }
 
-//todo: needs to be replaced by something meaningful
-void sendToSwitch_IPv4(struct finsFrame *ff) {
+int ipv4_to_switch(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	if (sem_wait(&IPv4_to_Switch_Qsem)) {
+		PRINT_ERROR("Interface_to_Switch_Qsem wait prob");
+		exit(-1);
+	}
+	if (write_queue(ff, IPv4_to_Switch_Queue)) {
+		/*#*/PRINT_DEBUG("");
+		sem_post(&IPv4_to_Switch_Qsem);
+		return 1;
+	}
 
-	sem_wait(&IPv4_to_Switch_Qsem);
-	write_queue(ff, IPv4_to_Switch_Queue);
+	PRINT_DEBUG("");
 	sem_post(&IPv4_to_Switch_Qsem);
-	PRINT_DEBUG("sendToSwitch_IPv4 DONE");
 
+	return 0;
 }

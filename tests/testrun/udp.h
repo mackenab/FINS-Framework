@@ -87,5 +87,5 @@ void udp_in(struct finsFrame* ff);
 void udp_out(struct finsFrame* ff);
 struct finsFrame create_ff(int dataOrCtrl, int direction, int destID,  int PDU_length, unsigned char* PDU, unsigned char* metadata );
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
-void udp_get_FF();
+void udp_get_ff();
 #endif

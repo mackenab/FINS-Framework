@@ -127,7 +127,7 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 
 	int i;
 
-	PRINT_DEBUG("matchdaemonSocket: %u/%u: %d, ", dstip, dstport, protocol);
+	PRINT_DEBUG("Entered: %u/%u: %d, ", dstip, dstport, protocol);
 
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (daemonSockets[i].uniqueSockID != -1) {
@@ -176,7 +176,7 @@ int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol) {
 }
 
 int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, int protocol) {
-	PRINT_DEBUG("match_daemon_socket: %u/%u to %u/%u", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: %u/%u to %u/%u", host_ip, host_port, rem_ip, rem_port);
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
@@ -1576,7 +1576,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 
-	PRINT_DEBUG("getsockopt_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
+	PRINT_DEBUG("uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
@@ -1637,7 +1637,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 
-	PRINT_DEBUG("setsockopt_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
+	PRINT_DEBUG("uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
@@ -1722,7 +1722,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	int type = daemonSockets[index].type;
 	int protocol = daemonSockets[index].protocol;
 
-	PRINT_DEBUG("poll_call_handler: uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
+	PRINT_DEBUG("uniqueSockID=%llu, index=%d, type=%d, proto=%d", uniqueSockID, index, type, protocol);
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {

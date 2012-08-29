@@ -96,7 +96,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(dst_temp, RTA_DATA(rta), IP4_ALEN);
 					//PRINT_DEBUG("received RTA_DST");
-					PRINT_DEBUG("parse_nlmsg: dst_str = %u.%u.%u.%u",
+					PRINT_DEBUG("dst_str = %u.%u.%u.%u",
 							dst_temp[0] & 0xFF, dst_temp[1] & 0xFF, dst_temp[2]
 									& 0xFF, dst_temp[3] & 0xFF);
 					table_pointer->dst
@@ -106,7 +106,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(gw_temp, RTA_DATA(rta), IP4_ALEN);
 					//PRINT_DEBUG("received RTA_GATEWAY");
-					PRINT_DEBUG("parse_nlmsg: gw_str = %u.%u.%u.%u", gw_temp[0]
+					PRINT_DEBUG("gw_str = %u.%u.%u.%u", gw_temp[0]
 							& 0xFF, gw_temp[1] & 0xFF, gw_temp[2] & 0xFF,
 							gw_temp[3] & 0xFF);
 					table_pointer->gw
@@ -115,13 +115,13 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 				case RTA_OIF: //interface
 					memcpy(&table_pointer->interface, RTA_DATA(rta),
 							sizeof(interface));
-					PRINT_DEBUG("parse_nlmsg: interface:%u",
+					PRINT_DEBUG("interface:%u",
 							table_pointer->interface);
 					break;
 				case RTA_PRIORITY: //metric
 					memcpy(&table_pointer->metric, RTA_DATA(rta),
 							sizeof(priority));
-					PRINT_DEBUG("parse_nlmsg: metric:%u", table_pointer->metric);
+					PRINT_DEBUG("metric:%u", table_pointer->metric);
 					break;
 				} //switch(rta->)
 			}// for()

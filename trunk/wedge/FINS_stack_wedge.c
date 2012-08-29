@@ -473,7 +473,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 				print_pt += 3;
 			}
 		}
-		PRINT_DEBUG("nl_send: msg_buf='%s'", print_buf);
+		PRINT_DEBUG("msg_buf='%s'", print_buf);
 		kfree(print_buf);
 	}
 	//####################

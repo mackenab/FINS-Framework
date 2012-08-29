@@ -285,30 +285,25 @@ struct finsFrame * buildFinsFrame(void) {
 }
 
 int freeFinsFrame(struct finsFrame *f) {
-	if (f == NULL)
+	if (f == NULL) {
 		return (0);
+	}
+
+	PRINT_DEBUG("Entered: ff=%p meta=%p", f, f->metaData);
 	if (f->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("freeFinsFrame: Entered: ff=%p meta=%p", f, f->metaData);
 		if (f->metaData != NULL) {
 			metadata_destroy(f->metaData);
-			PRINT_DEBUG("5555");
-
-		}PRINT_DEBUG("7777");
-
+		}
 	} else if (f->dataOrCtrl == DATA) {
-		PRINT_DEBUG("freeFinsFrame: Entered: ff=%p meta=%p", f, f->metaData);
 		if (f->metaData != NULL) {
 			metadata_destroy(f->metaData);
-			PRINT_DEBUG("5555");
-
-		}PRINT_DEBUG("7777");
+		}
 	} else {
 		//dataOrCtrl uninitialized
+		PRINT_DEBUG("todo error");
 	}
+
 	free(f);
-	PRINT_DEBUG("8888");
-
 	return (1);
-
 }
 

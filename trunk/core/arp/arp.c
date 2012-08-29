@@ -288,7 +288,7 @@ uint64_t search_MAC_addrs(uint32_t IP_addrs, struct node *ptr_list_neighbors) {
 void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("arp_to_fins: failed to create matadata: ff=%p", pckt_fins);
+		PRINT_ERROR("failed to create matadata: ff=%p", pckt_fins);
 		return;
 	}
 	metadata_create(params);
@@ -422,7 +422,7 @@ void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct ARP_message *ptr_msg) {
 	ptr_msg->target_IP_addrs = gen_IP_addrs(ip_dst[0], ip_dst[1], ip_dst[2], ip_dst[3]);
 }
 
-void arp_get_FF() {
+void arp_get_ff() {
 	struct finsFrame *ff;
 
 	do {
@@ -531,14 +531,7 @@ void arp_exec(struct finsFrame *ff) {
 
 /**@brief to be completed. A fins frame is written to the 'wire'*/
 void arp_to_switch(struct finsFrame *ff) {
-	if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("output_arp_queue: Entered: ff=%p meta=%p", ff, ff->metaData);
-	} else if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("output_arp_queue: Entered: ff=%p meta=%p", ff, ff->metaData);
-	} else {
-		PRINT_DEBUG("output_arp_queue: Entered: ff=%p type=%d", ff, ff->dataOrCtrl);
-	}
-
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
 	if (sem_wait(&ARP_to_Switch_Qsem)) {
 		PRINT_ERROR("ARP_to_Switch_Qsem wait prob");
 		exit(-1);
@@ -568,7 +561,7 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 	init_arp_intface(MACADDRESS, IPADDRESS);
 
 	while (arp_running) {
-		arp_get_FF();
+		arp_get_ff();
 		PRINT_DEBUG("");
 		//	free(pff);
 	}

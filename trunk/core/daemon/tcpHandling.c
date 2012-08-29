@@ -76,7 +76,7 @@ int daemon_fcf_to_tcp(uint16_t opcode, metadata *params) {
 	ff->ctrlFrame.opcode = opcode;
 	ff->metaData = params;
 
-	PRINT_DEBUG("daemon_TCP_to_fins_cntrl: ff=%p, meta=%p", ff, params);
+	PRINT_DEBUG("ff=%p, meta=%p", ff, params);
 	sem_wait(&Daemon_to_Switch_Qsem);
 	if (write_queue(ff, Daemon_to_Switch_Queue)) {
 		sem_post(&Daemon_to_Switch_Qsem);

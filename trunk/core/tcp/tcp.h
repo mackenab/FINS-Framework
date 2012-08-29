@@ -448,7 +448,7 @@ struct tcp_to_thread_data {
 void tcp_init(pthread_attr_t *fins_pthread_attr);
 void tcp_shutdown();
 void tcp_free();
-void tcp_get_FF();
+void tcp_get_ff();
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);

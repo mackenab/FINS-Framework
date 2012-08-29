@@ -32,7 +32,7 @@ void ICMP_in(struct finsFrame *ff)
 	//First step: Check the checksum.
 	if(ICMP_checksum(ff) != 0)
 	{
-		PRINT_DEBUG("ICMP_in(): Error in checksum of packet. Discarding...");
+		PRINT_DEBUG("Error in checksum of packet. Discarding...");
 		return; //Discard packet if checksum is bad
 	}
 	//Second step: get the type and code from the ICMP header from the frame. Is this how we should do it?
@@ -46,7 +46,7 @@ void ICMP_in(struct finsFrame *ff)
 	{ //If this fails, we'll assume that the protocol is correct
 		if(ntohl(protocol) != ICMP_PROTOCOL)
 		{
-			PRINT_DEBUG("ICMP_in(): Protocol =/= ICMP! Discarding frame...");
+			PRINT_DEBUG("Protocol =/= ICMP! Discarding frame...");
 			return; //Stop here
 		}
 	}
@@ -78,7 +78,7 @@ void ICMP_in(struct finsFrame *ff)
 			ICMP_send_FF(ffForward);
 		}
 		else
-			PRINT_DEBUG("ICMP_in(): Error in ICMP packet code. Dropping...");
+			PRINT_DEBUG("Error in ICMP packet code. Dropping...");
 		break;
 	case TYPE_DESTUNREACH:
 		PRINT_DEBUG("Destination unreachable");
@@ -99,7 +99,7 @@ void ICMP_in(struct finsFrame *ff)
 			ICMP_ping_reply(ff);
 		}
 		else
-			PRINT_DEBUG("ICMP_in(): Error in ICMP packet code. Dropping...");
+			PRINT_DEBUG("Error in ICMP packet code. Dropping...");
 		break;
 	case TYPE_TTLEXCEED:
 		PRINT_DEBUG("TTL Exceeded");
@@ -114,7 +114,7 @@ void ICMP_in(struct finsFrame *ff)
 		break;
 	default:
 		//Drop the packet
-		PRINT_DEBUG("ICMP_in(): The type of this received ICMP packet is currently unsupported. Have a nice day. Dropping...");
+		PRINT_DEBUG("The type of this received ICMP packet is currently unsupported. Have a nice day. Dropping...");
 		break;
 	}
 }
@@ -150,7 +150,7 @@ void ICMP_out_old(struct finsFrame *ff)
 		{
 			if(ntohl(protocol) != UDP_PROTOCOL)
 			{
-				PRINT_DEBUG("ICMP_out(): Incorrect protocol. Dropping frame...")
+				PRINT_DEBUG("Incorrect protocol. Dropping frame...")
 				return; //Stop here
 			}
 			else
@@ -194,11 +194,11 @@ void ICMP_out_old(struct finsFrame *ff)
 			ICMP_send_FF(ffForward);
 		}
 		else
-			PRINT_DEBUG("ICMP_out(): Error in ICMP packet code. Dropping...");
+			PRINT_DEBUG("Error in ICMP packet code. Dropping...");
 		break;
 	default:
 		//Drop the packet
-		PRINT_DEBUG("ICMP_out(): This type of this outgoing ICMP packet is currently unsupported. Have a nice day.");
+		PRINT_DEBUG("This type of this outgoing ICMP packet is currently unsupported. Have a nice day.");
 		break;
 	}
 }
@@ -206,7 +206,7 @@ void ICMP_out_old(struct finsFrame *ff)
 //---------------------------------------------------
 // Retrieve a finsFrame from the queue and process it
 //---------------------------------------------------
-void ICMP_get_FF(struct finsFrame *ff)
+void icmp_get_ff(struct finsFrame *ff)
 {
 	// Poll the queue constantly to see if there's anything there. Is this a good use of resources?
 	do
@@ -260,7 +260,7 @@ void icmp_init(pthread_attr_t *fins_pthread_attr)
 	struct finsFrame *pff = NULL;
 	while (1)
 	{
-		ICMP_get_FF(pff);
+		icmp_get_ff(pff);
 		PRINT_DEBUG("%d",(int)pff);
 		//Note that we always clean up the frame, no matter what we do with it. If the frame needs to go somewhere else also, we make a copy.
 		//free(pff);
@@ -269,11 +269,11 @@ void icmp_init(pthread_attr_t *fins_pthread_attr)
 
 void ICMP_init_old()
 {
-	PRINT_DEBUG("ICMP_init(): ICMP Started");
+	PRINT_DEBUG("ICMP Started");
 	struct finsFrame *pff = NULL;
 	while (1)
 	{
-		ICMP_get_FF(pff);
+		icmp_get_ff(pff);
 		PRINT_DEBUG("%d",(int)pff);
 		//Note that we always clean up the frame, no matter what we do with it. If the frame needs to go somewhere else also, we make a copy.
 		//Shouldn't we use freeFinsFrame() instead of just free()? I think so, so I will here
@@ -340,12 +340,12 @@ void ICMP_ping_reply(struct finsFrame* ff)
 	IP4addr IP_Dest, IP_Src;
 	if(metadata_readFromElement(ffout->metaData, "src_ip", &IP_Src) == CONFIG_FALSE)
 	{
-		PRINT_DEBUG("ICMP_ping_reply(): Missing data in FINS frame metadata: no source IP");
+		PRINT_DEBUG("Missing data in FINS frame metadata: no source IP");
 		return; //Stop here
 	}
 	if(metadata_readFromElement(ffout->metaData, "dst_ip", &IP_Dest) == CONFIG_FALSE)
 	{
-		PRINT_DEBUG("ICMP_ping_reply(): Missing data in FINS frame metadata: no destination IP");
+		PRINT_DEBUG("Missing data in FINS frame metadata: no destination IP");
 		return; //Stop here
 	}
 

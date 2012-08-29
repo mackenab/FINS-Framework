@@ -38,7 +38,7 @@ extern int rtm_out_fd;
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 //Code to receive a finsFrame from the Switch
-void rtm_get_FF() {
+void rtm_get_ff() {
 	int numBytes = 0;
 	
 	struct finsFrame *ff;
@@ -53,13 +53,13 @@ void rtm_get_FF() {
 		// send to something to deal with FCF
 		//format: || Data/Control | Destination_IDs_List | SenderID | Write_parameter_Confirmation_Code | Serial_Number ||
 
-		PRINT_DEBUG("RTM: send to CONTROL HANDLER !");
-		PRINT_DEBUG("RTM: dataOrCtrl parameter has been set to %d",(int)(ff->dataOrCtrl));
-		PRINT_DEBUG("RTM: destinationID parameter has been set to %d",(int)(ff->destinationID.id));
-		PRINT_DEBUG("RTM: opcode parameter has been set to %d",ff->ctrlFrame.opcode);
-		PRINT_DEBUG("RTM: senderID parameter has been set to %d",(int)(ff->ctrlFrame.senderID));
+		PRINT_DEBUG("send to CONTROL HANDLER !");
+		PRINT_DEBUG("dataOrCtrl parameter has been set to %d",(int)(ff->dataOrCtrl));
+		PRINT_DEBUG("destinationID parameter has been set to %d",(int)(ff->destinationID.id));
+		PRINT_DEBUG("opcode parameter has been set to %d",ff->ctrlFrame.opcode);
+		PRINT_DEBUG("senderID parameter has been set to %d",(int)(ff->ctrlFrame.senderID));
 
-		//PRINT_DEBUG("RTM: serialNum parameter has been set to %d",ff->ctrlFrame.serialNum);
+		//PRINT_DEBUG("serialNum parameter has been set to %d",ff->ctrlFrame.serialNum);
 
 		//Currently it serializes and sends any Control Frame it receives over the rtm_out pipe
 		rtm_out_fd = open(RTM_PIPE_OUT, O_RDWR);//should not be O_RDWR, should be WRITE ONLY
@@ -73,12 +73,12 @@ void rtm_get_FF() {
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.senderID, sizeof(unsigned char));
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.opcode, sizeof(unsigned short int));
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.serialNum, sizeof(unsigned int));
-		PRINT_DEBUG("RTM: serialNum %d",ff->ctrlFrame.serialNum)
+		PRINT_DEBUG("serialNum %d",ff->ctrlFrame.serialNum)
 
 	}
 	else//DATA FF
 	{
-		PRINT_DEBUG("RTM: Find out what to do with data frames")
+		PRINT_DEBUG("Find out what to do with data frames")
 	}
 
 }
@@ -88,7 +88,7 @@ void rtm_get_FF() {
 //Is started as a thread in core.c
 void rtm_init(pthread_attr_t *fins_pthread_attr) {
 
-	PRINT_DEBUG("RTM: RTM has started");
+	PRINT_DEBUG("RTM has started");
 
 	//int datalen;
 	int numBytes;
@@ -124,14 +124,14 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 		fins_frame = unserializeCtrlFrame(serialized_FCF,length_serialized_FCF);
 
 		//value, Assumption was made, notice the size
-		PRINT_DEBUG("RTM: received data");
+		PRINT_DEBUG("received data");
 		numBytes = 0;
 
 		//ERROR Message
 		fflush(stdout);
 		if (numBytes >= 0)
 		{
-			PRINT_DEBUG("RTM: numBytes written %d", numBytes);
+			PRINT_DEBUG("numBytes written %d", numBytes);
 		}
 
 		//CHANGE SenderID and SerialNum
@@ -142,9 +142,9 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 		sem_wait(&RTM_to_Switch_Qsem);
 		write_queue(fins_frame, RTM_to_Switch_Queue);
 		sem_post(&RTM_to_Switch_Qsem);
-		PRINT_DEBUG("RTM: sent data ");
+		PRINT_DEBUG("sent data ");
 
 		//READ FROM QUEUE
-		rtm_get_FF();
+		rtm_get_ff();
 	}
 }

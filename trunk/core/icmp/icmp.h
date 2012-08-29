@@ -70,7 +70,7 @@
 
 void ICMP_in(struct finsFrame *ff); //Processes an ICMP message that just came in
 void ICMP_out(struct finsFrame *ff); //Processes an ICMP message that's headed out
-void ICMP_get_FF(struct finsFrame *ff); //Gets a finsFrame from the queue and starts processing
+void icmp_get_ff(struct finsFrame *ff); //Gets a finsFrame from the queue and starts processing
 void ICMP_send_FF(struct finsFrame *ff); //Put a finsFrame onto the queue to go out
 
 void icmp_init(pthread_attr_t *fins_pthread_attr); //Get our ICMP engine up and running

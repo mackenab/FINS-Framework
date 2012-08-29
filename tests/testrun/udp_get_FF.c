@@ -20,7 +20,7 @@
 
 extern struct udp_statistics udpStat;
 
-void udp_get_FF(){
+void udp_get_ff(){
 	struct finsFrame ff;
 	UDP_InputQueue_Read_local(&ff);
 

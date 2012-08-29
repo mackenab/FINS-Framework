@@ -168,7 +168,7 @@ void arp_out(int response) {
  * @param fins_arp_out points to the fins frame which will be sent from the module
  * */
 void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
-	PRINT_DEBUG("arp_out_request: sought_IP_addrs=%u ff=%p", sought_IP_addrs, fins_arp_out);
+	PRINT_DEBUG("sought_IP_addrs=%u ff=%p", sought_IP_addrs, fins_arp_out);
 
 	fins_arp_out->destinationID.id = ETHERSTUBID;
 	fins_arp_out->dataOrCtrl = CONTROL;
@@ -184,7 +184,7 @@ void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
  * */
 void arp_out_request(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
 
-	PRINT_DEBUG("arp_out_request: sought_IP_addrs=%u ff=%p", sought_IP_addrs, fins_arp_out);
+	PRINT_DEBUG("sought_IP_addrs=%u ff=%p", sought_IP_addrs, fins_arp_out);
 
 	gen_requestARP(sought_IP_addrs, &arp_msg);
 	arp_msg_to_hdr(&arp_msg, packet);
@@ -198,7 +198,7 @@ void arp_out_request(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
  * @param fins_arp_out points to the fins frame which will be sent from the module
  * */
 void arp_out_reply(struct finsFrame *fins_arp_out) {
-	PRINT_DEBUG("arp_out_reply: ff=%p", fins_arp_out);
+	PRINT_DEBUG("ff=%p", fins_arp_out);
 
 	struct ARP_message arp_msg_reply;
 

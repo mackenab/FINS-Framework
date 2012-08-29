@@ -450,7 +450,7 @@ void ioctl_icmp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
-			PRINT_DEBUG("ioctl_call_handler: Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
+			PRINT_DEBUG("Exiting, fail send_wedge: uniqueSockID=%llu", uniqueSockID);
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
 		}
 		free(msg);

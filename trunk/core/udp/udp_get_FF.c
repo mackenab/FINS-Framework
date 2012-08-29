@@ -1,5 +1,5 @@
-/**@file udp_get_FF.c
- * udp_get_FF.c
+/**@file udp_get_ff.c
+ * udp_get_ff.c
  *
  *  Created on: Jul 8, 2010
  *      Author: Abdallah Abdallah

@@ -67,7 +67,7 @@ unsigned short UDP_checksum(struct udp_packet* pcket_netw, uint32_t src_ip_netw,
 	uint32_t sum = 0;
 
 	//packet is in network format
-	PRINT_DEBUG("UDP_checksum: Entered: (N) src_ip=%u (%x), dst_ip=%u (%x)", src_ip_netw, src_ip_netw, dst_ip_netw, dst_ip_netw);
+	PRINT_DEBUG("Entered: (N) src_ip=%u (%x), dst_ip=%u (%x)", src_ip_netw, src_ip_netw, dst_ip_netw, dst_ip_netw);
 	struct in_addr temp_src;
 	temp_src.s_addr = src_ip_netw;
 	PRINT_DEBUG("src_ip=%s", inet_ntoa(temp_src));
