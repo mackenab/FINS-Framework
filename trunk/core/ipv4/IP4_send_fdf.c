@@ -31,7 +31,8 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 		ff->destinationID.next = NULL;
 		break;
 	default:
-		PRINT_DEBUG("todo error");
+		PRINT_DEBUG("todo error")
+		;
 		break;
 	}
 
@@ -117,30 +118,31 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	//char dst_mac[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //same to itself
 	//jreed MAC addresses
 	//char src_mac[] = { 0x08, 0x00, 0x27, 0x12, 0x34, 0x56 }; //made up
-	char src_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
+	//char src_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 	//char src_mac[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
 	//char src_mac[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
 	//char src_mac[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
+	uint64_t src_mac = 0x080027445566;
 
-	char dst_mac[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
+	//char dst_mac[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
 	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
 	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
 	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
 	//char dst_mac[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
 	//char dst_mac[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
 	//char dst_mac[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; //eth broadcast
+	uint64_t dst_mac = 0xf46d0449badd;
 
 	//TODO get mac addr from ARP, by sending FCF
 
 	metadata *params = ff->metaData;
 
 	uint32_t ether_type = (uint32_t) IP4_ETH_TYPE;
-	metadata_writeToElement(params, "src_mac", src_mac, META_TYPE_STRING);
-	metadata_writeToElement(params, "dst_mac", dst_mac, META_TYPE_STRING);
+	metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+	metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
 
-	PRINT_DEBUG("send frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x",
-			(uint8_t) dst_mac[0], (uint8_t) dst_mac[1], (uint8_t) dst_mac[2], (uint8_t) dst_mac[3], (uint8_t) dst_mac[4], (uint8_t) dst_mac[5], (uint8_t) src_mac[0], (uint8_t) src_mac[1], (uint8_t) src_mac[2], (uint8_t) src_mac[3], (uint8_t) src_mac[4], (uint8_t) src_mac[5], ether_type);
+	PRINT_DEBUG("send frame: dst=0x%x, src=0x%x, type=0x%x", dst_mac, src_mac, ether_type);
 
 	u_char *pdu = ff->dataFrame.pdu;
 	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p", ff);

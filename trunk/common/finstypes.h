@@ -92,8 +92,8 @@ struct finsCtrlFrame {
 
 	unsigned char * name; // parameter/function/error name
 	void * data; // pointer to relevant data; msg type dependent
-				 // if using a struct for this, define elsewhere
-				 // such as ICMP data information, define in ICMP
+	// if using a struct for this, define elsewhere
+	// such as ICMP data information, define in ICMP
 	/* Special fields for control frames depending on the Opcode */
 
 	unsigned int paramterID;
@@ -198,12 +198,21 @@ typedef enum {
 	SS_UNCONNECTED, /* unconnected to any socket    */
 	SS_CONNECTING, /* in process of connecting     */
 	SS_CONNECTED, /* connected to socket          */
-	SS_DISCONNECTING /* in process of disconnecting  */
+	SS_DISCONNECTING
+/* in process of disconnecting  */
 } socket_state;
 
 #ifndef IP4_ADR_P2H
 /* macro to convert IPv4 address from human readable format Presentation to long int in Host format*/
 #define IP4_ADR_P2H(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 #endif /* IP4_ADR_P2N */
+
+#ifndef ntohll
+#define ntohll(x)
+#endif
+
+#ifndef htonll
+#define htonll(x)
+#endif
 
 #endif /* FINSTYPES_H_ */

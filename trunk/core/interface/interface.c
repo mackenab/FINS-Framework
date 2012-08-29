@@ -191,7 +191,7 @@ void *Capturer_to_Interface(void *local) {
 		metadata_writeToElement(ether_meta, "ether_type", &ether_type, META_TYPE_INT);
 
 		PRINT_DEBUG("recv frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x"
-		"%x",
+				"%x",
 				(uint8_t) etherdst[0], (uint8_t) etherdst[1], (uint8_t) etherdst[2], (uint8_t) etherdst[3], (uint8_t) etherdst[4], (uint8_t) etherdst[5], (uint8_t) ethersrc[0], (uint8_t) ethersrc[1], (uint8_t) ethersrc[2], (uint8_t) ethersrc[3], (uint8_t) ethersrc[4], (uint8_t) ethersrc[5], ether_type);
 
 		ff->dataOrCtrl = DATA;
@@ -299,8 +299,8 @@ void interface_get_ff() {
 
 void interface_out_fdf(struct finsFrame *ff) {
 
-	char *dst_mac;
-	char *src_mac;
+	uint64_t dst_mac;
+	uint64_t src_mac;
 	int ether_type = 0;
 
 	char *frame;
@@ -322,11 +322,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 		return;
 	}
 
-	PRINT_DEBUG("len=%d str='%s'", strlen(dst_mac), dst_mac);
-	PRINT_DEBUG("len=%d str='%s'", strlen(src_mac), src_mac);
-
-	PRINT_DEBUG("send frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x",
-			(uint8_t) dst_mac[0], (uint8_t) dst_mac[1], (uint8_t) dst_mac[2], (uint8_t) dst_mac[3], (uint8_t) dst_mac[4], (uint8_t) dst_mac[5], (uint8_t) src_mac[0], (uint8_t) src_mac[1], (uint8_t) src_mac[2], (uint8_t) src_mac[3], (uint8_t) src_mac[4], (uint8_t) src_mac[5], ether_type);
+	PRINT_DEBUG("send frame: dst=0x%x, src=0x%x, type=0x%x", dst_mac, src_mac, ether_type);
 
 	framelen = ff->dataFrame.pduLength + SIZE_ETHERNET;
 	PRINT_DEBUG("framelen=%d", framelen);
@@ -339,8 +335,22 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	hdr = (struct sniff_ethernet *) frame;
 
-	memcpy(hdr->ether_dhost, dst_mac, ETHER_ADDR_LEN);
-	memcpy(hdr->ether_shost, src_mac, ETHER_ADDR_LEN);
+	//memcpy(hdr->ether_dhost, dst_mac, ETHER_ADDR_LEN);
+	//memcpy(hdr->ether_shost, src_mac, ETHER_ADDR_LEN);
+
+	hdr->ether_dhost[0] = (dst_mac & 0x0000ff0000000000) >> 40;
+	hdr->ether_dhost[1] = (dst_mac & 0x000000ff00000000) >> 32;
+	hdr->ether_dhost[2] = (dst_mac & 0x00000000ff000000) >> 24;
+	hdr->ether_dhost[3] = (dst_mac & 0x0000000000ff0000) >> 16;
+	hdr->ether_dhost[4] = (dst_mac & 0x000000000000ff00) >> 8;
+	hdr->ether_dhost[5] = (dst_mac & 0x00000000000000ff);
+
+	hdr->ether_shost[0] = (src_mac & 0x0000ff0000000000) >> 40;
+	hdr->ether_shost[1] = (src_mac & 0x000000ff00000000) >> 32;
+	hdr->ether_shost[2] = (src_mac & 0x00000000ff000000) >> 24;
+	hdr->ether_shost[3] = (src_mac & 0x0000000000ff0000) >> 16;
+	hdr->ether_shost[4] = (src_mac & 0x000000000000ff00) >> 8;
+	hdr->ether_shost[5] = (src_mac & 0x00000000000000ff);
 
 	if (ether_type == ETH_TYPE_ARP) {
 		hdr->ether_type = htons(ETH_TYPE_ARP);

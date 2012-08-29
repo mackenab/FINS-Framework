@@ -595,7 +595,7 @@ void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", index, dst_ip, dst_port, host_ip, host_port);
 
 	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
-	temp->s_addr = host_ip;
+	temp->s_addr = htonl(host_ip);
 	PRINT_DEBUG("index=%d, dst=%s/%d (%u)", index, inet_ntoa(addr->sin_addr), dst_port, addr->sin_addr.s_addr);
 	PRINT_DEBUG("index=%d, host=%s/%d (%u)", index, inet_ntoa(*temp), host_port, (*temp).s_addr);
 	//free(data);

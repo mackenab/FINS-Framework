@@ -293,15 +293,18 @@ void *Switch_to_Daemon(void *local) {
 			PRINT_DEBUG("control ff: ff=%p meta=%p opcode=%d", ff, ff->metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_ALERT_REPLY:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM_REPLY:
@@ -410,15 +413,18 @@ void *Switch_to_Daemon(void *local) {
 				}
 				break;
 			case CTRL_SET_PARAM:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_SET_PARAM_REPLY:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC_REPLY:
@@ -599,11 +605,13 @@ void *Switch_to_Daemon(void *local) {
 				}
 				break;
 			case CTRL_ERROR:
-				PRINT_DEBUG("Not yet implmented");
+				PRINT_DEBUG("Not yet implmented")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			default:
-				PRINT_DEBUG("Unknown opcode");
+				PRINT_DEBUG("Unknown opcode")
+				;
 				freeFinsFrame(ff); //ftm
 				break;
 			}
@@ -811,23 +819,29 @@ void *Wedge_to_Daemon(void *local) {
 		if ((okFlag = NLMSG_OK(nlh, ret_val))) {
 			switch (nlh->nlmsg_type) {
 			case NLMSG_NOOP:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP")
+				;
 				break;
 			case NLMSG_ERROR:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR")
+				;
 			case NLMSG_OVERRUN:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN")
+				;
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE")
+				;
 				doneFlag = 1;
 			default:
-				PRINT_DEBUG("nlh->nlmsg_type=default");
+				PRINT_DEBUG("nlh->nlmsg_type=default")
+				;
 				nl_buf = NLMSG_DATA(nlh);
 				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				PRINT_DEBUG("nl_len= %d", nl_len);
+				PRINT_DEBUG("nl_len= %d", nl_len)
+				;
 
 				part_pt = nl_buf;
 				test_msg_len = *(ssize_t *) part_pt;
@@ -864,7 +878,8 @@ void *Wedge_to_Daemon(void *local) {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
+				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq)
+				;
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
@@ -1012,7 +1027,8 @@ void *Wedge_to_Daemon(void *local) {
 				sendpage_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			default:
-				PRINT_DEBUG("unknown opcode received (%d), dropping", call_type);
+				PRINT_DEBUG("unknown opcode received (%d), dropping", call_type)
+				;
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */
@@ -1152,54 +1168,6 @@ void termination_handler(int sig) {
 }
 
 int main() {
-
-	/*
-	 FILE *f;
-	 unsigned int temp;
-	 uint8_t num[3000];
-	 int i = 0;
-	 int rv;
-	 int num_values;
-
-	 f = fopen("udp_input_3.txt", "r");
-	 if (f == NULL) {
-	 printf("file doesnt exist?!\n");
-	 return 1;
-	 }
-
-	 while (i < 3000) {
-	 rv = fscanf(f, "%x", &temp);
-	 if (rv != 1)
-	 break;
-	 num[i] = (uint8_t) temp;
-	 printf("%d: %x (%u)\n", i, temp, num[i]);
-
-	 i++;
-	 }
-	 fclose(f);
-	 printf("i=%d\n", i);
-
-	 //uint32_t src_ip = xxx(192,168,1,11);
-	 uint32_t src_ip = xxx(192,168,1,20);
-	 //uint32_t dst_ip = xxx(66,69,232,38);
-	 uint32_t dst_ip = xxx(192,168,1,11);
-	 //src_ip = htonl(src_ip);
-	 //dst_ip = htonl(dst_ip);
-	 //struct udp_packet *pkt = (struct udp_packet *) num;
-	 struct udp_packet *pkt = (struct udp_packet *) malloc(sizeof(struct udp_packet));
-	 pkt->u_src = (55555);
-	 pkt->u_dst = (44444);
-	 pkt->u_len = 8;
-	 pkt->u_cksum = 0;
-	 pkt->u_cksum = 0xf5cd;
-
-	 uint16_t checksum = pkt->u_cksum;
-	 uint16_t calc = UDP_checksum(pkt, (src_ip), (dst_ip));
-	 PRINT_DEBUG("checksum (h): %4x %4x", (checksum), (calc));
-
-	 return 0;
-	 //*/
-
 	//init the netlink socket connection to daemon
 	//int nl_sockfd;
 	//sem_init();

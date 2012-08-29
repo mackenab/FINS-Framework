@@ -18,6 +18,7 @@
 /* over riding the original types of the Config library */
 
 #define META_TYPE_INT CONFIG_TYPE_INT
+#define META_TYPE_INT64 CONFIG_TYPE_INT64
 #define META_TYPE_STRING CONFIG_TYPE_STRING
 #define META_TRUE CONFIG_TRUE
 #define META_FALSE CONFIG_FALSE
