@@ -530,7 +530,7 @@ void arp_exec(struct finsFrame *ff) {
 }
 
 /**@brief to be completed. A fins frame is written to the 'wire'*/
-void arp_to_switch(struct finsFrame *ff) {
+int arp_to_switch(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
 	if (sem_wait(&ARP_to_Switch_Qsem)) {
 		PRINT_ERROR("ARP_to_Switch_Qsem wait prob");
@@ -539,11 +539,13 @@ void arp_to_switch(struct finsFrame *ff) {
 	if (write_queue(ff, ARP_to_Switch_Queue)) {
 		/*#*/PRINT_DEBUG("");
 		sem_post(&ARP_to_Switch_Qsem);
-		return;
+		return 1;
 	}
 
 	PRINT_DEBUG("");
 	sem_post(&ARP_to_Switch_Qsem);
+
+	return 0;
 }
 
 void arp_init(pthread_attr_t *fins_pthread_attr) {

@@ -116,15 +116,12 @@
 #define ERROR
 
 #ifdef DEBUG
-//#define PRINT_ERROR(format, args...) printk(KERN_DEBUG "FINS: DEBUG: %s, %s,  %d: "format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);
-//#define PRINT_DEBUG(format, args...) printk(KERN_DEBUG "FINS: DEBUG: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #define PRINT_DEBUG(format, args...) printk("FINS: DEBUG: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #else
 #define PRINT_DEBUG(format, args...)
 #endif
 
 #ifdef ERROR
-//#define PRINT_ERROR(format, args...) printk(KERN_CRIT "FINS: ERROR: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #define PRINT_ERROR(format, args...) printk("FINS: ERROR: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #else
 #define PRINT_ERROR(format, args...)
