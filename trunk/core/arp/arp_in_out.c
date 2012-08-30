@@ -42,11 +42,11 @@ void arp_in_fdf(struct finsFrame *ff) {
 	if (check_valid_arp(arp_msg_ptr) == 1) {
 		PRINT_DEBUG("ARP Data valid");
 
-		update_cache(arp_msg_ptr);
+		//update_cache(arp_msg_ptr); //TODO comment out?
 
-		if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARPREQUESTOP)) {
+		if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REQUEST_OP)) {
 			arp_out(REPLYDATA); //generate reply
-		} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARPREPLYOP)) {
+		} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REPLY_OP)) {
 			target_IP_addrs = arp_msg.sender_IP_addrs;
 			arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
 		}
@@ -115,9 +115,9 @@ void arp_in(struct finsFrame *ff) {
 
 			update_cache(arp_msg_ptr);
 
-			if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARPREQUESTOP)) {
+			if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REQUEST_OP)) {
 				arp_out(REPLYDATA); //generate reply
-			} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARPREPLYOP)) {
+			} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REPLY_OP)) {
 				target_IP_addrs = arp_msg.sender_IP_addrs;
 				arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
 			}

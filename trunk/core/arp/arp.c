@@ -85,7 +85,7 @@ void gen_requestARP(uint32_t IP_address_target, struct ARP_message *request_ARP_
 	request_ARP_ptr->protocol_type = (PROTOCOLTYPE);
 	request_ARP_ptr->hardware_addrs_length = HDWADDRSLEN;
 	request_ARP_ptr->protocol_addrs_length = PROTOCOLADDRSLEN;
-	request_ARP_ptr->operation = (ARPREQUESTOP);
+	request_ARP_ptr->operation = (ARP_REQUEST_OP);
 }
 
 /**
@@ -106,7 +106,7 @@ void gen_replyARP(struct ARP_message *request_ARP, struct ARP_message *reply_ARP
 		reply_ARP->protocol_type = (PROTOCOLTYPE);
 		reply_ARP->hardware_addrs_length = HDWADDRSLEN;
 		reply_ARP->protocol_addrs_length = PROTOCOLADDRSLEN;
-		reply_ARP->operation = (ARPREPLYOP);
+		reply_ARP->operation = (ARP_REPLY_OP);
 	}
 }
 
@@ -180,9 +180,9 @@ void update_cache(struct ARP_message *pckt) {
  */
 void print_msgARP(struct ARP_message *pckt) {
 
-	if (pckt->operation == ARPREQUESTOP)
+	if (pckt->operation == ARP_REQUEST_OP)
 		PRINT_DEBUG("\nARP Message Request");
-	if (pckt->operation == ARPREPLYOP)
+	if (pckt->operation == ARP_REPLY_OP)
 		PRINT_DEBUG("\nARP Message Reply");
 
 	PRINT_DEBUG("\nSender:");
@@ -369,7 +369,7 @@ void host_to_net(struct arp_hdr *pckt_hdr) {
  */
 int check_valid_arp(struct ARP_message *pckt) {
 
-	if ((pckt != NULL) && (pckt->hardware_type == HWDTYPE) && (pckt->operation == ARPREQUESTOP || pckt->operation == ARPREPLYOP)
+	if ((pckt != NULL) && (pckt->hardware_type == HWDTYPE) && (pckt->operation == ARP_REQUEST_OP || pckt->operation == ARP_REPLY_OP)
 			&& (pckt->hardware_addrs_length == HDWADDRSLEN) && (pckt->protocol_addrs_length == PROTOCOLADDRSLEN) && (pckt->protocol_type == PROTOCOLTYPE)
 			&& (pckt->sender_MAC_addrs != NULLADDRESS) && (pckt->sender_IP_addrs != NULLADDRESS) && (pckt->target_IP_addrs != NULLADDRESS))
 		return 1;
@@ -412,7 +412,6 @@ void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct ARP_message *ptr_msg) {
 
 	ptr_msg->hardware_type = ptr_hdr->hardware_type;
 	ptr_msg->protocol_type = ptr_hdr->protocol_type;
-	;
 	ptr_msg->hardware_addrs_length = ptr_hdr->hardware_addrs_length;
 	ptr_msg->protocol_addrs_length = ptr_hdr->protocol_addrs_length;
 	ptr_msg->operation = ptr_hdr->operation;

@@ -9,6 +9,7 @@
  */
 
 #include "metadata.h"
+#include <stdint.h>
 
 /** @example <USEmetadata>
  * int main(int argc, char **argv)
@@ -83,6 +84,9 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
 		case CONFIG_TYPE_INT:
 			status = config_setting_lookup_int(root, target, (int *) value);
 			break;
+		case CONFIG_TYPE_INT64:
+			status = config_setting_lookup_int64(root, target, (int64_t *) value);
+			break;
 		case CONFIG_TYPE_STRING:
 			status = config_setting_lookup_string(root, target, (const char **) value); //unsure of credibility, check strings?
 			break;
@@ -114,6 +118,14 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT);
 		status = config_setting_set_int(handle, *(int *) value);
+		PRINT_DEBUG("%d", status);
+		break;
+
+	case CONFIG_TYPE_INT64:
+		handle = config_setting_get_member(root, target);
+		if (handle == NULL)
+			handle = config_setting_add(root, target, CONFIG_TYPE_INT64);
+		status = config_setting_set_int64(handle, *(int64_t *) value);
 		PRINT_DEBUG("%d", status);
 		break;
 

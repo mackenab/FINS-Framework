@@ -179,7 +179,7 @@ void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, stru
 	request_ARP_ptr->protocol_type = (PROTOCOLTYPE);
 	request_ARP_ptr->hardware_addrs_length = HDWADDRSLEN;
 	request_ARP_ptr->protocol_addrs_length = PROTOCOLADDRSLEN;
-	request_ARP_ptr->operation = (ARPREQUESTOP);
+	request_ARP_ptr->operation = (ARP_REQUEST_OP);
 	request_ARP_ptr->sender_MAC_addrs = MAC_sender_addrs;
 	request_ARP_ptr->sender_IP_addrs = IP_sender_addrs;
 	request_ARP_ptr->target_MAC_addrs = 0;
@@ -208,7 +208,7 @@ void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *re
 			reply_ARP.target_MAC_addrs = request_ARP_ptr->sender_MAC_addrs;
 			reply_ARP.hardware_addrs_length = request_ARP_ptr->hardware_addrs_length;
 			reply_ARP.hardware_type = (request_ARP_ptr->hardware_type);
-			reply_ARP.operation = (ARPREPLYOP);
+			reply_ARP.operation = (ARP_REPLY_OP);
 			reply_ARP.protocol_addrs_length = request_ARP_ptr->protocol_addrs_length;
 			reply_ARP.protocol_type = (request_ARP_ptr->protocol_type);
 			memcpy(reply_ARP_ptr, &reply_ARP, sizeof(struct ARP_message));

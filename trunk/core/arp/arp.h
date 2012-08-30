@@ -22,8 +22,8 @@
 #include <finstypes.h>
 #include <queueModule.h>
 
-#define ARPREQUESTOP 1
-#define ARPREPLYOP 2
+#define ARP_REQUEST_OP 1
+#define ARP_REPLY_OP 2
 #define NULLADDRESS 0
 #define HWDTYPE 1
 #define PROTOCOLTYPE 0x800

@@ -142,7 +142,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
 
-	PRINT_DEBUG("send frame: dst=0x%x, src=0x%x, type=0x%x", dst_mac, src_mac, ether_type);
+	PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 
 	u_char *pdu = ff->dataFrame.pdu;
 	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p", ff);

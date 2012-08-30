@@ -215,7 +215,8 @@ void capture_init(char *interface) {
 	//strcat(filter_exp, "udp and port 5000");
 	//strcat(filter_exp, ""); //everything
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	strcat(filter_exp, "(ether dst 080027445566) or (broadcast and (not ether src 080027445566)) or (dst 192.168.1.20)"); //final? eth0, bridged
+	//strcat(filter_exp, "(ether dst 080027445566) or (broadcast and (not ether src 080027445566)) or (dst 192.168.1.20)"); //final? eth0, bridged
+	strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //final? eth0, bridged
 	//strcat(filter_exp, "(ether dst 080027112233) or (broadcast and (not ether src 080027112233)) or (dst 192.168.1.20)"); //final? eth1, nat
 	//strcat(filter_exp, "(ether dst 080027123456) or (broadcast and (not ether src 080027123456)) or (dst 192.168.1.20)"); //final? made up
 

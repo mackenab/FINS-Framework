@@ -76,17 +76,12 @@ int daemon_fdf_to_udp(u_char *data, u_int data_len, metadata *params) {
 	ff->dataFrame.pdu = data;
 	ff->metaData = params;
 
-	sem_wait(&Daemon_to_Switch_Qsem);
-	if (write_queue(ff, Daemon_to_Switch_Queue)) {
-		sem_post(&Daemon_to_Switch_Qsem);
-		PRINT_DEBUG("");
-
+	/*#*/PRINT_DEBUG("");
+	if (daemon_to_switch(ff)) {
 		return 1;
 	} else {
-		sem_post(&Daemon_to_Switch_Qsem);
 		PRINT_DEBUG("freeing: ff=%p", ff);
 		free(ff);
-
 		return 0;
 	}
 }

@@ -290,6 +290,7 @@ struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int no
 
 int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag);
 int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
+int daemon_to_switch(struct finsFrame *ff);
 
 /** calls handling functions */
 void socket_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);

@@ -599,6 +599,24 @@ struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int no
 	return ff;
 }
 
+int daemon_to_switch(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	if (sem_wait(&Daemon_to_Switch_Qsem)) {
+		PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
+		exit(-1);
+	}
+	if (write_queue(ff, Daemon_to_Switch_Queue)) {
+		/*#*/PRINT_DEBUG("");
+		sem_post(&Daemon_to_Switch_Qsem);
+		return 1;
+	}
+
+	PRINT_DEBUG("");
+	sem_post(&Daemon_to_Switch_Qsem);
+
+	return 0;
+}
+
 void socket_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
 
 	int domain;
