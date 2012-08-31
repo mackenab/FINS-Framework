@@ -1,12 +1,12 @@
 /*
- * handlers.h
+ * daemon.h
  *
  *  Created on: Mar 6, 2011
  *      Author: Abdallah Abdallah
  */
 
-#ifndef HANDLERS_H_
-#define HANDLERS_H_
+#ifndef DAEMON_H_
+#define DAEMON_H_
 
 #include <stdio.h>
 #include <string.h>
@@ -268,6 +268,7 @@ struct fins_daemon_socket {
 #define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
+#define RECV_BUFFER_SIZE	1024// Pick an appropriate value here
 int init_fins_nl();
 int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
 
@@ -290,7 +291,6 @@ struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int no
 
 int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag);
 int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
-int daemon_to_switch(struct finsFrame *ff);
 
 /** calls handling functions */
 void socket_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
@@ -323,4 +323,16 @@ struct recvfrom_data {
 };
 //#########################
 
-#endif /* HANDLERS_H_ */
+void daemon_init(pthread_attr_t *fins_pthread_attr);
+void daemon_shutdown();
+void daemon_free();
+void daemon_get_ff();
+int daemon_to_switch(struct finsFrame *ff);
+
+void daemon_out_fdf(struct finsFrame *ff);
+void daemon_in_fdf(struct finsFrame *ff);
+void daemon_fcf(struct finsFrame *ff);
+void daemon_read_param_reply(struct finsFrame *ff);
+void daemon_exec_reply(struct finsFrame *ff);
+
+#endif /* DAEMON_H_ */

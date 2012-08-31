@@ -457,37 +457,47 @@ void arp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		//arp_read_param(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		//arp_set_param(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		break;
 	}
 }
@@ -504,7 +514,8 @@ void arp_exec(struct finsFrame *ff) {
 		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
 		switch (exec_call) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call);
+			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
 
@@ -516,7 +527,8 @@ void arp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
+			PRINT_ERROR("Error unknown exec_call=%d", exec_call)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -557,7 +569,9 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 	//uint64_t MACADDRESS = 0x080027123456; //made up
 
 	//uint32_t IPADDRESS = 672121;/**<IP address of host; sent to the arp module*/
-	uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
+	//uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
+
+	uint32_t IPADDRESS = IP4_ADR_P2H(172,31,50,160);/**<IP address of host; sent to the arp module*/
 
 	init_arp_intface(MACADDRESS, IPADDRESS);
 

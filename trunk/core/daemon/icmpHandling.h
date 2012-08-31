@@ -8,7 +8,7 @@
 #ifndef ICMPHANDLING_H_
 #define ICMPHANDLING_H_
 
-#include "handlers.h"
+#include "daemon.h"
 
 int daemon_fdf_to_icmp(u_char *data, u_int data_len, metadata *params);
 

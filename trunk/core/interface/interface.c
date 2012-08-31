@@ -168,6 +168,18 @@ void *Capturer_to_Interface(void *local) {
 		PRINT_DEBUG("A frame of length %d has been written-----", frame_len);
 
 		//print_frame(data,datalen);
+		hdr = (struct sniff_ethernet *) frame;
+		ether_type = ntohs(hdr->ether_type);
+
+		PRINT_DEBUG("recv frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x",
+				(uint8_t) hdr->ether_dhost[0], (uint8_t) hdr->ether_dhost[1], (uint8_t) hdr->ether_dhost[2], (uint8_t) hdr->ether_dhost[3], (uint8_t) hdr->ether_dhost[4], (uint8_t) hdr->ether_dhost[5], (uint8_t) hdr->ether_shost[0], (uint8_t) hdr->ether_shost[1], (uint8_t) hdr->ether_shost[2], (uint8_t) hdr->ether_shost[3], (uint8_t) hdr->ether_shost[4], (uint8_t) hdr->ether_shost[5], ether_type);
+
+		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
+				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];
+		src_mac = ((uint64_t) hdr->ether_shost[0] << 40) + ((uint64_t) hdr->ether_shost[1] << 32) + ((uint64_t) hdr->ether_shost[2] << 24)
+				+ ((uint64_t) hdr->ether_shost[3] << 16) + ((uint64_t) hdr->ether_shost[4] << 8) + (uint64_t) hdr->ether_shost[5];
+
+		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 
 		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 		if (ff == NULL) {
@@ -192,36 +204,19 @@ void *Capturer_to_Interface(void *local) {
 		}
 		metadata_create(meta);
 
-		hdr = (struct sniff_ethernet *) frame;
-
-		PRINT_DEBUG("recv frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x",
-				(uint8_t) hdr->ether_dhost[0], (uint8_t) hdr->ether_dhost[1], (uint8_t) hdr->ether_dhost[2], (uint8_t) hdr->ether_dhost[3], (uint8_t) hdr->ether_dhost[4], (uint8_t) hdr->ether_dhost[5], (uint8_t) hdr->ether_shost[0], (uint8_t) hdr->ether_shost[1], (uint8_t) hdr->ether_shost[2], (uint8_t) hdr->ether_shost[3], (uint8_t) hdr->ether_shost[4], (uint8_t) hdr->ether_shost[5], ether_type);
-
-		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
-				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];
-		src_mac = ((uint64_t) hdr->ether_shost[0] << 40) + ((uint64_t) hdr->ether_shost[1] << 32) + ((uint64_t) hdr->ether_shost[2] << 24)
-				+ ((uint64_t) hdr->ether_shost[3] << 16) + ((uint64_t) hdr->ether_shost[4] << 8) + (uint64_t) hdr->ether_shost[5];
-		ether_type = ntohs(hdr->ether_type);
-
-		metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
-		metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
-		metadata_writeToElement(meta, "ether_type", &ether_type, META_TYPE_INT);
-
-		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
-
 		ff->dataOrCtrl = DATA;
 		ff->metaData = meta;
 
 		if (ether_type == ETH_TYPE_IP4) { //0x0800 == 2048, IPv4
-			PRINT_DEBUG("IPv4: proto=%x (%u)", ether_type, ether_type);
-			(ff->destinationID).id = IPV4ID;
-			(ff->destinationID).next = NULL;
+			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
+			ff->destinationID.id = IPV4ID;
+			ff->destinationID.next = NULL;
 		} else if (ether_type == ETH_TYPE_ARP) { //0x0806 == 2054, ARP
-			PRINT_DEBUG("ARP: proto=%x (%u)", ether_type, ether_type);
-			(ff->destinationID).id = ARPID;
-			(ff->destinationID).next = NULL;
+			PRINT_DEBUG("ARP: proto=0x%x (%u)", ether_type, ether_type);
+			ff->destinationID.id = ARPID;
+			ff->destinationID.next = NULL;
 		} else if (ether_type == ETH_TYPE_IP6) { //0x86dd == 34525, IPv6
-			PRINT_DEBUG("IPv6: proto=%x (%u)", ether_type, ether_type);
+			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
 			//drop, don't handle & don't catch sys calls
 			freeFinsFrame(ff);
 			free(frame);
@@ -236,11 +231,13 @@ void *Capturer_to_Interface(void *local) {
 
 		ff->dataFrame.directionFlag = UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
-
 		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		PRINT_DEBUG("ff=%p pdu=%p, frame=%p", ff, ff->dataFrame.pdu, frame);
+		metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
+		metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
+		metadata_writeToElement(meta, "ether_type", &ether_type, META_TYPE_INT);
+
 		if (!interface_to_switch(ff)) {
 			free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
@@ -298,7 +295,7 @@ void interface_get_ff() {
 		PRINT_DEBUG("");
 	} else if (ff->dataOrCtrl == DATA) {
 		//ff->dataFrame is an IPv4 packet
-		if ((ff->dataFrame).directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == UP) {
 			//interface_in_fdf(ff); //TODO remove?
 			PRINT_DEBUG("todo error");
 		} else { //directionFlag==DOWN
@@ -449,7 +446,7 @@ void interface_init(pthread_attr_t *fins_pthread_attr) {
 
 	while (interface_running) {
 		interface_get_ff();
-		//PRINT_DEBUG("");
+		PRINT_DEBUG("");
 	}
 
 	pthread_join(capturer_to_interface_thread, NULL);

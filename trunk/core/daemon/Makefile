@@ -9,7 +9,7 @@ CFLAGS += $(CORE_MODULES_INC)
 
 #This is the list of objects needed to build the FINS core. NOTE: object files
 #that contain a "main" function must NOT be included in this list!!!
-OBJS = handlers.o icmpHandling.o tcpHandling.o udpHandling.o
+OBJS = daemon.o icmpHandling.o tcpHandling.o udpHandling.o
 
 #list any added executables here to have them cleaned
 EXECUTABLES = 

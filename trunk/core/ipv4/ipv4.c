@@ -11,6 +11,13 @@
 IP4addr my_ip_addr;
 IP4addr loopback = IP4_ADR_P2H(127, 0, 0, 1);
 IP4addr my_mask;
+
+/*
+ IP4addr my_ip_addr;
+ IP4addr loopback_ip_addr;
+ IP4addr any_ip_addr;
+ */
+
 struct ip4_routing_table* routing_table;
 struct ip4_packet *construct_packet_buffer;
 struct ip4_stats stats;
@@ -23,7 +30,8 @@ void ipv4_init(pthread_attr_t *fins_pthread_attr) {
 	 * or from a configuration file
 	 */
 
-	my_ip_addr = IP4_ADR_P2H(192, 168, 1, 20);
+	//my_ip_addr = IP4_ADR_P2H(192, 168, 1, 20);
+	my_ip_addr = IP4_ADR_P2H(172,31,50,160);
 	//my_ip_addr = IP4_ADR_P2H(127, 0, 0, 1);
 	//my_ip_addr = IP4_ADR_P2H(172, 31, 63, 231);
 	//my_ip_addr = IP4_ADR_P2H(172, 31, 53, 114);

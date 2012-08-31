@@ -385,7 +385,7 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	metadata_writeToElement(params, "host_ip", &conn_stub->host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", &conn_stub->host_port, META_TYPE_INT);
 
-	int protocol = TCP_PROTOCOL;
+	int protocol = IPPROTO_TCP;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
@@ -1148,7 +1148,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->send_pkt->ip_hdr.src_ip = conn->host_ip;
 	conn->send_pkt->ip_hdr.dst_ip = conn->rem_ip;
 	conn->send_pkt->ip_hdr.zeros = 0;
-	conn->send_pkt->ip_hdr.protocol = TCP_PROTOCOL;
+	conn->send_pkt->ip_hdr.protocol = IPPROTO_TCP;
 	conn->send_pkt->tcp_hdr.src_port = conn->host_port;
 	conn->send_pkt->tcp_hdr.dst_port = conn->rem_port;
 	/*
@@ -1287,7 +1287,7 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
 
-	int protocol = TCP_PROTOCOL;
+	int protocol = IPPROTO_TCP;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
@@ -1449,7 +1449,7 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT); //Write the source port in
 	metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT); //And the destination port
 
-	int protocol = TCP_PROTOCOL;
+	int protocol = IPPROTO_TCP;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
@@ -1504,7 +1504,7 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	ip_hdr.src_ip = htonl(seg->src_ip);
 	ip_hdr.dst_ip = htonl(seg->dst_ip);
 	ip_hdr.zeros = 0;
-	ip_hdr.protocol = TCP_PROTOCOL;
+	ip_hdr.protocol = IPPROTO_TCP;
 	ip_hdr.tcp_len = htons((uint16_t) ff->dataFrame.pduLength);
 
 	pt = (uint8_t *) &ip_hdr;
@@ -1564,7 +1564,7 @@ struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
 	uint32_t protocol;
 	ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
 
-	if (ret || (uint16_t) protocol != TCP_PROTOCOL) {
+	if (ret || (uint16_t) protocol != IPPROTO_TCP) {
 		PRINT_DEBUG("error: ret=%d, protocol=%d", ret, protocol);
 		free(seg);
 		return NULL;
@@ -1968,7 +1968,7 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	pkt.src_ip = htonl(seg->src_ip);
 	pkt.dst_ip = htonl(seg->dst_ip);
 	pkt.zeros = 0;
-	pkt.protocol = TCP_PROTOCOL;
+	pkt.protocol = IPPROTO_TCP;
 	pkt.tcp_len = htons(TCP_HEADER_BYTES(seg->flags) + seg->data_len);
 	pkt.src_port = htons(seg->src_port);
 	pkt.dst_port = htons(seg->dst_port);
@@ -2504,7 +2504,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
 	}
 
-	int protocol = TCP_PROTOCOL;
+	int protocol = IPPROTO_TCP;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
@@ -2560,7 +2560,7 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	metadata_writeToElement(params, "dst_ip", &rem_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "dst_port", &rem_port, META_TYPE_INT);
 
-	int protocol = TCP_PROTOCOL;
+	int protocol = IPPROTO_TCP;
 	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));

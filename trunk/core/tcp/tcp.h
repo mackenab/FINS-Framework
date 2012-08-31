@@ -56,7 +56,7 @@
 #define TCP_HEADER_BYTES(flags)		WORDS_TO_BYTES(TCP_HEADER_WORDS(flags))	//For easily grabbing the size of the header in bytes from the flags field
 #define TCP_OPTIONS_BYTES(flags)	WORDS_TO_BYTES(TCP_OPTIONS_WORDS(flags))
 
-#define TCP_PROTOCOL 		IPPROTO_TCP //6
+//#define TCP_PROTOCOL 		IPPROTO_TCP //6
 #define IP_HEADER_WORDS 	3
 #define IP_HEADER_BYTES 	(IP_HEADER_WORDS*4)
 

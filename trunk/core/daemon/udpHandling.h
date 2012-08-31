@@ -10,7 +10,7 @@
 
 #define MAX_DATA_PER_UDP 4096
 
-#include "handlers.h"
+#include "daemon.h"
 
 int daemon_fdf_to_udp(u_char *data, u_int data_len, metadata *params);
 

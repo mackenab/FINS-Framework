@@ -23,10 +23,6 @@
 #include <limits.h>
 #include <sys/stat.h>
 
-//#include "wifidemux.h"
-//#include "daemon/handlers.h"
-#include <handlers.h>
-
 #define MAX_modules	16
 #define SNAP_LEN 		4096
 
