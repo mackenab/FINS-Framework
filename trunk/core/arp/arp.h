@@ -22,8 +22,9 @@
 #include <finstypes.h>
 #include <queueModule.h>
 
-#define ARP_REQUEST_OP 1
-#define ARP_REPLY_OP 2
+#define ARP_OP_REQUEST 1
+#define ARP_OP_REPLY 2
+
 #define NULLADDRESS 0
 #define HWDTYPE 1
 #define PROTOCOLTYPE 0x800
@@ -35,6 +36,8 @@
 #define REPLYCONTROL 3
 
 #define ARP_TYPE 0x0806
+#define ARP_MAC_BROADCAST 0xFFFFFFFFFFFF
+#define ARP_MAC_NULL 0x0
 
 /**struct arp_hdr is used for use external to the ARP module. The zeroth element of both
  * the IP and MAC arrays (e.g. sender_MAC_addrs[0] or target_IP_addrs[0] etc.) is the
@@ -68,14 +71,15 @@ struct ARP_message {
 };
 
 /**This struct is used to store information about neighboring nodes of the host interface*/
-struct node {
-
-	uint64_t MAC_addrs;
+struct arp_node {
+	struct arp_node *next;
 	uint32_t IP_addrs;
-	struct node *next;
+	uint64_t MAC_addrs;
+	//TODO add time created - for timeout
 };
 
-struct node *ptr_cacheHeader; /**< points to the first element of the dynamic ARP cache*/
+struct arp_node *interface_list;
+struct arp_node *cache_list; /**< points to the first element of the dynamic ARP cache*/
 uint64_t interface_MAC_addrs;/**<MAC address of interface*/
 uint32_t interface_IP_addrs;/**<IP address of interface*/
 unsigned char *fins_MAC_address; /**<void pointer of a fins control frame to pass MAC address*/
@@ -85,20 +89,25 @@ struct ARP_message arp_msg; /**<This is the ARP message to store and pass replie
 uint32_t target_IP_addrs; /**<IP address of a target node*/
 
 void gen_requestARP(uint32_t ip_target_addrs, struct ARP_message *request_ARP_ptr);
+void gen_requestARP_new(struct ARP_message *request_ARP_ptr, uint32_t dst_ip, uint32_t src_ip, uint64_t src_mac);
 
 void gen_replyARP(struct ARP_message *request, struct ARP_message *reply);
 
-int search_list(struct node *ptr_to_cache, uint32_t IP_addrs);
+int search_list(struct arp_node *ptr_to_cache, uint32_t IP_addrs);
+struct arp_node *search_list_new(struct arp_node *ptr_firstElementOfList, uint32_t IP_addrs);
 
 void update_cache(struct ARP_message *pckt);
+void update_cache_new(struct ARP_message *pckt);
 
-uint64_t search_MAC_addrs(uint32_t IP_addrs, struct node *ptr);
+uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_node *ptr);
 
 void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins);
 
 void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp); //, int size_of_finsFrame);
 
 void init_arp_intface(uint64_t MAC_address, uint32_t IP_address);
+
+int arp_register_interface(uint32_t IP_address, uint64_t MAC_address);
 
 void term_arp_intface();
 
@@ -108,7 +117,7 @@ void IP_addrs_conversion(uint32_t IP_int_addrs, unsigned char *IP_char_addrs);
 
 void print_msgARP(struct ARP_message *);
 
-void print_neighbors(struct node *ptr_to_cache);
+void print_neighbors(struct arp_node *ptr_to_cache);
 
 void print_IP_addrs(uint32_t ip_addrs);
 
@@ -134,7 +143,7 @@ void arp_in(struct finsFrame *sent_in);
 
 void arp_out_reply(struct finsFrame *fins_arp_out);
 
-void arp_out_request(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out);
+void arp_out_request(struct finsFrame *ff, uint32_t sought_IP_addrs, uint32_t src_ip, uint64_t src_mac);
 
 void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out);
 
@@ -155,6 +164,7 @@ void arp_in_fdf(struct finsFrame *ff);
 void arp_fcf(struct finsFrame *ff);
 
 void arp_exec(struct finsFrame *ff);
-void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip);
+void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip);
 
 #endif
+

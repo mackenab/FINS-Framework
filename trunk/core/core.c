@@ -29,8 +29,6 @@
 //#include <stdio.h> //added
 //kernel stuff
 
-int CORE_TEMP = 0;
-
 /** Global parameters of the socketdaemon
  *
  */
@@ -409,8 +407,8 @@ int main() {
 	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 
 	//set ip, loopback, etc //TODO move?
-	//my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
-	my_host_ip_addr = IP4_ADR_P2H(172,31,50,160);
+	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
+	//my_host_ip_addr = IP4_ADR_P2H(172,31,50,160);
 	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 
@@ -471,12 +469,40 @@ int main() {
 	pthread_create(&arp_thread, &fins_pthread_attr, ARP, &fins_pthread_attr);
 	//^^^^^ end added !!!!!
 
-	PRINT_DEBUG("created all threads\n");
+	PRINT_DEBUG("created all threads");
 
 	//TODO custom test, remove later
-	//char recv_data[4000];
-	//gets(recv_data);
-	CORE_TEMP = 1;
+	char recv_data[4000];
+	gets(recv_data);
+
+	PRINT_DEBUG("Sending ARP req");
+	struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+	if (ff_req == NULL) {
+		PRINT_DEBUG("todo error");
+		return 0;
+	}
+
+	metadata *params_req = (metadata *) malloc(sizeof(metadata));
+	if (params_req == NULL) {
+		PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
+		return 0;
+	}
+	metadata_create(params_req);
+
+	uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
+	uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
+
+	uint32_t exec_call = EXEC_ARP_GET_ADDR;
+	metadata_writeToElement(params_req, "exec_call", &exec_call, META_TYPE_INT);
+	metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT);
+	metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT);
+
+	ff_req->dataOrCtrl = CONTROL;
+	ff_req->destinationID.id = ARPID;
+	ff_req->metaData = params_req;
+	ff_req->ctrlFrame.opcode = CTRL_EXEC;
+
+	arp_to_switch(ff_req); //doesn't matter which queue
 
 	/**
 	 *************************************************************

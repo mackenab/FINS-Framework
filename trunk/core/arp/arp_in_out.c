@@ -32,51 +32,191 @@ void arp_in_fdf(struct finsFrame *ff) {
 		PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
 	}
 
-	fins_to_arp(ff, packet); //extract arp hdr from the fins frame
-	host_to_net(packet); //convert it into the right format (e.g. htons issue etc.)
+	struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
+	if (hdr == NULL) {
+		PRINT_DEBUG("todo error");
+		return;
+	}
+	fins_to_arp(ff, hdr); //extract arp hdr from the fins frame
+	host_to_net(hdr); //convert it into the right format (e.g. htons issue etc.)
 	arp_msg_ptr = &arp_msg;
-	arp_hdr_to_msg(packet, arp_msg_ptr); //convert the hdr into an internal ARP message (e.g. use uint64_t instead of unsigned char)
+	arp_hdr_to_msg(hdr, arp_msg_ptr); //convert the hdr into an internal ARP message (e.g. use uint64_t instead of unsigned char)
 
 	print_msgARP(arp_msg_ptr);
 
 	if (check_valid_arp(arp_msg_ptr) == 1) {
 		PRINT_DEBUG("ARP Data valid");
 
-		//update_cache(arp_msg_ptr); //TODO comment out?
+		uint32_t dst_ip = arp_msg_ptr->target_IP_addrs;
 
-		if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REQUEST_OP)) {
-			arp_out(REPLYDATA); //generate reply
-		} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REPLY_OP)) {
-			target_IP_addrs = arp_msg.sender_IP_addrs;
-			arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
+		struct arp_node *dst_node = search_list_new(interface_list, dst_ip);
+		if (dst_node) {
+			//uint64_t dst_mac = dst_node->MAC_addrs;
+
+			switch (arp_msg_ptr->operation) {
+			case ARP_OP_REQUEST: //TODO finish!!!!!!!!!!!!!!!
+				//arp_out(REPLYDATA); //generate reply
+				//arp_out_reply(ff, dst_ip);
+				PRINT_DEBUG("Request");
+
+				struct ARP_message arp_msg_reply;
+				gen_replyARP(&arp_msg, &arp_msg_reply);
+
+				struct arp_hdr *hdr_rep = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
+				if (hdr_rep == NULL) {
+					PRINT_DEBUG("todo error");
+					return;
+				}
+				arp_msg_to_hdr(&arp_msg_reply, hdr_rep);
+				host_to_net(hdr_rep);
+				print_arp_hdr(hdr_rep);
+				arp_to_fins(hdr_rep, ff); /**arp reply to be sent to network */
+
+				arp_to_switch(ff);
+				break;
+			case ARP_OP_REPLY:
+				PRINT_DEBUG("Reply");
+				//update_cache_new(arp_msg_ptr);
+
+				uint32_t src_ip = arp_msg_ptr->sender_IP_addrs;
+				uint64_t src_mac = arp_msg_ptr->sender_MAC_addrs;
+
+				struct arp_node *src_node = search_list_new(cache_list, src_ip);
+				if (src_node) {
+					PRINT_DEBUG("Updating host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
+
+					//TODO update IP/MAC
+					//TODO update time
+				} else {
+					src_node = (struct arp_node *) malloc(sizeof(struct arp_node));
+					src_node->IP_addrs = src_ip;
+					src_node->MAC_addrs = src_mac;
+					//TODO add time created etc
+
+					src_node->next = cache_list;
+					cache_list = src_node;
+
+					PRINT_DEBUG("Adding host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
+				}
+
+				//arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
+				//arp_out_ctrl(src_ip, ff);
+
+				//find FCF from queue, update meta, & send to switch
+
+				//arp_to_switch(ff);
+				break;
+			default:
+				PRINT_DEBUG("todo error");
+				break;
+			}
+		} else {
+			PRINT_DEBUG("todo error");
 		}
 	}
 }
 
-void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip) {
-	PRINT_DEBUG("Entered: ff=%p dst_ip=%u", ff, dst_ip);
+void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
+	struct arp_node *dst_node;
+	struct arp_node *src_node;
+	uint64_t dst_mac;
+	uint64_t src_mac;
+
+	PRINT_DEBUG("Entered: ff=%p dst_ip=%u src_ip=%u", ff, dst_ip, src_ip);
 
 	//memcpy(fins_IP_address, ff->ctrlFrame.paramterValue, PROTOCOLADDRSLEN);
 	//target_IP_addrs = gen_IP_addrs(fins_IP_address[0], fins_IP_address[1], fins_IP_address[2], fins_IP_address[3]);
 
-	target_IP_addrs = dst_ip;
+	//target_IP_addrs = dst_ip; //TODO remove need for?
 
-	/**request initiated by the ethernet stub*/
-	if (search_list(ptr_cacheHeader, target_IP_addrs) == 0) { //i.e. not found
-		arp_out(REQUESTDATA); //generate arp request for MAC address and send out to the network
+	src_node = search_list_new(interface_list, src_ip);
+	if (src_node) {
+		src_mac = src_node->MAC_addrs;
+
+		metadata *params = ff->metaData;
+		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
+
+		dst_node = search_list_new(interface_list, dst_ip);
+		if (dst_node) {
+			dst_mac = dst_node->MAC_addrs;
+			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+
+			ff->destinationID.id = IPID; //ff->ctrlFrame.senderID
+			ff->ctrlFrame.senderID = ARPID;
+			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+			arp_to_switch(ff);
+		} else {
+			dst_node = search_list_new(cache_list, dst_ip);
+			if (dst_node) {
+				if (1 /* timecheck */) { //TODO add time check here
+					dst_mac = dst_node->MAC_addrs;
+					metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+
+					ff->destinationID.id = IPID; //ff->ctrlFrame.senderID
+					ff->ctrlFrame.senderID = ARPID;
+					ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+					arp_to_switch(ff);
+				} else {
+					//TODO if TO, send ARP to old address, if timeout again, broadcast
+					//save fcf
+				}
+			} else {
+				dst_mac = ARP_MAC_BROADCAST;
+
+				struct ARP_message *msg = (struct ARP_message *) malloc(sizeof(struct ARP_message));
+				if (msg == NULL) {
+					PRINT_DEBUG("todo error");
+					return;
+				}
+				gen_requestARP_new(msg, dst_ip, src_ip, src_mac); //TODO remove/optimize?
+
+				struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
+				if (hdr == NULL) {
+					PRINT_DEBUG("todo error");
+					return;
+				}
+				arp_msg_to_hdr(msg, hdr);
+				host_to_net(hdr);
+				print_arp_hdr(hdr);
+
+				//#### move to new func?
+				struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+				if (ff_req == NULL) {
+					PRINT_DEBUG("todo error");
+					return;
+				}
+
+				metadata *params_req = (metadata *) malloc(sizeof(metadata));
+				if (params_req == NULL) {
+					PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
+					return;
+				}
+				metadata_create(params_req);
+
+				uint32_t ether_type = ARP_TYPE;
+				metadata_writeToElement(params_req, "ether_type", &ether_type, META_TYPE_INT);
+				metadata_writeToElement(params_req, "dst_mac", &dst_mac, META_TYPE_INT64);
+				metadata_writeToElement(params_req, "src_mac", &src_mac, META_TYPE_INT64);
+
+				ff_req->dataOrCtrl = DATA;
+				ff_req->destinationID.id = ETHERSTUBID;
+				ff_req->metaData = params_req;
+				ff_req->dataFrame.directionFlag = DOWN;
+				ff_req->dataFrame.pduLength = sizeof(struct arp_hdr);
+				ff_req->dataFrame.pdu = (unsigned char *) hdr;
+
+				arp_to_switch(ff_req);
+				//####
+
+				//arp_out_request(ff_req, dst_ip, src_ip, src_mac);
+				//save fcf in queue
+			}
+		}
 	} else {
-		//arp_out(REPLYCONTROL); //generate fins control carrying MAC address foe ethernet
-		//arp_out_ctrl(target_IP_addrs, ff);
-
-		ff->destinationID.id = ff->ctrlFrame.senderID;
-		ff->ctrlFrame.senderID = ARPID;
-		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-		MAC_addrs_conversion(search_MAC_addrs(target_IP_addrs, ptr_cacheHeader), fins_MAC_address);
-		ff->ctrlFrame.paramterValue = fins_MAC_address;
-
-		arp_to_switch(ff);
+		PRINT_DEBUG("todo error");
 	}
-	freeFinsFrame(ff);
 }
 
 /**@brief this function receives an arp message from outside and processes it
@@ -115,9 +255,9 @@ void arp_in(struct finsFrame *ff) {
 
 			update_cache(arp_msg_ptr);
 
-			if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REQUEST_OP)) {
+			if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_OP_REQUEST)) {
 				arp_out(REPLYDATA); //generate reply
-			} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_REPLY_OP)) {
+			} else if ((arp_msg_ptr->target_IP_addrs == interface_IP_addrs) && (arp_msg_ptr->operation == ARP_OP_REPLY)) {
 				target_IP_addrs = arp_msg.sender_IP_addrs;
 				arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
 			}
@@ -136,7 +276,7 @@ void arp_in(struct finsFrame *ff) {
 			target_IP_addrs = gen_IP_addrs(fins_IP_address[0], fins_IP_address[1], fins_IP_address[2], fins_IP_address[3]);
 
 			/**request initiated by the ethernet stub*/
-			if (search_list(ptr_cacheHeader, target_IP_addrs) == 0) { //i.e. not found
+			if (search_list(cache_list, target_IP_addrs) == 0) { //i.e. not found
 				arp_out(REQUESTDATA); //generate arp request for MAC address and send out to the network
 			} else {
 				arp_out(REPLYCONTROL); //generate fins control carrying MAC address foe ethernet
@@ -159,7 +299,7 @@ void arp_out(int response) {
 	struct finsFrame *fins_arp_out = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 
 	if (response == REQUESTDATA) {
-		arp_out_request(target_IP_addrs, fins_arp_out);
+		//arp_out_request(target_IP_addrs, fins_arp_out);
 	} else if (response == REPLYDATA) {
 		arp_out_reply(fins_arp_out);
 	} else if (response == REPLYCONTROL) {
@@ -183,7 +323,7 @@ void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
 	fins_arp_out->dataOrCtrl = CONTROL;
 	fins_arp_out->ctrlFrame.senderID = ARPID;
 	fins_arp_out->ctrlFrame.opcode = 222/*READREPLY*/;
-	MAC_addrs_conversion(search_MAC_addrs(sought_IP_addrs, ptr_cacheHeader), fins_MAC_address);
+	MAC_addrs_conversion(search_MAC_addrs(sought_IP_addrs, cache_list), fins_MAC_address);
 	fins_arp_out->ctrlFrame.paramterValue = fins_MAC_address;
 }
 
@@ -191,23 +331,46 @@ void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
  * @param sought_IP_addrs is the IP address whose associated MAC address is sought
  * @param fins_arp_out points to the fins frame which will be sent from the module
  * */
-void arp_out_request(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out) {
+void arp_out_request(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip, uint64_t src_mac) {
 
-	PRINT_DEBUG("sought_IP_addrs=%u ff=%p", sought_IP_addrs, fins_arp_out);
+	PRINT_DEBUG("sought_IP_addrs=%u ff=%p", dst_ip, ff);
 
-	gen_requestARP(sought_IP_addrs, &arp_msg);
+	gen_requestARP_new(&arp_msg, dst_ip, src_ip, src_mac);
 	arp_msg_to_hdr(&arp_msg, packet);
 	host_to_net(packet);
 	print_arp_hdr(packet);
-	arp_to_fins(packet, fins_arp_out); /**arp request to be sent to network*/
+	//arp_to_fins(packet, ff); /**arp request to be sent to network*/
+
+	metadata *params = ff->metaData;
+	if (params == NULL) {
+		PRINT_ERROR("failed to create matadata: ff=%p", ff);
+		return;
+	}
+
+	//metadata_writeToElement(params, "src_ip", (uint32_t *) pckt_arp->sender_MAC_addrs, META_TYPE_INT);
+	//metadata_writeToElement(params, "dst_ip", (uint32_t *) pckt_arp->target_IP_addrs, META_TYPE_INT);
+	//metadata_writeToElement(params, "src_mac", pckt_arp->sender_MAC_addrs, META_TYPE_STRING) ;
+	//metadata_writeToElement(params, "dst_mac", pckt_arp->target_MAC_addrs, META_TYPE_STRING) ;
+
+	uint32_t type = (uint32_t) ARP_TYPE;
+	metadata_writeToElement(params, "ether_type", &type, META_TYPE_INT);
+
+	ff->destinationID.id = ETHERSTUBID;
+	ff->dataOrCtrl = DATA;
+	ff->dataFrame.pdu = (unsigned char *) packet;
+	ff->dataFrame.directionFlag = DOWN;
+	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
+	ff->metaData = params;
+
+	arp_to_switch(ff);
 }
 
 /**@brief This function sends out a fins frame with a reply arp in response to a request
  * from the network
  * @param fins_arp_out points to the fins frame which will be sent from the module
  * */
-void arp_out_reply(struct finsFrame *fins_arp_out) {
-	PRINT_DEBUG("ff=%p", fins_arp_out);
+void arp_out_reply(struct finsFrame *ff) {
+	PRINT_DEBUG("ff=%p", ff);
 
 	struct ARP_message arp_msg_reply;
 
@@ -215,5 +378,7 @@ void arp_out_reply(struct finsFrame *fins_arp_out) {
 	arp_msg_to_hdr(&arp_msg_reply, packet);
 	host_to_net(packet);
 	print_arp_hdr(packet);
-	arp_to_fins(packet, fins_arp_out); /**arp reply to be sent to network */
+	arp_to_fins(packet, ff); /**arp reply to be sent to network */
+
+	arp_to_switch(ff);
 }

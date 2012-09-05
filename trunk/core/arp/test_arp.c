@@ -24,7 +24,7 @@ finsQueue ARP_to_Switch_Queue;
 sem_t Switch_to_ARP_Qsem;
 finsQueue Switch_to_ARP_Queue;
 
-struct node *ptr_neighbor_list;
+struct arp_node *ptr_neighbor_list;
 int num_hosts; /*<the number of neighbors to be generated*/
 
 uint64_t host_MAC_addrs;/**<MAC address of current interface; sent to the arp module*/
@@ -80,7 +80,7 @@ void gen_neighbor_list(char *fileName) {
 	/**< The following variables are for storing octet values*/
 	uint8_t IPa, IPb, IPc, IPd, MACa, MACb, MACc, MACd, MACe, MACf;
 
-	struct node record;
+	struct arp_node record;
 
 	ptr_file = fopen(fileName, "w");
 	if (!ptr_file) {
@@ -107,7 +107,7 @@ void gen_neighbor_list(char *fileName) {
 		IPd = (rand()) % 255;
 		record.IP_addrs = gen_IP_addrs(IPa, IPb, IPc, IPd);
 		record.MAC_addrs = gen_MAC_addrs(MACa, MACb, MACc, MACd, MACe, MACf);
-		fwrite(&record, sizeof(struct node), 1, ptr_file);
+		fwrite(&record, sizeof(struct arp_node), 1, ptr_file);
 	}
 
 	fclose(ptr_file); // closes the file
@@ -116,10 +116,10 @@ void gen_neighbor_list(char *fileName) {
 /**@brief this function reads a list of artificially created neighbor's list of a host
  * @param fileName is the file from which a list is generated
  */
-struct node* read_neighbor_list(char* fileName) {
+struct arp_node* read_neighbor_list(char* fileName) {
 	int i, j; /**<temporary variables for condition testing purposes*/
 
-	struct node *ptr_elementInList1, *ptr_elementInList2, *new_host, ptr_list; /**<These variables are used to store
+	struct arp_node *ptr_elementInList1, *ptr_elementInList2, *new_host, ptr_list; /**<These variables are used to store
 	 the read struct data from the file*/
 
 	if ((ptr_file = fopen(fileName, "r")) == NULL) {
@@ -131,9 +131,9 @@ struct node* read_neighbor_list(char* fileName) {
 	i = 0;
 
 	while (!feof(ptr_file) && j < num_hosts) {
-		fread(&ptr_list, sizeof(struct node), 1, ptr_file);
+		fread(&ptr_list, sizeof(struct arp_node), 1, ptr_file);
 
-		new_host = (struct node *) malloc(sizeof(struct node));
+		new_host = (struct arp_node *) malloc(sizeof(struct arp_node));
 
 		new_host->IP_addrs = ptr_list.IP_addrs;
 		new_host->MAC_addrs = ptr_list.MAC_addrs;
@@ -179,7 +179,7 @@ void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, stru
 	request_ARP_ptr->protocol_type = (PROTOCOLTYPE);
 	request_ARP_ptr->hardware_addrs_length = HDWADDRSLEN;
 	request_ARP_ptr->protocol_addrs_length = PROTOCOLADDRSLEN;
-	request_ARP_ptr->operation = (ARP_REQUEST_OP);
+	request_ARP_ptr->operation = (ARP_OP_REQUEST);
 	request_ARP_ptr->sender_MAC_addrs = MAC_sender_addrs;
 	request_ARP_ptr->sender_IP_addrs = IP_sender_addrs;
 	request_ARP_ptr->target_MAC_addrs = 0;
@@ -195,7 +195,7 @@ void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, stru
  * @param reply_ARP_ptr is the pointer to the ARP message struct reply given the appropriate node
  */
 void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *reply_ARP_ptr) {
-	struct node *ptr_elementInList;
+	struct arp_node *ptr_elementInList;
 	struct ARP_message reply_ARP;
 
 	ptr_elementInList = ptr_neighbor_list;
@@ -208,7 +208,7 @@ void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *re
 			reply_ARP.target_MAC_addrs = request_ARP_ptr->sender_MAC_addrs;
 			reply_ARP.hardware_addrs_length = request_ARP_ptr->hardware_addrs_length;
 			reply_ARP.hardware_type = (request_ARP_ptr->hardware_type);
-			reply_ARP.operation = (ARP_REPLY_OP);
+			reply_ARP.operation = (ARP_OP_REPLY);
 			reply_ARP.protocol_addrs_length = request_ARP_ptr->protocol_addrs_length;
 			reply_ARP.protocol_type = (request_ARP_ptr->protocol_type);
 			memcpy(reply_ARP_ptr, &reply_ARP, sizeof(struct ARP_message));

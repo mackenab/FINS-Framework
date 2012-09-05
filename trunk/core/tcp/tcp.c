@@ -1168,8 +1168,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	gbn_data->flag = &conn->to_gbn_flag;
 	gbn_data->waiting = &conn->main_wait_flag;
 	gbn_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%d to_gbn_fd=%d",
-			host_ip, host_port, rem_ip, rem_port, conn, gbn_data->id, conn->to_gbn_fd);
+	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%d to_gbn_fd=%d", host_ip, host_port, rem_ip, rem_port, conn, gbn_data->id, conn->to_gbn_fd);
 	if (pthread_create(&conn->to_gbn_thread, NULL, to_thread, (void *) gbn_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
@@ -2285,7 +2284,7 @@ void tcp_get_ff() {
 		tcp_fcf(ff);
 		PRINT_DEBUG("");
 	} else if (ff->dataOrCtrl == DATA) {
-		if ((ff->dataFrame).directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == UP) {
 			tcp_in_fdf(ff);
 			PRINT_DEBUG("");
 		} else { //directionFlag==DOWN
