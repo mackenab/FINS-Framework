@@ -46,11 +46,6 @@
 #define MAX_CALLS 500
 //#define LOOP_LIMIT 10
 
-// Data declarations
-/* Data for netlink sockets */
-struct sock *fins_nl_sk = NULL;
-int fins_daemon_pid = -1; // holds the pid of the FINS daemon so we know who to send back to
-
 /* Data for protocol registration */
 static struct proto_ops fins_proto_ops;
 static struct proto fins_proto;

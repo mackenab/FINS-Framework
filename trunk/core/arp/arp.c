@@ -369,10 +369,10 @@ void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
 	}
 	metadata_create(params);
 
-//metadata_writeToElement(params, "src_ip", (uint32_t *) pckt_arp->sender_MAC_addrs, META_TYPE_INT);
-//metadata_writeToElement(params, "dst_ip", (uint32_t *) pckt_arp->target_IP_addrs, META_TYPE_INT);
-//metadata_writeToElement(params, "src_mac", pckt_arp->sender_MAC_addrs, META_TYPE_STRING) ;
-//metadata_writeToElement(params, "dst_mac", pckt_arp->target_MAC_addrs, META_TYPE_STRING) ;
+	//metadata_writeToElement(params, "src_ip", (uint32_t *) pckt_arp->sender_MAC_addrs, META_TYPE_INT);
+	//metadata_writeToElement(params, "dst_ip", (uint32_t *) pckt_arp->target_IP_addrs, META_TYPE_INT);
+	//metadata_writeToElement(params, "src_mac", pckt_arp->sender_MAC_addrs, META_TYPE_STRING) ;
+	//metadata_writeToElement(params, "dst_mac", pckt_arp->target_MAC_addrs, META_TYPE_STRING) ;
 
 	uint32_t type = (uint32_t) ARP_TYPE;
 	metadata_writeToElement(params, "ether_type", &type, META_TYPE_INT);
@@ -392,7 +392,7 @@ void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
  */
 void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp) {
 
-//memcpy(pckt_arp, pckt_fins->dataFrame.pdu, pckt_fins->dataFrame.pduLength);
+	//memcpy(pckt_arp, pckt_fins->dataFrame.pdu, pckt_fins->dataFrame.pduLength);
 	memcpy(pckt_arp, pckt_fins->dataFrame.pdu, sizeof(struct arp_hdr));
 
 }
@@ -403,8 +403,8 @@ void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp) {
  * @param int_addrs is the address in unsigned int 64
  * @param *char_addrs points to the character array which will store the converted address
  *  */
+/**register shifting is used to extract individual bytes in the code below*/
 void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs) {
-	/**register shifting is used to extract individual bytes in the code below*/
 	char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FF))); //least sig.
 	char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00)) >> 8);
 	char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000)) >> 16);
@@ -445,9 +445,9 @@ void host_to_net(struct arp_hdr *pckt_hdr) {
  */
 int check_valid_arp(struct arp_message *msg) {
 
-	return (msg->hardware_type == HWDTYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY)
-			&& (msg->hardware_addrs_length == HDWADDRSLEN) && (msg->protocol_addrs_length == PROTOCOLADDRSLEN) && (msg->protocol_type == PROTOCOLTYPE)
-			&& (msg->sender_MAC_addrs != NULLADDRESS) && (msg->sender_IP_addrs != NULLADDRESS) && (msg->target_IP_addrs != NULLADDRESS);
+	return (msg->hardware_type == HWDTYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY) && (msg->hardware_addrs_length
+			== HDWADDRSLEN) && (msg->protocol_addrs_length == PROTOCOLADDRSLEN) && (msg->protocol_type == PROTOCOLTYPE) && (msg->sender_MAC_addrs
+			!= NULLADDRESS) && (msg->sender_IP_addrs != NULLADDRESS) && (msg->target_IP_addrs != NULLADDRESS);
 }
 
 /**
@@ -494,8 +494,58 @@ void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct arp_message *ptr_msg) {
 	ptr_msg->target_IP_addrs = gen_IP_addrs(ip_dst[0], ip_dst[1], ip_dst[2], ip_dst[3]);
 }
 
-struct finsFrame *arp_to_fdf(struct arp_message *tcp) {
-	return NULL;
+struct finsFrame *arp_to_fdf(struct arp_message *msg) {
+	PRINT_DEBUG("Entered: msg=%p", msg);
+
+	PRINT_DEBUG("target=%llx/%u, sender=%llx/%u, op=%d", msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
+
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	if (params == NULL) {
+		PRINT_ERROR("failed to create matadata: msg=%p", msg);
+		return NULL;
+	}
+	metadata_create(params);
+
+	uint32_t ether_type = ARP_TYPE;
+	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
+	metadata_writeToElement(params, "dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
+	metadata_writeToElement(params, "src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
+
+	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		PRINT_ERROR("failed to create ff: msg=%p meta=%p", msg, params);
+		metadata_destroy(params);
+		return NULL;
+	}
+
+	ff->dataOrCtrl = DATA;
+	ff->destinationID.id = ETHERSTUBID;
+	ff->destinationID.next = NULL;
+	ff->metaData = params;
+	ff->dataFrame.directionFlag = DOWN;
+	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
+	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
+
+	if (ff->dataFrame.pdu == NULL) {
+		PRINT_ERROR("failed to create pdu: msg=%p meta=%p", msg, params);
+		freeFinsFrame(ff);
+		return NULL;
+	}
+
+	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
+	hdr->hardware_type = htons(msg->hardware_type);
+	hdr->protocol_type = htons(msg->protocol_type);
+	hdr->hardware_addrs_length = msg->hardware_addrs_length;
+	hdr->protocol_addrs_length = msg->protocol_addrs_length;
+	hdr->operation = htons(hdr->operation);
+
+	MAC_addrs_conversion(msg->sender_MAC_addrs, hdr->sender_MAC_addrs);
+	IP_addrs_conversion(msg->sender_IP_addrs, hdr->sender_IP_addrs);
+	MAC_addrs_conversion(msg->target_MAC_addrs, hdr->target_MAC_addrs);
+	IP_addrs_conversion(msg->target_IP_addrs, hdr->target_IP_addrs);
+
+	PRINT_DEBUG("Exited: msg=%p ff=%p meta=%p", msg, ff, ff->metaData);
+	return ff;
 }
 
 struct arp_message *fdf_to_arp(struct finsFrame *ff) {
@@ -515,21 +565,24 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	}
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
+	//TODO change? such that sender_mac is uint64_t
 	unsigned char *sender_mac = hdr->sender_MAC_addrs;
 	unsigned char *sender_ip = hdr->sender_IP_addrs;
 	unsigned char *target_mac = hdr->target_MAC_addrs;
 	unsigned char *target_ip = hdr->target_IP_addrs;
 
-	msg->hardware_type = htons(hdr->hardware_type);
-	msg->protocol_type = htons(hdr->protocol_type);
+	msg->hardware_type = ntohs(hdr->hardware_type);
+	msg->protocol_type = ntohs(hdr->protocol_type);
 	msg->hardware_addrs_length = hdr->hardware_addrs_length;
 	msg->protocol_addrs_length = hdr->protocol_addrs_length;
-	msg->operation = htons(hdr->operation);
+	msg->operation = ntohs(hdr->operation);
 
 	msg->sender_MAC_addrs = gen_MAC_addrs(sender_mac[0], sender_mac[1], sender_mac[2], sender_mac[3], sender_mac[4], sender_mac[5]);
 	msg->sender_IP_addrs = gen_IP_addrs(sender_ip[0], sender_ip[1], sender_ip[2], sender_ip[3]);
 	msg->target_MAC_addrs = gen_MAC_addrs(target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
 	msg->target_IP_addrs = gen_IP_addrs(target_ip[0], target_ip[1], target_ip[2], target_ip[3]);
+
+	PRINT_DEBUG("target=%llx/%u, sender=%llx/%u, op=%d", msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
 	return msg;
 }
@@ -547,7 +600,7 @@ void arp_get_ff() {
 		return;
 	}
 
-//arp_in(ff);
+	//arp_in(ff);
 	if (ff->dataOrCtrl == CONTROL) {
 		arp_fcf(ff);
 		PRINT_DEBUG("");
@@ -567,42 +620,52 @@ void arp_get_ff() {
 void arp_fcf(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p", ff);
 
-//TODO fill out
+	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		//arp_read_param(ff);
 		//TODO read interface_mac?
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		//arp_set_param(ff);
 		//TODO set interface_mac?
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		break;
 	}
 }
@@ -620,7 +683,8 @@ void arp_exec(struct finsFrame *ff) {
 		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
 		switch (exec_call) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call);
+			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call)
+			;
 
 			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
 			ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
@@ -633,7 +697,8 @@ void arp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
+			PRINT_ERROR("Error unknown exec_call=%d", exec_call)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -668,21 +733,21 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("ARP Started");
 	arp_running = 1;
 
-//uint64_t MACADDRESS = 9890190479;/**<MAC address of host; sent to the arp module*/
+	//uint64_t MACADDRESS = 9890190479;/**<MAC address of host; sent to the arp module*/
 	uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
-//uint64_t MACADDRESS = 0x080027112233; //eth1, nat
-//uint64_t MACADDRESS = 0x080027123456; //made up
+	//uint64_t MACADDRESS = 0x080027112233; //eth1, nat
+	//uint64_t MACADDRESS = 0x080027123456; //made up
 
-//uint32_t IPADDRESS = 672121;/**<IP address of host; sent to the arp module*/
+	//uint32_t IPADDRESS = 672121;/**<IP address of host; sent to the arp module*/
 	uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
-//uint32_t IPADDRESS = IP4_ADR_P2H(172,31,50,160);/**<IP address of host; sent to the arp module*/
+	//uint32_t IPADDRESS = IP4_ADR_P2H(172,31,50,160);/**<IP address of host; sent to the arp module*/
 
-//init_arp_intface(MACADDRESS, IPADDRESS);
+	//init_arp_intface(MACADDRESS, IPADDRESS);
 
 	interface_list = NULL;
 	cache_list = NULL;
 
-	arp_register_interface(IPADDRESS, MACADDRESS);
+	arp_register_interface(MACADDRESS, IPADDRESS);
 
 	while (arp_running) {
 		arp_get_ff();
@@ -696,9 +761,9 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 void arp_shutdown() {
 	arp_running = 0;
 
-//TODO fill this out
+	//TODO fill this out
 }
 
 void arp_free() {
-//TODO free all module related mem
+	//TODO free all module related mem
 }

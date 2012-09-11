@@ -111,7 +111,7 @@ void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp); //, int
 
 void init_arp_intface(uint64_t MAC_address, uint32_t IP_address);
 
-int arp_register_interface(uint32_t IP_address, uint64_t MAC_address);
+int arp_register_interface(uint64_t MAC_address, uint32_t IP_address);
 
 void term_arp_intface();
 

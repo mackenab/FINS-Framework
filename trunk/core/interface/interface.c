@@ -232,6 +232,12 @@ void *Capturer_to_Interface(void *local) {
 		ff->dataFrame.directionFlag = UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
+		if (ff->dataFrame.pdu == NULL) {
+			PRINT_DEBUG("todo error");
+			freeFinsFrame(ff);
+			free(frame);
+			continue;
+		}
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
 		metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);

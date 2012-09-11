@@ -33,8 +33,8 @@ void init_arp_intface(uint64_t MAC_address, uint32_t IP_address) {
 	cache_list = intface;
 }
 
-int arp_register_interface(uint32_t IP_address, uint64_t MAC_address) {
-	PRINT_DEBUG("Registering Interface: IP=%u, MAC=%llu", IP_address, MAC_address);
+int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
+	PRINT_DEBUG("Registering Interface: MAC=%llu, IP=%u", MAC_address, IP_address);
 
 	struct arp_node *interface = (struct arp_node*) malloc(sizeof(struct arp_node));
 	if (interface == NULL) {
@@ -42,8 +42,8 @@ int arp_register_interface(uint32_t IP_address, uint64_t MAC_address) {
 		return 0;
 	}
 
-	interface->IP_addrs = IP_address;
 	interface->MAC_addrs = MAC_address;
+	interface->IP_addrs = IP_address;
 
 	interface->next = interface_list;
 	interface_list = interface;

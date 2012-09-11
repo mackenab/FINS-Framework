@@ -341,6 +341,10 @@ void termination_handler(int sig) {
 	ipv4_shutdown();
 	arp_shutdown();
 
+	daemon_shutdown(); //TODO finish
+	interface_shutdown(); //TODO finish
+	switch_shutdown(); //TODO finish
+
 	//join driving thread for each module
 	pthread_join(arp_thread, NULL);
 	pthread_join(ipv4_thread, NULL);
@@ -357,6 +361,10 @@ void termination_handler(int sig) {
 	tcp_free();
 	ipv4_free();
 	arp_free();
+
+	daemon_free();
+	interface_free();
+	switch_free();
 
 	//free daemonSockets
 	int i = 0, j = 0;
@@ -387,11 +395,10 @@ void termination_handler(int sig) {
 }
 
 int main() {
+	//############# //TODO move to Daemon
 	//init the netlink socket connection to daemon
-	//int nl_sockfd;
-	//sem_init();
 	nl_sockfd = init_fins_nl();
-	if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
+	if (nl_sockfd == -1) {
 		perror("init_fins_nl() caused an error");
 		exit(-1);
 	}
@@ -405,6 +412,7 @@ int main() {
 		exit(-1);
 	}
 	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	//#############
 
 	//set ip, loopback, etc //TODO move?
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
@@ -460,9 +468,10 @@ int main() {
 	//pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, &fins_pthread_attr);
 	//pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, &fins_pthread_attr);
 
-	pthread_create(&daemon_thread, &fins_pthread_attr, Daemon, &fins_pthread_attr);
 	pthread_create(&switch_thread, &fins_pthread_attr, Switch, &fins_pthread_attr);
+	pthread_create(&daemon_thread, &fins_pthread_attr, Daemon, &fins_pthread_attr);
 	pthread_create(&interface_thread, &fins_pthread_attr, Interface, &fins_pthread_attr);
+
 	pthread_create(&udp_thread, &fins_pthread_attr, UDP, &fins_pthread_attr);
 	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, &fins_pthread_attr);
 	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, &fins_pthread_attr);
@@ -490,7 +499,9 @@ int main() {
 	metadata_create(params_req);
 
 	uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
+	//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
 	uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
+	//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
 
 	uint32_t exec_call = EXEC_ARP_GET_ADDR;
 	metadata_writeToElement(params_req, "exec_call", &exec_call, META_TYPE_INT);

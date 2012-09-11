@@ -71,6 +71,10 @@ int send_wedge(int sockfd, u_char *buf, size_t len, int flags) {
 	// Build a message to send to the kernel
 	int nlmsg_len = NLMSG_LENGTH(len);
 	struct nlmsghdr *nlh = (struct nlmsghdr *) malloc(nlmsg_len);
+	if (nlh == NULL) {
+		PRINT_ERROR("nlh malloc error");
+		return -1;
+	}
 	memset(nlh, 0, nlmsg_len);
 
 	nlh->nlmsg_len = nlmsg_len;
@@ -691,6 +695,10 @@ void bind_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	}
 
 	addr = (struct sockaddr_in *) malloc(addr_len);
+	if (addr == NULL) {
+		PRINT_DEBUG("todo error");
+		return;
+	}
 	memcpy(addr, pt, addr_len);
 	pt += addr_len;
 
@@ -806,6 +814,10 @@ void connect_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	}
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
+	if (addr == NULL) {
+		PRINT_DEBUG("todo error");
+		return;
+	}
 
 	memcpy(addr, pt, addrlen);
 	pt += addrlen;
@@ -1057,6 +1069,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		pt += sizeof(int);
 
 		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_DEBUG("todo error");
+			return;
+		}
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1121,6 +1137,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		pt += sizeof(int);
 
 		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_DEBUG("todo error");
+			return;
+		}
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1185,6 +1205,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		pt += sizeof(int);
 
 		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_DEBUG("todo error");
+			return;
+		}
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1249,6 +1273,10 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		pt += sizeof(int);
 
 		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_DEBUG("todo error");
+			return;
+		}
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1584,6 +1612,10 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 
 	if (optlen > 0) { //TODO remove?
 		optval = (u_char *) malloc(optlen);
+		if (optval == NULL) {
+			PRINT_DEBUG("todo error");
+			return;
+		}
 		memcpy(optval, pt, optlen);
 		pt += optlen;
 	}
@@ -1645,6 +1677,10 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 
 	if (optlen > 0) {
 		optval = (u_char *) malloc(optlen);
+		if (optval == NULL) {
+			PRINT_DEBUG("todo error");
+			return;
+		}
 		memcpy(optval, pt, optlen);
 		pt += optlen;
 	}
@@ -3230,6 +3266,16 @@ void daemon_init(pthread_attr_t *fins_pthread_attr) {
 
 void daemon_shutdown() {
 	daemon_running = 0;
+
+	//prime the kernel to establish daemon's PID
+	int daemoncode = daemon_stop_call;
+	int ret_val;
+	ret_val = send_wedge(nl_sockfd, (u_char *) &daemoncode, sizeof(int), 0);
+	if (ret_val != 0) {
+		perror("sendfins() caused an error");
+		exit(-1);
+	}
+	PRINT_DEBUG("Disconnecting to wedge at %d", nl_sockfd);
 
 	//TODO expand this
 }

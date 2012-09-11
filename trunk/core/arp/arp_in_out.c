@@ -20,7 +20,6 @@ void arp_out_fdf(struct finsFrame *ff) {
 }
 
 void arp_in_fdf(struct finsFrame *ff) {
-	struct arp_message *arp_msg_ptr;
 	struct arp_message *msg;
 
 	PRINT_DEBUG("Entered: ff=%p", ff);
@@ -46,17 +45,16 @@ void arp_in_fdf(struct finsFrame *ff) {
 					struct arp_message arp_msg_reply;
 					gen_replyARP_new(&arp_msg_reply, dst_mac, dst_ip, src_mac, src_ip);
 
-					struct arp_hdr *hdr_rep = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
-					if (hdr_rep == NULL) {
+					struct finsFrame *ff_reply = arp_to_fdf(&arp_msg_reply);
+					if (ff_reply) {
+						if (!arp_to_switch(ff_reply)) {
+							PRINT_DEBUG("todo error");
+							free(ff_reply->dataFrame.pdu);
+							freeFinsFrame(ff_reply);
+						}
+					} else {
 						PRINT_DEBUG("todo error");
-						return;
 					}
-					arp_msg_to_hdr(&arp_msg_reply, hdr_rep);
-					host_to_net(hdr_rep);
-					print_arp_hdr(hdr_rep);
-					arp_to_fins(hdr_rep, ff); /**arp reply to be sent to network */
-
-					arp_to_switch(ff);
 				} else {
 					PRINT_DEBUG("Reply");
 					//update_cache_new(arp_msg_ptr);
@@ -69,6 +67,11 @@ void arp_in_fdf(struct finsFrame *ff) {
 						//TODO update time
 					} else {
 						src_node = (struct arp_node *) malloc(sizeof(struct arp_node));
+						if (src_node == NULL) {
+							PRINT_ERROR("node malloc error");
+							return;
+						}
+
 						src_node->IP_addrs = src_ip;
 						src_node->MAC_addrs = src_mac;
 						//TODO add time created etc
@@ -147,54 +150,70 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					//TODO save fcf in queue
 				}
 			} else {
-				//arp_out_request(ff_req, dst_ip, src_ip, src_mac);
 				dst_mac = ARP_MAC_BROADCAST;
 
-				struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
-				if (msg == NULL) {
+				/*
+				 struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
+				 if (msg == NULL) {
+				 PRINT_DEBUG("todo error");
+				 return;
+				 }*/
+				struct arp_message msg;
+				//gen_requestARP_new(msg, src_mac, src_ip, ARP_MAC_NULL, dst_ip); //TODO remove/optimize?
+				gen_requestARP_new(&msg, src_mac, src_ip, dst_mac, dst_ip); //TODO remove/optimize?
+				//gen_requestARP_new(msg, dst_mac, dst_ip, src_mac, src_ip);
+
+				struct finsFrame *ff_req = arp_to_fdf(&msg);
+				if (ff_req) {
+					if (!arp_to_switch(ff_req)) {
+						PRINT_DEBUG("todo error");
+						free(ff_req->dataFrame.pdu);
+						freeFinsFrame(ff_req);
+					}
+				} else {
 					PRINT_DEBUG("todo error");
-					return;
-				}
-				gen_requestARP_new(msg, src_mac, src_ip, ARP_MAC_NULL, dst_ip); //TODO remove/optimize?
-
-				struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
-				if (hdr == NULL) {
-					PRINT_DEBUG("todo error");
-					return;
-				}
-				arp_msg_to_hdr(msg, hdr);
-				host_to_net(hdr);
-				print_arp_hdr(hdr);
-
-				//#### //TODO move to new func?
-				struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-				if (ff_req == NULL) {
-					PRINT_DEBUG("todo error");
-					return;
 				}
 
-				metadata *params_req = (metadata *) malloc(sizeof(metadata));
-				if (params_req == NULL) {
-					PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
-					return;
-				}
-				metadata_create(params_req);
+				/*
+				 struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
+				 if (hdr == NULL) {
+				 PRINT_DEBUG("todo error");
+				 return;
+				 }
+				 arp_msg_to_hdr(msg, hdr);
+				 host_to_net(hdr);
+				 print_arp_hdr(hdr);
 
-				uint32_t ether_type = ARP_TYPE;
-				metadata_writeToElement(params_req, "ether_type", &ether_type, META_TYPE_INT);
-				metadata_writeToElement(params_req, "dst_mac", &dst_mac, META_TYPE_INT64);
-				metadata_writeToElement(params_req, "src_mac", &src_mac, META_TYPE_INT64);
+				 //#### //TODO move to new func?
+				 struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+				 if (ff_req == NULL) {
+				 PRINT_DEBUG("todo error");
+				 return;
+				 }
 
-				ff_req->dataOrCtrl = DATA;
-				ff_req->destinationID.id = ETHERSTUBID;
-				ff_req->metaData = params_req;
-				ff_req->dataFrame.directionFlag = DOWN;
-				ff_req->dataFrame.pduLength = sizeof(struct arp_hdr);
-				ff_req->dataFrame.pdu = (unsigned char *) hdr;
+				 metadata *params_req = (metadata *) malloc(sizeof(metadata));
+				 if (params_req == NULL) {
+				 PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
+				 return;
+				 }
+				 metadata_create(params_req);
 
-				arp_to_switch(ff_req);
-				//####
+				 uint32_t ether_type = ARP_TYPE;
+				 metadata_writeToElement(params_req, "ether_type", &ether_type, META_TYPE_INT);
+				 metadata_writeToElement(params_req, "dst_mac", &dst_mac, META_TYPE_INT64);
+				 metadata_writeToElement(params_req, "src_mac", &src_mac, META_TYPE_INT64);
 
+				 ff_req->dataOrCtrl = DATA;
+				 ff_req->destinationID.id = ETHERSTUBID;
+				 ff_req->destinationID.next = NULL;
+				 ff_req->metaData = params_req;
+				 ff_req->dataFrame.directionFlag = DOWN;
+				 ff_req->dataFrame.pduLength = sizeof(struct arp_hdr);
+				 ff_req->dataFrame.pdu = (unsigned char *) hdr;
+
+				 arp_to_switch(ff_req);
+				 //####
+				 */
 				//TODO save fcf in queue
 			}
 		}
