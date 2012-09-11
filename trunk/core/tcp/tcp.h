@@ -410,8 +410,8 @@ struct tcp_segment {
 void tcp_srand(); //Seed the random number generator
 int tcp_rand(); //Get a random number
 
-struct finsFrame *seg_to_fdf(struct tcp_segment *tcp);
-struct tcp_segment *fdf_to_seg(struct finsFrame *ff);
+struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
+struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
 
 struct tcp_segment *seg_create(struct tcp_connection *conn);
 void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);

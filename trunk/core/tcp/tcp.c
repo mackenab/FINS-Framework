@@ -1399,38 +1399,40 @@ int tcp_rand() {
 	return rand(); //Just use the standard C random number generator for now
 }
 
-uint8_t *copy_uint8(uint8_t *ptr, uint8_t val) {
-	*ptr++ = val;
-	return ptr;
-}
+/*
+ uint8_t *copy_uint8(uint8_t *ptr, uint8_t val) { //TODO deprecated, remove
+ *ptr++ = val;
+ return ptr;
+ }
 
-uint8_t *copy_uint16(uint8_t *ptr, uint16_t val) {
-	*ptr++ = (uint8_t)(val >> 8);
-	*ptr++ = (uint8_t)(val & 0x00FF);
-	return ptr;
-}
+ uint8_t *copy_uint16(uint8_t *ptr, uint16_t val) { //TODO deprecated, remove
+ *ptr++ = (uint8_t)(val >> 8);
+ *ptr++ = (uint8_t)(val & 0x00FF);
+ return ptr;
+ }
 
-uint8_t *copy_uint32(uint8_t *ptr, uint32_t val) {
-	*ptr++ = (uint8_t)(val >> 24);
-	*ptr++ = (uint8_t)((val & 0x00FF0000) >> 16);
-	*ptr++ = (uint8_t)((val & 0x0000FF00) >> 8);
-	*ptr++ = (uint8_t)(val & 0x000000FF);
-	return ptr;
-}
+ uint8_t *copy_uint32(uint8_t *ptr, uint32_t val) { //TODO deprecated, remove
+ *ptr++ = (uint8_t)(val >> 24);
+ *ptr++ = (uint8_t)((val & 0x00FF0000) >> 16);
+ *ptr++ = (uint8_t)((val & 0x0000FF00) >> 8);
+ *ptr++ = (uint8_t)(val & 0x000000FF);
+ return ptr;
+ }
 
-uint8_t *copy_uint64(uint8_t *ptr, uint64_t val) {
-	*ptr++ = (uint8_t)(val >> 56);
-	*ptr++ = (uint8_t)((val & 0x00FF000000000000) >> 48);
-	*ptr++ = (uint8_t)((val & 0x0000FF0000000000) >> 40);
-	*ptr++ = (uint8_t)((val & 0x000000FF00000000) >> 32);
-	*ptr++ = (uint8_t)((val & 0x00000000FF000000) >> 24);
-	*ptr++ = (uint8_t)((val & 0x0000000000FF0000) >> 16);
-	*ptr++ = (uint8_t)((val & 0x000000000000FF00) >> 8);
-	*ptr++ = (uint8_t)(val & 0x00000000000000FF);
-	return ptr;
-}
+ uint8_t *copy_uint64(uint8_t *ptr, uint64_t val) { //TODO deprecated, remove
+ *ptr++ = (uint8_t)(val >> 56);
+ *ptr++ = (uint8_t)((val & 0x00FF000000000000) >> 48);
+ *ptr++ = (uint8_t)((val & 0x0000FF0000000000) >> 40);
+ *ptr++ = (uint8_t)((val & 0x000000FF00000000) >> 32);
+ *ptr++ = (uint8_t)((val & 0x00000000FF000000) >> 24);
+ *ptr++ = (uint8_t)((val & 0x0000000000FF0000) >> 16);
+ *ptr++ = (uint8_t)((val & 0x000000000000FF00) >> 8);
+ *ptr++ = (uint8_t)(val & 0x00000000000000FF);
+ return ptr;
+ }
+ */
 
-struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
+struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	PRINT_DEBUG("Entered: seg=%p", seg);
 
 	PRINT_DEBUG( "info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=%x, win=%u, checksum=%x, F=%d, S=%d, R=%d, A=%d",
@@ -1535,7 +1537,7 @@ struct finsFrame *seg_to_fdf(struct tcp_segment *seg) {
 	return ff;
 }
 
-struct tcp_segment *fdf_to_seg(struct finsFrame *ff) {
+struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p", ff);
 
 	if (ff->dataFrame.pduLength < MIN_TCP_HEADER_BYTES) {
@@ -2028,7 +2030,7 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 int seg_send(struct tcp_segment *seg) {
 	PRINT_DEBUG("Entered: seg=%p", seg);
 
-	struct finsFrame *ff = seg_to_fdf(seg);
+	struct finsFrame *ff = tcp_to_fdf(seg);
 
 	/*//###############################
 	 struct tcp_segment *seg_test = fdf_to_seg(ff);

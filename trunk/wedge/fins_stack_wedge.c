@@ -1,5 +1,5 @@
 /*  
- * FINS_stack_wedge.c - 
+ * fins_stack_wedge.c -
  */
 
 /* License and signing info */
@@ -15,17 +15,17 @@
 #include <net/sock.h>		/* Needed for proto and sock struct defs, etc. */
 #include <linux/socket.h>	/* Needed for the sockaddr struct def */
 #include <linux/errno.h>	/* Needed for error number defines */
-#include <linux/aio.h>		/* Needed for FINS_sendmsg */
+#include <linux/aio.h>		/* Needed for fins_sendmsg */
 #include <linux/skbuff.h>	/* Needed for sk_buff struct def, etc. */
 #include <linux/net.h>		/* Needed for socket struct def, etc. */
 /* Includes for the netlink socket part */
 #include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
 #include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
 #include <asm/uaccess.h>	/** Copy from user */
-#include <asm/ioctls.h>		/* Needed for FINS_ioctl */
+#include <asm/ioctls.h>		/* Needed for fins_ioctl */
 #include <linux/sockios.h>
 #include <linux/delay.h>	/* For sleep */
-#include <linux/if.h>		/* Needed for FINS_ioctl */
+#include <linux/if.h>		/* Needed for fins_ioctl */
 #include <asm/spinlock.h> //might be linux/spin... for rwlock
 //##
 #include <net/inet_common.h>
@@ -99,7 +99,7 @@
  */
 
 //#include <sys/socket.h> /* may need to be removed */
-#include "FINS_stack_wedge.h"	/* Defs for this module */
+#include "fins_stack_wedge.h"	/* Defs for this module */
 
 #define RECV_BUFFER_SIZE	1024	// Same as userspace, Pick an appropriate value here
 //for compiling in non modified kernel, will compile but not run
@@ -145,6 +145,475 @@ int print_exit(const char *func, int line, int rc) {
 #endif
 	return rc;
 }
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+#include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/types.h>
+#include <linux/socket.h>
+#include <linux/in.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/sched.h>
+#include <linux/timer.h>
+#include <linux/string.h>
+#include <linux/sockios.h>
+#include <linux/net.h>
+#include <linux/capability.h>
+#include <linux/fcntl.h>
+#include <linux/mm.h>
+#include <linux/interrupt.h>
+#include <linux/stat.h>
+#include <linux/init.h>
+#include <linux/poll.h>
+#include <linux/netfilter_ipv4.h>
+#include <linux/random.h>
+#include <linux/slab.h>
+
+#include <asm/uaccess.h>
+#include <asm/system.h>
+
+#include <linux/inet.h>
+#include <linux/igmp.h>
+#include <linux/inetdevice.h>
+#include <linux/netdevice.h>
+#include <net/checksum.h>
+#include <net/ip.h>
+#include <net/protocol.h>
+#include <net/arp.h>
+#include <net/route.h>
+#include <net/ip_fib.h>
+#include <net/inet_connection_sock.h>
+#include <net/tcp.h>
+#include <net/udp.h>
+#include <net/udplite.h>
+#include <linux/skbuff.h>
+#include <net/sock.h>
+#include <net/raw.h>
+#include <net/icmp.h>
+#include <net/ipip.h>
+#include <net/inet_common.h>
+#include <net/xfrm.h>
+#include <net/net_namespace.h>
+#ifdef CONFIG_IP_MROUTE
+#include <linux/mroute.h>
+#endif
+
+//unsigned long *sysctl_local_reserved_ports; //TODO change name?
+extern unsigned long *sysctl_local_reserved_ports;
+
+#ifdef CONFIG_IP_MULTICAST
+static const struct net_protocol igmp_protocol = {
+	.handler = igmp_rcv,
+	.netns_ok = 1,
+};
+#endif
+
+static const struct net_protocol tcp_protocol = { .handler = tcp_v4_rcv, .err_handler = tcp_v4_err, .gso_send_check = tcp_v4_gso_send_check, .gso_segment =
+		tcp_tso_segment, .gro_receive = tcp4_gro_receive, .gro_complete = tcp4_gro_complete, .no_policy = 1, .netns_ok = 1, };
+
+static const struct net_protocol udp_protocol = { .handler = udp_rcv, .err_handler = udp_err, .gso_send_check = udp4_ufo_send_check, .gso_segment =
+		udp4_ufo_fragment, .no_policy = 1, .netns_ok = 1, };
+
+static const struct net_protocol icmp_protocol = { .handler = icmp_rcv, .no_policy = 1, .netns_ok = 1, };
+
+/*
+ struct proto raw_prot = { .name = "RAW", .owner = THIS_MODULE, .close = raw_close, .destroy = raw_destroy, .connect = ip4_datagram_connect, .disconnect =
+ udp_disconnect, .ioctl = raw_ioctl, .init = raw_init, .setsockopt = raw_setsockopt, .getsockopt = raw_getsockopt, .sendmsg = raw_sendmsg, .recvmsg =
+ raw_recvmsg, .bind = raw_bind, .backlog_rcv = raw_rcv_skb, .hash = raw_hash_sk, .unhash = raw_unhash_sk, .obj_size = sizeof(struct raw_sock),
+ .h.raw_hash = &raw_v4_hashinfo,
+ #ifdef CONFIG_COMPAT
+ .compat_setsockopt = compat_raw_setsockopt,
+ .compat_getsockopt = compat_raw_getsockopt,
+ .compat_ioctl = compat_raw_ioctl,
+ #endif
+ };
+ */
+
+static struct list_head fins_inetsw[SOCK_MAX];
+static DEFINE_SPINLOCK( fins_inetsw_lock);
+
+static const struct proto_ops inet_sockraw_ops = { .family = PF_INET, .owner = THIS_MODULE, .release = inet_release, .bind = inet_bind, .connect =
+		inet_dgram_connect, .socketpair = sock_no_socketpair, .accept = sock_no_accept, .getname = inet_getname, .poll = datagram_poll, .ioctl = inet_ioctl,
+		.listen = sock_no_listen, .shutdown = inet_shutdown, .setsockopt = sock_common_setsockopt, .getsockopt = sock_common_getsockopt,
+		.sendmsg = inet_sendmsg, .recvmsg = inet_recvmsg, .mmap = sock_no_mmap, .sendpage = inet_sendpage,
+#ifdef CONFIG_COMPAT
+		.compat_setsockopt = compat_sock_common_setsockopt,
+		.compat_getsockopt = compat_sock_common_getsockopt,
+		.compat_ioctl = inet_compat_ioctl,
+#endif
+		};
+
+/* Upon startup we insert all the elements in fins_inetsw_array[] into
+ * the linked list inetsw_fins.
+ */
+static struct inet_protosw fins_inetsw_array[] = { //
+		{ .type = SOCK_STREAM, .protocol = IPPROTO_TCP, .prot = &tcp_prot, .ops = &inet_stream_ops, .no_check = 0, .flags = INET_PROTOSW_PERMANENT
+				| INET_PROTOSW_ICSK, }, //
+				{ .type = SOCK_DGRAM, .protocol = IPPROTO_UDP, .prot = &udp_prot, .ops = &inet_dgram_ops, .no_check = UDP_CSUM_DEFAULT, .flags =
+						INET_PROTOSW_PERMANENT, }
+		/*,{ .type = SOCK_RAW, .protocol = IPPROTO_IP, .prot = &raw_prot, .ops =&inet_sockraw_ops, .no_check = UDP_CSUM_DEFAULT, .flags = INET_PROTOSW_REUSE, }*/
+		};
+
+#define FINS_INETSW_ARRAY_LEN	ARRAY_SIZE(fins_inetsw_array)
+
+void fins_inet_register_protosw(struct inet_protosw *p) {
+	struct list_head *lh;
+	struct inet_protosw *answer;
+	int protocol = p->protocol;
+	struct list_head *last_perm;
+
+	spin_lock_bh(&fins_inetsw_lock);
+
+	if (p->type >= SOCK_MAX)
+		goto out_illegal;
+
+	/* If we are trying to override a permanent protocol, bail. */
+	answer = NULL;
+	last_perm = &fins_inetsw[p->type];
+	list_for_each(lh, &fins_inetsw[p->type])
+	{
+		answer = list_entry(lh, struct inet_protosw, list);
+
+		/* Check only the non-wild match. */
+		if (INET_PROTOSW_PERMANENT & answer->flags) {
+			if (protocol == answer->protocol)
+				break;
+			last_perm = lh;
+		}
+
+		answer = NULL;
+	}
+	if (answer)
+		goto out_permanent;
+
+	/* Add the new entry after the last permanent entry if any, so that
+	 * the new entry does not override a permanent entry when matched with
+	 * a wild-card protocol. But it is allowed to override any existing
+	 * non-permanent entry.  This means that when we remove this entry, the
+	 * system automatically returns to the old behavior.
+	 */
+	list_add_rcu(&p->list, last_perm);
+	out: spin_unlock_bh(&fins_inetsw_lock);
+
+	return;
+
+	out_permanent:
+	printk(KERN_ERR "Attempt to override permanent protocol %d.\n",
+			protocol);
+	goto out;
+
+	out_illegal:
+	printk(KERN_ERR
+			"Ignoring attempt to register invalid socket type %d.\n",
+			p->type);
+	goto out;
+}
+
+#include <linux/cache.h>
+#include <linux/module.h>
+#include <linux/netdevice.h>
+#include <linux/spinlock.h>
+#include <net/protocol.h>
+
+const struct net_protocol __rcu *fins_inet_protos[MAX_INET_PROTOS] __read_mostly;
+
+/*
+ *      Add a protocol handler to the hash tables
+ */
+
+int fins_inet_add_protocol(const struct net_protocol *prot, unsigned char protocol) {
+	int hash = protocol & (MAX_INET_PROTOS - 1);
+
+	return !cmpxchg((const struct net_protocol **) &fins_inet_protos[hash], NULL, prot) ? 0 : -1;
+}
+
+/*
+ *      Remove a protocol from the hash tables.
+ */
+
+int fins_inet_del_protocol(const struct net_protocol *prot, unsigned char protocol) {
+	int ret, hash = protocol & (MAX_INET_PROTOS - 1);
+
+	ret = (cmpxchg((const struct net_protocol **) &fins_inet_protos[hash], prot, NULL) == prot) ? 0 : -1;
+
+	synchronize_net();
+
+	return ret;
+}
+
+static int fins_inet_init(void) {
+	struct sk_buff *dummy_skb;
+	struct inet_protosw *q;
+	struct list_head *r;
+	int rc = -EINVAL;
+
+	BUILD_BUG_ON(sizeof(struct inet_skb_parm) > sizeof(dummy_skb->cb));
+
+	if (sysctl_local_reserved_ports == NULL)
+		sysctl_local_reserved_ports = kzalloc(65536 / 8, GFP_KERNEL);
+	if (!sysctl_local_reserved_ports)
+		goto out;
+
+	rc = 0;
+	//rc = proto_register(&tcp_prot, 1);
+	if (rc)
+		goto out_free_reserved_ports;
+
+	//rc = proto_register(&udp_prot, 1);
+	if (rc)
+		goto out_unregister_tcp_proto;
+
+	//rc = proto_register(&raw_prot, 1);
+	if (rc)
+		goto out_unregister_udp_proto;
+
+	/*
+	 *	Tell SOCKET that we are alive...
+	 */
+
+	//(void) sock_register(&inet_family_ops);
+#ifdef CONFIG_SYSCTL
+	//ip_static_sysctl_init(); //TODO uncomment?
+#endif
+
+	/*
+	 *	Add all the base protocols.
+	 */
+
+	/*
+	 if (fins_inet_add_protocol(&icmp_protocol, IPPROTO_ICMP) < 0)
+	 printk(KERN_CRIT "inet_init: Cannot add ICMP protocol\n");
+	 if (fins_inet_add_protocol(&udp_protocol, IPPROTO_UDP) < 0)
+	 printk(KERN_CRIT "inet_init: Cannot add UDP protocol\n");
+	 if (fins_inet_add_protocol(&tcp_protocol, IPPROTO_TCP) < 0)
+	 printk(KERN_CRIT "inet_init: Cannot add TCP protocol\n");
+	 #ifdef CONFIG_IP_MULTICAST
+	 if (fins_inet_add_protocol(&igmp_protocol, IPPROTO_IGMP) < 0)
+	 printk(KERN_CRIT "inet_init: Cannot add IGMP protocol\n");
+	 #endif
+	 */
+
+	/* Register the socket-side information for inet_create. */
+	for (r = &fins_inetsw[0]; r < &fins_inetsw[SOCK_MAX]; ++r)
+		INIT_LIST_HEAD(r);
+
+	for (q = fins_inetsw_array; q < &fins_inetsw_array[FINS_INETSW_ARRAY_LEN]; ++q)
+		fins_inet_register_protosw(q);
+
+	/*
+	 *	Set the ARP module up
+	 */
+
+	//arp_init();
+	/*
+	 *	Set the IP module up
+	 */
+
+	//ip_init();
+	//tcp_v4_init();
+	/* Setup TCP slab cache for open requests. */
+	//tcp_init();
+	/* Setup UDP memory threshold */
+	//udp_init();
+	/* Add UDP-Lite (RFC 3828) */
+	//udplite4_register();
+	/*
+	 *	Set the ICMP layer up
+	 */
+
+	/*
+	 if (icmp_init() < 0)
+	 panic("Failed to create the ICMP control socket.\n");
+	 */
+
+	/*
+	 *	Initialise the multicast router
+	 */
+
+	/*
+	 #if defined(CONFIG_IP_MROUTE)
+	 if (ip_mr_init())
+	 printk(KERN_CRIT "inet_init: Cannot init ipv4 mroute\n");
+	 #endif
+	 */
+	/*
+	 *	Initialise per-cpu ipv4 mibs
+	 */
+
+	/*
+	 if (init_ipv4_mibs())
+	 printk(KERN_CRIT "inet_init: Cannot init ipv4 mibs\n");
+	 */
+
+	//ipv4_proc_init();
+	//ipfrag_init();
+	//dev_add_pack(&ip_packet_type);
+	rc = 0;
+	out: return rc;
+	out_unregister_udp_proto: proto_unregister(&udp_prot);
+	out_unregister_tcp_proto: proto_unregister(&tcp_prot);
+	out_free_reserved_ports: kfree(sysctl_local_reserved_ports);
+	goto out;
+}
+
+static inline int fins_inet_netns_ok(struct net *net, int protocol) {
+	int hash;
+	const struct net_protocol *ipprot;
+
+	if (net_eq(net, &init_net))
+		return 1;
+
+	hash = protocol & (MAX_INET_PROTOS - 1);
+	ipprot = rcu_dereference(fins_inet_protos[hash]);
+
+	if (ipprot == NULL)
+		/* raw IP is OK */
+		return 1;
+	return ipprot->netns_ok;
+}
+
+static int fins_inet_create(struct net *net, struct socket *sock, int protocol, int kern) {
+	struct sock *sk;
+	struct inet_protosw *answer;
+	struct inet_sock *inet;
+	struct proto *answer_prot;
+	unsigned char answer_flags;
+	char answer_no_check;
+	int try_loading_module = 0;
+	int err;
+
+	if (unlikely(!inet_ehash_secret))
+		if (sock->type != SOCK_RAW && sock->type != SOCK_DGRAM)
+			build_ehash_secret();
+
+	sock->state = SS_UNCONNECTED;
+
+	/* Look for the requested type/protocol pair. */
+	lookup_protocol: err = -ESOCKTNOSUPPORT;
+	rcu_read_lock();
+	list_for_each_entry_rcu(answer, &fins_inetsw[sock->type], list)
+	{
+
+		err = 0;
+		/* Check the non-wild match. */
+		if (protocol == answer->protocol) {
+			if (protocol != IPPROTO_IP)
+				break;
+		} else {
+			/* Check for the two wild cases. */
+			if (IPPROTO_IP == protocol) {
+				protocol = answer->protocol;
+				break;
+			}
+			if (IPPROTO_IP == answer->protocol)
+				break;
+		}
+		err = -EPROTONOSUPPORT;
+	}
+
+	if (unlikely(err)) {
+		if (try_loading_module < 2) {
+			rcu_read_unlock();
+			/*
+			 * Be more specific, e.g. net-pf-2-proto-132-type-1
+			 * (net-pf-PF_INET-proto-IPPROTO_SCTP-type-SOCK_STREAM)
+			 */
+			if (++try_loading_module == 1)
+				request_module("net-pf-%d-proto-%d-type-%d", PF_INET, protocol, sock->type);
+			/*
+			 * Fall back to generic, e.g. net-pf-2-proto-132
+			 * (net-pf-PF_INET-proto-IPPROTO_SCTP)
+			 */
+			else
+				request_module("net-pf-%d-proto-%d", PF_INET, protocol);
+			goto lookup_protocol;
+		} else
+			goto out_rcu_unlock;
+	}
+
+	err = -EPERM;
+	if (sock->type == SOCK_RAW && !kern && !capable(CAP_NET_RAW))
+		goto out_rcu_unlock;
+
+	err = -EAFNOSUPPORT;
+	if (!fins_inet_netns_ok(net, protocol)) //TODO comment?
+		goto out_rcu_unlock;
+
+	sock->ops = answer->ops;
+	answer_prot = answer->prot;
+	answer_no_check = answer->no_check;
+	answer_flags = answer->flags;
+	rcu_read_unlock();
+
+	WARN_ON(answer_prot->slab == NULL);
+
+	err = -ENOBUFS;
+	sk = sk_alloc(net, PF_INET, GFP_KERNEL, answer_prot);
+	if (sk == NULL)
+		goto out;
+
+	err = 0;
+	sk->sk_no_check = answer_no_check;
+	if (INET_PROTOSW_REUSE & answer_flags)
+		sk->sk_reuse = 1;
+
+	inet = inet_sk(sk);
+	inet->is_icsk = (INET_PROTOSW_ICSK & answer_flags) != 0;
+
+	inet->nodefrag = 0;
+
+	if (SOCK_RAW == sock->type) {
+		inet->inet_num = protocol;
+		if (IPPROTO_RAW == protocol)
+			inet->hdrincl = 1;
+	}
+
+	if (ipv4_config.no_pmtu_disc)
+		inet->pmtudisc = IP_PMTUDISC_DONT;
+	else
+		inet->pmtudisc = IP_PMTUDISC_WANT;
+
+	inet->inet_id = 0;
+
+	sock_init_data(sock, sk);
+
+	sk->sk_destruct = inet_sock_destruct;
+	sk->sk_protocol = protocol;
+	sk->sk_backlog_rcv = sk->sk_prot->backlog_rcv;
+
+	inet->uc_ttl = -1;
+	inet->mc_loop = 1;
+	inet->mc_ttl = 1;
+	inet->mc_all = 1;
+	inet->mc_index = 0;
+	inet->mc_list = NULL;
+
+	sk_refcnt_debug_inc(sk);
+
+	if (inet->inet_num) {
+		/* It assumes that any protocol which allows
+		 * the user to assign a number at socket
+		 * creation time automatically
+		 * shares.
+		 */
+		inet->inet_sport = htons(inet->inet_num);
+		/* Add to protocol hash chains. */
+		sk->sk_prot->hash(sk);
+	}
+
+	if (sk->sk_prot->init) {
+		err = sk->sk_prot->init(sk);
+		if (err)
+			sk_common_release(sk);
+	}
+	out: return print_exit(__FUNCTION__, __LINE__, err);
+	out_rcu_unlock: rcu_read_unlock();
+	goto out;
+}
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 void init_wedge_calls(void) {
 	int i;
@@ -418,7 +887,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 	memcpy(NLMSG_DATA(nlh), buf, len);
 
 	// Send the message
-	ret_val = nlmsg_unicast(FINS_nl_sk, skb, pid);
+	ret_val = nlmsg_unicast(fins_nl_sk, skb, pid);
 	if (ret_val < 0) {
 		PRINT_ERROR("netlink error sending to user");
 		return -1;
@@ -645,13 +1114,15 @@ void nl_data_ready(struct sk_buff *skb) {
 		} else if (len == sizeof(u_int)) {
 			reply_call = *(u_int *) buf;
 			if (reply_call == daemon_start_call) {
-				if (FINS_daemon_pid != -1) {
-					PRINT_DEBUG("Daemon pID changed, old pid=%d\n", FINS_daemon_pid);
+				if (fins_daemon_pid != -1) {
+					PRINT_DEBUG("Daemon pID changed, old pid=%d", fins_daemon_pid);
 				}
-				FINS_daemon_pid = pid;
-				PRINT_DEBUG("Daemon connected, pid=%d\n", FINS_daemon_pid);
+				fins_stack_passthrough_enabled = 1;
+				fins_daemon_pid = pid;
+				PRINT_DEBUG("Daemon connected, pid=%d", fins_daemon_pid);
 			} else if (reply_call == daemon_stop_call) {
-				FINS_daemon_pid = -1; //TODO expand this functionality
+				fins_stack_passthrough_enabled = 0;
+				fins_daemon_pid = -1; //TODO expand this functionality
 			} else {
 				//TODO drop?
 			}
@@ -664,17 +1135,17 @@ void nl_data_ready(struct sk_buff *skb) {
 	end: PRINT_DEBUG("Exited: skb=%p", skb);
 }
 
-/* This function is called from within FINS_release and is modeled after ipx_destroy_socket() */
-/*static void FINS_destroy_socket(struct sock *sk) {
+/* This function is called from within fins_release and is modeled after ipx_destroy_socket() */
+/*static void fins_destroy_socket(struct sock *sk) {
  PRINT_DEBUG("called.");
  skb_queue_purge(&sk->sk_receive_queue);
  sk_refcnt_debug_dec(sk);
  }*/
 
-int FINS_sk_create(struct net *net, struct socket *sock) {
+int fins_sk_create(struct net *net, struct socket *sock) {
 	struct sock *sk;
 
-	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &FINS_proto);
+	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &fins_proto);
 	if (sk == NULL) {
 		return -ENOMEM;
 	}
@@ -683,12 +1154,12 @@ int FINS_sk_create(struct net *net, struct socket *sock) {
 	sock_init_data(sock, sk);
 
 	sk->sk_no_check = 1;
-	sock->ops = &FINS_proto_ops;
+	sock->ops = &fins_proto_ops;
 
 	return 0;
 }
 
-void FINS_sk_destroy(struct socket *sock) {
+void fins_sk_destroy(struct socket *sock) {
 	struct sock *sk;
 	sk = sock->sk;
 
@@ -709,15 +1180,15 @@ void FINS_sk_destroy(struct socket *sock) {
 /*
  * This function tests whether the FINS data passthrough has been enabled or if the original stack is to be used
  * and passes data through appropriately.  This function is called when socket() call is made from userspace
- * (specified in struct net_proto_family FINS_net_proto)
+ * (specified in struct net_proto_family fins_net_proto)
  */
-static int FINS_wedge_create(struct net *net, struct socket *sock, int protocol, int kern) {
+static int wedge_create(struct net *net, struct socket *sock, int protocol, int kern) {
 	//int err;
 	//const struct net_proto_family *pf;
 	//int family = AF_INET;
 
-	if (FINS_stack_passthrough_enabled == 1) {
-		return FINS_create(net, sock, protocol, kern);
+	if (fins_stack_passthrough_enabled) {
+		return fins_create(net, sock, protocol, kern);
 	} else { // Use original inet stack
 		/*
 		 rcu_read_lock();
@@ -730,7 +1201,7 @@ static int FINS_wedge_create(struct net *net, struct socket *sock, int protocol,
 		 rcu_read_unlock();
 		 return pf->create(net, sock, protocol, kern);
 		 */
-		return -1;
+		return print_exit(__FUNCTION__, __LINE__, fins_inet_create(net, sock, protocol, kern));
 		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
 		//return inet_stream_ops.bind(NULL, NULL, 0);
 	}
@@ -738,9 +1209,9 @@ static int FINS_wedge_create(struct net *net, struct socket *sock, int protocol,
 
 /*
  * If the FINS stack passthrough is enabled, this function is called when socket() is called from userspace.
- * See FINS_wedge_create_socket for details.
+ * See wedge_create_socket for details.
  */
-static int FINS_create(struct net *net, struct socket *sock, int protocol, int kern) {
+static int fins_create(struct net *net, struct socket *sock, int protocol, int kern) {
 	int rc = -ESOCKTNOSUPPORT;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -754,13 +1225,13 @@ static int FINS_create(struct net *net, struct socket *sock, int protocol, int k
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
 	// Required stuff for kernel side
-	rc = FINS_sk_create(net, sock);
+	rc = fins_sk_create(net, sock);
 	if (rc) {
 		PRINT_ERROR("allocation failed");
 		return print_exit(__FUNCTION__, __LINE__, rc);
@@ -780,7 +1251,7 @@ static int FINS_create(struct net *net, struct socket *sock, int protocol, int k
 	PRINT_DEBUG("insert: sock_id=%llu sock_index=%d", sock_id, sock_index);
 	if (sock_index == -1) {
 		up(&sockets_sem);
-		FINS_sk_destroy(sock);
+		fins_sk_destroy(sock);
 		return print_exit(__FUNCTION__, __LINE__, -ENOMEM);
 	}
 
@@ -838,8 +1309,8 @@ static int FINS_create(struct net *net, struct socket *sock, int protocol, int k
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", socket_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -876,7 +1347,7 @@ static int FINS_create(struct net *net, struct socket *sock, int protocol, int k
 		ret = remove_wedge_socket(sock_id, sock_index, socket_call);
 		up(&sockets_sem);
 
-		FINS_sk_destroy(sock);
+		fins_sk_destroy(sock);
 		return print_exit(__FUNCTION__, __LINE__, rc);
 	}
 
@@ -892,7 +1363,49 @@ static int FINS_create(struct net *net, struct socket *sock, int protocol, int k
 	return print_exit(__FUNCTION__, __LINE__, 0);
 }
 
-static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
+static int wedge_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu, addr_len=%d", sock_id, addr_len);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+			PRINT_ERROR("daemon not connected");
+			return print_exit(__FUNCTION__, __LINE__, -1);
+		}
+
+		return fins_bind(sock, addr, addr_len);
+	} else { // Use original inet stack
+		//release_sock(sk);
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.bind(sock, addr, addr_len));
+	}
+}
+
+static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -906,7 +1419,7 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -987,8 +1500,8 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", bind_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -1028,7 +1541,43 @@ static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_listen(struct socket *sock, int backlog) {
+static int wedge_listen(struct socket *sock, int backlog) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_listen(sock, backlog);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.listen(sock, backlog));
+	}
+}
+
+static int fins_listen(struct socket *sock, int backlog) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -1042,7 +1591,7 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1117,8 +1666,8 @@ static int FINS_listen(struct socket *sock, int backlog) {
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", listen_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -1158,7 +1707,43 @@ static int FINS_listen(struct socket *sock, int backlog) {
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags) {
+static int wedge_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_connect(sock, addr, addr_len, flags);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.connect(sock, addr, addr_len, flags));
+	}
+}
+
+static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -1172,7 +1757,7 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1253,8 +1838,8 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", connect_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -1294,7 +1879,43 @@ static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) { //TODO fix, two blocking accept calls
+static int wedge_accept(struct socket *sock, struct socket *sock_new, int flags) { //TODO fix, two blocking accept calls
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_accept(sock, sock_new, flags);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.accept(sock, sock_new, flags));
+	}
+}
+
+static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) { //TODO fix, two blocking accept calls
 	int rc;
 	struct sock *sk, *sk_new;
 	unsigned long long sock_id, sock_id_new;
@@ -1308,7 +1929,7 @@ static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1337,7 +1958,7 @@ static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) 
 
 	sk_new = wedge_sockets[sock_index].sk_new;
 	if (sk_new == NULL) {
-		rc = FINS_sk_create(sock_net(sock->sk), sock_new);
+		rc = fins_sk_create(sock_net(sock->sk), sock_new);
 		if (rc) {
 			PRINT_ERROR("allocation failed");
 			up(&sockets_sem);
@@ -1356,7 +1977,7 @@ static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) 
 		PRINT_DEBUG("insert new: sock_id=%llu sock_index=%d", sock_id_new, index_new);
 		if (index_new == -1) {
 			up(&sockets_sem);
-			FINS_sk_destroy(sock_new);
+			fins_sk_destroy(sock_new);
 			release_sock(sk);
 			return print_exit(__FUNCTION__, __LINE__, rc);
 		}
@@ -1376,7 +1997,7 @@ static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) 
 			 PRINT_DEBUG("insert new: sock_id=%llu sock_index=%d", uniqueSockID_new, index_new);
 			 if (index_new == -1) {
 			 up(&sockets_sem);
-			 FINS_sk_destroy(sock_new);
+			 fins_sk_destroy(sock_new);
 			 release_sock(sk);
 			 return print_exit(__FUNCTION__, __LINE__, rc);
 			 }
@@ -1442,8 +2063,8 @@ static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) 
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", accept_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -1498,7 +2119,43 @@ static int FINS_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer) {
+static int wedge_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_getname(sock, addr, len, peer);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.getname(sock, addr, len, peer));
+	}
+}
+
+static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -1513,7 +2170,7 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	int ret;
 	struct sockaddr_in *addr_in;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1588,8 +2245,8 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", getname_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -1666,7 +2323,43 @@ static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len) {
+static int wedge_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_sendmsg(iocb, sock, msg, len);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.sendmsg(iocb, sock, msg, len));
+	}
+}
+
+static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -1685,7 +2378,7 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1795,8 +2488,8 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", sendmsg_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -1839,7 +2532,43 @@ static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags) {
+static int wedge_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_recvmsg(iocb, sock, msg, len, flags);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.recvmsg(iocb, sock, msg, len, flags));
+	}
+}
+
+static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -1855,7 +2584,7 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	int ret;
 	int i;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -1942,8 +2671,8 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", recvmsg_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -2052,7 +2781,43 @@ static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
+static int wedge_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_ioctl(sock, cmd, arg);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.ioctl(sock, cmd, arg));
+	}
+}
+
+static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
 	int rc = 0;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -2082,7 +2847,7 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	//http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L4905 - ioctl
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -2311,8 +3076,8 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", ioctl_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -2573,13 +3338,49 @@ static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
+static int wedge_release(struct socket *sock) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_release(sock);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.release(sock));
+	}
+}
+
 /*
  * This function is called automatically to cleanup when a program that
  * created a socket terminates.
  * Or manually via close()?????
  * Modeled after ipx_release().
  */
-static int FINS_release(struct socket *sock) {
+static int fins_release(struct socket *sock) {
 	int rc = 0;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -2593,7 +3394,7 @@ static int FINS_release(struct socket *sock) {
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, 0); //TODO should be -1, done to prevent stalls
 	}
@@ -2616,7 +3417,7 @@ static int FINS_release(struct socket *sock) {
 	PRINT_DEBUG("sock_index=%d", sock_index);
 	if (sock_index == -1) {
 		up(&sockets_sem);
-		FINS_sk_destroy(sock);
+		fins_sk_destroy(sock);
 		return print_exit(__FUNCTION__, __LINE__, 0);
 	}
 
@@ -2672,8 +3473,8 @@ static int FINS_release(struct socket *sock) {
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", release_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -2708,11 +3509,47 @@ static int FINS_release(struct socket *sock) {
 	ret = remove_wedge_socket(sock_id, sock_index, release_call);
 	up(&sockets_sem);
 
-	FINS_sk_destroy(sock);
+	fins_sk_destroy(sock);
 	return print_exit(__FUNCTION__, __LINE__, 0); //TODO should be rc, 0 to prevent stalling
 }
 
-static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *table) {
+static unsigned int wedge_poll(struct file *file, struct socket *sock, poll_table *table) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_poll(file, sock, table);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.poll(file, sock, table));
+	}
+}
+
+static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table *table) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -2734,7 +3571,7 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 		PRINT_DEBUG("file=%p sock=%p table=%p key=NULL", file, sock, table);
 	}
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, 0);
 	}
@@ -2817,8 +3654,8 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", poll_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -2892,8 +3729,44 @@ static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
+static int wedge_shutdown(struct socket *sock, int how) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_shutdown(sock, how);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.shutdown(sock, how));
+	}
+}
+
 //TODO figure out when this is called
-static int FINS_shutdown(struct socket *sock, int how) {
+static int fins_shutdown(struct socket *sock, int how) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -2907,7 +3780,7 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -2982,8 +3855,8 @@ static int FINS_shutdown(struct socket *sock, int how) {
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", shutdown_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -3023,7 +3896,43 @@ static int FINS_shutdown(struct socket *sock, int how) {
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
+static int wedge_socketpair(struct socket *sock1, struct socket *sock2) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock1->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_socketpair(sock1, sock2);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.socketpair(sock1, sock2));
+	}
+}
+
+static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	struct sock *sk1, *sk2;
 	unsigned long long uniqueSockID1, uniqueSockID2;
 	int ret;
@@ -3042,7 +3951,7 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	PRINT_DEBUG("Entered for %llu, %llu.", uniqueSockID1, uniqueSockID2);
 
 	// Notify FINS daemon
-	if (FINS_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
+	if (fins_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -3050,11 +3959,11 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	//TODO: finish this & daemon side
 
 	// Build the message
-	buf = "FINS_socketpair() called.";
+	buf = "fins_socketpair() called.";
 	buffer_length = strlen(buf) + 1;
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buffer_length, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
 		return print_exit(__FUNCTION__, __LINE__, -1);
@@ -3063,7 +3972,43 @@ static int FINS_socketpair(struct socket *sock1, struct socket *sock2) {
 	return 0;
 }
 
-static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma) {
+static int wedge_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+		return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+	if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+		//TODO error
+	}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+	if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_mmap(file, sock, vma);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.mmap(file, sock, vma));
+	}
+}
+
+static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -3077,7 +4022,7 @@ static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -3149,8 +4094,8 @@ static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", mmap_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -3190,7 +4135,16 @@ static int FINS_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static ssize_t FINS_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags) {
+static ssize_t wedge_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags) {
+	if (fins_stack_passthrough_enabled) {
+		return fins_sendpage(sock, page, offset, size, flags);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__, inet_stream_ops.sendpage(sock, page, offset, size, flags));
+	}
+}
+
+static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -3204,7 +4158,7 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page, int offset,
 	u_char *pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -3276,8 +4230,8 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page, int offset,
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", sendpage_call, sock_id, buf_len);
 
-	// Send message to FINS_daemon
-	ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+	// Send message to fins_daemon
+	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -3317,8 +4271,44 @@ static ssize_t FINS_sendpage(struct socket *sock, struct page *page, int offset,
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_getsockopt(struct socket *sock, int level, int optname, char __user*optval, int __user *optlen) {
-	//static int FINS_getsockopt(struct socket *sock, int level, int optname, char *optval, int *optlen) {
+static int wedge_getsockopt(struct socket *sock, int level, int optname, char __user*optval, int __user *optlen) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+//TODO error
+}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_getsockopt(sock, level, optname, optval, optlen);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__,  inet_stream_ops.getsockopt(sock, level, optname, optval, optlen));
+	}
+}
+
+static int fins_getsockopt(struct socket *sock, int level, int optname, char __user*optval, int __user *optlen) {
+	//static int fins_getsockopt(struct socket *sock, int level, int optname, char *optval, int *optlen) {
 	int rc = 0;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -3340,7 +4330,7 @@ static int FINS_getsockopt(struct socket *sock, int level, int optname, char __u
 	//SO_SNDBUF
 	//SO_RCVBUF
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -3440,8 +4430,8 @@ kfree(buf);
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", getsockopt_call, sock_id, buf_len);
 
-// Send message to FINS_daemon
-ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+// Send message to fins_daemon
+ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -3520,8 +4510,44 @@ up(&sockets_sem);
 	return print_exit(__FUNCTION__, __LINE__, rc);
 }
 
-static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
-	//static int FINS_setsockopt(struct socket *sock, int level, int optname, char *optval, unsigned int optlen) {
+static int wedge_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
+	struct sock *sk;
+	unsigned long long sock_id;
+	int sock_index;
+
+	sk = sock->sk;
+	if (sk == NULL) {
+		PRINT_ERROR("sk null");
+return print_exit(__FUNCTION__, __LINE__, -1);
+	}
+	lock_sock(sk);
+
+	sock_id = getUniqueSockID(sk);
+	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+
+if (down_interruptible(&sockets_sem)) {
+		PRINT_ERROR("sockets_sem acquire fail");
+//TODO error
+}
+	sock_index = find_wedge_socket(sock_id);
+	PRINT_DEBUG("sock_index=%d", sock_index);
+if (sock_index == -1) {
+	} else {
+		//call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	}
+	up(&sockets_sem);
+	release_sock(sk);
+
+	if (fins_stack_passthrough_enabled) {
+		return fins_setsockopt(sock, level, optname, optval,  optlen);
+	} else { // Use original inet stack
+		//return inet_family_ops.inet_create(net, sock, protocol, kern); //doesn't work? does internal number checking with AF_INET
+		return print_exit(__FUNCTION__, __LINE__,  inet_stream_ops.setsockopt(sock, level, optname, optval,  optlen));
+	}
+}
+
+static int fins_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
+	//static int fins_setsockopt(struct socket *sock, int level, int optname, char *optval, unsigned int optlen) {
 	int rc;
 	struct sock *sk;
 	unsigned long long sock_id;
@@ -3535,7 +4561,7 @@ static int FINS_setsockopt(struct socket *sock, int level, int optname, char __u
 	u_char * pt;
 	int ret;
 
-	if (FINS_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
+	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
 return print_exit(__FUNCTION__, __LINE__, -1);
 	}
@@ -3626,8 +4652,8 @@ kfree(buf);
 
 	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", setsockopt_call, sock_id, buf_len);
 
-// Send message to FINS_daemon
-ret = nl_send(FINS_daemon_pid, buf, buf_len, 0);
+// Send message to fins_daemon
+ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
@@ -3669,28 +4695,30 @@ return print_exit(__FUNCTION__, __LINE__, rc);
 
 /* Data structures needed for protocol registration */
 /* A proto struct for the dummy protocol */
-static struct proto FINS_proto = { .name = "FINS_PROTO", .owner = THIS_MODULE, .obj_size = sizeof(struct FINS_sock), };
+static struct proto fins_proto = { .name = "FINS_PROTO", .owner = THIS_MODULE, .obj_size = sizeof(struct fins_sock), };
 
 /* see IPX struct net_proto_family ipx_family_ops for comparison */
-static struct net_proto_family FINS_net_proto = { .family = PF_FINS, .create = FINS_wedge_create, // This function gets called when socket() is called from userspace
+static struct net_proto_family fins_net_proto = { .family = PF_FINS, .create = wedge_create, // This function gets called when socket() is called from userspace
 	.owner = THIS_MODULE, };
 
 /* Defines which functions get called when corresponding calls are made from userspace */
-static struct proto_ops FINS_proto_ops = { .owner = THIS_MODULE, .family = PF_FINS, .release = FINS_release, .bind = FINS_bind, //sock_no_bind,
-	.connect = FINS_connect, //sock_no_connect,
-	.socketpair = FINS_socketpair, //sock_no_socketpair,
-	.accept = FINS_accept, //sock_no_accept,
-	.getname = FINS_getname, //sock_no_getname,
-	.poll = FINS_poll, //sock_no_poll,
-	.ioctl = FINS_ioctl, //sock_no_ioctl,
-	.listen = FINS_listen, //sock_no_listen,
-	.shutdown = FINS_shutdown, //sock_no_shutdown,
-	.setsockopt = FINS_setsockopt, //sock_no_setsockopt,
-	.getsockopt = FINS_getsockopt, //sock_no_getsockopt,
-	.sendmsg = FINS_sendmsg, //sock_no_sendmsg,
-	.recvmsg = FINS_recvmsg, //sock_no_recvmsg,
-	.mmap = FINS_mmap, //sock_no mmap,
-	.sendpage = FINS_sendpage, //sock_no_sendpage,
+static struct proto_ops fins_proto_ops = { .owner = THIS_MODULE, .family = PF_FINS, //
+	.release = wedge_release, //sock_no_close,
+	.bind = wedge_bind, //sock_no_bind,
+	.connect = wedge_connect, //sock_no_connect,
+	.socketpair = wedge_socketpair, //sock_no_socketpair,
+	.accept = wedge_accept, //sock_no_accept,
+	.getname = wedge_getname, //sock_no_getname,
+	.poll = wedge_poll, //sock_no_poll,
+	.ioctl = wedge_ioctl, //sock_no_ioctl,
+	.listen = wedge_listen, //sock_no_listen,
+	.shutdown = wedge_shutdown, //sock_no_shutdown,
+	.setsockopt = wedge_setsockopt, //sock_no_setsockopt,
+	.getsockopt = wedge_getsockopt, //sock_no_getsockopt,
+	.sendmsg = wedge_sendmsg, //sock_no_sendmsg,
+	.recvmsg = wedge_recvmsg, //sock_no_recvmsg,
+	.mmap = wedge_mmap, //sock_no mmap,
+	.sendpage = wedge_sendpage, //sock_no_sendpage,
 	};
 
 /* Helper function to extract a unique socket ID from a given struct sock */
@@ -3699,39 +4727,39 @@ return (unsigned long long) &(sk->__sk_common); // Pointer to sock_common struct
 }
 
 /* Functions to initialize and teardown the protocol */
-static void setup_FINS_protocol(void) {
+static void setup_fins_protocol(void) {
 int rc; // used for reporting return value
 
 // Changing this value to 0 disables the FINS passthrough by default
 // Changing this value to 1 enables the FINS passthrough by default
-FINS_stack_passthrough_enabled = 1; // Initialize kernel wide FINS data passthrough
+fins_stack_passthrough_enabled = 1;//0; // Initialize kernel wide FINS data passthrough
 
 /* Call proto_register and report debugging info */
-rc = proto_register(&FINS_proto, 1);
+rc = proto_register(&fins_proto, 1);
 PRINT_DEBUG("proto_register returned: %d", rc);
 PRINT_DEBUG("Made it through FINS proto_register()");
 
 /* Call sock_register to register the handler with the socket layer */
-rc = sock_register(&FINS_net_proto);
+rc = sock_register(&fins_net_proto);
 PRINT_DEBUG("sock_register returned: %d", rc);
 PRINT_DEBUG("Made it through FINS sock_register()");
 }
 
-static void teardown_FINS_protocol(void) {
+static void teardown_fins_protocol(void) {
 /* Call sock_unregister to unregister the handler with the socket layer */
-sock_unregister(FINS_net_proto.family);
+sock_unregister(fins_net_proto.family);
 PRINT_DEBUG("Made it through FINS sock_unregister()");
 
 /* Call proto_unregister and report debugging info */
-proto_unregister(&FINS_proto);
+proto_unregister(&fins_proto);
 PRINT_DEBUG("Made it through FINS proto_unregister()");
 }
 
 /* Functions to initialize and teardown the netlink socket */
-static int setup_FINS_netlink(void) {
+static int setup_fins_netlink(void) {
 // nl_data_ready is the name of the function to be called when the kernel receives a datagram on this netlink socket.
-FINS_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, 0, nl_data_ready, NULL, THIS_MODULE);
-if (FINS_nl_sk == NULL) {
+fins_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, 0, nl_data_ready, NULL, THIS_MODULE);
+if (fins_nl_sk == NULL) {
 	PRINT_ERROR("Error creating socket.");
 	return -10;
 }
@@ -3741,10 +4769,10 @@ sema_init(&link_sem, 1);
 return 0;
 }
 
-static void teardown_FINS_netlink(void) {
+static void teardown_fins_netlink(void) {
 // closes the netlink socket
-if (FINS_nl_sk != NULL) {
-	sock_release(FINS_nl_sk->sk_socket);
+if (fins_nl_sk != NULL) {
+	sock_release(fins_nl_sk->sk_socket);
 }
 }
 
@@ -3752,28 +4780,29 @@ if (FINS_nl_sk != NULL) {
 /*
  * Note: the init and exit functions must be defined (or declared/declared in header file) before the macros are called
  */
-static int __init FINS_stack_wedge_init(void) {
+static int __init fins_stack_wedge_init(void) {
 	PRINT_DEBUG("############################################");
-PRINT_DEBUG("Loading the FINS_stack_wedge module");
-setup_FINS_protocol();
-	setup_FINS_netlink();
+PRINT_DEBUG("Loading the fins_stack_wedge module");
+setup_fins_protocol();
+	setup_fins_netlink();
 	init_wedge_calls();
 	init_wedge_sockets();
-	PRINT_DEBUG("Made it through the FINS_stack_wedge initialization");
+	fins_inet_init();
+	PRINT_DEBUG("Made it through the fins_stack_wedge initialization");
 return 0;
 }
 
-static void __exit FINS_stack_wedge_exit(void) {
-	PRINT_DEBUG("Unloading the FINS_stack_wedge module");
-teardown_FINS_netlink();
-	teardown_FINS_protocol();
-	PRINT_DEBUG("Made it through the FINS_stack_wedge removal");
+static void __exit fins_stack_wedge_exit(void) {
+	PRINT_DEBUG("Unloading the fins_stack_wedge module");
+teardown_fins_netlink();
+	teardown_fins_protocol();
+	PRINT_DEBUG("Made it through the fins_stack_wedge removal");
  // the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
 /* Macros defining the init and exit functions */
-module_init( FINS_stack_wedge_init);
-module_exit( FINS_stack_wedge_exit);
+module_init( fins_stack_wedge_init);
+module_exit( fins_stack_wedge_exit);
 
 /* Set the license and signing info for the module */
 MODULE_LICENSE(M_LICENSE);

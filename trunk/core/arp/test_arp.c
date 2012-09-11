@@ -174,7 +174,7 @@ void init_recordsARP(char *fileName) {
  * @param MAC_sender_addrs is the MAC address of the neighbor
  * @param request_ARP_ptr is the pointer to the ARP message struct
  */
-void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, struct ARP_message *request_ARP_ptr) {
+void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, struct arp_message *request_ARP_ptr) {
 	request_ARP_ptr->hardware_type = (HWDTYPE);
 	request_ARP_ptr->protocol_type = (PROTOCOLTYPE);
 	request_ARP_ptr->hardware_addrs_length = HDWADDRSLEN;
@@ -194,9 +194,9 @@ void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, stru
  * @param request_ARP_ptr is the pointer to the ARP message struct request received by the 'nodes'
  * @param reply_ARP_ptr is the pointer to the ARP message struct reply given the appropriate node
  */
-void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *reply_ARP_ptr) {
+void mimic_net_reply(struct arp_message *request_ARP_ptr, struct arp_message *reply_ARP_ptr) {
 	struct arp_node *ptr_elementInList;
-	struct ARP_message reply_ARP;
+	struct arp_message reply_ARP;
 
 	ptr_elementInList = ptr_neighbor_list;
 
@@ -211,7 +211,7 @@ void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *re
 			reply_ARP.operation = (ARP_OP_REPLY);
 			reply_ARP.protocol_addrs_length = request_ARP_ptr->protocol_addrs_length;
 			reply_ARP.protocol_type = (request_ARP_ptr->protocol_type);
-			memcpy(reply_ARP_ptr, &reply_ARP, sizeof(struct ARP_message));
+			memcpy(reply_ARP_ptr, &reply_ARP, sizeof(struct arp_message));
 		}
 		ptr_elementInList = ptr_elementInList->next;
 	}
@@ -223,7 +223,7 @@ void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *re
  * @param task indicates whether the arp message is a request or a reply to or from network
  */
 void fins_from_net(struct finsFrame *fins_frame, int task) {
-	struct ARP_message msg1, msg2;
+	struct arp_message msg1, msg2;
 	uint32_t IP_addrs_read;
 	uint64_t MAC_addrs;
 

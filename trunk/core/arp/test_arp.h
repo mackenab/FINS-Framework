@@ -15,9 +15,9 @@ void gen_neighbor_list(char* fileName);
 
 uint32_t read_IP_addrs();
 
-void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, struct ARP_message *request_ARP);
+void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, struct arp_message *request_ARP);
 
-void mimic_net_reply(struct ARP_message *request_ARP_ptr, struct ARP_message *reply_ARP_ptr);
+void mimic_net_reply(struct arp_message *request_ARP_ptr, struct arp_message *reply_ARP_ptr);
 
 struct arp_node* read_neighbor_list(char* fileName);
 

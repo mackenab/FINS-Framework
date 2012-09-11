@@ -20,100 +20,85 @@ void arp_out_fdf(struct finsFrame *ff) {
 }
 
 void arp_in_fdf(struct finsFrame *ff) {
-	struct ARP_message *arp_msg_ptr;
+	struct arp_message *arp_msg_ptr;
+	struct arp_message *msg;
 
 	PRINT_DEBUG("Entered: ff=%p", ff);
 
-	if (ff->dataFrame.pduLength < sizeof(struct arp_hdr)) {
-		PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
-		freeFinsFrame(ff);
-		return;
-	} else if (ff->dataFrame.pduLength > sizeof(struct arp_hdr)) {
-		PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
-	}
+	msg = fdf_to_arp(ff);
+	if (msg) {
+		print_msgARP(msg);
 
-	struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
-	if (hdr == NULL) {
-		PRINT_DEBUG("todo error");
-		return;
-	}
-	fins_to_arp(ff, hdr); //extract arp hdr from the fins frame
-	host_to_net(hdr); //convert it into the right format (e.g. htons issue etc.)
-	arp_msg_ptr = &arp_msg;
-	arp_hdr_to_msg(hdr, arp_msg_ptr); //convert the hdr into an internal ARP message (e.g. use uint64_t instead of unsigned char)
+		if (check_valid_arp(msg)) {
+			uint32_t dst_ip = msg->target_IP_addrs;
 
-	print_msgARP(arp_msg_ptr);
+			//TODO add sems
+			struct arp_node *dst_node = search_list_new(interface_list, dst_ip);
+			if (dst_node) {
+				uint64_t dst_mac = dst_node->MAC_addrs;
 
-	if (check_valid_arp(arp_msg_ptr) == 1) {
-		PRINT_DEBUG("ARP Data valid");
+				uint32_t src_ip = msg->sender_IP_addrs;
+				uint64_t src_mac = msg->sender_MAC_addrs;
 
-		uint32_t dst_ip = arp_msg_ptr->target_IP_addrs;
+				if (msg->operation == ARP_OP_REQUEST) {
+					PRINT_DEBUG("Request");
 
-		struct arp_node *dst_node = search_list_new(interface_list, dst_ip);
-		if (dst_node) {
-			//uint64_t dst_mac = dst_node->MAC_addrs;
+					struct arp_message arp_msg_reply;
+					gen_replyARP_new(&arp_msg_reply, dst_mac, dst_ip, src_mac, src_ip);
 
-			switch (arp_msg_ptr->operation) {
-			case ARP_OP_REQUEST: //TODO finish!!!!!!!!!!!!!!!
-				//arp_out(REPLYDATA); //generate reply
-				//arp_out_reply(ff, dst_ip);
-				PRINT_DEBUG("Request");
+					struct arp_hdr *hdr_rep = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
+					if (hdr_rep == NULL) {
+						PRINT_DEBUG("todo error");
+						return;
+					}
+					arp_msg_to_hdr(&arp_msg_reply, hdr_rep);
+					host_to_net(hdr_rep);
+					print_arp_hdr(hdr_rep);
+					arp_to_fins(hdr_rep, ff); /**arp reply to be sent to network */
 
-				struct ARP_message arp_msg_reply;
-				gen_replyARP(&arp_msg, &arp_msg_reply);
-
-				struct arp_hdr *hdr_rep = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
-				if (hdr_rep == NULL) {
-					PRINT_DEBUG("todo error");
-					return;
-				}
-				arp_msg_to_hdr(&arp_msg_reply, hdr_rep);
-				host_to_net(hdr_rep);
-				print_arp_hdr(hdr_rep);
-				arp_to_fins(hdr_rep, ff); /**arp reply to be sent to network */
-
-				arp_to_switch(ff);
-				break;
-			case ARP_OP_REPLY:
-				PRINT_DEBUG("Reply");
-				//update_cache_new(arp_msg_ptr);
-
-				uint32_t src_ip = arp_msg_ptr->sender_IP_addrs;
-				uint64_t src_mac = arp_msg_ptr->sender_MAC_addrs;
-
-				struct arp_node *src_node = search_list_new(cache_list, src_ip);
-				if (src_node) {
-					PRINT_DEBUG("Updating host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
-
-					//TODO update IP/MAC
-					//TODO update time
+					arp_to_switch(ff);
 				} else {
-					src_node = (struct arp_node *) malloc(sizeof(struct arp_node));
-					src_node->IP_addrs = src_ip;
-					src_node->MAC_addrs = src_mac;
-					//TODO add time created etc
+					PRINT_DEBUG("Reply");
+					//update_cache_new(arp_msg_ptr);
 
-					src_node->next = cache_list;
-					cache_list = src_node;
+					struct arp_node *src_node = search_list_new(cache_list, src_ip);
+					if (src_node) {
+						PRINT_DEBUG("Updating host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
 
-					PRINT_DEBUG("Adding host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
+						//TODO update IP/MAC
+						//TODO update time
+					} else {
+						src_node = (struct arp_node *) malloc(sizeof(struct arp_node));
+						src_node->IP_addrs = src_ip;
+						src_node->MAC_addrs = src_mac;
+						//TODO add time created etc
+
+						src_node->next = cache_list;
+						cache_list = src_node;
+
+						PRINT_DEBUG("Adding host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
+					}
+
+					//arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
+					//arp_out_ctrl(src_ip, ff);
+
+					//find FCF from queue, update meta, & send to switch
+
+					//arp_to_switch(ff);
 				}
-
-				//arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
-				//arp_out_ctrl(src_ip, ff);
-
-				//find FCF from queue, update meta, & send to switch
-
-				//arp_to_switch(ff);
-				break;
-			default:
-				PRINT_DEBUG("todo error");
-				break;
+			} else {
+				PRINT_DEBUG("No corresponding interface. Dropping...");
+				//TODO drop packet? since is trying to reach different or outdated IP
 			}
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_DEBUG("Invalid Message. Dropping...")
 		}
+	} else {
+		PRINT_DEBUG("Bad ARP message. Dropping...");
 	}
+
+	free(ff->dataFrame.pdu);
+	freeFinsFrame(ff);
 }
 
 void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
@@ -126,7 +111,6 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 	//memcpy(fins_IP_address, ff->ctrlFrame.paramterValue, PROTOCOLADDRSLEN);
 	//target_IP_addrs = gen_IP_addrs(fins_IP_address[0], fins_IP_address[1], fins_IP_address[2], fins_IP_address[3]);
-
 	//target_IP_addrs = dst_ip; //TODO remove need for?
 
 	src_node = search_list_new(interface_list, src_ip);
@@ -160,17 +144,18 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					arp_to_switch(ff);
 				} else {
 					//TODO if TO, send ARP to old address, if timeout again, broadcast
-					//save fcf
+					//TODO save fcf in queue
 				}
 			} else {
+				//arp_out_request(ff_req, dst_ip, src_ip, src_mac);
 				dst_mac = ARP_MAC_BROADCAST;
 
-				struct ARP_message *msg = (struct ARP_message *) malloc(sizeof(struct ARP_message));
+				struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
 				if (msg == NULL) {
 					PRINT_DEBUG("todo error");
 					return;
 				}
-				gen_requestARP_new(msg, dst_ip, src_ip, src_mac); //TODO remove/optimize?
+				gen_requestARP_new(msg, src_mac, src_ip, ARP_MAC_NULL, dst_ip); //TODO remove/optimize?
 
 				struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
 				if (hdr == NULL) {
@@ -181,7 +166,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 				host_to_net(hdr);
 				print_arp_hdr(hdr);
 
-				//#### move to new func?
+				//#### //TODO move to new func?
 				struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 				if (ff_req == NULL) {
 					PRINT_DEBUG("todo error");
@@ -210,8 +195,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 				arp_to_switch(ff_req);
 				//####
 
-				//arp_out_request(ff_req, dst_ip, src_ip, src_mac);
-				//save fcf in queue
+				//TODO save fcf in queue
 			}
 		}
 	} else {
@@ -224,7 +208,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
  */
 void arp_in(struct finsFrame *ff) {
 
-	struct ARP_message *arp_msg_ptr;
+	struct arp_message *arp_msg_ptr;
 
 	/**request or reply received from the network and as transmitted by the ethernet stub*/
 	if (ff->dataOrCtrl == DATA) {
@@ -335,7 +319,7 @@ void arp_out_request(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip, uin
 
 	PRINT_DEBUG("sought_IP_addrs=%u ff=%p", dst_ip, ff);
 
-	gen_requestARP_new(&arp_msg, dst_ip, src_ip, src_mac);
+	gen_requestARP_new(&arp_msg, src_mac, src_ip, 0, dst_ip);
 	arp_msg_to_hdr(&arp_msg, packet);
 	host_to_net(packet);
 	print_arp_hdr(packet);
@@ -372,7 +356,7 @@ void arp_out_request(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip, uin
 void arp_out_reply(struct finsFrame *ff) {
 	PRINT_DEBUG("ff=%p", ff);
 
-	struct ARP_message arp_msg_reply;
+	struct arp_message arp_msg_reply;
 
 	gen_replyARP(&arp_msg, &arp_msg_reply);
 	arp_msg_to_hdr(&arp_msg_reply, packet);

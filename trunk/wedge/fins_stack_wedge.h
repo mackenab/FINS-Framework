@@ -48,37 +48,61 @@
 
 // Data declarations
 /* Data for netlink sockets */
-struct sock *FINS_nl_sk = NULL;
-int FINS_daemon_pid = -1; // holds the pid of the FINS daemon so we know who to send back to
+struct sock *fins_nl_sk = NULL;
+int fins_daemon_pid = -1; // holds the pid of the FINS daemon so we know who to send back to
 
 /* Data for protocol registration */
-static struct proto_ops FINS_proto_ops;
-static struct proto FINS_proto;
-static struct net_proto_family FINS_net_proto;
+static struct proto_ops fins_proto_ops;
+static struct proto fins_proto;
+static struct net_proto_family fins_net_proto;
 /* Protocol specific socket structure */
-struct FINS_sock {
-	/* struct sock MUST be the first member of FINS_sock */
+struct fins_sock {
+	/* struct sock MUST be the first member of fins_sock */
 	struct sock sk;
 	/* Add the protocol implementation specific members per socket here from here on */
 // Other stuff might go here, maybe look at IPX or IPv4 registration process
 };
 
 // Function prototypes:
-static int FINS_create(struct net *net, struct socket *sock, int protocol, int kern);
-static int FINS_bind(struct socket *sock, struct sockaddr *addr, int addr_len);
-static int FINS_listen(struct socket *sock, int backlog);
-static int FINS_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
-static int FINS_accept(struct socket *sock, struct socket *newsock, int flags);
-static int FINS_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer);
-static int FINS_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len);
-static int FINS_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags);
-static int FINS_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
-static int FINS_release(struct socket *sock);
-static unsigned int FINS_poll(struct file *file, struct socket *sock, poll_table *table);
-static int FINS_shutdown(struct socket *sock, int how);
+static int fins_create(struct net *net, struct socket *sock, int protocol, int kern);
+static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len);
+static int fins_listen(struct socket *sock, int backlog);
+static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
+static int fins_accept(struct socket *sock, struct socket *newsock, int flags);
+static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer);
+static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len);
+static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags);
+static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
+static int fins_release(struct socket *sock);
+static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table *table);
+static int fins_shutdown(struct socket *sock, int how);
 
-static int FINS_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
-static int FINS_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
+static int fins_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
+static int fins_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
+
+static int fins_socketpair(struct socket *sock1, struct socket *sock2);
+static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma);
+static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags);
+
+static int wedge_create(struct net *net, struct socket *sock, int protocol, int kern);
+static int wedge_bind(struct socket *sock, struct sockaddr *addr, int addr_len);
+static int wedge_listen(struct socket *sock, int backlog);
+static int wedge_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags);
+static int wedge_accept(struct socket *sock, struct socket *newsock, int flags);
+static int wedge_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer);
+static int wedge_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, size_t len);
+static int wedge_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags);
+static int wedge_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
+static int wedge_release(struct socket *sock);
+static unsigned int wedge_poll(struct file *file, struct socket *sock, poll_table *table);
+static int wedge_shutdown(struct socket *sock, int how);
+
+static int wedge_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
+static int wedge_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
+
+static int wedge_socketpair(struct socket *sock1, struct socket *sock2);
+static int wedge_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma);
+static ssize_t wedge_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags);
 
 /* FINS netlink functions*/
 int nl_send(int pid, void *buf, ssize_t len, int flags);
@@ -175,7 +199,7 @@ int wait_wedge_socket(unsigned long long sock_id, int sock_index, u_int calltype
 int checkConfirmation(int sock_index);
 
 /* This is my initial example recommended datagram to pass over the netlink socket between daemon and kernel via the nl_send() function */
-//struct FINS_nl_dgram {
+//struct fins_nl_dgram {
 //	int socketCallType;	// used for identifying what socketcall was made and who the response is intended for
 //	unsigned long long sock_id1;
 //	unsigned long long sock_id2;	// some calls need to pass second ID such as accept and socketpair
@@ -189,7 +213,7 @@ int checkConfirmation(int sock_index);
  */
 //static int inet_create(struct net *net, struct socket *sock, int protocol, int kern);
 /* This is a flag to enable or disable the FINS stack passthrough */
-int FINS_stack_passthrough_enabled;
-EXPORT_SYMBOL (FINS_stack_passthrough_enabled);
+int fins_stack_passthrough_enabled;
+EXPORT_SYMBOL (fins_stack_passthrough_enabled);
 
 #endif /* FINS_STACK_WEDGE_H_ */

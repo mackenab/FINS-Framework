@@ -318,8 +318,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t
 					startTimer(conn->to_gbn_fd, 2 /* *DEFAULT_MSL*/); //TODO uncomment
 				} else {
 					//if FIN ACK, send FIN ACK, CLOSING (w FIN_SENT)
-					PRINT_DEBUG("FIN_WAIT_1: FIN ACK, send FIN ACK, CLOSING/FIN_SENT: state=%d conn=%p, seg=%p",
-							conn->state, conn, seg);
+					PRINT_DEBUG("FIN_WAIT_1: FIN ACK, send FIN ACK, CLOSING/FIN_SENT: state=%d conn=%p, seg=%p", conn->state, conn, seg);
 					conn->state = TCP_CLOSING;
 					*send_flags |= FLAG_FIN;
 				}
@@ -518,8 +517,7 @@ int process_flags_old(struct tcp_connection *conn, struct tcp_segment *seg, uint
 					return 1;
 				} else {
 					//if FIN ACK, send FIN ACK, CLOSING (w FIN_SENT)
-					PRINT_DEBUG("FIN_WAIT_1: FIN ACK, send FIN ACK, CLOSING/FIN_SENT: state=%d conn=%p, seg=%p",
-							conn->state, conn, seg);
+					PRINT_DEBUG("FIN_WAIT_1: FIN ACK, send FIN ACK, CLOSING/FIN_SENT: state=%d conn=%p, seg=%p", conn->state, conn, seg);
 					conn->state = TCP_CLOSING;
 					if (seg->data_len) {
 						*send_flags |= FLAG_ACK | FLAG_FIN;
@@ -1732,17 +1730,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 
 	PRINT_DEBUG("Entered");
 
-	seg = fdf_to_seg(ff);
-
-	//####################### //TODO fix IP/Eth issues so can remove this
-	if (seg && 0) {
-		seg->src_ip = ntohl(seg->src_ip); //makes seg_to_fdf & fdf_to_seg non reciprical //TODO align all module so don't need
-		seg->dst_ip = ntohl(seg->dst_ip);
-		seg->src_ip = 2130706433; //TODO remove, include atm to keep local
-		seg->dst_ip = 2130706433; //TODO remove, include atm to keep local
-	}
-	//#######################
-
+	seg = fdf_to_tcp(ff);
 	if (seg) {
 		/*#*/PRINT_DEBUG("");
 		if (sem_wait(&conn_list_sem)) {

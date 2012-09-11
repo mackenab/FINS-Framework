@@ -58,7 +58,7 @@ struct arp_hdr {
 /**struct ARP_message is used for internal use for the module and stores all the traditional
  * fields in more convenient format (e.g. uint64_t instead of unsigned char array[6] etc.).
  * This struct has to be converted into an 'external' format once pushed outside the ARP module*/
-struct ARP_message {
+struct arp_message {
 	uint16_t hardware_type;
 	uint16_t protocol_type;
 	uint8_t hardware_addrs_length;
@@ -73,31 +73,35 @@ struct ARP_message {
 /**This struct is used to store information about neighboring nodes of the host interface*/
 struct arp_node {
 	struct arp_node *next;
-	uint32_t IP_addrs;
 	uint64_t MAC_addrs;
+	uint32_t IP_addrs;
 	//TODO add time created - for timeout
 };
 
 struct arp_node *interface_list;
 struct arp_node *cache_list; /**< points to the first element of the dynamic ARP cache*/
+
+//####### //TODO deprecated, remove
 uint64_t interface_MAC_addrs;/**<MAC address of interface*/
 uint32_t interface_IP_addrs;/**<IP address of interface*/
 unsigned char *fins_MAC_address; /**<void pointer of a fins control frame to pass MAC address*/
 unsigned char *fins_IP_address;/**<void pointer of a fins control fram to pass IP address*/
 struct arp_hdr *packet;/**<An arp header associated with the fins data frame's pdu*/
-struct ARP_message arp_msg; /**<This is the ARP message to store and pass replies/requests*/
+struct arp_message arp_msg; /**<This is the ARP message to store and pass replies/requests*/
 uint32_t target_IP_addrs; /**<IP address of a target node*/
+//#######
 
-void gen_requestARP(uint32_t ip_target_addrs, struct ARP_message *request_ARP_ptr);
-void gen_requestARP_new(struct ARP_message *request_ARP_ptr, uint32_t dst_ip, uint32_t src_ip, uint64_t src_mac);
+void gen_requestARP(uint32_t ip_target_addrs, struct arp_message *request_ARP_ptr);
+void gen_requestARP_new(struct arp_message *request_ARP_ptr, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip);
 
-void gen_replyARP(struct ARP_message *request, struct ARP_message *reply);
+void gen_replyARP(struct arp_message *request, struct arp_message *reply);
+void gen_replyARP_new(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip);
 
 int search_list(struct arp_node *ptr_to_cache, uint32_t IP_addrs);
-struct arp_node *search_list_new(struct arp_node *ptr_firstElementOfList, uint32_t IP_addrs);
+struct arp_node *search_list_new(struct arp_node *head, uint32_t IP_addrs);
 
-void update_cache(struct ARP_message *pckt);
-void update_cache_new(struct ARP_message *pckt);
+void update_cache(struct arp_message *pckt);
+void update_cache_new(struct arp_message *pckt);
 
 uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_node *ptr);
 
@@ -115,7 +119,7 @@ void MAC_addrs_conversion(uint64_t MAC_int_addrs, unsigned char *MAC_addrs);
 
 void IP_addrs_conversion(uint32_t IP_int_addrs, unsigned char *IP_char_addrs);
 
-void print_msgARP(struct ARP_message *);
+void print_msgARP(struct arp_message *);
 
 void print_neighbors(struct arp_node *ptr_to_cache);
 
@@ -131,13 +135,13 @@ void print_cache();
 
 void host_to_net(struct arp_hdr *pckt_hdr);
 
-int check_valid_arp(struct ARP_message *pckt_arp);
+int check_valid_arp(struct arp_message *msg);
 
 void print_arp_hdr(struct arp_hdr *pckt);
 
-void arp_msg_to_hdr(struct ARP_message *ptr_msg, struct arp_hdr *ptr_hdr);
+void arp_msg_to_hdr(struct arp_message *ptr_msg, struct arp_hdr *ptr_hdr);
 
-void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct ARP_message *ptr_msg);
+void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct arp_message *ptr_msg);
 
 void arp_in(struct finsFrame *sent_in);
 
@@ -148,6 +152,9 @@ void arp_out_request(struct finsFrame *ff, uint32_t sought_IP_addrs, uint32_t sr
 void arp_out_ctrl(uint32_t sought_IP_addrs, struct finsFrame *fins_arp_out);
 
 void arp_out(int response_type);
+
+struct finsFrame *arp_to_fdf(struct arp_message *tcp);
+struct arp_message *fdf_to_arp(struct finsFrame *ff);
 
 void arp_init(pthread_attr_t *fins_pthread_attr);
 void arp_shutdown();
