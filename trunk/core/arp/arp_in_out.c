@@ -32,9 +32,9 @@ void arp_in_fdf(struct finsFrame *ff) {
 			uint32_t dst_ip = msg->target_IP_addrs;
 
 			//TODO add sems
-			struct arp_node *dst_node = search_list_new(interface_list, dst_ip);
-			if (dst_node) {
-				uint64_t dst_mac = dst_node->MAC_addrs;
+			struct arp_entry *dst_entry = search_list_new(interface_list, dst_ip);
+			if (dst_entry) {
+				uint64_t dst_mac = dst_entry->MAC_addrs;
 
 				uint32_t src_ip = msg->sender_IP_addrs;
 				uint64_t src_mac = msg->sender_MAC_addrs;
@@ -57,35 +57,35 @@ void arp_in_fdf(struct finsFrame *ff) {
 					}
 				} else {
 					PRINT_DEBUG("Reply");
-					//update_cache_new(arp_msg_ptr);
 
-					struct arp_node *src_node = search_list_new(cache_list, src_ip);
-					if (src_node) {
-						PRINT_DEBUG("Updating host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
+					struct arp_entry *src_entry = search_list_new(cache_list, src_ip);
+					if (src_entry) {
+						PRINT_DEBUG("Updating host: node=%p, ip=%u, mac=0x%llx", src_entry, src_ip, src_mac);
 
 						//TODO update IP/MAC
 						//TODO update time
 					} else {
-						src_node = (struct arp_node *) malloc(sizeof(struct arp_node));
-						if (src_node == NULL) {
+						src_entry = (struct arp_entry *) malloc(sizeof(struct arp_entry));
+						if (src_entry == NULL) {
 							PRINT_ERROR("node malloc error");
 							return;
 						}
 
-						src_node->IP_addrs = src_ip;
-						src_node->MAC_addrs = src_mac;
+						src_entry->IP_addrs = src_ip;
+						src_entry->MAC_addrs = src_mac;
 						//TODO add time created etc
 
-						src_node->next = cache_list;
-						cache_list = src_node;
+						src_entry->next = cache_list;
+						cache_list = src_entry;
 
-						PRINT_DEBUG("Adding host: node=%p, ip=%u, mac=0x%llx", src_node, src_ip, src_mac);
+						PRINT_DEBUG("Adding host: node=%p, ip=%u, mac=0x%llx", src_entry, src_ip, src_mac);
 					}
+
+					//TODO add search for FCF, drop if can't find FCF
+					//find FCF from queue, update meta, & send to switch
 
 					//arp_out(REPLYCONTROL); //generate fins control carrying neighbor's MAC address
 					//arp_out_ctrl(src_ip, ff);
-
-					//find FCF from queue, update meta, & send to switch
 
 					//arp_to_switch(ff);
 				}
@@ -105,27 +105,23 @@ void arp_in_fdf(struct finsFrame *ff) {
 }
 
 void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
-	struct arp_node *dst_node;
-	struct arp_node *src_node;
+	struct arp_entry *dst_entry;
+	struct arp_entry *src_entry;
 	uint64_t dst_mac;
 	uint64_t src_mac;
 
 	PRINT_DEBUG("Entered: ff=%p dst_ip=%u src_ip=%u", ff, dst_ip, src_ip);
 
-	//memcpy(fins_IP_address, ff->ctrlFrame.paramterValue, PROTOCOLADDRSLEN);
-	//target_IP_addrs = gen_IP_addrs(fins_IP_address[0], fins_IP_address[1], fins_IP_address[2], fins_IP_address[3]);
-	//target_IP_addrs = dst_ip; //TODO remove need for?
-
-	src_node = search_list_new(interface_list, src_ip);
-	if (src_node) {
-		src_mac = src_node->MAC_addrs;
+	src_entry = search_list_new(interface_list, src_ip);
+	if (src_entry) {
+		src_mac = src_entry->MAC_addrs;
 
 		metadata *params = ff->metaData;
 		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 
-		dst_node = search_list_new(interface_list, dst_ip);
-		if (dst_node) {
-			dst_mac = dst_node->MAC_addrs;
+		dst_entry = search_list_new(interface_list, dst_ip);
+		if (dst_entry) {
+			dst_mac = dst_entry->MAC_addrs;
 			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
 
 			ff->destinationID.id = IPID; //ff->ctrlFrame.senderID
@@ -134,10 +130,10 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 			arp_to_switch(ff);
 		} else {
-			dst_node = search_list_new(cache_list, dst_ip);
-			if (dst_node) {
+			dst_entry = search_list_new(cache_list, dst_ip);
+			if (dst_entry) {
 				if (1 /* timecheck */) { //TODO add time check here
-					dst_mac = dst_node->MAC_addrs;
+					dst_mac = dst_entry->MAC_addrs;
 					metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
 
 					ff->destinationID.id = IPID; //ff->ctrlFrame.senderID
@@ -152,16 +148,9 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 			} else {
 				dst_mac = ARP_MAC_BROADCAST;
 
-				/*
-				 struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
-				 if (msg == NULL) {
-				 PRINT_DEBUG("todo error");
-				 return;
-				 }*/
 				struct arp_message msg;
 				//gen_requestARP_new(msg, src_mac, src_ip, ARP_MAC_NULL, dst_ip); //TODO remove/optimize?
 				gen_requestARP_new(&msg, src_mac, src_ip, dst_mac, dst_ip); //TODO remove/optimize?
-				//gen_requestARP_new(msg, dst_mac, dst_ip, src_mac, src_ip);
 
 				struct finsFrame *ff_req = arp_to_fdf(&msg);
 				if (ff_req) {
@@ -174,47 +163,18 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					PRINT_DEBUG("todo error");
 				}
 
-				/*
-				 struct arp_hdr *hdr = (struct arp_hdr *) malloc(sizeof(struct arp_hdr));
-				 if (hdr == NULL) {
-				 PRINT_DEBUG("todo error");
-				 return;
-				 }
-				 arp_msg_to_hdr(msg, hdr);
-				 host_to_net(hdr);
-				 print_arp_hdr(hdr);
+				struct arp_store *store = (struct arp_store *) malloc(sizeof(struct arp_store));
+				if (store == NULL) {
+					PRINT_ERROR("failed to create store: ff=%p", ff);
+					return;
+				}
 
-				 //#### //TODO move to new func?
-				 struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-				 if (ff_req == NULL) {
-				 PRINT_DEBUG("todo error");
-				 return;
-				 }
+				store->ff = ff;
+				store->dst_ip = dst_ip;
+				store->src_ip = src_ip;
 
-				 metadata *params_req = (metadata *) malloc(sizeof(metadata));
-				 if (params_req == NULL) {
-				 PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
-				 return;
-				 }
-				 metadata_create(params_req);
-
-				 uint32_t ether_type = ARP_TYPE;
-				 metadata_writeToElement(params_req, "ether_type", &ether_type, META_TYPE_INT);
-				 metadata_writeToElement(params_req, "dst_mac", &dst_mac, META_TYPE_INT64);
-				 metadata_writeToElement(params_req, "src_mac", &src_mac, META_TYPE_INT64);
-
-				 ff_req->dataOrCtrl = DATA;
-				 ff_req->destinationID.id = ETHERSTUBID;
-				 ff_req->destinationID.next = NULL;
-				 ff_req->metaData = params_req;
-				 ff_req->dataFrame.directionFlag = DOWN;
-				 ff_req->dataFrame.pduLength = sizeof(struct arp_hdr);
-				 ff_req->dataFrame.pdu = (unsigned char *) hdr;
-
-				 arp_to_switch(ff_req);
-				 //####
-				 */
-				//TODO save fcf in queue
+				store->next = store_list;
+				store_list = store;
 			}
 		}
 	} else {

@@ -21,7 +21,7 @@
 void init_arp_intface(uint64_t MAC_address, uint32_t IP_address) {
 	PRINT_DEBUG("\nInitializing ARP cache\n");
 
-	struct arp_node *intface = (struct arp_node*) malloc(sizeof(struct arp_node));
+	struct arp_entry *intface = (struct arp_entry*) malloc(sizeof(struct arp_entry));
 	packet = (struct arp_hdr*) malloc(sizeof(struct arp_hdr));
 	fins_MAC_address = (unsigned char*) malloc(sizeof(unsigned char) * HDWADDRSLEN);
 	fins_IP_address = (unsigned char*) malloc(sizeof(unsigned char) * PROTOCOLADDRSLEN);
@@ -36,7 +36,7 @@ void init_arp_intface(uint64_t MAC_address, uint32_t IP_address) {
 int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 	PRINT_DEBUG("Registering Interface: MAC=%llu, IP=%u", MAC_address, IP_address);
 
-	struct arp_node *interface = (struct arp_node*) malloc(sizeof(struct arp_node));
+	struct arp_entry *interface = (struct arp_entry*) malloc(sizeof(struct arp_entry));
 	if (interface == NULL) {
 		PRINT_DEBUG("todo error");
 		return 0;
@@ -55,7 +55,7 @@ int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
  * @brief this function liberates all memory allocated to store and frees the cache
  * of the ARP module */
 void term_arp_intface() {
-	struct arp_node *ptr_elementInList1, *ptr_elementInList2;
+	struct arp_entry *ptr_elementInList1, *ptr_elementInList2;
 	ptr_elementInList1 = cache_list;
 	ptr_elementInList2 = cache_list;
 

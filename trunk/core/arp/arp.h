@@ -71,15 +71,27 @@ struct arp_message {
 };
 
 /**This struct is used to store information about neighboring nodes of the host interface*/
-struct arp_node {
-	struct arp_node *next;
+struct arp_entry {
+	struct arp_entry *next;
 	uint64_t MAC_addrs;
 	uint32_t IP_addrs;
 	//TODO add time created - for timeout
 };
 
-struct arp_node *interface_list;
-struct arp_node *cache_list; /**< points to the first element of the dynamic ARP cache*/
+struct arp_entry *interface_list;
+struct arp_entry *cache_list; /**< points to the first element of the dynamic ARP cache*/
+
+//request, call, element, node, inquiry, demand, store
+struct arp_store {
+	struct arp_store *next;
+	struct finsFrame *ff;
+	uint32_t dst_ip;
+	uint32_t src_ip;
+	//uint32_t retrans;
+	//TODO add time created - for timeout
+};
+
+struct arp_store *store_list;
 
 //####### //TODO deprecated, remove
 uint64_t interface_MAC_addrs;/**<MAC address of interface*/
@@ -97,13 +109,13 @@ void gen_requestARP_new(struct arp_message *request_ARP_ptr, uint64_t sender_mac
 void gen_replyARP(struct arp_message *request, struct arp_message *reply);
 void gen_replyARP_new(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip);
 
-int search_list(struct arp_node *ptr_to_cache, uint32_t IP_addrs);
-struct arp_node *search_list_new(struct arp_node *head, uint32_t IP_addrs);
+int search_list(struct arp_entry *ptr_to_cache, uint32_t IP_addrs);
+struct arp_entry *search_list_new(struct arp_entry *head, uint32_t IP_addrs);
 
 void update_cache(struct arp_message *pckt);
 void update_cache_new(struct arp_message *pckt);
 
-uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_node *ptr);
+uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_entry *ptr);
 
 void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins);
 
@@ -121,7 +133,7 @@ void IP_addrs_conversion(uint32_t IP_int_addrs, unsigned char *IP_char_addrs);
 
 void print_msgARP(struct arp_message *);
 
-void print_neighbors(struct arp_node *ptr_to_cache);
+void print_neighbors(struct arp_entry *ptr_to_cache);
 
 void print_IP_addrs(uint32_t ip_addrs);
 

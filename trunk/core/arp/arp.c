@@ -69,7 +69,7 @@ void print_IP_addrs(uint32_t IP_addrs) {
  * @param IP_addrs is the uint64 address (although a 48-byte address is used in practice
  */
 void print_MAC_addrs(uint64_t MAC_intg_addrs) {
-	PRINT_DEBUG("MAC address = %llx", MAC_intg_addrs);
+	PRINT_DEBUG("MAC address = 0x%llx", MAC_intg_addrs);
 }
 
 /**
@@ -142,8 +142,8 @@ void gen_replyARP_new(struct arp_message *reply_ARP, uint64_t sender_mac, uint32
  * @param ptr_intface_cache is the pointer to the first element of the cache
  * @param MAC_addrs is the searched MAC address from the cache
  */
-int search_list(struct arp_node *ptr_firstElementOfList, uint32_t IP_addrs) {
-	struct arp_node *ptr_elementInList;
+int search_list(struct arp_entry *ptr_firstElementOfList, uint32_t IP_addrs) {
+	struct arp_entry *ptr_elementInList;
 	int found = 0;
 
 	ptr_elementInList = ptr_firstElementOfList;
@@ -159,8 +159,8 @@ int search_list(struct arp_node *ptr_firstElementOfList, uint32_t IP_addrs) {
 	return found;
 }
 
-struct arp_node *search_list_new(struct arp_node *head, uint32_t IP_addrs) {
-	struct arp_node *temp;
+struct arp_entry *search_list_new(struct arp_entry *head, uint32_t IP_addrs) {
+	struct arp_entry *temp;
 
 	temp = head;
 	while (temp != NULL) {
@@ -179,7 +179,7 @@ struct arp_node *search_list_new(struct arp_node *head, uint32_t IP_addrs) {
  */
 void update_cache(struct arp_message *pckt) {
 	int found = 0;
-	struct arp_node *ptr_interfaceHeader;/**these variables are used to traverse the linked list structure of cache*/
+	struct arp_entry *ptr_interfaceHeader;/**these variables are used to traverse the linked list structure of cache*/
 	struct arp_message *pckt_ARP;
 
 	pckt_ARP = pckt;
@@ -203,7 +203,7 @@ void update_cache(struct arp_message *pckt) {
 			 * list of neighbors. The cache header point towards this new node
 			 * Thus new node is added at the top of the list
 			 * */
-			struct arp_node *new_host = (struct arp_node *) malloc(sizeof(struct arp_node));
+			struct arp_entry *new_host = (struct arp_entry *) malloc(sizeof(struct arp_entry));
 			new_host->next = NULL;
 			new_host->IP_addrs = pckt_ARP->sender_IP_addrs;
 			new_host->MAC_addrs = pckt_ARP->sender_MAC_addrs;
@@ -215,7 +215,7 @@ void update_cache(struct arp_message *pckt) {
 
 void update_cache_new(struct arp_message *pckt) {
 	int found = 0;
-	struct arp_node *ptr_interfaceHeader;/**these variables are used to traverse the linked list structure of cache*/
+	struct arp_entry *ptr_interfaceHeader;/**these variables are used to traverse the linked list structure of cache*/
 	struct arp_message *pckt_ARP;
 
 	pckt_ARP = pckt;
@@ -239,7 +239,7 @@ void update_cache_new(struct arp_message *pckt) {
 			 * list of neighbors. The cache header point towards this new node
 			 * Thus new node is added at the top of the list
 			 * */
-			struct arp_node *new_host = (struct arp_node *) malloc(sizeof(struct arp_node));
+			struct arp_entry *new_host = (struct arp_entry *) malloc(sizeof(struct arp_entry));
 			new_host->next = NULL;
 			new_host->IP_addrs = pckt_ARP->sender_IP_addrs;
 			new_host->MAC_addrs = pckt_ARP->sender_MAC_addrs;
@@ -305,7 +305,7 @@ void print_arp_hdr(struct arp_hdr *pckt) {
  */
 void print_cache() {
 
-	struct arp_node *ptr_elementInList;
+	struct arp_entry *ptr_elementInList;
 
 	PRINT_DEBUG("\nHost Interface:");
 	ptr_elementInList = cache_list;
@@ -321,9 +321,9 @@ void print_cache() {
  * (useful in testing/mimicing network response)
  * @param ptr_neighbors points to the first element of the list of 'neighbors'
  */
-void print_neighbors(struct arp_node *ptr_list_neighbors) {
+void print_neighbors(struct arp_entry *ptr_list_neighbors) {
 
-	struct arp_node *ptr_elementInList;
+	struct arp_entry *ptr_elementInList;
 
 	ptr_elementInList = ptr_list_neighbors;
 	PRINT_DEBUG("\nList of addresses of neighbors:\n");
@@ -342,9 +342,9 @@ void print_neighbors(struct arp_node *ptr_list_neighbors) {
  * @param IP_addrs is the searched address
  * @param list points to the first element of the list of neighbors
  */
-uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_node *ptr_list_neighbors) {
+uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_entry *ptr_list_neighbors) {
 	uint64_t MAC_addrs = NULLADDRESS;
-	struct arp_node *ptr_elementInList = ptr_list_neighbors;
+	struct arp_entry *ptr_elementInList = ptr_list_neighbors;
 
 	while (ptr_elementInList != NULL) {
 		if (IP_addrs == ptr_elementInList->IP_addrs)
@@ -445,9 +445,9 @@ void host_to_net(struct arp_hdr *pckt_hdr) {
  */
 int check_valid_arp(struct arp_message *msg) {
 
-	return (msg->hardware_type == HWDTYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY) && (msg->hardware_addrs_length
-			== HDWADDRSLEN) && (msg->protocol_addrs_length == PROTOCOLADDRSLEN) && (msg->protocol_type == PROTOCOLTYPE) && (msg->sender_MAC_addrs
-			!= NULLADDRESS) && (msg->sender_IP_addrs != NULLADDRESS) && (msg->target_IP_addrs != NULLADDRESS);
+	return (msg->hardware_type == HWDTYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY)
+			&& (msg->hardware_addrs_length == HDWADDRSLEN) && (msg->protocol_addrs_length == PROTOCOLADDRSLEN) && (msg->protocol_type == PROTOCOLTYPE)
+			&& (msg->sender_MAC_addrs != NULLADDRESS) && (msg->sender_IP_addrs != NULLADDRESS) && (msg->target_IP_addrs != NULLADDRESS);
 }
 
 /**
@@ -497,7 +497,8 @@ void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct arp_message *ptr_msg) {
 struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	PRINT_DEBUG("Entered: msg=%p", msg);
 
-	PRINT_DEBUG("target=%llx/%u, sender=%llx/%u, op=%d", msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
+	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
+			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -537,7 +538,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	hdr->protocol_type = htons(msg->protocol_type);
 	hdr->hardware_addrs_length = msg->hardware_addrs_length;
 	hdr->protocol_addrs_length = msg->protocol_addrs_length;
-	hdr->operation = htons(hdr->operation);
+	hdr->operation = htons(msg->operation);
 
 	MAC_addrs_conversion(msg->sender_MAC_addrs, hdr->sender_MAC_addrs);
 	IP_addrs_conversion(msg->sender_IP_addrs, hdr->sender_IP_addrs);
@@ -552,10 +553,10 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p", ff);
 
 	if (ff->dataFrame.pduLength < sizeof(struct arp_hdr)) {
-		PRINT_DEBUG("pdu len smaller than ARP header: hdr_len=%u, len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
+		PRINT_DEBUG("pdu len smaller than ARP header: hdr_len=%u, pdu_len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
 		return NULL;
 	} else if (ff->dataFrame.pduLength > sizeof(struct arp_hdr)) {
-		PRINT_DEBUG("pdu len longer than ARP header: hdr_len=%u, len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
+		PRINT_DEBUG("pdu len longer than ARP header: hdr_len=%u, pdu_len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
 	}
 
 	struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
@@ -582,8 +583,10 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	msg->target_MAC_addrs = gen_MAC_addrs(target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
 	msg->target_IP_addrs = gen_IP_addrs(target_ip[0], target_ip[1], target_ip[2], target_ip[3]);
 
-	PRINT_DEBUG("target=%llx/%u, sender=%llx/%u, op=%d", msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
+	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
+			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
+	PRINT_DEBUG("Exited: ff=%p meta=%p msg=%p ", ff, ff->metaData, msg);
 	return msg;
 }
 
@@ -623,49 +626,39 @@ void arp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		//arp_read_param(ff);
 		//TODO read interface_mac?
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		//arp_set_param(ff);
 		//TODO set interface_mac?
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		break;
 	}
 }
@@ -683,8 +676,7 @@ void arp_exec(struct finsFrame *ff) {
 		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
 		switch (exec_call) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call)
-			;
+			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call);
 
 			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
 			ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
@@ -697,8 +689,7 @@ void arp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown exec_call=%d", exec_call)
-			;
+			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -746,6 +737,7 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 
 	interface_list = NULL;
 	cache_list = NULL;
+	store_list = NULL;
 
 	arp_register_interface(MACADDRESS, IPADDRESS);
 

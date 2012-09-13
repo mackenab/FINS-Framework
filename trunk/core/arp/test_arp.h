@@ -19,7 +19,7 @@ void mimic_net_request(uint32_t IP_sender_addrs, uint64_t MAC_sender_addrs, stru
 
 void mimic_net_reply(struct arp_message *request_ARP_ptr, struct arp_message *reply_ARP_ptr);
 
-struct arp_node* read_neighbor_list(char* fileName);
+struct arp_entry* read_neighbor_list(char* fileName);
 
 void init_recordsARP(char *fileName);
 
