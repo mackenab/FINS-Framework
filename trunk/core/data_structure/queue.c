@@ -6,7 +6,6 @@
  * @author Abdallah Abdallah
  */
 
-
 #include <queue.h>
 #include <fatal.h>
 #include <stdlib.h>
@@ -35,31 +34,28 @@ int IsFull(Queue Q) {
 Queue CreateQueue(const char* name, int MaxElements) {
 	Queue Q;
 
-	/* 1*/
 	if (MaxElements < MinQueueSize)
-		/* 2*/Error( "Queue size is too small" );
+		Error( "Queue size is too small");
 
-	/* 3*/
 	Q = malloc(sizeof(struct QueueRecord));
-	/* 4*/
-	if (Q == NULL)
-		/* 5*/FatalError( "Out of space!!!" );
+	if (Q == NULL) {
+		FatalError( "Out of space!!!");
+		exit(-1);
+	}
 
-	/* 6*/
 	Q->Array = malloc(sizeof(ElementType) * MaxElements);
-	/* 7*/
-	if (Q->Array == NULL)
-		/* 8*/FatalError( "Out of space!!!" );
+	if (Q->Array == NULL) {
+		FatalError( "Out of space!!!");
+		exit(-1);
+	}
 
 	memset(Q->Array, 0, sizeof(ElementType) * MaxElements); //avoid freeFinsFrame: use of f->dataOrControl
 
-	/* 9*/
 	Q->Capacity = MaxElements;
 	strcpy(Q->name, name);
-	/*10*/
 	MakeEmpty(Q);
 
-	/*11*/return Q;
+	return Q;
 }
 
 /* START: fig3_59.txt */
@@ -100,7 +96,7 @@ static int Prev(int Value, Queue Q) {
 
 int Enqueue(ElementType X, Queue Q) {
 	if (IsFull(Q)) {
-		Error( "Full queue" );
+		Error( "Full queue");
 		return (0);
 	} else {
 		Q->Size++;
@@ -112,7 +108,7 @@ int Enqueue(ElementType X, Queue Q) {
 
 int EnqueueFront(ElementType X, Queue Q) {
 	if (IsFull(Q)) {
-		Error( "Full queue" );
+		Error( "Full queue");
 		return (0);
 	} else {
 		Q->Size++;
@@ -126,13 +122,13 @@ int EnqueueFront(ElementType X, Queue Q) {
 ElementType Front(Queue Q) {
 	if (!IsEmpty(Q))
 		return Q->Array[Q->Front];
-	Error( "Empty queue" );
+	Error( "Empty queue");
 	return 0; /* Return value used to avoid warning */
 }
 
 void Dequeue(Queue Q) {
 	if (IsEmpty(Q))
-		Error( "Empty queue" );
+		Error( "Empty queue");
 	else {
 		Q->Size--;
 		Q->Front = Succ(Q->Front, Q);
@@ -140,7 +136,7 @@ void Dequeue(Queue Q) {
 }
 
 ElementType FrontAndDequeue(Queue Q) {
-	ElementType X;// = (ElementType) malloc(sizeof(ElementType)); //this just gets overwritten
+	ElementType X; // = (ElementType) malloc(sizeof(ElementType)); //this just gets overwritten
 
 	if (IsEmpty(Q)) {
 		//Error( "Empty queue" );

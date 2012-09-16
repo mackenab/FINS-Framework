@@ -49,7 +49,9 @@ void ipv4_init(pthread_attr_t *fins_pthread_attr) {
 #ifndef BUILD_FOR_ANDROID
 	IP4_init();
 #endif
+}
 
+void ipv4_run(void) {
 	while (ipv4_running) {
 		IP4_receive_fdf();
 		PRINT_DEBUG("");
@@ -60,12 +62,12 @@ void ipv4_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("IPv4 Terminating");
 }
 
-void ipv4_shutdown() {
+void ipv4_shutdown(void) {
 	ipv4_running = 0;
 
 	//TODO expand this
 }
 
-void ipv4_free() {
+void ipv4_release(void) {
 	//TODO free all module related mem
 }

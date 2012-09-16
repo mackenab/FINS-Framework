@@ -42,8 +42,7 @@ int main(int argc, char *argv[]) {
 
 	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
 	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	//if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-	if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
@@ -56,8 +55,7 @@ int main(int argc, char *argv[]) {
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
-	//server_addr.sin_family = AF_INET;
-	server_addr.sin_family = 2;
+	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
 	server_addr.sin_addr.s_addr = xxx(192,168,1,11);
@@ -73,8 +71,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		client_port = 55555;
 	}
-	//client_addr.sin_family = AF_INET;
-	client_addr.sin_family = 39;
+	client_addr.sin_family = AF_INET;
 	client_addr.sin_port = htons(client_port);
 
 	//client_addr.sin_addr.s_addr = xxx(127,0,0,1);
@@ -84,12 +81,12 @@ int main(int argc, char *argv[]) {
 	//bzero(&(client_addr.sin_zero), 8);
 
 	///*
-	 printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
-	 if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr_in)) == -1) {
-	 perror("Bind");
-	 printf("Failure");
-	 exit(1);
-	 } //*/
+	printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr_in)) == -1) {
+		perror("Bind");
+		printf("Failure");
+		exit(1);
+	} //*/
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 
@@ -105,7 +102,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	int i = 0;
-	while (i < 10) {
+	while (i < 100) {
 		i++;
 		if (1) {
 			printf("(%d) Input msg (q or Q to quit):", i);

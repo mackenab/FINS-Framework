@@ -305,71 +305,6 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 	return conn_stub;
 }
 
-int conn_stub_insert(struct tcp_connection_stub *conn_stub) { //TODO change from append to insertion to ordered LL, return -1 if already inserted
-	struct tcp_connection_stub *temp = NULL;
-
-	if (conn_stub_list == NULL) {
-		conn_stub_list = conn_stub;
-	} else {
-		temp = conn_stub_list;
-		while (temp->next != NULL) {
-			temp = temp->next;
-		}
-
-		temp->next = conn_stub;
-		conn_stub->next = NULL;
-	}
-
-	conn_stub_num++;
-	return 1;
-}
-
-struct tcp_connection_stub *conn_stub_find(uint32_t host_ip, uint16_t host_port) {
-	PRINT_DEBUG("Entered: host=%u/%u", host_ip, host_port);
-
-	struct tcp_connection_stub *temp = conn_stub_list;
-	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
-		if (temp->host_ip == host_ip && temp->host_port == host_port) {
-			PRINT_DEBUG("Exited: host=%u/%u, conn_stub=%p", host_ip, host_port, temp);
-			return temp;
-		}
-		temp = temp->next;
-	}
-
-	PRINT_DEBUG("Exited: host=%u/%u, conn_stub=%p", host_ip, host_port, NULL);
-	return NULL;
-}
-
-void conn_stub_remove(struct tcp_connection_stub *conn_stub) {
-	struct tcp_connection_stub *temp = conn_stub_list;
-	if (temp == NULL) {
-		return;
-	}
-
-	if (temp == conn_stub) {
-		conn_stub_list = conn_stub_list->next;
-		conn_stub_num--;
-		return;
-	}
-
-	while (temp->next != NULL) {
-		if (temp->next == conn_stub) {
-			temp->next = conn_stub->next;
-			conn_stub_num--;
-			break;
-		}
-		temp = temp->next;
-	}
-}
-
-int conn_stub_is_empty(void) {
-	return conn_stub_num == 0;
-}
-
-int conn_stub_has_space(uint32_t len) {
-	return conn_stub_num + len <= TCP_CONN_MAX;
-}
-
 int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn_stub=%p, exec_call=%d, ret_val=%d ret_msg=%u", conn_stub, exec_call, ret_val, ret_msg);
 
@@ -403,9 +338,9 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = DAEMONID;
+	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->ctrlFrame.senderID = TCPID;
+	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
 	ff->metaData = params;
@@ -463,7 +398,72 @@ void conn_stub_free(struct tcp_connection_stub *conn_stub) {
 	free(conn_stub);
 }
 
-void *to_thread(void *local) {
+int conn_stub_list_insert(struct tcp_connection_stub *conn_stub) { //TODO change from append to insertion to ordered LL, return -1 if already inserted
+	struct tcp_connection_stub *temp = NULL;
+
+	if (conn_stub_list == NULL) {
+		conn_stub_list = conn_stub;
+	} else {
+		temp = conn_stub_list;
+		while (temp->next != NULL) {
+			temp = temp->next;
+		}
+
+		temp->next = conn_stub;
+		conn_stub->next = NULL;
+	}
+
+	conn_stub_num++;
+	return 1;
+}
+
+struct tcp_connection_stub *conn_stub_list_find(uint32_t host_ip, uint16_t host_port) {
+	PRINT_DEBUG("Entered: host=%u/%u", host_ip, host_port);
+
+	struct tcp_connection_stub *temp = conn_stub_list;
+	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
+		if (temp->host_ip == host_ip && temp->host_port == host_port) {
+			PRINT_DEBUG("Exited: host=%u/%u, conn_stub=%p", host_ip, host_port, temp);
+			return temp;
+		}
+		temp = temp->next;
+	}
+
+	PRINT_DEBUG("Exited: host=%u/%u, conn_stub=%p", host_ip, host_port, NULL);
+	return NULL;
+}
+
+void conn_stub_list_remove(struct tcp_connection_stub *conn_stub) {
+	struct tcp_connection_stub *temp = conn_stub_list;
+	if (temp == NULL) {
+		return;
+	}
+
+	if (temp == conn_stub) {
+		conn_stub_list = conn_stub_list->next;
+		conn_stub_num--;
+		return;
+	}
+
+	while (temp->next != NULL) {
+		if (temp->next == conn_stub) {
+			temp->next = conn_stub->next;
+			conn_stub_num--;
+			break;
+		}
+		temp = temp->next;
+	}
+}
+
+int conn_stub_list_is_empty(void) {
+	return conn_stub_num == 0;
+}
+
+int conn_stub_list_has_space(uint32_t len) {
+	return conn_stub_num + len <= TCP_CONN_MAX;
+}
+
+void *tcp_to_thread(void *local) {
 	struct tcp_to_thread_data *to_data = (struct tcp_to_thread_data *) local;
 	int id = to_data->id;
 	int fd = to_data->fd;
@@ -995,7 +995,7 @@ void *main_thread(void *local) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	conn_remove(conn);
+	conn_list_remove(conn);
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
 
@@ -1144,6 +1144,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->send_pkt = (struct tcp_packet *) malloc(sizeof(struct tcp_packet));
 	if (conn->send_pkt == NULL) {
 		PRINT_ERROR("problem");
+		exit(-1);
 	}
 	conn->send_pkt->ip_hdr.src_ip = conn->host_ip;
 	conn->send_pkt->ip_hdr.dst_ip = conn->rem_ip;
@@ -1169,7 +1170,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	gbn_data->waiting = &conn->main_wait_flag;
 	gbn_data->sem = &conn->main_wait_sem;
 	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%d to_gbn_fd=%d", host_ip, host_port, rem_ip, rem_port, conn, gbn_data->id, conn->to_gbn_fd);
-	if (pthread_create(&conn->to_gbn_thread, NULL, to_thread, (void *) gbn_data)) {
+	if (pthread_create(&conn->to_gbn_thread, NULL, tcp_to_thread, (void *) gbn_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
 	}
@@ -1183,7 +1184,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	delayed_data->sem = &conn->main_wait_sem;
 	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%d to_gbn_fd=%d",
 			host_ip, host_port, rem_ip, rem_port, conn, delayed_data->id, conn->to_delayed_fd);
-	if (pthread_create(&conn->to_delayed_thread, NULL, to_thread, (void *) delayed_data)) {
+	if (pthread_create(&conn->to_delayed_thread, NULL, tcp_to_thread, (void *) delayed_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
 	}
@@ -1200,73 +1201,6 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u conn=%p", host_ip, host_port, rem_ip, rem_port, conn);
 	return conn;
-}
-
-int conn_insert(struct tcp_connection *conn) { //TODO change from append to insertion to ordered LL, return -1 if already inserted
-	struct tcp_connection *temp = NULL;
-
-	if (conn_list == NULL) {
-		conn_list = conn;
-	} else {
-		temp = conn_list;
-		while (temp->next != NULL) {
-			temp = temp->next;
-		}
-
-		temp->next = conn;
-		conn->next = NULL;
-	}
-
-	conn_num++;
-	return 1;
-}
-
-//find a TCP connection with given host addr/port and remote addr/port
-//NOTE: this means for incoming IP FF call with (dst_ip, src_ip, dst_p, src_p)
-struct tcp_connection *conn_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
-
-	struct tcp_connection *temp = conn_list;
-	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
-		if (temp->rem_port == rem_port && /*temp->rem_ip == rem_ip && temp->host_ip == host_ip &&*/temp->host_port == host_port) {
-			PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, conn=%p", host_ip, host_port, rem_ip, rem_port, temp);
-			return temp;
-		}
-		temp = temp->next;
-	}
-
-	PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, conn=%p", host_ip, host_port, rem_ip, rem_port, NULL);
-	return NULL;
-}
-
-void conn_remove(struct tcp_connection *conn) {
-	struct tcp_connection *temp = conn_list;
-	if (temp == NULL) {
-		return;
-	}
-
-	if (temp == conn) {
-		conn_list = conn_list->next;
-		conn_num--;
-		return;
-	}
-
-	while (temp->next != NULL) {
-		if (temp->next == conn) {
-			temp->next = conn->next;
-			conn_num--;
-			break;
-		}
-		temp = temp->next;
-	}
-}
-
-int conn_is_empty(void) {
-	return conn_num == 0;
-}
-
-int conn_has_space(uint32_t len) {
-	return conn_num + len <= TCP_CONN_MAX;
 }
 
 int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg) {
@@ -1304,9 +1238,9 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = DAEMONID;
+	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->ctrlFrame.senderID = TCPID;
+	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
 	ff->metaData = params;
@@ -1389,13 +1323,80 @@ void conn_free(struct tcp_connection *conn) {
 	free(conn);
 }
 
+int conn_list_insert(struct tcp_connection *conn) { //TODO change from append to insertion to ordered LL, return -1 if already inserted
+	struct tcp_connection *temp = NULL;
+
+	if (conn_list == NULL) {
+		conn_list = conn;
+	} else {
+		temp = conn_list;
+		while (temp->next != NULL) {
+			temp = temp->next;
+		}
+
+		temp->next = conn;
+		conn->next = NULL;
+	}
+
+	conn_num++;
+	return 1;
+}
+
+//find a TCP connection with given host addr/port and remote addr/port
+//NOTE: this means for incoming IP FF call with (dst_ip, src_ip, dst_p, src_p)
+struct tcp_connection *conn_list_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+
+	struct tcp_connection *temp = conn_list;
+	while (temp != NULL) { //TODO change to return NULL once conn_list is ordered LL
+		if (temp->rem_port == rem_port && /*temp->rem_ip == rem_ip && temp->host_ip == host_ip &&*/temp->host_port == host_port) {
+			PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, conn=%p", host_ip, host_port, rem_ip, rem_port, temp);
+			return temp;
+		}
+		temp = temp->next;
+	}
+
+	PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, conn=%p", host_ip, host_port, rem_ip, rem_port, NULL);
+	return NULL;
+}
+
+void conn_list_remove(struct tcp_connection *conn) {
+	struct tcp_connection *temp = conn_list;
+	if (temp == NULL) {
+		return;
+	}
+
+	if (temp == conn) {
+		conn_list = conn_list->next;
+		conn_num--;
+		return;
+	}
+
+	while (temp->next != NULL) {
+		if (temp->next == conn) {
+			temp->next = conn->next;
+			conn_num--;
+			break;
+		}
+		temp = temp->next;
+	}
+}
+
+int conn_list_is_empty(void) {
+	return conn_num == 0;
+}
+
+int conn_list_has_space(uint32_t len) {
+	return conn_num + len <= TCP_CONN_MAX;
+}
+
 //Seed the above random number generator
-void tcp_srand() {
+void tcp_srand(void) {
 	srand(time(NULL)); //Just use the standard C random number generator for now
 }
 
 //Get a random number to use as a starting sequence number
-int tcp_rand() {
+int tcp_rand(void) {
 	return rand(); //Just use the standard C random number generator for now
 }
 
@@ -1441,7 +1442,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_ERROR("failed to create matadata: seg=%p", seg);
-		return NULL;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1457,11 +1458,11 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	if (ff == NULL) {
 		PRINT_ERROR("failed to create ff: seg=%p meta=%p", seg, params);
 		metadata_destroy(params);
-		return NULL;
+		exit(-1);
 	}
 
 	ff->dataOrCtrl = DATA; //leave unset?
-	ff->destinationID.id = IPV4ID; // destination module ID
+	ff->destinationID.id = IPV4_ID; // destination module ID
 	ff->destinationID.next = NULL;
 	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	ff->metaData = params;
@@ -1473,7 +1474,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	if (ff->dataFrame.pdu == NULL) {
 		PRINT_ERROR("failed to create pdu: seg=%p meta=%p", seg, params);
 		freeFinsFrame(ff);
-		return NULL;
+		exit(-1);
 	}
 
 	struct tcpv4_header *hdr = (struct tcpv4_header *) ff->dataFrame.pdu;
@@ -1548,14 +1549,14 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 	struct tcp_segment *seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
 	if (seg == NULL) {
 		PRINT_ERROR("seg malloc error");
-		return NULL;
+		exit(-1);
 	}
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
 		PRINT_ERROR("metadata NULL");
 		free(seg);
-		return NULL;
+		exit(-1);
 	}
 
 	int ret = 0;
@@ -1591,8 +1592,9 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 	if (seg->data_len > 0) {
 		seg->data = (uint8_t *) malloc(seg->data_len);
 		if (seg->data == NULL) {
+			PRINT_ERROR("todo error");
 			free(seg);
-			return NULL;
+			exit(-1);
 		}
 
 		//uint8_t *ptr = hdr->options + seg->opt_len;
@@ -1642,6 +1644,11 @@ void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data
 	seg->data_len = data_len;
 	seg->seq_end = seg->seq_num + seg->data_len;
 	seg->data = (uint8_t *) malloc(data_len);
+	if (seg->data) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+
 	uint8_t *ptr = seg->data;
 
 	int output = data_len;
@@ -2257,6 +2264,9 @@ void tcp_init(pthread_attr_t *fins_pthread_attr) {
 	sem_init(&conn_list_sem, 0, 1);
 
 	tcp_srand();
+}
+
+void tcp_run(void) {
 	while (tcp_running) {
 		tcp_get_ff();
 		PRINT_DEBUG("");
@@ -2266,7 +2276,7 @@ void tcp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("TCP Terminating");
 }
 
-void tcp_get_ff() {
+void tcp_get_ff(void) {
 
 	struct finsFrame *ff;
 
@@ -2298,13 +2308,13 @@ void tcp_get_ff() {
 	}
 }
 
-void tcp_shutdown() {
+void tcp_shutdown(void) {
 	tcp_running = 0;
 
 	//TODO expand this
 }
 
-void tcp_free() {
+void tcp_release(void) {
 	//TODO free all module related mem
 }
 
@@ -2519,9 +2529,9 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 	/**TODO get the address automatically by searching the local copy of the
 	 * switch table
 	 */
-	ff->destinationID.id = DAEMONID;
+	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->ctrlFrame.senderID = TCPID;
+	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.serialNum = tcp_serial_num++;
 	ff->metaData = params;
@@ -2577,7 +2587,7 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	 * switch table
 	 */
 	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = DAEMONID;
+	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
 	ff->dataFrame.directionFlag = UP;
 	ff->dataFrame.pduLength = len;

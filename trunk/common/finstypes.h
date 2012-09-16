@@ -8,7 +8,7 @@
  * +fix the define values to be into capital letters
  * +The destination ID has been modified to be list of destination IDs
  * which is implemented as a linked list grows dynamically
- * + wifistub is renamed to be ETHERSTUB and its ID became ETHERSTUBID
+ * + wifistub is renamed to be ETHERSTUB and its ID became INTERFACE_ID
  * + Static MetaData is replaced with The fully functioning MetaData
  * based on the MetaDate Library
  * @author: Abdallah Abdallah
@@ -17,34 +17,22 @@
 #ifndef FINSTYPES_H_
 #define FINSTYPES_H_
 
-/* Include MetaData header File */
+//Include MetaData header File
 #include "metadata.h"		//guicomm need this local
-/* Definition of the modules IDs */
-#define ARPID 66
-#define SOCKETSTUBID 55
-#define UDPID 44
-#define TCPID 33
-#define ICMPID 77
-#define IPID 22
-#define RTMID 88
-#define ETHERSTUBID 11
-#define SWITCHID 00
+//Definition of the modules IDs
+#define SWITCH_ID 0
+#define DAEMON_ID 1
+#define INTERFACE_ID 2
+#define IP_ID 3
+#define ARP_ID 4
+#define UDP_ID 5
+#define TCP_ID 6
+#define ICMP_ID 7
+#define RTM_ID 8
+#define MAX_ID 9
 
-#define IPV4ID IPID
-#define DAEMONID SOCKETSTUBID
-
-//following block excluded in vt_mark's code, temp. included for ARP code
-/* Definition of the possible Opcodes */
-/*
- #define READREQUEST 111
- #define READREPLY 222
- #define WRITEREQUEST 333
- #define WRITECONF 444
- #define QUERYREQUEST 555
- #define QUERYREPLY 666
- */
-
-/* control message types - finsCtrlFrame.opcode values */
+#define IPV4_ID IP_ID //TODO remove?
+//control message types - finsCtrlFrame.opcode values
 #define CTRL_ALERT 	0			// "pushed" messages; not error messages
 #define CTRL_ALERT_REPLY 1
 #define CTRL_READ_PARAM	2		// read module parameter message
@@ -54,21 +42,20 @@
 #define CTRL_EXEC 6				// telling a module to do something; module dependent
 #define CTRL_EXEC_REPLY 7		// a reply to the above, if necessary
 #define CTRL_ERROR 8 			// error message; ICMP msg for example
-/* frame type - finsframe.dataOrCtrl values */
+//frame type - finsframe.dataOrCtrl values
 #define DATA 0
 #define CONTROL 1
 
-/* frame direction - finsDataFrame.directionFlag values */
+//frame direction - finsDataFrame.directionFlag values
 #define UP 0	// ingress network data (interface -> app)
 #define DOWN 1	// egress network data (app -> interface)
-/* this should be removed -MST */
+//this should be removed -MST
 struct destinationList {
 	unsigned char id;
 	struct destinationList *next;
 };
 
 /* this needs a comment */
-
 struct tableRecord {
 	unsigned char sourceID;
 	unsigned char directionFlag;
@@ -83,6 +70,8 @@ struct finsDataFrame {
 	unsigned int pduLength; // length of pdu array
 	unsigned char *pdu; // data!
 };
+
+//unsigned int ctrl_serial_count = 0;
 
 struct finsCtrlFrame {
 	/* only for FINS control frames */
@@ -104,7 +93,6 @@ struct finsCtrlFrame {
 };
 
 struct finsFrame {
-
 	/* Common Fields between data and control */
 	unsigned char dataOrCtrl; // data frame or control frame; use #def values above
 	struct destinationList destinationID; // destination module ID
@@ -116,66 +104,6 @@ struct finsFrame {
 
 };
 
-/* I don't think we're going to need this. --MST */
-//struct readRequestFrame {
-//
-//	/* only for FINS control frames */
-//	unsigned char senderID;
-//	unsigned short int opcode;
-//	unsigned int serialNum;
-//
-//	unsigned int paramterID;
-//
-//};
-//
-//struct readReplyFrame {
-//
-//	/* only for FINS control frames */
-//	unsigned char senderID;
-//	unsigned short int opcode;
-//	unsigned int serialNum;
-//
-//	void *paramterValue;
-//
-//};
-//
-//struct writeRequestFrame {
-//	/* only for FINS control frames */
-//	unsigned char senderID;
-//	unsigned short int opcode;
-//	unsigned int serialNum;
-//
-//	unsigned int paramterID;
-//	void *paramterValue;
-//
-//};
-//
-//struct writeConfirmationFrame {
-//	/* only for FINS control frames */
-//	unsigned char senderID;
-//	unsigned short int opcode;
-//	unsigned int serialNum;
-//
-//};
-//
-//struct queryRequestFrame {
-//
-//	/* only for FINS control frames */
-//	unsigned char senderID;
-//	unsigned short int opcode;
-//	unsigned int serialNum;
-//
-//};
-//
-//struct queryReplyFrame {
-//
-//	/* only for FINS control frames */
-//	unsigned char senderID;
-//	unsigned short int opcode;
-//	unsigned int serialNum;
-//
-//	struct tableRecord *replyRecord;
-//};
 /* needed function defs */
 int serializeCtrlFrame(struct finsFrame *, unsigned char **);
 /* serializes a fins control frame for transmission to an external process

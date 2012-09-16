@@ -36,7 +36,7 @@ int daemon_fdf_to_tcp(u_char *data, u_int data_len, metadata *params) {
 	 * switch table
 	 */
 	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = TCPID;
+	ff->destinationID.id = TCP_ID;
 	ff->destinationID.next = NULL;
 
 	ff->dataFrame.directionFlag = DOWN;
@@ -68,10 +68,10 @@ int daemon_fcf_to_tcp(uint16_t opcode, metadata *params) {
 
 	//TODO get the address from local copy of switch table
 	ff->dataOrCtrl = CONTROL;
-	ff->destinationID.id = TCPID;
+	ff->destinationID.id = TCP_ID;
 	ff->destinationID.next = NULL;
 
-	ff->ctrlFrame.senderID = DAEMONID;
+	ff->ctrlFrame.senderID = DAEMON_ID;
 	ff->ctrlFrame.serialNum = serial_num++;
 	ff->ctrlFrame.opcode = opcode;
 	ff->metaData = params;
@@ -214,9 +214,9 @@ void listen_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, listen_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -452,10 +452,10 @@ void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, connect_call, 0);
 		free(addr);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -643,10 +643,10 @@ void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int c
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 
 		nack_send(uniqueSockID, index, call_id, call_index, accept_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -737,9 +737,9 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if (addr == NULL) {
-		PRINT_DEBUG("addr creation failed");
+		PRINT_ERROR("addr creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
-		return;
+		exit(-1);
 	}
 
 	if (peer == 0) { //getsockname
@@ -763,7 +763,7 @@ void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	if (msg == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
 		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
-		return;
+		exit(-1);
 	}
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
@@ -832,7 +832,7 @@ void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1011,9 +1011,9 @@ void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1435,10 +1435,9 @@ void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, release_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1627,10 +1626,9 @@ void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1684,8 +1682,8 @@ void shutdown_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int
 
 	//index = find_daemonSocket(uniqueSockID);
 	if (index == -1) {
-		PRINT_DEBUG("socket descriptor not found into daemon sockets");
-		exit(1);
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		exit(-1);
 	}
 
 	PRINT_DEBUG("index = %d", index);
@@ -1832,10 +1830,9 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1963,7 +1960,7 @@ void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
-			return;
+			exit(-1);
 		}
 
 		struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
@@ -2117,10 +2114,9 @@ void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, i
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
-
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 

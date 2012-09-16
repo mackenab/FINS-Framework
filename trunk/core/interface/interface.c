@@ -24,6 +24,9 @@ extern finsQueue Interface_to_Switch_Queue;
 extern sem_t Switch_to_Interface_Qsem;
 extern finsQueue Switch_to_Interface_Queue;
 
+int capture_pipe_fd; /** capture file descriptor to read from capturer */
+int inject_pipe_fd; /** inject file descriptor to read from capturer */
+
 /** special functions to print the data within a frame for testing*/
 void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 
@@ -120,7 +123,7 @@ void *Capturer_to_Interface(void *local) {
 	int frame_len;
 	struct sniff_ethernet *hdr;
 	int numBytes;
-	int capture_pipe_fd;
+	//int capture_pipe_fd;
 	struct finsFrame *ff = NULL;
 
 	metadata *meta;
@@ -132,8 +135,8 @@ void *Capturer_to_Interface(void *local) {
 
 	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
 	if (capture_pipe_fd == -1) {
-		PRINT_DEBUG("opening capture_pipe did not work");
-		exit(EXIT_FAILURE);
+		PRINT_ERROR("opening capture_pipe did not work");
+		exit(-1); //exit(EXIT_FAILURE);
 	}
 
 	while (interface_running) {
@@ -145,7 +148,7 @@ void *Capturer_to_Interface(void *local) {
 		frame = (u_char *) malloc(frame_len);
 		if (frame == NULL) {
 			PRINT_ERROR("allocation fail");
-			exit(1);
+			exit(-1);
 		}
 
 		numBytes = read(capture_pipe_fd, frame, frame_len);
@@ -200,7 +203,7 @@ void *Capturer_to_Interface(void *local) {
 			PRINT_ERROR("metadata creation failed");
 			free(ff);
 			free(frame);
-			continue;
+			exit(-1);
 		}
 		metadata_create(meta);
 
@@ -209,11 +212,11 @@ void *Capturer_to_Interface(void *local) {
 
 		if (ether_type == ETH_TYPE_IP4) { //0x0800 == 2048, IPv4
 			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
-			ff->destinationID.id = IPV4ID;
+			ff->destinationID.id = IPV4_ID;
 			ff->destinationID.next = NULL;
 		} else if (ether_type == ETH_TYPE_ARP) { //0x0806 == 2054, ARP
 			PRINT_DEBUG("ARP: proto=0x%x (%u)", ether_type, ether_type);
-			ff->destinationID.id = ARPID;
+			ff->destinationID.id = ARP_ID;
 			ff->destinationID.next = NULL;
 		} else if (ether_type == ETH_TYPE_IP6) { //0x86dd == 34525, IPv6
 			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
@@ -233,10 +236,10 @@ void *Capturer_to_Interface(void *local) {
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
 		if (ff->dataFrame.pdu == NULL) {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			free(frame);
-			continue;
+			exit(-1);
 		}
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
@@ -255,8 +258,6 @@ void *Capturer_to_Interface(void *local) {
 	pthread_exit(NULL);
 }
 
-int inject_pipe_fd;
-
 void *Switch_to_Interface(void *local) {
 
 	//char data[]="loloa7aa7a";
@@ -267,8 +268,8 @@ void *Switch_to_Interface(void *local) {
 
 	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
 	if (inject_pipe_fd == -1) {
-		PRINT_DEBUG("opening inject_pipe did not work");
-		exit(EXIT_FAILURE);
+		PRINT_ERROR("opening inject_pipe did not work");
+		exit(-1);
 	}
 
 	PRINT_DEBUG("");
@@ -281,7 +282,7 @@ void *Switch_to_Interface(void *local) {
 	pthread_exit(NULL);
 } // end of Inject Function
 
-void interface_get_ff() {
+void interface_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
@@ -345,7 +346,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	frame = (char *) malloc(framelen);
 	if (frame == NULL) {
-		PRINT_DEBUG("frame creation failed");
+		PRINT_ERROR("frame creation failed");
 		exit(-1);
 	}
 
@@ -372,6 +373,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 	} else {
 		PRINT_DEBUG("todo error");
 		//TODO create error fcf?
+		free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -385,6 +387,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 	numBytes = write(inject_pipe_fd, &framelen, sizeof(int));
 	if (numBytes <= 0) {
 		PRINT_DEBUG("numBytes written %d\n", numBytes);
+		free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -393,11 +396,13 @@ void interface_out_fdf(struct finsFrame *ff) {
 	numBytes = write(inject_pipe_fd, frame, framelen);
 	if (numBytes <= 0) {
 		PRINT_DEBUG("numBytes written %d\n", numBytes);
+		free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
 	}
 
+	free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 	free(frame);
 }
@@ -432,41 +437,40 @@ int interface_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
+pthread_t capturer_to_interface_thread;
+
 void interface_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("Interface Started");
 	interface_running = 1;
 
-	pthread_t capturer_to_interface_thread;
-	//pthread_t switch_to_interface_thread;
-
 	pthread_create(&capturer_to_interface_thread, fins_pthread_attr, Capturer_to_Interface, fins_pthread_attr);
-	//pthread_create(&switch_to_interface_thread, fins_pthread_attr, Switch_to_Interface, fins_pthread_attr);
 
 	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
 	if (inject_pipe_fd == -1) {
-		PRINT_DEBUG("opening inject_pipe did not work");
-		exit(EXIT_FAILURE);
+		PRINT_ERROR("opening inject_pipe did not work");
+		exit(-1);
 	}
 
 	PRINT_DEBUG("");
+}
 
+void interface_run(void) {
 	while (interface_running) {
 		interface_get_ff();
 		PRINT_DEBUG("");
 	}
 
 	pthread_join(capturer_to_interface_thread, NULL);
-	//pthread_join(switch_to_interface_thread, NULL);
 
 	PRINT_DEBUG("Interface Terminating");
 }
 
-void interface_shutdown() {
+void interface_shutdown(void) {
 	interface_running = 0;
 
 	//TODO expand this
 }
 
-void interface_free() {
+void interface_release(void) {
 	//TODO free all module related mem
 }

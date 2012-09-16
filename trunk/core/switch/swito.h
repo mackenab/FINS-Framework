@@ -10,8 +10,13 @@
 
 #include <pthread.h>
 
+#define MAX_Queue_size 100000
+
+void Queues_init(void);
+
 void switch_init(pthread_attr_t *fins_pthread_attr);
-void switch_shutdown();
-void switch_free();
+void switch_run(void);
+void switch_shutdown(void);
+void switch_release(void);
 
 #endif /* SWITO_H_ */

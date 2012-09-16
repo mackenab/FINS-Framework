@@ -12,12 +12,13 @@
 #include "daemon.h"
 
 int daemon_running;
-extern sem_t daemonSockets_sem; //TODO move here?
-extern struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
 
-extern int recv_thread_index;
-extern int thread_count;
-extern sem_t thread_sem;
+sem_t daemonSockets_sem;
+struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
+
+int recv_thread_index;
+int thread_count;
+sem_t thread_sem;
 
 /** The queues might be moved later to another Master file */
 
@@ -26,7 +27,7 @@ extern finsQueue Switch_to_Daemon_Queue;
 extern sem_t Daemon_to_Switch_Qsem;
 extern sem_t Switch_to_Daemon_Qsem;
 
-int init_fins_nl() {
+int init_fins_nl(void) {
 	int sockfd;
 	int ret_val;
 
@@ -185,8 +186,8 @@ int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_i
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port && daemonSockets[i].dst_ip
-				== rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
+		if (daemonSockets[i].uniqueSockID != -1 && daemonSockets[i].host_ip == host_ip && daemonSockets[i].host_port == host_port
+				&& daemonSockets[i].dst_ip == rem_ip && daemonSockets[i].dst_port == rem_port && daemonSockets[i].protocol == protocol) {
 			PRINT_DEBUG("Matched connection index=%d", i);
 			return (i);
 		}
@@ -366,7 +367,7 @@ int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	u_char *buf = (u_char *) malloc(buf_len);
 	if (buf == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
-		exit(0);
+		exit(-1);
 	}
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
@@ -379,7 +380,7 @@ int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
 	free(buf);
 
-	return ret_val == 1;
+	return ret_val == 1; //TODO change to ret_val ?
 }
 
 int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int msg) {
@@ -391,7 +392,7 @@ int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call
 	u_char *buf = (u_char *) malloc(buf_len);
 	if (buf == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
-		exit(0);
+		exit(-1);
 	}
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
@@ -404,7 +405,7 @@ int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call
 	ret_val = send_wedge(nl_sockfd, buf, buf_len, 0);
 	free(buf);
 
-	return ret_val == 1;
+	return ret_val == 1; //TODO change to ret_val ?
 }
 
 int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
@@ -696,8 +697,8 @@ void bind_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 
 	addr = (struct sockaddr_in *) malloc(addr_len);
 	if (addr == NULL) {
-		PRINT_DEBUG("todo error");
-		return;
+		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 	memcpy(addr, pt, addr_len);
 	pt += addr_len;
@@ -815,8 +816,8 @@ void connect_call_handler(unsigned long long uniqueSockID, int index, int call_t
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
 	if (addr == NULL) {
-		PRINT_DEBUG("todo error");
-		return;
+		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 
 	memcpy(addr, pt, addrlen);
@@ -990,15 +991,14 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 3 * sizeof(struct ifreq);
 		msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1054,8 +1054,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		}
 
 		*(int *) temp = total;
-		PRINT_DEBUG("total=%d (%d)", total, total/32)
-		;
+		PRINT_DEBUG("total=%d (%d)", total, total/32);
 
 		if (pt - msg != msg_len) {
 			PRINT_DEBUG("write error: diff=%d len=%d\n", pt - msg, msg_len);
@@ -1070,8 +1069,9 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 
 		temp = malloc(len);
 		if (temp == NULL) {
-			PRINT_DEBUG("todo error");
-			return;
+			PRINT_ERROR("todo error");
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			exit(-1);
 		}
 		memcpy(temp, pt, len);
 		pt += len;
@@ -1082,8 +1082,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1102,15 +1101,14 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
 		if (!msg) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1138,8 +1136,9 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 
 		temp = malloc(len);
 		if (temp == NULL) {
-			PRINT_DEBUG("todo error");
-			return;
+			PRINT_ERROR("todo error");
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			exit(-1);
 		}
 		memcpy(temp, pt, len);
 		pt += len;
@@ -1150,8 +1149,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1170,15 +1168,14 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1206,8 +1203,9 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 
 		temp = malloc(len);
 		if (temp == NULL) {
-			PRINT_DEBUG("todo error");
-			return;
+			PRINT_ERROR("todo error");
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			exit(-1);
 		}
 		memcpy(temp, pt, len);
 		pt += len;
@@ -1218,8 +1216,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1238,15 +1235,14 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1274,8 +1270,9 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 
 		temp = malloc(len);
 		if (temp == NULL) {
-			PRINT_DEBUG("todo error");
-			return;
+			PRINT_ERROR("todo error");
+			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
+			exit(-1);
 		}
 		memcpy(temp, pt, len);
 		pt += len;
@@ -1286,8 +1283,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1306,15 +1302,14 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
-		;
+		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (u_char *) malloc(msg_len);
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1353,8 +1348,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 	case SIOCSIFBRDADDR:
 	case SIOCSIFNETMASK:
 		//TODO
-		PRINT_DEBUG("not implemented: cmd=%d", cmd)
-		;
+		PRINT_DEBUG("not implemented: cmd=%d", cmd);
 		if (pt - buf != buf_len) {
 			PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
@@ -1362,8 +1356,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 		}
 		break;
 	default:
-		PRINT_DEBUG("cmd=%d default", cmd)
-		;
+		PRINT_DEBUG("cmd=%d default", cmd);
 		break;
 	}
 
@@ -1424,9 +1417,9 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 		if (addr_len >= sizeof(struct sockaddr_in)) {
 			addr = (struct sockaddr_in *) malloc(addr_len);
 			if (addr == NULL) {
-				PRINT_DEBUG("allocation fail");
+				PRINT_ERROR("allocation fail");
 				nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-				return;
+				exit(-1);
 			}
 
 			memcpy(addr, pt, addr_len);
@@ -1447,9 +1440,9 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 
 	msg_control = malloc(msg_controllen);
 	if (msg_control == NULL) {
-		PRINT_DEBUG("allocation fail");
+		PRINT_ERROR("allocation fail");
 		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		return;
+		exit(-1);
 	}
 
 	memcpy(msg_control, pt, msg_controllen);
@@ -1460,9 +1453,9 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 
 	data = (u_char *) malloc(data_len);
 	if (data == NULL) {
-		PRINT_DEBUG("allocation fail");
+		PRINT_ERROR("allocation fail");
 		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		return;
+		exit(-1);
 	}
 
 	memcpy(data, pt, data_len);
@@ -1542,9 +1535,9 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 
 	msg_control = (u_char *) malloc(msg_controllen);
 	if (msg_control == NULL) {
-		PRINT_DEBUG("allocation error");
+		PRINT_ERROR("allocation error");
 		nack_send(uniqueSockID, index, call_id, call_index, recvmsg_call, 0);
-		return;
+		exit(-1);
 	}
 
 	memcpy(msg_control, pt, msg_controllen);
@@ -1613,8 +1606,9 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 	if (optlen > 0) { //TODO remove?
 		optval = (u_char *) malloc(optlen);
 		if (optval == NULL) {
-			PRINT_DEBUG("todo error");
-			return;
+			PRINT_ERROR("todo error");
+			nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
+			exit(-1);
 		}
 		memcpy(optval, pt, optlen);
 		pt += optlen;
@@ -1678,8 +1672,9 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 	if (optlen > 0) {
 		optval = (u_char *) malloc(optlen);
 		if (optval == NULL) {
-			PRINT_DEBUG("todo error");
-			return;
+			PRINT_ERROR("todo error");
+			nack_send(uniqueSockID, index, call_id, call_index, setsockopt_call, 0);
+			exit(-1);
 		}
 		memcpy(optval, pt, optlen);
 		pt += optlen;
@@ -1962,18 +1957,15 @@ void *Switch_to_Daemon(void *local) {
 			PRINT_DEBUG("control ff: ff=%p meta=%p opcode=%d", ff, ff->metaData, ff->ctrlFrame.opcode);
 			switch (ff->ctrlFrame.opcode) {
 			case CTRL_ALERT:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_ALERT_REPLY:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_READ_PARAM_REPLY:
@@ -2082,18 +2074,15 @@ void *Switch_to_Daemon(void *local) {
 				}
 				break;
 			case CTRL_SET_PARAM:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_SET_PARAM_REPLY:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			case CTRL_EXEC_REPLY:
@@ -2274,13 +2263,11 @@ void *Switch_to_Daemon(void *local) {
 				}
 				break;
 			case CTRL_ERROR:
-				PRINT_DEBUG("Not yet implmented")
-				;
+				PRINT_DEBUG("Not yet implmented");
 				freeFinsFrame(ff); //ftm
 				break;
 			default:
-				PRINT_DEBUG("Unknown opcode")
-				;
+				PRINT_DEBUG("Unknown opcode");
 				freeFinsFrame(ff); //ftm
 				break;
 			}
@@ -2302,6 +2289,9 @@ void *Switch_to_Daemon(void *local) {
 
 			if (ret) {
 				PRINT_ERROR("prob reading metadata ret=%d", ret);
+
+				if (ff->dataFrame.pdu)
+					free(ff->dataFrame.pdu);
 				freeFinsFrame(ff);
 				continue;
 			}
@@ -2352,6 +2342,8 @@ void *Switch_to_Daemon(void *local) {
 						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 						sem_post(&daemonSockets_sem);
 
+						if (ff->dataFrame.pdu)
+							free(ff->dataFrame.pdu);
 						freeFinsFrame(ff);
 						continue;
 					}
@@ -2406,19 +2398,26 @@ void *Switch_to_Daemon(void *local) {
 					sem_post(&daemonSockets[index].Qs);
 					PRINT_DEBUG("");
 					sem_post(&daemonSockets_sem);
+
+					if (ff->dataFrame.pdu)
+						free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 				}
 			} else {
 				PRINT_DEBUG("No match, freeing ff");
 				sem_post(&daemonSockets_sem);
 
+				if (ff->dataFrame.pdu)
+					free(ff->dataFrame.pdu);
 				freeFinsFrame(ff);
 			}
 		} else {
 
 			PRINT_DEBUG("unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
-			freeFinsFrame(ff);
 
+			if (ff->dataFrame.pdu)
+				free(ff->dataFrame.pdu);
+			freeFinsFrame(ff);
 		} // end of if , else if , else statement
 	} // end of while
 
@@ -2488,29 +2487,23 @@ void *Wedge_to_Daemon(void *local) {
 		if ((okFlag = NLMSG_OK(nlh, ret_val))) {
 			switch (nlh->nlmsg_type) {
 			case NLMSG_NOOP:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
 				break;
 			case NLMSG_ERROR:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR");
 			case NLMSG_OVERRUN:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN");
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE");
 				doneFlag = 1;
 			default:
-				PRINT_DEBUG("nlh->nlmsg_type=default")
-				;
+				PRINT_DEBUG("nlh->nlmsg_type=default");
 				nl_buf = NLMSG_DATA(nlh);
 				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				PRINT_DEBUG("nl_len= %d", nl_len)
-				;
+				PRINT_DEBUG("nl_len= %d", nl_len);
 
 				part_pt = nl_buf;
 				test_msg_len = *(ssize_t *) part_pt;
@@ -2547,8 +2540,7 @@ void *Wedge_to_Daemon(void *local) {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq)
-				;
+				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
@@ -2696,8 +2688,7 @@ void *Wedge_to_Daemon(void *local) {
 				sendpage_call_handler(uniqueSockID, index, call_threads, call_id, call_index, msg_pt, msg_len);
 				break;
 			default:
-				PRINT_DEBUG("unknown opcode received (%d), dropping", call_type)
-				;
+				PRINT_DEBUG("unknown opcode received (%d), dropping", call_type);
 				/** a function must be called to clean and reset the pipe
 				 * to original conditions before crashing
 				 */
@@ -2718,7 +2709,7 @@ void *Wedge_to_Daemon(void *local) {
 	pthread_exit(NULL);
 }
 
-void daemon_get_ff() {
+void daemon_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
@@ -2753,46 +2744,36 @@ void daemon_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
 		daemon_read_param_reply(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
 		daemon_exec_reply(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		break;
 	}
 }
@@ -3102,12 +3083,9 @@ void daemon_exec_reply(struct finsFrame *ff) {
 void daemon_in_fdf(struct finsFrame *ff) {
 	int protocol = 0;
 	int index = 0;
-	//socket_state state = 0;
-	//uint32_t exec_call = 0;
 	uint16_t dstport, hostport = 0;
 	uint32_t dstport_buf = 0, hostport_buf = 0;
 	uint32_t dstip = 0, hostip = 0;
-	//uint32_t host_ip = 0, host_port = 0, rem_ip = 0, rem_port = 0;
 
 	PRINT_DEBUG("data ff: ff=%p meta=%p len=%d", ff, ff->metaData, ff->dataFrame.pduLength);
 
@@ -3120,6 +3098,8 @@ void daemon_in_fdf(struct finsFrame *ff) {
 
 	if (ret) {
 		PRINT_ERROR("prob reading metadata ret=%d", ret);
+		if (ff->dataFrame.pdu)
+			free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -3170,6 +3150,8 @@ void daemon_in_fdf(struct finsFrame *ff) {
 				PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
 				sem_post(&daemonSockets_sem);
 
+				if (ff->dataFrame.pdu)
+					free(ff->dataFrame.pdu);
 				freeFinsFrame(ff);
 				return;
 			}
@@ -3211,7 +3193,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 			buf = (char *) malloc(ff->dataFrame.pduLength + 1);
 			if (buf == NULL) {
 				PRINT_ERROR("error allocation");
-				exit(1);
+				exit(-1);
 			}
 			memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 			buf[ff->dataFrame.pduLength] = '\0';
@@ -3224,25 +3206,49 @@ void daemon_in_fdf(struct finsFrame *ff) {
 			sem_post(&daemonSockets[index].Qs);
 			PRINT_DEBUG("");
 			sem_post(&daemonSockets_sem);
+
+			if (ff->dataFrame.pdu)
+				free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 		}
 	} else {
 		PRINT_DEBUG("No match, freeing ff");
 		sem_post(&daemonSockets_sem);
 
+		if (ff->dataFrame.pdu)
+			free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 	}
 }
+
+/**
+ * @brief initialize the daemon sockets array by filling with value of -1
+ * @param
+ * @return nothing
+ */
+void init_daemonSockets(void) {
+	int i;
+
+	sem_init(&daemonSockets_sem, 0, 1);
+	for (i = 0; i < MAX_SOCKETS; i++) {
+		daemonSockets[i].uniqueSockID = -1;
+		daemonSockets[i].state = SS_FREE;
+	}
+
+	sem_init(&thread_sem, 0, 1);
+	recv_thread_index = 0;
+	thread_count = 0;
+}
+
+pthread_t wedge_to_daemon_thread;
 
 void daemon_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("Daemon Started");
 	daemon_running = 1;
 
-	pthread_t wedge_to_daemon_thread;
-	//pthread_t switch_to_interface_thread;
+	init_daemonSockets();
 
-	pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, Wedge_to_Daemon, fins_pthread_attr);
-	//pthread_create(&switch_to_interface_thread, fins_pthread_attr, Switch_to_Interface, fins_pthread_attr);
+	pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, Wedge_to_Daemon, fins_pthread_attr); //TODO separate into distinct init/run
 
 	/*
 	 inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
@@ -3252,7 +3258,9 @@ void daemon_init(pthread_attr_t *fins_pthread_attr) {
 	 }
 	 */
 	PRINT_DEBUG("");
+}
 
+void daemon_run(void) {
 	while (daemon_running) {
 		daemon_get_ff();
 		PRINT_DEBUG("");
@@ -3264,7 +3272,7 @@ void daemon_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("Daemon Terminating");
 }
 
-void daemon_shutdown() {
+void daemon_shutdown(void) {
 	daemon_running = 0;
 
 	//prime the kernel to establish daemon's PID
@@ -3280,6 +3288,28 @@ void daemon_shutdown() {
 	//TODO expand this
 }
 
-void daemon_free() {
+void daemon_release(void) {
 	//TODO free all module related mem
+	int i = 0, j = 0;
+	int THREADS = 100;
+
+	for (i = 0; i < MAX_SOCKETS; i++) {
+		if (daemonSockets[i].uniqueSockID != -1) {
+			daemonSockets[i].uniqueSockID = -1;
+
+			//TODO stop all threads related to
+
+			for (j = 0; j < THREADS; j++) {
+				sem_post(&daemonSockets[i].control_sem);
+			}
+
+			for (j = 0; j < THREADS; j++) {
+				sem_post(&daemonSockets[i].data_sem);
+			}
+
+			daemonSockets[i].state = SS_FREE;
+			term_queue(daemonSockets[i].controlQueue);
+			term_queue(daemonSockets[i].dataQueue);
+		}
+	}
 }

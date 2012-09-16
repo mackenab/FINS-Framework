@@ -44,7 +44,7 @@ struct finsFrame *get_fake_frame() {
 	//	metadata_writeToElement(metaptr,linkname,&linkvalue,META_TYPE_INT);
 	PRINT_DEBUG("2.5");
 	f->dataOrCtrl = DATA;
-	f->destinationID.id = (unsigned char) SOCKETSTUBID;
+	f->destinationID.id = (unsigned char) DAEMON_ID;
 	f->destinationID.next = NULL;
 	//f->metaData = metaptr;
 	f->metaData = NULL;
@@ -68,7 +68,7 @@ int daemon_fdf_to_udp(u_char *data, u_int data_len, metadata *params) {
 	 * switch table
 	 */
 	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = UDPID;
+	ff->destinationID.id = UDP_ID;
 	ff->destinationID.next = NULL;
 
 	ff->dataFrame.directionFlag = DOWN;
@@ -356,9 +356,9 @@ void getname_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if (addr == NULL) {
-		PRINT_DEBUG("addr creation failed");
+		PRINT_ERROR("addr creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
-		return;
+		exit(-1);
 	}
 
 	if (peer == 0) { //getsockname
@@ -382,7 +382,7 @@ void getname_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 	if (msg == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
 		nack_send(uniqueSockID, index, call_id, call_index, getname_call, 0);
-		return;
+		exit(-1);
 	}
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
@@ -450,7 +450,7 @@ void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int ca
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, ioctl_call, 0);
-			return;
+			exit(-1);
 		}
 
 		hdr = (struct nl_daemon_to_wedge *) msg;
@@ -601,9 +601,9 @@ void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_DEBUG("metadata creation failed");
+		PRINT_ERROR("metadata creation failed");
 		nack_send(uniqueSockID, index, call_id, call_index, sendmsg_call, 0);
-		return;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -702,7 +702,7 @@ void *recvmsg_udp_thread(void *local) {
 	u_char *msg = (u_char *) malloc(msg_len);
 	if (msg == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
-		exit(0);
+		exit(-1);
 	}
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
@@ -904,7 +904,7 @@ void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 		if (msg == NULL) {
 			PRINT_ERROR("ERROR: buf alloc fail");
 			nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
-			return;
+			exit(-1);
 		}
 
 		struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;
@@ -1142,7 +1142,7 @@ void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, i
 	if (msg == NULL) {
 		PRINT_ERROR("ERROR: buf alloc fail");
 		nack_send(uniqueSockID, index, call_id, call_index, getsockopt_call, 0);
-		return;
+		exit(-1);
 	}
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) msg;

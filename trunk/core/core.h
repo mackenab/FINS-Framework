@@ -28,7 +28,6 @@
 
 int read_configurations();
 void commChannel_init();
-void Queues_init();
 
 //begin: interceptor merge
 //ADDED mrd015 !!!!!

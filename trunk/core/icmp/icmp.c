@@ -74,7 +74,7 @@ void ICMP_in(struct finsFrame *ff)
 			
 			if(!ICMP_copy_finsFrame(ff, ffForward))
 				break;
-			ffForward->destinationID.id = SOCKETSTUBID;	//TODO: will the socket stub handle this correctly? It better.
+			ffForward->destinationID.id = DAEMON_ID;	//TODO: will the socket stub handle this correctly? It better.
 			ICMP_send_FF(ffForward);
 		}
 		else
@@ -129,7 +129,7 @@ void ICMP_out(struct finsFrame *ff)
 	//Since not a control frame (Otherwise this wouldn't come to this function), forward out as-is to the IPv4 module, as this'll be a raw socket.
 	if(!ICMP_copy_finsFrame(ff, ffForward))
 		return;
-	ffForward->destinationID.id = IPV4ID;	//Send to IP handler
+	ffForward->destinationID.id = IPV4_ID;	//Send to IP handler
 	ICMP_send_FF(ffForward);
 
 	PRINT_DEBUG("Forwarding out ICMP packet.");
@@ -190,7 +190,7 @@ void ICMP_out_old(struct finsFrame *ff)
 			//Just do some stuff to change the destination and send this packet out as-is
 			if(!ICMP_copy_finsFrame(ff, ffForward))
 				break;
-			ffForward->destinationID.id = ETHERSTUBID;	//Right?
+			ffForward->destinationID.id = INTERFACE_ID;	//Right?
 			ICMP_send_FF(ffForward);
 		}
 		else
@@ -358,9 +358,9 @@ void ICMP_ping_reply(struct finsFrame* ff)
 
 	PRINT_DEBUG("Source IP: %lu, Dest IP: %lu", IP_Dest, IP_Src);
 	//Make sure this goes to the right place. Is this what we have to do to send out an ICMP packet?
-	ffout->destinationID.id = IPV4ID;		//Go to the socket stub (Socket daemon) //vt_mark
+	ffout->destinationID.id = IPV4_ID;		//Go to the socket stub (Socket daemon) //vt_mark
 	ffout->destinationID.next = NULL;		//Set this to NULL, since we're only sending one.
-	//ffout->destinationID.id = DAEMONID;		//Go to the socket stub (Socket daemon) //bu_mike code
+	//ffout->destinationID.id = DAEMON_ID;		//Go to the socket stub (Socket daemon) //bu_mike code
 	//ffout->destinationID.next = NULL;		//I have no idea what this does, so I'll set it to null for now.
 	ffout->dataFrame.directionFlag = DOWN;	//Go out (Down the stack)
 
@@ -514,7 +514,7 @@ void ICMP_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code)
 	//Now that we have the total length, we can create the finsFrame that has the PDU length we want
 
 	ffout->dataOrCtrl = DATA;	//We're sending a data packet here
-	ffout->destinationID.id = IPV4ID;	//Go out across the wire
+	ffout->destinationID.id = IPV4_ID;	//Go out across the wire
 	ffout->destinationID.next = NULL;
 	ffout->dataFrame.directionFlag = DOWN;	//Out
 	ffout->dataFrame.pduLength = totallen;	//Make the total length correct
@@ -559,9 +559,9 @@ void ICMP_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code)
 	int iLen = 0;
 
 	ffout->dataOrCtrl = CONTROL;	//We're sending a control here
-	ffout->destinationID.id = UDPID;	//Go to the UDP stub. TODO: Should probably also send one to TCP whenever TCP is finished
+	ffout->destinationID.id = UDP_ID;	//Go to the UDP stub. TODO: Should probably also send one to TCP whenever TCP is finished
 	ffout->destinationID.next = NULL;
-	ffout->ctrlFrame.senderID = ICMPID;	//Coming from the ICMP module
+	ffout->ctrlFrame.senderID = ICMP_ID;	//Coming from the ICMP module
 	ffout->ctrlFrame.opcode = CTRL_ERROR;	//Error code comin' through!
 	ffout->ctrlFrame.serialNum = 0;		//No use for this currently. Probably should use for some kind of tracking later.
 	//Figure out the name from the passed type and code
@@ -674,7 +674,7 @@ void IMCP_create_unreach(struct finsFrame* ff)
 
 	ffout = (struct finsFrame *)malloc(sizeof(struct finsFrame));	//Allocate memory for the frame
 	ffout->dataOrCtrl = DATA;	//We're sending a data packet here
-	ffout->destinationID.id = DAEMONID;	//Go to the socket stub
+	ffout->destinationID.id = DAEMON_ID;	//Go to the socket stub
 	ffout->destinationID.next = NULL;	//TODO: Still no idea what this does
 	ffout->dataFrame.directionFlag = DOWN;	//Out
 	ffout->dataFrame.pduLength = totallen;	//Make the total length correct

@@ -84,8 +84,9 @@ struct udp_statistics {
 #define UP_RIP			520						/* route information exchange (RIP) */
 
 void udp_init(pthread_attr_t *fins_pthread_attr);
-void udp_shutdown();
-void udp_free();
+void udp_run(void);
+void udp_shutdown(void);
+void udp_release(void);
 
 //unsigned short UDP_checksum(struct udp_packet* pcket, struct udp_metadata_parsed* meta);
 unsigned short UDP_checksum(struct udp_packet* pcket, uint32_t src_ip, uint32_t dst_ip);
@@ -94,8 +95,8 @@ void udp_in(struct finsFrame* ff);
 void udp_out(struct finsFrame* ff);
 struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, unsigned char* PDU, metadata *meta);
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
-void udp_get_ff();
-void sendToSwitch(struct finsFrame *ff);
+void udp_get_ff(void);
+void udp_to_switch(struct finsFrame *ff);
 //static inline unsigned short from64to16(unsigned long x);
 
 unsigned short UDP_checkSeparate(uint32_t src, uint32_t dest, unsigned short len, unsigned short protocol, uint16_t wsum);

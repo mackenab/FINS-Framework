@@ -1,8 +1,8 @@
 /**@file arp.c
  *@brief this files contains all relevant functions to execute an ARP module,
  *@brief IP and MAC address of the host is provided by the main
- *@author Syed Amaar Ahmad
- *@date  September 27, 2010
+ *@author Jonathan Reed
+ *@date  September 5, 2012
  */
 
 #include <stdio.h>
@@ -19,9 +19,28 @@ extern finsQueue ARP_to_Switch_Queue;
 extern sem_t Switch_to_ARP_Qsem;
 extern finsQueue Switch_to_ARP_Queue;
 
-//struct udp_statistics arpStat;
+struct arp_interface *interface_list;
+uint32_t interface_num;
 
-//#define DEBUG
+struct arp_cache *cache_list; //The list of current cache we have
+uint32_t cache_num;
+
+uint8_t interrupt_flag;
+int arp_thread_count = 0;
+
+/**
+ * An address like a:b:c:d:e:f is converted into an 64-byte unsigned integer
+ * @brief this function takes a user provided MAC address as a set of octets and produces a uint64 address
+ * @param a an octet (most significant)
+ * @param b an octet
+ * @param c an octet
+ * @param d an octet
+ * @param e an octet
+ * @parm f an octet (least significant)*/
+
+uint64_t gen_MAC_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f) {
+	return 1099511627776ull * (a) + 4294967296ull * (b) + 16777216ull * (c) + 65536ull * (d) + (256ull * (e)) + (f);
+}
 
 /**
  * An address like a.b.c.d (e.g. 5.45.0.07 where a= 5, b=45, c=0,d=7) is converted an integer
@@ -36,17 +55,464 @@ uint32_t gen_IP_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 }
 
 /**
- * An address like a:b:c:d:e:f is converted into an 64-byte unsigned integer
- * @brief this function takes a user provided MAC address as a set of octets and produces a uint64 address
- * @param a an octet (most significant)
- * @param b an octet
- * @param c an octet
- * @param d an octet
- * @param e an octet
- * @parm f an octet (least significant)*/
+ * @brief converts 6-byte MAC address (stored as unsigned 64-bit int)
+ * into a representable 6-byte char array
+ * @param int_addrs is the address in unsigned int 64
+ * @param *char_addrs points to the character array which will store the converted address
+ *  */
+/**register shifting is used to extract individual bytes in the code below*/
+void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs) {
+	char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FF))); //least sig.
+	char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00)) >> 8);
+	char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000)) >> 16);
+	char_addrs[2] = (unsigned char) ((int_addrs & (0x00000000FF000000)) >> 24);
+	char_addrs[1] = (unsigned char) ((int_addrs & (0x000000FF00000000)) >> 32);
+	char_addrs[0] = (unsigned char) ((int_addrs & (0x0000FF0000000000)) >> 40); //most sig.
+}
 
-uint64_t gen_MAC_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f) {
-	return 1099511627776ull * (a) + 4294967296ull * (b) + 16777216ull * (c) + 65536ull * (d) + (256ull * (e)) + (f);
+/**
+ * @brief converts 4-byte IP address (stored as unsigned 32-bit int)
+ * into a representable 4-byte char array
+ * @param int_addrs is the address in unsigned int 32
+ * @param *char_addrs points to the character array which will store the converted address
+ *  */
+void IP_addrs_conversion(uint32_t int_addrs, unsigned char *char_addrs) {
+	/**register shifting is used to extract individual bytes in the code below*/
+	char_addrs[3] = (unsigned char) ((int_addrs & (0x000000FF))); //least significant
+	char_addrs[2] = (unsigned char) ((int_addrs & (0x0000FF00)) >> 8);
+	char_addrs[1] = (unsigned char) ((int_addrs & (0x00FF0000)) >> 16);
+	char_addrs[0] = (unsigned char) ((int_addrs & (0xFF000000)) >> 24); //most significant
+}
+
+/**
+ * @brief this function produces an ARP request for a host whose IP address is known
+ * @param IP_address_target is the uint32 address of the target host
+ */
+void gen_requestARP(struct arp_message *request_ARP_ptr, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip) {
+	request_ARP_ptr->sender_MAC_addrs = sender_mac;
+	request_ARP_ptr->sender_IP_addrs = sender_ip;
+	request_ARP_ptr->target_MAC_addrs = target_mac;
+	request_ARP_ptr->target_IP_addrs = target_ip;
+
+	request_ARP_ptr->hardware_type = ARP_HWD_TYPE;
+	request_ARP_ptr->protocol_type = ARP_PROTOCOL_TYPE;
+	request_ARP_ptr->hardware_addrs_length = ARP_HDW_ADDR_LEN;
+	request_ARP_ptr->protocol_addrs_length = ARP_PROTOCOL_ADDR_LEN;
+	request_ARP_ptr->operation = ARP_OP_REQUEST;
+}
+
+/**
+ * @brief this function produces an ARP reply for the host which has already sent
+ * a request for a MAC address
+ * @param request_ARP is the ARP request
+ * @param reply_ARP is the pointer to the
+ */
+void gen_replyARP(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip) {
+	/**generate reply only if the request is intended for the host*/
+	reply_ARP->sender_MAC_addrs = sender_mac;
+	reply_ARP->sender_IP_addrs = sender_ip;
+	reply_ARP->target_MAC_addrs = target_mac;
+	reply_ARP->target_IP_addrs = target_ip;
+
+	reply_ARP->hardware_type = ARP_HWD_TYPE;
+	reply_ARP->protocol_type = ARP_PROTOCOL_TYPE;
+	reply_ARP->hardware_addrs_length = ARP_HDW_ADDR_LEN;
+	reply_ARP->protocol_addrs_length = ARP_PROTOCOL_ADDR_LEN;
+	reply_ARP->operation = ARP_OP_REPLY;
+}
+
+/**
+ * @brief simply checks whether a received ARP message is valid or not
+ * @param pckt_arp points to the ARP message
+ */
+int check_valid_arp(struct arp_message *msg) {
+
+	return (msg->hardware_type == ARP_HWD_TYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY)
+			&& (msg->hardware_addrs_length == ARP_HDW_ADDR_LEN) && (msg->protocol_addrs_length == ARP_PROTOCOL_ADDR_LEN)
+			&& (msg->protocol_type == ARP_PROTOCOL_TYPE) && (msg->sender_MAC_addrs != ARP_MAC_NULL) && (msg->sender_IP_addrs != ARP_IP_NULL)
+			&& (msg->target_IP_addrs != ARP_IP_NULL);
+}
+
+struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr) {
+	struct arp_interface *interface = (struct arp_interface *) malloc(sizeof(struct arp_interface));
+	if (interface == NULL) {
+		PRINT_ERROR("interface alloc fail");
+		exit(-1);
+	}
+
+	interface->mac_addr = mac_addr;
+	interface->ip_addr = ip_addr;
+
+	return interface;
+}
+
+void interface_free(struct arp_interface *interface) {
+	PRINT_DEBUG("interface=%p", interface);
+
+	free(interface);
+}
+
+int interface_list_insert(struct arp_interface *interface) {
+	interface->next = interface_list;
+	interface_list = interface;
+
+	interface_num++;
+	return 1;
+}
+
+struct arp_interface *interface_list_find(uint32_t ip_addr) {
+	struct arp_interface *temp = interface_list;
+
+	while (temp != NULL && temp->ip_addr != ip_addr) {
+		temp = temp->next;
+	}
+
+	return temp;
+}
+
+void interface_list_remove(struct arp_interface *interface) {
+	if (interface_list == NULL) {
+		return;
+	}
+
+	if (interface_list == interface) {
+		interface_list = interface_list->next;
+		interface_num--;
+		return;
+	}
+
+	struct arp_interface *temp = interface_list;
+	while (temp->next != NULL) {
+		if (temp->next == interface) {
+			temp->next = interface->next;
+			interface_num--;
+			return;
+		}
+		temp = temp->next;
+	}
+}
+
+int interface_list_is_empty(void) {
+	return interface_num == 0;
+}
+
+int interface_list_has_space(void) {
+	return interface_num < ARP_INTERFACE_LIST_MAX;
+}
+
+struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
+	struct arp_request *request = (struct arp_request *) malloc(sizeof(struct arp_request));
+	if (request == NULL) {
+		PRINT_ERROR("failed to create store: ff=%p", ff);
+		exit(-1);
+	}
+
+	request->next = NULL;
+	request->ff = ff;
+	request->src_mac = src_mac;
+	request->src_ip = src_ip;
+
+	return request;
+}
+
+void request_free(struct arp_request *request) {
+	PRINT_DEBUG("request=%p", request);
+
+	free(request);
+}
+
+struct arp_request_list *request_list_create(uint32_t max) {
+	PRINT_DEBUG("Entered: max=%u", max);
+
+	struct arp_request_list *request_list = (struct arp_request_list *) malloc(sizeof(struct arp_request_list));
+	if (request_list == NULL) {
+		PRINT_ERROR("Unable to create request_list: max=%u", max);
+		exit(-1);
+	}
+
+	request_list->front = NULL;
+	request_list->end = NULL;
+
+	request_list->max = max;
+	request_list->len = 0;
+
+	return request_list;
+}
+
+void request_list_append(struct arp_request_list *request_list, struct arp_request *request) {
+	request->next = NULL;
+	if (request_list_is_empty(request_list)) {
+		//queue empty
+		request_list->front = request;
+	} else {
+		//node after end
+		request_list->end->next = request;
+	}
+	request_list->end = request;
+	request_list->len++;
+}
+
+struct arp_request *request_list_find(struct arp_request_list *request_list, uint32_t src_ip) {
+	struct arp_request *comp = request_list->front;
+	while (comp) {
+		if (comp->src_ip == src_ip) {
+			return comp;
+		} else {
+			comp = comp->next;
+		}
+	}
+
+	return NULL;
+}
+
+struct arp_request *request_list_remove_front(struct arp_request_list *request_list) {
+	struct arp_request *old = request_list->front;
+
+	request_list->front = old->next;
+	request_list->len--;
+
+	return old;
+}
+
+int request_list_is_empty(struct arp_request_list *request_list) {
+	return request_list->front == NULL;
+}
+
+int request_list_has_space(struct arp_request_list *request_list) {
+	return request_list->len < request_list->max;
+}
+
+void request_list_free(struct arp_request_list *request_list) {
+	PRINT_DEBUG("Entered: request_list=%p", request_list);
+
+	struct arp_request *next;
+
+	struct arp_request *request = request_list->front;
+	while (request) {
+		next = request->next;
+		request_free(request);
+
+		request = next;
+	}
+
+	free(request_list);
+}
+
+void *arp_to_thread(void *local) {
+	struct arp_to_thread_data *to_data = (struct arp_to_thread_data *) local;
+	int id = to_data->id;
+	int fd = to_data->fd;
+	uint8_t *running = to_data->running;
+	uint8_t *flag = to_data->flag;
+	uint8_t *interrupt = to_data->interrupt;
+	free(to_data);
+
+	int ret;
+	uint64_t exp;
+
+	PRINT_DEBUG("Entered: id=%d, fd=%d", id, fd);
+	while (*running) {
+		/*#*/PRINT_DEBUG("");
+		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
+		if (!(*running)) {
+			break;
+		}
+		if (ret != sizeof(uint64_t)) {
+			//read error
+			PRINT_DEBUG("Read error: id=%d fd=%d", id, fd);
+			continue;
+		}
+
+		PRINT_DEBUG("Throwing TO flag: id=%d fd=%d", id, fd);
+		*interrupt = 1;
+		*flag = 1;
+	}
+
+	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
+	pthread_exit(NULL);
+}
+
+void arp_stop_timer(int fd) {
+	PRINT_DEBUG("stopping timer=%d", fd);
+
+	struct itimerspec its;
+	its.it_value.tv_sec = 0;
+	its.it_value.tv_nsec = 0;
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
+}
+
+void arp_start_timer(int fd, double millis) {
+	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
+
+	struct itimerspec its;
+	its.it_value.tv_sec = (long int) (millis / 1000);
+	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
+}
+
+struct arp_cache *cache_create(uint32_t ip_addr) {
+	PRINT_DEBUG("Entered: ip=%u", ip_addr);
+
+	struct arp_cache *cache = (struct arp_cache *) malloc(sizeof(struct arp_cache));
+	if (cache == NULL) {
+		PRINT_ERROR("Unable to create cache: ip=%u", ip_addr);
+		exit(-1);
+	}
+
+	cache->next = NULL;
+	cache->running_flag = 1;
+
+	cache->mac_addr = ARP_MAC_NULL;
+	cache->ip_addr = ip_addr;
+
+	cache->request_list = request_list_create(ARP_REQUEST_LIST_MAX);
+	cache->request_num = 0;
+
+	cache->seeking = 0;
+	memset(&cache->updated_stamp, 0, sizeof(struct timeval));
+
+	cache->to_flag = 0;
+	cache->to_fd = timerfd_create(CLOCK_REALTIME, 0);
+	if (cache->to_fd == -1) {
+		PRINT_ERROR("ERROR: unable to create to_fd.");
+		exit(-1);
+	}
+	cache->retries = 0;
+
+	//start timer thread
+	struct arp_to_thread_data *to_data = (struct arp_to_thread_data *) malloc(sizeof(struct arp_to_thread_data));
+	if (to_data == NULL) {
+		PRINT_ERROR("arp_to_thread_data alloc fail");
+		exit(-1);
+	}
+	to_data->id = arp_thread_count++;
+	to_data->fd = cache->to_fd;
+	to_data->running = &cache->running_flag;
+	to_data->flag = &cache->to_flag;
+	to_data->interrupt = &interrupt_flag;
+	if (pthread_create(&cache->to_thread, NULL, arp_to_thread, (void *) to_data)) {
+		PRINT_ERROR("ERROR: unable to create arp_to_thread thread.");
+		exit(-1);
+	}
+
+	PRINT_DEBUG("Exited: ip=%u, cache=%p, id=%d, to_fd=%d", ip_addr, cache, to_data->id, cache->to_fd);
+	return cache;
+}
+
+void cache_shutdown(struct arp_cache *cache) {
+	PRINT_DEBUG("Entered: cache=%p", cache);
+
+	cache->running_flag = 0;
+
+	//stop threads
+	arp_start_timer(cache->to_fd, 1);
+
+	//sem_post(&conn->write_wait_sem);
+	//sem_post(&conn->write_sem);
+	//clear all threads using this conn_stub
+
+	/*#*/PRINT_DEBUG("");
+	//post to read/write/connect/etc threads
+	pthread_join(cache->to_thread, NULL);
+	/*#*/PRINT_DEBUG("");
+}
+
+void cache_free(struct arp_cache *cache) {
+	PRINT_DEBUG("cache=%p", cache);
+
+	//free request_list?
+	if (cache->request_list) {
+		request_list_free(cache->request_list);
+	}
+
+	free(cache);
+}
+int cache_list_insert(struct arp_cache *cache) {
+	struct arp_cache *temp = NULL;
+
+	if (cache_list == NULL) {
+		cache_list = cache;
+	} else {
+		temp = cache_list;
+		while (temp->next != NULL) {
+			temp = temp->next;
+		}
+
+		temp->next = cache;
+		cache->next = NULL;
+	}
+
+	cache_num++;
+	return 1;
+}
+
+struct arp_cache *cache_list_find(uint32_t ip_addr) {
+	PRINT_DEBUG("Entered: ip=%u", ip_addr);
+
+	struct arp_cache *temp = cache_list;
+	while (temp != NULL) {
+		if (temp->ip_addr == ip_addr) {
+			PRINT_DEBUG("Exited: ip=%u, cache=%p", ip_addr, temp);
+			return temp;
+		}
+		temp = temp->next;
+	}
+
+	PRINT_DEBUG("Exited: ip=%u, cache=%p", ip_addr, NULL);
+	return NULL;
+}
+
+void cache_list_remove(struct arp_cache *cache) {
+	if (cache_list == NULL) {
+		return;
+	}
+
+	if (cache_list == cache) {
+		cache_list = cache_list->next;
+		cache_num--;
+		return;
+	}
+
+	struct arp_cache *temp = cache_list;
+	while (temp->next != NULL) {
+		if (temp->next == cache) {
+			temp->next = cache->next;
+			cache_num--;
+			return;
+		}
+		temp = temp->next;
+	}
+}
+
+struct arp_cache *cache_list_remove_front(void) {
+	if (cache_list == NULL) {
+		return NULL;
+	}
+
+	struct arp_cache *head = cache_list;
+	cache_list = head->next;
+
+	return head;
+}
+
+int cache_list_is_empty(void) {
+	return cache_num == 0;
+}
+
+int cache_list_has_space(void) {
+	return cache_num < ARP_CACHE_LIST_MAX;
 }
 
 /**
@@ -70,183 +536,6 @@ void print_IP_addrs(uint32_t IP_addrs) {
  */
 void print_MAC_addrs(uint64_t MAC_intg_addrs) {
 	PRINT_DEBUG("MAC address = 0x%llx", MAC_intg_addrs);
-}
-
-/**
- * @brief this function produces an ARP request for a host whose IP address is known
- * @param IP_address_target is the uint32 address of the target host
- */
-void gen_requestARP(uint32_t IP_address_target, struct arp_message *request_ARP_ptr) {
-	request_ARP_ptr->sender_MAC_addrs = interface_MAC_addrs;
-	request_ARP_ptr->sender_IP_addrs = interface_IP_addrs;
-	request_ARP_ptr->target_MAC_addrs = NULLADDRESS;
-	request_ARP_ptr->target_IP_addrs = IP_address_target;
-	request_ARP_ptr->hardware_type = HWDTYPE;
-	request_ARP_ptr->protocol_type = PROTOCOLTYPE;
-	request_ARP_ptr->hardware_addrs_length = HDWADDRSLEN;
-	request_ARP_ptr->protocol_addrs_length = PROTOCOLADDRSLEN;
-	request_ARP_ptr->operation = ARP_OP_REQUEST;
-}
-
-void gen_requestARP_new(struct arp_message *request_ARP_ptr, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip) {
-	request_ARP_ptr->sender_MAC_addrs = sender_mac;
-	request_ARP_ptr->sender_IP_addrs = sender_ip;
-	request_ARP_ptr->target_MAC_addrs = target_mac;
-	request_ARP_ptr->target_IP_addrs = target_ip;
-
-	request_ARP_ptr->hardware_type = HWDTYPE;
-	request_ARP_ptr->protocol_type = PROTOCOLTYPE;
-	request_ARP_ptr->hardware_addrs_length = HDWADDRSLEN;
-	request_ARP_ptr->protocol_addrs_length = PROTOCOLADDRSLEN;
-	request_ARP_ptr->operation = ARP_OP_REQUEST;
-}
-
-/**
- * @brief this function produces an ARP reply for the host which has already sent
- * a request for a MAC address
- * @param request_ARP is the ARP request
- * @param reply_ARP is the pointer to the
- */
-void gen_replyARP(struct arp_message *request_ARP, struct arp_message *reply_ARP) {
-	/**generate reply only if the request is intended for the host*/
-	//if ((request_ARP->target_IP_addrs == interface_IP_addrs) && (request_ARP->target_MAC_addrs == NULLADDRESS)) {
-	reply_ARP->sender_MAC_addrs = interface_MAC_addrs;
-	reply_ARP->sender_IP_addrs = interface_IP_addrs;
-	reply_ARP->target_MAC_addrs = request_ARP->sender_MAC_addrs;
-	reply_ARP->target_IP_addrs = request_ARP->sender_IP_addrs;
-	reply_ARP->hardware_type = HWDTYPE;
-	reply_ARP->protocol_type = PROTOCOLTYPE;
-	reply_ARP->hardware_addrs_length = HDWADDRSLEN;
-	reply_ARP->protocol_addrs_length = PROTOCOLADDRSLEN;
-	reply_ARP->operation = ARP_OP_REPLY;
-	//}
-}
-
-void gen_replyARP_new(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip) {
-	/**generate reply only if the request is intended for the host*/
-	reply_ARP->sender_MAC_addrs = sender_mac;
-	reply_ARP->sender_IP_addrs = sender_ip;
-	reply_ARP->target_MAC_addrs = target_mac;
-	reply_ARP->target_IP_addrs = target_ip;
-
-	reply_ARP->hardware_type = HWDTYPE;
-	reply_ARP->protocol_type = PROTOCOLTYPE;
-	reply_ARP->hardware_addrs_length = HDWADDRSLEN;
-	reply_ARP->protocol_addrs_length = PROTOCOLADDRSLEN;
-	reply_ARP->operation = ARP_OP_REPLY;
-}
-
-/**
- * @brief this function searches a list or cache for to check if it contains a
- * particular MAC address, returns 1 if found else returns 0
- * @param ptr_intface_cache is the pointer to the first element of the cache
- * @param MAC_addrs is the searched MAC address from the cache
- */
-int search_list(struct arp_entry *ptr_firstElementOfList, uint32_t IP_addrs) {
-	struct arp_entry *ptr_elementInList;
-	int found = 0;
-
-	ptr_elementInList = ptr_firstElementOfList;
-
-	while (ptr_elementInList != NULL) {
-
-		if ((ptr_elementInList->IP_addrs == IP_addrs) && (ptr_elementInList->MAC_addrs != NULLADDRESS))
-			found = 1;
-
-		ptr_elementInList = ptr_elementInList->next;
-	}
-
-	return found;
-}
-
-struct arp_entry *search_list_new(struct arp_entry *head, uint32_t IP_addrs) {
-	struct arp_entry *temp;
-
-	temp = head;
-	while (temp != NULL) {
-		if (temp->IP_addrs == IP_addrs) {
-			break;
-		}
-		temp = temp->next;
-	}
-
-	return temp;
-}
-
-/** * ptr_cacheHeader is the pointer to the first element of the cache
- * @brief this function updates a cache based on an ARP message
- * @param pckt_ARP is an ARP message (either reply or request) from some host within the neighborhood
- */
-void update_cache(struct arp_message *pckt) {
-	int found = 0;
-	struct arp_entry *ptr_interfaceHeader;/**these variables are used to traverse the linked list structure of cache*/
-	struct arp_message *pckt_ARP;
-
-	pckt_ARP = pckt;
-	/**update cache is performed only is the received arp message pointer is not null*/
-	if (check_valid_arp(pckt_ARP) == 1) {
-		/**cache header is a node which has information about the interface of
-		 * the host itself. It links via 'next' pointer to the node containing addresses of
-		 * a neighbor. Each subsequent neighbor is linked via this pointer
-		 *
-		 * */
-		ptr_interfaceHeader = cache_list;
-
-		/**returns 1 if found, else 0*/
-		found = search_list(ptr_interfaceHeader, pckt_ARP->sender_IP_addrs);
-		/**the received ARP message must be from a neighbor which is not currently known to host*/
-		ptr_interfaceHeader = cache_list;
-
-		if (found == 0) {
-			/**If the ARP module is a valid sender and contains information about a new neighbor add it to cache
-			 * Store the new information as a new node and which will point to the current
-			 * list of neighbors. The cache header point towards this new node
-			 * Thus new node is added at the top of the list
-			 * */
-			struct arp_entry *new_host = (struct arp_entry *) malloc(sizeof(struct arp_entry));
-			new_host->next = NULL;
-			new_host->IP_addrs = pckt_ARP->sender_IP_addrs;
-			new_host->MAC_addrs = pckt_ARP->sender_MAC_addrs;
-			new_host->next = ptr_interfaceHeader->next;
-			ptr_interfaceHeader->next = new_host;
-		}
-	}
-}
-
-void update_cache_new(struct arp_message *pckt) {
-	int found = 0;
-	struct arp_entry *ptr_interfaceHeader;/**these variables are used to traverse the linked list structure of cache*/
-	struct arp_message *pckt_ARP;
-
-	pckt_ARP = pckt;
-	/**update cache is performed only is the received arp message pointer is not null*/
-	if (check_valid_arp(pckt_ARP) == 1) {
-		/**cache header is a node which has information about the interface of
-		 * the host itself. It links via 'next' pointer to the node containing addresses of
-		 * a neighbor. Each subsequent neighbor is linked via this pointer
-		 *
-		 * */
-		ptr_interfaceHeader = cache_list;
-
-		/**returns 1 if found, else 0*/
-		found = search_list(ptr_interfaceHeader, pckt_ARP->sender_IP_addrs);
-		/**the received ARP message must be from a neighbor which is not currently known to host*/
-		ptr_interfaceHeader = cache_list;
-
-		if (found == 0) {
-			/**If the ARP module is a valid sender and contains information about a new neighbor add it to cache
-			 * Store the new information as a new node and which will point to the current
-			 * list of neighbors. The cache header point towards this new node
-			 * Thus new node is added at the top of the list
-			 * */
-			struct arp_entry *new_host = (struct arp_entry *) malloc(sizeof(struct arp_entry));
-			new_host->next = NULL;
-			new_host->IP_addrs = pckt_ARP->sender_IP_addrs;
-			new_host->MAC_addrs = pckt_ARP->sender_MAC_addrs;
-			new_host->next = ptr_interfaceHeader->next;
-			ptr_interfaceHeader->next = new_host;
-		}
-	}
 }
 
 /**
@@ -281,16 +570,16 @@ void print_arp_hdr(struct arp_hdr *pckt) {
 
 	PRINT_DEBUG("\n\nPrinting of an external format arp message");
 	PRINT_DEBUG("\nSender hardware (MAC) address = ");
-	for (i = 0; i < HDWADDRSLEN; i++)
+	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
 		PRINT_DEBUG("%x:", pckt->sender_MAC_addrs[i]);
 	PRINT_DEBUG("\nSender IP address = ");
-	for (i = 0; i < PROTOCOLADDRSLEN; i++)
+	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
 		PRINT_DEBUG("%d.", pckt->sender_IP_addrs[i]);
 	PRINT_DEBUG("\nTarget hardware (MAC) address= ");
-	for (i = 0; i < HDWADDRSLEN; i++)
+	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
 		PRINT_DEBUG("%x:", pckt->target_MAC_addrs[i]);
 	PRINT_DEBUG("\nTarget IP address = ");
-	for (i = 0; i < PROTOCOLADDRSLEN; i++)
+	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
 		PRINT_DEBUG("%d.", pckt->target_IP_addrs[i]);
 	PRINT_DEBUG("\nHardware type: %d", pckt->hardware_type);
 	PRINT_DEBUG("\nProtocol type: %d", pckt->protocol_type);
@@ -303,16 +592,15 @@ void print_arp_hdr(struct arp_hdr *pckt) {
  * @brief this function prints the contents of a cache for each of the interfaces
  * ptr_cacheHeader points to the first element/header of the cache
  */
-void print_cache() {
+void print_cache(void) { //TODO fix/update?
+	//struct arp_cache *ptr_elementInList;
 
-	struct arp_entry *ptr_elementInList;
-
-	PRINT_DEBUG("\nHost Interface:");
-	ptr_elementInList = cache_list;
-	print_IP_addrs(ptr_elementInList->IP_addrs);
-	print_MAC_addrs(ptr_elementInList->MAC_addrs);
-	ptr_elementInList = ptr_elementInList->next; //move the pointer to the stored node
-	print_neighbors(ptr_elementInList);
+	//PRINT_DEBUG("\nHost Interface:");
+	//ptr_elementInList = cache_list;
+	//print_IP_addrs(ptr_elementInList->ip_addr);
+	//print_MAC_addrs(ptr_elementInList->mac_addr);
+	//ptr_elementInList = ptr_elementInList->next; //move the pointer to the stored node
+	print_neighbors(cache_list);
 	PRINT_DEBUG("\n\n");
 }
 
@@ -321,177 +609,19 @@ void print_cache() {
  * (useful in testing/mimicing network response)
  * @param ptr_neighbors points to the first element of the list of 'neighbors'
  */
-void print_neighbors(struct arp_entry *ptr_list_neighbors) {
+void print_neighbors(struct arp_cache *ptr_list_neighbors) {
 
-	struct arp_entry *ptr_elementInList;
+	struct arp_cache *ptr_elementInList;
 
 	ptr_elementInList = ptr_list_neighbors;
 	PRINT_DEBUG("\nList of addresses of neighbors:\n");
 
 	while (ptr_elementInList != NULL) {
-		print_IP_addrs(ptr_elementInList->IP_addrs);
-		print_MAC_addrs(ptr_elementInList->MAC_addrs);
+		print_IP_addrs(ptr_elementInList->ip_addr);
+		print_MAC_addrs(ptr_elementInList->mac_addr);
 		PRINT_DEBUG("\n");
 		ptr_elementInList = ptr_elementInList->next;
 	}
-}
-
-/**
- * @brief this function searches for a MAC address from a list of addresses of neighbors
- * where each neighbor has an IP and a MAC address
- * @param IP_addrs is the searched address
- * @param list points to the first element of the list of neighbors
- */
-uint64_t search_MAC_addrs(uint32_t IP_addrs, struct arp_entry *ptr_list_neighbors) {
-	uint64_t MAC_addrs = NULLADDRESS;
-	struct arp_entry *ptr_elementInList = ptr_list_neighbors;
-
-	while (ptr_elementInList != NULL) {
-		if (IP_addrs == ptr_elementInList->IP_addrs)
-			MAC_addrs = ptr_elementInList->MAC_addrs;
-
-		ptr_elementInList = ptr_elementInList->next;
-
-	}
-	return MAC_addrs;
-}
-
-/**
- * @brief this function converts an ARP message into a FINS frame
- * @param reply_ARP is a pointer to an ARP message struct which is type cast as a PDU
- * of a data FINS frame
- */
-void arp_to_fins(struct arp_hdr *pckt_arp, struct finsFrame *pckt_fins) {
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("failed to create matadata: ff=%p", pckt_fins);
-		return;
-	}
-	metadata_create(params);
-
-	//metadata_writeToElement(params, "src_ip", (uint32_t *) pckt_arp->sender_MAC_addrs, META_TYPE_INT);
-	//metadata_writeToElement(params, "dst_ip", (uint32_t *) pckt_arp->target_IP_addrs, META_TYPE_INT);
-	//metadata_writeToElement(params, "src_mac", pckt_arp->sender_MAC_addrs, META_TYPE_STRING) ;
-	//metadata_writeToElement(params, "dst_mac", pckt_arp->target_MAC_addrs, META_TYPE_STRING) ;
-
-	uint32_t type = (uint32_t) ARP_TYPE;
-	metadata_writeToElement(params, "ether_type", &type, META_TYPE_INT);
-
-	pckt_fins->destinationID.id = ETHERSTUBID;
-	pckt_fins->dataOrCtrl = DATA;
-	pckt_fins->dataFrame.pdu = (unsigned char *) pckt_arp;
-	pckt_fins->dataFrame.directionFlag = DOWN;
-	pckt_fins->dataFrame.pduLength = sizeof(struct arp_hdr);
-	pckt_fins->metaData = params;
-}
-
-/**
- * @brief this function converts a FINS frame into an ARP message
- * @param pckt_fins is a FINS data frame whose pdu contains the address of an ARP message struct
- * @param reply_ARP is an 'empty' ARP message which will be be filled by the contents pointed to by the FINS frame's pdu
- */
-void fins_to_arp(struct finsFrame *pckt_fins, struct arp_hdr *pckt_arp) {
-
-	//memcpy(pckt_arp, pckt_fins->dataFrame.pdu, pckt_fins->dataFrame.pduLength);
-	memcpy(pckt_arp, pckt_fins->dataFrame.pdu, sizeof(struct arp_hdr));
-
-}
-
-/**
- * @brief converts 6-byte MAC address (stored as unsigned 64-bit int)
- * into a representable 6-byte char array
- * @param int_addrs is the address in unsigned int 64
- * @param *char_addrs points to the character array which will store the converted address
- *  */
-/**register shifting is used to extract individual bytes in the code below*/
-void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs) {
-	char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FF))); //least sig.
-	char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00)) >> 8);
-	char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000)) >> 16);
-	char_addrs[2] = (unsigned char) ((int_addrs & (0x00000000FF000000)) >> 24);
-	char_addrs[1] = (unsigned char) ((int_addrs & (0x000000FF00000000)) >> 32);
-	char_addrs[0] = (unsigned char) ((int_addrs & (0x0000FF0000000000)) >> 40); //most sig.
-}
-
-/**
- * @brief converts 4-byte IP address (stored as unsigned 32-bit int)
- * into a representable 4-byte char array
- * @param int_addrs is the address in unsigned int 32
- * @param *char_addrs points to the character array which will store the converted address
- *  */
-void IP_addrs_conversion(uint32_t int_addrs, unsigned char *char_addrs) {
-	/**register shifting is used to extract individual bytes in the code below*/
-	char_addrs[3] = (unsigned char) ((int_addrs & (0x000000FF))); //least significant
-	char_addrs[2] = (unsigned char) ((int_addrs & (0x0000FF00)) >> 8);
-	char_addrs[1] = (unsigned char) ((int_addrs & (0x00FF0000)) >> 16);
-	char_addrs[0] = (unsigned char) ((int_addrs & (0xFF000000)) >> 24); //most significant
-}
-
-/**
- * @brief converts an arp header into a representable format (endien/address format)
- * immediately receiving it after or before sending it outside the arp module
- * @param pckt_hdr points to the arp header
- */
-void host_to_net(struct arp_hdr *pckt_hdr) {
-
-	pckt_hdr->protocol_type = htons(pckt_hdr->protocol_type);
-	pckt_hdr->hardware_type = htons(pckt_hdr->hardware_type);
-	pckt_hdr->operation = htons(pckt_hdr->operation);
-}
-
-/**
- * @brief simply checks whether a received ARP message is valid or not
- * @param pckt_arp points to the ARP message
- */
-int check_valid_arp(struct arp_message *msg) {
-
-	return (msg->hardware_type == HWDTYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY)
-			&& (msg->hardware_addrs_length == HDWADDRSLEN) && (msg->protocol_addrs_length == PROTOCOLADDRSLEN) && (msg->protocol_type == PROTOCOLTYPE)
-			&& (msg->sender_MAC_addrs != NULLADDRESS) && (msg->sender_IP_addrs != NULLADDRESS) && (msg->target_IP_addrs != NULLADDRESS);
-}
-
-/**
- * @brief converts an internal ARP message into a proper ARP header to be sent outside the module
- * @param ptr_msg is the pointer to the internal ARP message
- * @param ptr_hdr is the pointer to the ARP header which will be communicated outside
- *   */
-void arp_msg_to_hdr(struct arp_message *ptr_msg, struct arp_hdr *ptr_hdr) {
-
-	ptr_hdr->hardware_type = ptr_msg->hardware_type;
-	ptr_hdr->protocol_type = ptr_msg->protocol_type;
-
-	ptr_hdr->hardware_addrs_length = ptr_msg->hardware_addrs_length;
-	ptr_hdr->protocol_addrs_length = ptr_msg->protocol_addrs_length;
-	ptr_hdr->operation = ptr_msg->operation;
-	MAC_addrs_conversion(ptr_msg->sender_MAC_addrs, ptr_hdr->sender_MAC_addrs);
-	IP_addrs_conversion(ptr_msg->sender_IP_addrs, ptr_hdr->sender_IP_addrs);
-	MAC_addrs_conversion(ptr_msg->target_MAC_addrs, ptr_hdr->target_MAC_addrs);
-	IP_addrs_conversion(ptr_msg->target_IP_addrs, ptr_hdr->target_IP_addrs);
-}
-
-/**
- * @brief converts an external ARP header into an internal ARP message
- * @param ptr_hdr is the pointer to the ARP header
- * @param ptr_msg is the pointer to the internal ARP message
- */
-void arp_hdr_to_msg(struct arp_hdr *ptr_hdr, struct arp_message *ptr_msg) {
-
-	unsigned char *sdr_ads, *tgt_ads, *ip_sdr, *ip_dst;
-
-	sdr_ads = ptr_hdr->sender_MAC_addrs;
-	tgt_ads = ptr_hdr->target_MAC_addrs;
-	ip_sdr = ptr_hdr->sender_IP_addrs;
-	ip_dst = ptr_hdr->target_IP_addrs;
-
-	ptr_msg->hardware_type = ptr_hdr->hardware_type;
-	ptr_msg->protocol_type = ptr_hdr->protocol_type;
-	ptr_msg->hardware_addrs_length = ptr_hdr->hardware_addrs_length;
-	ptr_msg->protocol_addrs_length = ptr_hdr->protocol_addrs_length;
-	ptr_msg->operation = ptr_hdr->operation;
-	ptr_msg->sender_MAC_addrs = gen_MAC_addrs(sdr_ads[0], sdr_ads[1], sdr_ads[2], sdr_ads[3], sdr_ads[4], sdr_ads[5]);
-	ptr_msg->sender_IP_addrs = gen_IP_addrs((ip_sdr[0]), (ip_sdr[1]), (ip_sdr[2]), (ip_sdr[3]));
-	ptr_msg->target_MAC_addrs = gen_MAC_addrs(tgt_ads[0], tgt_ads[1], tgt_ads[2], tgt_ads[3], tgt_ads[4], tgt_ads[5]);
-	ptr_msg->target_IP_addrs = gen_IP_addrs(ip_dst[0], ip_dst[1], ip_dst[2], ip_dst[3]);
 }
 
 struct finsFrame *arp_to_fdf(struct arp_message *msg) {
@@ -503,7 +633,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_ERROR("failed to create matadata: msg=%p", msg);
-		return NULL;
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -516,11 +646,11 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	if (ff == NULL) {
 		PRINT_ERROR("failed to create ff: msg=%p meta=%p", msg, params);
 		metadata_destroy(params);
-		return NULL;
+		exit(-1);
 	}
 
 	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = ETHERSTUBID;
+	ff->destinationID.id = INTERFACE_ID;
 	ff->destinationID.next = NULL;
 	ff->metaData = params;
 	ff->dataFrame.directionFlag = DOWN;
@@ -530,7 +660,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	if (ff->dataFrame.pdu == NULL) {
 		PRINT_ERROR("failed to create pdu: msg=%p meta=%p", msg, params);
 		freeFinsFrame(ff);
-		return NULL;
+		exit(-1);
 	}
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
@@ -562,7 +692,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
 	if (msg == NULL) {
 		PRINT_ERROR("msg malloc error");
-		return NULL;
+		exit(-1);
 	}
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
@@ -590,33 +720,38 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	return msg;
 }
 
-void arp_get_ff() {
+void arp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
 		sem_wait(&Switch_to_ARP_Qsem);
 		ff = read_queue(Switch_to_ARP_Queue);
 		sem_post(&Switch_to_ARP_Qsem);
-	} while (arp_running && ff == NULL);
+	} while (arp_running && ff == NULL && !interrupt_flag);
 
 	if (!arp_running) {
 		return;
 	}
 
-	//arp_in(ff);
-	if (ff->dataOrCtrl == CONTROL) {
-		arp_fcf(ff);
-		PRINT_DEBUG("");
-	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->dataFrame.directionFlag == UP) {
-			arp_in_fdf(ff);
+	if (ff) {
+		if (ff->dataOrCtrl == CONTROL) {
+			arp_fcf(ff);
 			PRINT_DEBUG("");
-		} else { //directionFlag==DOWN
-			//arp_out_fdf(ff); //TODO remove?
+		} else if (ff->dataOrCtrl == DATA) {
+			if (ff->dataFrame.directionFlag == UP) {
+				arp_in_fdf(ff);
+				PRINT_DEBUG("");
+			} else { //directionFlag==DOWN
+				//arp_out_fdf(ff); //TODO remove?
+				PRINT_DEBUG("todo error");
+			}
+		} else {
 			PRINT_DEBUG("todo error");
 		}
-	} else {
-		PRINT_DEBUG("todo error");
+	} else if (interrupt_flag) {
+		interrupt_flag = 0;
+
+		arp_interrupt();
 	}
 }
 
@@ -701,6 +836,20 @@ void arp_exec(struct finsFrame *ff) {
 	}
 }
 
+void arp_interrupt(void) {
+	struct arp_cache *cache = cache_list;
+
+	while (cache) {
+		if (cache->to_flag) {
+			cache->to_flag = 0;
+
+			arp_handle_to(cache);
+		}
+
+		cache = cache->next;
+	}
+}
+
 /**@brief to be completed. A fins frame is written to the 'wire'*/
 int arp_to_switch(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
@@ -724,23 +873,23 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("ARP Started");
 	arp_running = 1;
 
-	//uint64_t MACADDRESS = 9890190479;/**<MAC address of host; sent to the arp module*/
-	uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
-	//uint64_t MACADDRESS = 0x080027112233; //eth1, nat
-	//uint64_t MACADDRESS = 0x080027123456; //made up
+	interface_list = NULL;
+	interface_num = 0;
 
-	//uint32_t IPADDRESS = 672121;/**<IP address of host; sent to the arp module*/
+	cache_list = NULL;
+	cache_num = 0;
+
+	//#############
+	uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
+
 	uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
 	//uint32_t IPADDRESS = IP4_ADR_P2H(172,31,50,160);/**<IP address of host; sent to the arp module*/
 
-	//init_arp_intface(MACADDRESS, IPADDRESS);
-
-	interface_list = NULL;
-	cache_list = NULL;
-	store_list = NULL;
-
 	arp_register_interface(MACADDRESS, IPADDRESS);
+	//#############
+}
 
+void arp_run(void) {
 	while (arp_running) {
 		arp_get_ff();
 		PRINT_DEBUG("");
@@ -750,12 +899,29 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("ARP Terminating");
 }
 
-void arp_shutdown() {
+int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
+	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
+
+	if (interface_list_has_space()) {
+		struct arp_interface *interface = interface_create(MAC_address, IP_address);
+		if (interface) {
+			interface_list_insert(interface);
+		} else {
+			return 0;
+		}
+	} else {
+		return 0;
+	}
+
+	return 1;
+}
+
+void arp_shutdown(void) {
 	arp_running = 0;
 
 	//TODO fill this out
 }
 
-void arp_free() {
+void arp_release(void) {
 	//TODO free all module related mem
 }

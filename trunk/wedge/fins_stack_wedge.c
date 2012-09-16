@@ -1127,12 +1127,12 @@ void nl_data_ready(struct sk_buff *skb) {
 				if (fins_daemon_pid != -1) {
 					PRINT_DEBUG("Daemon pID changed, old pid=%d", fins_daemon_pid);
 				}
-				fins_stack_passthrough_enabled = 1;
+				//fins_stack_passthrough_enabled = 1;
 				fins_daemon_pid = pid;
 				PRINT_DEBUG("Daemon connected, pid=%d", fins_daemon_pid);
 			} else if (reply_call == daemon_stop_call) {
 				PRINT_DEBUG("Daemon disconnected");
-				fins_stack_passthrough_enabled = 0;
+				//fins_stack_passthrough_enabled = 0;
 				fins_daemon_pid = -1; //TODO expand this functionality
 			} else {
 				//TODO drop?
@@ -4795,7 +4795,7 @@ if (fins_nl_sk != NULL) {
 static int __init fins_stack_wedge_init(void) {
 	PRINT_DEBUG("############################################");
 PRINT_DEBUG("Unregistering AF_INET");
-	sock_unregister(AF_INET);
+sock_unregister(AF_INET);
 	PRINT_DEBUG("Loading the fins_stack_wedge module");
 setup_fins_protocol();
 	setup_fins_netlink();

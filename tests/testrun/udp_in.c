@@ -20,7 +20,7 @@
 
 extern struct udp_statistics udpStat;
 
-void sendToSwitch(struct finsFrame * newFF){
+void udp_to_switch(struct finsFrame * newFF){
 
 	PRINT_DEBUG("send to switch has been just called");
 	struct udp_metadata_parsed meta;
@@ -91,6 +91,6 @@ void udp_in(struct finsFrame* ff) {
 	struct finsFrame newFF;
 	newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), (ff->dataFrame.pdu), (unsigned char*)meta);
 
-	sendToSwitch(&newFF);
+	udp_to_switch(&newFF);
 }
 

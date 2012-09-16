@@ -195,7 +195,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	conn = conn_find(src_ip, src_port, dst_ip, dst_port); //TODO check if right
+	conn = conn_list_find(src_ip, src_port, dst_ip, dst_port); //TODO check if right
 	start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
@@ -273,9 +273,9 @@ void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	conn_stub = conn_stub_find(host_ip, host_port);
+	conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub) {
-		conn_stub_remove(conn_stub);
+		conn_stub_list_remove(conn_stub);
 		start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 		/*#*/PRINT_DEBUG("");
 		sem_post(&conn_stub_list_sem);
@@ -396,7 +396,7 @@ void tcp_exec_poll(socket_state state, uint32_t host_ip, uint16_t host_port, uin
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
 		}
-		conn = conn_find(host_ip, host_port, rem_ip, rem_port);
+		conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 		if (conn) {
 			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 			/*#*/PRINT_DEBUG("");
@@ -427,7 +427,7 @@ void tcp_exec_poll(socket_state state, uint32_t host_ip, uint16_t host_port, uin
 			PRINT_ERROR("conn_stub_list_sem wait prob");
 			exit(-1);
 		}
-		conn_stub = conn_stub_find(host_ip, host_port);
+		conn_stub = conn_stub_list_find(host_ip, host_port);
 		if (conn_stub) {
 			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 			/*#*/PRINT_DEBUG("");
@@ -543,11 +543,11 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	conn = conn_find(host_ip, host_port, rem_ip, rem_port);
+	conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn == NULL) {
-		if (conn_has_space(1)) {
+		if (conn_list_has_space(1)) {
 			conn = conn_create(host_ip, host_port, rem_ip, rem_port);
-			if (conn_insert(conn)) {
+			if (conn_list_insert(conn)) {
 				conn->threads++;
 				/*#*/PRINT_DEBUG("");
 				sem_post(&conn_list_sem);
@@ -558,9 +558,9 @@ void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uin
 					PRINT_ERROR("conn_list_sem wait prob");
 					exit(-1);
 				}
-				conn_stub = conn_stub_find(host_ip, host_port);
+				conn_stub = conn_stub_list_find(host_ip, host_port);
 				if (conn_stub) {
-					conn_stub_remove(conn_stub);
+					conn_stub_list_remove(conn_stub);
 					start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 					/*#*/PRINT_DEBUG("");
 					sem_post(&conn_stub_list_sem);
@@ -624,11 +624,11 @@ void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
-	conn_stub = conn_stub_find(host_ip, host_port);
+	conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub == NULL) {
-		if (conn_stub_has_space(1)) {
+		if (conn_stub_list_has_space(1)) {
 			conn_stub = conn_stub_create(host_ip, host_port, backlog);
-			if (conn_stub_insert(conn_stub)) {
+			if (conn_stub_list_insert(conn_stub)) {
 				/*#*/PRINT_DEBUG("");
 				sem_post(&conn_stub_list_sem);
 			} else {
@@ -687,11 +687,11 @@ void *accept_thread(void *local) {
 				PRINT_ERROR("conn_list_sem wait prob");
 				exit(-1);
 			}
-			conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
+			conn = conn_list_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 			if (conn == NULL) {
-				if (conn_has_space(1)) {
+				if (conn_list_has_space(1)) {
 					conn = conn_create(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
-					if (conn_insert(conn)) {
+					if (conn_list_insert(conn)) {
 						conn->threads++;
 						/*#*/PRINT_DEBUG("");
 						sem_post(&conn_list_sem);
@@ -835,7 +835,7 @@ void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
 		exit(-1);
 	}
-	conn_stub = conn_stub_find(host_ip, host_port);
+	conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub) {
 		start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 		/*#*/PRINT_DEBUG("");
@@ -995,7 +995,7 @@ void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint1
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	conn = conn_find(host_ip, host_port, rem_ip, rem_port);
+	conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn) {
 		start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 		/*#*/PRINT_DEBUG("");
@@ -1207,7 +1207,7 @@ void tcp_read_param(struct finsFrame *ff) {
 				PRINT_ERROR("conn_list_sem wait prob");
 				exit(-1);
 			}
-			conn = conn_find(host_ip, host_port, rem_ip, rem_port);
+			conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 			if (conn) {
 				start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 				/*#*/PRINT_DEBUG("");
@@ -1239,7 +1239,7 @@ void tcp_read_param(struct finsFrame *ff) {
 				PRINT_ERROR("conn_stub_list_sem wait prob");
 				exit(-1);
 			}
-			conn_stub = conn_stub_find(host_ip, host_port);
+			conn_stub = conn_stub_list_find(host_ip, host_port);
 			if (conn_stub) {
 				start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 				/*#*/PRINT_DEBUG("");
@@ -1468,7 +1468,7 @@ void tcp_set_param(struct finsFrame *ff) {
 					PRINT_ERROR("conn_list_sem wait prob");
 					exit(-1);
 				}
-				struct tcp_connection *conn = conn_find(host_ip, host_port, rem_ip, rem_port);
+				struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 				if (conn) {
 					start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 					/*#*/PRINT_DEBUG("");
@@ -1508,7 +1508,7 @@ void tcp_set_param(struct finsFrame *ff) {
 					PRINT_ERROR("conn_stub_list_sem wait prob");
 					exit(-1);
 				}
-				struct tcp_connection_stub *conn_stub = conn_stub_find(host_ip, host_port);
+				struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 				if (conn_stub) {
 					start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 					/*#*/PRINT_DEBUG("");

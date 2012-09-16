@@ -36,7 +36,7 @@ void udp_in(struct finsFrame* ff) {
 		freeFinsFrame(ff);
 		return;
 	}
-	if (ff->destinationID.id != UDPID) {
+	if (ff->destinationID.id != UDP_ID) {
 		// release FDF here
 		freeFinsFrame(ff);
 		return;
@@ -143,7 +143,7 @@ void udp_in(struct finsFrame* ff) {
 	free(temp);
 	//#########################
 
-	ff->destinationID.id = SOCKETSTUBID;
+	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
 
 	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
@@ -153,7 +153,7 @@ void udp_in(struct finsFrame* ff) {
 	//print_finsFrame(newFF);
 
 	//sendToSwitch(newFF);
-	sendToSwitch(ff);
+	udp_to_switch(ff);
 
 	//PRINT_DEBUG("freeing: ff=%p", ff);
 	//freeFinsFrame(ff); //can't since using meta

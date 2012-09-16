@@ -19,15 +19,15 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	PRINT_DEBUG("protocol # %d", pheader->protocol);
 	switch (pheader->protocol) {
 	case IP4_PT_TCP:
-		ff->destinationID.id = TCPID;
+		ff->destinationID.id = TCP_ID;
 		ff->destinationID.next = NULL;
 		break;
 	case IP4_PT_UDP:
-		ff->destinationID.id = UDPID;
+		ff->destinationID.id = UDP_ID;
 		ff->destinationID.next = NULL;
 		break;
 	case IP4_PT_ICMP:
-		ff->destinationID.id = ICMPID;
+		ff->destinationID.id = ICMP_ID;
 		ff->destinationID.next = NULL;
 		break;
 	default:
@@ -84,8 +84,8 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 
 	if (ff == NULL) {
 
-		PRINT_DEBUG("forwarded frame equal NULL");
-		exit(1);
+		PRINT_ERROR("forwarded frame equal NULL");
+		exit(-1);
 
 	}
 
@@ -95,7 +95,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	 char *data;
 	 PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p newff=%p", ff, fins_frame);
 	 fins_frame->dataOrCtrl = DATA;
-	 (fins_frame->destinationID).id = ETHERSTUBID;
+	 (fins_frame->destinationID).id = INTERFACE_ID;
 	 (fins_frame->destinationID).next = NULL;
 	 (fins_frame->dataFrame).directionFlag = DOWN;
 	 (fins_frame->metaData) = ff->metaData;
@@ -147,7 +147,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	u_char *pdu = ff->dataFrame.pdu;
 	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p", ff);
 	//ff->dataOrCtrl = DATA;
-	ff->destinationID.id = ETHERSTUBID;
+	ff->destinationID.id = INTERFACE_ID;
 	ff->destinationID.next = NULL;
 	//ff->dataFrame.directionFlag = DOWN;
 	//ff->metaData = ff->metaData;

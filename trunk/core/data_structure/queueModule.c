@@ -210,52 +210,52 @@ void cpy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 /**@brief prints the contents of a fins frame whether data or control type
  * @param fins_in the pointer to the fins frame
  * */
-void print_finsFrame(struct finsFrame *fins_in) {
+void print_finsFrame(struct finsFrame *ff) {
 
 	char *temp;
 	struct destinationList *dest;
 
 	PRINT_DEBUG("Printing FINS frame: \n");
 
-	dest = &(fins_in->destinationID);
+	dest = &(ff->destinationID);
 
 	while (dest != NULL) {
 		PRINT_DEBUG("\nDestination id %d", dest->id);
 		dest = dest->next;
 	}
 
-	if (fins_in->dataOrCtrl == DATA) {
-		PRINT_DEBUG("\nData fins %d \n", fins_in->dataOrCtrl);
-		PRINT_DEBUG("Direction flag %d\n", fins_in->dataFrame.directionFlag);
+	if (ff->dataOrCtrl == DATA) {
+		PRINT_DEBUG("\nData fins %d \n", ff->dataOrCtrl);
+		PRINT_DEBUG("Direction flag %d\n", ff->dataFrame.directionFlag);
 		//PRINT_DEBUG("Meta data (first element) %x\n", fins_in->metaData);
-		PRINT_DEBUG("PDU size (bytes) %d\n", fins_in->dataFrame.pduLength);
+		PRINT_DEBUG("PDU size (bytes) %d\n", ff->dataFrame.pduLength);
 		int i = 0;
-		while (i < fins_in->dataFrame.pduLength) {
-			PRINT_DEBUG("%d", fins_in->dataFrame.pdu[i]);
+		while (i < ff->dataFrame.pduLength) {
+			PRINT_DEBUG("%d", ff->dataFrame.pdu[i]);
 			i++;
 
 		}
-		temp = (char *) malloc(fins_in->dataFrame.pduLength + 1);
-		memcpy(temp, fins_in->dataFrame.pdu, fins_in->dataFrame.pduLength);
-		temp[fins_in->dataFrame.pduLength] = '\0';
+		temp = (char *) malloc(ff->dataFrame.pduLength + 1);
+		memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+		temp[ff->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pdu=%s", temp);
 		free(temp);
 
-	} else if (fins_in->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("\nControl fins %d\n", fins_in->dataOrCtrl);
-		PRINT_DEBUG("\nOpcode %d\n", fins_in->ctrlFrame.opcode);
-		PRINT_DEBUG("\nParameter ID %d\n", fins_in->ctrlFrame.paramterID);
-		PRINT_DEBUG("\nParameter Value %d\n", *(int *) (fins_in->ctrlFrame.paramterValue));
+	} else if (ff->dataOrCtrl == CONTROL) {
+		PRINT_DEBUG("\nControl fins %d\n", ff->dataOrCtrl);
+		PRINT_DEBUG("\nOpcode %d\n", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("\nParameter ID %d\n", ff->ctrlFrame.paramterID);
+		PRINT_DEBUG("\nParameter Value %d\n", *(int *) (ff->ctrlFrame.paramterValue));
 		//		PRINT_DEBUG("\nReply Record (first element) %x\n", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("\nSender Id %d\n", fins_in->ctrlFrame.senderID);
-		PRINT_DEBUG("\nSerial number %d\n", fins_in->ctrlFrame.serialNum);
+		PRINT_DEBUG("\nSender Id %d\n", ff->ctrlFrame.senderID);
+		PRINT_DEBUG("\nSerial number %d\n", ff->ctrlFrame.serialNum);
 	}
 
 }
 
 struct finsFrame * buildFinsFrame(void) {
 
-	struct finsFrame *f = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	PRINT_DEBUG("2.1");
 	int linkvalue = 80211;
 	char linkname[] = "linklayer";
@@ -272,38 +272,38 @@ struct finsFrame * buildFinsFrame(void) {
 	PRINT_DEBUG("2.4");
 	metadata_writeToElement(metaptr, linkname, &linkvalue, META_TYPE_INT);
 	PRINT_DEBUG("2.5");
-	f->dataOrCtrl = DATA;
-	f->destinationID.id = (unsigned char) 200;
-	f->destinationID.next = NULL;
+	ff->dataOrCtrl = DATA;
+	ff->destinationID.id = (unsigned char) 200;
+	ff->destinationID.next = NULL;
 
-	f->dataFrame.directionFlag = UP;
-	f->metaData = metaptr;
-	f->dataFrame.pdu = fakeData;
-	f->dataFrame.pduLength = 10;
+	ff->dataFrame.directionFlag = UP;
+	ff->metaData = metaptr;
+	ff->dataFrame.pdu = fakeData;
+	ff->dataFrame.pduLength = 10;
 
-	return (f);
+	return ff;
 }
 
-int freeFinsFrame(struct finsFrame *f) {
-	if (f == NULL) {
+int freeFinsFrame(struct finsFrame *ff) {
+	if (ff == NULL) {
 		return (0);
 	}
 
-	PRINT_DEBUG("Entered: ff=%p meta=%p", f, f->metaData);
-	if (f->dataOrCtrl == CONTROL) {
-		if (f->metaData != NULL) {
-			metadata_destroy(f->metaData);
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	if (ff->dataOrCtrl == CONTROL) {
+		if (ff->metaData != NULL) {
+			metadata_destroy(ff->metaData);
 		}
-	} else if (f->dataOrCtrl == DATA) {
-		if (f->metaData != NULL) {
-			metadata_destroy(f->metaData);
+	} else if (ff->dataOrCtrl == DATA) {
+		if (ff->metaData != NULL) {
+			metadata_destroy(ff->metaData);
 		}
 	} else {
 		//dataOrCtrl uninitialized
 		PRINT_DEBUG("todo error");
 	}
 
-	free(f);
+	free(ff);
 	return (1);
 }
 

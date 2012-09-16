@@ -44,7 +44,7 @@ void udp_out(struct finsFrame* ff) {
 		PRINT_ERROR("shouldn't reach here");
 		return;
 	}
-	if (ff->destinationID.id != UDPID) {
+	if (ff->destinationID.id != UDP_ID) {
 		// release FDF here
 		PRINT_ERROR("shouldn't reach here");
 		return;
@@ -214,10 +214,10 @@ void udp_out(struct finsFrame* ff) {
 	PRINT_DEBUG("%p", udp_dataunit);
 	//(int)ff->dataFrame.pdu);
 
-	//newFF = create_ff(DATA, DOWN, IPV4ID, packet_length, udp_dataunit, meta);
+	//newFF = create_ff(DATA, DOWN, IPV4_ID, packet_length, udp_dataunit, meta);
 
 	//ff->dataOrCtrl = DATA;
-	ff->destinationID.id = IPV4ID;
+	ff->destinationID.id = IPV4_ID;
 	ff->destinationID.next = NULL;
 
 	//ff->dataFrame.directionFlag = DOWN;
@@ -232,7 +232,7 @@ void udp_out(struct finsFrame* ff) {
 	udpStat.totalSent++;
 
 	//sendToSwitch(newFF);
-	sendToSwitch(ff);
+	udp_to_switch(ff);
 
 	//PRINT_DEBUG("freeing: ff=%p", ff);
 	PRINT_DEBUG("freeing: pdu=%p", pdu);

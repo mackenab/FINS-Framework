@@ -29,10 +29,6 @@
 //#include <stdio.h> //added
 //kernel stuff
 
-/** Global parameters of the socketdaemon
- *
- */
-
 /**
  * TODO free and close/DESTORY all the semaphores before exit !!!
  * POSIX does not clean the garbage of semaphores at exiting
@@ -46,101 +42,67 @@
  * in UDPreadFrom_fins. Only lock/unlock when changing daemonSockets,
  * since recvfrom_udp just reads data.
  */
-sem_t daemonSockets_sem;
-struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
 
-int recv_thread_index;
-int thread_count; //TODO move?
-sem_t thread_sem;
+pthread_t daemon_thread;
+pthread_t udp_thread;
+//	pthread_t udp_outgoing;
+pthread_t icmp_thread;
+pthread_t rtm_thread;
+pthread_t tcp_thread;
+//	pthread_t tcp_outgoing;
+pthread_t ipv4_thread;
+//	pthread_t ip_outgoing;
+pthread_t arp_thread;
+//	pthread_t arp_outgoing;
+pthread_t interface_thread;
+pthread_t switch_thread;
 
 /** The list of major Queues which connect the modules to each other
  * including the switch module
  * The list of Semaphores which protect the Queues
  */
 
-pthread_t daemon_thread;
-
-pthread_t udp_thread;
-//	pthread_t udp_outgoing;
-
-pthread_t icmp_thread;
-
-pthread_t rtm_thread;
-
-pthread_t tcp_thread;
-//	pthread_t tcp_outgoing;
-
-pthread_t ipv4_thread;
-//	pthread_t ip_outgoing;
-
-pthread_t arp_thread;
-//	pthread_t arp_outgoing;
-
-pthread_t interface_thread;
-
-pthread_t switch_thread;
-
+//TODO move to each separate module
 finsQueue Daemon_to_Switch_Queue;
 finsQueue Switch_to_Daemon_Queue;
-
-finsQueue Switch_to_RTM_Queue;
-finsQueue RTM_to_Switch_Queue;
-
-finsQueue Switch_to_UDP_Queue;
-finsQueue UDP_to_Switch_Queue;
-
-finsQueue Switch_to_TCP_Queue;
-finsQueue TCP_to_Switch_Queue;
-
-finsQueue Switch_to_ARP_Queue;
-finsQueue ARP_to_Switch_Queue;
-
-finsQueue Switch_to_IPv4_Queue;
-finsQueue IPv4_to_Switch_Queue;
-
-finsQueue Switch_to_Interface_Queue;
-finsQueue Interface_to_Switch_Queue;
-
-finsQueue Switch_to_ICMP_Queue;
-finsQueue ICMP_to_Switch_Queue;
-
 sem_t Daemon_to_Switch_Qsem;
 sem_t Switch_to_Daemon_Qsem;
 
 /** RunTimeManager Module to connect to the user interface  */
+finsQueue Switch_to_RTM_Queue;
+finsQueue RTM_to_Switch_Queue;
 sem_t RTM_to_Switch_Qsem;
 sem_t Switch_to_RTM_Qsem;
 
+finsQueue Switch_to_UDP_Queue;
+finsQueue UDP_to_Switch_Queue;
 sem_t Switch_to_UDP_Qsem;
 sem_t UDP_to_Switch_Qsem;
 
-sem_t ICMP_to_Switch_Qsem;
-sem_t Switch_to_ICMP_Qsem;
-
+finsQueue Switch_to_TCP_Queue;
+finsQueue TCP_to_Switch_Queue;
 sem_t Switch_to_TCP_Qsem;
 sem_t TCP_to_Switch_Qsem;
 
-sem_t Switch_to_IPv4_Qsem;
-sem_t IPv4_to_Switch_Qsem;
-
+finsQueue Switch_to_ARP_Queue;
+finsQueue ARP_to_Switch_Queue;
 sem_t Switch_to_ARP_Qsem;
 sem_t ARP_to_Switch_Qsem;
 
+finsQueue Switch_to_IPv4_Queue;
+finsQueue IPv4_to_Switch_Queue;
+sem_t Switch_to_IPv4_Qsem;
+sem_t IPv4_to_Switch_Qsem;
+
+finsQueue Switch_to_Interface_Queue;
+finsQueue Interface_to_Switch_Queue;
 sem_t Switch_to_Interface_Qsem;
 sem_t Interface_to_Switch_Qsem;
 
-finsQueue modules_IO_queues[MAX_modules];
-sem_t *IO_queues_sem[MAX_modules];
-
-/** ----------------------------------------------------------*/
-
-int capture_pipe_fd; /** capture file descriptor to read from capturer */
-int inject_pipe_fd; /** inject file descriptor to read from capturer */
-int rtm_in_fd;
-int rtm_out_fd;
-
-//bu_mark kernel stuff
-//end kernel stuff
+finsQueue Switch_to_ICMP_Queue;
+finsQueue ICMP_to_Switch_Queue;
+sem_t ICMP_to_Switch_Qsem;
+sem_t Switch_to_ICMP_Qsem;
 
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
@@ -166,168 +128,58 @@ int read_configurations() {
 	return EXIT_SUCCESS;
 }
 
-/**
- * @brief initialize the daemon sockets array by filling with value of -1
- * @param
- * @return nothing
- */
-void init_daemonSockets() {
-	int i;
-
-	sem_init(&daemonSockets_sem, 0, 1);
-	for (i = 0; i < MAX_SOCKETS; i++) {
-		daemonSockets[i].uniqueSockID = -1;
-		daemonSockets[i].state = SS_FREE;
-	}
-
-	sem_init(&thread_sem, 0, 1);
-	recv_thread_index = 0;
-	thread_count = 0;
-}
-
-void Queues_init() {
-
-	Daemon_to_Switch_Queue = init_queue("daemon2switch", MAX_Queue_size);
-	Switch_to_Daemon_Queue = init_queue("switch2daemon", MAX_Queue_size);
-	modules_IO_queues[0] = Daemon_to_Switch_Queue;
-	modules_IO_queues[1] = Switch_to_Daemon_Queue;
-	sem_init(&Daemon_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_Daemon_Qsem, 0, 1);
-	IO_queues_sem[0] = &Daemon_to_Switch_Qsem;
-	IO_queues_sem[1] = &Switch_to_Daemon_Qsem;
-
-	UDP_to_Switch_Queue = init_queue("udp2switch", MAX_Queue_size);
-	Switch_to_UDP_Queue = init_queue("switch2udp", MAX_Queue_size);
-	modules_IO_queues[2] = UDP_to_Switch_Queue;
-	modules_IO_queues[3] = Switch_to_UDP_Queue;
-	sem_init(&UDP_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_UDP_Qsem, 0, 1);
-	IO_queues_sem[2] = &UDP_to_Switch_Qsem;
-	IO_queues_sem[3] = &Switch_to_UDP_Qsem;
-
-	TCP_to_Switch_Queue = init_queue("tcp2switch", MAX_Queue_size);
-	Switch_to_TCP_Queue = init_queue("switch2tcp", MAX_Queue_size);
-	modules_IO_queues[4] = TCP_to_Switch_Queue;
-	modules_IO_queues[5] = Switch_to_TCP_Queue;
-	sem_init(&TCP_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_TCP_Qsem, 0, 1);
-	IO_queues_sem[4] = &TCP_to_Switch_Qsem;
-	IO_queues_sem[5] = &Switch_to_TCP_Qsem;
-
-	IPv4_to_Switch_Queue = init_queue("ipv42switch", MAX_Queue_size);
-	Switch_to_IPv4_Queue = init_queue("switch2ipv4", MAX_Queue_size);
-	modules_IO_queues[6] = IPv4_to_Switch_Queue;
-	modules_IO_queues[7] = Switch_to_IPv4_Queue;
-	sem_init(&IPv4_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_IPv4_Qsem, 0, 1);
-	IO_queues_sem[6] = &IPv4_to_Switch_Qsem;
-	IO_queues_sem[7] = &Switch_to_IPv4_Qsem;
-
-	ARP_to_Switch_Queue = init_queue("arp2switch", MAX_Queue_size);
-	Switch_to_ARP_Queue = init_queue("switch2arp", MAX_Queue_size);
-	modules_IO_queues[8] = ARP_to_Switch_Queue;
-	modules_IO_queues[9] = Switch_to_ARP_Queue;
-	sem_init(&ARP_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_ARP_Qsem, 0, 1);
-	IO_queues_sem[8] = &ARP_to_Switch_Qsem;
-	IO_queues_sem[9] = &Switch_to_ARP_Qsem;
-
-	Interface_to_Switch_Queue = init_queue("etherstub2switch", MAX_Queue_size);
-	Switch_to_Interface_Queue = init_queue("switch2etherstub", MAX_Queue_size);
-	modules_IO_queues[10] = Interface_to_Switch_Queue;
-	modules_IO_queues[11] = Switch_to_Interface_Queue;
-	sem_init(&Interface_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_Interface_Qsem, 0, 1);
-	IO_queues_sem[10] = &Interface_to_Switch_Qsem;
-	IO_queues_sem[11] = &Switch_to_Interface_Qsem;
-
-	ICMP_to_Switch_Queue = init_queue("icmp2switch", MAX_Queue_size);
-	Switch_to_ICMP_Queue = init_queue("switch2icmp", MAX_Queue_size);
-	modules_IO_queues[12] = ICMP_to_Switch_Queue;
-	modules_IO_queues[13] = Switch_to_ICMP_Queue;
-	sem_init(&ICMP_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_ICMP_Qsem, 0, 1);
-	IO_queues_sem[12] = &ICMP_to_Switch_Qsem;
-	IO_queues_sem[13] = &Switch_to_ICMP_Qsem;
-
-	RTM_to_Switch_Queue = init_queue("rtm2switch", MAX_Queue_size);
-	Switch_to_RTM_Queue = init_queue("switch2rtm", MAX_Queue_size);
-	modules_IO_queues[14] = RTM_to_Switch_Queue;
-	modules_IO_queues[15] = Switch_to_RTM_Queue;
-	sem_init(&RTM_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_RTM_Qsem, 0, 1);
-	IO_queues_sem[14] = &RTM_to_Switch_Qsem;
-	IO_queues_sem[15] = &Switch_to_RTM_Qsem;
-}
-
 void *Daemon(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	daemon_init(fins_pthread_attr);
+	daemon_run();
 
 	pthread_exit(NULL);
 }
 
 void *Interface(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	interface_init(fins_pthread_attr);
+	interface_run();
 
 	pthread_exit(NULL);
 }
 
 void *UDP(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	udp_init(fins_pthread_attr);
+	udp_run();
 
 	pthread_exit(NULL);
 }
 
 void *RTM(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	rtm_init(fins_pthread_attr);
+	//TODO change to rtm_init & rtm_run
+	rtm_init(NULL);
 
 	pthread_exit(NULL);
 }
 
 void *TCP(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	tcp_init(fins_pthread_attr);
+	tcp_run();
 
 	pthread_exit(NULL);
 }
 
 void *IPv4(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	ipv4_init(fins_pthread_attr);
+	ipv4_run();
 
 	pthread_exit(NULL);
 }
 
 void *ICMP(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	icmp_init(fins_pthread_attr);
+	//TODO change to rtm_init & rtm_run
+	icmp_init(NULL);
 
 	pthread_exit(NULL);
 }
 
 void *ARP(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	arp_init(fins_pthread_attr);
+	arp_run();
 
 	pthread_exit(NULL);
 }
 
 void *Switch(void *local) {
-	pthread_attr_t *fins_pthread_attr = (pthread_attr_t *) local;
-
-	switch_init(fins_pthread_attr);
+	switch_run();
 
 	pthread_exit(NULL);
 }
@@ -357,41 +209,17 @@ void termination_handler(int sig) {
 	//pthread_join(wedge_to_daemon_thread, NULL);
 
 	//TODO move que/sem free to module
-	udp_free();
-	tcp_free();
-	ipv4_free();
-	arp_free();
+	udp_release();
+	tcp_release();
+	ipv4_release();
+	arp_release();
 
-	daemon_free();
-	interface_free();
-	switch_free();
-
-	//free daemonSockets
-	int i = 0, j = 0;
-	int THREADS = 100;
-
-	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemonSockets[i].uniqueSockID != -1) {
-			daemonSockets[i].uniqueSockID = -1;
-
-			//TODO stop all threads related to
-
-			for (j = 0; j < THREADS; j++) {
-				sem_post(&daemonSockets[i].control_sem);
-			}
-
-			for (j = 0; j < THREADS; j++) {
-				sem_post(&daemonSockets[i].data_sem);
-			}
-
-			daemonSockets[i].state = SS_FREE;
-			term_queue(daemonSockets[i].controlQueue);
-			term_queue(daemonSockets[i].dataQueue);
-		}
-	}
+	daemon_release();
+	interface_release();
+	switch_release();
 
 	PRINT_DEBUG("FIN");
-	exit(2);
+	exit(-1);
 }
 
 int main() {
@@ -426,7 +254,7 @@ int main() {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
 		} else {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
-			exit(1);
+			exit(-1);
 		}
 	}
 	if (mkfifo(RTM_PIPE_OUT, 0777) != 0) {
@@ -434,7 +262,7 @@ int main() {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) already exists.");
 		} else {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) failed.");
-			exit(1);
+			exit(-1);
 		}
 	}
 
@@ -453,9 +281,7 @@ int main() {
 	 * 3.
 	 */
 	//	read_configurations();
-	init_daemonSockets(); //TODO move to daemon module?
-	Queues_init(); //TODO split & move to each module
-
+	//init_daemonSockets(); //TODO move to daemon module?
 	//register termination handler
 	signal(SIGINT, termination_handler);
 
@@ -463,57 +289,118 @@ int main() {
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 
-	//pthread_create(&wedge_to_daemon_thread, &fins_pthread_attr, Wedge_to_Daemon, &fins_pthread_attr); //this has named pipe input from wedge
-	//pthread_create(&switch_to_daemon_thread, &fins_pthread_attr, Switch_to_Daemon, &fins_pthread_attr);
-	//pthread_create(&etherStub_capturing, &fins_pthread_attr, Capture, &fins_pthread_attr);
-	//pthread_create(&etherStub_injecting, &fins_pthread_attr, Inject, &fins_pthread_attr);
+	//######################################## //TODO register modules:
+	/*
+	 //Have in swito.c
+	 struct module_ops {
+	 int id;
+	 void (*init)(struct net *net, int kern); //TODO change this to inputs
+	 void (*run)(void);
+	 void (*shutdown)(void);
+	 void (*release)(void);
+	 struct finsQueue *in_queue;	//TODO check pointers/etc
+	 sem_t in_sem;
+	 struct finsQueue *out_queue;
+	 sem_t out_sem;
+	 };
+	 static const struct module_ops *modules[MAX_ID];
+	 int module_register(const struct module_ops *ops) { modules[ops->module_id] = ops;} //TODO add checks/expand
 
-	pthread_create(&switch_thread, &fins_pthread_attr, Switch, &fins_pthread_attr);
-	pthread_create(&daemon_thread, &fins_pthread_attr, Daemon, &fins_pthread_attr);
-	pthread_create(&interface_thread, &fins_pthread_attr, Interface, &fins_pthread_attr);
+	 //Have in daemon.c
+	 finsQueue Daemon_to_Switch_Queue;
+	 finsQueue Switch_to_Daemon_Queue;
+	 sem_t Daemon_to_Switch_Qsem;
+	 sem_t Switch_to_Daemon_Qsem;
 
-	pthread_create(&udp_thread, &fins_pthread_attr, UDP, &fins_pthread_attr);
-	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, &fins_pthread_attr);
-	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, &fins_pthread_attr);
-	pthread_create(&arp_thread, &fins_pthread_attr, ARP, &fins_pthread_attr);
+	 Daemon_to_Switch_Queue = init_queue("daemon_to_switch", MAX_Queue_size);
+	 Switch_to_Daemon_Queue = init_queue("switch_to_daemon", MAX_Queue_size);
+	 sem_init(&Daemon_to_Switch_Qsem, 0, 1);
+	 sem_init(&Switch_to_Daemon_Qsem, 0, 1);
+
+	 static struct module_ops daemon_ops = {
+	 .id = DAEMON_ID, .init = daemon_init, .run = daemon_run, .shutdown =  daemon_shutdown, .release = daemon_release,
+	 .in_queue = Switch_to_Daemon_Queue, .in_sem = Switch_to_Daemon_Qsem,
+	 .out_queue = Daemon_to_Switch_Queue, .out_sem = Daemon_to_Switch_Qsem,
+	 };
+
+	 module_register(&daemon_ops); //potentially do in init?
+
+	 switch_run()
+	 if (modules[i]) {
+	 sem_wait(modules[i]->out_sem);
+	 ff = read_queue(modules[i]->out_queue);
+	 sem_post(modules[i]->out_sem);
+	 ...
+	 if (ff->destinationID.id < MAX_ID){
+	 //PRINT_DEBUG("ARP Queue +1, ff=%p", ff);
+	 sem_wait(modules[i]->in_sem);
+	 write_queue(ff, modules[i]->in_queue);
+	 sem_post(modules[i]->in_sem);
+	 }
+
+	 */
+
+	//module init
+	//module run in thread //TODO start threads here? or in init?
+	//########################################
+//TODO do this by registration
+	switch_init(&fins_pthread_attr); //should always be first
+	daemon_init(&fins_pthread_attr);
+	interface_init(&fins_pthread_attr);
+	udp_init(&fins_pthread_attr);
+	tcp_init(&fins_pthread_attr);
+	ipv4_init(&fins_pthread_attr);
+	arp_init(&fins_pthread_attr);
+
+	pthread_create(&switch_thread, &fins_pthread_attr, Switch, NULL);
+	pthread_create(&daemon_thread, &fins_pthread_attr, Daemon, NULL);
+	pthread_create(&interface_thread, &fins_pthread_attr, Interface, NULL);
+	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
+	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
+	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
+	pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
+	//pthread_create(&icmp_thread, &fins_pthread_attr, ICMP, NULL);
 	//^^^^^ end added !!!!!
 
 	PRINT_DEBUG("created all threads");
 
-	//TODO custom test, remove later
+//TODO custom test, remove later
 	char recv_data[4000];
-	gets(recv_data);
 
-	PRINT_DEBUG("Sending ARP req");
-	struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-	if (ff_req == NULL) {
-		PRINT_DEBUG("todo error");
-		return 0;
+	while (1) {
+		gets(recv_data);
+
+		PRINT_DEBUG("Sending ARP req");
+		struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+		if (ff_req == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		metadata *params_req = (metadata *) malloc(sizeof(metadata));
+		if (params_req == NULL) {
+			PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
+			exit(-1);
+		}
+		metadata_create(params_req);
+
+		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
+//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
+		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
+//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
+
+		uint32_t exec_call = EXEC_ARP_GET_ADDR;
+		metadata_writeToElement(params_req, "exec_call", &exec_call, META_TYPE_INT);
+		metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT);
+		metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT);
+
+		ff_req->dataOrCtrl = CONTROL;
+		ff_req->destinationID.id = ARP_ID;
+		ff_req->metaData = params_req;
+		ff_req->ctrlFrame.opcode = CTRL_EXEC;
+
+		arp_to_switch(ff_req); //doesn't matter which queue
 	}
-
-	metadata *params_req = (metadata *) malloc(sizeof(metadata));
-	if (params_req == NULL) {
-		PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
-		return 0;
-	}
-	metadata_create(params_req);
-
-	uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
-	//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
-	uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
-	//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
-
-	uint32_t exec_call = EXEC_ARP_GET_ADDR;
-	metadata_writeToElement(params_req, "exec_call", &exec_call, META_TYPE_INT);
-	metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT);
-	metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT);
-
-	ff_req->dataOrCtrl = CONTROL;
-	ff_req->destinationID.id = ARPID;
-	ff_req->metaData = params_req;
-	ff_req->ctrlFrame.opcode = CTRL_EXEC;
-
-	arp_to_switch(ff_req); //doesn't matter which queue
 
 	/**
 	 *************************************************************

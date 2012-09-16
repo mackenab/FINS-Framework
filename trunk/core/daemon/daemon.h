@@ -269,13 +269,13 @@ struct fins_daemon_socket {
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 #define RECV_BUFFER_SIZE	1024// Pick an appropriate value here
-int init_fins_nl();
+int init_fins_nl(void);
 int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
 
 int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
 int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
 
-void init_daemonSockets();
+void init_daemonSockets(void);
 int randoming(int min, int max);
 int check_daemonSocket(unsigned long long uniqueSockID);
 int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol);
@@ -324,9 +324,10 @@ struct recvfrom_data {
 //#########################
 
 void daemon_init(pthread_attr_t *fins_pthread_attr);
-void daemon_shutdown();
-void daemon_free();
-void daemon_get_ff();
+void daemon_run(void);
+void daemon_shutdown(void);
+void daemon_release(void);
+void daemon_get_ff(void);
 int daemon_to_switch(struct finsFrame *ff);
 
 void daemon_out_fdf(struct finsFrame *ff);

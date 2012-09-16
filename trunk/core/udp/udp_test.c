@@ -80,7 +80,7 @@
 //
 //	ff.dataFrame.pduLength = packet2.u_len;
 //	ff.dataOrCtrl = DATA;
-//	ff.destinationID = UDPID;
+//	ff.destinationID = UDP_ID;
 //	ff.dataFrame.directionFlag = UP;
 //
 //

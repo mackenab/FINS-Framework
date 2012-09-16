@@ -1737,7 +1737,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
 		}
-		conn = conn_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
+		conn = conn_list_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 		if (conn) {
 			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 			/*#*/PRINT_DEBUG("");
@@ -1770,7 +1770,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 					PRINT_ERROR("conn_stub_list_sem wait prob");
 					exit(-1);
 				}
-				conn_stub = conn_stub_find(seg->dst_ip, seg->dst_port);
+				conn_stub = conn_stub_list_find(seg->dst_ip, seg->dst_port);
 				if (conn_stub) {
 					start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
 					/*#*/PRINT_DEBUG("");

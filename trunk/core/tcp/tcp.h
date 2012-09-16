@@ -119,18 +119,19 @@ struct tcp_connection_stub {
 //uint32_t backlog; //TODO ?
 };
 
-sem_t conn_stub_list_sem;
 struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
-int conn_stub_insert(struct tcp_connection_stub *conn_stub);
-struct tcp_connection_stub *conn_stub_find(uint32_t host_ip, uint16_t host_port);
-void conn_stub_remove(struct tcp_connection_stub *conn_stub);
-int conn_stub_is_empty(void);
-int conn_stub_has_space(uint32_t len);
 //int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val);
 int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
 void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
+
+sem_t conn_stub_list_sem;
+int conn_stub_list_insert(struct tcp_connection_stub *conn_stub);
+struct tcp_connection_stub *conn_stub_list_find(uint32_t host_ip, uint16_t host_port);
+void conn_stub_list_remove(struct tcp_connection_stub *conn_stub);
+int conn_stub_list_is_empty(void);
+int conn_stub_list_has_space(uint32_t len);
 
 typedef enum {
 	TCP_CLOSED = 0,
@@ -366,18 +367,19 @@ struct tcp_connection {
 #define TCP_TS 8
 #define TCP_TS_BYTES 10
 
-sem_t conn_list_sem;
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-int conn_insert(struct tcp_connection *conn);
-struct tcp_connection *conn_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-void conn_remove(struct tcp_connection *conn);
-int conn_is_empty(void);
-int conn_has_space(uint32_t len);
 //int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
 int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
 void conn_shutdown(struct tcp_connection *conn);
 void conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
 void conn_free(struct tcp_connection *conn);
+
+sem_t conn_list_sem;
+int conn_list_insert(struct tcp_connection *conn);
+struct tcp_connection *conn_list_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+void conn_list_remove(struct tcp_connection *conn);
+int conn_list_is_empty(void);
+int conn_list_has_space(uint32_t len);
 
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
@@ -407,8 +409,8 @@ struct tcp_segment {
 	//uint32_t sack_len;
 };
 
-void tcp_srand(); //Seed the random number generator
-int tcp_rand(); //Get a random number
+void tcp_srand(void); //Seed the random number generator
+int tcp_rand(void); //Get a random number
 
 struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
 struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
@@ -446,9 +448,10 @@ struct tcp_to_thread_data {
 
 //General functions for dealing with the incoming and outgoing frames
 void tcp_init(pthread_attr_t *fins_pthread_attr);
-void tcp_shutdown();
-void tcp_free();
-void tcp_get_ff();
+void tcp_run(void);
+void tcp_shutdown(void);
+void tcp_release(void);
+void tcp_get_ff(void);
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);

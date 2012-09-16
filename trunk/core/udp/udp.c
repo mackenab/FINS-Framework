@@ -28,15 +28,15 @@ extern finsQueue UDP_to_Switch_Queue;
 extern sem_t Switch_to_UDP_Qsem;
 extern finsQueue Switch_to_UDP_Queue;
 
-void sendToSwitch(struct finsFrame *ff) {
+void udp_to_switch(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p", ff);
 
 	sem_wait(&UDP_to_Switch_Qsem);
 	write_queue(ff, UDP_to_Switch_Queue);
 	sem_post(&UDP_to_Switch_Qsem);
-
 }
 
-void udp_get_ff() {
+void udp_get_ff(void) {
 
 	int dummy_a = 0; //KEVINS CODE THIS IS A TEST
 	int dummy_b = 0;
@@ -123,7 +123,9 @@ void udp_get_ff() {
 void udp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("UDP Started");
 	udp_running = 1;
+}
 
+void udp_run(void) {
 	while (udp_running) {
 		udp_get_ff();
 		PRINT_DEBUG("");
@@ -133,12 +135,12 @@ void udp_init(pthread_attr_t *fins_pthread_attr) {
 	PRINT_DEBUG("UDP Terminating");
 }
 
-void udp_shutdown() {
+void udp_shutdown(void) {
 	udp_running = 0;
 
 	//TODO expand this
 }
 
-void udp_free() {
+void udp_release(void) {
 	//TODO free all module related mem
 }
