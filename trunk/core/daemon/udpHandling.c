@@ -16,10 +16,11 @@ extern struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
 extern int thread_count;
 extern sem_t thread_sem;
 
-extern finsQueue Daemon_to_Switch_Queue;
-extern finsQueue Switch_to_Daemon_Queue;
 extern sem_t Daemon_to_Switch_Qsem;
+extern finsQueue Daemon_to_Switch_Queue;
+
 extern sem_t Switch_to_Daemon_Qsem;
+extern finsQueue Switch_to_Daemon_Queue;
 
 //#include <unistd.h> //TODO remove
 
@@ -862,15 +863,11 @@ void *poll_udp_thread(void *local) {
 	pthread_exit(NULL);
 }
 
-void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events) {
+void poll_udp_out(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events) {
 	//socket_state state;
 	uint32_t mask = 0;
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d id=%u index=%d events=%x", uniqueSockID, index, call_id, call_index, events);
-
-	/*
-	 * Convert to flow based: events come, wait poll_sem (?),
-	 */
 
 	if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 		sem_wait(&daemonSockets_sem);
@@ -932,23 +929,41 @@ void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 			nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
 		}
 	} else {
-		struct daemon_udp_thread_data *thread_data = (struct daemon_udp_thread_data *) malloc(sizeof(struct daemon_udp_thread_data));
-		thread_data->id = thread_count++;
-		thread_data->uniqueSockID = uniqueSockID;
-		thread_data->index = index;
-		thread_data->call_id = call_id;
-		thread_data->call_index = call_index;
-		thread_data->flags = events;
+		//set daemonSockets[index].poll_events
 
-		//spin off thread to handle
-		pthread_t thread;
-		if (pthread_create(&thread, NULL, poll_udp_thread, (void *) thread_data)) {
-			PRINT_ERROR("ERROR: unable to create recvfrom_udp_thread thread.");
+		//insert to call queue
+		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
+			PRINT_DEBUG("Socket closed, canceling poll_udp.");
+			sem_post(&daemonSockets_sem);
+
 			nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
+			return;
+		}
 
-			free(thread_data);
-		} else {
-			pthread_detach(thread);
+		//add new daemon call
+
+		PRINT_DEBUG("");
+		sem_post(&daemonSockets_sem);
+
+		if (0) {
+			struct daemon_udp_thread_data *thread_data = (struct daemon_udp_thread_data *) malloc(sizeof(struct daemon_udp_thread_data));
+			thread_data->id = thread_count++;
+			thread_data->uniqueSockID = uniqueSockID;
+			thread_data->index = index;
+			thread_data->call_id = call_id;
+			thread_data->call_index = call_index;
+			thread_data->flags = events;
+
+			//spin off thread to handle
+			pthread_t thread;
+			if (pthread_create(&thread, NULL, poll_udp_thread, (void *) thread_data)) {
+				PRINT_ERROR("ERROR: unable to create recvfrom_udp_thread thread.");
+				nack_send(uniqueSockID, index, call_id, call_index, poll_call, 0);
+
+				free(thread_data);
+			} else {
+				pthread_detach(thread);
+			}
 		}
 	}
 }

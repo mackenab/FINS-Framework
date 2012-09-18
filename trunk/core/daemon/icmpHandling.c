@@ -16,10 +16,11 @@ extern struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
 extern int thread_count;
 extern sem_t thread_sem;
 
-extern finsQueue Daemon_to_Switch_Queue;
-extern finsQueue Switch_to_Daemon_Queue;
 extern sem_t Daemon_to_Switch_Qsem;
+extern finsQueue Daemon_to_Switch_Queue;
+
 extern sem_t Switch_to_Daemon_Qsem;
+extern finsQueue Switch_to_Daemon_Queue;
 
 //#include <unistd.h> //TODO remove
 

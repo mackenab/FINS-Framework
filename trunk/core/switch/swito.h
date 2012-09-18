@@ -14,8 +14,8 @@
 
 void Queues_init(void);
 
-void switch_init(pthread_attr_t *fins_pthread_attr);
-void switch_run(void);
+void switch_init(void);
+void switch_run(pthread_attr_t *fins_pthread_attr);
 void switch_shutdown(void);
 void switch_release(void);
 

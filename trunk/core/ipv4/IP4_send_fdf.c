@@ -8,8 +8,8 @@
 #include "ipv4.h"
 #include <queueModule.h>
 
-extern finsQueue IPv4_to_Switch_Queue;
-extern sem_t IPv4_to_Switch_Qsem;
+finsQueue IPv4_to_Switch_Queue;
+sem_t IPv4_to_Switch_Qsem;
 
 void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip4_packet* ppacket) {
 

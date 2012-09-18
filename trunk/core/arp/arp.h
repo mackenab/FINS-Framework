@@ -181,8 +181,8 @@ void print_cache();
 struct finsFrame *arp_to_fdf(struct arp_message *msg);
 struct arp_message *fdf_to_arp(struct finsFrame *ff);
 
-void arp_init(pthread_attr_t *fins_pthread_attr);
-void arp_run(void);
+void arp_init(void);
+void arp_run(pthread_attr_t *fins_pthread_attr);
 void arp_shutdown(void);
 void arp_release(void);
 

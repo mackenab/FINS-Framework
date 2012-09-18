@@ -14,6 +14,7 @@
 #include <string.h>
 #include <finstypes.h>
 #include <queueModule.h>
+#include <pthread.h>
 #include "udp.h"
 
 #define DUMMYA 123
@@ -21,12 +22,16 @@
 #define DUMMYC 789
 
 int udp_running;
-struct udp_statistics udpStat;
-extern sem_t UDP_to_Switch_Qsem;
-extern finsQueue UDP_to_Switch_Queue;
+pthread_t switch_to_udp_thread;
 
-extern sem_t Switch_to_UDP_Qsem;
-extern finsQueue Switch_to_UDP_Queue;
+sem_t UDP_to_Switch_Qsem;
+finsQueue UDP_to_Switch_Queue;
+
+sem_t Switch_to_UDP_Qsem;
+finsQueue Switch_to_UDP_Queue;
+
+struct udp_statistics udpStat;
+
 
 void udp_to_switch(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p", ff);
@@ -120,27 +125,39 @@ void udp_get_ff(void) {
 
 }
 
-void udp_init(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("UDP Started");
-	udp_running = 1;
-}
-
-void udp_run(void) {
+void *switch_to_udp(void *local) {
 	while (udp_running) {
 		udp_get_ff();
 		PRINT_DEBUG("");
-		//	free(pff);
+		//	free(ff);
 	}
 
-	PRINT_DEBUG("UDP Terminating");
+	PRINT_DEBUG("Exiting");
+	pthread_exit(NULL);
+}
+
+void udp_init(void) {
+	PRINT_DEBUG("Entered");
+	udp_running = 1;
+}
+
+void udp_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
+
+	pthread_create(&switch_to_udp_thread, fins_pthread_attr, switch_to_udp, fins_pthread_attr);
 }
 
 void udp_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	udp_running = 0;
 
 	//TODO expand this
+
+	pthread_join(switch_to_udp_thread, NULL);
 }
 
 void udp_release(void) {
+	PRINT_DEBUG("Entered");
+
 	//TODO free all module related mem
 }

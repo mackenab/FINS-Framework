@@ -27,7 +27,8 @@ void recvmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int 
 void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
 void release_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void poll_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events);
+void poll_udp_out(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events);
+//void poll_udp_in(unsigned long long uniqueSockID, int index /* results? */);
 void mmap_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
 void socketpair_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
 void shutdown_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int how);

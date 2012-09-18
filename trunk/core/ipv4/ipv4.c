@@ -22,15 +22,26 @@ struct ip4_routing_table* routing_table;
 struct ip4_packet *construct_packet_buffer;
 struct ip4_stats stats;
 
-void ipv4_init(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("IPv4 Started");
+void *switch_to_ipv4(void *local) {
+	while (ipv4_running) {
+		IP4_receive_fdf();
+		PRINT_DEBUG("");
+		//	free(ff);
+	}
+
+	PRINT_DEBUG("Exiting");
+	pthread_exit(NULL);
+}
+
+void ipv4_init(void) {
+	PRINT_DEBUG("Entered");
 	ipv4_running = 1;
 
 	/* find a way to get the IP of the desired interface automatically from the system
 	 * or from a configuration file
 	 */
 
-	my_ip_addr = IP4_ADR_P2H(192, 168, 1, 20);
+	//my_ip_addr = IP4_ADR_P2H(192, 168, 1, 20);
 	//my_ip_addr = IP4_ADR_P2H(172,31,50,160);
 	//my_ip_addr = IP4_ADR_P2H(127, 0, 0, 1);
 	//my_ip_addr = IP4_ADR_P2H(172, 31, 63, 231);
@@ -51,23 +62,27 @@ void ipv4_init(pthread_attr_t *fins_pthread_attr) {
 #endif
 }
 
-void ipv4_run(void) {
-	while (ipv4_running) {
-		IP4_receive_fdf();
-		PRINT_DEBUG("");
-		//	free(ff);
+void set_interface(uint32_t IP_address, uint32_t mask) {
+	my_ip_addr = IP_address;
+	my_mask = mask;
+}
 
-	}
+void ipv4_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
 
-	PRINT_DEBUG("IPv4 Terminating");
+	pthread_create(&switch_to_ipv4_thread, fins_pthread_attr, switch_to_ipv4, fins_pthread_attr);
 }
 
 void ipv4_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	ipv4_running = 0;
 
 	//TODO expand this
+
+	pthread_join(switch_to_ipv4_thread, NULL);
 }
 
 void ipv4_release(void) {
+	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
 }

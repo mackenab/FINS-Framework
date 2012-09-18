@@ -37,8 +37,8 @@ struct sniff_ethernet {
 	u_char data[1];
 };
 
-void interface_init(pthread_attr_t *fins_pthread_attr);
-void interface_run(void);
+void interface_init(void);
+void interface_run(pthread_attr_t *fins_pthread_attr);
 void interface_shutdown(void);
 void interface_release(void);
 

@@ -43,67 +43,6 @@
  * since recvfrom_udp just reads data.
  */
 
-pthread_t daemon_thread;
-pthread_t udp_thread;
-//	pthread_t udp_outgoing;
-pthread_t icmp_thread;
-pthread_t rtm_thread;
-pthread_t tcp_thread;
-//	pthread_t tcp_outgoing;
-pthread_t ipv4_thread;
-//	pthread_t ip_outgoing;
-pthread_t arp_thread;
-//	pthread_t arp_outgoing;
-pthread_t interface_thread;
-pthread_t switch_thread;
-
-/** The list of major Queues which connect the modules to each other
- * including the switch module
- * The list of Semaphores which protect the Queues
- */
-
-//TODO move to each separate module
-finsQueue Daemon_to_Switch_Queue;
-finsQueue Switch_to_Daemon_Queue;
-sem_t Daemon_to_Switch_Qsem;
-sem_t Switch_to_Daemon_Qsem;
-
-/** RunTimeManager Module to connect to the user interface  */
-finsQueue Switch_to_RTM_Queue;
-finsQueue RTM_to_Switch_Queue;
-sem_t RTM_to_Switch_Qsem;
-sem_t Switch_to_RTM_Qsem;
-
-finsQueue Switch_to_UDP_Queue;
-finsQueue UDP_to_Switch_Queue;
-sem_t Switch_to_UDP_Qsem;
-sem_t UDP_to_Switch_Qsem;
-
-finsQueue Switch_to_TCP_Queue;
-finsQueue TCP_to_Switch_Queue;
-sem_t Switch_to_TCP_Qsem;
-sem_t TCP_to_Switch_Qsem;
-
-finsQueue Switch_to_ARP_Queue;
-finsQueue ARP_to_Switch_Queue;
-sem_t Switch_to_ARP_Qsem;
-sem_t ARP_to_Switch_Qsem;
-
-finsQueue Switch_to_IPv4_Queue;
-finsQueue IPv4_to_Switch_Queue;
-sem_t Switch_to_IPv4_Qsem;
-sem_t IPv4_to_Switch_Qsem;
-
-finsQueue Switch_to_Interface_Queue;
-finsQueue Interface_to_Switch_Queue;
-sem_t Switch_to_Interface_Qsem;
-sem_t Interface_to_Switch_Qsem;
-
-finsQueue Switch_to_ICMP_Queue;
-finsQueue ICMP_to_Switch_Queue;
-sem_t ICMP_to_Switch_Qsem;
-sem_t Switch_to_ICMP_Qsem;
-
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
  * @param
@@ -128,94 +67,31 @@ int read_configurations() {
 	return EXIT_SUCCESS;
 }
 
-void *Daemon(void *local) {
-	daemon_run();
-
-	pthread_exit(NULL);
-}
-
-void *Interface(void *local) {
-	interface_run();
-
-	pthread_exit(NULL);
-}
-
-void *UDP(void *local) {
-	udp_run();
-
-	pthread_exit(NULL);
-}
-
-void *RTM(void *local) {
-	//TODO change to rtm_init & rtm_run
-	rtm_init(NULL);
-
-	pthread_exit(NULL);
-}
-
-void *TCP(void *local) {
-	tcp_run();
-
-	pthread_exit(NULL);
-}
-
-void *IPv4(void *local) {
-	ipv4_run();
-
-	pthread_exit(NULL);
-}
-
-void *ICMP(void *local) {
-	//TODO change to rtm_init & rtm_run
-	icmp_init(NULL);
-
-	pthread_exit(NULL);
-}
-
-void *ARP(void *local) {
-	arp_run();
-
-	pthread_exit(NULL);
-}
-
-void *Switch(void *local) {
-	switch_run();
-
-	pthread_exit(NULL);
-}
-
 void termination_handler(int sig) {
 	PRINT_DEBUG("**********Terminating *******");
 
-	//TODO shutdown all module threads
+	//TODO shutdown all module threads in backwards order of startup
 	udp_shutdown();
 	tcp_shutdown();
 	ipv4_shutdown();
 	arp_shutdown();
+	//icmp_shutdown();
+	//rtm_shutdown();
 
-	daemon_shutdown(); //TODO finish
 	interface_shutdown(); //TODO finish
+	daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
-
-	//join driving thread for each module
-	pthread_join(arp_thread, NULL);
-	pthread_join(ipv4_thread, NULL);
-	pthread_join(tcp_thread, NULL);
-	pthread_join(udp_thread, NULL);
-	//pthread_join(etherStub_capturing, NULL);
-	//pthread_join(etherStub_injecting, NULL);
-	//pthread_join(switch_thread, NULL);
-	//pthread_join(Switch_to_daemon_thread, NULL);
-	//pthread_join(wedge_to_daemon_thread, NULL);
 
 	//TODO move que/sem free to module
 	udp_release();
 	tcp_release();
 	ipv4_release();
 	arp_release();
+	//icmp_release();
+	//rtm_release();
 
-	daemon_release();
 	interface_release();
+	daemon_release();
 	switch_release();
 
 	PRINT_DEBUG("FIN");
@@ -223,28 +99,12 @@ void termination_handler(int sig) {
 }
 
 int main() {
-	//############# //TODO move to Daemon
-	//init the netlink socket connection to daemon
-	nl_sockfd = init_fins_nl();
-	if (nl_sockfd == -1) {
-		perror("init_fins_nl() caused an error");
-		exit(-1);
-	}
-
-	//prime the kernel to establish daemon's PID
-	int daemoncode = daemon_start_call;
-	int ret_val;
-	ret_val = send_wedge(nl_sockfd, (u_char *) &daemoncode, sizeof(int), 0);
-	if (ret_val != 0) {
-		perror("sendfins() caused an error");
-		exit(-1);
-	}
-	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
-	//#############
-
-	//set ip, loopback, etc //TODO move?
+	//set ip, loopback, etc //TODO do this from config file eventually
+	my_host_mac_addr = 0x080027445566;
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
 	//my_host_ip_addr = IP4_ADR_P2H(172,31,50,160);
+	my_host_mask = IP4_ADR_P2H(255, 255, 255, 0);
+
 	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 
@@ -276,18 +136,7 @@ int main() {
 #endif
 	// END of added section !!!!!
 
-	/** 1. init the Daemon sockets database
-	 * 2. Init the queues connecting Daemonn to thw FINS Switch
-	 * 3.
-	 */
-	//	read_configurations();
-	//init_daemonSockets(); //TODO move to daemon module?
-	//register termination handler
-	signal(SIGINT, termination_handler);
-
-	// Start the driving thread of each module
-	pthread_attr_t fins_pthread_attr;
-	pthread_attr_init(&fins_pthread_attr);
+	signal(SIGINT, termination_handler); //register termination handler
 
 	//######################################## //TODO register modules:
 	/*
@@ -325,6 +174,11 @@ int main() {
 
 	 module_register(&daemon_ops); //potentially do in init?
 
+	 for each module:
+	 module[i]->init();
+	 module[i]->run(fins_pthread_attr); //TODO move thread creation to here
+
+
 	 switch_run()
 	 if (modules[i]) {
 	 sem_wait(modules[i]->out_sem);
@@ -343,28 +197,50 @@ int main() {
 	//module init
 	//module run in thread //TODO start threads here? or in init?
 	//########################################
-//TODO do this by registration
-	switch_init(&fins_pthread_attr); //should always be first
-	daemon_init(&fins_pthread_attr);
-	interface_init(&fins_pthread_attr);
-	udp_init(&fins_pthread_attr);
-	tcp_init(&fins_pthread_attr);
-	ipv4_init(&fins_pthread_attr);
-	arp_init(&fins_pthread_attr);
+	/*
+	 normal wedge
+	 Wedge_to_Daemon
+	 call_call_handler();
+	 poll_udp_out/top/call
 
-	pthread_create(&switch_thread, &fins_pthread_attr, Switch, NULL);
-	pthread_create(&daemon_thread, &fins_pthread_attr, Daemon, NULL);
-	pthread_create(&interface_thread, &fins_pthread_attr, Interface, NULL);
-	pthread_create(&udp_thread, &fins_pthread_attr, UDP, NULL);
-	pthread_create(&tcp_thread, &fins_pthread_attr, TCP, NULL);
-	pthread_create(&ipv4_thread, &fins_pthread_attr, IPv4, NULL);
-	pthread_create(&arp_thread, &fins_pthread_attr, ARP, NULL);
-	//pthread_create(&icmp_thread, &fins_pthread_attr, ICMP, NULL);
-	//^^^^^ end added !!!!!
 
-	PRINT_DEBUG("created all threads");
 
-//TODO custom test, remove later
+	 Switch_to_Daemon
+
+
+	 */
+
+	// Start the driving thread of each module
+	PRINT_DEBUG("Initialize Modules");
+	switch_init(); //should always be first
+	daemon_init(); //TODO set mac/ip
+	interface_init();
+
+	arp_init();
+	arp_register_interface(my_host_mac_addr, my_host_ip_addr);
+
+	ipv4_init();
+	set_interface(my_host_ip_addr, my_host_mask);
+
+	udp_init();
+	tcp_init();
+	//rtm_init();
+
+	pthread_attr_t fins_pthread_attr;
+	pthread_attr_init(&fins_pthread_attr);
+
+	PRINT_DEBUG("Run/start Modules");
+	switch_run(&fins_pthread_attr);
+	daemon_run(&fins_pthread_attr);
+	interface_run(&fins_pthread_attr);
+	arp_run(&fins_pthread_attr);
+	ipv4_run(&fins_pthread_attr);
+	udp_run(&fins_pthread_attr);
+	tcp_run(&fins_pthread_attr);
+	//icmp_run(&fins_pthread_attr);
+	//rtm_run(&fins_pthread_attr);
+
+	//############################# //TODO custom test, remove later
 	char recv_data[4000];
 
 	while (1) {
@@ -385,9 +261,9 @@ int main() {
 		metadata_create(params_req);
 
 		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
-//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
+		//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
 		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
-//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
+		//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
 
 		uint32_t exec_call = EXEC_ARP_GET_ADDR;
 		metadata_writeToElement(params_req, "exec_call", &exec_call, META_TYPE_INT);
@@ -401,28 +277,11 @@ int main() {
 
 		arp_to_switch(ff_req); //doesn't matter which queue
 	}
+	//#############################
 
-	/**
-	 *************************************************************
-	 */
-	pthread_join(arp_thread, NULL);
-	pthread_join(ipv4_thread, NULL);
-	pthread_join(tcp_thread, NULL);
-	pthread_join(udp_thread, NULL);
-	//pthread_join(etherStub_capturing, NULL);
-	//pthread_join(etherStub_injecting, NULL);
-	pthread_join(interface_thread, NULL);
-	pthread_join(switch_thread, NULL);
-	pthread_join(daemon_thread, NULL);
-	//pthread_join(switch_to_daemon_thread, NULL);
-	//pthread_join(wedge_to_daemon_thread, NULL);
-	//pthread_join(icmp_thread, NULL);
-
-	while (1) {
-
-	}
+	while (1)
+		;
 
 	return (1);
-
 }
 

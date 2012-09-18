@@ -135,13 +135,14 @@ struct nl_daemon_to_wedge {
 	u_int msg;
 };
 
-struct fins_call {
+struct fins_wedge_call {
 	int running; //TODO remove?
 
 	u_int call_id;
+	u_int call_type;
+
 	unsigned long long sock_id;
 	int sock_index;
-	u_int type;
 	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 
 	//struct semaphore sem; //TODO remove? might be unnecessary
@@ -166,24 +167,11 @@ struct fins_wedge_socket {
 	struct socket *sock;
 	struct sock *sk;
 
-	//struct semaphore call_sems[MAX_CALL_TYPES];
 	int threads[MAX_CALL_TYPES];
 
 	int release_flag;
 	struct socket *sock_new;
 	struct sock *sk_new;
-
-	//struct semaphore threads_sem;
-
-	/* //TODO remove all this
-	 struct semaphore reply_sem_w;
-	 struct semaphore reply_sem_r; //reassuring, but might not be necessary
-	 u_int reply_call;
-	 u_int reply_ret;
-	 u_int reply_msg;
-	 u_char *reply_buf;
-	 int reply_len;
-	 //*/
 };
 
 void init_wedge_sockets(void);

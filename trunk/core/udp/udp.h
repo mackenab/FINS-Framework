@@ -83,8 +83,8 @@ struct udp_statistics {
 #define UP_RWHO			513						/* remote who server (ruptime) */
 #define UP_RIP			520						/* route information exchange (RIP) */
 
-void udp_init(pthread_attr_t *fins_pthread_attr);
-void udp_run(void);
+void udp_init(void);
+void udp_run(pthread_attr_t *fins_pthread_attr);
 void udp_shutdown(void);
 void udp_release(void);
 

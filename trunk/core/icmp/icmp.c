@@ -8,11 +8,11 @@
 #include "icmp.h"
 #include <ipv4.h>
 
-extern sem_t ICMP_to_Switch_Qsem;
-extern finsQueue ICMP_to_Switch_Queue;
+sem_t ICMP_to_Switch_Qsem;
+finsQueue ICMP_to_Switch_Queue;
 
-extern sem_t Switch_to_ICMP_Qsem;
-extern finsQueue Switch_to_ICMP_Queue;
+sem_t Switch_to_ICMP_Qsem;
+finsQueue Switch_to_ICMP_Queue;
 
 
 //--------------------------------------------

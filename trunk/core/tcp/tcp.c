@@ -8,11 +8,13 @@
 #include "tcp.h"
 
 int tcp_running;
-extern sem_t TCP_to_Switch_Qsem;
-extern finsQueue TCP_to_Switch_Queue;
+pthread_t switch_to_tcp_thread;
 
-extern sem_t Switch_to_TCP_Qsem;
-extern finsQueue Switch_to_TCP_Queue;
+sem_t TCP_to_Switch_Qsem;
+finsQueue TCP_to_Switch_Queue;
+
+sem_t Switch_to_TCP_Qsem;
+finsQueue Switch_to_TCP_Queue;
 
 struct tcp_connection_stub *conn_stub_list; //The list of current connections we have
 uint32_t conn_stub_num;
@@ -2250,9 +2252,19 @@ void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_i
 	}
 }
 
-void tcp_init(pthread_attr_t *fins_pthread_attr) {
+void *switch_to_tcp(void *local) {
+	while (tcp_running) {
+		tcp_get_ff();
+		PRINT_DEBUG("");
+		//	free(ff);
+	}
 
-	PRINT_DEBUG("TCP started");
+	PRINT_DEBUG("Exiting");
+	pthread_exit(NULL);
+}
+
+void tcp_init(void) {
+	PRINT_DEBUG("Entered");
 	tcp_running = 1;
 
 	conn_stub_list = NULL;
@@ -2266,14 +2278,10 @@ void tcp_init(pthread_attr_t *fins_pthread_attr) {
 	tcp_srand();
 }
 
-void tcp_run(void) {
-	while (tcp_running) {
-		tcp_get_ff();
-		PRINT_DEBUG("");
-		//	free(pff);
-	}
+void tcp_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
 
-	PRINT_DEBUG("TCP Terminating");
+	pthread_create(&switch_to_tcp_thread, fins_pthread_attr, switch_to_tcp, fins_pthread_attr);
 }
 
 void tcp_get_ff(void) {
@@ -2309,12 +2317,17 @@ void tcp_get_ff(void) {
 }
 
 void tcp_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	tcp_running = 0;
 
 	//TODO expand this
+
+	pthread_join(switch_to_tcp_thread, NULL);
 }
 
 void tcp_release(void) {
+	PRINT_DEBUG("Entered");
+
 	//TODO free all module related mem
 }
 

@@ -131,7 +131,7 @@
 struct fins_wedge_socket wedge_sockets[MAX_SOCKETS];
 struct semaphore sockets_sem;
 
-struct fins_call wedge_calls[MAX_CALLS];
+struct fins_wedge_call wedge_calls[MAX_CALLS];
 struct semaphore calls_sem; //TODO merge with sockets_sem?
 u_int call_count; //TODO fix eventual roll over problem
 
@@ -639,7 +639,7 @@ void init_wedge_calls(void) {
 	PRINT_DEBUG("Exited.");
 }
 
-int insert_wedge_call(u_int id, unsigned long long sock_id, int sock_index, u_int type) { //TODO might not need sock
+int insert_wedge_call(u_int call_id, unsigned long long sock_id, int sock_index, u_int call_type) { //TODO might not need sock
 	int i;
 
 	PRINT_DEBUG("Entered for %llu.", sock_id);
@@ -648,10 +648,11 @@ int insert_wedge_call(u_int id, unsigned long long sock_id, int sock_index, u_in
 		if (wedge_calls[i].call_id == -1) {
 			wedge_calls[i].running = 1;
 
-			wedge_calls[i].call_id = id;
+			wedge_calls[i].call_id = call_id;
+			wedge_calls[i].call_type = call_type;
+
 			wedge_calls[i].sock_id = sock_id;
 			wedge_calls[i].sock_index = sock_index;
-			wedge_calls[i].type = type;
 
 			//sema_init(&wedge_calls[i].sem, 1);
 			wedge_calls[i].reply = 0;
@@ -672,7 +673,7 @@ int find_wedge_call(unsigned long long sock_id, int sock_index, u_int type) {
 	//PRINT_DEBUG("Entered: id=%u", id);
 
 	for (i = 0; i < MAX_CALLS; i++) {
-		if (wedge_calls[i].call_id != -1 && wedge_calls[i].sock_id == sock_id && wedge_calls[i].sock_index == sock_index && wedge_calls[i].type == type) { //TODO remove sock_index? maybe unnecessary
+		if (wedge_calls[i].call_id != -1 && wedge_calls[i].sock_id == sock_id && wedge_calls[i].sock_index == sock_index && wedge_calls[i].call_type == type) { //TODO remove sock_index? maybe unnecessary
 			return print_exit(__FUNCTION__, __LINE__, i);
 		}
 	}
@@ -1102,8 +1103,9 @@ void nl_data_ready(struct sk_buff *skb) {
 					//TODO error
 				}
 				if (wedge_calls[hdr->call_index].call_id == hdr->call_id) {
-					if (wedge_calls[hdr->call_index].type != hdr->call_type) { //TODO remove type check ~ unnecessary? shouldn't ever happen
-						PRINT_ERROR("call mismatched: call_index=%d type=%u hdr->type=%u", hdr->call_index, wedge_calls[hdr->call_index].type, hdr->call_type);
+					if (wedge_calls[hdr->call_index].call_type != hdr->call_type) { //TODO remove type check ~ unnecessary? shouldn't ever happen
+						PRINT_ERROR("call mismatched: call_index=%d call_type=%u hdr->type=%u",
+								hdr->call_index, wedge_calls[hdr->call_index].call_type, hdr->call_type);
 					}
 					wedge_calls[hdr->call_index].ret = hdr->ret;
 					wedge_calls[hdr->call_index].msg = hdr->msg;

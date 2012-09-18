@@ -12,6 +12,8 @@
 #include <arpa/inet.h>
 
 int switch_running;
+pthread_t switch_thread;
+
 #define MAX_modules 16
 extern finsQueue Daemon_to_Switch_Queue;
 extern finsQueue Switch_to_Daemon_Queue;
@@ -138,15 +140,8 @@ void Queues_init(void) {
 	IO_queues_sem[15] = &Switch_to_RTM_Qsem;
 }
 
-void switch_init(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Switch Started");
-	switch_running = 1;
+void *switch_loop(void *local) {
 
-	Queues_init(); //TODO split & move to each module
-	//TODO not much, init queues here?
-}
-
-void switch_run(void) {
 	int i;
 	struct finsFrame *ff;
 
@@ -229,15 +224,34 @@ void switch_run(void) {
 
 	} // end of while loop
 
-	PRINT_DEBUG("Switch Terminating");
+	PRINT_DEBUG("Exiting");
+	pthread_exit(NULL);
 } // end of switch_init Function
 
+void switch_init(void) {
+	PRINT_DEBUG("Entered");
+	switch_running = 1;
+
+	Queues_init(); //TODO split & move to each module
+	//TODO not much, init queues here?
+}
+
+void switch_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
+
+	pthread_create(&switch_thread, fins_pthread_attr, switch_loop, fins_pthread_attr);
+}
+
 void switch_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	switch_running = 0;
 
 	//TODO expand this
+
+	pthread_join(switch_thread, NULL);
 }
 
 void switch_release(void) {
+	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
 }

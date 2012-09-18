@@ -12,6 +12,14 @@
 #include "daemon.h"
 
 int daemon_running;
+pthread_t wedge_to_daemon_thread;
+pthread_t switch_to_daemon_thread;
+
+sem_t Daemon_to_Switch_Qsem;
+finsQueue Daemon_to_Switch_Queue;
+
+sem_t Switch_to_Daemon_Qsem;
+finsQueue Switch_to_Daemon_Queue;
 
 sem_t daemonSockets_sem;
 struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
@@ -19,13 +27,6 @@ struct fins_daemon_socket daemonSockets[MAX_SOCKETS];
 int recv_thread_index;
 int thread_count;
 sem_t thread_sem;
-
-/** The queues might be moved later to another Master file */
-
-extern finsQueue Daemon_to_Switch_Queue;
-extern finsQueue Switch_to_Daemon_Queue;
-extern sem_t Daemon_to_Switch_Qsem;
-extern sem_t Switch_to_Daemon_Qsem;
 
 int init_fins_nl(void) {
 	int sockfd;
@@ -120,7 +121,7 @@ int send_wedge(int sockfd, u_char *buf, size_t len, int flags) {
  * @param
  * @return the location index on success , -1 on failure
  */
-int find_daemonSocket(unsigned long long targetID) {
+int find_daemonSocket(uint64_t targetID) {
 	int i = 0;
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (daemonSockets[i].uniqueSockID == targetID)
@@ -204,7 +205,7 @@ int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_i
  * @param
  * @return value of 1 on success , -1 on failure
  */
-int insert_daemonSocket(unsigned long long uniqueSockID, int index, int type, int protocol) {
+int insert_daemonSocket(uint64_t uniqueSockID, int index, int type, int protocol) {
 	if (daemonSockets[index].uniqueSockID == -1) {
 		daemonSockets[index].uniqueSockID = uniqueSockID;
 		daemonSockets[index].state = SS_UNCONNECTED;
@@ -266,7 +267,7 @@ int insert_daemonSocket(unsigned long long uniqueSockID, int index, int type, in
  * @param
  * @return value of 1 on success , -1 on failure
  */
-int remove_daemonSocket(unsigned long long uniqueSockID, int index) {
+int remove_daemonSocket(uint64_t uniqueSockID, int index) {
 
 	int i = 0;
 	int THREADS = 100;
@@ -358,7 +359,7 @@ int randoming(int min, int max) {
 
 }
 
-int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int msg) {
+int nack_send(uint64_t uniqueSockID, int index, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra params
 	int ret_val;
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d nack %d", uniqueSockID, call_type, NACK);
@@ -383,7 +384,7 @@ int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int cal
 	return ret_val == 1; //TODO change to ret_val ?
 }
 
-int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int msg) {
+int ack_send(uint64_t uniqueSockID, int index, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra params
 	int ret_val;
 
 	PRINT_DEBUG("uniqueSockID %llu calltype %d ack %d", uniqueSockID, call_type, ACK);
@@ -408,7 +409,7 @@ int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call
 	return ret_val == 1; //TODO change to ret_val ?
 }
 
-int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
+int get_fdf(int index, uint64_t uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
 	if (index < 0) {
 		return 0;
 	}
@@ -460,60 +461,7 @@ int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, i
 	return 1;
 }
 
-struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag) {
-	struct finsFrame *ff = NULL;
-
-	if (index < 0) {
-		return NULL;
-	}
-
-	if (non_block_flag) {
-		int val;
-		sem_getvalue(&daemonSockets[index].data_sem, &val);
-		//sem_trywait(daemonSockets[index].Qs);
-
-		if (val) {
-			sem_wait(&daemonSockets_sem);
-			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-				PRINT_DEBUG("Socket closed, canceling read block.");
-				sem_post(&daemonSockets_sem);
-				return NULL;
-			}
-			sem_wait(&(daemonSockets[index].Qs));
-			ff = read_queue(daemonSockets[index].dataQueue);
-			//ff = get_fake_frame();
-			if (ff) {
-				daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
-				//print_finsFrame(ff);
-			}
-			sem_post(&(daemonSockets[index].Qs));
-			sem_post(&daemonSockets_sem);
-		}
-	} else {
-		sem_wait(&daemonSockets[index].data_sem);
-
-		sem_wait(&daemonSockets_sem);
-		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-			PRINT_DEBUG("Socket closed, canceling read block.");
-			sem_post(&daemonSockets_sem);
-			return NULL;
-		}
-
-		sem_wait(&(daemonSockets[index].Qs));
-		ff = read_queue(daemonSockets[index].dataQueue);
-		//ff = get_fake_frame();
-
-		if (ff) {
-			daemonSockets[index].buf_data -= ff->dataFrame.pduLength;
-			//print_finsFrame(ff);
-		}
-		sem_post(&(daemonSockets[index].Qs));
-		sem_post(&daemonSockets_sem);
-	}
-
-	return ff;
-}
-int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
+int get_fcf(int index, uint64_t uniqueSockID, struct finsFrame **ff, int non_blocking_flag) {
 	if (index < 0) {
 		return 0;
 	}
@@ -558,53 +506,6 @@ int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, i
 	return 1;
 }
 
-struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int non_block_flag) {
-	struct finsFrame *ff = NULL;
-
-	if (index < 0) {
-		return NULL;
-	}
-
-	if (non_block_flag) {
-		int val = 0;
-		sem_getvalue(&daemonSockets[index].control_sem, &val);
-
-		if (val) {
-			sem_wait(&daemonSockets_sem);
-			if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-				PRINT_DEBUG("Socket closed, canceling read block.");
-				sem_post(&daemonSockets_sem);
-				return NULL;
-			}
-
-			sem_wait(&(daemonSockets[index].Qs));
-			ff = read_queue(daemonSockets[index].controlQueue);
-			//ff = get_fake_frame();
-			//print_finsFrame(ff);
-			sem_post(&(daemonSockets[index].Qs));
-			sem_post(&daemonSockets_sem);
-		}
-	} else {
-		sem_wait(&daemonSockets[index].control_sem);
-
-		sem_wait(&daemonSockets_sem);
-		if (daemonSockets[index].uniqueSockID != uniqueSockID) {
-			PRINT_DEBUG("Socket closed, canceling read block.");
-			sem_post(&daemonSockets_sem);
-			return NULL;
-		}
-
-		sem_wait(&(daemonSockets[index].Qs));
-		ff = read_queue(daemonSockets[index].controlQueue);
-		//ff = get_fake_frame();
-		//print_finsFrame(ff);
-		sem_post(&(daemonSockets[index].Qs));
-		sem_post(&daemonSockets_sem);
-	}
-
-	return ff;
-}
-
 int daemon_to_switch(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
 	if (sem_wait(&Daemon_to_Switch_Qsem)) {
@@ -623,7 +524,7 @@ int daemon_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-void socket_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void socket_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	int domain;
 	int type;
@@ -674,7 +575,7 @@ void socket_call_handler(unsigned long long uniqueSockID, int index, int call_th
  * End of socket_call_handler
  */
 
-void bind_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void bind_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	socklen_t addr_len;
 	struct sockaddr_in *addr;
 	u_char * pt;
@@ -749,7 +650,7 @@ void bind_call_handler(unsigned long long uniqueSockID, int index, int call_thre
  * ------------------End of bind_call_handler-----------------
  */
 
-void listen_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void listen_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	int backlog;
 	u_char * pt;
 
@@ -795,7 +696,7 @@ void listen_call_handler(unsigned long long uniqueSockID, int index, int call_th
 	}
 }
 
-void connect_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void connect_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
 	int flags;
@@ -861,8 +762,8 @@ void connect_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	}
 }
 
-void accept_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
-	unsigned long long uniqueSockID_new;
+void accept_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
+	uint64_t uniqueSockID_new;
 	int index_new;
 	int flags;
 	u_char * pt;
@@ -871,7 +772,7 @@ void accept_call_handler(unsigned long long uniqueSockID, int index, int call_th
 
 	pt = buf;
 
-	uniqueSockID_new = *(unsigned long long *) pt;
+	uniqueSockID_new = *(uint64_t *) pt;
 	pt += sizeof(unsigned long long);
 
 	index_new = *(int *) pt;
@@ -914,7 +815,7 @@ void accept_call_handler(unsigned long long uniqueSockID, int index, int call_th
 	}
 }
 
-void getname_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void getname_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	int peer;
 	u_char * pt;
@@ -960,8 +861,8 @@ void getname_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	}
 }
 
-void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t buf_len) {
-	u_int cmd;
+void ioctl_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t buf_len) {
+	uint32_t cmd;
 	u_char * pt;
 	u_char *temp;
 	int len;
@@ -976,7 +877,7 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 
 	pt = buf;
 
-	cmd = *(u_int *) pt;
+	cmd = *(uint32_t *) pt;
 	pt += sizeof(u_int);
 
 	switch (cmd) {
@@ -1396,13 +1297,13 @@ void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 	}
 }
 
-void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void sendmsg_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	int addr_len;
 	struct sockaddr_in *addr;
-	u_int msg_flags;
-	u_int msg_controllen;
+	uint32_t msg_flags;
+	uint32_t msg_controllen;
 	void *msg_control;
-	u_int data_len;
+	uint32_t data_len;
 	u_char *data;
 	u_char *pt;
 
@@ -1432,10 +1333,10 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 		}
 	}
 
-	msg_flags = *(u_int *) pt;
+	msg_flags = *(uint32_t *) pt;
 	pt += sizeof(u_int);
 
-	msg_controllen = *(u_int *) pt;
+	msg_controllen = *(uint32_t *) pt;
 	pt += sizeof(u_int);
 
 	msg_control = malloc(msg_controllen);
@@ -1448,7 +1349,7 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	memcpy(msg_control, pt, msg_controllen);
 	pt += msg_controllen;
 
-	data_len = *(u_int *) pt;
+	data_len = *(uint32_t *) pt;
 	pt += sizeof(u_int);
 
 	data = (u_char *) malloc(data_len);
@@ -1509,11 +1410,11 @@ void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	}
 }
 
-void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void recvmsg_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	int data_len;
 	int flags;
-	u_int msg_flags;
-	u_int msg_controllen;
+	uint32_t msg_flags;
+	uint32_t msg_controllen;
 	void *msg_control;
 	u_char * pt;
 
@@ -1527,10 +1428,10 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	flags = *(int *) pt;
 	pt += sizeof(int);
 
-	msg_flags = *(u_int *) pt;
+	msg_flags = *(uint32_t *) pt;
 	pt += sizeof(u_int);
 
-	msg_controllen = *(u_int *) pt;
+	msg_controllen = *(uint32_t *) pt;
 	pt += sizeof(u_int);
 
 	msg_control = (u_char *) malloc(msg_controllen);
@@ -1582,7 +1483,7 @@ void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	}
 }
 
-void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void getsockopt_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	int level;
 	int optname;
@@ -1648,7 +1549,7 @@ void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 	}
 }
 
-void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void setsockopt_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	int level;
 	int optname;
@@ -1714,7 +1615,7 @@ void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int cal
 	}
 }
 
-void release_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void release_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	u_char * pt;
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d threads=%d id=%u index=%d len=%d", uniqueSockID, index, call_threads, call_id, call_index, len);
@@ -1755,7 +1656,7 @@ void release_call_handler(unsigned long long uniqueSockID, int index, int call_t
 	}
 }
 
-void poll_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void poll_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	u_char * pt;
 	int events;
 
@@ -1788,7 +1689,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	sem_post(&daemonSockets_sem);
 
 	if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-		poll_udp(uniqueSockID, index, call_id, call_index, events);
+		poll_udp_out(uniqueSockID, index, call_id, call_index, events);
 	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		poll_tcp(uniqueSockID, index, call_id, call_index, events);
 	} else if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1799,7 +1700,7 @@ void poll_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	}
 }
 
-void mmap_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void mmap_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 	u_char * pt;
 	pt = buf;
 
@@ -1845,13 +1746,13 @@ void mmap_call_handler(unsigned long long uniqueSockID, int index, int call_thre
 	}
 }
 
-void socketpair_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void socketpair_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d threads=%d id=%u index=%d len=%d", uniqueSockID, index, call_threads, call_id, call_index, len);
 
 }
 
-void shutdown_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void shutdown_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	int how;
 	u_char * pt;
@@ -1897,7 +1798,7 @@ void shutdown_call_handler(unsigned long long uniqueSockID, int index, int call_
 	}
 }
 
-void close_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void close_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d threads=%d id=%u index=%d len=%d", uniqueSockID, index, call_threads, call_id, call_index, len);
 
@@ -1920,520 +1821,49 @@ void close_call_handler(unsigned long long uniqueSockID, int index, int call_thr
 	}
 }
 
-void sendpage_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len) {
+void sendpage_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len) {
 
 	PRINT_DEBUG("Entered: uniqueSockID=%llu index=%d threads=%d id=%u index=%d len=%d", uniqueSockID, index, call_threads, call_id, call_index, len);
 
 }
 
-void *Switch_to_Daemon(void *local) {
+int daemon_setNonblocking(int fd) {
+	int flags;
 
-	struct finsFrame *ff;
-	int protocol = 0;
-	int index = 0;
-	socket_state state = 0;
-	uint32_t exec_call = 0;
-	uint16_t dstport, hostport = 0;
-	uint32_t dstport_buf = 0, hostport_buf = 0;
-	uint32_t dstip = 0, hostip = 0;
-	uint32_t host_ip = 0, host_port = 0, rem_ip = 0, rem_port = 0;
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 1;
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
 
-	while (1) {
-		sem_wait(&Switch_to_Daemon_Qsem);
-		ff = read_queue(Switch_to_Daemon_Queue);
-		sem_post(&Switch_to_Daemon_Qsem);
+int daemon_setBlocking(int fd) {
+	int flags;
 
-		if (ff == NULL) {
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 0; //TODO verify is right?
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
 
-			continue;
-		}
-
-		if (ff->dataOrCtrl == CONTROL) {
-			host_ip = 0;
-			host_port = 0;
-			rem_ip = 0;
-			rem_port = 0;
-
-			PRINT_DEBUG("control ff: ff=%p meta=%p opcode=%d", ff, ff->metaData, ff->ctrlFrame.opcode);
-			switch (ff->ctrlFrame.opcode) {
-			case CTRL_ALERT:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			case CTRL_ALERT_REPLY:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			case CTRL_READ_PARAM:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			case CTRL_READ_PARAM_REPLY:
-				if (ff->metaData) {
-					metadata *params = ff->metaData;
-					int ret = 0;
-					ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
-
-					if (state > SS_UNCONNECTED) {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
-
-						if (ret) {
-							//TODO error
-							PRINT_DEBUG("error ret=%d", ret);
-							freeFinsFrame(ff);
-							continue;
-						}
-
-						PRINT_DEBUG("");
-						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
-						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
-							sem_wait(&daemonSockets[index].Qs);
-
-							/**
-							 * TODO Replace The data Queue with a pipeLine at least for
-							 * the RAW DATA in order to find a natural way to support
-							 * Blocking and Non-Blocking mode
-							 */
-							if (write_queue(ff, daemonSockets[index].controlQueue)) {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].control_sem);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-							} else {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-								freeFinsFrame(ff);
-							}
-						} else {
-							PRINT_DEBUG("");
-							sem_post(&daemonSockets_sem);
-
-							PRINT_DEBUG("No socket found, dropping");
-							freeFinsFrame(ff);
-						}
-					} else {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
-
-						if (ret) {
-							//TODO error
-							PRINT_DEBUG("error ret=%d", ret);
-							freeFinsFrame(ff);
-							continue;
-						}
-
-						PRINT_DEBUG("");
-						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
-						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
-							sem_wait(&daemonSockets[index].Qs);
-
-							/**
-							 * TODO Replace The data Queue with a pipeLine at least for
-							 * the RAW DATA in order to find a natural way to support
-							 * Blocking and Non-Blocking mode
-							 */
-							if (write_queue(ff, daemonSockets[index].controlQueue)) {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].control_sem);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-							} else {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-								freeFinsFrame(ff);
-							}
-						} else {
-							PRINT_DEBUG("");
-							sem_post(&daemonSockets_sem);
-
-							PRINT_DEBUG("No socket found, dropping");
-							freeFinsFrame(ff);
-						}
-					}
-				} else {
-					//TODO error
-					PRINT_DEBUG("error");
-					freeFinsFrame(ff);
-				}
-				break;
-			case CTRL_SET_PARAM:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			case CTRL_SET_PARAM_REPLY:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			case CTRL_EXEC:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			case CTRL_EXEC_REPLY:
-				if (ff->metaData) {
-					metadata *params = ff->metaData;
-					int ret = 0;
-					ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
-
-					if (state > SS_UNCONNECTED) {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
-
-						if (ret) {
-							//TODO error
-							PRINT_DEBUG("error ret=%d", ret);
-							freeFinsFrame(ff);
-							continue;
-						}
-
-						//##################
-						struct sockaddr_in *temp = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-						//memset(temp->sin_addr, 0, sizeof(struct sockaddr_in));
-						if (host_ip) {
-							temp->sin_addr.s_addr = (int) htonl(host_ip);
-						} else {
-							temp->sin_addr.s_addr = 0;
-						}
-						//temp->sin_port = 0;
-						struct sockaddr_in *temp2 = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-						//memset(temp2, 0, sizeof(struct sockaddr_in));
-						if (rem_ip) {
-							temp2->sin_addr.s_addr = (int) htonl(rem_ip);
-						} else {
-							temp2->sin_addr.s_addr = 0;
-						}
-						//temp2->sin_port = 0;
-						PRINT_DEBUG("host=%s/%d (%u)", inet_ntoa(temp->sin_addr), (host_port), temp->sin_addr.s_addr);
-						PRINT_DEBUG("dst=%s/%d (%u)", inet_ntoa(temp2->sin_addr), (rem_port), temp2->sin_addr.s_addr);
-						free(temp);
-						free(temp2);
-						//##################
-
-						PRINT_DEBUG("");
-						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, protocol);
-						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
-							sem_wait(&daemonSockets[index].Qs);
-
-							/**
-							 * TODO Replace The data Queue with a pipeLine at least for
-							 * the RAW DATA in order to find a natural way to support
-							 * Blocking and Non-Blocking mode
-							 */
-							if (write_queue(ff, daemonSockets[index].controlQueue)) {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].control_sem);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-							} else {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-								freeFinsFrame(ff);
-							}
-						} else {
-							ret += metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
-							ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
-
-							if (ret == 0 && (exec_call == EXEC_TCP_CONNECT || exec_call == EXEC_TCP_ACCEPT)) {
-								index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
-								if (index != -1) {
-									PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
-									sem_wait(&daemonSockets[index].Qs);
-
-									/**
-									 * TODO Replace The data Queue with a pipeLine at least for
-									 * the RAW DATA in order to find a natural way to support
-									 * Blocking and Non-Blocking mode
-									 */
-									if (write_queue(ff, daemonSockets[index].controlQueue)) {
-										PRINT_DEBUG("");
-										sem_post(&daemonSockets[index].control_sem);
-										PRINT_DEBUG("");
-										sem_post(&daemonSockets[index].Qs);
-										PRINT_DEBUG("");
-										sem_post(&daemonSockets_sem);
-									} else {
-										PRINT_DEBUG("");
-										sem_post(&daemonSockets[index].Qs);
-										PRINT_DEBUG("");
-										sem_post(&daemonSockets_sem);
-										freeFinsFrame(ff);
-									}
-								} else {
-									PRINT_DEBUG("");
-									sem_post(&daemonSockets_sem);
-
-									PRINT_DEBUG("No socket found, dropping");
-									freeFinsFrame(ff);
-								}
-							} else {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-
-								PRINT_DEBUG("No socket found, dropping");
-								freeFinsFrame(ff);
-							}
-						}
-					} else {
-						ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-						ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
-
-						if (ret) {
-							//TODO error
-							PRINT_DEBUG("error ret=%d", ret);
-							freeFinsFrame(ff);
-							continue;
-						}
-
-						//##################
-						struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
-						if (hostip) {
-							temp->s_addr = host_ip;
-						} else {
-							temp->s_addr = 0;
-						}
-						PRINT_DEBUG("NETFORMAT host=%s/%d", inet_ntoa(*temp), (host_port));
-						PRINT_DEBUG("NETFORMAT host=%u/%d", (*temp).s_addr, (host_port));
-						free(temp);
-						//##################
-
-						PRINT_DEBUG("");
-						sem_wait(&daemonSockets_sem);
-						index = match_daemon_connection(host_ip, (uint16_t) host_port, 0, 0, protocol);
-						if (index != -1) {
-							PRINT_DEBUG("Matched: ff=%p index=%d", ff, index);
-							sem_wait(&daemonSockets[index].Qs);
-
-							/**
-							 * TODO Replace The data Queue with a pipeLine at least for
-							 * the RAW DATA in order to find a natural way to support
-							 * Blocking and Non-Blocking mode
-							 */
-							if (write_queue(ff, daemonSockets[index].controlQueue)) {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].control_sem);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-							} else {
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets[index].Qs);
-								PRINT_DEBUG("");
-								sem_post(&daemonSockets_sem);
-								freeFinsFrame(ff);
-							}
-						} else {
-							PRINT_DEBUG("");
-							sem_post(&daemonSockets_sem);
-
-							PRINT_DEBUG("No socket found, dropping");
-							freeFinsFrame(ff);
-						}
-					}
-				} else {
-					//TODO error
-					PRINT_DEBUG("error");
-					freeFinsFrame(ff);
-				}
-				break;
-			case CTRL_ERROR:
-				PRINT_DEBUG("Not yet implmented");
-				freeFinsFrame(ff); //ftm
-				break;
-			default:
-				PRINT_DEBUG("Unknown opcode");
-				freeFinsFrame(ff); //ftm
-				break;
-			}
-		} else if (ff->dataOrCtrl == DATA) {
-			PRINT_DEBUG("data ff: ff=%p meta=%p len=%d", ff, ff->metaData, ff->dataFrame.pduLength);
-
-			dstport = 0;
-			hostport = 0;
-			dstip = 0;
-			hostip = 0;
-			protocol = 0;
-
-			int ret = 0;
-			ret += metadata_readFromElement(ff->metaData, "src_ip", &hostip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->metaData, "src_port", &hostport_buf) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->metaData, "dst_ip", &dstip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->metaData, "dst_port", &dstport_buf) == CONFIG_FALSE;
-			ret += metadata_readFromElement(ff->metaData, "protocol", &protocol) == CONFIG_FALSE;
-
-			if (ret) {
-				PRINT_ERROR("prob reading metadata ret=%d", ret);
-
-				if (ff->dataFrame.pdu)
-					free(ff->dataFrame.pdu);
-				freeFinsFrame(ff);
-				continue;
-			}
-
-			dstport = (uint16_t) dstport_buf;
-			hostport = (uint16_t) hostport_buf;
-
-			//##############################################
-			struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
-			if (hostip) {
-				temp->s_addr = htonl(hostip);
-			} else {
-				temp->s_addr = 0;
-			}
-			struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
-			if (dstip) {
-				temp2->s_addr = htonl(dstip);
-			} else {
-				temp2->s_addr = 0;
-			}
-			PRINT_DEBUG("prot=%d, ff=%p", protocol, ff);
-			PRINT_DEBUG("host=%s:%d (%u)", inet_ntoa(*temp), (hostport), (*temp).s_addr);
-			PRINT_DEBUG("dst=%s:%d (%u)", inet_ntoa(*temp2), (dstport), (*temp2).s_addr);
-
-			free(temp);
-			free(temp2);
-			//##############################################
-
-			/**
-			 * check if this received datagram destIP and destport matching which socket hostIP
-			 * and hostport insidee our sockets database
-			 */
-			sem_wait(&daemonSockets_sem);
-			if (protocol == IPPROTO_ICMP) {
-				index = match_daemonSocket(0, hostip, protocol);
-			} else if (protocol == IPPROTO_TCP) {
-				index = match_daemon_connection(hostip, hostport, dstip, dstport, protocol);
-				if (index == -1) {
-					index = match_daemon_connection(hostip, hostport, 0, 0, protocol);
-				}
-			} else { //udp
-				index = match_daemonSocket(dstport, dstip, protocol); //TODO change for multicast
-
-				//if (index != -1 && daemonSockets[index].connection_status > 0) { //TODO review this logic might be bad
-				if (index != -1 && daemonSockets[index].state > SS_UNCONNECTED) { //TODO review this logic might be bad
-					PRINT_DEBUG("ICMP should not enter here at all ff=%p", ff);
-					if ((hostport != daemonSockets[index].dst_port) || (hostip != daemonSockets[index].dst_ip)) {
-						PRINT_DEBUG("Wrong address, the socket is already connected to another destination");
-						sem_post(&daemonSockets_sem);
-
-						if (ff->dataFrame.pdu)
-							free(ff->dataFrame.pdu);
-						freeFinsFrame(ff);
-						continue;
-					}
-				}
-			}
-
-			PRINT_DEBUG("ff=%p index=%d", ff, index);
-			if (index != -1 && daemonSockets[index].uniqueSockID != -1) {
-				PRINT_DEBUG( "Matched: host=%u/%u, dst=%u/%u, prot=%u",
-						daemonSockets[index].host_ip, daemonSockets[index].host_port, daemonSockets[index].dst_ip, daemonSockets[index].dst_port, daemonSockets[index].protocol);
-
-				/**
-				 * check if this datagram comes from the address this socket has been previously
-				 * connected to it (Only if the socket is already connected to certain address)
-				 */
-
-				int value;
-				sem_getvalue(&(daemonSockets[index].Qs), &value);
-				PRINT_DEBUG("sem: ind=%d, val=%d", index, value);
-				sem_wait(&daemonSockets[index].Qs);
-
-				/**
-				 * TODO Replace The data Queue with a pipeLine at least for
-				 * the RAW DATA in order to find a natural way to support
-				 * Blocking and Non-Blocking mode
-				 */
-				if (write_queue(ff, daemonSockets[index].dataQueue)) {
-					daemonSockets[index].buf_data += ff->dataFrame.pduLength;
-					PRINT_DEBUG("");
-					sem_post(&daemonSockets[index].data_sem);
-					PRINT_DEBUG("");
-					sem_post(&daemonSockets[index].Qs);
-					PRINT_DEBUG("");
-					sem_post(&daemonSockets_sem);
-
-					//PRINT_DEBUG("pdu=\"%s\"", ff->dataFrame.pdu);
-
-					char *buf;
-					buf = (char *) malloc(ff->dataFrame.pduLength + 1);
-					if (buf == NULL) {
-						PRINT_ERROR("error allocation");
-						exit(1);
-					}
-					memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-					buf[ff->dataFrame.pduLength] = '\0';
-					PRINT_DEBUG("pdu='%s'", buf);
-					free(buf);
-
-					PRINT_DEBUG("pdu length %d", ff->dataFrame.pduLength);
-				} else {
-					PRINT_DEBUG("");
-					sem_post(&daemonSockets[index].Qs);
-					PRINT_DEBUG("");
-					sem_post(&daemonSockets_sem);
-
-					if (ff->dataFrame.pdu)
-						free(ff->dataFrame.pdu);
-					freeFinsFrame(ff);
-				}
-			} else {
-				PRINT_DEBUG("No match, freeing ff");
-				sem_post(&daemonSockets_sem);
-
-				if (ff->dataFrame.pdu)
-					free(ff->dataFrame.pdu);
-				freeFinsFrame(ff);
-			}
-		} else {
-
-			PRINT_DEBUG("unknown FINS Frame type NOT DATA NOT CONTROL !!!Probably FORMAT ERROR");
-
-			if (ff->dataFrame.pdu)
-				free(ff->dataFrame.pdu);
-			freeFinsFrame(ff);
-		} // end of if , else if , else statement
-	} // end of while
-
-	pthread_exit(NULL);
-} // end of function
-
-void *Wedge_to_Daemon(void *local) {
+void *wedge_to_daemon(void *local) {
 	int ret_val;
-	//int nl_sockfd;
-	/*
-	 nl_sockfd = init_fins_nl();
-	 if (nl_sockfd == -1) { // if you get an error here, check to make sure you've inserted the FINS LKM first.
-	 perror("init_fins_nl() caused an error");
-	 exit(-1);
-	 }
-	 */
+
 	// Begin receive message section
 	// Allocate a buffer to hold contents of recvfrom call
 	void *recv_buf;
@@ -2462,20 +1892,30 @@ void *Wedge_to_Daemon(void *local) {
 
 	int pos;
 
-	unsigned long long uniqueSockID;
+	uint64_t uniqueSockID;
 	int index;
-	u_int call_type; //Integer representing what socketcall type was placed (for testing purposes)
+	uint32_t call_type; //Integer representing what socketcall type was placed (for testing purposes)
 	int call_threads;
-	u_int call_id;
+	uint32_t call_id;
 	int call_index;
 
 	PRINT_DEBUG("Waiting for message from kernel\n");
 
 	int counter = 0;
-	while (1) {
-
+	while (daemon_running) {
 		PRINT_DEBUG("NL counter = %d", counter++);
-		ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen);
+
+		daemon_setNonblocking(nl_sockfd);
+		do {
+			ret_val = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen); //TODO change to nonblocking in loop
+		} while (daemon_running && ret_val <= 0);
+
+		if (!daemon_running) {
+			break;
+		}
+
+		daemon_setBlocking(nl_sockfd);
+
 		if (ret_val == -1) {
 			perror("recvfrom() caused an error");
 			exit(-1);
@@ -2706,6 +2146,18 @@ void *Wedge_to_Daemon(void *local) {
 
 	free(recv_buf);
 	close(nl_sockfd);
+
+	PRINT_DEBUG("Exiting");
+	pthread_exit(NULL);
+}
+
+void *switch_to_daemon(void *local) {
+	while (daemon_running) {
+		daemon_get_ff();
+		PRINT_DEBUG("");
+	}
+
+	PRINT_DEBUG("Exiting");
 	pthread_exit(NULL);
 }
 
@@ -3240,39 +2692,42 @@ void init_daemonSockets(void) {
 	thread_count = 0;
 }
 
-pthread_t wedge_to_daemon_thread;
-
-void daemon_init(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Daemon Started");
+void daemon_init(void) {
+	PRINT_DEBUG("Entered");
 	daemon_running = 1;
 
 	init_daemonSockets();
 
-	pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, Wedge_to_Daemon, fins_pthread_attr); //TODO separate into distinct init/run
-
-	/*
-	 inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
-	 if (inject_pipe_fd == -1) {
-	 PRINT_DEBUG("opening inject_pipe did not work");
-	 exit(EXIT_FAILURE);
-	 }
-	 */
-	PRINT_DEBUG("");
-}
-
-void daemon_run(void) {
-	while (daemon_running) {
-		daemon_get_ff();
-		PRINT_DEBUG("");
+	//############# //TODO move to Daemon
+	//init the netlink socket connection to daemon
+	nl_sockfd = init_fins_nl();
+	if (nl_sockfd == -1) {
+		perror("init_fins_nl() caused an error");
+		exit(-1);
 	}
 
-	pthread_join(wedge_to_daemon_thread, NULL);
-	//pthread_join(switch_to_interface_thread, NULL);
+	//prime the kernel to establish daemon's PID
+	int daemoncode = daemon_start_call;
+	int ret_val;
+	ret_val = send_wedge(nl_sockfd, (u_char *) &daemoncode, sizeof(int), 0);
+	if (ret_val != 0) {
+		perror("sendfins() caused an error");
+		exit(-1);
+	}
+	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	//#############
 
-	PRINT_DEBUG("Daemon Terminating");
+}
+
+void daemon_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
+
+	pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, wedge_to_daemon, fins_pthread_attr);
+	pthread_create(&switch_to_daemon_thread, fins_pthread_attr, switch_to_daemon, fins_pthread_attr);
 }
 
 void daemon_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	daemon_running = 0;
 
 	//prime the kernel to establish daemon's PID
@@ -3285,10 +2740,15 @@ void daemon_shutdown(void) {
 	}
 	PRINT_DEBUG("Disconnecting to wedge at %d", nl_sockfd);
 
+	pthread_join(switch_to_daemon_thread, NULL);
+	PRINT_DEBUG("Here");
+	pthread_join(wedge_to_daemon_thread, NULL);
+	PRINT_DEBUG("Here");
 	//TODO expand this
 }
 
 void daemon_release(void) {
+	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
 	int i = 0, j = 0;
 	int THREADS = 100;

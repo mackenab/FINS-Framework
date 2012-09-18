@@ -15,12 +15,12 @@
 #include "rtm.h"
 
 //declares external semaphores to manage/protect the RTM_to_Switch Queue multithreading
-extern sem_t RTM_to_Switch_Qsem;
-extern finsQueue RTM_to_Switch_Queue;
+sem_t RTM_to_Switch_Qsem;
+finsQueue RTM_to_Switch_Queue;
 
 //declares external semaphores to manage/protect the RTM_to_Switch Queue due to multithreading
-extern sem_t Switch_to_RTM_Qsem;
-extern finsQueue Switch_to_RTM_Queue;
+sem_t Switch_to_RTM_Qsem;
+finsQueue Switch_to_RTM_Queue;
 
 //declares file descriptors for the two pipes
 int rtm_in_fd;

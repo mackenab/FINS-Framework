@@ -10,14 +10,17 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <pthread.h>
 #include "arp.h"
 
 int arp_running;
-extern sem_t ARP_to_Switch_Qsem;
-extern finsQueue ARP_to_Switch_Queue;
+pthread_t switch_to_arp_thread;
 
-extern sem_t Switch_to_ARP_Qsem;
-extern finsQueue Switch_to_ARP_Queue;
+sem_t ARP_to_Switch_Qsem;
+finsQueue ARP_to_Switch_Queue;
+
+sem_t Switch_to_ARP_Qsem;
+finsQueue Switch_to_ARP_Queue;
 
 struct arp_interface *interface_list;
 uint32_t interface_num;
@@ -727,7 +730,7 @@ void arp_get_ff(void) {
 		sem_wait(&Switch_to_ARP_Qsem);
 		ff = read_queue(Switch_to_ARP_Queue);
 		sem_post(&Switch_to_ARP_Qsem);
-	} while (arp_running && ff == NULL && !interrupt_flag);
+	} while (arp_running && ff == NULL && !interrupt_flag); //TODO change logic here, combine with switch_to_arp?
 
 	if (!arp_running) {
 		return;
@@ -869,8 +872,19 @@ int arp_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-void arp_init(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("ARP Started");
+void *switch_to_arp(void *local) {
+	while (arp_running) {
+		arp_get_ff();
+		PRINT_DEBUG("");
+		//	free(pff);
+	}
+
+	PRINT_DEBUG("Exiting");
+	pthread_exit(NULL);
+}
+
+void arp_init(void) {
+	PRINT_DEBUG("Entered");
 	arp_running = 1;
 
 	interface_list = NULL;
@@ -880,23 +894,19 @@ void arp_init(pthread_attr_t *fins_pthread_attr) {
 	cache_num = 0;
 
 	//#############
-	uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
+	//uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
 
-	uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
+	//uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
 	//uint32_t IPADDRESS = IP4_ADR_P2H(172,31,50,160);/**<IP address of host; sent to the arp module*/
 
-	arp_register_interface(MACADDRESS, IPADDRESS);
+	//arp_register_interface(MACADDRESS, IPADDRESS);
 	//#############
 }
 
-void arp_run(void) {
-	while (arp_running) {
-		arp_get_ff();
-		PRINT_DEBUG("");
-		//	free(pff);
-	}
+void arp_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
 
-	PRINT_DEBUG("ARP Terminating");
+	pthread_create(&switch_to_arp_thread, fins_pthread_attr, switch_to_arp, fins_pthread_attr);
 }
 
 int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
@@ -917,11 +927,15 @@ int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 }
 
 void arp_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	arp_running = 0;
 
 	//TODO fill this out
+
+	pthread_join(switch_to_arp_thread, NULL);
 }
 
 void arp_release(void) {
+	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
 }

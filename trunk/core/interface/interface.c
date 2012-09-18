@@ -18,11 +18,14 @@
 #include "interface.h"
 
 int interface_running;
-extern sem_t Interface_to_Switch_Qsem;
-extern finsQueue Interface_to_Switch_Queue;
+pthread_t switch_to_interface_thread;
+pthread_t capturer_to_interface_thread;
 
-extern sem_t Switch_to_Interface_Qsem;
-extern finsQueue Switch_to_Interface_Queue;
+sem_t Interface_to_Switch_Qsem;
+finsQueue Interface_to_Switch_Queue;
+
+sem_t Switch_to_Interface_Qsem;
+finsQueue Switch_to_Interface_Queue;
 
 int capture_pipe_fd; /** capture file descriptor to read from capturer */
 int inject_pipe_fd; /** inject file descriptor to read from capturer */
@@ -117,7 +120,41 @@ void print_frame(const u_char *payload, int len) {
 } // end of print_frame
 /** ---------------------------------------------------------*/
 
-void *Capturer_to_Interface(void *local) {
+int interface_setNonblocking(int fd) { //TODO move to common file?
+	int flags;
+
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 1;
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
+
+int interface_setBlocking(int fd) {
+	int flags;
+
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 0; //TODO verify is right?
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
+
+void *capturer_to_interface(void *local) {
 
 	u_char *frame;
 	int frame_len;
@@ -133,14 +170,18 @@ void *Capturer_to_Interface(void *local) {
 	uint64_t src_mac;
 	u_short ether_type;
 
-	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
-	if (capture_pipe_fd == -1) {
-		PRINT_ERROR("opening capture_pipe did not work");
-		exit(-1); //exit(EXIT_FAILURE);
-	}
-
 	while (interface_running) {
-		numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
+		interface_setNonblocking(capture_pipe_fd);
+		do {
+			numBytes = read(capture_pipe_fd, &frame_len, sizeof(int)); //TODO change to nonblocking in loop
+		} while (interface_running && numBytes <= 0);
+
+		if (!interface_running) {
+			break;
+		}
+
+		interface_setBlocking(capture_pipe_fd);
+
 		if (numBytes <= 0) {
 			PRINT_DEBUG("numBytes written %d\n", numBytes);
 			break;
@@ -255,30 +296,17 @@ void *Capturer_to_Interface(void *local) {
 		free(frame);
 	} // end of while loop
 
+	PRINT_DEBUG("Exiting");
 	pthread_exit(NULL);
 }
 
-void *Switch_to_Interface(void *local) {
-
-	//char data[]="loloa7aa7a";
-	//struct ipv4_packet *packet;
-	//IP4addr destination;
-	//struct hostent *loop_host;
-	//uint32_t dstip;
-
-	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
-	if (inject_pipe_fd == -1) {
-		PRINT_ERROR("opening inject_pipe did not work");
-		exit(-1);
-	}
-
-	PRINT_DEBUG("");
-
+void *switch_to_interface(void *local) {
 	while (interface_running) {
 		interface_get_ff();
-		//PRINT_DEBUG("");
+		PRINT_DEBUG("");
 	}
 
+	PRINT_DEBUG("Exiting");
 	pthread_exit(NULL);
 } // end of Inject Function
 
@@ -437,13 +465,9 @@ int interface_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-pthread_t capturer_to_interface_thread;
-
-void interface_init(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Interface Started");
+void interface_init(void) {
+	PRINT_DEBUG("Entered");
 	interface_running = 1;
-
-	pthread_create(&capturer_to_interface_thread, fins_pthread_attr, Capturer_to_Interface, fins_pthread_attr);
 
 	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
 	if (inject_pipe_fd == -1) {
@@ -451,26 +475,33 @@ void interface_init(pthread_attr_t *fins_pthread_attr) {
 		exit(-1);
 	}
 
+	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
+	if (capture_pipe_fd == -1) {
+		PRINT_ERROR("opening capture_pipe did not work");
+		exit(-1); //exit(EXIT_FAILURE);
+	}
+
 	PRINT_DEBUG("");
 }
 
-void interface_run(void) {
-	while (interface_running) {
-		interface_get_ff();
-		PRINT_DEBUG("");
-	}
+void interface_run(pthread_attr_t *fins_pthread_attr) {
+	PRINT_DEBUG("Entered");
 
-	pthread_join(capturer_to_interface_thread, NULL);
-
-	PRINT_DEBUG("Interface Terminating");
+	pthread_create(&switch_to_interface_thread, fins_pthread_attr, switch_to_interface, fins_pthread_attr);
+	pthread_create(&capturer_to_interface_thread, fins_pthread_attr, capturer_to_interface, fins_pthread_attr);
 }
 
 void interface_shutdown(void) {
+	PRINT_DEBUG("Entered");
 	interface_running = 0;
 
 	//TODO expand this
+
+	pthread_join(switch_to_interface_thread, NULL);
+	pthread_join(capturer_to_interface_thread, NULL);
 }
 
 void interface_release(void) {
+	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
 }

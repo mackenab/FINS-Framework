@@ -174,35 +174,52 @@ struct tcp_Parameters {
 };
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
+uint64_t my_host_mac_addr;
 uint32_t my_host_ip_addr; // = IP4_ADR_P2H(192,168,1,20);
+uint32_t my_host_mask;
 uint32_t loopback_ip_addr; // = IP4_ADR_P2H(127,0,0,1);
 uint32_t any_ip_addr; // = IP4_ADR_P2H(0,0,0,0);
 
 struct nl_wedge_to_daemon {
-	unsigned long long sock_id; //TODO when ironed out remove uID or index, prob uID
+	uint64_t sock_id; //TODO when ironed out remove uID or index, prob uID
 	int sock_index;
 
-	u_int call_type;
+	uint32_t call_type;
 	int call_threads;
 
-	u_int call_id; //TODO when ironed out remove id or index
+	uint32_t call_id; //TODO when ironed out remove id or index
 	int call_index;
 };
 
 struct nl_daemon_to_wedge {
-	u_int call_type;
+	uint32_t call_type;
 
 	union {
-		u_int call_id; //TODO when ironed out remove id or index
-		unsigned long long sock_id; //TODO when ironed out remove uID & index
+		uint32_t call_id; //TODO when ironed out remove id or index
+		uint64_t sock_id; //TODO when ironed out remove uID & index
 	};
 	union {
 		int call_index;
 		int sock_index;
 	};
 
-	u_int ret;
-	u_int msg;
+	uint32_t ret;
+	uint32_t msg;
+};
+
+struct fins_daemon_call {
+	//next or have array?
+
+	uint32_t call_id;
+	uint32_t call_type;
+	uint32_t call_index;
+
+	uint32_t data;
+	uint32_t fcf_serialNum;
+	//uint64_t sock_id;
+	//int sock_index;
+
+	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 };
 
 struct fins_daemon_socket {
@@ -212,8 +229,8 @@ struct fins_daemon_socket {
 	 */
 	//int connection_status; //0=created, not connected to anything, 1=connecting/accepting, 2=established
 	socket_state state;
-	unsigned long long uniqueSockID;
-	pid_t childrenList[MaxChildrenNumSharingSocket];
+	uint64_t uniqueSockID;
+	pid_t childrenList[MaxChildrenNumSharingSocket]; //TODO remove or implement? not used
 	int type;
 	int protocol;
 
@@ -253,6 +270,8 @@ struct fins_daemon_socket {
 	int recv_ind;
 	int threads;
 	int replies;
+
+	int poll_events;
 };
 
 //ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
@@ -272,59 +291,45 @@ struct fins_daemon_socket {
 int init_fins_nl(void);
 int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
 
-int nack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
-int ack_send(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int call_type, u_int ret_msg);
+int nack_send(uint64_t uniqueSockID, int index, uint32_t call_id, int call_index, uint32_t call_type, uint32_t ret_msg);
+int ack_send(uint64_t uniqueSockID, int index, uint32_t call_id, int call_index, uint32_t call_type, uint32_t ret_msg);
 
 void init_daemonSockets(void);
 int randoming(int min, int max);
-int check_daemonSocket(unsigned long long uniqueSockID);
+int check_daemonSocket(uint64_t uniqueSockID);
 int match_daemonSocket(uint16_t dstport, uint32_t dstip, int protocol);
 int match_daemon_connection(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, int protocol);
-int find_daemonSocket(unsigned long long uniqueSockID);
-int insert_daemonSocket(unsigned long long uniqueSockID, int index, int type, int protocol);
-int remove_daemonSocket(unsigned long long uniqueSockID, int index);
+int find_daemonSocket(uint64_t uniqueSockID);
+int insert_daemonSocket(uint64_t uniqueSockID, int index, int type, int protocol);
+int remove_daemonSocket(uint64_t uniqueSockID, int index);
 
 int check_daemon_ports(uint16_t hostport, uint32_t hostip);
 
-struct finsFrame *get_fdf_old(int index, unsigned long long uniqueSockID, int non_block_flag); //deprecated
-struct finsFrame *get_fcf_old(int index, unsigned long long uniqueSockID, int non_block_flag); //deprecated //blocking doesn't matter
-
-int get_fdf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag);
-int get_fcf(int index, unsigned long long uniqueSockID, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
+int get_fdf(int index, uint64_t uniqueSockID, struct finsFrame **ff, int non_blocking_flag);
+int get_fcf(int index, uint64_t uniqueSockID, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
 
 /** calls handling functions */
-void socket_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void bind_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void listen_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void connect_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void accept_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void getname_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void ioctl_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void sendmsg_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void recvmsg_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void getsockopt_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void setsockopt_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void release_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void poll_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void mmap_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void socketpair_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void shutdown_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void close_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
-void sendpage_call_handler(unsigned long long uniqueSockID, int index, int call_threads, u_int call_id, int call_index, u_char *buf, ssize_t len);
+void socket_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void bind_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void listen_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void connect_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void accept_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void getname_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void ioctl_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void sendmsg_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void recvmsg_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void getsockopt_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void setsockopt_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void release_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void poll_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void mmap_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void socketpair_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void shutdown_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void close_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
+void sendpage_call_handler(uint64_t uniqueSockID, int index, int call_threads, uint32_t call_id, int call_index, u_char *buf, ssize_t len);
 
-//######################### //TODO remove
-struct recvfrom_data {
-	int id;
-	unsigned long long uniqueSockID;
-	int socketCallType;
-	int datalen;
-	int flags;
-	int symbol;
-};
-//#########################
-
-void daemon_init(pthread_attr_t *fins_pthread_attr);
-void daemon_run(void);
+void daemon_init(void);
+void daemon_run(pthread_attr_t *fins_pthread_attr);
 void daemon_shutdown(void);
 void daemon_release(void);
 void daemon_get_ff(void);

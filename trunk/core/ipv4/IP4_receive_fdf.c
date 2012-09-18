@@ -10,8 +10,8 @@
 
 extern IP4addr my_ip_addr;
 
-extern sem_t Switch_to_IPv4_Qsem;
-extern finsQueue Switch_to_IPv4_Queue;
+sem_t Switch_to_IPv4_Qsem;
+finsQueue Switch_to_IPv4_Queue;
 
 void IP4_receive_fdf() {
 
