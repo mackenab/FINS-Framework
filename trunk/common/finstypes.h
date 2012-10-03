@@ -19,6 +19,8 @@
 
 //Include MetaData header File
 #include "metadata.h"		//guicomm need this local
+#include <stdint.h>
+
 //Definition of the modules IDs
 #define SWITCH_ID 0
 #define DAEMON_ID 1
@@ -79,6 +81,8 @@ struct finsCtrlFrame {
 	unsigned short int opcode; // type of control message, see CTRL_* values
 	unsigned int serialNum; // unique identifier, varies by msg type
 
+	//unsigned char ret_val;  //NACK/ACK
+
 	unsigned char * name; // parameter/function/error name
 	void * data; // pointer to relevant data; msg type dependent
 	// if using a struct for this, define elsewhere
@@ -120,6 +124,8 @@ struct finsFrame * unserializeCtrlFrame(unsigned char *, int);
  * -- struct.
  * - called by the receiver
  */
+
+uint32_t gen_control_serial_num(void);
 
 typedef enum {
 	SS_FREE = 0, /* not allocated                */

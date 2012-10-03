@@ -108,22 +108,24 @@ void nl_data_ready(struct sk_buff *skb);
 inline unsigned long long getUniqueSockID(struct sock *sk);
 
 struct nl_wedge_to_daemon {
-	unsigned long long sock_id; //TODO when ironed out remove uID or sock_index, prob uID
+	unsigned long long sock_id;
 	int sock_index;
 
 	u_int call_type;
-	int call_threads;
+	int call_threads; //TODO remove, not used anymore
 
-	u_int call_id; //TODO when ironed out remove id or sock_index
+	u_int call_id;
 	int call_index;
+
+	int pid;
 };
 
 struct nl_daemon_to_wedge {
 	u_int call_type;
 
 	union {
-		u_int call_id; //TODO when ironed out remove id or sock_index
-		unsigned long long sock_id; //TODO when ironed out remove uID & sock_index
+		u_int call_id;
+		unsigned long long sock_id;
 
 	};
 	union {

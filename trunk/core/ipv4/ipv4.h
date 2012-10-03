@@ -139,15 +139,18 @@ struct ip4_routing_table {
 	IP4addr gw;
 	IP4addr mask;
 	unsigned int metric;
-	unsigned int interface;
+	//unsigned int interface;
+	unsigned long interface; //TODO change back
 
 	struct ip4_routing_table * next_entry;
 };
 
 struct ip4_next_hop_info {
 	IP4addr address;
-	int interface;
+	//int interface;
+	unsigned long interface;
 };
+
 //struct ip_
 /* Basic IPv4 definitions */
 #define	IP4_ALEN		4		/* IP address length in bytes (octets)					*/
@@ -216,6 +219,24 @@ struct ip4_next_hop_info {
 #define	IP4_CLASSD(x) (((x) & 0xf0000000) == 0xe0000000)	/* IP Class D */
 #define	IP4_CLASSE(x) (((x) & 0xf8000000) == 0xf0000000)	/* IP Class E */
 
+struct ip4_store {
+	struct ip4_store *next;
+	uint32_t serialNum;
+	struct finsFrame *ff;
+	u_char *pdu;
+};
+
+struct ip4_store *store_create(uint32_t serialNum, struct finsFrame *ff, u_char *pdu);
+void store_free(struct ip4_store *store);
+
+#define IP4_STORE_LIST_MAX 200
+
+int store_list_insert(struct ip4_store *store);
+struct ip4_store *store_list_find(uint32_t serialNum);
+void store_list_remove(struct ip4_store *store);
+int store_list_is_empty(void);
+int store_list_has_space(void);
+
 int ipv4_running; //TODO move to ipv4.c
 pthread_t switch_to_ipv4_thread;
 
@@ -252,6 +273,11 @@ void IP4_init();
 struct ip4_next_hop_info IP4_next_hop(IP4addr dst);
 int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length);
 void IP4_receive_fdf();
+
+void ipv4_fcf(struct finsFrame *ff);
+void ipv4_exec_reply(struct finsFrame *ff);
+#define EXEC_ARP_GET_ADDR 0
+
 int InputQueue_Read_local(struct finsFrame *pff);
 int ipv4_to_switch(struct finsFrame *fins_frame);
 void IP4_exit();

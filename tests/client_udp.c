@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,11);
+	server_addr.sin_addr.s_addr = xxx(172,168,1,20);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	bzero(&(server_addr.sin_zero), 8);
@@ -80,13 +80,12 @@ int main(int argc, char *argv[]) {
 	client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
 	//bzero(&(client_addr.sin_zero), 8);
 
-	///*
 	printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr_in)) == -1) {
 		perror("Bind");
 		printf("Failure");
 		exit(1);
-	} //*/
+	}
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 

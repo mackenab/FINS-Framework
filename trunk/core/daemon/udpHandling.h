@@ -2,7 +2,7 @@
  * @file udpHandling.h
  *
  *  @date Nov 28, 2010
- *  @author Abdallah Abdallah
+ *  @author Jonathan Reed
  */
 
 #ifndef UDPHANDLING_H_
@@ -12,40 +12,30 @@
 
 #include "daemon.h"
 
-int daemon_fdf_to_udp(u_char *data, u_int data_len, metadata *params);
+int daemon_fdf_to_udp(u_char *data, uint32_t data_len, metadata *params);
 
-void socket_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
-void bind_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
-void listen_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int backlog);
-void connect_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr, int flags);
-void accept_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, unsigned long long uniqueSockID_new, int index_new, int flags);
-void getname_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int peer);
-void ioctl_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
-void sendmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
-		struct sockaddr_in *dest_addr, int addr_len);
-void recvmsg_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
-void getsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
-void setsockopt_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
-void release_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void poll_udp_out(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events);
-//void poll_udp_in(unsigned long long uniqueSockID, int index /* results? */);
-void mmap_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void socketpair_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void shutdown_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int how);
-void close_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void sendpage_udp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void socket_out_udp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol);
+void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr);
+void listen_out_udp(struct nl_wedge_to_daemon *hdr, int backlog);
+void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, int flags);
+void accept_out_udp(struct nl_wedge_to_daemon *hdr, unsigned long long uniqueSockID_new, int index_new, int flags);
+void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer);
+void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, u_char *buf, ssize_t buf_len);
+void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, u_char *data, uint32_t data_len, uint32_t flags, struct sockaddr_in *dest_addr, int addr_len);
+void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, int flags, uint32_t msg_flags); //TODO need symbol?
+void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, u_char *optval);
+void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, u_char *optval);
+void release_out_udp(struct nl_wedge_to_daemon *hdr);
+void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events);
+void mmap_out_udp(struct nl_wedge_to_daemon *hdr);
+void socketpair_out_udp(struct nl_wedge_to_daemon *hdr);
+void shutdown_out_udp(struct nl_wedge_to_daemon *hdr, int how);
+void close_out_udp(struct nl_wedge_to_daemon *hdr);
+void sendpage_out_udp(struct nl_wedge_to_daemon *hdr);
 
-struct daemon_udp_thread_data {
-	int id;
-	unsigned long long uniqueSockID;
-	int index;
-	u_int call_id;
-	int call_index;
+void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t dst_ip, uint16_t dst_port);
 
-	int data_len;
-	int flags;
-//int socketCallType; //TODO remove?
-//int symbol; //TODO remove?
-};
+void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, struct finsFrame *ff, uint32_t src_ip, uint16_t src_port);
+void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call);
 
 #endif /* UDPHANDLING_H_ */

@@ -8,6 +8,10 @@
 #include "finstypes.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <semaphore.h>
+
+uint32_t control_serial_num = 0;
+sem_t control_serial_sem;
 
 int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 /* serializes a fins control frame for transmission to an external process
@@ -254,3 +258,14 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 
 	return ff;
 }
+
+uint32_t gen_control_serial_num(void) {
+	uint32_t num;
+
+	sem_wait(&control_serial_sem);
+	num = ++control_serial_num;
+	sem_post(&control_serial_sem);
+
+	return num;
+}
+

@@ -11,6 +11,8 @@
 finsQueue IPv4_to_Switch_Queue;
 sem_t IPv4_to_Switch_Qsem;
 
+extern IP4addr my_ip_addr;
+
 void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip4_packet* ppacket) {
 
 	//struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
@@ -31,8 +33,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 		ff->destinationID.next = NULL;
 		break;
 	default:
-		PRINT_DEBUG("todo error")
-		;
+		PRINT_DEBUG("todo error");
 		break;
 	}
 
@@ -82,68 +83,8 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 
 void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length) {
 
-	if (ff == NULL) {
-
-		PRINT_ERROR("forwarded frame equal NULL");
-		exit(-1);
-
-	}
-
-	/*
-	 //print_finsFrame(ff);
-	 struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	 char *data;
-	 PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p newff=%p", ff, fins_frame);
-	 fins_frame->dataOrCtrl = DATA;
-	 (fins_frame->destinationID).id = INTERFACE_ID;
-	 (fins_frame->destinationID).next = NULL;
-	 (fins_frame->dataFrame).directionFlag = DOWN;
-	 (fins_frame->metaData) = ff->metaData;
-	 (fins_frame->dataFrame).pduLength = length + IP4_MIN_HLEN;
-	 //(fins_frame->dataFrame).pdu = (unsigned char *)ppacket;
-
-	 data = (char *) malloc(length + IP4_MIN_HLEN);
-
-	 memcpy(data, ppacket, IP4_MIN_HLEN);
-	 memcpy(data + IP4_MIN_HLEN, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	 (fins_frame->dataFrame).pdu = (u_char *) data;
-
-	 //print_finsFrame(fins_frame);
-	 sendToSwitch_IPv4(fins_frame);
-	 */
-
-	//char dst_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	//char src_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	//char dst_mac[] = { 0x00, 0x1c, 0xbf, 0x86, 0xd2, 0xda }; // Mark Machine
-	//char dst_mac[] = { 0x00, 0x1c, 0xbf, 0x87, 0x1a, 0xfd }; //same to itself
-	//jreed MAC addresses
-	//char src_mac[] = { 0x08, 0x00, 0x27, 0x12, 0x34, 0x56 }; //made up
-	//char src_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
-	//char src_mac[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
-	//char src_mac[] = { 0x08, 0x00, 0x27, 0xa5, 0x5f, 0x13 }; //HAF Vanilla-dev_env eth0
-	//char src_mac[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev_env eth1
-	uint64_t src_mac = 0x080027445566;
-
-	//char dst_mac[] = { 0xf4, 0x6d, 0x04, 0x49, 0xba, 0xdd }; //HAF host
-	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x44, 0x55, 0x66 }; //HAF FINS-dev_env eth0, bridged
-	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x11, 0x22, 0x33 }; //HAF FINS-dev_env eth1, nat
-	//char dst_mac[] = { 0x08, 0x00, 0x27, 0x16, 0xc7, 0x9b }; //HAF Vanilla-dev eth 1
-	//char dst_mac[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x87 }; //Router 192.168.1.1 //LAN port
-	//char dst_mac[] = { 0xa0, 0x21, 0xb7, 0x71, 0x0c, 0x88 }; //Router 192.168.1.1 //INET port
-	//char dst_mac[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; //eth broadcast
-	uint64_t dst_mac = 0xf46d0449badd;
-
-	//TODO get mac addr from ARP, by sending FCF
-
-	metadata *params = ff->metaData;
-
-	uint32_t ether_type = (uint32_t) IP4_ETH_TYPE;
-	metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
-	metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
-	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
-
-	PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
-
+	//PRINT_DEBUG("address=%u, interface=%u", (uint32_t)next_hop.address, next_hop.interface);
+	PRINT_DEBUG("address=%u, interface=%lu", (uint32_t)next_hop.address, next_hop.interface);
 	u_char *pdu = ff->dataFrame.pdu;
 	PRINT_DEBUG("IP4_send_fdf_out() called, ff=%p", ff);
 	//ff->dataOrCtrl = DATA;
@@ -158,12 +99,50 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	memcpy(data + IP4_MIN_HLEN, pdu, length);
 	ff->dataFrame.pdu = data;
 
-	//print_finsFrame(fins_frame);
-	ipv4_to_switch(ff);
+	if (store_list_has_space()) {
+		metadata *params = (metadata *) malloc(sizeof(metadata));
+		if (params == NULL) {
+			PRINT_ERROR("metadata creation failed");
+			exit(-1);
+		}
+		metadata_create(params);
 
-	//PRINT_DEBUG("Freeing ff=%p", ff);
-	PRINT_DEBUG("Freeing pdu=%p", pdu);
-	free(pdu);
+		//uint32_t src_ip = my_ip_addr; //TODO get these from next hop info
+		//uint32_t dst_ip = ntohl(ppacket->ip_dst);
+		uint32_t src_ip = next_hop.interface; //TODO get this value from interface list with hop.interface as the index
+		uint32_t dst_ip = next_hop.address;
+
+		uint32_t exec_call = EXEC_ARP_GET_ADDR;
+		metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
+		metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT);
+		metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT);
+
+		struct finsFrame *ff_arp = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+		if (ff_arp == NULL) {
+			PRINT_ERROR("ff_arp alloc error");
+			exit(-1);
+		}
+
+		ff_arp->dataOrCtrl = CONTROL;
+		ff_arp->destinationID.id = ARP_ID;
+		ff_arp->destinationID.next = NULL;
+		ff_arp->metaData = params;
+
+		uint32_t serial_num = gen_control_serial_num();
+
+		ff_arp->ctrlFrame.senderID = IP_ID;
+		ff_arp->ctrlFrame.serialNum = serial_num;
+		ff_arp->ctrlFrame.opcode = CTRL_EXEC;
+
+		ipv4_to_switch(ff_arp);
+
+		//TODO store IP fdf
+		struct ip4_store *store = store_create(serial_num, ff, pdu);
+		store_list_insert(store);
+	} else {
+		PRINT_DEBUG("todo error");
+		//TODO expand store space? remove first stored packet, send error message, & store new packet?
+	}
 }
 
 int ipv4_to_switch(struct finsFrame *ff) {

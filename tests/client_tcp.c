@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <poll.h>
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -146,16 +147,47 @@ int main(int argc, char *argv[]) {
 
 	//while (1);
 
+	int nfds = 2;
+	struct pollfd fds[nfds];
+	fds[0].fd = -1;
+	fds[0].events = POLLIN | POLLRDNORM; //| POLLPRI;
+	fds[1].fd = sock;
+	fds[1].events = POLLOUT | POLLWRNORM;
+	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
+	int time = 1000;
+
+	int ret;
 	int i = 0;
-	while (i < 1000) {
-		if (1) {
+	while (i < 10000) {
+		printf("(%d) Input msg (q or Q to quit):", i++);
+		gets(send_data);
+
+		ret = poll(fds, nfds, time);
+		if (ret || 0) {
+			///*
+			printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
+			printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
+					(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
+					(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+					(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+			fflush(stdout);
+			//*/
+			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
+			} else if ((fds[ret].revents & (POLLOUT | POLLWRNORM)) || 0) {
+				printf("%s", send_data);
+				numbytes = send(sock, send_data, strlen(send_data), 0);
+			}
+		}
+
+		if (0) {
 			printf("(%d) Input msg (q or Q to quit):", i++);
 			gets(send_data);
 			printf("%s", send_data);
 			numbytes = send(sock, send_data, strlen(send_data), 0);
 		} else {
-			sleep(1);
-			numbytes = send(sock, send_data, 1, 0);
+			//sleep(1);
+			//numbytes = send(sock, send_data, 1, 0);
 		}
 		if (numbytes > 0) {
 			//numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));

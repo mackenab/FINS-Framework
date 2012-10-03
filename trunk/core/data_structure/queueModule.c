@@ -24,7 +24,8 @@ finsQueue init_queue(const char* name, int size) {
 }
 
 int TerminateFinsQueue(finsQueue Q) {
-	PRINT_DEBUG("222");
+	PRINT_DEBUG("Entered: Q=%p", Q);
+
 	int counter = 0;
 	int empty = 0;
 	int size = Q->Size;
@@ -41,20 +42,22 @@ int TerminateFinsQueue(finsQueue Q) {
 
 		for (i = min; i <= max; i++) {
 			if (Q->Array[i]) {
+				if (Q->Array[i]->dataOrCtrl == DATA) {
+					if (Q->Array[i]->dataFrame.pdu) {
+						free(Q->Array[i]->dataFrame.pdu);
+					}
+				}
+
 				if (freeFinsFrame(Q->Array[i]) == 0) {
 					//PRINT_DEBUG("333");
 
 					//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
 					empty++;
-
 				} else {
-
 					counter++;
-
 				}
 			}
 		}
-
 	} else {
 
 		max = Q->Front;
@@ -62,22 +65,31 @@ int TerminateFinsQueue(finsQueue Q) {
 
 		for (i = max; i < Q->Capacity; i++) {
 			if (Q->Array[i]) {
+				if (Q->Array[i]->dataOrCtrl == DATA) {
+					if (Q->Array[i]->dataFrame.pdu) {
+						free(Q->Array[i]->dataFrame.pdu);
+					}
+				}
+
 				if (freeFinsFrame(Q->Array[i]) == 0) {
 					//PRINT_DEBUG("333");
 
 					//PRINT_DEBUG("Element number %d was already NULL before deleting",i);
 					empty++;
-
 				} else {
-
 					counter++;
-
 				}
 			}
 		}
 
 		for (i = 0; i <= min; i++) {
 			if (Q->Array[i]) {
+				if (Q->Array[i]->dataOrCtrl == DATA) {
+					if (Q->Array[i]->dataFrame.pdu) {
+						free(Q->Array[i]->dataFrame.pdu);
+					}
+				}
+
 				if (freeFinsFrame(Q->Array[i]) == 0) {
 					//PRINT_DEBUG("333");
 
@@ -85,13 +97,10 @@ int TerminateFinsQueue(finsQueue Q) {
 					empty++;
 
 				} else {
-
 					counter++;
-
 				}
 			}
 		}
-
 	}
 
 	//while (checkEmpty(Q))
@@ -108,9 +117,13 @@ int TerminateFinsQueue(finsQueue Q) {
 }
 
 int DisposeFinsQueue(finsQueue Q) {
-
+	PRINT_DEBUG("Entered: Q=%p", Q);
 	if (Q != NULL) {
-		// freeFinsFrame(Q->Array );
+		if (Q->Array != NULL) {
+			//freeFinsFrame(Q->Array);
+			free(Q->Array);
+		}
+
 		free(Q);
 	}
 	return (1);
@@ -120,7 +133,8 @@ int DisposeFinsQueue(finsQueue Q) {
  * @param q points to this structure
  * */
 int term_queue(finsQueue q) {
-	if (q) {
+	PRINT_DEBUG("Entered: q=%p", q);
+	if (q != NULL) {
 		return (TerminateFinsQueue(q) && DisposeFinsQueue(q));
 	} else {
 		return 1;
@@ -215,20 +229,20 @@ void print_finsFrame(struct finsFrame *ff) {
 	char *temp;
 	struct destinationList *dest;
 
-	PRINT_DEBUG("Printing FINS frame: \n");
+	PRINT_DEBUG("Printing FINS frame:");
 
 	dest = &(ff->destinationID);
 
 	while (dest != NULL) {
-		PRINT_DEBUG("\nDestination id %d", dest->id);
+		PRINT_DEBUG("Destination id %d", dest->id);
 		dest = dest->next;
 	}
 
 	if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("\nData fins %d \n", ff->dataOrCtrl);
-		PRINT_DEBUG("Direction flag %d\n", ff->dataFrame.directionFlag);
+		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);
+		PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
 		//PRINT_DEBUG("Meta data (first element) %x\n", fins_in->metaData);
-		PRINT_DEBUG("PDU size (bytes) %d\n", ff->dataFrame.pduLength);
+		PRINT_DEBUG("PDU size (bytes) %d", ff->dataFrame.pduLength);
 		int i = 0;
 		while (i < ff->dataFrame.pduLength) {
 			PRINT_DEBUG("%d", ff->dataFrame.pdu[i]);
@@ -242,13 +256,13 @@ void print_finsFrame(struct finsFrame *ff) {
 		free(temp);
 
 	} else if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("\nControl fins %d\n", ff->dataOrCtrl);
-		PRINT_DEBUG("\nOpcode %d\n", ff->ctrlFrame.opcode);
-		PRINT_DEBUG("\nParameter ID %d\n", ff->ctrlFrame.paramterID);
-		PRINT_DEBUG("\nParameter Value %d\n", *(int *) (ff->ctrlFrame.paramterValue));
+		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);
+		PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.paramterID);
+		PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.paramterValue));
 		//		PRINT_DEBUG("\nReply Record (first element) %x\n", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("\nSender Id %d\n", ff->ctrlFrame.senderID);
-		PRINT_DEBUG("\nSerial number %d\n", ff->ctrlFrame.serialNum);
+		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);
+		PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serialNum);
 	}
 
 }

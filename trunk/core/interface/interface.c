@@ -296,7 +296,7 @@ void *capturer_to_interface(void *local) {
 		free(frame);
 	} // end of while loop
 
-	PRINT_DEBUG("Exiting");
+	PRINT_DEBUG("Exited");
 	pthread_exit(NULL);
 }
 
@@ -306,7 +306,7 @@ void *switch_to_interface(void *local) {
 		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exiting");
+	PRINT_DEBUG("Exited");
 	pthread_exit(NULL);
 } // end of Inject Function
 
@@ -436,14 +436,17 @@ void interface_out_fdf(struct finsFrame *ff) {
 }
 
 void interface_in_fdf(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
 
 }
 
 void interface_fcf(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
 
 }
 
 void interface_exec(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
 
 }
 
@@ -504,4 +507,7 @@ void interface_shutdown(void) {
 void interface_release(void) {
 	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
+
+	term_queue(Interface_to_Switch_Queue);
+	term_queue(Switch_to_Interface_Queue);
 }

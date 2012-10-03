@@ -32,7 +32,6 @@ finsQueue Switch_to_UDP_Queue;
 
 struct udp_statistics udpStat;
 
-
 void udp_to_switch(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p", ff);
 
@@ -113,16 +112,17 @@ void udp_get_ff(void) {
 		///KEVINS CODE THIS IS A TEST
 
 		freeFinsFrame(ff);
+	} else if (ff->dataOrCtrl == DATA) {
+		if (ff->dataFrame.directionFlag == UP) {
+			udp_in(ff);
+			PRINT_DEBUG("");
+		} else if (ff->dataFrame.directionFlag == DOWN) {
+			udp_out(ff);
+			PRINT_DEBUG("");
+		}
+	} else {
+		PRINT_DEBUG("todo error");
 	}
-	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == UP)) {
-		udp_in(ff);
-		PRINT_DEBUG("");
-	}
-	if ((ff->dataOrCtrl == DATA) && ((ff->dataFrame).directionFlag == DOWN)) {
-		udp_out(ff);
-		PRINT_DEBUG("");
-	}
-
 }
 
 void *switch_to_udp(void *local) {
@@ -132,7 +132,7 @@ void *switch_to_udp(void *local) {
 		//	free(ff);
 	}
 
-	PRINT_DEBUG("Exiting");
+	PRINT_DEBUG("Exited");
 	pthread_exit(NULL);
 }
 
@@ -160,4 +160,7 @@ void udp_release(void) {
 	PRINT_DEBUG("Entered");
 
 	//TODO free all module related mem
+
+	term_queue(UDP_to_Switch_Queue);
+	term_queue(Switch_to_UDP_Queue);
 }

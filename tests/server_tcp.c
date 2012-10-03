@@ -168,17 +168,21 @@ int main(int argc, char *argv[]) {
 			ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	fflush(stdout);
 
-	int nfds = 1;
+	int nfds = 2;
 	struct pollfd fds[nfds];
-	fds[0].fd = sock;
+	fds[0].fd = -1;
 	fds[0].events = POLLIN | POLLPRI | POLLRDNORM;
+	fds[1].fd = sock_client;
+	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
+	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
 	int time = 1000;
 
-	/*
-	 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ", POLLIN, POLLPRI,
-	 POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
-	 fflush(stdout);
-	 */
+	///*
+	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ", POLLIN, POLLPRI,
+			POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
+	fflush(stdout);
+	//*/
 
 	//pID = fork();
 	if (pID == 0) { // child -- Capture process
@@ -196,18 +200,18 @@ int main(int argc, char *argv[]) {
 	//while (1);
 
 	i = 0;
-	while (1) {
-		//ret = poll(fds, nfds, time);
-		if (ret || 1) {
-			/*
-			 printf("\n poll: ret=%d, revents=%x", ret, fds[0].revents);
-			 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
-			 (fds[0].revents & POLLIN) > 0, (fds[0].revents & POLLPRI) > 0, (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLERR) > 0,
-			 (fds[0].revents & POLLHUP) > 0, (fds[0].revents & POLLNVAL) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLRDBAND) > 0,
-			 (fds[0].revents & POLLWRNORM) > 0, (fds[0].revents & POLLWRBAND) > 0);
-			 fflush(stdout);
-			 */
-			if ((fds[0].revents & (POLLIN | POLLRDNORM)) || 1) {
+	while (i < 10000) {
+		ret = poll(fds, nfds, time);
+		if (ret || 0) {
+			///*
+			printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
+			printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
+					(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
+					(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+					(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+			fflush(stdout);
+			//*/
+			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
 				if (pID || 1) {
 					bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
 				} else {
@@ -241,9 +245,9 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 	close(sock_client);
 
-	//printf("\n Closing server socket");
-	//fflush(stdout);
-	//close(sock);
+	printf("\n Closing server socket");
+	fflush(stdout);
+	close(sock);
 
 	printf("\n FIN");
 	fflush(stdout);

@@ -18,6 +18,15 @@ pthread_t switch_thread;
 extern finsQueue Daemon_to_Switch_Queue;
 extern finsQueue Switch_to_Daemon_Queue;
 
+extern finsQueue Switch_to_Interface_Queue;
+extern finsQueue Interface_to_Switch_Queue;
+
+extern finsQueue Switch_to_ARP_Queue;
+extern finsQueue ARP_to_Switch_Queue;
+
+extern finsQueue Switch_to_IPv4_Queue;
+extern finsQueue IPv4_to_Switch_Queue;
+
 extern finsQueue RTM_to_Switch_Queue;
 extern finsQueue Switch_to_RTM_Queue;
 
@@ -27,26 +36,20 @@ extern finsQueue UDP_to_Switch_Queue;
 extern finsQueue Switch_to_TCP_Queue;
 extern finsQueue TCP_to_Switch_Queue;
 
-extern finsQueue Switch_to_ARP_Queue;
-extern finsQueue ARP_to_Switch_Queue;
-
-extern finsQueue Switch_to_IPv4_Queue;
-extern finsQueue IPv4_to_Switch_Queue;
-
-extern finsQueue Switch_to_Interface_Queue;
-extern finsQueue Interface_to_Switch_Queue;
-
 extern finsQueue Switch_to_ICMP_Queue;
 extern finsQueue ICMP_to_Switch_Queue;
 
-extern sem_t ICMP_to_Switch_Qsem;
-extern sem_t Switch_to_ICMP_Qsem;
-
-extern sem_t RTM_to_Switch_Qsem;
-extern sem_t Switch_to_RTM_Qsem;
-
 extern sem_t Daemon_to_Switch_Qsem;
 extern sem_t Switch_to_Daemon_Qsem;
+
+extern sem_t Switch_to_Interface_Qsem;
+extern sem_t Interface_to_Switch_Qsem;
+
+extern sem_t Switch_to_ARP_Qsem;
+extern sem_t ARP_to_Switch_Qsem;
+
+extern sem_t Switch_to_IPv4_Qsem;
+extern sem_t IPv4_to_Switch_Qsem;
 
 extern sem_t Switch_to_UDP_Qsem;
 extern sem_t UDP_to_Switch_Qsem;
@@ -54,19 +57,16 @@ extern sem_t UDP_to_Switch_Qsem;
 extern sem_t Switch_to_TCP_Qsem;
 extern sem_t TCP_to_Switch_Qsem;
 
-extern sem_t Switch_to_IPv4_Qsem;
-extern sem_t IPv4_to_Switch_Qsem;
+extern sem_t ICMP_to_Switch_Qsem;
+extern sem_t Switch_to_ICMP_Qsem;
 
-extern sem_t Switch_to_ARP_Qsem;
-extern sem_t ARP_to_Switch_Qsem;
-
-extern sem_t Switch_to_Interface_Qsem;
-extern sem_t Interface_to_Switch_Qsem;
+extern sem_t RTM_to_Switch_Qsem;
+extern sem_t Switch_to_RTM_Qsem;
 
 finsQueue modules_IO_queues[MAX_modules];
 sem_t *IO_queues_sem[MAX_modules];
 
-void Queues_init(void) {
+void Queues_init(void) { //TODO split & move to each module, when registration is done
 	Daemon_to_Switch_Queue = init_queue("daemon_to_switch", MAX_Queue_size);
 	Switch_to_Daemon_Queue = init_queue("switch_to_daemon", MAX_Queue_size);
 	modules_IO_queues[0] = Daemon_to_Switch_Queue;
@@ -75,6 +75,33 @@ void Queues_init(void) {
 	sem_init(&Switch_to_Daemon_Qsem, 0, 1);
 	IO_queues_sem[0] = &Daemon_to_Switch_Qsem;
 	IO_queues_sem[1] = &Switch_to_Daemon_Qsem;
+
+	Interface_to_Switch_Queue = init_queue("etherstub_to_switch", MAX_Queue_size);
+	Switch_to_Interface_Queue = init_queue("switch_to_etherstub", MAX_Queue_size);
+	modules_IO_queues[10] = Interface_to_Switch_Queue;
+	modules_IO_queues[11] = Switch_to_Interface_Queue;
+	sem_init(&Interface_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_Interface_Qsem, 0, 1);
+	IO_queues_sem[10] = &Interface_to_Switch_Qsem;
+	IO_queues_sem[11] = &Switch_to_Interface_Qsem;
+
+	ARP_to_Switch_Queue = init_queue("arp_to_switch", MAX_Queue_size);
+	Switch_to_ARP_Queue = init_queue("switch_to_arp", MAX_Queue_size);
+	modules_IO_queues[8] = ARP_to_Switch_Queue;
+	modules_IO_queues[9] = Switch_to_ARP_Queue;
+	sem_init(&ARP_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_ARP_Qsem, 0, 1);
+	IO_queues_sem[8] = &ARP_to_Switch_Qsem;
+	IO_queues_sem[9] = &Switch_to_ARP_Qsem;
+
+	IPv4_to_Switch_Queue = init_queue("ipv4_to_switch", MAX_Queue_size);
+	Switch_to_IPv4_Queue = init_queue("switch_to_ipv4", MAX_Queue_size);
+	modules_IO_queues[6] = IPv4_to_Switch_Queue;
+	modules_IO_queues[7] = Switch_to_IPv4_Queue;
+	sem_init(&IPv4_to_Switch_Qsem, 0, 1);
+	sem_init(&Switch_to_IPv4_Qsem, 0, 1);
+	IO_queues_sem[6] = &IPv4_to_Switch_Qsem;
+	IO_queues_sem[7] = &Switch_to_IPv4_Qsem;
 
 	UDP_to_Switch_Queue = init_queue("udp_to_switch", MAX_Queue_size);
 	Switch_to_UDP_Queue = init_queue("switch_to_udp", MAX_Queue_size);
@@ -93,33 +120,6 @@ void Queues_init(void) {
 	sem_init(&Switch_to_TCP_Qsem, 0, 1);
 	IO_queues_sem[4] = &TCP_to_Switch_Qsem;
 	IO_queues_sem[5] = &Switch_to_TCP_Qsem;
-
-	IPv4_to_Switch_Queue = init_queue("ipv4_to_switch", MAX_Queue_size);
-	Switch_to_IPv4_Queue = init_queue("switch_to_ipv4", MAX_Queue_size);
-	modules_IO_queues[6] = IPv4_to_Switch_Queue;
-	modules_IO_queues[7] = Switch_to_IPv4_Queue;
-	sem_init(&IPv4_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_IPv4_Qsem, 0, 1);
-	IO_queues_sem[6] = &IPv4_to_Switch_Qsem;
-	IO_queues_sem[7] = &Switch_to_IPv4_Qsem;
-
-	ARP_to_Switch_Queue = init_queue("arp_to_switch", MAX_Queue_size);
-	Switch_to_ARP_Queue = init_queue("switch_to_arp", MAX_Queue_size);
-	modules_IO_queues[8] = ARP_to_Switch_Queue;
-	modules_IO_queues[9] = Switch_to_ARP_Queue;
-	sem_init(&ARP_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_ARP_Qsem, 0, 1);
-	IO_queues_sem[8] = &ARP_to_Switch_Qsem;
-	IO_queues_sem[9] = &Switch_to_ARP_Qsem;
-
-	Interface_to_Switch_Queue = init_queue("etherstub_to_switch", MAX_Queue_size);
-	Switch_to_Interface_Queue = init_queue("switch_to_etherstub", MAX_Queue_size);
-	modules_IO_queues[10] = Interface_to_Switch_Queue;
-	modules_IO_queues[11] = Switch_to_Interface_Queue;
-	sem_init(&Interface_to_Switch_Qsem, 0, 1);
-	sem_init(&Switch_to_Interface_Qsem, 0, 1);
-	IO_queues_sem[10] = &Interface_to_Switch_Qsem;
-	IO_queues_sem[11] = &Switch_to_Interface_Qsem;
 
 	ICMP_to_Switch_Queue = init_queue("icmp_to_switch", MAX_Queue_size);
 	Switch_to_ICMP_Queue = init_queue("switch_to_icmp", MAX_Queue_size);
@@ -152,7 +152,6 @@ void *switch_loop(void *local) {
 		 * 0,2,4,6,8,10,12,14. This is why we increase the counter by 2
 		 */
 		for (i = 0; i < MAX_modules; i = i + 2) {
-
 			sem_wait(IO_queues_sem[i]);
 			ff = read_queue(modules_IO_queues[i]);
 			sem_post(IO_queues_sem[i]);
@@ -224,7 +223,7 @@ void *switch_loop(void *local) {
 
 	} // end of while loop
 
-	PRINT_DEBUG("Exiting");
+	PRINT_DEBUG("Exited");
 	pthread_exit(NULL);
 } // end of switch_init Function
 
@@ -254,4 +253,7 @@ void switch_shutdown(void) {
 void switch_release(void) {
 	PRINT_DEBUG("Entered");
 	//TODO free all module related mem
+
+	term_queue(RTM_to_Switch_Queue); //TODO move to RTM module when that's updated
+	term_queue(Switch_to_RTM_Queue);
 }

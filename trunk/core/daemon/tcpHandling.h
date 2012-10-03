@@ -12,21 +12,13 @@
 
 #include "daemon.h"
 
-#define EXEC_TCP_CONNECT 0
-#define EXEC_TCP_LISTEN 1
-#define EXEC_TCP_ACCEPT 2
-#define EXEC_TCP_SEND 3
-#define EXEC_TCP_RECV 4
-#define EXEC_TCP_CLOSE 5
-#define EXEC_TCP_CLOSE_STUB 6
-#define EXEC_TCP_OPT 7
-#define EXEC_TCP_POLL 8
-
 struct daemon_tcp_thread_data {
 	int id;
+
 	unsigned long long uniqueSockID;
 	int index;
-	u_int call_id;
+
+	uint32_t call_id;
 	int call_index;
 
 	int data_len;
@@ -37,27 +29,45 @@ struct daemon_tcp_thread_data {
 	//int symbol; //TODO remove?
 };
 
-int daemon_fdf_to_tcp(u_char *data, u_int data_len, metadata *params);
-int daemon_fcf_to_tcp(uint16_t opcode, metadata *params);
+int daemon_fdf_to_tcp(u_char *data, uint32_t data_len, metadata *params);
+int daemon_fcf_to_tcp(metadata *params, uint32_t serialNum, uint16_t opcode);
 
-void socket_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int domain, int type, int protocol);
-void bind_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr);
-void listen_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int backlog);
-void connect_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, struct sockaddr_in *addr, int flags);
-void accept_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, unsigned long long uniqueSockID_new, int index_new, int flags);
-void getname_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int peer);
-void ioctl_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int cmd, u_char *buf, ssize_t buf_len);
-void sendmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_char *data, u_int data_len, u_int flags,
-		struct sockaddr_in *dest_addr, int addr_len);
-void recvmsg_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int data_len, int flags, u_int msg_flags); //TODO need symbol?
-void getsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
-void setsockopt_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int level, int optname, int optlen, u_char *optval);
-void release_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void poll_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, u_int events);
-void mmap_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void socketpair_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void shutdown_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index, int how);
-void close_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
-void sendpage_tcp(unsigned long long uniqueSockID, int index, u_int call_id, int call_index);
+void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol);
+void bind_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr);
+void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog);
+void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, int flags);
+void accept_out_tcp(struct nl_wedge_to_daemon *hdr, unsigned long long uniqueSockID_new, int index_new, int flags);
+void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer);
+void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, u_char *buf, ssize_t buf_len);
+void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, u_char *data, uint32_t data_len, uint32_t flags, struct sockaddr_in *dest_addr, int addr_len);
+void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, int flags, uint32_t msg_flags); //TODO need symbol?
+void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, u_char *optval);
+void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, u_char *optval);
+void release_out_tcp(struct nl_wedge_to_daemon *hdr);
+void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events);
+void mmap_out_tcp(struct nl_wedge_to_daemon *hdr);
+void socketpair_out_tcp(struct nl_wedge_to_daemon *hdr);
+void shutdown_out_tcp(struct nl_wedge_to_daemon *hdr, int how);
+void close_out_tcp(struct nl_wedge_to_daemon *hdr);
+void sendpage_out_tcp(struct nl_wedge_to_daemon *hdr);
+
+void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint32_t flags);
+void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint64_t sock_id_new,
+		int sock_index_new, uint32_t flags);
+void sendmsg_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint32_t flags);
+void getsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint32_t data);
+void setsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint32_t data);
+void release_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index);
+void poll_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint32_t data);
+
+void recvmsg_in_tcp(struct daemon_call_list *call_list, struct daemon_call *call, struct finsFrame *ff, uint32_t src_ip, uint16_t src_port);
+
+void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t dst_ip, uint16_t dst_port);
+
+#define SET_PARAM_TCP_HOST_WINDOW 0
+#define SET_PARAM_TCP_SOCK_OPT 1
+
+#define READ_PARAM_TCP_HOST_WINDOW 0
+#define READ_PARAM_TCP_SOCK_OPT 1
 
 #endif /* TCPHANDLING_H_ */

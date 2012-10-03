@@ -113,12 +113,12 @@ struct arp_request_list {
 	uint32_t len;
 };
 
-#define ARP_REQUEST_LIST_MAX 20
+#define ARP_REQUEST_LIST_MAX 2 //TODO chang back
 
 struct arp_request_list *request_list_create(uint32_t max);
 void request_list_append(struct arp_request_list *request_list, struct arp_request *request);
 struct arp_request *request_list_find(struct arp_request_list *request_list, uint32_t src_ip);
-struct arp_request *request_list_remove_front(struct arp_request_list *queue);
+struct arp_request *request_list_remove_front(struct arp_request_list *request_list);
 int request_list_is_empty(struct arp_request_list *request_list);
 int request_list_has_space(struct arp_request_list *request_list);
 void request_list_free(struct arp_request_list *request_list);
@@ -162,12 +162,12 @@ struct arp_cache *cache_create(uint32_t ip_addr);
 void cache_shutdown(struct arp_cache *cache);
 void cache_free(struct arp_cache *cache);
 
-#define ARP_CACHE_LIST_MAX 100
+#define ARP_CACHE_LIST_MAX 1 //TODO change back
 
 int cache_list_insert(struct arp_cache *cache);
 struct arp_cache *cache_list_find(uint32_t ip_addr);
 void cache_list_remove(struct arp_cache *cache);
-struct arp_cache *cache_list_remove_front(void);
+struct arp_cache *cache_list_remove_first_non_seeking(void);
 int cache_list_is_empty(void);
 int cache_list_has_space(void);
 

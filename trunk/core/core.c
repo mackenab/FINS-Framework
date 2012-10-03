@@ -14,15 +14,15 @@
  *       */
 
 #include "core.h"
+#include <swito.h>
 #include <daemon.h>
+#include <interface.h>
 #include <ipv4.h>
+#include <arp.h>
 #include <udp.h>
 #include <tcp.h>
-#include <arp.h>
-#include <swito.h>
-#include <rtm.h>
 #include <icmp.h>
-#include <interface.h>
+#include <rtm.h>
 #include <sys/types.h>
 #include <signal.h>
 //#include <stdlib.h> //added
@@ -71,24 +71,24 @@ void termination_handler(int sig) {
 	PRINT_DEBUG("**********Terminating *******");
 
 	//TODO shutdown all module threads in backwards order of startup
-	udp_shutdown();
+	//rtm_shutdown();
+	icmp_shutdown();
 	tcp_shutdown();
+	udp_shutdown();
 	ipv4_shutdown();
 	arp_shutdown();
-	//icmp_shutdown();
-	//rtm_shutdown();
 
 	interface_shutdown(); //TODO finish
 	daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
 
 	//TODO move que/sem free to module
-	udp_release();
+	//rtm_release();
+	icmp_release();
 	tcp_release();
+	udp_release();
 	ipv4_release();
 	arp_release();
-	//icmp_release();
-	//rtm_release();
 
 	interface_release();
 	daemon_release();
@@ -98,7 +98,10 @@ void termination_handler(int sig) {
 	exit(-1);
 }
 
+extern sem_t control_serial_sem;
+
 int main() {
+
 	//set ip, loopback, etc //TODO do this from config file eventually
 	my_host_mac_addr = 0x080027445566;
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
@@ -107,6 +110,8 @@ int main() {
 
 	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
+
+	sem_init(&control_serial_sem, 0, 1);
 
 	//added to include code from fins_daemon.sh -- mrd015 !!!!! //TODO move this to RTM module
 	if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
@@ -192,24 +197,23 @@ int main() {
 	 sem_post(modules[i]->in_sem);
 	 }
 
-	 */
+	 module init:
+	 initialize data structures
+	 create queues (?)
+	 register module (?)
 
-	//module init
-	//module run in thread //TODO start threads here? or in init?
+	 module run:
+	 start module threads
+
+	 module shutdown:
+	 stop module threads
+
+	 module release:
+	 unregister module (?)
+	 free queues (?)
+	 free data structures
+	 */
 	//########################################
-	/*
-	 normal wedge
-	 Wedge_to_Daemon
-	 call_call_handler();
-	 poll_udp_out/top/call
-
-
-
-	 Switch_to_Daemon
-
-
-	 */
-
 	// Start the driving thread of each module
 	PRINT_DEBUG("Initialize Modules");
 	switch_init(); //should always be first
@@ -226,6 +230,23 @@ int main() {
 	tcp_init();
 	//rtm_init();
 
+	/*	//####
+	 struct ip4_next_hop_info hop1 = IP4_next_hop(IP4_ADR_P2H(192,168,1,20));
+	 struct ip4_next_hop_info hop2 = IP4_next_hop(IP4_ADR_P2H(192,168,1,5));
+	 struct ip4_next_hop_info hop3 = IP4_next_hop(IP4_ADR_P2H(192,168,1,1));
+	 struct ip4_next_hop_info hop4 = IP4_next_hop(IP4_ADR_P2H(169,254,158,90));
+	 struct ip4_next_hop_info hop5 = IP4_next_hop(IP4_ADR_P2H(127,0,0,1));
+
+	 char str1[5], str2[5];
+
+	 PRINT_DEBUG("1 hop=%lu %lu", IP_addrs_conversion(hop1.address, &str1), IP_addrs_conversion(hop1.interface, &str2));
+	 PRINT_DEBUG("2 hop=%lu %lu", hop2.address, hop2.interface);
+	 PRINT_DEBUG("3 hop=%lu %lu", hop3.address, hop3.interface);
+	 PRINT_DEBUG("4 hop=%lu %lu", hop4.address, hop4.interface);
+	 PRINT_DEBUG("5 hop=%lu %lu", hop5.address, hop5.interface);
+	 return 0;
+	 //####		*/
+
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 
@@ -237,7 +258,7 @@ int main() {
 	ipv4_run(&fins_pthread_attr);
 	udp_run(&fins_pthread_attr);
 	tcp_run(&fins_pthread_attr);
-	//icmp_run(&fins_pthread_attr);
+	icmp_run(&fins_pthread_attr);
 	//rtm_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
@@ -272,7 +293,11 @@ int main() {
 
 		ff_req->dataOrCtrl = CONTROL;
 		ff_req->destinationID.id = ARP_ID;
+		ff_req->destinationID.next = NULL;
 		ff_req->metaData = params_req;
+
+		ff_req->ctrlFrame.senderID = IP_ID;
+		ff_req->ctrlFrame.serialNum = gen_control_serial_num();
 		ff_req->ctrlFrame.opcode = CTRL_EXEC;
 
 		arp_to_switch(ff_req); //doesn't matter which queue

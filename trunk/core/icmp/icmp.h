@@ -73,7 +73,7 @@ void ICMP_out(struct finsFrame *ff); //Processes an ICMP message that's headed o
 void icmp_get_ff(struct finsFrame *ff); //Gets a finsFrame from the queue and starts processing
 void ICMP_send_FF(struct finsFrame *ff); //Put a finsFrame onto the queue to go out
 
-void icmp_init(pthread_attr_t *fins_pthread_attr); //Get our ICMP engine up and running
+//void icmp_init(pthread_attr_t *fins_pthread_attr); //Get our ICMP engine up and running
 unsigned short ICMP_checksum(struct finsFrame * ff); //Calculate a checksum for an ICMP package
 void ICMP_ping_reply(struct finsFrame* ff); //Create a ping reply from a ping request package
 void IMCP_create_unreach(struct finsFrame* ff); //Create a "destination unreachable" message from data we receive from the UDP //removed in vt_mark?
@@ -82,5 +82,10 @@ int ICMP_copy_finsFrame(struct finsFrame* src, struct finsFrame* dst); //Copy on
 void ICMP_control_handler(struct finsFrame *ff); //Handle control frames sent from other modules, creating new messages as needed and sending them out.
 void ICMP_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code); //Create and send out an error from this type and code
 void ICMP_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code); //Create a control frame to TCP/UDP out of ICMP error that came in
+
+void icmp_init(void);
+void icmp_run(pthread_attr_t *fins_pthread_attr);
+void icmp_shutdown(void);
+void icmp_release(void);
 
 #endif /* ICMP_H_ */

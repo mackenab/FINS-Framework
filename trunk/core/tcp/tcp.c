@@ -22,8 +22,8 @@ uint32_t conn_stub_num;
 struct tcp_connection *conn_list; //The list of current connections we have
 uint32_t conn_num;
 
-int tcp_serial_num = 0;
-int tcp_thread_count = 0;
+uint32_t tcp_thread_id_num = 0;
+sem_t tcp_thread_id_sem;
 
 struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end) {
 	PRINT_DEBUG("Entered: data=%p, len=%d, seq_num=%u, seq_end=%u", data, len, seq_num, seq_end);
@@ -258,6 +258,7 @@ struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
 
 int queue_is_empty(struct tcp_queue *queue) {
 	return queue->front == NULL;
+	//return queue->len == 0;
 }
 
 int queue_has_space(struct tcp_queue *queue, uint32_t len) {
@@ -327,7 +328,7 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
 	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-	metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -337,15 +338,13 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_c
 	}
 
 	ff->dataOrCtrl = CONTROL;
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-	ff->ctrlFrame.serialNum = tcp_serial_num++;
-	ff->metaData = params;
+	ff->ctrlFrame.serialNum = gen_control_serial_num();
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -478,7 +477,7 @@ void *tcp_to_thread(void *local) {
 	int ret;
 	uint64_t exp;
 
-	PRINT_DEBUG("Entered: id=%d, fd=%d", id, fd);
+	PRINT_DEBUG("Entered: id=%u, fd=%d", id, fd);
 	while (*running) {
 		/*#*/PRINT_DEBUG("");
 		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
@@ -487,11 +486,11 @@ void *tcp_to_thread(void *local) {
 		}
 		if (ret != sizeof(uint64_t)) {
 			//read error
-			PRINT_DEBUG("Read error: id=%d fd=%d", id, fd);
+			PRINT_DEBUG("Read error: id=%u fd=%d", id, fd);
 			continue;
 		}
 
-		PRINT_DEBUG("throwing flag: id=%d fd=%d", id, fd);
+		PRINT_DEBUG("throwing flag: id=%u fd=%d", id, fd);
 		*flag = 1;
 		if (*waiting) {
 			PRINT_DEBUG("posting to wait_sem");
@@ -499,7 +498,7 @@ void *tcp_to_thread(void *local) {
 		}
 	}
 
-	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
+	PRINT_DEBUG("Exited: id=%u, fd=%d", id, fd);
 	pthread_exit(NULL);
 }
 
@@ -870,7 +869,14 @@ void main_time_wait(struct tcp_connection *conn) {
 		conn->state = TCP_CLOSED;
 
 		//send ACK to close handler
-		conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
+		if (conn->ff_close) {
+			//conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
+			tcp_reply_fcf(conn->ff_close, 1, 0);
+			conn->ff_close = NULL;
+		} else {
+			PRINT_DEBUG("todo error");
+			//TODO error
+		}
 
 		//conn->main_wait_flag = 0;
 		conn_shutdown(conn);
@@ -1027,7 +1033,7 @@ void stopTimer(int fd) {
 void startTimer(int fd, double millis) {
 	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
 
-	struct itimerspec its; //TODO check if casts right
+	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);
 	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
 	its.it_interval.tv_sec = 0;
@@ -1063,7 +1069,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT); //TODO: could wait on this
 	conn->send_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
 	conn->recv_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
-	//conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //TODO might not need
+	//conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //commented, since buffer in Daemon
 
 	conn->main_wait_flag = 0;
 	sem_init(&conn->main_wait_sem, 0, 0);
@@ -1165,26 +1171,26 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	//##################################################################
 	//start timers
 	struct tcp_to_thread_data *gbn_data = (struct tcp_to_thread_data *) malloc(sizeof(struct tcp_to_thread_data));
-	gbn_data->id = tcp_thread_count++;
+	gbn_data->id = tcp_gen_thread_id();
 	gbn_data->fd = conn->to_gbn_fd;
 	gbn_data->running = &conn->running_flag;
 	gbn_data->flag = &conn->to_gbn_flag;
 	gbn_data->waiting = &conn->main_wait_flag;
 	gbn_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%d to_gbn_fd=%d", host_ip, host_port, rem_ip, rem_port, conn, gbn_data->id, conn->to_gbn_fd);
+	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%u to_gbn_fd=%d", host_ip, host_port, rem_ip, rem_port, conn, gbn_data->id, conn->to_gbn_fd);
 	if (pthread_create(&conn->to_gbn_thread, NULL, tcp_to_thread, (void *) gbn_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
 	}
 
 	struct tcp_to_thread_data *delayed_data = (struct tcp_to_thread_data *) malloc(sizeof(struct tcp_to_thread_data));
-	delayed_data->id = tcp_thread_count++;
+	delayed_data->id = tcp_gen_thread_id();
 	delayed_data->fd = conn->to_delayed_fd;
 	delayed_data->running = &conn->running_flag;
 	delayed_data->flag = &conn->to_delayed_flag;
 	delayed_data->waiting = &conn->main_wait_flag;
 	delayed_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%d to_gbn_fd=%d",
+	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u conn=%p id=%u to_gbn_fd=%d",
 			host_ip, host_port, rem_ip, rem_port, conn, delayed_data->id, conn->to_delayed_fd);
 	if (pthread_create(&conn->to_delayed_thread, NULL, tcp_to_thread, (void *) delayed_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
@@ -1227,7 +1233,7 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 
 	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
 	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-	metadata_writeToElement(params, "ret_msg", &ret_val, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1237,15 +1243,13 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 	}
 
 	ff->dataOrCtrl = CONTROL;
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-	ff->ctrlFrame.serialNum = tcp_serial_num++;
-	ff->metaData = params;
+	ff->ctrlFrame.serialNum = gen_control_serial_num();
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -1254,6 +1258,90 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t r
 		freeFinsFrame(ff);
 		return 0;
 	}
+}
+
+int conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg) {
+	PRINT_DEBUG("Entered: conn=%p, exec_call=%d, ret_val=%d ret_msg=%u", conn, exec_call, ret_val, ret_msg);
+
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	if (params == NULL) {
+		PRINT_ERROR("metadata creation failed");
+		return 0;
+	}
+	metadata_create(params);
+
+	socket_state state = SS_CONNECTED;
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
+	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+
+	int protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+
+	metadata_writeToElement(params, "exec_call", &exec_call, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed, meta=%p", params);
+		metadata_destroy(params);
+		return 0;
+	}
+
+	ff->dataOrCtrl = CONTROL;
+	ff->destinationID.id = DAEMON_ID;
+	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
+	ff->ctrlFrame.senderID = TCP_ID;
+	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+	ff->ctrlFrame.serialNum = serialNum;
+
+	/*#*/PRINT_DEBUG("");
+	if (tcp_to_switch(ff)) {
+		return 1;
+	} else {
+		freeFinsFrame(ff);
+		return 0;
+	}
+}
+
+int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_msg) {
+	PRINT_DEBUG("Entered: conn=%p, ret_val=%u ret_msg=%u", conn, ret_val, ret_msg);
+
+	struct finsFrame *ff = conn->ff;
+	metadata *params = ff->metaData;
+	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+
+	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT); //TODO include more info?
+	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
+	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+
+	ff->destinationID.id = ff->ctrlFrame.senderID;
+
+	ff->ctrlFrame.senderID = TCP_ID;
+
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_READ_PARAM:
+		ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+		break;
+	case CTRL_SET_PARAM:
+		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		break;
+	case CTRL_EXEC:
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		break;
+	default:
+		PRINT_ERROR("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode)
+		return 0;
+	}
+
+	return tcp_to_switch(ff);
 }
 
 void conn_shutdown(struct tcp_connection *conn) {
@@ -1268,16 +1356,16 @@ void conn_stop(struct tcp_connection *conn) {
 
 	conn->running_flag = 0;
 
-	//stop threads
+//stop threads
 	startTimer(conn->to_gbn_fd, 1);
 	startTimer(conn->to_delayed_fd, 1);
-	//TODO stop keepalive timer
-	//TODO stop silly window timer
-	//TODO stop nagel timer
-	//sem_post(&conn->main_wait_sem);
+//TODO stop keepalive timer
+//TODO stop silly window timer
+//TODO stop nagel timer
+//sem_post(&conn->main_wait_sem);
 	sem_post(&conn->write_wait_sem);
-	//sem_post(&conn->write_sem);
-	//clear all threads using this conn_stub
+//sem_post(&conn->write_sem);
+//clear all threads using this conn_stub
 
 	while (1) {
 		/*#*/PRINT_DEBUG("");
@@ -1304,7 +1392,7 @@ void conn_stop(struct tcp_connection *conn) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	//post to read/write/connect/etc threads
+//post to read/write/connect/etc threads
 	pthread_join(conn->to_gbn_thread, NULL);
 	pthread_join(conn->to_delayed_thread, NULL);
 	/*#*/PRINT_DEBUG("");
@@ -1320,8 +1408,8 @@ void conn_free(struct tcp_connection *conn) {
 		queue_free(conn->send_queue);
 	if (conn->recv_queue)
 		queue_free(conn->recv_queue);
-	//if (conn->read_queue)
-	//	queue_free(conn->read_queue);
+//if (conn->read_queue)
+//	queue_free(conn->read_queue);
 	free(conn);
 }
 
@@ -1388,8 +1476,8 @@ int conn_list_is_empty(void) {
 	return conn_num == 0;
 }
 
-int conn_list_has_space(uint32_t len) {
-	return conn_num + len <= TCP_CONN_MAX;
+int conn_list_has_space(void) {
+	return conn_num < TCP_CONN_MAX;
 }
 
 //Seed the above random number generator
@@ -1402,38 +1490,16 @@ int tcp_rand(void) {
 	return rand(); //Just use the standard C random number generator for now
 }
 
-/*
- uint8_t *copy_uint8(uint8_t *ptr, uint8_t val) { //TODO deprecated, remove
- *ptr++ = val;
- return ptr;
- }
+uint32_t tcp_gen_thread_id(void) {
+	//uint32_t gen_control_serial_num(void) {
+	uint32_t num;
 
- uint8_t *copy_uint16(uint8_t *ptr, uint16_t val) { //TODO deprecated, remove
- *ptr++ = (uint8_t)(val >> 8);
- *ptr++ = (uint8_t)(val & 0x00FF);
- return ptr;
- }
+	sem_wait(&tcp_thread_id_sem);
+	num = ++tcp_thread_id_num;
+	sem_post(&tcp_thread_id_sem);
 
- uint8_t *copy_uint32(uint8_t *ptr, uint32_t val) { //TODO deprecated, remove
- *ptr++ = (uint8_t)(val >> 24);
- *ptr++ = (uint8_t)((val & 0x00FF0000) >> 16);
- *ptr++ = (uint8_t)((val & 0x0000FF00) >> 8);
- *ptr++ = (uint8_t)(val & 0x000000FF);
- return ptr;
- }
-
- uint8_t *copy_uint64(uint8_t *ptr, uint64_t val) { //TODO deprecated, remove
- *ptr++ = (uint8_t)(val >> 56);
- *ptr++ = (uint8_t)((val & 0x00FF000000000000) >> 48);
- *ptr++ = (uint8_t)((val & 0x0000FF0000000000) >> 40);
- *ptr++ = (uint8_t)((val & 0x000000FF00000000) >> 32);
- *ptr++ = (uint8_t)((val & 0x00000000FF000000) >> 24);
- *ptr++ = (uint8_t)((val & 0x0000000000FF0000) >> 16);
- *ptr++ = (uint8_t)((val & 0x000000000000FF00) >> 8);
- *ptr++ = (uint8_t)(val & 0x00000000000000FF);
- return ptr;
- }
- */
+	return num;
+}
 
 struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	PRINT_DEBUG("Entered: seg=%p", seg);
@@ -1466,8 +1532,9 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	ff->dataOrCtrl = DATA; //leave unset?
 	ff->destinationID.id = IPV4_ID; // destination module ID
 	ff->destinationID.next = NULL;
-	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	ff->metaData = params;
+
+	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
 	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
 	PRINT_DEBUG("seg=%p ff=%p meta=%p data_len=%d hdr=%d pduLength=%d",
@@ -1486,7 +1553,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	hdr->ack_num = htonl(seg->ack_num);
 	hdr->flags = htons(seg->flags);
 	hdr->win_size = htons(seg->win_size);
-	//hdr->checksum = htons(seg->checksum)
+//hdr->checksum = htons(seg->checksum)
 	hdr->checksum = 0;
 	hdr->urg_pointer = htons(seg->urg_pointer);
 
@@ -1524,10 +1591,10 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	}
 	if (ff->dataFrame.pduLength & 0x1) {
 		//PRINT_DEBUG("%u=%2x (%u), uneven", ff->dataFrame.pduLength-1, *(pt+1), *(pt+1));
-		sum += *++pt << 8;
+		sum += *pt << 8;
 	}
 
-	while (sum >> 16) {
+	while ((sum >> 16)) {
 		sum = (sum & 0xFFFF) + (sum >> 16);
 	}
 	sum = ~sum;
@@ -1589,7 +1656,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 		memcpy(seg->options, hdr->options, seg->opt_len);
 	}
 
-	//And fill in the data length and the data, also
+//And fill in the data length and the data, also
 	seg->data_len = ff->dataFrame.pduLength - TCP_HEADER_BYTES(seg->flags);
 	if (seg->data_len > 0) {
 		seg->data = (uint8_t *) malloc(seg->data_len);
@@ -1632,7 +1699,7 @@ struct tcp_segment *seg_create(struct tcp_connection *conn) {
 	seg->checksum = 0;
 	seg->urg_pointer = 0;
 	seg->opt_len = 0;
-	//seg->options = malloc(MAX_TCP_OPTIONS_BYTES);
+//seg->options = malloc(MAX_TCP_OPTIONS_BYTES);
 	seg->data_len = 0;
 	seg->data = NULL;
 
@@ -1646,7 +1713,7 @@ void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data
 	seg->data_len = data_len;
 	seg->seq_end = seg->seq_num + seg->data_len;
 	seg->data = (uint8_t *) malloc(data_len);
-	if (seg->data) {
+	if (seg->data == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
@@ -1676,14 +1743,14 @@ void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data
 void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p", conn, seg);
 
-	//uint32_t i;
-	//uint32_t len;
+//uint32_t i;
+//uint32_t len;
 	uint8_t *pt;
 	struct tcp_node *node;
 	uint32_t left;
 	uint32_t right;
 
-	//add options //TODO implement options system
+//add options //TODO implement options system
 	switch (conn->state) {
 	case TCP_SYN_SENT:
 		PRINT_DEBUG("");
@@ -1887,13 +1954,13 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 void seg_update_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p", conn, seg);
 
-	//update options, since options are always 40 bytes long, so can just rewrite it
+//update options, since options are always 40 bytes long, so can just rewrite it
 }
 
 void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t flags) { //updates ack/win/opts/timestamps
-	//clear flags
-	//memset(&seg->flags, 0, sizeof(uint16_t));
-	//seg->flags &= ~FLAG_PSH;
+//clear flags
+//memset(&seg->flags, 0, sizeof(uint16_t));
+//seg->flags &= ~FLAG_PSH;
 	seg->flags |= (flags & (FLAG_CONTROL | FLAG_ECN)); //TODO this is where FLAG_FIN, etc should be added
 
 	switch (conn->state) {
@@ -1956,21 +2023,21 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 	} else {
 		seg_add_options(seg, conn);
 	}
-	//seg->opt_len = 0;
+//seg->opt_len = 0;
 
-	//TODO PAWS
+//TODO PAWS
 
 	int offset = seg->opt_len / 4; //TODO improve logic, use ceil? round up
 	seg->flags |= ((MIN_TCP_HEADER_WORDS + offset) << 12) & FLAG_DATAOFFSET;
 	PRINT_DEBUG("offset=%d header_len=%d pkt_len=%d", offset, TCP_HEADER_BYTES(seg->flags), TCP_HEADER_BYTES(seg->flags)+seg->data_len);
 
-	//TODO alt checksum
-	//seg->checksum = seg_checksum(seg);
+//TODO alt checksum
+//seg->checksum = seg_checksum(seg);
 }
 
 uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works, check rollover
 	int i;
-	//TODO add TCP alternate checksum w/data in options (15)
+//TODO add TCP alternate checksum w/data in options (15)
 
 	uint32_t sum = 0;
 
@@ -2012,20 +2079,20 @@ uint16_t seg_checksum(struct tcp_segment *seg) { //TODO check if checksum works,
 	 sum += seg->urg_pointer;
 	 */
 
-	//options, opt_len always has to be a factor of 2
+//options, opt_len always has to be a factor of 2
 	pt = (uint8_t *) seg->options;
 	for (i = 0; i < seg->opt_len; i += 2, pt += 2) {
 		sum += (*pt << 8) + *(pt + 1);
 	}
 
-	//data
+//data
 	pt = (uint8_t *) seg->data;
 	for (i = 1; i < seg->data_len; i += 2, pt += 2) {
 		sum += (*pt << 8) + *(pt + 1);
 	}
 
 	if (seg->data_len & 0x1) {
-		sum += *++pt << 8;
+		sum += *pt << 8;
 	}
 
 	while (sum >> 16) {
@@ -2096,6 +2163,7 @@ void seg_free(struct tcp_segment *seg) {
 
 	if (seg->opt_len && seg->options) {
 		//free(seg->options); //TODO change when have options object
+		//PRINT_DEBUG("todo error");
 	}
 	free(seg);
 }
@@ -2112,8 +2180,8 @@ void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 // 0=out of window, 1=in window
 int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end) {
-	//check if tcp_seg is in connection window
-	//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover,
+//check if tcp_seg is in connection window
+//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover,
 	if (win_seq_num <= win_seq_end) { // [] |
 		if (seq_num <= seq_end) { // <> |
 			if (win_seq_num <= seq_num && seq_end <= win_seq_end) { // [ <> ] |
@@ -2144,8 +2212,8 @@ int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t
 }
 
 int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end) {
-	//check if tcp_seg is in connection window
-	//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover
+//check if tcp_seg is in connection window
+//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover
 	if (seq_num == seq_end) {
 		if (win_seq_num == win_seq_end) {
 			if (win_seq_num == seq_num) {
@@ -2228,7 +2296,7 @@ int metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip,
 	ret += metadata_readFromElement(params, "host_port", &host_port_buf) == CONFIG_FALSE;
 	*host_port = (uint16_t) host_port_buf;
 
-	if (ret && *state) {
+	if (ret == 0 && *state > SS_UNCONNECTED) {
 		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == CONFIG_FALSE;
 		ret += metadata_readFromElement(params, "rem_port", &rem_port_buf) == CONFIG_FALSE;
 		*rem_port = (uint16_t) rem_port_buf;
@@ -2238,15 +2306,15 @@ int metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip,
 }
 
 void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
-	//uint32_t host_port_buf;
-	//uint32_t rem_port_buf;
+//uint32_t host_port_buf;
+//uint32_t rem_port_buf;
 
 	metadata_writeToElement(params, "state", state, META_TYPE_INT);
 
 	metadata_writeToElement(params, "host_ip", host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "host_port", host_port, META_TYPE_INT);
 
-	if (*state) {
+	if (*state > SS_UNCONNECTED) {
 		metadata_writeToElement(params, "rem_ip", rem_ip, META_TYPE_INT);
 		metadata_writeToElement(params, "rem_port", rem_port, META_TYPE_INT);
 	}
@@ -2259,13 +2327,16 @@ void *switch_to_tcp(void *local) {
 		//	free(ff);
 	}
 
-	PRINT_DEBUG("Exiting");
+	PRINT_DEBUG("Exited");
 	pthread_exit(NULL);
 }
 
 void tcp_init(void) {
 	PRINT_DEBUG("Entered");
 	tcp_running = 1;
+
+	tcp_thread_id_num = 0;
+	sem_init(&tcp_thread_id_sem, 0, 1);
 
 	conn_stub_list = NULL;
 	conn_stub_num = 0;
@@ -2320,7 +2391,7 @@ void tcp_shutdown(void) {
 	PRINT_DEBUG("Entered");
 	tcp_running = 0;
 
-	//TODO expand this
+//TODO expand this
 
 	pthread_join(switch_to_tcp_thread, NULL);
 }
@@ -2329,18 +2400,23 @@ void tcp_release(void) {
 	PRINT_DEBUG("Entered");
 
 	//TODO free all module related mem
+
+	term_queue(TCP_to_Switch_Queue);
+	term_queue(Switch_to_TCP_Queue);
 }
 
 void tcp_fcf(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered");
+	PRINT_DEBUG("Entered: ff=%p", ff);
 
-	//TODO fill out
+//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
@@ -2348,6 +2424,7 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
@@ -2355,6 +2432,7 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
@@ -2362,12 +2440,15 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		freeFinsFrame(ff);
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		freeFinsFrame(ff);
 		break;
 	}
 }
@@ -2375,11 +2456,14 @@ void tcp_fcf(struct finsFrame *ff) {
 void tcp_exec(struct finsFrame *ff) {
 	int ret = 0;
 	uint32_t exec_call = 0;
+	uint32_t ret_val = 0;
+
 	socket_state state = 0;
 	uint32_t host_ip = 0;
 	uint32_t host_port = 0;
 	uint32_t rem_ip = 0;
 	uint32_t rem_port = 0;
+
 	uint32_t backlog = 0;
 	uint32_t flags = 0;
 
@@ -2398,13 +2482,23 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ret_val = 0;
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				tcp_to_switch(ff);
 			} else {
-				tcp_exec_listen(host_ip, (uint16_t) host_port, backlog);
+				tcp_exec_listen(ff, host_ip, (uint16_t) host_port, backlog);
 			}
 			break;
 		case EXEC_TCP_CONNECT:
 			PRINT_DEBUG("exec_call=EXEC_TCP_CONNECT (%d)", exec_call);
+			ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
@@ -2413,9 +2507,18 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ret_val = 0;
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				tcp_to_switch(ff);
 			} else {
-				tcp_exec_connect(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port); //TODO add ff->ctrlFrame.serialNum?
+				tcp_exec_connect(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, flags);
 			}
 			break;
 		case EXEC_TCP_ACCEPT:
@@ -2427,9 +2530,18 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ret_val = 0;
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				tcp_to_switch(ff);
 			} else {
-				tcp_exec_accept(host_ip, (uint16_t) host_port, flags);
+				tcp_exec_accept(ff, host_ip, (uint16_t) host_port, flags);
 			}
 			break;
 		case EXEC_TCP_CLOSE:
@@ -2442,9 +2554,18 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ret_val = 0;
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				tcp_to_switch(ff);
 			} else {
-				tcp_exec_close(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+				tcp_exec_close(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 			}
 			break;
 		case EXEC_TCP_CLOSE_STUB:
@@ -2455,14 +2576,25 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ret_val = 0;
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				tcp_to_switch(ff);
+
 			} else {
-				tcp_exec_close_stub(host_ip, (uint16_t) host_port);
+				tcp_exec_close_stub(ff, host_ip, (uint16_t) host_port);
 			}
 			break;
 		case EXEC_TCP_POLL:
 			PRINT_DEBUG("exec_call=EXEC_TCP_POLL (%d)", exec_call);
 			ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
@@ -2473,22 +2605,46 @@ void tcp_exec(struct finsFrame *ff) {
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ret_val = 0;
+				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				tcp_to_switch(ff);
 			} else {
-				tcp_exec_poll(state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+				tcp_exec_poll(ff, state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, flags);
 			}
 			break;
 		default:
 			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
 			//TODO implement?
+
+			ret_val = 0;
+			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
+			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+			tcp_to_switch(ff);
 			break;
 		}
 	} else {
-		//TODO send nack
 		PRINT_ERROR("Error fcf.metadata==NULL");
-	}
 
-	freeFinsFrame(ff); //TODO remove? pass ff so that it can be passed back eventually
+		//TODO create/add metadata?
+		ff->destinationID.id = ff->ctrlFrame.senderID;
+
+		ff->ctrlFrame.senderID = TCP_ID;
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+		tcp_to_switch(ff);
+	}
 }
 
 int tcp_to_switch(struct finsFrame *ff) {
@@ -2539,15 +2695,13 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 	}
 
 	ff->dataOrCtrl = CONTROL;
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-	ff->ctrlFrame.serialNum = tcp_serial_num++;
-	ff->metaData = params;
+	ff->ctrlFrame.serialNum = gen_control_serial_num();
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -2561,23 +2715,12 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t exec_call, uint32_t host_ip, 
 int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, len);
 
-	/*
-	 uint32_t src_ip_netw = htonl(host_ip);
-	 uint32_t src_port_netw = (uint32_t) htons(host_port);
-	 uint32_t dst_ip_netw = htonl(rem_ip);
-	 uint32_t dst_port_netw = (uint32_t) htons(rem_port);
-	 */
-
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
 		PRINT_ERROR("metadata creation failed");
 		return 0;
 	}
 	metadata_create(params);
-
-	/** metadata_writeToElement() set the value of an element if it already exist
-	 * or it creates the element and set its value in case it is new
-	 */
 
 	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
 	metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT);
@@ -2602,10 +2745,11 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
 	ff->dataFrame.directionFlag = UP;
 	ff->dataFrame.pduLength = len;
 	ff->dataFrame.pdu = dataLocal;
-	ff->metaData = params;
 
 	/**TODO insert the frame into daemon_to_switch queue
 	 * check if insertion succeeded or not then
@@ -2620,6 +2764,35 @@ int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t hos
 	}
 }
 
+int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
+	PRINT_DEBUG("Entered: ff=%p, ret_val=%u ret_msg=%u", ff, ret_val, ret_msg);
+
+	metadata *params = ff->metaData;
+	metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+
+	ff->destinationID.id = ff->ctrlFrame.senderID;
+
+	ff->ctrlFrame.senderID = TCP_ID;
+
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_READ_PARAM:
+		ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+		break;
+	case CTRL_SET_PARAM:
+		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		break;
+	case CTRL_EXEC:
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		break;
+	default:
+		PRINT_ERROR("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode)
+		return 0;
+	}
+
+	return tcp_to_switch(ff);
+}
+
 //TODO: deprecated, remove?------------------------------------------------------------------------------------------------
 
 //--------------------------------------------
@@ -2631,13 +2804,13 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 	unsigned char *w = ff->dataFrame.pdu;
 	int nleft = ff->dataFrame.pduLength;
 
-	//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
-	//{
-	//	nleft--;  //By decrementing the number of bytes we have to add in
-	//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
-	//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
-	// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
-	//}
+//if(nleft % 2)  //Check if we've got an uneven number of bytes here, and deal with it accordingly if we do.
+//{
+//	nleft--;  //By decrementing the number of bytes we have to add in
+//	sum += ((int)(ff->dataframe.pdu[nleft])) << 8; //And shifting these over, adding them in as if they're the high byte of a 2-byte pair
+//This is as per specification of the checksum from the RFC: "If the total length is odd, the received data is padded with one
+// octet of zeros for computing the checksum." We don't explicitly add an octet of zeroes, but this has the same result.
+//}
 
 	while (nleft > 0) {
 		//Deal with the high and low words of each 16-bit value here. I tried earlier to do this 'normally' by
@@ -2648,7 +2821,7 @@ uint16_t ff_checksum_tcp(struct finsFrame *ff) {
 		nleft -= 2; //Decrement by 2, since we're taking 2 at a time
 	}
 
-	//Fully fill out the checksum
+//Fully fill out the checksum
 	for (;;) {
 		sum = (sum >> 16) + (sum & 0xFFFF); //Get the sum shifted over added into the current sum
 		if (!(sum >> 16)) //Continue this until the sum shifted over is zero

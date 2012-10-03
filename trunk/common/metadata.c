@@ -47,18 +47,15 @@
 
 void metadata_create(metadata *mptr) {
 
-	PRINT_DEBUG("");
+	PRINT_DEBUG("Entered: meta=%p", mptr);
 	config_init(mptr);
-	PRINT_DEBUG("");
-
-	return;
 
 }
 
 void metadata_destroy(metadata *metadata) {
-	if (metadata) {
-		PRINT_DEBUG("Entered: meta=%p", metadata);
+	PRINT_DEBUG("Entered: meta=%p", metadata);
 
+	if (metadata) {
 		config_destroy(metadata);
 		free(metadata);
 	}
@@ -96,6 +93,7 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
 			break;
 
 		}
+		PRINT_DEBUG("meta=%p, '%s', %d", cfgptr, target, status);
 	}
 
 	return (status);
@@ -118,7 +116,6 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT);
 		status = config_setting_set_int(handle, *(int *) value);
-		PRINT_DEBUG("%d", status);
 		break;
 
 	case CONFIG_TYPE_INT64:
@@ -126,7 +123,6 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT64);
 		status = config_setting_set_int64(handle, *(int64_t *) value);
-		PRINT_DEBUG("%d", status);
 		break;
 
 	case CONFIG_TYPE_STRING:
@@ -134,7 +130,6 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_STRING);
 		status = config_setting_set_string(handle, (char *) value);
-		PRINT_DEBUG("%d", status);
 		break;
 	default:
 		PRINT_DEBUG(" wrong type to be written\n");
@@ -143,8 +138,8 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		break;
 	}
 
+	PRINT_DEBUG("meta=%p, '%s', %d", cfgptr, target, status);
 	return (status);
-
 }
 
 /** @function set the value of a MetaData element which is already

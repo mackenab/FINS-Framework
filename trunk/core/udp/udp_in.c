@@ -112,7 +112,7 @@ void udp_in(struct finsFrame* ff) {
 	src_port = ntohs(packet->u_src);
 	dst_port = ntohs(packet->u_dst);
 
-	PRINT_DEBUG("proto=%d , src=%d:%d, dst=%d:%d", (int)protocol_type, (int)srcip, (int)src_port, (int)dstip, (int)dst_port);
+	PRINT_DEBUG("proto=%u , src=%lu:%u, dst=%lu:%u", protocol_type, srcip, src_port, dstip, dst_port);
 
 	metadata_writeToElement(meta, "src_port", &src_port, META_TYPE_INT);
 	metadata_writeToElement(meta, "dst_port", &dst_port, META_TYPE_INT);

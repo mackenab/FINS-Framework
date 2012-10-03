@@ -11,24 +11,20 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 	printf("Routing table:\n");
 	printf("Destination\tGateway\t\tMask\tMetric\tInterface\n");
 	while (current_pointer != NULL) {
-		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->dst >> 24,
-				(unsigned int) (current_pointer->dst >> 16) & 0xFF,
-				(unsigned int) (current_pointer->dst >> 8) & 0xFF,
-				(unsigned int) current_pointer->dst & 0xFF);
-		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->gw >> 24,
-				(unsigned int) (current_pointer->gw >> 16) & 0xFF,
-				(unsigned int) (current_pointer->gw >> 8) & 0xFF,
-				(unsigned int) current_pointer->gw & 0xFF);
+		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->dst >> 24, (unsigned int) (current_pointer->dst >> 16) & 0xFF,
+				(unsigned int) (current_pointer->dst >> 8) & 0xFF, (unsigned int) current_pointer->dst & 0xFF);
+		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->gw >> 24, (unsigned int) (current_pointer->gw >> 16) & 0xFF,
+				(unsigned int) (current_pointer->gw >> 8) & 0xFF, (unsigned int) current_pointer->gw & 0xFF);
 		printf("%u \t", (unsigned int) current_pointer->mask);
 		printf("%u \t", current_pointer->metric);
-		printf("%u", current_pointer->interface);
+		//printf("%u", current_pointer->interface);
+		printf("%lu", current_pointer->interface);
 		printf("\n");
 		current_pointer = current_pointer->next_entry;
 	}
 }
 
-struct ip4_routing_table * IP4_sort_routing_table(
-		struct ip4_routing_table * table_pointer) {
+struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * table_pointer) {
 	if (table_pointer == NULL) {
 		return NULL;
 	}
@@ -77,8 +73,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	switch (msg->nlmsg_type) {
 	case NLMSG_ERROR: {
 		struct nlmsgerr* errorMsg = (struct nlmsgerr*) NLMSG_DATA(msg);
-		PRINT_DEBUG("\nrecvd NLMSG_ERROR error seq:%d code:%d...",
-				msg->nlmsg_seq, errorMsg->error);
+		PRINT_DEBUG("\nrecvd NLMSG_ERROR error seq:%d code:%d...", msg->nlmsg_seq, errorMsg->error);
 		break;
 	}
 	case RTM_NEWROUTE: {
@@ -86,9 +81,8 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 		struct rtattr* rta = RTM_RTA(rtm);
 		int rtaLen = msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct rtmsg));
 		if (rtm->rtm_type == RTN_UNICAST) // don't consider local, broadcast and unreachable routes
-		{
-			table_pointer = (struct ip4_routing_table*) malloc(
-					sizeof(struct ip4_routing_table));
+				{
+			table_pointer = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 			memset(table_pointer, 0, sizeof(struct ip4_routing_table)); // zero the routing table entry data
 			for (; RTA_OK(rta, rtaLen); rta = RTA_NEXT(rta, rtaLen)) {
 				switch (rta->rta_type) {
@@ -96,35 +90,27 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(dst_temp, RTA_DATA(rta), IP4_ALEN);
 					//PRINT_DEBUG("received RTA_DST");
-					PRINT_DEBUG("dst_str = %u.%u.%u.%u",
-							dst_temp[0] & 0xFF, dst_temp[1] & 0xFF, dst_temp[2]
-									& 0xFF, dst_temp[3] & 0xFF);
-					table_pointer->dst
-							= IP4_ADR_P2H(dst_temp[0]&0xFF, dst_temp[1]&0xFF, dst_temp[2]&0xFF, dst_temp[3]&0xFF);
+					PRINT_DEBUG("dst_str = %u.%u.%u.%u", dst_temp[0] & 0xFF, dst_temp[1] & 0xFF, dst_temp[2] & 0xFF, dst_temp[3] & 0xFF);
+					table_pointer->dst = IP4_ADR_P2H(dst_temp[0]&0xFF, dst_temp[1]&0xFF, dst_temp[2]&0xFF, dst_temp[3]&0xFF);
 					break;
 				case RTA_GATEWAY: //next hop
 					table_pointer->mask = rtm->rtm_dst_len;
 					memcpy(gw_temp, RTA_DATA(rta), IP4_ALEN);
 					//PRINT_DEBUG("received RTA_GATEWAY");
-					PRINT_DEBUG("gw_str = %u.%u.%u.%u", gw_temp[0]
-							& 0xFF, gw_temp[1] & 0xFF, gw_temp[2] & 0xFF,
-							gw_temp[3] & 0xFF);
-					table_pointer->gw
-							= IP4_ADR_P2H(gw_temp[0]&0xFF, gw_temp[1]&0xFF, gw_temp[2]&0xFF, gw_temp[3]&0xFF);
+					PRINT_DEBUG("gw_str = %u.%u.%u.%u", gw_temp[0] & 0xFF, gw_temp[1] & 0xFF, gw_temp[2] & 0xFF, gw_temp[3] & 0xFF);
+					table_pointer->gw = IP4_ADR_P2H(gw_temp[0]&0xFF, gw_temp[1]&0xFF, gw_temp[2]&0xFF, gw_temp[3]&0xFF);
 					break;
 				case RTA_OIF: //interface
-					memcpy(&table_pointer->interface, RTA_DATA(rta),
-							sizeof(interface));
-					PRINT_DEBUG("interface:%u",
-							table_pointer->interface);
+					memcpy(&table_pointer->interface, RTA_DATA(rta), sizeof(interface)); //TODO won't work with current hack
+					//PRINT_DEBUG("interface:%u", table_pointer->interface);
+					PRINT_DEBUG("interface:%lu", table_pointer->interface);
 					break;
 				case RTA_PRIORITY: //metric
-					memcpy(&table_pointer->metric, RTA_DATA(rta),
-							sizeof(priority));
+					memcpy(&table_pointer->metric, RTA_DATA(rta), sizeof(priority));
 					PRINT_DEBUG("metric:%u", table_pointer->metric);
 					break;
 				} //switch(rta->)
-			}// for()
+			} // for()
 		} // if RTN_UNICAST
 		return (table_pointer);
 	}
@@ -156,7 +142,7 @@ struct ip4_routing_table * IP4_get_routing_table_old() {
 	route_req.msg.nlmsg_pid = pid;
 
 	route_req.rt.rtm_family = AF_INET;
-	route_req.rt.rtm_dst_len = IP4_ALEN * 8;// must be supplied in bits
+	route_req.rt.rtm_dst_len = IP4_ALEN * 8; // must be supplied in bits
 	route_req.rt.rtm_src_len = 0;
 	route_req.rt.rtm_table = RT_TABLE_MAIN;
 	route_req.rt.rtm_protocol = RTPROT_UNSPEC;
@@ -212,26 +198,51 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 
-	row0->dst = IP4_ADR_P2H(10,0,2,0);
-	row0->gw = IP4_ADR_P2H(0,0,0,0);
-	row0->mask = 24;
-	row0->metric = 1;
-	row0->interface = 3;
-	row0->next_entry = row1;
+	if (1) {
+		row0->dst = IP4_ADR_P2H(192,168,1,0);
+		row0->gw = IP4_ADR_P2H(0,0,0,0);
+		row0->mask = 24;
+		row0->metric = 10;
+		row0->interface = IP4_ADR_P2H(192,168,1,20); //TODO change back to number? so looks up in interface list
+		row0->next_entry = row1;
 
-	row1->dst = IP4_ADR_P2H(169,254,0,0);
-	row1->gw = IP4_ADR_P2H(0,0,0,0);
-	row1->mask = 16;
-	row1->metric = 1000;
-	row1->interface = 3;
-	row1->next_entry = row2;
+		row1->dst = IP4_ADR_P2H(0,0,0,0);
+		row1->gw = IP4_ADR_P2H(192,168,1,1);
+		row1->mask = 24;
+		row1->metric = 10;
+		row1->interface = IP4_ADR_P2H(192,168,1,20); //TODO change back to number? so looks up in interface list
+		row1->next_entry = row2;
 
-	row2->dst = IP4_ADR_P2H(0,0,0,0);
-	row2->gw = IP4_ADR_P2H(10,0,2,2);
-	row2->mask = 0;
-	row2->metric = 0;
-	row2->interface = 3;
-	row2->next_entry = NULL;
+		row2->dst = IP4_ADR_P2H(127,0,0,1);
+		row2->gw = IP4_ADR_P2H(10,0,2,2);
+		row2->mask = 0;
+		row2->metric = 0;
+		row2->interface = IP4_ADR_P2H(192,168,1,20);
+		row2->next_entry = NULL;
+	}
+
+	if (0) { //standard linux table
+		row0->dst = IP4_ADR_P2H(10,0,2,0);
+		row0->gw = IP4_ADR_P2H(0,0,0,0);
+		row0->mask = 24;
+		row0->metric = 1;
+		row0->interface = 3; //number assiociated with IP?
+		row0->next_entry = row1;
+
+		row1->dst = IP4_ADR_P2H(169,254,0,0);
+		row1->gw = IP4_ADR_P2H(0,0,0,0);
+		row1->mask = 16;
+		row1->metric = 1000;
+		row1->interface = 3;
+		row1->next_entry = row2;
+
+		row2->dst = IP4_ADR_P2H(0,0,0,0);
+		row2->gw = IP4_ADR_P2H(10,0,2,2);
+		row2->mask = 0;
+		row2->metric = 0;
+		row2->interface = 3;
+		row2->next_entry = NULL;
+	}
 
 	routing_table = row0;
 

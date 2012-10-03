@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <queueModule.h>
+#include <poll.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.
@@ -100,15 +101,17 @@ int queue_has_space(struct tcp_queue *queue, uint32_t len);
 void queue_free(struct tcp_queue *queue);
 
 struct tcp_connection_stub {
+	//## protected by conn_stub_list_sem
 	struct tcp_connection_stub *next;
+	uint32_t threads;
+	//##
+
 	sem_t sem;
 
 	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
-
-	uint32_t threads;
 
 	//int syn_threads;
 
@@ -195,10 +198,14 @@ struct tcp_packet2 {
 
 //Structure for TCP connections that we have open at the moment
 struct tcp_connection {
+	//## protected by conn_list_sem
 	struct tcp_connection *next; //Next item in the list of TCP connections //TODO remove when change conn_list to circular array of ptrs
+	uint32_t threads; //Number of threads accessing this obj
+	uint32_t write_threads;
+	//##
+
 	sem_t sem; //for next, state, write_threads
 	uint8_t running_flag; //signifies if it is running, 0 when shutting down
-	uint32_t threads; //Number of threads accessing this obj
 	tcp_state state;
 
 	//some type of options state
@@ -284,6 +291,8 @@ struct tcp_connection {
 	double timeout;
 
 	uint8_t active_open;
+	struct finsFrame *ff;
+	struct finsFrame *ff_close;
 
 	uint8_t tsopt_attempt; //attempt time stamp option
 	uint8_t tsopt_enabled; //time stamp option enabled
@@ -321,13 +330,7 @@ struct tcp_connection {
 };
 
 //TODO raise any of these?
-//#define MAX_RECV_THREADS 10
-//#define MAX_WRITE_THREADS 10
-//#define MAX_SYN_THREADS 10
-//#define MAX_ACCEPT_THREADS 10
-//#define MAX_CONNECT_THREADS 10
-//#define MAX_SYS_THREADS 10
-#define TCP_THREADS_MAX 50
+#define TCP_THREADS_MAX 50 //TODO set thread limits by call?
 #define TCP_MAX_QUEUE_DEFAULT 65535
 #define TCP_CONN_MAX 512
 #define TCP_GBN_TO_MIN 1000
@@ -370,6 +373,8 @@ struct tcp_connection {
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 //int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
 int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
+int conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
+int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_msg);
 void conn_shutdown(struct tcp_connection *conn);
 void conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
 void conn_free(struct tcp_connection *conn);
@@ -379,7 +384,7 @@ int conn_list_insert(struct tcp_connection *conn);
 struct tcp_connection *conn_list_find(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void conn_list_remove(struct tcp_connection *conn);
 int conn_list_is_empty(void);
-int conn_list_has_space(uint32_t len);
+int conn_list_has_space(void);
 
 void startTimer(int fd, double millis);
 void stopTimer(int fd);
@@ -411,6 +416,7 @@ struct tcp_segment {
 
 void tcp_srand(void); //Seed the random number generator
 int tcp_rand(void); //Get a random number
+uint32_t tcp_gen_thread_id(void);
 
 struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
 struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
@@ -427,18 +433,19 @@ int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t
 int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
 struct tcp_thread_data {
-	int id;
+	uint32_t id;
 	struct tcp_connection *conn; //TODO change conn/conn_stub to union?
 	struct tcp_connection_stub *conn_stub;
 	struct tcp_segment *seg; //TODO change seg/raw to union?
 	uint8_t *data_raw;
 	uint32_t data_len;
 	uint32_t flags;
+	uint32_t serial_num;
 	struct finsFrame *ff;
 };
 
 struct tcp_to_thread_data {
-	int id;
+	uint32_t id;
 	int fd;
 	uint8_t *running;
 	uint8_t *flag;
@@ -455,6 +462,7 @@ void tcp_get_ff(void);
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
 #define EXEC_TCP_CONNECT 0
 #define EXEC_TCP_LISTEN 1
@@ -480,12 +488,12 @@ void tcp_exec(struct finsFrame *ff);
 int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 
-void tcp_exec_connect(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-void tcp_exec_listen(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
-void tcp_exec_accept(uint32_t host_ip, uint16_t host_port, uint32_t flags);
-void tcp_exec_close(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-void tcp_exec_close_stub(uint32_t host_ip, uint16_t host_port);
-void tcp_exec_poll(socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags);
+void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog);
+void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags);
+void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port);
+void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags);
 
 void tcp_set_param(struct finsFrame *ff);
 void tcp_read_param(struct finsFrame *ff);

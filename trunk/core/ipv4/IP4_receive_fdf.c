@@ -29,8 +29,7 @@ void IP4_receive_fdf() {
 
 	if (pff->dataOrCtrl == CONTROL) {
 		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->metaData);
-		/** TODO:  Here goes code for control messages */
-
+		ipv4_fcf(pff);
 	} else if (pff->dataOrCtrl == DATA) {
 		PRINT_DEBUG("Received frame: D/C: %d, DestID: %d, ff=%p meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->metaData);
 		PRINT_DEBUG("PDU Length: %d", pff->dataFrame.pduLength);
@@ -84,4 +83,144 @@ void IP4_receive_fdf() {
 		freeFinsFrame(pff);
 	}
 
+}
+
+void ipv4_fcf(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p", ff);
+
+	//TODO fill out
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_ALERT:
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		break;
+	case CTRL_ALERT_REPLY:
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		break;
+	case CTRL_READ_PARAM:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		//ipv4_read_param(ff);
+		//TODO read interface_mac?
+		break;
+	case CTRL_READ_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		break;
+	case CTRL_SET_PARAM:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		//ipv4_set_param(ff);
+		//TODO set interface_mac?
+		break;
+	case CTRL_SET_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		break;
+	case CTRL_EXEC:
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		//ipv4_exec(ff);
+		break;
+	case CTRL_EXEC_REPLY:
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		ipv4_exec_reply(ff);
+		break;
+	case CTRL_ERROR:
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		break;
+	default:
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		break;
+	}
+}
+
+void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint64_t dst_mac) {
+	PRINT_DEBUG("Entered: ff=%p, src_mac=%llx, dst_mac=%llx", ff, src_mac, dst_mac);
+
+	struct ip4_store *store = store_list_find(ff->ctrlFrame.serialNum);
+	if (store) {
+		store_list_remove(store);
+
+		metadata *params = store->ff->metaData;
+
+		uint32_t ether_type = (uint32_t) IP4_ETH_TYPE;
+		metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
+
+		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
+
+		//print_finsFrame(fins_frame);
+		ipv4_to_switch(store->ff);
+
+		PRINT_DEBUG("Freeing pdu=%p", store->pdu);
+		free(store->pdu);
+		store_free(store);
+
+		freeFinsFrame(ff);
+	} else {
+		PRINT_DEBUG("todo error");
+		//TODO error sending back FDF as FCF? saved pdu for that
+	}
+}
+
+void ipv4_exec_reply(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p", ff);
+
+	int ret = 0;
+	uint32_t exec_call = 0;
+	uint32_t ret_val = 0;
+
+	metadata *params = ff->metaData;
+	if (params) {
+		ret += metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
+		ret += metadata_readFromElement(params, "ret_val", &ret_val) == CONFIG_FALSE;
+
+		switch (exec_call) {
+		case EXEC_ARP_GET_ADDR:
+			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call);
+
+			if (ret_val) {
+				uint64_t src_mac, dst_mac;
+				ret += metadata_readFromElement(params, "src_mac", &src_mac) == CONFIG_FALSE;
+				ret += metadata_readFromElement(params, "dst_mac", &dst_mac) == CONFIG_FALSE;
+
+				if (ret) {
+					PRINT_ERROR("ret=%d", ret);
+					//TODO send nack
+				} else {
+					//ipv4_exec_reply_get_addr(ff, src_mac, dst_mac);
+					struct ip4_store *store = store_list_find(ff->ctrlFrame.serialNum);
+					if (store) {
+						store_list_remove(store);
+
+						uint32_t ether_type = (uint32_t) IP4_ETH_TYPE;
+						metadata_writeToElement(store->ff->metaData, "dst_mac", &dst_mac, META_TYPE_INT64);
+						metadata_writeToElement(store->ff->metaData, "src_mac", &src_mac, META_TYPE_INT64);
+						metadata_writeToElement(store->ff->metaData, "ether_type", &ether_type, META_TYPE_INT);
+
+						PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
+
+						//print_finsFrame(fins_frame);
+						ipv4_to_switch(store->ff);
+
+						PRINT_DEBUG("Freeing pdu=%p", store->pdu);
+						free(store->pdu);
+						store_free(store);
+
+						freeFinsFrame(ff);
+					} else {
+						PRINT_DEBUG("todo error");
+					}
+				}
+			} else {
+				//TODO error sending back FDF as FCF? saved pdu for that
+			}
+			break;
+		default:
+			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
+			//TODO implement?
+			freeFinsFrame(ff);
+			break;
+		}
+	} else {
+		//TODO send nack
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		freeFinsFrame(ff);
+	}
 }

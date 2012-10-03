@@ -38,23 +38,28 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 	struct arp_interface *interface;
 	struct arp_cache *cache;
-	struct arp_cache *old;
+	struct arp_cache *temp_cache;
 	uint64_t dst_mac;
 	uint64_t src_mac;
+	uint32_t ret_val;
 
 	PRINT_DEBUG("Entered: ff=%p dst_ip=%u src_ip=%u", ff, dst_ip, src_ip);
+
+	metadata *params = ff->metaData;
 
 	interface = interface_list_find(src_ip);
 	if (interface) {
 		src_mac = interface->mac_addr;
 
-		metadata *params = ff->metaData;
 		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 
 		interface = interface_list_find(dst_ip);
 		if (interface) {
 			dst_mac = interface->mac_addr;
 			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+
+			ret_val = 1;
+			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 
 			ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
 			ff->ctrlFrame.senderID = ARP_ID;
@@ -65,13 +70,22 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 			cache = cache_list_find(dst_ip);
 			if (cache) {
 				if (cache->seeking) {
+					PRINT_DEBUG("cache seeking: cache=%p", cache);
 					struct arp_request *request = request_create(ff, src_mac, src_ip);
 					if (request_list_has_space(cache->request_list)) {
 						request_list_append(cache->request_list, request);
 					} else {
-						PRINT_DEBUG("todo error");
+						PRINT_DEBUG("Error: request_list full");
+						request_free(request);
 
-						//TODO send error FCF
+						ret_val = 0;
+						metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+						ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+						ff->ctrlFrame.senderID = ARP_ID;
+						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+						arp_to_switch(ff);
 					}
 				} else {
 					dst_mac = cache->mac_addr;
@@ -80,7 +94,12 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					gettimeofday(&current, 0);
 
 					if (time_diff(&cache->updated_stamp, &current) <= ARP_CACHE_TO_DEFAULT) {
+						PRINT_DEBUG("up to date cache: cache=%p", cache);
+
 						metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+
+						ret_val = 1;
+						metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 
 						ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
 						ff->ctrlFrame.senderID = ARP_ID;
@@ -88,6 +107,8 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 						arp_to_switch(ff);
 					} else {
+						PRINT_DEBUG("cache expired: cache=%p", cache);
+
 						struct arp_message msg;
 						gen_requestARP(&msg, src_mac, src_ip, dst_mac, dst_ip);
 
@@ -103,16 +124,31 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							if (request_list_has_space(cache->request_list)) {
 								request_list_append(cache->request_list, request);
 							} else {
-								PRINT_DEBUG("todo error");
+								PRINT_DEBUG("Error: request_list full");
+								request_free(request);
 
-								//TODO send error FCF
+								ret_val = 0;
+								metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+								ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+								ff->ctrlFrame.senderID = ARP_ID;
+								ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+								arp_to_switch(ff);
 							}
 						} else {
-							PRINT_DEBUG("todo error");
+							PRINT_DEBUG("switch send failed");
 							free(ff_req->dataFrame.pdu);
 							freeFinsFrame(ff_req);
 
-							//TODO send error FCF
+							ret_val = 0;
+							metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+							ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+							ff->ctrlFrame.senderID = ARP_ID;
+							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+							arp_to_switch(ff);
 						}
 					}
 				}
@@ -126,12 +162,47 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 				if (arp_to_switch(ff_req)) {
 					cache = cache_create(dst_ip);
 					if (!cache_list_has_space()) {
-						old = cache_list_remove_front(); //TODO change to finding first non seeking cache in list
+						PRINT_DEBUG("Making space in cache_list");
 
-						//TODO send error FCF for each dropped request
+						temp_cache = cache_list_remove_first_non_seeking(); //TODO change to finding first non seeking cache in list
+						if (temp_cache) {
+							struct arp_request *temp_request;
+							struct finsFrame *temp_ff;
 
-						cache_shutdown(old);
-						cache_free(old);
+							while (!request_list_is_empty(temp_cache->request_list)) {
+								temp_request = request_list_remove_front(temp_cache->request_list);
+								temp_ff = temp_request->ff;
+
+								ret_val = 0;
+								metadata_writeToElement(temp_ff->metaData, "ret_val", &ret_val, META_TYPE_INT);
+
+								temp_ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+								temp_ff->ctrlFrame.senderID = ARP_ID;
+								temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+								arp_to_switch(temp_ff);
+
+								request_free(temp_request);
+							}
+
+							cache_shutdown(temp_cache);
+							cache_free(temp_cache);
+						} else {
+							PRINT_DEBUG("Cache full");
+
+							ret_val = 0;
+							metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+							ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+							ff->ctrlFrame.senderID = ARP_ID;
+							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+							arp_to_switch(ff);
+
+							cache_shutdown(cache);
+							cache_free(cache);
+							return;
+						}
 					}
 					cache_list_insert(cache);
 					cache->seeking = 1;
@@ -143,16 +214,32 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					struct arp_request *request = request_create(ff, src_mac, src_ip);
 					request_list_append(cache->request_list, request);
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_DEBUG("switch send failed");
 					free(ff_req->dataFrame.pdu);
 					freeFinsFrame(ff_req);
 
-					//TODO send error FCF
+					ret_val = 0;
+					metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+					ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+					ff->ctrlFrame.senderID = ARP_ID;
+					ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+					arp_to_switch(ff);
 				}
 			}
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_DEBUG("No corresponding interface");
+
+		ret_val = 0;
+		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+
+		ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+		ff->ctrlFrame.senderID = ARP_ID;
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+		arp_to_switch(ff);
 	}
 }
 
@@ -196,6 +283,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 						if (cache->seeking) {
 							PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
 							arp_stop_timer(cache->to_fd);
+							cache->to_flag = 0;
 							gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
 
 							cache->seeking = 0;
@@ -209,6 +297,9 @@ void arp_in_fdf(struct finsFrame *ff) {
 								ff_resp = request->ff;
 
 								metadata_writeToElement(ff_resp->metaData, "dst_mac", &src_mac, META_TYPE_INT64);
+
+								uint32_t ret_val = 1;
+								metadata_writeToElement(ff_resp->metaData, "ret_val", &ret_val, META_TYPE_INT);
 
 								ff_resp->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
 								ff_resp->ctrlFrame.senderID = ARP_ID;
@@ -249,37 +340,69 @@ void arp_out_fdf(struct finsFrame *ff) {
 }
 
 void arp_handle_to(struct arp_cache *cache) {
-	if (cache->retries < ARP_RETRIES) {
-		uint64_t dst_mac = ARP_MAC_BROADCAST;
-		uint32_t dst_ip = cache->ip_addr;
+	PRINT_DEBUG("Entered: cache=%p", cache);
 
-		if (request_list_is_empty(cache->request_list)) {
-			//TODO retrans from default interface?
-			//TODO send error FCF ?
-		} else {
-			struct arp_request *request = cache->request_list->front;
+	uint32_t ret_val;
 
-			uint64_t src_mac = request->src_mac;
-			uint32_t src_ip = request->src_ip;
+	if (cache->seeking) {
+		if (cache->retries < ARP_RETRIES) {
+			uint64_t dst_mac = ARP_MAC_BROADCAST;
+			uint32_t dst_ip = cache->ip_addr;
 
-			struct arp_message msg;
-			gen_requestARP(&msg, src_mac, src_ip, dst_mac, dst_ip);
-
-			struct finsFrame *ff_req = arp_to_fdf(&msg);
-			if (arp_to_switch(ff_req)) {
-				cache->retries++;
-
-				//gettimeofday(&cache->updated_stamp, 0);
-				arp_start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
-			} else {
+			if (request_list_is_empty(cache->request_list)) {
 				PRINT_DEBUG("todo error");
-				free(ff_req->dataFrame.pdu);
-				freeFinsFrame(ff_req);
+				//TODO retrans from default interface?
+				//TODO send error FCF ?
+			} else {
+				struct arp_request *request = cache->request_list->front;
 
-				//TODO send error FCF
+				uint64_t src_mac = request->src_mac;
+				uint32_t src_ip = request->src_ip;
+
+				struct arp_message msg;
+				gen_requestARP(&msg, src_mac, src_ip, dst_mac, dst_ip);
+
+				struct finsFrame *ff_req = arp_to_fdf(&msg);
+				if (arp_to_switch(ff_req)) {
+					cache->retries++;
+
+					//gettimeofday(&cache->updated_stamp, 0);
+					arp_start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
+				} else {
+					PRINT_DEBUG("todo error");
+					free(ff_req->dataFrame.pdu);
+					freeFinsFrame(ff_req);
+
+					//TODO send error FCF
+				}
 			}
+		} else {
+			PRINT_DEBUG("Unreachable address, sending error FCF");
+
+			struct arp_request *request;
+			struct finsFrame *ff;
+
+			while (!request_list_is_empty(cache->request_list)) {
+				request = request_list_remove_front(cache->request_list);
+				ff = request->ff;
+
+				ret_val = 0;
+				metadata_writeToElement(ff->metaData, "ret_val", &ret_val, META_TYPE_INT);
+
+				ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+				ff->ctrlFrame.senderID = ARP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+				arp_to_switch(ff);
+
+				request_free(request);
+			}
+
+			cache_list_remove(cache);
+			cache_shutdown(cache);
+			cache_free(cache);
 		}
 	} else {
-		//TODO send error FCF
+		PRINT_DEBUG("Dropping TO: cache=%p", cache);
 	}
 }

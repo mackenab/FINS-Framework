@@ -38,7 +38,6 @@ int main(int argc, char *argv[]) {
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
-
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
@@ -90,10 +89,9 @@ int main(int argc, char *argv[]) {
 		printf("%s", send_data);
 		i = i + 1;
 		sleep(1);
-		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0)
+		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
 			break;
-
-		else {
+		} else {
 			//	if (i % 100 ==0 )
 			numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
 			printf("\n %d", numbytes);

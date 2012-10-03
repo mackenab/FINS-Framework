@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-	//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
+		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}
@@ -59,7 +59,6 @@ int main(int argc, char *argv[]) {
 	printf("Provided with sock=%d\n", sock);
 
 	server_addr.sin_family = AF_INET;
-	//server_addr.sin_family = 39;
 	server_addr.sin_port = htons(port);
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
@@ -140,7 +139,7 @@ int main(int argc, char *argv[]) {
 			ret = poll(fds, nfds, time);
 			//	printf("\n pID=%d poll after", pID);
 			//	fflush(stdout);
-			if (ret || 1) {
+			if (ret) {
 				printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 				printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
 						(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
@@ -148,7 +147,7 @@ int main(int argc, char *argv[]) {
 						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 				fflush(stdout);
 
-				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+				if (fds[ret].revents & (POLLIN | POLLRDNORM)) {
 					bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
 					//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 					//bytes_read = recv(sock,recv_data,1024,0);
