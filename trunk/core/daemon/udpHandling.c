@@ -787,11 +787,12 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, int flags, ui
 			if (call_list_has_space(call_list)) {
 				call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
+				if (flags & (SOCK_NONBLOCK | MSG_DONTWAIT)) {
+					daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				}
 				PRINT_DEBUG("");
 				/*#*/PRINT_DEBUG("post@@@@@@@@@@@@@@@@@@@@@@@");
 				sem_post(&daemon_sockets_sem);
-
-				//TODO if nonblocking start timer
 			} else {
 				PRINT_DEBUG("call_list full");
 				/*#*/PRINT_DEBUG("post@@@@@@@@@@@@@@@@@@@@@@@");

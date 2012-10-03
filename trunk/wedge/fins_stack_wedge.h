@@ -43,7 +43,7 @@
 #define ACK 	200
 #define NACK 	6666
 #define MAX_SOCKETS 100
-#define MAX_CALLS 500
+#define MAX_CALLS 100
 //#define LOOP_LIMIT 10
 
 /* Data for protocol registration */

@@ -30,6 +30,8 @@ struct daemon_call daemon_calls[MAX_CALLS];
 int daemon_thread_count;
 sem_t daemon_thread_sem;
 
+uint8_t daemon_interrupt_flag;
+
 int init_fins_nl(void) {
 	int sockfd;
 	int ret_val;
@@ -118,6 +120,70 @@ int send_wedge(int sockfd, u_char *buf, size_t len, int flags) {
 	}
 }
 
+void *daemon_to_thread(void *local) {
+	struct daemon_to_thread_data *to_data = (struct daemon_to_thread_data *) local;
+	int id = to_data->id;
+	int fd = to_data->fd;
+	uint8_t *running = to_data->running;
+	uint8_t *flag = to_data->flag;
+	uint8_t *interrupt = to_data->interrupt;
+	free(to_data);
+
+	int ret;
+	uint64_t exp;
+
+	PRINT_DEBUG("Entered: id=%d, fd=%d", id, fd);
+	while (*running) {
+		/*#*/PRINT_DEBUG("");
+		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
+		if (!(*running)) {
+			break;
+		}
+		if (ret != sizeof(uint64_t)) {
+			//read error
+			PRINT_DEBUG("Read error: id=%d fd=%d", id, fd);
+			continue;
+		}
+
+		PRINT_DEBUG("Throwing TO flag: id=%d fd=%d", id, fd);
+		*interrupt = 1;
+		*flag = 1;
+	}
+
+	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
+	pthread_exit(NULL);
+}
+
+void daemon_stop_timer(int fd) {
+	PRINT_DEBUG("stopping timer=%d", fd);
+
+	struct itimerspec its;
+	its.it_value.tv_sec = 0;
+	its.it_value.tv_nsec = 0;
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
+}
+
+void daemon_start_timer(int fd, double millis) {
+	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
+
+	struct itimerspec its;
+	its.it_value.tv_sec = (long int) (millis / 1000);
+	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
+}
+
 struct daemon_call *call_create(uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index) {
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%d, call_type=%u", call_id, call_index, call_type);
 
@@ -183,19 +249,39 @@ int daemon_calls_find(uint32_t serial_num) {
 
 	for (i = 0; i < MAX_CALLS; i++) {
 		if (daemon_calls[i].call_id != -1 && daemon_calls[i].serial_num == serial_num) {
+			PRINT_DEBUG("Exited: serial_num=%u, call_index=%u", serial_num, i);
 			return i;
 		}
 	}
 
+	PRINT_DEBUG("Exited: serial_num=%u, call_index=%u", serial_num, -1);
 	return -1;
 }
 
-int daemon_calls_remove(int call_index) {
+void daemon_calls_remove(int call_index) {
 	PRINT_DEBUG("Entered: call_index=%d", call_index);
 
 	daemon_calls[call_index].call_id = -1;
 
-	return 1;
+	daemon_stop_timer(daemon_calls[call_index].to_fd);
+	daemon_calls[call_index].to_flag = 0;
+}
+
+void daemon_calls_shutdown(int call_index) {
+	PRINT_DEBUG("Entered: call_index=%d", call_index);
+
+	daemon_calls[call_index].running_flag = 0;
+
+	//stop threads
+	daemon_start_timer(daemon_calls[call_index].to_fd, 1);
+
+	//sem_post(&conn->write_wait_sem);
+	//sem_post(&conn->write_sem);
+	//clear all threads using this conn_stub
+
+	/*#*/PRINT_DEBUG("");
+	//post to read/write/connect/etc threads
+	pthread_join(daemon_calls[call_index].to_thread, NULL);
 }
 
 struct daemon_call_list *call_list_create(uint32_t max) {
@@ -2477,6 +2563,28 @@ void *switch_to_daemon(void *local) {
 	pthread_exit(NULL);
 }
 
+void daemon_handle_to(int call_index) {
+	PRINT_DEBUG("Entered: call_index=%p", call_index);
+
+	uint32_t ret_val;
+
+}
+
+void daemon_interrupt(void) {
+	struct arp_cache *cache = cache_list;
+	struct arp_cache *next;
+
+	int i = 0;
+
+	for (i = 0; i < MAX_CALLS; i++) {
+		if (daemon_calls[i].sock_id != -1 && daemon_calls[i].to_flag) {
+			daemon_calls[i].to_flag = 0;
+
+			daemon_handle_to(i);
+		}
+	}
+}
+
 void daemon_get_ff(void) {
 	struct finsFrame *ff;
 
@@ -2484,25 +2592,31 @@ void daemon_get_ff(void) {
 		sem_wait(&Switch_to_Daemon_Qsem);
 		ff = read_queue(Switch_to_Daemon_Queue);
 		sem_post(&Switch_to_Daemon_Qsem);
-	} while (daemon_running && ff == NULL);
+	} while (daemon_running && ff == NULL && !daemon_interrupt_flag); //TODO change logic here, combine with switch_to_arp?
 
 	if (!daemon_running) {
 		return;
 	}
 
-	if (ff->dataOrCtrl == CONTROL) {
-		daemon_fcf(ff);
-		PRINT_DEBUG("");
-	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->dataFrame.directionFlag == UP) {
-			daemon_in_fdf(ff);
+	if (ff) {
+		if (ff->dataOrCtrl == CONTROL) {
+			daemon_fcf(ff);
 			PRINT_DEBUG("");
-		} else { //directionFlag==DOWN
+		} else if (ff->dataOrCtrl == DATA) {
+			if (ff->dataFrame.directionFlag == UP) {
+				daemon_in_fdf(ff);
+				PRINT_DEBUG("");
+			} else { //directionFlag==DOWN
+				PRINT_DEBUG("todo error");
+				//drop
+			}
+		} else {
 			PRINT_DEBUG("todo error");
-			//drop
 		}
-	} else {
-		PRINT_DEBUG("todo error");
+	} else if (daemon_interrupt_flag) {
+		daemon_interrupt_flag = 0;
+
+		daemon_interrupt();
 	}
 }
 
@@ -2796,6 +2910,8 @@ void daemon_init(void) {
 	daemon_running = 1;
 
 //init_daemonSockets();
+	sem_init(&daemon_thread_sem, 0, 1);
+	daemon_thread_count = 0;
 
 	int i;
 	sem_init(&daemon_sockets_sem, 0, 1);
@@ -2807,10 +2923,33 @@ void daemon_init(void) {
 	sem_init(&daemon_calls_sem, 0, 1);
 	for (i = 0; i < MAX_CALLS; i++) {
 		daemon_calls[i].call_id = -1;
-	}
 
-	sem_init(&daemon_thread_sem, 0, 1);
-	daemon_thread_count = 0;
+		daemon_calls[i].running_flag = 1;
+		daemon_calls[i].to_flag = 0;
+		daemon_calls[i].to_fd = timerfd_create(CLOCK_REALTIME, 0);
+		if (daemon_calls[i].to_fd == -1) {
+			PRINT_ERROR("ERROR: unable to create to_fd.");
+			exit(-1);
+		}
+
+		//start timer thread
+		struct daemon_to_thread_data *to_data = (struct daemon_to_thread_data *) malloc(sizeof(struct daemon_to_thread_data));
+		if (to_data == NULL) {
+			PRINT_ERROR("daemon_to_thread_data alloc fail");
+			exit(-1);
+		}
+
+		//int id = ;
+		to_data->id = ++daemon_thread_count;
+		to_data->fd = daemon_calls[i].to_fd;
+		to_data->running = &daemon_calls[i].running_flag;
+		to_data->flag = &daemon_calls[i].to_flag;
+		to_data->interrupt = &daemon_interrupt_flag;
+		if (pthread_create(&daemon_calls[i].to_thread, NULL, daemon_to_thread, (void *) to_data)) {
+			PRINT_ERROR("ERROR: unable to create arp_to_thread thread.");
+			exit(-1);
+		}
+	}
 
 //init the netlink socket connection to daemon
 	nl_sockfd = init_fins_nl();
@@ -2888,6 +3027,10 @@ void daemon_release(void) {
 			 term_queue(daemon_sockets[i].dataQueue);
 			 */
 		}
+	}
+
+	for (i = 0; i < MAX_CALLS; i++) {
+		daemon_calls_shutdown(i);
 	}
 
 	term_queue(Daemon_to_Switch_Queue);

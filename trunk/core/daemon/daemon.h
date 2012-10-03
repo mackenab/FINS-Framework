@@ -26,6 +26,9 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <poll.h>
+#include <sys/time.h>
+#include <sys/timerfd.h>
+#include <math.h>
 
 #include <linux/netlink.h>
 #include <linux/if_ether.h>
@@ -44,7 +47,7 @@
 
 /** FINS Sockets database related defined constants */
 #define MAX_SOCKETS 100
-#define MAX_CALLS 500
+#define MAX_CALLS 100
 #define MaxChildrenNumSharingSocket 100
 #define MAX_parallel_threads 10
 #define MAX_Queue_size 100000
@@ -54,6 +57,7 @@
 #define MIN_port 32768
 #define MAX_port 61000
 #define DEFAULT_BACKLOG 5
+#define DAEMON_BLOCK_DEFAULT 100
 
 /** Socket related calls and their codes */
 #define socket_call 1
@@ -177,6 +181,17 @@ uint32_t my_host_mask;
 uint32_t loopback_ip_addr; // = IP4_ADR_P2H(127,0,0,1);
 uint32_t any_ip_addr; // = IP4_ADR_P2H(0,0,0,0);
 
+struct daemon_to_thread_data {
+	int id;
+	int fd;
+	uint8_t *running;
+	uint8_t *flag;
+	uint8_t *interrupt;
+};
+
+void daemon_stop_timer(int fd);
+void daemon_start_timer(int fd, double millis);
+
 struct nl_wedge_to_daemon {
 	uint64_t sock_id; //TODO when ironed out remove uID or index, prob uID
 	int sock_index;
@@ -222,6 +237,11 @@ struct daemon_call {
 
 	uint64_t sock_id_new;
 	int sock_index_new;
+
+	uint8_t running_flag;
+	int to_fd;
+	pthread_t to_thread;
+	uint8_t to_flag;
 	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 };
 
@@ -230,7 +250,8 @@ void call_free(struct daemon_call *call);
 
 int daemon_calls_insert(uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index);
 int daemon_calls_find(uint32_t serialNum);
-int daemon_calls_remove(int call_index);
+void daemon_calls_remove(int call_index);
+void daemon_calls_shutdown(int call_index);
 
 struct daemon_call_list {
 	struct daemon_call *front;

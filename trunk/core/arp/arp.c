@@ -28,7 +28,7 @@ uint32_t interface_num;
 struct arp_cache *cache_list; //The list of current cache we have
 uint32_t cache_num;
 
-uint8_t interrupt_flag;
+uint8_t arp_interrupt_flag;
 int arp_thread_count = 0;
 
 /**
@@ -424,7 +424,7 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	to_data->fd = cache->to_fd;
 	to_data->running = &cache->running_flag;
 	to_data->flag = &cache->to_flag;
-	to_data->interrupt = &interrupt_flag;
+	to_data->interrupt = &arp_interrupt_flag;
 	if (pthread_create(&cache->to_thread, NULL, arp_to_thread, (void *) to_data)) {
 		PRINT_ERROR("ERROR: unable to create arp_to_thread thread.");
 		exit(-1);
@@ -774,7 +774,7 @@ void arp_get_ff(void) {
 		sem_wait(&Switch_to_ARP_Qsem);
 		ff = read_queue(Switch_to_ARP_Queue);
 		sem_post(&Switch_to_ARP_Qsem);
-	} while (arp_running && ff == NULL && !interrupt_flag); //TODO change logic here, combine with switch_to_arp?
+	} while (arp_running && ff == NULL && !arp_interrupt_flag); //TODO change logic here, combine with switch_to_arp?
 
 	if (!arp_running) {
 		return;
@@ -795,8 +795,8 @@ void arp_get_ff(void) {
 		} else {
 			PRINT_DEBUG("todo error");
 		}
-	} else if (interrupt_flag) {
-		interrupt_flag = 0;
+	} else if (arp_interrupt_flag) {
+		arp_interrupt_flag = 0;
 
 		arp_interrupt();
 	}
