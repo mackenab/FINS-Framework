@@ -46,22 +46,22 @@ void udp_in(struct finsFrame* ff) {
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
-	metadata* meta = ff->metaData;
+	metadata *params = ff->metaData;
 
-	uint16_t protocol_type;
-	unsigned long srcip;
-	unsigned long dstip;
+	uint8_t protocol;
+	uint32_t src_ip;
+	uint32_t dst_ip;
 	uint16_t src_port;
 	uint16_t dst_port;
 
 	int ret = 0;
-	ret += metadata_readFromElement(meta, "protocol", &protocol_type) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "src_ip", &srcip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "dst_ip", &dstip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
 
 	if (ret) {
 		//TODO error
-		PRINT_DEBUG("todo error")
+		PRINT_ERROR("todo error");
 	}
 
 	/* begins checking the UDP packets integrity */
@@ -75,10 +75,10 @@ void udp_in(struct finsFrame* ff) {
 	 return;
 	 }
 	 */
-	if (protocol_type != UDP_PROTOCOL) {
+	if (protocol != UDP_PROTOCOL) {
 		udpStat.wrongProtocol++;
 		udpStat.totalBadDatagrams++;
-		PRINT_DEBUG("wrong proto=%d", protocol_type);
+		PRINT_ERROR("wrong proto=%d", protocol);
 
 		return;
 	}
@@ -88,16 +88,19 @@ void udp_in(struct finsFrame* ff) {
 	 * Now it will be called as a dummy function
 	 * */
 
-	uint16_t checksum = UDP_checksum((struct udp_packet*) packet, htonl(srcip), htonl(dstip));
+	uint16_t checksum = UDP_checksum((struct udp_packet*) packet, htonl(src_ip), htonl(dst_ip));
 
-	PRINT_DEBUG("proto=%d , src=%lu:%u, dst=%lu:%u", (int)protocol_type, srcip, packet->u_dst, dstip, packet->u_src);
+	src_port = ntohs(packet->u_src);
+	dst_port = ntohs(packet->u_dst);
+
+	PRINT_DEBUG("proto=%u , src=%u/%u, dst=%u/%u", protocol, src_ip, src_port, dst_ip, dst_port);
 	PRINT_DEBUG("UDP_checksum=%u checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
 			udpStat.badChecksum++;
 			udpStat.totalBadDatagrams++;
-			PRINT_DEBUG("bad checksum=%x, calc=%x", packet->u_cksum, checksum);
+			PRINT_ERROR("bad checksum=%x, calc=%x", packet->u_cksum, checksum);
 
 			return;
 		}
@@ -109,13 +112,8 @@ void udp_in(struct finsFrame* ff) {
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
 
-	src_port = ntohs(packet->u_src);
-	dst_port = ntohs(packet->u_dst);
-
-	PRINT_DEBUG("proto=%u , src=%lu:%u, dst=%lu:%u", protocol_type, srcip, src_port, dstip, dst_port);
-
-	metadata_writeToElement(meta, "src_port", &src_port, META_TYPE_INT);
-	metadata_writeToElement(meta, "dst_port", &dst_port, META_TYPE_INT);
+	metadata_writeToElement(params, "src_port", &src_port, META_TYPE_INT);
+	metadata_writeToElement(params, "dst_port", &dst_port, META_TYPE_INT);
 
 	/* put the header into the meta data*/
 	//	meta->u_destPort = packet->u_dst;

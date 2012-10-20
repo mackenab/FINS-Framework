@@ -13,6 +13,7 @@ extern struct ip4_stats stats;
  * Responsible for parsing, checking reassembling and passing packets out.
  */
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
+	PRINT_DEBUG("Entered: ff=%p, ppacket=%p, len=%d", ff, ppacket, len);
 
 	stats.receivedtotal++;
 	/* Parse the header. Some of the items only needed to be inserted into FDF meta data*/
@@ -44,20 +45,27 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 
 	/* Check minimum header length */
 	if (header.header_length < IP4_MIN_HLEN) {
+		PRINT_ERROR("Packet header length (%d) in packet ID %d is smaller than the defined minimum (20).", header.header_length, header.id);
 		stats.badhlen++;
 		stats.droppedtotal++;
-		PRINT_ERROR("Packet header length (%d) in packet ID %d is smaller than the defined minimum (20).", header.header_length, header.id);
+
 		//free ppacket
+		//free(ff->dataFrame.pdu);
+		freeFinsFrame(ff);
 		return;
 	}
-	PRINT_DEBUG("");
+	int hlen = IP4_HLEN(ppacket);
+	PRINT_DEBUG("hdr_len=%u, hlen=%u", header.header_length, IP4_HLEN(ppacket));
 
 	/* Check the integrity of the header. Drop the packet if corrupted header.*/
-	if (IP4_checksum(ppacket, IP4_HLEN(ppacket)) != 0) {
+	if (IP4_checksum(ppacket, hlen) != 0) { //TODO check this checksum, don't think it does uneven?
+		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, IP4_checksum(ppacket, IP4_HLEN(ppacket)));
 		stats.badsum++;
 		stats.droppedtotal++;
-		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, IP4_checksum(ppacket, IP4_HLEN(ppacket)));
+
 		//free ppacket
+		//free(ff->dataFrame.pdu);
+		freeFinsFrame(ff);
 		return;
 	}
 	PRINT_DEBUG("");
@@ -71,15 +79,27 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		if (header.packet_length > len) {
 			PRINT_DEBUG("The header length is even longer than the len");
 			stats.droppedtotal++;
+
 			//free ppacket
+			//free(ff->dataFrame.pdu);
+			freeFinsFrame(ff);
 			return;
 		}
 	}
 	PRINT_DEBUG("");
 
+	if (header.ttl == 0) {
+		PRINT_DEBUG("todo");
+		//TODO discard packet & send TTL icmp to sender
+
+		//free(ff->dataFrame.pdu);
+		freeFinsFrame(ff);
+		return;
+	}
+
 	PRINT_DEBUG("src=%lu dst=%lu (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
-	if (IP4_dest_check(header.destination) == 0) {
+	if (IP4_dest_check(header.destination) == 0) { //TODO update away from class system
 		PRINT_DEBUG("");
 
 		if (IP4_forward(ff, ppacket, header.destination, len)) { //TODO disabled atm
@@ -99,6 +119,8 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.droppedtotal++;
 		PRINT_ERROR("Packet ID %d has both DF and MF flags set", header.id);
 		//free ppacket
+		//free(ff->dataFrame.pdu);
+		freeFinsFrame(ff);
 		return;
 	}
 	/* If not fragmented, pass out. If fragmented, call reassembly algorithm.

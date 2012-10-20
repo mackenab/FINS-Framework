@@ -155,6 +155,7 @@ int interface_setBlocking(int fd) {
 }
 
 void *capturer_to_interface(void *local) {
+	PRINT_DEBUG("Entered");
 
 	u_char *frame;
 	int frame_len;
@@ -163,12 +164,12 @@ void *capturer_to_interface(void *local) {
 	//int capture_pipe_fd;
 	struct finsFrame *ff = NULL;
 
-	metadata *meta;
+	metadata *params;
 
 	//struct sniff_ethernet *ethernet_header;
 	uint64_t dst_mac;
 	uint64_t src_mac;
-	u_short ether_type;
+	uint16_t ether_type;
 
 	while (interface_running) {
 		interface_setNonblocking(capture_pipe_fd);
@@ -183,7 +184,7 @@ void *capturer_to_interface(void *local) {
 		interface_setBlocking(capture_pipe_fd);
 
 		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			PRINT_ERROR("numBytes written %d\n", numBytes);
 			break;
 		}
 		frame = (u_char *) malloc(frame_len);
@@ -194,19 +195,19 @@ void *capturer_to_interface(void *local) {
 
 		numBytes = read(capture_pipe_fd, frame, frame_len);
 		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			PRINT_ERROR("numBytes written %d\n", numBytes);
 			free(frame);
 			break;
 		}
 
 		if (numBytes != frame_len) {
-			PRINT_DEBUG("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
+			PRINT_ERROR("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
 			free(frame);
 			continue;
 		}
 
 		if (numBytes < sizeof(struct sniff_ethernet)) {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 		}
 
 		PRINT_DEBUG("A frame of length %d has been written-----", frame_len);
@@ -239,17 +240,17 @@ void *capturer_to_interface(void *local) {
 		 * 2. pre-process the frame in order to extract the metadata
 		 * 3. build a finsFrame and insert it into EtherStub_to_Switch_Queue
 		 */
-		meta = (metadata *) malloc(sizeof(metadata));
-		if (meta == NULL) {
+		params = (metadata *) malloc(sizeof(metadata));
+		if (params == NULL) {
 			PRINT_ERROR("metadata creation failed");
-			free(ff);
-			free(frame);
+			//free(ff);
+			//free(frame);
 			exit(-1);
 		}
-		metadata_create(meta);
+		metadata_create(params);
 
 		ff->dataOrCtrl = DATA;
-		ff->metaData = meta;
+		ff->metaData = params;
 
 		if (ether_type == ETH_TYPE_IP4) { //0x0800 == 2048, IPv4
 			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
@@ -266,7 +267,7 @@ void *capturer_to_interface(void *local) {
 			free(frame);
 			continue;
 		} else {
-			PRINT_DEBUG("default: proto=%x (%u)", ether_type, ether_type);
+			PRINT_ERROR("default: proto=%x (%u)", ether_type, ether_type);
 			//drop
 			freeFinsFrame(ff);
 			free(frame);
@@ -278,18 +279,18 @@ void *capturer_to_interface(void *local) {
 		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
 		if (ff->dataFrame.pdu == NULL) {
 			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			free(frame);
+			//freeFinsFrame(ff);
+			//free(frame);
 			exit(-1);
 		}
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
-		metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
-		metadata_writeToElement(meta, "ether_type", &ether_type, META_TYPE_INT);
+		metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
 
 		if (!interface_to_switch(ff)) {
-			free(ff->dataFrame.pdu);
+			//free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 		}
 
@@ -301,6 +302,8 @@ void *capturer_to_interface(void *local) {
 }
 
 void *switch_to_interface(void *local) {
+	PRINT_DEBUG("Entered");
+
 	while (interface_running) {
 		interface_get_ff();
 		PRINT_DEBUG("");
@@ -332,13 +335,13 @@ void interface_get_ff(void) {
 		//ff->dataFrame is an IPv4 packet
 		if (ff->dataFrame.directionFlag == UP) {
 			//interface_in_fdf(ff); //TODO remove?
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 		} else { //directionFlag==DOWN
 			interface_out_fdf(ff);
 			PRINT_DEBUG("");
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 	}
 }
 
@@ -346,23 +349,23 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	uint64_t dst_mac;
 	uint64_t src_mac;
-	int ether_type = 0;
+	uint16_t ether_type;
 
 	char *frame;
 	struct sniff_ethernet *hdr;
 	int framelen;
 	int numBytes;
 
-	metadata* meta = ff->metaData;
+	metadata *params = ff->metaData;
 
 	int ret = 0;
-	ret += metadata_readFromElement(meta, "dst_mac", &dst_mac) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "src_mac", &src_mac) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "ether_type", &ether_type) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "dst_mac", &dst_mac) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "src_mac", &src_mac) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "ether_type", &ether_type) == CONFIG_FALSE;
 
 	if (ret) {
 		//TODO error
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//TODO create error fcf?
 		return;
 	}
@@ -399,9 +402,9 @@ void interface_out_fdf(struct finsFrame *ff) {
 	} else if (ether_type == ETH_TYPE_IP4) {
 		hdr->ether_type = htons(ETH_TYPE_IP4);
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//TODO create error fcf?
-		free(ff->dataFrame.pdu);
+		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -414,8 +417,8 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	numBytes = write(inject_pipe_fd, &framelen, sizeof(int));
 	if (numBytes <= 0) {
-		PRINT_DEBUG("numBytes written %d\n", numBytes);
-		free(ff->dataFrame.pdu);
+		PRINT_ERROR("numBytes written %d\n", numBytes);
+		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -423,35 +426,35 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	numBytes = write(inject_pipe_fd, frame, framelen);
 	if (numBytes <= 0) {
-		PRINT_DEBUG("numBytes written %d\n", numBytes);
-		free(ff->dataFrame.pdu);
+		PRINT_ERROR("numBytes written %d\n", numBytes);
+		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
 	}
 
-	free(ff->dataFrame.pdu);
+	//free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 	free(frame);
 }
 
 void interface_in_fdf(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 }
 
 void interface_fcf(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 }
 
 void interface_exec(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 }
 
 int interface_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 	if (sem_wait(&Interface_to_Switch_Qsem)) {
 		PRINT_ERROR("Interface_to_Switch_Qsem wait prob");
 		exit(-1);

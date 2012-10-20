@@ -57,7 +57,7 @@ void rtm_get_ff() {
 		PRINT_DEBUG("opcode parameter has been set to %d", ff->ctrlFrame.opcode);
 		PRINT_DEBUG("senderID parameter has been set to %d", (int)(ff->ctrlFrame.senderID));
 
-		//PRINT_DEBUG("serialNum parameter has been set to %d",ff->ctrlFrame.serialNum);
+		//PRINT_DEBUG("serial_num parameter has been set to %d",ff->ctrlFrame.serial_num);
 
 		//Currently it serializes and sends any Control Frame it receives over the rtm_out pipe
 		rtm_out_fd = open(RTM_PIPE_OUT, O_RDWR); //should not be O_RDWR, should be WRITE ONLY
@@ -70,8 +70,8 @@ void rtm_get_ff() {
 		numBytes += write(rtm_out_fd, &ff->destinationID.id, sizeof(unsigned char));
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.senderID, sizeof(unsigned char));
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.opcode, sizeof(unsigned short int));
-		numBytes += write(rtm_out_fd, &ff->ctrlFrame.serialNum, sizeof(unsigned int));
-		PRINT_DEBUG("serialNum %d", ff->ctrlFrame.serialNum)
+		numBytes += write(rtm_out_fd, &ff->ctrlFrame.serial_num, sizeof(unsigned int));
+		PRINT_DEBUG("serial_num %d", ff->ctrlFrame.serial_num)
 
 	} else //DATA FF
 	{
@@ -109,7 +109,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 	fflush(stdout);
 	
 	while (1) {
-		temp_serial_cntr++; //used as a temporary serialNumber generator
+		temp_serial_cntr++; //used as a temporary serial_number generator
 
 		//READ FROM PIPE RTM_IN
 		numBytes = 0;
@@ -130,7 +130,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 
 		//CHANGE SenderID and SerialNum
 		fins_frame->ctrlFrame.senderID = RTM_ID;
-		fins_frame->ctrlFrame.serialNum = temp_serial_cntr;
+		fins_frame->ctrlFrame.serial_num = temp_serial_cntr;
 
 		//SEND TO QUEUE
 		sem_wait(&RTM_to_Switch_Qsem);

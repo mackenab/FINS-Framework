@@ -227,7 +227,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 					break;
 				}
 			} else {
-				PRINT_DEBUG("Invalid ACK: was not sent.");
+				PRINT_ERROR("Invalid ACK: was not sent.");
 			}
 		}
 
@@ -262,7 +262,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 		//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 	} else {
-		PRINT_DEBUG("Invalid ACK: out of sent window.");
+		PRINT_ERROR("Invalid ACK: out of sent window.");
 	}
 }
 
@@ -704,7 +704,7 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 					}
 				}
 			} else {
-				PRINT_DEBUG("MSS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
+				PRINT_ERROR("MSS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
 			}
 			break;
 		case TCP_WS:
@@ -728,7 +728,7 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 					}
 				}
 			} else {
-				PRINT_DEBUG("WS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
+				PRINT_ERROR("WS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
 			}
 			break;
 		case TCP_SACK_PERM:
@@ -743,7 +743,7 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 					}
 				}
 			} else {
-				PRINT_DEBUG("SACK Perm: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
+				PRINT_ERROR("SACK Perm: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
 			}
 			break;
 		case TCP_SACK:
@@ -752,7 +752,7 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//TODO
 				PRINT_DEBUG("SACK: (%u/%u) len=%u", i-TCP_SACK_MIN_BYTES, seg->opt_len, len);
 			} else {
-				PRINT_DEBUG("SACK: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
+				PRINT_ERROR("SACK: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
 			}
 			break;
 		case TCP_TS:
@@ -784,7 +784,7 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 					//conn->ts_rem = ts_val;
 				}
 			} else {
-				PRINT_DEBUG("TS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
+				PRINT_ERROR("TS: (%u/%u) len=%u PROB", i-2, seg->opt_len, len);
 			}
 			break;
 		default:
@@ -851,7 +851,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		if (process_seg(conn, seg, &send_flags)) {
 			conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			//TODO error
 		}
 		seg_free(seg);
@@ -891,7 +891,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				if (process_seg(conn, seg, &send_flags)) {
 					PRINT_DEBUG("Connected to seq=%u datalen:%d\n", seg->seq_num, seg->data_len);
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 					//TODO error
 				}
 
@@ -960,7 +960,7 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 	if (flags & FLAG_FIN) {
 		if (conn->fin_sent) {
 			//TODO prob
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			PRINT_DEBUG("removing fin");
 			flags &= ~FLAG_FIN;
 		} else {
@@ -1014,7 +1014,7 @@ void *syn_thread(void *local) {
 	if (conn_stub->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum, not really used
 		PRINT_DEBUG("checksum=%u calc=%u %u", seg->checksum, calc, seg->checksum == calc);
-		if (!calc || 1) { //TODO remove override when IP prob fixed
+		if (!calc) {
 			if (queue_has_space(conn_stub->syn_queue, 1)) {
 				node = node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
 				queue_append(conn_stub->syn_queue, node);
@@ -1162,7 +1162,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 					tcp_reply_fcf(conn->ff, 1, 0);
 					conn->ff = NULL;
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent: ack=%u, host_seq_num=%u", seg->ack_num, conn->send_seq_num);
@@ -1233,7 +1233,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//TODO finish? verify/add conn_stub, free conn
 	} else if (seg->flags & FLAG_FIN) {
 		//drop
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 	} else if (seg->flags & FLAG_ACK) {
 		//if ACK/SYN ACK, send -, ESTABLISHED
 		if (seg->ack_num == conn->send_seq_num + 1) {
@@ -1285,12 +1285,12 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn_reply_fcf(conn, 1, 0);
 				conn->ff = NULL;
 			} else {
-				PRINT_DEBUG("todo error");
+				PRINT_ERROR("todo error");
 			}
 		} else {
 			PRINT_DEBUG("Invalid ACK: was not sent.");
 			//TODO send RST?
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 		}
 	} else if (seg->flags & FLAG_SYN) {
 		if (seg->opt_len) {
@@ -1600,7 +1600,7 @@ void recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 			tcp_reply_fcf(conn->ff_close, 1, 0);
 			conn->ff_close = NULL;
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			//TODO error
 		}
 
@@ -1650,7 +1650,7 @@ void recv_last_ack_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 					tcp_reply_fcf(conn->ff_close, 1, 0);
 					conn->ff_close = NULL;
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 					//TODO error
 				}
 
@@ -1765,7 +1765,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
 
-	PRINT_DEBUG("Entered: ff=%p", ff);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	seg = fdf_to_tcp(ff);
 	if (seg) {
@@ -1792,7 +1792,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				}
 				pthread_detach(thread);
 			} else {
-				PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 			}
 		} else {
 			/*#*/PRINT_DEBUG("");
@@ -1825,7 +1825,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 						}
 						pthread_detach(thread);
 					} else {
-						PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+						PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 					}
 				} else {
 					/*#*/PRINT_DEBUG("");
@@ -1846,7 +1846,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 		PRINT_DEBUG("Bad tcp_seg. Dropping...");
 	}
 
-	free(ff->dataFrame.pdu);
+	//free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 }
 

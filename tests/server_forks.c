@@ -56,12 +56,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}
 
-	server_addr.sin_family = AF_INET;
+	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 

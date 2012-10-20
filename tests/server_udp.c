@@ -19,6 +19,7 @@ int i = 0;
 
 void termination_handler(int sig) {
 	printf("\n**********Number of packers that have been received = %d *******\n", i);
+	fflush(stdout);
 	exit(2);
 }
 
@@ -32,6 +33,7 @@ int main(int argc, char *argv[]) {
 	uint16_t port;
 
 	(void) signal(SIGINT, termination_handler);
+
 	int sock;
 	socklen_t addr_len = sizeof(struct sockaddr);
 	int bytes_read;
@@ -49,8 +51,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
@@ -58,7 +60,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Provided with sock=%d\n", sock);
 
-	server_addr.sin_family = AF_INET;
+	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
 	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
 	int time = -1;
 
-	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ", POLLIN, POLLPRI,
+	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x", POLLIN, POLLPRI,
 			POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
 	fflush(stdout);
 
@@ -114,7 +116,7 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	int j = 0;
-	while (++j <= 1) {
+	while (++j <= 3) {
 		pID = fork();
 		if (pID == 0) { // child -- Capture process
 			continue;
@@ -132,28 +134,33 @@ int main(int argc, char *argv[]) {
 		//while (1);
 	}
 
-	while (1) {
-		if (pID == 0) {
+	if (pID != 0 || 1) {
+		j = 0;
+		int k = 0;
+		while (j < 4) {
 			//printf("\n pID=%d poll before", pID);
 			//fflush(stdout);
 			ret = poll(fds, nfds, time);
-			//	printf("\n pID=%d poll after", pID);
-			//	fflush(stdout);
-			if (ret) {
-				printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
-				printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
-						(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
-						(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
-						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
-				fflush(stdout);
+			printf("\n poll: pID=%d, ret=%d, revents=%x", pID, ret, fds[ret].revents);
+			fflush(stdout);
+			if (ret || 0) {
+				if (1) {
+					printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
+					printf("\n POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d ",
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+							(fds[ret].revents & POLLWRBAND) > 0);
+					fflush(stdout);
+				}
 
-				if (fds[ret].revents & (POLLIN | POLLRDNORM)) {
+				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
 					bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
 					//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 					//bytes_read = recv(sock,recv_data,1024,0);
 					if (bytes_read > 0) {
 						recv_data[bytes_read] = '\0';
-						printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++i, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),
+						printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++k, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),
 								recv_data);
 						fflush(stdout);
 
@@ -170,7 +177,12 @@ int main(int argc, char *argv[]) {
 					}
 				}
 			}
-		} else {
+			j++;
+			//break;
+		}
+	} else {
+		i = 0;
+		while (i < 5) {
 			//printf("\n pID=%d recvfrom before", pID);
 			//fflush(stdout);
 			bytes_read = recvfrom(sock, recv_data, 2000, 0, (struct sockaddr *) client_addr, &addr_len);
@@ -196,6 +208,11 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+
+	printf("\n After");
+	fflush(stdout);
+	while (1)
+		;
 
 	printf("\n Closing server socket");
 	fflush(stdout);

@@ -8,6 +8,12 @@
 #include "ipv4.h"
 #include <queueModule.h>
 
+sem_t IPv4_to_Switch_Qsem;
+finsQueue IPv4_to_Switch_Queue;
+
+sem_t Switch_to_IPv4_Qsem;
+finsQueue Switch_to_IPv4_Queue;
+
 IP4addr my_ip_addr;
 IP4addr loopback = IP4_ADR_P2H(127, 0, 0, 1);
 IP4addr my_mask;
@@ -26,6 +32,8 @@ struct ip4_store *store_list;
 uint32_t store_num;
 
 void *switch_to_ipv4(void *local) {
+	PRINT_DEBUG("Entered");
+
 	while (ipv4_running) {
 		IP4_receive_fdf();
 		PRINT_DEBUG("");
@@ -36,8 +44,8 @@ void *switch_to_ipv4(void *local) {
 	pthread_exit(NULL);
 }
 
-struct ip4_store *store_create(uint32_t serialNum, struct finsFrame *ff, u_char *pdu) {
-	PRINT_DEBUG("Entered: ff=%p, serialNum=%u", ff, serialNum);
+struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, u_char *pdu) {
+	PRINT_DEBUG("Entered: ff=%p, serial_num=%u", ff, serial_num);
 
 	struct ip4_store *store = (struct ip4_store *) malloc(sizeof(struct ip4_store));
 	if (store == NULL) {
@@ -46,7 +54,7 @@ struct ip4_store *store_create(uint32_t serialNum, struct finsFrame *ff, u_char 
 	}
 
 	store->next = NULL;
-	store->serialNum = serialNum;
+	store->serial_num = serial_num;
 	store->ff = ff;
 	store->pdu = pdu;
 
@@ -56,8 +64,13 @@ struct ip4_store *store_create(uint32_t serialNum, struct finsFrame *ff, u_char 
 void store_free(struct ip4_store *store) {
 	PRINT_DEBUG("Entered: store=%p", store);
 
-	//free pdu?
-	//free ff?
+	if (store->pdu) {
+		PRINT_DEBUG("Freeing pdu=%p", store->pdu);
+		free(store->pdu);
+	}
+
+	if (store->ff)
+		freeFinsFrame(store->ff);
 
 	free(store);
 }
@@ -82,12 +95,12 @@ int store_list_insert(struct ip4_store *store) {
 	return 1;
 }
 
-struct ip4_store *store_list_find(uint32_t serialNum) {
-	PRINT_DEBUG("Entered: serialNum=%u", serialNum);
+struct ip4_store *store_list_find(uint32_t serial_num) {
+	PRINT_DEBUG("Entered: serial_num=%u", serial_num);
 
 	struct ip4_store *temp = store_list;
 
-	while (temp != NULL && temp->serialNum != serialNum) {
+	while (temp != NULL && temp->serial_num != serial_num) {
 		temp = temp->next;
 	}
 
@@ -173,8 +186,24 @@ void ipv4_shutdown(void) {
 
 void ipv4_release(void) {
 	PRINT_DEBUG("Entered");
+
 	//TODO free all module related mem
 
-	//term_queue(IPv4_to_Switch_Queue); //TODO uncomment
-	//term_queue(Switch_to_IPv4_Queue);
+	struct ip4_store *store;
+	while (!store_list_is_empty()) {
+		store = store_list;
+		store_list_remove(store);
+		store_free(store);
+	}
+
+	struct ip4_routing_table *table;
+	while (routing_table) {
+		table = routing_table;
+		routing_table = routing_table->next_entry;
+
+		free(table);
+	}
+
+	term_queue(IPv4_to_Switch_Queue); //TODO uncomment
+	term_queue(Switch_to_IPv4_Queue);
 }

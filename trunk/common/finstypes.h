@@ -77,22 +77,24 @@ struct finsDataFrame {
 
 struct finsCtrlFrame {
 	/* only for FINS control frames */
-	unsigned char senderID; // ID of the src module
-	unsigned short int opcode; // type of control message, see CTRL_* values
-	unsigned int serialNum; // unique identifier, varies by msg type
+	uint8_t senderID; //ID of the src module
+	uint32_t serial_num; //unique identifier among all FCF, see gen_control_serial_num()
 
-	//unsigned char ret_val;  //NACK/ACK
+	uint16_t opcode; //type of control message, see CTRL_* values
+	uint32_t param_id; //the type of call for EXEC/ERROR/ALERT, param for READ/SET,
+	uint32_t ret_val; // NACK (0) / ACK (1)
 
+	uint32_t data_len;
+	uint8_t *data;
+
+	//## //TODO remove this?
 	unsigned char * name; // parameter/function/error name
-	void * data; // pointer to relevant data; msg type dependent
+	void * data_old; // pointer to relevant data; msg type dependent
 	// if using a struct for this, define elsewhere
 	// such as ICMP data information, define in ICMP
 	/* Special fields for control frames depending on the Opcode */
 
-	unsigned int paramterID;
-	void *paramterValue;
-	unsigned int paramterLen;
-
+	//##
 	struct tableRecord *replyRecord;
 };
 

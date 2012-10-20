@@ -33,7 +33,7 @@ finsQueue Switch_to_UDP_Queue;
 struct udp_statistics udpStat;
 
 void udp_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p", ff);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	sem_wait(&UDP_to_Switch_Qsem);
 	write_queue(ff, UDP_to_Switch_Queue);
@@ -41,10 +41,6 @@ void udp_to_switch(struct finsFrame *ff) {
 }
 
 void udp_get_ff(void) {
-
-	int dummy_a = 0; //KEVINS CODE THIS IS A TEST
-	int dummy_b = 0;
-	int dummy_c = 0;
 
 	struct finsFrame *ff;
 	do {
@@ -58,60 +54,9 @@ void udp_get_ff(void) {
 	}
 
 	udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%p", udpStat.totalRecieved, ff);
+	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", udpStat.totalRecieved, ff, ff->metaData);
 	if (ff->dataOrCtrl == CONTROL) {
-		// send to something to deal with FCF
-		PRINT_DEBUG("CONTROL HANDLER !");
-
-		//dummy = (int)(ff->ctrlFrame.paramterValue);
-
-//CHANGEME	if(ff->ctrlFrame.paramterID == DUMMYA)
-		{
-//CHANGEME		dummy_a = (int)(ff->ctrlFrame.paramterValue);
-			PRINT_DEBUG("Dummy parameter A has been set to %d", dummy_a);
-
-		}
-//CHANGEME		else if(ff->ctrlFrame.paramterID == DUMMYB)
-		{
-//CHANGEME		dummy_b = (int)(ff->ctrlFrame.paramterValue);
-			PRINT_DEBUG("Dummy parameter B has been set to %d", dummy_b);
-		}
-//CHANGEME		else if(ff->ctrlFrame.paramterID == DUMMYC)
-		{
-//CHANGEME			dummy_c = (int)(ff->ctrlFrame.paramterValue);
-			PRINT_DEBUG("Dummy parameter C has been set to %d", dummy_c);
-		}
-
-		//DEBUG Statements
-		PRINT_DEBUG("dataOrCtrl parameter has been set to %d", (int)(ff->dataOrCtrl));
-		///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("destinationID parameter has been set to %d", (int)(ff->destinationID.id));
-		///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("opcode parameter has been set to %d", ff->ctrlFrame.opcode);
-		///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("senderID parameter has been set to %d", (int)(ff->ctrlFrame.senderID));
-		///KEVINS CODE THIS IS A TEST
-//CHANGEME		PRINT_DEBUG("parameterID parameter has been set to %d",ff->ctrlFrame.paramterID);			///KEVINS CODE THIS IS A TEST
-
-		//	PRINT_DEBUG("serialNum has been set to %d",ff->ctrlFrame.serialNum);
-
-		//CONSTRUCTION OF A WRITE_CONFIRMATION FRAME
-		//|| Data/Control | Destination_IDs_List | SenderID | Write_parameter_Confirmation_Code | Serial_Number ||
-		struct finsFrame *ff_confirmation = (struct finsFrame *) malloc(sizeof(struct finsFrame)); ///KEVINS CODE THIS IS A TEST
-		ff_confirmation->dataOrCtrl = ff->dataOrCtrl; ///KEVINS CODE THIS IS A TEST
-		ff_confirmation->destinationID.id = ff->ctrlFrame.senderID; ///KEVINS CODE THIS IS A TEST
-		ff_confirmation->ctrlFrame.senderID = ff->destinationID.id; ///KEVINS CODE THIS IS A TEST
-//CHANGEME		ff_confirmation->ctrlFrame.opcode = WRITECONF;						// hard coded				///KEVINS CODE THIS IS A TEST
-		ff_confirmation->ctrlFrame.serialNum = ff->ctrlFrame.serialNum; //same as the Write REquest ///KEVINS CODE THIS IS A TEST
-
-		//SEND TO QUEUE
-		sem_wait(&UDP_to_Switch_Qsem); ///KEVINS CODE THIS IS A TEST
-		write_queue(ff_confirmation, UDP_to_Switch_Queue); ///KEVINS CODE THIS IS A TEST
-		sem_post(&UDP_to_Switch_Qsem); ///KEVINS CODE THIS IS A TEST
-		PRINT_DEBUG("sent data ");
-		///KEVINS CODE THIS IS A TEST
-
-		freeFinsFrame(ff);
+		udp_fcf(ff);
 	} else if (ff->dataOrCtrl == DATA) {
 		if (ff->dataFrame.directionFlag == UP) {
 			udp_in(ff);
@@ -121,11 +66,110 @@ void udp_get_ff(void) {
 			PRINT_DEBUG("");
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
+	}
+}
+
+void udp_fcf(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+
+	//TODO fill out
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_ALERT:
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_ALERT_REPLY:
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_READ_PARAM:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_READ_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		//daemon_read_param_reply(ff);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_SET_PARAM:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_SET_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		//daemon_set_param_reply(ff);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_EXEC:
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_EXEC_REPLY:
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		//daemon_exec_reply(ff);
+		freeFinsFrame(ff);
+		break;
+	case CTRL_ERROR:
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		udp_error(ff);
+		break;
+	default:
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		freeFinsFrame(ff);
+		break;
+	}
+}
+
+void udp_error(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+
+	int ret = 0;
+
+	metadata *params = ff->metaData;
+	if (params) {
+		switch (ff->ctrlFrame.param_id) {
+		case ERROR_ICMP_TTL:
+			PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
+
+			if (ret) {
+				PRINT_ERROR("todo error");
+				return;
+			}
+			PRINT_DEBUG("todo");
+
+			//TODO finish for
+			//if (ff->ctrlFrame.para)
+			freeFinsFrame(ff);
+			break;
+		case ERROR_ICMP_DEST_UNREACH:
+			PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+
+			if (ret) {
+				PRINT_ERROR("todo error");
+				return;
+			}
+			PRINT_DEBUG("todo");
+
+			//TODO finish
+			freeFinsFrame(ff);
+			break;
+		default:
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			//TODO implement?
+			freeFinsFrame(ff);
+			break;
+		}
+	} else {
+		//TODO send nack
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		freeFinsFrame(ff);
 	}
 }
 
 void *switch_to_udp(void *local) {
+	PRINT_DEBUG("Entered");
+
 	while (udp_running) {
 		udp_get_ff();
 		PRINT_DEBUG("");

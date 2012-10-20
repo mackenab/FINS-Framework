@@ -50,7 +50,7 @@ void udp_out(struct finsFrame* ff) {
 		return;
 	}
 
-	PRINT_DEBUG("UDP_out, ff=%p", ff);
+	PRINT_DEBUG("UDP_out, ff=%p, meta=%p", ff, ff->metaData);
 
 	//print_finsFrame(ff);
 
@@ -69,49 +69,43 @@ void udp_out(struct finsFrame* ff) {
 	free(temp);
 	//#########################
 
-	uint16_t dstbuf16;
-	uint16_t srcbuf16;
+	uint16_t dst_port;
+	uint16_t src_port;
 
-	uint32_t dstbuf;
-	uint32_t srcbuf;
+	uint32_t dst_ip;
+	uint32_t src_ip;
 
-	uint32_t dstip;
-	uint32_t srcip;
-
-	metadata* meta = ff->metaData;
+	metadata *params = ff->metaData;
 
 	int ret = 0;
-	ret += metadata_readFromElement(meta, "dst_port", &dstbuf) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "src_port", &srcbuf) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "dst_ip", &dstip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "src_ip", &srcip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "src_port", &src_port) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "dst_port", &dst_port) == CONFIG_FALSE;
 
 	if (ret) {
 		//TODO error
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 	}
 
-	int protocol = UDP_PROTOCOL;
-	metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT);
+	uint8_t protocol = UDP_PROTOCOL;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
 
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
 	 */
-	dstbuf16 = (uint16_t) dstbuf;
-	srcbuf16 = (uint16_t) srcbuf;
 
 	//packet_host.u_src = srcbuf16;
 	//packet_host.u_dst = dstbuf16;
 	//packet_host.u_len = packet_length;
 	//packet_host.u_cksum = 0;
-
-	packet_netw->u_src = htons(srcbuf16);
-	packet_netw->u_dst = htons(dstbuf16);
+	packet_netw->u_src = htons(src_port);
+	packet_netw->u_dst = htons(dst_port);
 	packet_netw->u_len = htons(packet_length);
 	packet_netw->u_cksum = 0;
 	memcpy(packet_netw->u_data, pdu, ff->dataFrame.pduLength);
 
-	PRINT_DEBUG("pkt_host: %d,%d,%d,%d", srcbuf16, dstbuf16, packet_length, 0);
+	PRINT_DEBUG("src=%u/%u, dst=%u/%u, pkt_len=%u", src_ip, src_port, dst_ip, dst_port, packet_length);
 
 	/*
 	 int i=0;
@@ -160,12 +154,12 @@ void udp_out(struct finsFrame* ff) {
 	 parsed_meta.u_srcPort = (srcbuf16);
 	 */
 
-	uint16_t checksum = UDP_checksum(packet_netw, htonl(srcip), htonl(dstip));
+	uint16_t checksum = UDP_checksum(packet_netw, htonl(src_ip), htonl(dst_ip));
 	packet_netw->u_cksum = htons(checksum);
 	//packet_netw->u_cksum = 0;
 	PRINT_DEBUG("checksum (h):%x", checksum);
 
-	PRINT_DEBUG("%d,%d", srcip, dstip);
+	//PRINT_DEBUG("%u,%u", src_ip, dst_ip);
 
 	PRINT_DEBUG("pkt_netw: %d,%d,%d,%x", packet_netw->u_src, packet_netw->u_dst, packet_netw->u_len, packet_netw->u_cksum);
 

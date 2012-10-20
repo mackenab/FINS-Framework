@@ -8,31 +8,34 @@
 #ifndef DAEMON_H_
 #define DAEMON_H_
 
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <linux/socket.h>
+#include <linux/netlink.h>
+#include <linux/if_ether.h>
+#include <linux/ip.h>
+#include <linux/tcp.h> //TODO remove?
+#include <math.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <net/if.h>
+#include <poll.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <errno.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <net/if.h>
-#include <poll.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
-#include <math.h>
+#include <unistd.h>
 
-#include <linux/netlink.h>
-#include <linux/if_ether.h>
-#include <pthread.h>
 /** additional header for queues */
 #include <queueModule.h>
 /**additional headers for testing */
@@ -40,10 +43,6 @@
 /** Additional header for meta-data manipulation */
 #include <metadata.h>
 //#include "arp.c"
-
-/* to handle forking + pipes operations */
-#include <unistd.h>
-#include <sys/types.h>
 
 /** FINS Sockets database related defined constants */
 #define MAX_SOCKETS 100
@@ -78,15 +77,19 @@
 #define shutdown_call 16
 #define close_call 17
 #define sendpage_call 18
+
+//only sent from daemon to wedge
 #define daemon_start_call 19
 #define daemon_stop_call 20
+#define poll_event_call 21
+
 /** Additional calls
  * To hande special cases
  * overwriting the generic functions which write to a socket descriptor
  * in order to make sure that we cover as many applications as possible
  * This range of these functions will start from 30
  */
-#define MAX_CALL_TYPES 21
+#define MAX_CALL_TYPES 22
 
 //fins netlink stuff
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
@@ -95,7 +98,7 @@ struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destinatio
 int nl_sockfd; //temp for now
 sem_t nl_sem;
 
-enum sockOptions {
+enum sol_sockOptions {
 
 	FSO_DEBUG = 1,
 	FSO_REUSEADDR,
@@ -128,8 +131,9 @@ enum sockOptions {
 
 };
 
-struct socket_Options {
+struct socket_options { //TODO change to common opts, then union of structs for ICMP/UDP/TCP
 
+	//SOL_SOCKET stuff
 	int FSO_DEBUG;
 	int FSO_REUSEADDR;
 	int FSO_TYPE;
@@ -165,6 +169,18 @@ struct socket_Options {
 	int FSO_RXQ_OVFL;
 	int FSO_ATTACH_FILTER;
 	int FSO_DETACH_FILTER;
+
+	//SOL_IP stuff
+	int FIP_TOS;
+	int FIP_TTL;
+	int FIP_RECVERR;
+	int FIP_RECVTTL;
+
+	//SOL_RAW stuff
+	int FICMP_FILTER;
+
+	//SOL_TCP stuff;
+	int FTCP_NODELAY;
 };
 
 struct tcp_Parameters {
@@ -193,28 +209,26 @@ void daemon_stop_timer(int fd);
 void daemon_start_timer(int fd, double millis);
 
 struct nl_wedge_to_daemon {
-	uint64_t sock_id; //TODO when ironed out remove uID or index, prob uID
+	uint64_t sock_id;
 	int sock_index;
 
 	uint32_t call_type;
-	int call_threads;
+	int call_pid;
 
-	uint32_t call_id; //TODO when ironed out remove id or index
+	uint32_t call_id;
 	int call_index;
-
-	int pid;
 };
 
 struct nl_daemon_to_wedge {
 	uint32_t call_type;
 
 	union {
-		uint32_t call_id; //TODO when ironed out remove id or index
-		uint64_t sock_id; //TODO when ironed out remove uID & index
+		uint32_t call_id;
+		uint64_t sock_id; //TODO currently unused, remove if never needed
 	};
 	union {
 		int call_index;
-		int sock_index;
+		int sock_index; //TODO currently unused, remove if never needed
 	};
 
 	uint32_t ret;
@@ -226,6 +240,8 @@ struct daemon_call {
 
 	uint32_t call_id;
 	int call_index;
+
+	int call_pid;
 	uint32_t call_type;
 
 	uint64_t sock_id;
@@ -245,10 +261,10 @@ struct daemon_call {
 	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 };
 
-struct daemon_call *call_create(uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index);
+struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index);
 void call_free(struct daemon_call *call);
 
-int daemon_calls_insert(uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index);
+int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index);
 int daemon_calls_find(uint32_t serialNum);
 void daemon_calls_remove(int call_index);
 void daemon_calls_shutdown(int call_index);
@@ -260,13 +276,14 @@ struct daemon_call_list {
 	uint32_t len;
 };
 
-#define DAEMON_CALL_LIST_MAX 20
+#define DAEMON_CALL_LIST_MAX 30
 
 struct daemon_call_list *call_list_create(uint32_t max);
 void call_list_append(struct daemon_call_list *call_list, struct daemon_call *call);
-struct daemon_call *call_list_find(struct daemon_call_list *call_list, uint32_t serialNum);
+struct daemon_call *call_list_find(struct daemon_call_list *call_list, int call_pid, uint32_t call_type, uint64_t sock_id);
 struct daemon_call *call_list_remove_front(struct daemon_call_list *call_list);
 void call_list_remove(struct daemon_call_list *call_list, struct daemon_call *call);
+int call_list_check(struct daemon_call_list *call_list);
 int call_list_is_empty(struct daemon_call_list *call_list);
 int call_list_has_space(struct daemon_call_list *call_list);
 void call_list_free(struct daemon_call_list *call_list);
@@ -281,14 +298,13 @@ struct daemon_socket {
 
 	uint64_t sock_id;
 	socket_state state;
+	uint8_t bound;
 
 	int type;
 	int protocol;
 
 	int listening;
 	int backlog;
-
-	//pid_t childrenList[MaxChildrenNumSharingSocket]; //TODO remove or implement? not used
 
 	/** check the opt_name to find which bit to access in the options variable then use
 	 * the following code to handle the bits individually
@@ -298,9 +314,7 @@ struct daemon_socket {
 	 * Checking a bit      value = number & (1 << x);
 	 */
 	//uint32_t socketoptions;
-	struct socket_Options sockopts;
-	int blockingFlag;
-	//struct tcp_Parameters tcpParameters;
+	struct socket_options sockopts;
 
 	/** All the above already initialized using the insert function
 	 * the remaining below is handled using the update function*/
@@ -309,9 +323,14 @@ struct daemon_socket {
 	uint32_t dst_ip; //host format
 	uint16_t dst_port; //host format
 
-	finsQueue dataQueue;
-	int buf_data;
-	sem_t data_sem; //TODO remove? not used or tie calls to this sem somehow
+	finsQueue data_queue;
+	int data_buf;
+	//sem_t data_sem; //TODO remove? not used or tie calls to this sem somehow
+	struct timeval stamp;
+
+	finsQueue error_queue;
+	int error_buf;
+	//sem_t error_sem; //TODO remove? not used or tie calls to this sem somehow
 
 	struct daemon_call_list *call_list;
 };
@@ -334,8 +353,6 @@ int randoming(int min, int max);
 #endif
 
 //#define MAIN_SOCKET_CHANNEL FINS_TMP_ROOT "/mainsocket_channel"
-//#define CLIENT_CHANNEL_TX FINS_TMP_ROOT "/uniqueSockID_%llu_TX"
-//#define CLIENT_CHANNEL_RX FINS_TMP_ROOT "/uniqueSockID_%llu_RX"
 #define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
@@ -368,24 +385,31 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
 void close_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
 void sendpage_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
 
+void connect_interrupt();
+void accept_interrupt();
+void sendmsg_interrupt();
+void recvmsg_interrupt();
+void poll_interrupt();
+
 void daemon_init(void);
 void daemon_run(pthread_attr_t *fins_pthread_attr);
 void daemon_shutdown(void);
 void daemon_release(void);
-void daemon_get_ff(void);
+
 int daemon_to_switch(struct finsFrame *ff);
 
-void daemon_out_fdf(struct finsFrame *ff);
-void daemon_in_fdf(struct finsFrame *ff);
+void daemon_get_ff(void);
 
 void daemon_fcf(struct finsFrame *ff);
 void daemon_read_param_reply(struct finsFrame *ff);
 void daemon_set_param_reply(struct finsFrame *ff);
 void daemon_exec_reply(struct finsFrame *ff);
+void daemon_error(struct finsFrame *ff);
 
-#include "udpHandling.h"
-#include "tcpHandling.h"
-#include "icmpHandling.h"
+void daemon_in_fdf(struct finsFrame *ff);
+void daemon_out_fdf(struct finsFrame *ff);
+
+void daemon_interrupt(void);
 
 //TODO standardize these, so that there aren't different ones for each proto
 #define EXEC_TCP_CONNECT 0
@@ -397,5 +421,12 @@ void daemon_exec_reply(struct finsFrame *ff);
 #define EXEC_TCP_CLOSE_STUB 6
 #define EXEC_TCP_OPT 7
 #define EXEC_TCP_POLL 8
+
+#define ERROR_ICMP_TTL 0
+#define ERROR_ICMP_DEST_UNREACH 1
+
+#include "udpHandling.h"
+#include "tcpHandling.h"
+#include "icmpHandling.h"
 
 #endif /* DAEMON_H_ */

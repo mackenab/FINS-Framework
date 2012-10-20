@@ -249,11 +249,11 @@ struct arp_request_list *request_list_create(uint32_t max) {
 		exit(-1);
 	}
 
-	request_list->front = NULL;
-	request_list->end = NULL;
-
 	request_list->max = max;
 	request_list->len = 0;
+
+	request_list->front = NULL;
+	request_list->end = NULL;
 
 	PRINT_DEBUG("Exited: max=%u, request_list=%p", max, request_list);
 	return request_list;
@@ -340,7 +340,7 @@ void *arp_to_thread(void *local) {
 		}
 		if (ret != sizeof(uint64_t)) {
 			//read error
-			PRINT_DEBUG("Read error: id=%d fd=%d", id, fd);
+			PRINT_ERROR("Read error: id=%d fd=%d", id, fd);
 			continue;
 		}
 
@@ -683,7 +683,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	}
 	metadata_create(params);
 
-	uint32_t ether_type = ARP_TYPE;
+	uint16_t ether_type = ARP_TYPE;
 	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
 	metadata_writeToElement(params, "dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
 	metadata_writeToElement(params, "src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
@@ -691,7 +691,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
 		PRINT_ERROR("failed to create ff: msg=%p meta=%p", msg, params);
-		metadata_destroy(params);
+		//metadata_destroy(params);
 		exit(-1);
 	}
 
@@ -703,10 +703,9 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	ff->dataFrame.directionFlag = DOWN;
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
 	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
-
 	if (ff->dataFrame.pdu == NULL) {
 		PRINT_ERROR("failed to create pdu: msg=%p meta=%p", msg, params);
-		freeFinsFrame(ff);
+		//freeFinsFrame(ff);
 		exit(-1);
 	}
 
@@ -722,12 +721,12 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	MAC_addrs_conversion(msg->target_MAC_addrs, hdr->target_MAC_addrs);
 	IP_addrs_conversion(msg->target_IP_addrs, hdr->target_IP_addrs);
 
-	PRINT_DEBUG("Exited: msg=%p ff=%p meta=%p", msg, ff, ff->metaData);
+	PRINT_DEBUG("Exited: msg=%p, ff=%p, meta=%p", msg, ff, ff->metaData);
 	return ff;
 }
 
 struct arp_message *fdf_to_arp(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p", ff);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	if (ff->dataFrame.pduLength < sizeof(struct arp_hdr)) {
 		PRINT_DEBUG("pdu len smaller than ARP header: hdr_len=%u, pdu_len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
@@ -744,10 +743,10 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
 	//TODO change? such that sender_mac is uint64_t
-	unsigned char *sender_mac = hdr->sender_MAC_addrs;
-	unsigned char *sender_ip = hdr->sender_IP_addrs;
-	unsigned char *target_mac = hdr->target_MAC_addrs;
-	unsigned char *target_ip = hdr->target_IP_addrs;
+	u_char *sender_mac = hdr->sender_MAC_addrs;
+	u_char *sender_ip = hdr->sender_IP_addrs;
+	u_char *target_mac = hdr->target_MAC_addrs;
+	u_char *target_ip = hdr->target_IP_addrs;
 
 	msg->hardware_type = ntohs(hdr->hardware_type);
 	msg->protocol_type = ntohs(hdr->protocol_type);
@@ -763,7 +762,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
 			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
-	PRINT_DEBUG("Exited: ff=%p meta=%p msg=%p ", ff, ff->metaData, msg);
+	PRINT_DEBUG("Exited: ff=%p, meta=%p, msg=%p ", ff, ff->metaData, msg);
 	return msg;
 }
 
@@ -790,20 +789,22 @@ void arp_get_ff(void) {
 				PRINT_DEBUG("");
 			} else { //directionFlag==DOWN
 				//arp_out_fdf(ff); //TODO remove?
-				PRINT_DEBUG("todo error");
+				PRINT_ERROR("todo error");
 			}
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 		}
 	} else if (arp_interrupt_flag) {
 		arp_interrupt_flag = 0;
 
 		arp_interrupt();
+	} else {
+		PRINT_ERROR("todo error");
 	}
 }
 
 void arp_fcf(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p", ff);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
@@ -847,39 +848,48 @@ void arp_fcf(struct finsFrame *ff) {
 
 void arp_exec(struct finsFrame *ff) {
 	int ret = 0;
-	uint32_t exec_call = 0;
 	uint32_t dst_ip = 0;
 	uint32_t src_ip = 0;
 
-	PRINT_DEBUG("Entered: ff=%p", ff);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	metadata *params = ff->metaData;
 	if (params) {
-		ret = metadata_readFromElement(params, "exec_call", &exec_call) == CONFIG_FALSE;
-		switch (exec_call) {
+		switch (ff->ctrlFrame.param_id) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("exec_call=EXEC_ARP_GET_ADDR (%d)", exec_call);
+			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
 			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
 			ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+
+				ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+				ff->ctrlFrame.senderID = ARP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+				ff->ctrlFrame.ret_val = 0;
+
+				arp_to_switch(ff);
 			} else {
 				arp_exec_get_addr(ff, dst_ip, src_ip);
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown exec_call=%d", exec_call);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
 		}
 	} else {
-		//TODO send nack
 		PRINT_ERROR("Error fcf.metadata==NULL");
-		freeFinsFrame(ff);
+
+		ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+		ff->ctrlFrame.senderID = ARP_ID;
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
+		arp_to_switch(ff);
 	}
 }
 
@@ -900,7 +910,7 @@ void arp_interrupt(void) {
 
 /**@brief to be completed. A fins frame is written to the 'wire'*/
 int arp_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 	if (sem_wait(&ARP_to_Switch_Qsem)) {
 		PRINT_ERROR("ARP_to_Switch_Qsem wait prob");
 		exit(-1);
@@ -918,6 +928,8 @@ int arp_to_switch(struct finsFrame *ff) {
 }
 
 void *switch_to_arp(void *local) {
+	PRINT_DEBUG("Entered");
+
 	while (arp_running) {
 		arp_get_ff();
 		PRINT_DEBUG("");
@@ -982,7 +994,24 @@ void arp_shutdown(void) {
 
 void arp_release(void) {
 	PRINT_DEBUG("Entered");
+
 	//TODO free all module related mem
+
+	struct arp_interface *interface;
+	while (!interface_list_is_empty()) {
+		interface = interface_list;
+		interface_list_remove(interface);
+		interface_free(interface);
+	}
+
+	struct arp_cache *cache;
+	while (!cache_list_is_empty()) {
+		cache = cache_list;
+		cache_list_remove(cache);
+
+		cache_shutdown(cache);
+		cache_free(cache);
+	}
 
 	term_queue(ARP_to_Switch_Queue);
 	term_queue(Switch_to_ARP_Queue);

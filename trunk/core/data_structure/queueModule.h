@@ -42,7 +42,7 @@ struct finsFrame * buildFinsFrame(void);
 
 int freeFinsFrame(struct finsFrame *f);
 
-void cpy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
+void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
 
 void print_finsFrame(struct finsFrame *fins_in);
 

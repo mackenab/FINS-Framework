@@ -12,8 +12,8 @@ extern struct ip4_stats stats;
 
 //extern struct ip4_packet *construct_packet_buffer;
 void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t protocol) {
+	PRINT_DEBUG("Entered: ff=%p, meta=%p, len=%u, src=%lu, proto=%u", ff, ff->metaData, length, source, protocol);
 
-	PRINT_DEBUG("");
 	//print_finsFrame(ff);
 	//char *data = (char *) ((ff->dataFrame).pdu);
 	PRINT_DEBUG("");
@@ -35,12 +35,25 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t prot
 	ret += metadata_readFromElement(ff->metaData, "dst_ip", &destination) == CONFIG_FALSE;
 
 	if (ret) {
+		PRINT_ERROR("todo error");
+
 		//TODO error
 	}
 
 	PRINT_DEBUG("");
 
 	IP4_const_header(construct_packet_buffer, source, destination, protocol);
+
+	uint32_t ttl;
+	if (metadata_readFromElement(ff->metaData, "ttl", &ttl) == CONFIG_TRUE) {
+		construct_packet_buffer->ip_ttl = ttl;
+	}
+
+	uint32_t tos;
+	if (metadata_readFromElement(ff->metaData, "tos", &tos) == CONFIG_TRUE) {
+		//TODO
+	}
+
 	PRINT_DEBUG("");
 	/** TODO
 	 * finding out what is wrong with the fragmentation and reimplement it
@@ -90,7 +103,7 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t prot
 		//print_finsFrame(ff);
 		IP4_send_fdf_out(ff, construct_packet_buffer, next_hop, length);
 	} else {
-		PRINT_DEBUG("No route to the destination, packet discarded");
+		PRINT_ERROR("No route to the destination, packet discarded");
 		freeFinsFrame(ff);
 	}
 }

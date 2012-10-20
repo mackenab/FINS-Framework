@@ -40,4 +40,6 @@ metadata_element *metadata_addElement(metadata *cfgptr, char *elementName,
 		int type);
 int metadata_print(metadata *cfgptr);
 
+int metadata_copy(metadata *cfgptr, metadata *cfgptr_copy);
+
 #endif /* METADATA_H_ */

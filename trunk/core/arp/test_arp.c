@@ -261,9 +261,9 @@ void fins_from_stub(struct finsFrame *fins_frame) {
 	fins_frame->dataOrCtrl = CONTROL;
 	fins_frame->destinationID.id = ARP_ID;
 	fins_frame->ctrlFrame.opcode = 333/*WRITEREQUEST*/;
-	fins_frame->ctrlFrame.serialNum = 123;
+	fins_frame->ctrlFrame.serial_num = 123;
 	fins_frame->ctrlFrame.senderID = (unsigned char) INTERFACE_ID;
-	fins_frame->ctrlFrame.paramterValue = IP_addrs;
+	//fins_frame->ctrlFrame.paramterValue = IP_addrs;
 }
 
 void test_to_arp(struct finsFrame *fins_frame) {

@@ -23,11 +23,7 @@
 #include <tcp.h>
 #include <icmp.h>
 #include <rtm.h>
-#include <sys/types.h>
 #include <signal.h>
-//#include <stdlib.h> //added
-//#include <stdio.h> //added
-//kernel stuff
 
 /**
  * TODO free and close/DESTORY all the semaphores before exit !!!
@@ -70,11 +66,11 @@ int read_configurations() {
 void termination_handler(int sig) {
 	PRINT_DEBUG("**********Terminating *******");
 
-	//TODO shutdown all module threads in backwards order of startup
+	//shutdown all module threads in backwards order of startup
 	//rtm_shutdown();
-	icmp_shutdown();
-	tcp_shutdown();
 	udp_shutdown();
+	tcp_shutdown();
+	icmp_shutdown();
 	ipv4_shutdown();
 	arp_shutdown();
 
@@ -82,11 +78,11 @@ void termination_handler(int sig) {
 	daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
 
-	//TODO move que/sem free to module
+	//have each module free data & que/sem //TODO finish each of these
 	//rtm_release();
-	icmp_release();
-	tcp_release();
 	udp_release();
+	tcp_release();
+	icmp_release();
 	ipv4_release();
 	arp_release();
 
@@ -98,10 +94,9 @@ void termination_handler(int sig) {
 	exit(-1);
 }
 
-extern sem_t control_serial_sem;
+extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
 int main() {
-
 	//set ip, loopback, etc //TODO do this from config file eventually
 	my_host_mac_addr = 0x080027445566;
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
@@ -118,7 +113,7 @@ int main() {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
 		} else {
-			PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
+			PRINT_ERROR("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
 			exit(-1);
 		}
 	}
@@ -126,7 +121,7 @@ int main() {
 		if (errno == EEXIST) {
 			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) already exists.");
 		} else {
-			PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) failed.");
+			PRINT_ERROR("mkfifo(" RTM_PIPE_OUT ", 0777) failed.");
 			exit(-1);
 		}
 	}
@@ -226,26 +221,10 @@ int main() {
 	ipv4_init();
 	set_interface(my_host_ip_addr, my_host_mask);
 
-	udp_init();
+	icmp_init();
 	tcp_init();
+	udp_init();
 	//rtm_init();
-
-	/*	//####
-	 struct ip4_next_hop_info hop1 = IP4_next_hop(IP4_ADR_P2H(192,168,1,20));
-	 struct ip4_next_hop_info hop2 = IP4_next_hop(IP4_ADR_P2H(192,168,1,5));
-	 struct ip4_next_hop_info hop3 = IP4_next_hop(IP4_ADR_P2H(192,168,1,1));
-	 struct ip4_next_hop_info hop4 = IP4_next_hop(IP4_ADR_P2H(169,254,158,90));
-	 struct ip4_next_hop_info hop5 = IP4_next_hop(IP4_ADR_P2H(127,0,0,1));
-
-	 char str1[5], str2[5];
-
-	 PRINT_DEBUG("1 hop=%lu %lu", IP_addrs_conversion(hop1.address, &str1), IP_addrs_conversion(hop1.interface, &str2));
-	 PRINT_DEBUG("2 hop=%lu %lu", hop2.address, hop2.interface);
-	 PRINT_DEBUG("3 hop=%lu %lu", hop3.address, hop3.interface);
-	 PRINT_DEBUG("4 hop=%lu %lu", hop4.address, hop4.interface);
-	 PRINT_DEBUG("5 hop=%lu %lu", hop5.address, hop5.interface);
-	 return 0;
-	 //####		*/
 
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
@@ -256,9 +235,9 @@ int main() {
 	interface_run(&fins_pthread_attr);
 	arp_run(&fins_pthread_attr);
 	ipv4_run(&fins_pthread_attr);
-	udp_run(&fins_pthread_attr);
-	tcp_run(&fins_pthread_attr);
 	icmp_run(&fins_pthread_attr);
+	tcp_run(&fins_pthread_attr);
+	udp_run(&fins_pthread_attr);
 	//rtm_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
@@ -268,15 +247,10 @@ int main() {
 		gets(recv_data);
 
 		PRINT_DEBUG("Sending ARP req");
-		struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-		if (ff_req == NULL) {
-			PRINT_ERROR("todo error");
-			exit(-1);
-		}
 
 		metadata *params_req = (metadata *) malloc(sizeof(metadata));
 		if (params_req == NULL) {
-			PRINT_ERROR("failed to create matadata: ff=%p", ff_req);
+			PRINT_ERROR("metadata alloc fail");
 			exit(-1);
 		}
 		metadata_create(params_req);
@@ -286,10 +260,15 @@ int main() {
 		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
 		//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
 
-		uint32_t exec_call = EXEC_ARP_GET_ADDR;
-		metadata_writeToElement(params_req, "exec_call", &exec_call, META_TYPE_INT);
 		metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT);
 		metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT);
+
+		struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+		if (ff_req == NULL) {
+			PRINT_ERROR("todo error");
+			//metadata_destroy(params_req);
+			exit(-1);
+		}
 
 		ff_req->dataOrCtrl = CONTROL;
 		ff_req->destinationID.id = ARP_ID;
@@ -297,8 +276,9 @@ int main() {
 		ff_req->metaData = params_req;
 
 		ff_req->ctrlFrame.senderID = IP_ID;
-		ff_req->ctrlFrame.serialNum = gen_control_serial_num();
+		ff_req->ctrlFrame.serial_num = gen_control_serial_num();
 		ff_req->ctrlFrame.opcode = CTRL_EXEC;
+		ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
 
 		arp_to_switch(ff_req); //doesn't matter which queue
 	}

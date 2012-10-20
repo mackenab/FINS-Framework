@@ -41,7 +41,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//load buffer
 
-//	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID.id + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.senderID) + itoa(ff->ctrlFrame.serialNum) + sizeof((char)ff->ctrlFrame.data)))
+//	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID.id + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.senderID) + itoa(ff->ctrlFrame.serial_num) + sizeof((char)ff->ctrlFrame.data)))
 
 	PRINT_DEBUG("In serializeCtrlFrame!")
 
@@ -49,7 +49,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//initialize buffer
 
-	int buf_size = strlen((char *) ff->ctrlFrame.data) + strlen((char *) ff->ctrlFrame.name) + 3 * sizeof(unsigned char) + 2 * sizeof(int)
+	int buf_size = strlen((char *) ff->ctrlFrame.data_old) + strlen((char *) ff->ctrlFrame.name) + 3 * sizeof(unsigned char) + 2 * sizeof(int)
 			+ sizeof(unsigned short int) + sizeof(unsigned int);
 
 	//PRINT_DEBUG("SIZE OF BUF_SIZE = %d", buf_size);
@@ -104,7 +104,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 	*buffer += sizeof(unsigned char);
 
 	//SERIALNUM
-	memcpy((unsigned char *) *buffer, &(ff->ctrlFrame.serialNum), sizeof(unsigned int));
+	memcpy((unsigned char *) *buffer, &(ff->ctrlFrame.serial_num), sizeof(unsigned int));
 	//PRINT_DEBUG("buffer6: %s", *buffer);
 
 	*buffer += sizeof(unsigned int);
@@ -127,14 +127,14 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	case CTRL_SET_PARAM:
 		//send size of data first
-		temp = strlen((char *) (ff->ctrlFrame.data));
+		temp = strlen((char *) (ff->ctrlFrame.data_old));
 		memcpy((unsigned char *) *buffer, &temp, sizeof(int));
 
 		//increment buffer
 		*buffer += sizeof(int);
 
 		//send data itself
-		memcpy(*buffer, (char *) (ff->ctrlFrame.data), temp);
+		memcpy(*buffer, (char *) (ff->ctrlFrame.data_old), temp);
 		//PRINT_DEBUG("CSP: buffer7 = %s, temp = %d, data = %s", *buffer,temp,((char *)(ff->ctrlFrame.data)));
 		break;
 
@@ -207,8 +207,8 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	buffer += sizeof(unsigned char);
 
 	//SERIALNUM
-	memcpy(&(ff->ctrlFrame.serialNum), (unsigned char *) buffer, sizeof(unsigned int));
-	//PRINT_DEBUG("buffer6 = %s, serialNum = %d", buffer,ff->ctrlFrame.serialNum);
+	memcpy(&(ff->ctrlFrame.serial_num), (unsigned char *) buffer, sizeof(unsigned int));
+	//PRINT_DEBUG("buffer6 = %s, serial_num = %d", buffer,ff->ctrlFrame.serial_num);
 	buffer += sizeof(unsigned int);
 
 	//DATA
@@ -242,8 +242,8 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 		//PRINT_DEBUG("CSP: buffer6.5 = %s", buffer);
 
 		//retrieve data itself
-		ff->ctrlFrame.data = malloc(temp);
-		memcpy((char *) (ff->ctrlFrame.data), buffer, temp);
+		ff->ctrlFrame.data_old = malloc(temp);
+		memcpy((char *) (ff->ctrlFrame.data_old), buffer, temp);
 		//PRINT_DEBUG("CSP: buffer7 = %s, temp = %d, data = %s", buffer, temp,(char *)(ff->ctrlFrame.data));
 		break;
 
@@ -262,6 +262,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
+	//TODO replace this with a random number generator
 	sem_wait(&control_serial_sem);
 	num = ++control_serial_num;
 	sem_post(&control_serial_sem);

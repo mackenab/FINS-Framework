@@ -12,14 +12,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <linux/rtnetlink.h> 	// RT... stuff
-#include <unistd.h>  			// getpid(), getppid()
+#include <linux/rtnetlink.h>
+#include <unistd.h>
 #include <inttypes.h>
 #include <netinet/in.h>
-//#include <stdarg.h>
 #include <pthread.h>
 #include <finstypes.h>
 #include <finsdebug.h>
+#include <queueModule.h>
 
 /* Internet Protocol (IP)  Constants and Datagram Format		*/
 
@@ -221,18 +221,18 @@ struct ip4_next_hop_info {
 
 struct ip4_store {
 	struct ip4_store *next;
-	uint32_t serialNum;
+	uint32_t serial_num;
 	struct finsFrame *ff;
 	u_char *pdu;
 };
 
-struct ip4_store *store_create(uint32_t serialNum, struct finsFrame *ff, u_char *pdu);
+struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, u_char *pdu);
 void store_free(struct ip4_store *store);
 
 #define IP4_STORE_LIST_MAX 200
 
 int store_list_insert(struct ip4_store *store);
-struct ip4_store *store_list_find(uint32_t serialNum);
+struct ip4_store *store_list_find(uint32_t serial_num);
 void store_list_remove(struct ip4_store *store);
 int store_list_is_empty(void);
 int store_list_has_space(void);
@@ -276,6 +276,9 @@ void IP4_receive_fdf();
 
 void ipv4_fcf(struct finsFrame *ff);
 void ipv4_exec_reply(struct finsFrame *ff);
+void ipv4_error(struct finsFrame *ff);
+
+
 #define EXEC_ARP_GET_ADDR 0
 
 int InputQueue_Read_local(struct finsFrame *pff);

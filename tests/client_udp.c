@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
 	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
-	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
@@ -55,10 +55,10 @@ int main(int argc, char *argv[]) {
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
-	server_addr.sin_family = AF_INET;
+	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
 
-	server_addr.sin_addr.s_addr = xxx(172,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	bzero(&(server_addr.sin_zero), 8);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		client_port = 55555;
 	}
-	client_addr.sin_family = AF_INET;
+	client_addr.sin_family = PF_INET;
 	client_addr.sin_port = htons(client_port);
 
 	//client_addr.sin_addr.s_addr = xxx(127,0,0,1);

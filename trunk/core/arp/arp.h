@@ -107,13 +107,13 @@ struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint3
 void request_free(struct arp_request *request);
 
 struct arp_request_list {
-	struct arp_request *front;
-	struct arp_request *end;
 	uint32_t max;
 	uint32_t len;
+	struct arp_request *front;
+	struct arp_request *end;
 };
 
-#define ARP_REQUEST_LIST_MAX 2 //TODO chang back
+#define ARP_REQUEST_LIST_MAX 50
 
 struct arp_request_list *request_list_create(uint32_t max);
 void request_list_append(struct arp_request_list *request_list, struct arp_request *request);
@@ -162,8 +162,7 @@ struct arp_cache *cache_create(uint32_t ip_addr);
 void cache_shutdown(struct arp_cache *cache);
 void cache_free(struct arp_cache *cache);
 
-#define ARP_CACHE_LIST_MAX 1 //TODO change back
-
+#define ARP_CACHE_LIST_MAX 50
 int cache_list_insert(struct arp_cache *cache);
 struct arp_cache *cache_list_find(uint32_t ip_addr);
 void cache_list_remove(struct arp_cache *cache);

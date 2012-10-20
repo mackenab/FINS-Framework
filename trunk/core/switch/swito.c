@@ -141,6 +141,7 @@ void Queues_init(void) { //TODO split & move to each module, when registration i
 }
 
 void *switch_loop(void *local) {
+	PRINT_DEBUG("Entered");
 
 	int i;
 	struct finsFrame *ff;
@@ -158,59 +159,59 @@ void *switch_loop(void *local) {
 
 			if (ff != NULL) {
 				counter++;
-				PRINT_DEBUG("Counter %d", counter);
+				//PRINT_DEBUG("Counter %d", counter);
 
 				switch (ff->destinationID.id) {
 				case ARP_ID:
-					PRINT_DEBUG("ARP Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to ARP Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_ARP_Qsem);
 					write_queue(ff, Switch_to_ARP_Queue);
 					sem_post(&Switch_to_ARP_Qsem);
 					break;
 				case RTM_ID:
-					PRINT_DEBUG("RTM Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to RTM Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_RTM_Qsem);
 					write_queue(ff, Switch_to_RTM_Queue);
 					sem_post(&Switch_to_RTM_Qsem);
 					break;
 				case DAEMON_ID:
-					PRINT_DEBUG("Daemon Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to Daemon Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_Daemon_Qsem);
 					write_queue(ff, Switch_to_Daemon_Queue);
 					sem_post(&Switch_to_Daemon_Qsem);
 					break;
 				case UDP_ID:
-					PRINT_DEBUG("UDP Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to UDP Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_UDP_Qsem);
 					write_queue(ff, Switch_to_UDP_Queue);
 					sem_post(&Switch_to_UDP_Qsem);
 					break;
 				case TCP_ID:
-					PRINT_DEBUG("TCP Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to TCP Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_TCP_Qsem);
 					write_queue(ff, Switch_to_TCP_Queue);
 					sem_post(&Switch_to_TCP_Qsem);
 					break;
 				case IPV4_ID:
-					PRINT_DEBUG("IP Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to IPv4 Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_IPv4_Qsem);
 					write_queue(ff, Switch_to_IPv4_Queue);
 					sem_post(&Switch_to_IPv4_Qsem);
 					break;
 				case INTERFACE_ID:
-					PRINT_DEBUG("EtherStub Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to Interface Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_Interface_Qsem);
 					write_queue(ff, Switch_to_Interface_Queue);
 					sem_post(&Switch_to_Interface_Qsem);
 					break;
 				case ICMP_ID:
-					PRINT_DEBUG("ICMP Queue +1, ff=%p", ff);
+					PRINT_DEBUG("Counter=%d, from='%s' to ICMP Queue +1, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					sem_wait(&Switch_to_ICMP_Qsem);
 					write_queue(ff, Switch_to_ICMP_Queue);
 					sem_post(&Switch_to_ICMP_Qsem);
 					break;
 				default:
-					PRINT_DEBUG("Unknown Destination");
+					PRINT_DEBUG("Counter=%d, from='%s' to Unknown Dest, ff=%p, meta=%p", counter, modules_IO_queues[i]->name, ff, ff->metaData);
 					freeFinsFrame(ff);
 					break;
 				} // end of Switch statement

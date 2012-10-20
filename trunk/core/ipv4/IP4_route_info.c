@@ -189,14 +189,26 @@ struct ip4_routing_table * IP4_get_routing_table_old() {
 }
 
 struct ip4_routing_table * IP4_get_routing_table() {
-	struct ip4_routing_table * routing_table;
-	struct ip4_routing_table * row0;
-	struct ip4_routing_table * row1;
-	struct ip4_routing_table * row2;
+	struct ip4_routing_table *routing_table;
+	struct ip4_routing_table *row0;
+	struct ip4_routing_table *row1;
+	struct ip4_routing_table *row2;
 
 	row0 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	if (row0 == NULL) {
+		PRINT_ERROR("table alloc fail");
+		exit(-1);
+	}
 	row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	if (row1 == NULL) {
+		PRINT_ERROR("table alloc fail");
+		exit(-1);
+	}
 	row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	if (row2 == NULL) {
+		PRINT_ERROR("table alloc fail");
+		exit(-1);
+	}
 
 	if (1) {
 		row0->dst = IP4_ADR_P2H(192,168,1,0);

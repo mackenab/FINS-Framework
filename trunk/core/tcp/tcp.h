@@ -82,11 +82,11 @@ void node_free(struct tcp_node *node);
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
 struct tcp_queue {
-	struct tcp_node *front;
-	struct tcp_node *end;
+	//sem_t sem; //TODO remove, not used anymore
 	uint32_t max;
 	uint32_t len;
-	sem_t sem; //TODO remove, not used anymore
+	struct tcp_node *front;
+	struct tcp_node *end;
 };
 
 struct tcp_queue *queue_create(uint32_t max);
@@ -123,8 +123,8 @@ struct tcp_connection_stub {
 };
 
 struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_port, uint32_t backlog);
-//int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val);
-int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
+//int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t param_id, uint32_t ret_val);
+int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 void conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
 void conn_stub_free(struct tcp_connection_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
@@ -339,7 +339,8 @@ struct tcp_connection {
 #define TCP_DELAYED_TO_DEFAULT 200
 #define TCP_MAX_SEQ_NUM 4294967295.0
 #define TCP_MAX_WINDOW_DEFAULT 8191
-#define TCP_MSS_DEFAULT 1460 //also said to be, 536
+#define TCP_MSS_DEFAULT_LARGE 1460 //also said to be, 536
+#define TCP_MSS_DEFAULT_SMALL 536 //also said to be, 536
 #define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO
 #define TCP_KA_TO_DEFAULT 7200000 //keep alive TO
 #define TCP_SEND_MIN 4096
@@ -371,9 +372,9 @@ struct tcp_connection {
 #define TCP_TS_BYTES 10
 
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-//int conn_send_jinni(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val);
-int conn_send_daemon(struct tcp_connection *conn, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
-int conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t exec_call, uint32_t ret_val, uint32_t ret_msg);
+//int conn_send_jinni(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val);
+int conn_send_daemon(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_msg);
 void conn_shutdown(struct tcp_connection *conn);
 void conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
@@ -460,8 +461,8 @@ void tcp_shutdown(void);
 void tcp_release(void);
 void tcp_get_ff(void);
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
-int tcp_fcf_to_daemon(uint32_t status, uint32_t exec_call, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
-int tcp_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_fcf_to_daemon(uint32_t status, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
+int tcp_fdf_to_daemon(u_char *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
 #define EXEC_TCP_CONNECT 0
@@ -480,10 +481,14 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 #define READ_PARAM_TCP_HOST_WINDOW 0
 #define READ_PARAM_TCP_SOCK_OPT 1
 
+#define ERROR_ICMP_TTL 0
+#define ERROR_ICMP_DEST_UNREACH 1
+
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
 void tcp_fcf(struct finsFrame *ff);
 void tcp_exec(struct finsFrame *ff);
+void tcp_error(struct finsFrame *ff);
 
 int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);

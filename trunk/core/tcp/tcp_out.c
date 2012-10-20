@@ -118,11 +118,11 @@ void *write_thread(void *local) {
 					//conn_send_daemon(conn, EXEC_TCP_SEND, 1, 0);
 					conn_send_fcf(conn, serial_num, EXEC_TCP_SEND, 1, called_len);
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 					//TODO error  //TODO remove - can't ever happen?
 				}
 			} else {
-				/*#*/PRINT_DEBUG("todo error");
+				/*#*/PRINT_ERROR("todo error");
 				//send NACK to send handler
 				//conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
 				conn_send_fcf(conn, serial_num, EXEC_TCP_SEND, 0, 1);
@@ -131,7 +131,7 @@ void *write_thread(void *local) {
 			free(called_data);
 		} else {
 			//TODO error, send/write'ing when conn sending is closed
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			//send NACK to send handler
 			//conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
 			conn_send_fcf(conn, serial_num, EXEC_TCP_SEND, 0, 1);
@@ -139,7 +139,7 @@ void *write_thread(void *local) {
 			free(called_data);
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//send NACK to send handler
 		//conn_send_daemon(conn, EXEC_TCP_SEND, 0, 1);
 		conn_send_fcf(conn, serial_num, EXEC_TCP_SEND, 0, 1);
@@ -170,29 +170,29 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	//receiving straight data from the APP layer, process/package into segment
 	uint32_t src_ip;
 	uint32_t dst_ip;
-	uint32_t src_port;
-	uint32_t dst_port;
+	uint16_t src_port;
+	uint16_t dst_port;
 
 	uint32_t flags;
 	uint32_t serial_num;
 
-	PRINT_DEBUG("Entered: ff=%p", ff);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata* meta = ff->metaData;
+	metadata *params = ff->metaData;
 
 	int ret = 0;
-	ret += metadata_readFromElement(meta, "flags", &flags) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
 
-	ret += metadata_readFromElement(meta, "src_ip", &src_ip) == CONFIG_FALSE; //host
-	ret += metadata_readFromElement(meta, "dst_ip", &dst_ip) == CONFIG_FALSE; //remote
-	ret += metadata_readFromElement(meta, "src_port", &src_port) == CONFIG_FALSE;
-	ret += metadata_readFromElement(meta, "dst_port", &dst_port) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE; //host
+	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE; //remote
+	ret += metadata_readFromElement(params, "src_port", &src_port) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "dst_port", &dst_port) == CONFIG_FALSE;
 
-	ret += metadata_readFromElement(meta, "serial_num", &serial_num) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "serial_num", &serial_num) == CONFIG_FALSE;
 
 	if (ret) {
 		//TODO error
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -200,7 +200,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	struct tcp_connection *conn = conn_list_find(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port); //TODO check if right
+	struct tcp_connection *conn = conn_list_find(src_ip, src_port, dst_ip, dst_port); //TODO check if right
 	int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 	//if (start) {conn->write_threads++;}
 	/*#*/PRINT_DEBUG("");
@@ -216,6 +216,8 @@ void tcp_out_fdf(struct finsFrame *ff) {
 			thread_data->flags = flags;
 			thread_data->serial_num = serial_num;
 
+			ff->dataFrame.pdu = NULL;
+
 			//spin off thread to handle
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, write_thread, (void *) thread_data)) {
@@ -224,11 +226,11 @@ void tcp_out_fdf(struct finsFrame *ff) {
 			}
 			pthread_detach(thread);
 		} else {
-			PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 		}
 	} else {
 		//TODO error
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 
 		//TODO LISTEN: if SEND, SYN, SYN_SENT
 	}
@@ -261,7 +263,7 @@ void *close_stub_thread(void *local) {
 
 		conn_stub_free(conn_stub);
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//send NACK to close handler
 		//conn_stub_send_daemon(conn_stub, EXEC_TCP_CLOSE_STUB, 0, 0);
 		tcp_reply_fcf(ff, 0, 0);
@@ -302,10 +304,10 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 			}
 			pthread_detach(thread);
 		} else {
-			PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
+			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		sem_post(&conn_stub_list_sem);
 		//TODO error
 	}
@@ -392,7 +394,7 @@ void *poll_thread(void *local) {
 			sem_post(&conn->write_sem);
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//conn_send_daemon(conn, EXEC_TCP_POLL, 1, 0);
 		tcp_reply_fcf(ff, 1, POLLHUP); //TODO check on value?
 	}
@@ -451,7 +453,7 @@ void *poll_stub_thread(void *local) {
 		//conn_stub_send_daemon(conn_stub, EXEC_TCP_POLL, 1, mask);
 		tcp_reply_fcf(ff, 1, mask);
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//conn_stub_send_daemon(conn_stub, EXEC_TCP_POLL, 1, 0);
 		tcp_reply_fcf(ff, 0, 0);
 	}
@@ -502,11 +504,11 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				}
 				pthread_detach(thread);
 			} else {
-				PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 				tcp_reply_fcf(ff, 1, POLLERR); //TODO check on value?
 			}
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			sem_post(&conn_list_sem);
 			//TODO error
 
@@ -537,11 +539,11 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				}
 				pthread_detach(thread);
 			} else {
-				PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 				tcp_reply_fcf(ff, 1, POLLERR); //TODO check on value?
 			}
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			sem_post(&conn_stub_list_sem);
 			//TODO error
 
@@ -607,12 +609,12 @@ void *connect_thread(void *local) {
 			//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
 		} else {
 			//TODO error
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			//conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 0);
 			tcp_reply_fcf(ff, 0, 0);
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//send NACK to connect handler
 		//conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 1);
 		tcp_reply_fcf(ff, 0, 1);
@@ -707,14 +709,14 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 				//TODO send NACK
 			}
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			sem_post(&conn_list_sem);
 
 			//TODO throw minor error, list full
 			//TODO send NACK
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		sem_post(&conn_list_sem);
 
 		//TODO error, existing connection already connected there
@@ -746,12 +748,12 @@ void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 				conn_stub_free(conn_stub);
 			}
 		} else {
-			PRINT_DEBUG("todo error");
+			PRINT_ERROR("todo error");
 			sem_post(&conn_stub_list_sem);
 			//TODO throw minor error
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		sem_post(&conn_stub_list_sem);
 		//TODO error
 	}
@@ -851,7 +853,7 @@ void *accept_thread(void *local) {
 
 							startTimer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
 						} else {
-							PRINT_DEBUG("todo error");
+							PRINT_ERROR("todo error");
 							//TODO error
 						}
 
@@ -882,12 +884,12 @@ void *accept_thread(void *local) {
 						//conn_free(conn);
 					}
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 					sem_post(&conn_list_sem);
 					//TODO throw minor error
 				}
 			} else {
-				PRINT_DEBUG("todo error");
+				PRINT_ERROR("todo error");
 				sem_post(&conn_list_sem);
 				//TODO error
 			}
@@ -915,7 +917,7 @@ void *accept_thread(void *local) {
 	}
 
 	if (!conn_stub->running_flag) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//conn_stub_send_daemon(conn_stub, EXEC_TCP_ACCEPT, 0, 0);
 		tcp_reply_fcf(ff, 0, 0);
 	}
@@ -964,11 +966,11 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 			}
 			pthread_detach(thread);
 		} else {
-			PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
+			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 			//TODO send NACK
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		sem_post(&conn_stub_list_sem);
 		//TODO error, no listening stub
 
@@ -1070,23 +1072,34 @@ void *close_thread(void *local) {
 				tcp_reply_fcf(conn->ff, 0, 0); //send NACK about connect call
 				conn->ff = NULL;
 			} else {
-				PRINT_DEBUG("todo error");
+				PRINT_ERROR("todo error");
 			}
 
 			//conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
 			tcp_reply_fcf(ff, 1, 0);
 
 			conn_shutdown(conn);
+
+		} else if (conn->state == TCP_CLOSED || conn->state == TCP_TIME_WAIT) {
+			if (conn->state == TCP_CLOSED) {
+				PRINT_DEBUG("CLOSED: CLOSE, -, CLOSED: state=%d conn=%p", conn->state, conn);
+			} else {
+				PRINT_DEBUG("TIME_WAIT: CLOSE, -, TIME_WAIT: state=%d conn=%p", conn->state, conn);
+			}
+			tcp_reply_fcf(ff, 1, 0);
 		} else {
+			PRINT_ERROR("todo error");
+
+			PRINT_DEBUG("conn=%p, state=%u", conn, conn->state);
 			//TODO figure out:
-			PRINT_DEBUG("todo error");
 		}
 	} else {
 		//TODO figure out: conn shutting down already?
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 	}
 
-	/*#*/PRINT_DEBUG("");
+	/*#*/
+	PRINT_DEBUG("");
 	sem_post(&conn->write_sem);
 
 	/*#*/PRINT_DEBUG("");
@@ -1132,10 +1145,10 @@ void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, 
 			}
 			pthread_detach(thread);
 		} else {
-			PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		sem_post(&conn_list_sem);
 		//TODO error trying to close closed connection
 	}
@@ -1152,12 +1165,10 @@ void *read_param_conn_thread(void *local) {
 	PRINT_DEBUG("Entered: ff=%p, conn=%p, id=%u", ff, conn, id);
 
 	uint32_t ret_val;
-	uint32_t param_id;
 	uint32_t value;
 
 	int ret = 0;
 	metadata *params = ff->metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
@@ -1165,63 +1176,61 @@ void *read_param_conn_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
+		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 				value = conn->recv_win;
-				metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
+				metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				//fill in with switch of opts? or have them separate?
 
 				//TODO read sock opts
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_DEBUG("Error unknown param_id=%d", param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
-			ret_val = 0;
-			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
 			tcp_to_switch(ff);
 			break;
 		}
 	} else {
-		PRINT_DEBUG("todo error");
-
-		ret_val = 0;
-		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+		PRINT_ERROR("todo error");
 
 		ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
 		tcp_to_switch(ff);
 	}
 
@@ -1252,12 +1261,10 @@ void *read_param_conn_stub_thread(void *local) {
 	PRINT_DEBUG("Entered: ff=%p, conn_stub=%p, id=%u", ff, conn_stub, id);
 
 	uint32_t ret_val;
-	uint32_t param_id;
 	uint32_t value;
 
 	int ret = 0;
 	metadata *params = ff->metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
@@ -1265,16 +1272,15 @@ void *read_param_conn_stub_thread(void *local) {
 		exit(-1);
 	}
 	if (conn_stub->running_flag) {
-		switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
+		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				//TODO do something? error?
 
@@ -1285,21 +1291,20 @@ void *read_param_conn_stub_thread(void *local) {
 				//}
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				//fill in with switch of opts? or have them separate?
 
@@ -1310,30 +1315,29 @@ void *read_param_conn_stub_thread(void *local) {
 				//}
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_DEBUG("Error unknown param_id=%d", param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
-			ret_val = 0;
-			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
 			tcp_to_switch(ff);
 			break;
 		}
 	} else {
-		PRINT_DEBUG("todo error");
-
-		ret_val = 0;
-		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+		PRINT_ERROR("todo error");
 
 		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
 		tcp_to_switch(ff);
 	}
 
@@ -1394,10 +1398,10 @@ void tcp_read_param(struct finsFrame *ff) {
 					}
 					pthread_detach(thread);
 				} else {
-					PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+					PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 				}
 			} else {
-				PRINT_DEBUG("todo error");
+				PRINT_ERROR("todo error");
 				sem_post(&conn_list_sem);
 
 				//TODO error
@@ -1426,17 +1430,17 @@ void tcp_read_param(struct finsFrame *ff) {
 					}
 					pthread_detach(thread);
 				} else {
-					PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
+					PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 				}
 			} else {
-				PRINT_DEBUG("todo error");
+				PRINT_ERROR("todo error");
 				sem_post(&conn_stub_list_sem);
 
 				//TODO error
 			}
 		}
 	} else {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		//TODO error
 	}
 }
@@ -1451,14 +1455,12 @@ void *set_param_conn_thread(void *local) {
 
 	PRINT_DEBUG("Entered: ff=%p, conn=%p, id=%u", ff, conn, id);
 
-	uint32_t param_id;
 	uint32_t ret_val;
 	uint32_t value;
 
 	metadata *params = ff->metaData;
 
 	int ret = 0;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
@@ -1466,16 +1468,15 @@ void *set_param_conn_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
+		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				if (conn->recv_win + value < conn->recv_win || conn->recv_max_win < conn->recv_win + value) {
 					conn->recv_win = conn->recv_max_win;
@@ -1484,21 +1485,21 @@ void *set_param_conn_thread(void *local) {
 				}
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				//fill in with switch of opts? or have them separate?
 
@@ -1509,30 +1510,29 @@ void *set_param_conn_thread(void *local) {
 				}
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_DEBUG("Error unknown param_id=%d", param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
-			ret_val = 0;
-			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
 			tcp_to_switch(ff);
 			break;
 		}
 	} else {
-		PRINT_DEBUG("todo error");
-
-		ret_val = 0;
-		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+		PRINT_ERROR("todo error");
 
 		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
 		tcp_to_switch(ff);
 	}
 
@@ -1563,12 +1563,10 @@ void *set_param_conn_stub_thread(void *local) {
 	PRINT_DEBUG("Entered: ff=%p, conn_stub=%p, id=%u", ff, conn_stub, id);
 
 	uint32_t ret_val;
-	uint32_t param_id;
 	uint32_t value;
 
 	int ret = 0;
 	metadata *params = ff->metaData;
-	ret = metadata_readFromElement(params, "param_id", &param_id) == CONFIG_FALSE;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
@@ -1576,16 +1574,15 @@ void *set_param_conn_stub_thread(void *local) {
 		exit(-1);
 	}
 	if (conn_stub->running_flag) {
-		switch (param_id) { //TODO optimize this code better when control format is fully fleshed out
+		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
 				ret_val = 0;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			} else {
 				//TODO do something? error?
 
@@ -1596,21 +1593,21 @@ void *set_param_conn_stub_thread(void *local) {
 				//}
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
 			if (ret) {
-				PRINT_DEBUG("ret=%d", ret);
+				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
 
-				value = 0;
-				metadata_writeToElement(params, "ret_val", &value, META_TYPE_INT);
+				ret_val = 0;
 			} else {
 				//fill in with switch of opts? or have them separate?
 
@@ -1621,30 +1618,29 @@ void *set_param_conn_stub_thread(void *local) {
 				//}
 
 				ret_val = 1;
-				metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_DEBUG("Error unknown param_id=%d", param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
-			ret_val = 0;
-			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
 			tcp_to_switch(ff);
 			break;
 		}
 	} else {
-		PRINT_DEBUG("todo error");
-
-		ret_val = 0;
-		metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+		PRINT_ERROR("todo error");
 
 		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
 		tcp_to_switch(ff);
 	}
 
@@ -1676,7 +1672,6 @@ void tcp_set_param(struct finsFrame *ff) {
 	int start;
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
-	uint32_t ret_val;
 
 	metadata *params = ff->metaData;
 	if (params) {
@@ -1706,18 +1701,17 @@ void tcp_set_param(struct finsFrame *ff) {
 						}
 						pthread_detach(thread);
 					} else {
-						PRINT_DEBUG("Too many threads=%d. Dropping...", conn->threads);
+						PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 					}
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 					sem_post(&conn_list_sem);
 
 					//TODO error
 
-					ret_val = 0;
-					metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
 					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+					ff->ctrlFrame.ret_val = 0;
+
 					tcp_to_switch(ff);
 				}
 			} else {
@@ -1745,32 +1739,31 @@ void tcp_set_param(struct finsFrame *ff) {
 						}
 						pthread_detach(thread);
 					} else {
-						PRINT_DEBUG("Too many threads=%d. Dropping...", conn_stub->threads);
+						PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 					}
 				} else {
-					PRINT_DEBUG("todo error");
+					PRINT_ERROR("todo error");
 					sem_post(&conn_stub_list_sem);
 
 					//TODO error
 
-					ret_val = 0;
-					metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
-
 					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+					ff->ctrlFrame.ret_val = 0;
+
 					tcp_to_switch(ff);
 				}
 			}
 		} else {
 			//TODO error
-			PRINT_DEBUG("todo error");
-			ret_val = 0;
-			metadata_writeToElement(params, "ret_val", &ret_val, META_TYPE_INT);
+			PRINT_ERROR("todo error");
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
 			tcp_to_switch(ff);
 		}
 	} else {
 		//TODO huge error
-		PRINT_DEBUG("todo error huge");
+		PRINT_ERROR("todo error");
 	}
 }
