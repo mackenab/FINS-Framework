@@ -17,9 +17,9 @@
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-	#include <linux/sem.h>
+#include <linux/sem.h>
 #else
-	#include  <sys/sem.h> 
+#include  <sys/sem.h>
 #endif
 
 //#include <pthread.h>    /* POSIX Threads */
@@ -37,13 +37,5 @@ int write_queue(struct finsFrame *ff, finsQueue q);
 int write_queue_front(struct finsFrame *ff, finsQueue q);
 
 struct finsFrame * read_queue(finsQueue q);
-
-struct finsFrame * buildFinsFrame(void);
-
-int freeFinsFrame(struct finsFrame *f);
-
-void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
-
-void print_finsFrame(struct finsFrame *fins_in);
 
 #endif /* QUEUEMODULE_H_ */

@@ -74,10 +74,10 @@
 // Defined here as a macro for simplicity. 512 bits seems reasonable in my opinion, but it can be tweaked.
 
 #define ICMP_MSL_TO_DEFAULT 512000
+#define ICMP_SENT_LIST_MAX 300
 
 #define ERROR_ICMP_TTL 0
 #define ERROR_ICMP_DEST_UNREACH 1
-
 
 struct icmp_packet {
 	uint8_t type;
@@ -95,28 +95,16 @@ struct tcp_header_frag {
 	uint8_t data[1];
 };
 
-struct udp_header_frag {
-	uint16_t src_port;
-	uint16_t dst_port;
-	uint16_t len;
-	uint16_t checksum;
-	uint8_t data[1];
-};
-
 struct icmp_sent {
 	struct icmp_sent *next;
 
-	uint32_t src_ip;
-	uint32_t dst_ip;
-
-	u_char *data;
-	uint32_t data_len;
+	struct finsFrame *ff;
 
 	struct timeval stamp;
 };
 
-struct icmp_sent *sent_create(uint32_t src_ip, uint32_t dst_ip, u_char *data, uint32_t data_len);
-void sent_free(struct icmp_sent *sent);
+struct icmp_sent *icmp_sent_create(struct finsFrame *ff);
+void icmp_sent_free(struct icmp_sent *sent);
 
 struct icmp_sent_list {
 	uint32_t max;
@@ -125,34 +113,27 @@ struct icmp_sent_list {
 	struct icmp_sent *end;
 };
 
-#define ICMP_SENT_LIST_MAX 300
-
 //TODO convert to hardcoded sent_list, so no create/free
-struct icmp_sent_list *sent_list_create(uint32_t max);
-void sent_list_append(struct icmp_sent_list *sent_list, struct icmp_sent *sent);
-struct icmp_sent *sent_list_find(struct icmp_sent_list *sent_list, u_char *data, uint32_t data_len);
-struct icmp_sent *sent_list_remove_front(struct icmp_sent_list *sent_list); //TODO remove?
-void sent_list_remove(struct icmp_sent_list *sent_list, struct icmp_sent *sent);
-int sent_list_is_empty(struct icmp_sent_list *sent_list);
-int sent_list_has_space(struct icmp_sent_list *sent_list);
-void sent_list_free(struct icmp_sent_list *sent_list);
+struct icmp_sent_list *icmp_sent_list_create(uint32_t max);
+void icmp_sent_list_append(struct icmp_sent_list *sent_list, struct icmp_sent *sent);
+struct icmp_sent *icmp_sent_list_find(struct icmp_sent_list *sent_list, uint8_t *data, uint32_t data_len);
+struct icmp_sent *icmp_sent_list_remove_front(struct icmp_sent_list *sent_list); //TODO remove?
+void icmp_sent_list_remove(struct icmp_sent_list *sent_list, struct icmp_sent *sent);
+int icmp_sent_list_is_empty(struct icmp_sent_list *sent_list);
+int icmp_sent_list_has_space(struct icmp_sent_list *sent_list);
+void icmp_sent_list_free(struct icmp_sent_list *sent_list);
+void icmp_sent_list_gc(struct icmp_sent_list *sent_list, double timeout);
 
 void icmp_get_ff(void); //Gets a finsFrame from the queue and starts processing
-void ICMP_send_FF(struct finsFrame *ff); //Put a finsFrame onto the queue to go out
 int icmp_to_switch(struct finsFrame *ff);
 
-void icmp_sent_gc(void);
-void icmp_out(struct finsFrame *ff); //Processes an ICMP message that's headed out
+void icmp_out_fdf(struct finsFrame *ff); //Processes an ICMP message that's headed out
 
-void icmp_in(struct finsFrame *ff); //Processes an ICMP message that just came in
+void icmp_in_fdf(struct finsFrame *ff); //Processes an ICMP message that just came in
 uint16_t icmp_checksum(uint8_t *pt, uint32_t len);
 void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_t data_len); //Create a ping reply from a ping request package
-void icmp_create_unreach(struct finsFrame* ff); //Create a "destination unreachable" message from data we receive from the UDP //removed in vt_mark?
 
 void icmp_fcf(struct finsFrame *ff);
-void icmp_control_handler(struct finsFrame *ff); //Handle control frames sent from other modules, creating new messages as needed and sending them out.
-void icmp_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code); //Create and send out an error from this type and code
-void icmp_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code); //Create a control frame to TCP/UDP out of ICMP error that came in
 
 void icmp_init(void);
 void icmp_run(pthread_attr_t *fins_pthread_attr);

@@ -83,8 +83,8 @@ struct udp_statistics{
 
 unsigned short UDP_checksum(struct udp_packet* pcket,
 		struct udp_metadata_parsed* meta);
-void udp_in(struct finsFrame* ff);
-void udp_out(struct finsFrame* ff);
+void udp_in_fdf(struct finsFrame* ff);
+void udp_out_fdf(struct finsFrame* ff);
 struct finsFrame create_ff(int dataOrCtrl, int direction, int destID,  int PDU_length, unsigned char* PDU, unsigned char* metadata );
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 void udp_get_ff();

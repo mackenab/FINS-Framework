@@ -49,12 +49,15 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 	interface = interface_list_find(src_ip);
 	if (interface) {
 		src_mac = interface->mac_addr;
+		PRINT_DEBUG("src: interface=%p, ip=%u, mac=%llx", interface, src_ip, src_mac);
 
 		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 
 		interface = interface_list_find(dst_ip);
 		if (interface) {
 			dst_mac = interface->mac_addr;
+			PRINT_DEBUG("dst: interface=%p, ip=%u, mac=%llx", interface, dst_ip, dst_mac);
+
 			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
 
 			ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
@@ -84,6 +87,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					}
 				} else {
 					dst_mac = cache->mac_addr;
+					PRINT_DEBUG("dst: cache=%p, ip=%u, mac=%llx", cache, dst_ip, dst_mac);
 
 					struct timeval current;
 					gettimeofday(&current, 0);
@@ -129,7 +133,6 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							}
 						} else {
 							PRINT_ERROR("switch send failed");
-							//free(ff_req->dataFrame.pdu);
 							freeFinsFrame(ff_req);
 
 							ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
@@ -142,6 +145,8 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					}
 				}
 			} else {
+				PRINT_DEBUG("dst: start seeking");
+
 				dst_mac = ARP_MAC_BROADCAST;
 
 				struct arp_message msg;
@@ -200,7 +205,6 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					request_list_append(cache->request_list, request);
 				} else {
 					PRINT_DEBUG("switch send failed");
-					//free(ff_req->dataFrame.pdu);
 					freeFinsFrame(ff_req);
 
 					ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
@@ -253,7 +257,6 @@ void arp_in_fdf(struct finsFrame *ff) {
 					struct finsFrame *ff_reply = arp_to_fdf(&arp_msg_reply);
 					if (!arp_to_switch(ff_reply)) {
 						PRINT_ERROR("todo error");
-						//free(ff_reply->dataFrame.pdu);
 						freeFinsFrame(ff_reply);
 					}
 				} else {
@@ -299,7 +302,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 					}
 				}
 			} else {
-				PRINT_ERROR("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip);
+				PRINT_DEBUG("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip);
 			}
 		} else {
 			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);
@@ -310,7 +313,6 @@ void arp_in_fdf(struct finsFrame *ff) {
 		PRINT_ERROR("Bad ARP message. Dropping: ff=%p", ff);
 	}
 
-	//free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 }
 
@@ -347,7 +349,6 @@ void arp_handle_to(struct arp_cache *cache) {
 					arp_start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
 				} else {
 					PRINT_ERROR("todo error");
-					//free(ff_req->dataFrame.pdu);
 					freeFinsFrame(ff_req);
 
 					//TODO send error FCF

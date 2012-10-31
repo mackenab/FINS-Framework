@@ -13,10 +13,10 @@ extern IP4addr my_ip_addr;
 extern sem_t Switch_to_IPv4_Qsem;
 extern finsQueue Switch_to_IPv4_Queue;
 
-void IP4_receive_fdf() {
+void IP4_receive_fdf(void) {
 
 	struct finsFrame* pff = NULL;
-	uint8_t protocol;
+	uint32_t protocol;
 	do {
 		sem_wait(&Switch_to_IPv4_Qsem);
 		pff = read_queue(Switch_to_IPv4_Queue);
@@ -52,7 +52,7 @@ void IP4_receive_fdf() {
 			}
 
 			int ret = 0;
-			ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "send_protocol", &protocol) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("metadata read error: ret=%d", ret);
@@ -143,10 +143,10 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint64_t d
 
 		metadata *params = store->ff->metaData;
 
-		uint16_t ether_type = IP4_ETH_TYPE;
-		metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
-		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
-		metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
+		uint32_t ether_type = IP4_ETH_TYPE;
+		metadata_writeToElement(params, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "send_src_mac", &src_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
 
 		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 
@@ -176,8 +176,8 @@ void ipv4_exec_reply(struct finsFrame *ff) {
 
 			if (ff->ctrlFrame.ret_val) {
 				uint64_t src_mac, dst_mac;
-				ret += metadata_readFromElement(params, "src_mac", &src_mac) == CONFIG_FALSE;
-				ret += metadata_readFromElement(params, "dst_mac", &dst_mac) == CONFIG_FALSE;
+				ret += metadata_readFromElement(params, "src_mac", &src_mac) == META_FALSE;
+				ret += metadata_readFromElement(params, "dst_mac", &dst_mac) == META_FALSE;
 
 				if (ret) {
 					PRINT_ERROR("ret=%d", ret);
@@ -189,10 +189,10 @@ void ipv4_exec_reply(struct finsFrame *ff) {
 						PRINT_DEBUG("store=%p, ff=%p, serial_num=%u", store, store->ff, store->serial_num);
 						store_list_remove(store);
 
-						uint16_t ether_type = IP4_ETH_TYPE;
-						metadata_writeToElement(store->ff->metaData, "dst_mac", &dst_mac, META_TYPE_INT64);
-						metadata_writeToElement(store->ff->metaData, "src_mac", &src_mac, META_TYPE_INT64);
-						metadata_writeToElement(store->ff->metaData, "ether_type", &ether_type, META_TYPE_INT);
+						uint32_t ether_type = IP4_ETH_TYPE;
+						metadata_writeToElement(store->ff->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
+						metadata_writeToElement(store->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+						metadata_writeToElement(store->ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
 
 						PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 

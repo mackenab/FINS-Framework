@@ -171,7 +171,7 @@ void main(int argc, char *argv[])
             if (  ft == NULL )
             {
                    printf( "Cannot open target file" );
-                   fclose (udp_in);
+                   fclose (udp_in_fdf);
                    fclose( ft );
                    exit(1);
             }

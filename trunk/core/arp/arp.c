@@ -455,7 +455,6 @@ void cache_shutdown(struct arp_cache *cache) {
 void cache_free(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
-	//free request_list?
 	if (cache->request_list) {
 		request_list_free(cache->request_list);
 	}
@@ -617,13 +616,13 @@ void print_arp_hdr(struct arp_hdr *pckt) {
 	PRINT_DEBUG("\n\nPrinting of an external format arp message");
 	PRINT_DEBUG("\nSender hardware (MAC) address = ");
 	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
-		PRINT_DEBUG("%x:", pckt->sender_MAC_addrs[i]);
+		PRINT_DEBUG("0x%x:", pckt->sender_MAC_addrs[i]);
 	PRINT_DEBUG("\nSender IP address = ");
 	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
 		PRINT_DEBUG("%d.", pckt->sender_IP_addrs[i]);
 	PRINT_DEBUG("\nTarget hardware (MAC) address= ");
 	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
-		PRINT_DEBUG("%x:", pckt->target_MAC_addrs[i]);
+		PRINT_DEBUG("0x%x:", pckt->target_MAC_addrs[i]);
 	PRINT_DEBUG("\nTarget IP address = ");
 	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
 		PRINT_DEBUG("%d.", pckt->target_IP_addrs[i]);
@@ -683,10 +682,10 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	}
 	metadata_create(params);
 
-	uint16_t ether_type = ARP_TYPE;
-	metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
-	metadata_writeToElement(params, "src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
+	uint32_t ether_type = ARP_TYPE;
+	metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
+	metadata_writeToElement(params, "send_dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
+	metadata_writeToElement(params, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -702,10 +701,9 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	ff->dataFrame.directionFlag = DOWN;
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
-	ff->dataFrame.pdu = (unsigned char *) malloc(ff->dataFrame.pduLength);
+	ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 	if (ff->dataFrame.pdu == NULL) {
 		PRINT_ERROR("failed to create pdu: msg=%p meta=%p", msg, params);
-		//freeFinsFrame(ff);
 		exit(-1);
 	}
 
@@ -743,10 +741,10 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
 	//TODO change? such that sender_mac is uint64_t
-	u_char *sender_mac = hdr->sender_MAC_addrs;
-	u_char *sender_ip = hdr->sender_IP_addrs;
-	u_char *target_mac = hdr->target_MAC_addrs;
-	u_char *target_ip = hdr->target_IP_addrs;
+	uint8_t *sender_mac = hdr->sender_MAC_addrs;
+	uint8_t *sender_ip = hdr->sender_IP_addrs;
+	uint8_t *target_mac = hdr->target_MAC_addrs;
+	uint8_t *target_ip = hdr->target_IP_addrs;
 
 	msg->hardware_type = ntohs(hdr->hardware_type);
 	msg->protocol_type = ntohs(hdr->protocol_type);
@@ -859,8 +857,8 @@ void arp_exec(struct finsFrame *ff) {
 		case EXEC_ARP_GET_ADDR:
 			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "src_ip", &src_ip) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);

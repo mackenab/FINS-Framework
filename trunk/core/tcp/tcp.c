@@ -48,6 +48,7 @@ int node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_n
 	// []=window, |=wrap around , ()=node, {}=cmp, ,=is in that region
 
 	//TODO add time stamps to comparison
+	PRINT_DEBUG("Entered: node=%p, cmp=%p, win_seq_num=%u, win_seq_end%u", node, cmp, win_seq_num, win_seq_end);
 
 	if (win_seq_num <= node->seq_num) { // [ ( | ]
 		if (win_seq_num <= node->seq_end) { // [ () | ]
@@ -162,6 +163,8 @@ struct tcp_queue *queue_create(uint32_t max) {
 }
 
 void queue_append(struct tcp_queue *queue, struct tcp_node *node) {
+	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
+
 	node->next = NULL;
 	if (queue_is_empty(queue)) {
 		//queue empty
@@ -172,15 +175,24 @@ void queue_append(struct tcp_queue *queue, struct tcp_node *node) {
 	}
 	queue->end = node;
 	queue->len += node->len;
+
+	queue_check(queue);
 }
 
 void queue_prepend(struct tcp_queue *queue, struct tcp_node *node) {
+	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
+
 	node->next = queue->front;
+	if (queue_is_empty(queue)) {
+		queue->end = node;
+	}
 	queue->front = node;
 	queue->len += node->len;
 }
 
 void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev) {
+	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
+
 	node->next = prev->next;
 	prev->next = node;
 	queue->len += node->len;
@@ -190,9 +202,14 @@ void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *
 int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end) {
 	int ret;
 
+	PRINT_DEBUG("Entered: queue=%p, len=%u, node=%p, win_seq_num=%u, win_seq_end=%u", queue, queue->len, node, win_seq_num, win_seq_end);
+	queue_check(queue);
+
 	//empty
 	if (queue_is_empty(queue)) {
 		queue_prepend(queue, node);
+
+		queue_check(queue);
 		return 1;
 	}
 
@@ -200,8 +217,12 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	ret = node_compare(node, queue->front, win_seq_num, win_seq_end);
 	if (ret == -1) { // [ <> () ] |
 		queue_prepend(queue, node);
+
+		queue_check(queue);
 		return 1;
 	} else if (ret == 0) {
+
+		queue_check(queue);
 		return 0;
 	}
 
@@ -209,8 +230,12 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	ret = node_compare(node, queue->end, win_seq_num, win_seq_end);
 	if (ret == 1) { // [ {} <> ] |
 		queue_append(queue, node);
+
+		queue_check(queue);
 		return 1;
 	} else if (ret == 0) {
+
+		queue_check(queue);
 		return 0;
 	}
 
@@ -220,8 +245,12 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 		ret = node_compare(node, temp_node->next, win_seq_num, win_seq_end);
 		if (ret == -1) {
 			queue_add(queue, node, temp_node);
+
+			queue_check(queue);
 			return 1;
 		} else if (ret == 0) {
+
+			queue_check(queue);
 			return 0;
 		}
 
@@ -234,6 +263,8 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 }
 
 struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num) {
+	PRINT_DEBUG("Entered: queue=%p, seq_num=%u", queue, seq_num);
+
 	struct tcp_node *comp = queue->front;
 	while (comp) {
 		if (comp->seq_num == seq_num) {
@@ -247,6 +278,8 @@ struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num) {
 }
 
 struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
+	PRINT_DEBUG("Entered: queue=%p", queue);
+
 	struct tcp_node *old = queue->front;
 	if (old) {
 		queue->front = old->next;
@@ -256,7 +289,37 @@ struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
 		queue->len = 0;
 	}
 
+	queue_check(queue);
 	return old;
+}
+
+int queue_check(struct tcp_queue *queue) {
+	PRINT_DEBUG("Entered: queue=%p, len=%u", queue, queue->len);
+
+	int count = 0;
+
+	PRINT_DEBUG("Entered: front=%p, end=%p", queue->front, queue->end);
+
+	struct tcp_node *temp = queue->front;
+	while (temp && count <= queue->max) {
+		count += temp->len;
+		temp = temp->next;
+	}
+
+	if (count == queue->len) {
+	} else {
+		PRINT_ERROR("todo error: queue=%p, max=%u, len=%u, count=%u, check=%u", queue, queue->max, queue->len, count, count == queue->len);
+		temp = queue->front;
+		while (temp && count <= queue->max) {
+			PRINT_DEBUG("count=%d, call=%p", count, temp);
+			count += temp->len;
+			temp = temp->next;
+		}
+	}
+
+	PRINT_DEBUG("Exited: call_list=%p, count=%u, check=%u", queue, count, count == queue->len);
+	return count == queue->len;
+
 }
 
 int queue_is_empty(struct tcp_queue *queue) {
@@ -301,6 +364,8 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 
 	conn_stub->syn_queue = queue_create(backlog);
 
+	conn_stub->poll_events = 0;
+
 	//conn_stub->syn_threads = 0;
 
 	//conn_stub->accept_threads = 0;
@@ -321,15 +386,17 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_
 	}
 	metadata_create(params);
 
-	uint8_t protocol = IPPROTO_TCP;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	uint32_t protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
 
-	socket_state state = SS_UNCONNECTED;
-	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
-	metadata_writeToElement(params, "host_ip", &conn_stub->host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &conn_stub->host_port, META_TYPE_INT);
+	uint32_t state = SS_UNCONNECTED;
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
+	metadata_writeToElement(params, "host_ip", &conn_stub->host_ip, META_TYPE_INT32);
+
+	uint32_t host_port = conn_stub->host_port;
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -348,6 +415,9 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.param_id = param_id;
 	ff->ctrlFrame.ret_val = ret_val;
+
+	ff->ctrlFrame.data_len = 0;
+	ff->ctrlFrame.data = NULL;
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -574,7 +644,7 @@ void main_syn_recv(struct tcp_connection *conn) {
 			//TO, resend SYN, SYN_SENT (?) //TODO check if correct
 			conn->to_gbn_flag = 0;
 
-			conn->state = TCP_SYN_SENT;
+			conn->state = TS_SYN_SENT;
 			conn->issn = tcp_rand(); //TODO uncomment
 			conn->send_seq_num = conn->issn;
 			conn->send_seq_end = conn->send_seq_num;
@@ -624,7 +694,7 @@ void main_established(struct tcp_connection *conn) {
 
 		if (queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
-			if ((conn->state == TCP_FIN_WAIT_1 || conn->state == TCP_LAST_ACK) && queue_is_empty(conn->write_queue) && conn->fin_sent
+			if ((conn->state == TS_FIN_WAIT_1 || conn->state == TS_LAST_ACK) && queue_is_empty(conn->write_queue) && conn->fin_sent
 					&& conn->send_seq_num == conn->send_seq_end) {
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
@@ -728,7 +798,7 @@ void main_established(struct tcp_connection *conn) {
 		PRINT_DEBUG("Normal");
 
 		if (queue_is_empty(conn->write_queue)) {
-			if (!conn->fin_sent && (conn->state == TCP_FIN_WAIT_1 || conn->state == TCP_LAST_ACK)) {
+			if (!conn->fin_sent && (conn->state == TS_FIN_WAIT_1 || conn->state == TS_LAST_ACK)) {
 				conn->fin_sent = 1;
 				conn->fin_sep = 1;
 				conn->fin_ack = conn->send_seq_end + 1;
@@ -777,7 +847,7 @@ void main_established(struct tcp_connection *conn) {
 					conn->send_win = 0;
 				}
 
-				if ((conn->state == TCP_FIN_WAIT_1 || conn->state == TCP_LAST_ACK) && queue_is_empty(conn->write_queue)) {
+				if ((conn->state == TS_FIN_WAIT_1 || conn->state == TS_LAST_ACK) && queue_is_empty(conn->write_queue)) {
 					conn->fin_sent = 1;
 					conn->fin_sep = 0;
 					conn->fin_ack = conn->send_seq_end;
@@ -799,9 +869,24 @@ void main_established(struct tcp_connection *conn) {
 					startTimer(conn->to_gbn_fd, conn->timeout);
 				}
 
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn->write_wait_sem); //unstop write_thread if waiting
+				if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+					int val;
+					sem_getvalue(&conn->write_sem, &val);
+					if (val) {
+						int space = conn->write_queue->max - conn->write_queue->len;
+						PRINT_DEBUG("conn=%p, conn->write_sem=%d, space=%d", conn, val, space);
+						if (space > 0) {
+							conn_send_exec(conn, EXEC_TCP_POLL_POST, 1, POLLOUT | POLLWRNORM | POLLWRBAND);
+							conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+						}
+					} else {
+						PRINT_DEBUG("conn=%p, conn->write_sem=%d", conn, val);
+					}
+				}
 
+				/*#*/
+				PRINT_DEBUG("");
+				sem_post(&conn->write_wait_sem); //unstop write_thread if waiting
 			} else {
 				conn->main_wait_flag = 1;
 				PRINT_DEBUG("Normal: flagging waitFlag");
@@ -869,7 +954,7 @@ void main_time_wait(struct tcp_connection *conn) {
 
 		conn->to_gbn_flag = 0;
 		PRINT_DEBUG("TO, CLOSE: state=%d conn=%p", conn->state, conn);
-		conn->state = TCP_CLOSED;
+		conn->state = TS_CLOSED;
 
 		//send ACK to close handler
 		if (conn->ff_close) {
@@ -937,37 +1022,37 @@ void *main_thread(void *local) {
 				conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag, conn->delayed_flag, conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
 
 		switch (conn->state) {
-		case TCP_CLOSED:
+		case TS_CLOSED:
 			main_closed(conn);
 			break;
-		case TCP_LISTEN:
+		case TS_LISTEN:
 			main_listen(conn);
 			break;
-		case TCP_SYN_SENT:
+		case TS_SYN_SENT:
 			main_syn_sent(conn);
 			break;
-		case TCP_SYN_RECV:
+		case TS_SYN_RECV:
 			main_syn_recv(conn);
 			break;
-		case TCP_ESTABLISHED:
+		case TS_ESTABLISHED:
 			main_established(conn);
 			break;
-		case TCP_FIN_WAIT_1:
+		case TS_FIN_WAIT_1:
 			main_fin_wait_1(conn);
 			break;
-		case TCP_FIN_WAIT_2:
+		case TS_FIN_WAIT_2:
 			main_fin_wait_2(conn);
 			break;
-		case TCP_CLOSING:
+		case TS_CLOSING:
 			main_closing(conn);
 			break;
-		case TCP_TIME_WAIT:
+		case TS_TIME_WAIT:
 			main_time_wait(conn);
 			break;
-		case TCP_CLOSE_WAIT:
+		case TS_CLOSE_WAIT:
 			main_close_wait(conn);
 			break;
-		case TCP_LAST_ACK:
+		case TS_LAST_ACK:
 			main_last_ack(conn);
 			break;
 		}
@@ -1061,15 +1146,17 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	sem_init(&conn->sem, 0, 1);
 	conn->running_flag = 1;
 	conn->threads = 1;
-	conn->state = TCP_CLOSED;
+	conn->state = TS_CLOSED;
 	PRINT_DEBUG("state=%d conn=%p", conn->state, conn);
+
+	conn->poll_events = 0;
 
 	conn->host_ip = host_ip;
 	conn->host_port = host_port;
 	conn->rem_ip = rem_ip;
 	conn->rem_port = rem_port;
 
-	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT); //TODO: could wait on this
+	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT & 0x1); //TODO: could wait on this
 	conn->send_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
 	conn->recv_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
 	//conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //commented, since buffer in Daemon
@@ -1143,8 +1230,8 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	conn->wsopt_attempt = 1;
 	conn->wsopt_enabled = 0;
-	conn->ws_send = TCP_WS_DEFAULT;
-	conn->ws_recv = TCP_WS_DEFAULT;
+	conn->ws_send = TCP_OPT_WS_DEFAULT;
+	conn->ws_recv = TCP_OPT_WS_DEFAULT;
 
 	//################################################################## alternate implementation, uses 1
 	conn->send_buf = NULL;
@@ -1214,7 +1301,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	return conn;
 }
 
-int conn_send_daemon(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
+int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
@@ -1224,17 +1311,19 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t param_id, uint32_t re
 	}
 	metadata_create(params);
 
-	uint8_t protocol = IPPROTO_TCP;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	uint32_t protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
 
-	socket_state state = SS_CONNECTED;
-	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
-	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+	uint32_t state = SS_CONNECTED;
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
+	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT32);
+	uint32_t host_port = conn->host_port;
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
+	uint32_t rem_port = conn->rem_port;
+	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1250,9 +1339,12 @@ int conn_send_daemon(struct tcp_connection *conn, uint32_t param_id, uint32_t re
 
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.serial_num = gen_control_serial_num();
-	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+	ff->ctrlFrame.opcode = CTRL_EXEC; //TODO alert?
 	ff->ctrlFrame.param_id = param_id;
 	ff->ctrlFrame.ret_val = ret_val;
+
+	ff->ctrlFrame.data_len = 0;
+	ff->ctrlFrame.data = NULL;
 
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
@@ -1273,17 +1365,19 @@ int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t par
 	}
 	metadata_create(params);
 
-	uint8_t protocol = IPPROTO_TCP;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	uint32_t protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
 
-	socket_state state = SS_CONNECTED;
-	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
-	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+	uint32_t state = SS_CONNECTED;
+	metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
+	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT32);
+	uint32_t host_port = conn->host_port;
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
+	uint32_t rem_port = conn->rem_port;
+	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1303,6 +1397,9 @@ int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t par
 	ff->ctrlFrame.param_id = param_id;
 	ff->ctrlFrame.ret_val = ret_val;
 
+	ff->ctrlFrame.data_len = 0;
+	ff->ctrlFrame.data = NULL;
+
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
 		return 1;
@@ -1317,12 +1414,14 @@ int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_m
 
 	struct finsFrame *ff = conn->ff;
 	metadata *params = ff->metaData;
-	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT); //TODO include more info?
-	metadata_writeToElement(params, "host_port", &conn->host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "rem_port", &conn->rem_port, META_TYPE_INT);
+	metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT32); //TODO include more info?
+	uint32_t host_port = conn->host_port;
+	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
+	uint32_t rem_port = conn->rem_port;
+	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
 
 	ff->destinationID.id = ff->ctrlFrame.senderID;
 
@@ -1508,7 +1607,7 @@ uint32_t tcp_gen_thread_id(void) {
 struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	PRINT_DEBUG("Entered: seg=%p", seg);
 
-	PRINT_DEBUG( "info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=%x, win=%u, checksum=%x, F=%d, S=%d, R=%d, A=%d",
+	PRINT_DEBUG( "info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=0x%x, win=%u, checksum=0x%x, F=%d, S=%d, R=%d, A=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
@@ -1518,13 +1617,15 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	}
 	metadata_create(params);
 
-	uint8_t protocol = IPPROTO_TCP;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	uint32_t protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "src_ip", &seg->src_ip, META_TYPE_INT); //Write the source ip in
-	metadata_writeToElement(params, "dst_ip", &seg->dst_ip, META_TYPE_INT); //And the destination ip
-	metadata_writeToElement(params, "src_port", &seg->src_port, META_TYPE_INT); //Write the source port in
-	metadata_writeToElement(params, "dst_port", &seg->dst_port, META_TYPE_INT); //And the destination port
+	metadata_writeToElement(params, "send_src_ip", &seg->src_ip, META_TYPE_INT32); //Write the source ip in
+	metadata_writeToElement(params, "send_dst_ip", &seg->dst_ip, META_TYPE_INT32); //And the destination ip
+	uint32_t src_port = seg->src_port;
+	metadata_writeToElement(params, "send_src_port", &src_port, META_TYPE_INT32); //Write the source port in
+	uint32_t dst_port = seg->dst_port;
+	metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32); //And the destination port
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -1540,13 +1641,12 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 
 	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
-	ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
+	ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 	PRINT_DEBUG("seg=%p, ff=%p, meta=%p, data_len=%d, hdr=%d, pduLength=%d",
 			seg, ff, ff->metaData, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
 
 	if (ff->dataFrame.pdu == NULL) {
 		PRINT_ERROR("failed to create pdu: seg=%p meta=%p", seg, params);
-		//freeFinsFrame(ff);
 		exit(-1);
 	}
 
@@ -1603,7 +1703,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	}
 	sum = ~sum;
 
-	PRINT_DEBUG("checksum=%x", (uint16_t) sum);
+	PRINT_DEBUG("checksum=0x%x", (uint16_t) sum);
 
 	hdr->checksum = htons((uint16_t) sum);
 
@@ -1628,23 +1728,22 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 	metadata *params = ff->metaData;
 	if (params == NULL) {
 		PRINT_ERROR("metadata NULL");
-		//free(seg);
 		exit(-1);
 	}
 
 	int ret = 0;
 
-	uint8_t protocol;
-	ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
+	uint32_t protocol;
+	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
 
 	if (ret || protocol != IPPROTO_TCP) {
-		PRINT_ERROR("error: ret=%d, protocol=%d", ret, protocol);
+		PRINT_ERROR("error: ret=%d, protocol=%u", ret, protocol);
 		free(seg);
 		return NULL;
 	}
 
-	ret += metadata_readFromElement(params, "src_ip", &seg->src_ip) == CONFIG_FALSE; //host
-	ret += metadata_readFromElement(params, "dst_ip", &seg->dst_ip) == CONFIG_FALSE; //remote
+	ret += metadata_readFromElement(params, "recv_src_ip", &seg->src_ip) == META_FALSE; //host
+	ret += metadata_readFromElement(params, "recv_dst_ip", &seg->dst_ip) == META_FALSE; //remote
 
 	if (ret) {
 		PRINT_ERROR("error: ret=%d", ret);
@@ -1673,7 +1772,6 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 		seg->data = (uint8_t *) malloc(seg->data_len);
 		if (seg->data == NULL) {
 			PRINT_ERROR("todo error");
-			//free(seg);
 			exit(-1);
 		}
 
@@ -1684,7 +1782,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 	seg->seq_end = seg->seq_num + seg->data_len;
 
-	PRINT_DEBUG("info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=%x, win=%u, checksum=%x, F=%d, S=%d, R=%d, A=%d",
+	PRINT_DEBUG("info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=0x%x, win=%u, checksum=0x%x, F=%d, S=%d, R=%d, A=%d",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
 
 	PRINT_DEBUG("Exited: ff=%p, meta=%p, seg=%p", ff, ff->metaData, seg);
@@ -1763,7 +1861,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 //add options //TODO implement options system
 	switch (conn->state) {
-	case TCP_SYN_SENT:
+	case TS_SYN_SENT:
 		PRINT_DEBUG("");
 		//add MSS to seg
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_attempt + TCP_TS_BYTES * conn->tsopt_attempt + TCP_WS_BYTES * conn->wsopt_attempt;
@@ -1777,33 +1875,33 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 		pt = seg->options;
 
 		//MSS typically 1460
-		seg->opt_len += TCP_MSS_BYTES;
-		*pt++ = TCP_MSS;
-		*pt++ = TCP_MSS_BYTES;
+		seg->opt_len += TCP_OPT_MSS_BYTES;
+		*pt++ = TCP_OPT_MSS;
+		*pt++ = TCP_OPT_MSS_BYTES;
 		*(uint16_t *) pt = htons(conn->MSS);
 		pt += sizeof(uint16_t);
 
 		if (conn->sack_attempt) {
 			if (!conn->tsopt_attempt) {
 				seg->opt_len += 2;
-				*pt++ = TCP_NOP; //NOP
-				*pt++ = TCP_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
 			}
 
-			seg->opt_len += TCP_SACK_PERM_BYTES;
-			*pt++ = TCP_SACK_PERM;
-			*pt++ = TCP_SACK_PERM_BYTES;
+			seg->opt_len += TCP_OPT_SACK_PERM_BYTES;
+			*pt++ = TCP_OPT_SACK_PERM;
+			*pt++ = TCP_OPT_SACK_PERM_BYTES;
 		}
 
 		if (conn->tsopt_attempt) {
 			if (!conn->sack_attempt) {
 				seg->opt_len += 2;
-				*pt++ = TCP_NOP; //NOP
-				*pt++ = TCP_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
 			}
-			seg->opt_len += TCP_TS_BYTES;
-			*pt++ = TCP_TS;
-			*pt++ = TCP_TS_BYTES;
+			seg->opt_len += TCP_OPT_TS_BYTES;
+			*pt++ = TCP_OPT_TS;
+			*pt++ = TCP_OPT_TS_BYTES;
 
 			*(uint32_t *) pt = htonl(((int) time(NULL)));
 			pt += sizeof(uint32_t);
@@ -1813,15 +1911,15 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 		if (conn->wsopt_attempt) {
 			seg->opt_len++;
-			*pt++ = TCP_NOP; //NOP
+			*pt++ = TCP_OPT_NOP; //NOP
 
-			seg->opt_len += TCP_WS_BYTES;
-			*pt++ = TCP_WS; //WS opt
-			*pt++ = TCP_WS_BYTES;
+			seg->opt_len += TCP_OPT_WS_BYTES;
+			*pt++ = TCP_OPT_WS; //WS opt
+			*pt++ = TCP_OPT_WS_BYTES;
 			*pt++ = conn->ws_recv; //believe default is 6
 		}
 		break;
-	case TCP_SYN_RECV:
+	case TS_SYN_RECV:
 		PRINT_DEBUG("");
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_enabled + TCP_TS_BYTES * conn->tsopt_enabled + TCP_WS_BYTES * conn->wsopt_enabled;
 		//if (seg->opt_len % 4) {
@@ -1834,34 +1932,34 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 		pt = seg->options;
 
 		//MSS typically 1460
-		seg->opt_len += TCP_MSS_BYTES;
-		*pt++ = TCP_MSS;
-		*pt++ = TCP_MSS_BYTES;
+		seg->opt_len += TCP_OPT_MSS_BYTES;
+		*pt++ = TCP_OPT_MSS;
+		*pt++ = TCP_OPT_MSS_BYTES;
 		*(uint16_t *) pt = htons(conn->MSS);
 		pt += sizeof(uint16_t);
 
 		if (conn->sack_enabled) {
 			if (!conn->tsopt_enabled) {
 				seg->opt_len += 2;
-				*pt++ = TCP_NOP; //NOP
-				*pt++ = TCP_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
 			}
 
-			seg->opt_len += TCP_SACK_PERM_BYTES;
-			*pt++ = TCP_SACK_PERM;
-			*pt++ = TCP_SACK_PERM_BYTES;
+			seg->opt_len += TCP_OPT_SACK_PERM_BYTES;
+			*pt++ = TCP_OPT_SACK_PERM;
+			*pt++ = TCP_OPT_SACK_PERM_BYTES;
 		}
 
 		if (conn->tsopt_enabled) {
 			if (!conn->sack_enabled) {
 				seg->opt_len += 2;
-				*pt++ = TCP_NOP; //NOP
-				*pt++ = TCP_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
+				*pt++ = TCP_OPT_NOP; //NOP
 			}
 
-			seg->opt_len += TCP_TS_BYTES;
-			*pt++ = TCP_TS;
-			*pt++ = TCP_TS_BYTES;
+			seg->opt_len += TCP_OPT_TS_BYTES;
+			*pt++ = TCP_OPT_TS;
+			*pt++ = TCP_OPT_TS_BYTES;
 
 			*(uint32_t *) pt = htonl(((int) time(NULL))); //TODO complete
 			pt += sizeof(uint32_t);
@@ -1871,26 +1969,26 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 		if (conn->wsopt_enabled) {
 			seg->opt_len++;
-			*pt++ = TCP_NOP; //NOP
+			*pt++ = TCP_OPT_NOP; //NOP
 
-			seg->opt_len += TCP_WS_BYTES;
-			*pt++ = TCP_WS; //WS opt
-			*pt++ = TCP_WS_BYTES;
+			seg->opt_len += TCP_OPT_WS_BYTES;
+			*pt++ = TCP_OPT_WS; //WS opt
+			*pt++ = TCP_OPT_WS_BYTES;
 			*pt++ = conn->ws_recv; //believe default is 6
 		}
 		break;
-	case TCP_ESTABLISHED:
+	case TS_ESTABLISHED:
 		seg->opt_len = 0;
 		pt = seg->options;
 
 		if (conn->tsopt_enabled) {
 			seg->opt_len += 2;
-			*pt++ = TCP_NOP; //NOP
-			*pt++ = TCP_NOP; //NOP
+			*pt++ = TCP_OPT_NOP; //NOP
+			*pt++ = TCP_OPT_NOP; //NOP
 
-			seg->opt_len += TCP_TS_BYTES;
-			*pt++ = TCP_TS;
-			*pt++ = TCP_TS_BYTES;
+			seg->opt_len += TCP_OPT_TS_BYTES;
+			*pt++ = TCP_OPT_TS;
+			*pt++ = TCP_OPT_TS_BYTES;
 
 			*(uint32_t *) pt = htonl(((int) time(NULL))); //TODO complete
 			pt += sizeof(uint32_t);
@@ -1900,11 +1998,11 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 		if (conn->sack_enabled) {
 			seg->opt_len += 2;
-			*pt++ = TCP_NOP; //NOP
-			*pt++ = TCP_NOP; //NOP
+			*pt++ = TCP_OPT_NOP; //NOP
+			*pt++ = TCP_OPT_NOP; //NOP
 
 			seg->opt_len += 2;
-			*pt++ = TCP_SACK;
+			*pt++ = TCP_OPT_SACK;
 			uint8_t *len_pt = pt++;
 			*len_pt = 2;
 
@@ -1975,18 +2073,18 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 	seg->flags |= (flags & (FLAG_CONTROL | FLAG_ECN)); //TODO this is where FLAG_FIN, etc should be added
 
 	switch (conn->state) {
-	case TCP_CLOSED:
+	case TS_CLOSED:
 		break;
-	case TCP_LISTEN:
+	case TS_LISTEN:
 		break;
-	case TCP_SYN_SENT:
+	case TS_SYN_SENT:
 		break;
-	case TCP_SYN_RECV:
+	case TS_SYN_RECV:
 		break;
-	case TCP_ESTABLISHED:
+	case TS_ESTABLISHED:
 		seg_delayed_ack(seg, conn);
 		break;
-	case TCP_FIN_WAIT_1:
+	case TS_FIN_WAIT_1:
 		seg_delayed_ack(seg, conn);
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) { //TODO remove?
 		//send fin
@@ -1994,15 +2092,15 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 			seg->flags |= FLAG_FIN;
 		}
 		break;
-	case TCP_FIN_WAIT_2:
+	case TS_FIN_WAIT_2:
 		break;
-	case TCP_CLOSING:
+	case TS_CLOSING:
 		seg_delayed_ack(seg, conn);
 		break;
-	case TCP_CLOSE_WAIT:
+	case TS_CLOSE_WAIT:
 		seg_delayed_ack(seg, conn);
 		break;
-	case TCP_LAST_ACK:
+	case TS_LAST_ACK:
 		seg_delayed_ack(seg, conn); //TODO move outside of switch? get rid of switch
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) {
 			//send fin
@@ -2010,7 +2108,7 @@ void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t f
 			seg->flags |= FLAG_FIN;
 		}
 		break;
-	case TCP_TIME_WAIT:
+	case TS_TIME_WAIT:
 		break;
 	}
 
@@ -2135,17 +2233,17 @@ int seg_send(struct tcp_segment *seg) {
 	 if (seg->ack_num != seg_test->ack_num)
 	 PRINT_DEBUG("diff: ack_num: seg=%u, test=%u", seg->ack_num, seg_test->ack_num);
 	 if (seg->flags != seg_test->flags)
-	 PRINT_DEBUG("diff: flags: seg=%x, test=%x", seg->flags, seg_test->flags);
+	 PRINT_DEBUG("diff: flags: seg=0x%x, test=0x%x", seg->flags, seg_test->flags);
 	 if (seg->win_size != seg_test->win_size)
 	 PRINT_DEBUG("diff: win_size: seg=%u, test=%u", seg->win_size, seg_test->win_size);
 	 if (seg->checksum != seg_test->checksum)
-	 PRINT_DEBUG("diff: checksum: seg=%x, test=%x", seg->checksum, seg_test->checksum);
+	 PRINT_DEBUG("diff: checksum: seg=0x%x, test=0x%x", seg->checksum, seg_test->checksum);
 	 if (seg->urg_pointer != seg_test->urg_pointer)
-	 PRINT_DEBUG("diff: urg_pointer: seg=%x, test=%d", seg->urg_pointer, seg_test->urg_pointer);
+	 PRINT_DEBUG("diff: urg_pointer: seg=0x%x, test=%d", seg->urg_pointer, seg_test->urg_pointer);
 	 if (seg->opt_len != seg_test->opt_len)
-	 PRINT_DEBUG("diff: opt_len: seg=%x, test=%d", seg->opt_len, seg_test->opt_len);
+	 PRINT_DEBUG("diff: opt_len: seg=0x%x, test=%d", seg->opt_len, seg_test->opt_len);
 	 if (seg->data_len != seg_test->data_len)
-	 PRINT_DEBUG("diff: data_len: seg=%x, test=%d", seg->data_len, seg_test->data_len);
+	 PRINT_DEBUG("diff: data_len: seg=0x%x, test=%d", seg->data_len, seg_test->data_len);
 	 //check options/data?
 	 }
 	 //###############################*/
@@ -2297,37 +2395,43 @@ int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 }
 
 int metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
-	//uint32_t host_port_buf;
-	//uint32_t rem_port_buf;
+	uint32_t state_buf;
+	uint32_t host_port_buf;
+	uint32_t rem_port_buf;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "state", state) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "state", &state_buf) == META_FALSE;
+	*state = (socket_state) state_buf;
 
-	ret += metadata_readFromElement(params, "host_ip", host_ip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "host_port", host_port) == CONFIG_FALSE;
-	//*host_port = (uint16_t) host_port_buf;
+	ret += metadata_readFromElement(params, "host_ip", host_ip) == META_FALSE;
+	ret += metadata_readFromElement(params, "host_port", &host_port_buf) == META_FALSE;
+	*host_port = (uint16_t) host_port_buf;
 
 	if (ret == 0 && *state > SS_UNCONNECTED) {
-		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == CONFIG_FALSE;
-		ret += metadata_readFromElement(params, "rem_port", rem_port) == CONFIG_FALSE;
-		//*rem_port = (uint16_t) rem_port_buf;
+		ret += metadata_readFromElement(params, "rem_ip", rem_ip) == META_FALSE;
+		ret += metadata_readFromElement(params, "rem_port", &rem_port_buf) == META_FALSE;
+		*rem_port = (uint16_t) rem_port_buf;
 	}
 
 	return !ret;
 }
 
 void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
-//uint32_t host_port_buf;
-//uint32_t rem_port_buf;
+	uint32_t state_buf;
+	uint32_t host_port_buf;
+	uint32_t rem_port_buf;
 
-	metadata_writeToElement(params, "state", state, META_TYPE_INT);
+	state_buf = *state;
+	metadata_writeToElement(params, "state", &state_buf, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "host_ip", host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", host_port, META_TYPE_INT);
+	metadata_writeToElement(params, "host_ip", host_ip, META_TYPE_INT32);
+	host_port_buf = *host_port;
+	metadata_writeToElement(params, "host_port", &host_port_buf, META_TYPE_INT32);
 
 	if (*state > SS_UNCONNECTED) {
-		metadata_writeToElement(params, "rem_ip", rem_ip, META_TYPE_INT);
-		metadata_writeToElement(params, "rem_port", rem_port, META_TYPE_INT);
+		metadata_writeToElement(params, "rem_ip", rem_ip, META_TYPE_INT32);
+		rem_port_buf = *rem_port;
+		metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 }
 
@@ -2337,7 +2441,6 @@ void *switch_to_tcp(void *local) {
 	while (tcp_running) {
 		tcp_get_ff();
 		PRINT_DEBUG("");
-		//	free(ff);
 	}
 
 	PRINT_DEBUG("Exited");
@@ -2404,7 +2507,43 @@ void tcp_shutdown(void) {
 	PRINT_DEBUG("Entered");
 	tcp_running = 0;
 
-//TODO expand this
+	//TODO expand this
+	//shutdown every conn/conn_stub
+
+	/*#*/PRINT_DEBUG("");
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	struct tcp_connection *conn = conn_list;
+	struct tcp_connection *old_conn;
+	while (conn) { //change to conn_list_is_empty()
+		old_conn = conn;
+		conn = conn->next;
+
+		//TODO add conn->sem's
+		//conn_shutdown(old_conn);
+	}
+	/*#*/PRINT_DEBUG("");
+	sem_post(&conn_list_sem);
+
+	/*#*/PRINT_DEBUG("");
+	if (sem_wait(&conn_stub_list_sem)) {
+		PRINT_ERROR("conn_stub_list_sem wait prob");
+		exit(-1);
+	}
+	struct tcp_connection_stub *conn_stub = conn_stub_list;
+	struct tcp_connection_stub *old_conn_stub;
+	while (conn_stub) { //change to conn_list_is_empty()
+		old_conn_stub = conn_stub;
+		conn_stub = conn_stub->next;
+
+		//TODO add conn_stub->sem's
+		//conn_stub_shutdown(old_conn_stub);
+		//conn_stub_free(old_conn_stub);
+	}
+	/*#*/PRINT_DEBUG("");
+	sem_post(&conn_stub_list_sem);
 
 	pthread_join(switch_to_tcp_thread, NULL);
 }
@@ -2421,7 +2560,7 @@ void tcp_release(void) {
 void tcp_fcf(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-//TODO fill out
+	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
@@ -2469,13 +2608,12 @@ void tcp_fcf(struct finsFrame *ff) {
 void tcp_exec(struct finsFrame *ff) {
 	int ret = 0;
 
-	socket_state state = 0;
+	uint32_t state = 0;
 	uint32_t host_ip = 0;
-	uint16_t host_port = 0;
+	uint32_t host_port = 0;
 	uint32_t rem_ip = 0;
-	uint16_t rem_port = 0;
+	uint32_t rem_port = 0;
 
-	uint32_t backlog = 0;
 	uint32_t flags = 0;
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
@@ -2486,9 +2624,10 @@ void tcp_exec(struct finsFrame *ff) {
 		case EXEC_TCP_LISTEN:
 			PRINT_DEBUG("param_id=EXEC_TCP_LISTEN (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "backlog", &backlog) == CONFIG_FALSE;
+			uint32_t backlog = 0;
+			ret += metadata_readFromElement(params, "backlog", &backlog) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -2501,17 +2640,17 @@ void tcp_exec(struct finsFrame *ff) {
 
 				tcp_to_switch(ff);
 			} else {
-				tcp_exec_listen(ff, host_ip, host_port, backlog);
+				tcp_exec_listen(ff, host_ip, (uint16_t) host_port, backlog);
 			}
 			break;
 		case EXEC_TCP_CONNECT:
 			PRINT_DEBUG("param_id=EXEC_TCP_CONNECT (%d)", ff->ctrlFrame.param_id);
-			ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "flags", &flags) == META_FALSE;
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
+			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -2524,15 +2663,15 @@ void tcp_exec(struct finsFrame *ff) {
 
 				tcp_to_switch(ff);
 			} else {
-				tcp_exec_connect(ff, host_ip, host_port, rem_ip, rem_port, flags);
+				tcp_exec_connect(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, flags);
 			}
 			break;
 		case EXEC_TCP_ACCEPT:
 			PRINT_DEBUG("param_id=EXEC_TCP_ACCEPT (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
+			ret += metadata_readFromElement(params, "flags", &flags) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -2545,16 +2684,16 @@ void tcp_exec(struct finsFrame *ff) {
 
 				tcp_to_switch(ff);
 			} else {
-				tcp_exec_accept(ff, host_ip, host_port, flags);
+				tcp_exec_accept(ff, host_ip, (uint16_t) host_port, flags);
 			}
 			break;
 		case EXEC_TCP_CLOSE:
 			PRINT_DEBUG("param_id=EXEC_TCP_CLOSE (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
+			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -2567,14 +2706,14 @@ void tcp_exec(struct finsFrame *ff) {
 
 				tcp_to_switch(ff);
 			} else {
-				tcp_exec_close(ff, host_ip, host_port, rem_ip, rem_port);
+				tcp_exec_close(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 			}
 			break;
 		case EXEC_TCP_CLOSE_STUB:
 			PRINT_DEBUG("param_id=EXEC_TCP_CLOSE_STUB (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -2588,19 +2727,22 @@ void tcp_exec(struct finsFrame *ff) {
 				tcp_to_switch(ff);
 
 			} else {
-				tcp_exec_close_stub(ff, host_ip, host_port);
+				tcp_exec_close_stub(ff, host_ip, (uint16_t) host_port);
 			}
 			break;
 		case EXEC_TCP_POLL:
 			PRINT_DEBUG("param_id=EXEC_TCP_POLL (%d)", ff->ctrlFrame.param_id);
-			ret += metadata_readFromElement(params, "state", &state) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == CONFIG_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == CONFIG_FALSE;
+			uint32_t initial;
+			ret += metadata_readFromElement(params, "initial", &initial) == META_FALSE;
+			ret += metadata_readFromElement(params, "flags", &flags) == META_FALSE;
+
+			ret += metadata_readFromElement(params, "state", &state) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
 			if (state > SS_UNCONNECTED) {
-				ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == CONFIG_FALSE;
-				ret += metadata_readFromElement(params, "rem_port", &rem_port) == CONFIG_FALSE;
+				ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == META_FALSE;
+				ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
 			}
 
 			if (ret) {
@@ -2614,7 +2756,7 @@ void tcp_exec(struct finsFrame *ff) {
 
 				tcp_to_switch(ff);
 			} else {
-				tcp_exec_poll(ff, state, host_ip, host_port, rem_ip, rem_port, flags);
+				tcp_exec_poll(ff, (socket_state) state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, initial, flags);
 			}
 			break;
 		default:
@@ -2659,7 +2801,7 @@ void tcp_error(struct finsFrame *ff) {
 				return;
 			}
 
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
 
 			//TODO finish for
 			//if (ff->ctrlFrame.para)
@@ -2673,7 +2815,7 @@ void tcp_error(struct finsFrame *ff) {
 				return;
 			}
 
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
 
 			//TODO finish
 			freeFinsFrame(ff);
@@ -2717,15 +2859,18 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 	}
 	metadata_create(params);
 
-	uint8_t protocol = IPPROTO_TCP;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	uint32_t protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "state", &state, META_TYPE_INT);
-	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT);
+	uint32_t state_buf = state;
+	metadata_writeToElement(params, "state", &state_buf, META_TYPE_INT32);
+	metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
+	uint32_t host_port_buf = host_port;
+	metadata_writeToElement(params, "host_port", &host_port_buf, META_TYPE_INT32);
 	if (state > SS_UNCONNECTED) {
-		metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT);
-		metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT);
+		metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
+		uint32_t rem_port_buf = rem_port;
+		metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
@@ -2746,6 +2891,9 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 	ff->ctrlFrame.param_id = param_id;
 	ff->ctrlFrame.ret_val = ret_val;
 
+	ff->ctrlFrame.data_len = 0;
+	ff->ctrlFrame.data = NULL;
+
 	/*#*/PRINT_DEBUG("");
 	if (tcp_to_switch(ff)) {
 		return 1;
@@ -2755,7 +2903,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 	}
 }
 
-int tcp_fdf_to_daemon(u_char *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, data_len);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
@@ -2765,13 +2913,15 @@ int tcp_fdf_to_daemon(u_char *data, int data_len, uint32_t host_ip, uint16_t hos
 	}
 	metadata_create(params);
 
-	uint8_t protocol = IPPROTO_TCP;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
+	uint32_t protocol = IPPROTO_TCP;
+	metadata_writeToElement(params, "recv_protocol", &protocol, META_TYPE_INT32);
 
-	metadata_writeToElement(params, "src_ip", &host_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "src_port", &host_port, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_ip", &rem_ip, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_port", &rem_port, META_TYPE_INT);
+	metadata_writeToElement(params, "recv_src_ip", &host_ip, META_TYPE_INT32);
+	uint32_t host_port_buf = host_port;
+	metadata_writeToElement(params, "recv_src_port", &host_port_buf, META_TYPE_INT32);
+	metadata_writeToElement(params, "recv_dst_ip", &rem_ip, META_TYPE_INT32);
+	uint32_t rem_port_buf = rem_port;
+	metadata_writeToElement(params, "recv_dst_port", &rem_port_buf, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
@@ -2812,7 +2962,7 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: ff=%p, ret_val=%u ret_msg=%u", ff, ret_val, ret_msg);
 
 	metadata *params = ff->metaData;
-	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT);
+	metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
 
 	ff->destinationID.id = ff->ctrlFrame.senderID;
 

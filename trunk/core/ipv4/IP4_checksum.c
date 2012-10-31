@@ -5,11 +5,11 @@
 
 #include "ipv4.h"
 
-unsigned short IP4_checksum(struct ip4_packet* ptr, int length) {
+uint16_t IP4_checksum(struct ip4_packet* ptr, int length) {
 
 	int sum = 0;
 	u_short ret = 0;
-	unsigned short *w = (unsigned short*) ptr;
+	uint16_t *w = (uint16_t*) ptr;
 	int nleft = length;
 
 	while (nleft > 1) {

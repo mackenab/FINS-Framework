@@ -43,12 +43,12 @@ int TerminateFinsQueue(finsQueue Q) {
 		for (i = min; i <= max; i++) {
 			if (Q->Array[i]) {
 				/*
-				if (Q->Array[i]->dataOrCtrl == DATA) {
-					if (Q->Array[i]->dataFrame.pdu) {
-						free(Q->Array[i]->dataFrame.pdu);
-					}
-				}
-				*/
+				 if (Q->Array[i]->dataOrCtrl == DATA) {
+				 if (Q->Array[i]->dataFrame.pdu) {
+				 free(Q->Array[i]->dataFrame.pdu);
+				 }
+				 }
+				 */
 
 				if (freeFinsFrame(Q->Array[i]) == 0) {
 					//PRINT_DEBUG("333");
@@ -68,12 +68,12 @@ int TerminateFinsQueue(finsQueue Q) {
 		for (i = max; i < Q->Capacity; i++) {
 			if (Q->Array[i]) {
 				/*
-				if (Q->Array[i]->dataOrCtrl == DATA) {
-					if (Q->Array[i]->dataFrame.pdu) {
-						free(Q->Array[i]->dataFrame.pdu);
-					}
-				}
-				*/
+				 if (Q->Array[i]->dataOrCtrl == DATA) {
+				 if (Q->Array[i]->dataFrame.pdu) {
+				 free(Q->Array[i]->dataFrame.pdu);
+				 }
+				 }
+				 */
 
 				if (freeFinsFrame(Q->Array[i]) == 0) {
 					//PRINT_DEBUG("333");
@@ -89,12 +89,12 @@ int TerminateFinsQueue(finsQueue Q) {
 		for (i = 0; i <= min; i++) {
 			if (Q->Array[i]) {
 				/*
-				if (Q->Array[i]->dataOrCtrl == DATA) {
-					if (Q->Array[i]->dataFrame.pdu) {
-						free(Q->Array[i]->dataFrame.pdu);
-					}
-				}
-				*/
+				 if (Q->Array[i]->dataOrCtrl == DATA) {
+				 if (Q->Array[i]->dataFrame.pdu) {
+				 free(Q->Array[i]->dataFrame.pdu);
+				 }
+				 }
+				 */
 
 				if (freeFinsFrame(Q->Array[i]) == 0) {
 					//PRINT_DEBUG("333");
@@ -189,147 +189,5 @@ struct finsFrame * read_queue(finsQueue q) {
 
 int checkEmpty(finsQueue Q) {
 	return (IsEmpty(Q));
-}
-
-/** Todo Getrid of the functions below in case they are needed any longer*/
-
-/**@brief copies the contents of one fins frame into another
- * @param dst is the pointer to the fins frame being written to
- * @param src is the pointer to the source fins frame
- * */
-void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
-
-	if (src->dataOrCtrl == DATA) {
-
-		dst->destinationID = src->destinationID;
-		dst->dataOrCtrl = src->dataOrCtrl;
-		//memcpy(&dst->dataFrame, &src->dataFrame, sizeof(src->dataFrame));
-
-		dst->dataFrame.directionFlag = src->dataFrame.directionFlag;
-		dst->dataFrame.pdu = src->dataFrame.pdu;
-		dst->dataFrame.pduLength = src->dataFrame.pduLength;
-		dst->metaData = src->metaData;
-
-	} else if (src->dataOrCtrl == CONTROL) {
-
-		PRINT_DEBUG("\ncontrol fins frame\n");
-
-		dst->destinationID = src->destinationID;
-		dst->dataOrCtrl = src->dataOrCtrl;
-		//memcpy(&dst->ctrlFrame, &src->ctrlFrame, sizeof(src->ctrlFrame));
-		dst->ctrlFrame.opcode = src->ctrlFrame.opcode;
-		dst->ctrlFrame.param_id = src->ctrlFrame.param_id;
-		dst->ctrlFrame.data = src->ctrlFrame.data;
-		dst->ctrlFrame.replyRecord = (void *) src->ctrlFrame.data;
-		dst->ctrlFrame.senderID = src->ctrlFrame.senderID;
-		dst->ctrlFrame.serial_num = src->ctrlFrame.serial_num;
-	}
-
-}
-
-/**@brief prints the contents of a fins frame whether data or control type
- * @param fins_in the pointer to the fins frame
- * */
-void print_finsFrame(struct finsFrame *ff) {
-
-	char *temp;
-	struct destinationList *dest;
-
-	PRINT_DEBUG("Printing FINS frame:");
-
-	dest = &(ff->destinationID);
-
-	while (dest != NULL) {
-		PRINT_DEBUG("Destination id %d", dest->id);
-		dest = dest->next;
-	}
-
-	if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);
-		PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
-		//PRINT_DEBUG("Meta data (first element) %x\n", fins_in->metaData);
-		PRINT_DEBUG("PDU size (bytes) %d", ff->dataFrame.pduLength);
-		int i = 0;
-		while (i < ff->dataFrame.pduLength) {
-			PRINT_DEBUG("%d", ff->dataFrame.pdu[i]);
-			i++;
-
-		}
-		temp = (char *) malloc(ff->dataFrame.pduLength + 1);
-		memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-		temp[ff->dataFrame.pduLength] = '\0';
-		PRINT_DEBUG("pdu=%s", temp);
-		free(temp);
-
-	} else if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);
-		PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);
-		PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);
-		PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
-		//		PRINT_DEBUG("\nReply Record (first element) %x\n", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);
-		PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
-	}
-
-}
-
-struct finsFrame * buildFinsFrame(void) {
-
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	PRINT_DEBUG("2.1");
-	int linkvalue = 80211;
-	char linkname[] = "linklayer";
-	unsigned char fakeDatav[] = "loloa77a7";
-	unsigned char *fakeData = fakeDatav;
-
-	metadata *metaptr = (metadata *) malloc(sizeof(metadata));
-
-	//metadata *metaptr;
-	PRINT_DEBUG("2.2");
-	metadata_create(metaptr);
-	PRINT_DEBUG("2.3");
-	metadata_addElement(metaptr, linkname, META_TYPE_INT);
-	PRINT_DEBUG("2.4");
-	metadata_writeToElement(metaptr, linkname, &linkvalue, META_TYPE_INT);
-	PRINT_DEBUG("2.5");
-	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = (unsigned char) 200;
-	ff->destinationID.next = NULL;
-
-	ff->dataFrame.directionFlag = UP;
-	ff->metaData = metaptr;
-	ff->dataFrame.pdu = fakeData;
-	ff->dataFrame.pduLength = 10;
-
-	return ff;
-}
-
-int freeFinsFrame(struct finsFrame *ff) {
-	if (ff == NULL) {
-		return (0);
-	}
-
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (ff->dataOrCtrl == CONTROL) {
-		if (ff->metaData != NULL) {
-			metadata_destroy(ff->metaData);
-		}
-		if (ff->ctrlFrame.data) {
-			free(ff->ctrlFrame.data);
-		}
-	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->metaData != NULL) {
-			metadata_destroy(ff->metaData);
-		}
-		if (ff->dataFrame.pdu) {
-			free(ff->dataFrame.pdu);
-		}
-	} else {
-		//dataOrCtrl uninitialized
-		PRINT_ERROR("todo error");
-	}
-
-	free(ff);
-	return (1);
 }
 

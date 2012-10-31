@@ -50,7 +50,6 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.droppedtotal++;
 
 		//free ppacket
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -64,7 +63,6 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.droppedtotal++;
 
 		//free ppacket
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -81,7 +79,6 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 			stats.droppedtotal++;
 
 			//free ppacket
-			//free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 			return;
 		}
@@ -89,10 +86,9 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	PRINT_DEBUG("");
 
 	if (header.ttl == 0) {
-		PRINT_DEBUG("todo");
+		PRINT_ERROR("todo");
 		//TODO discard packet & send TTL icmp to sender
 
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -119,7 +115,6 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		stats.droppedtotal++;
 		PRINT_ERROR("Packet ID %d has both DF and MF flags set", header.id);
 		//free ppacket
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}

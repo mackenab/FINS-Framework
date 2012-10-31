@@ -53,7 +53,7 @@
 #define DOWN 1	// egress network data (app -> interface)
 //this should be removed -MST
 struct destinationList {
-	unsigned char id;
+	uint8_t id;
 	struct destinationList *next;
 };
 
@@ -68,9 +68,9 @@ struct tableRecord {
 
 struct finsDataFrame {
 	/* Only for FINS DATA FRAMES */
-	unsigned char directionFlag; // ingress or egress network data; see above
-	unsigned int pduLength; // length of pdu array
-	unsigned char *pdu; // data!
+	uint8_t directionFlag; // ingress or egress network data; see above
+	uint32_t pduLength; // length of pdu array
+	uint8_t *pdu; // data!
 };
 
 //unsigned int ctrl_serial_count = 0;
@@ -87,20 +87,15 @@ struct finsCtrlFrame {
 	uint32_t data_len;
 	uint8_t *data;
 
-	//## //TODO remove this?
-	unsigned char * name; // parameter/function/error name
-	void * data_old; // pointer to relevant data; msg type dependent
+	/* Special fields for control frames depending on the Opcode */
 	// if using a struct for this, define elsewhere
 	// such as ICMP data information, define in ICMP
-	/* Special fields for control frames depending on the Opcode */
-
-	//##
-	struct tableRecord *replyRecord;
+	//struct tableRecord *replyRecord; //TODO remove?
 };
 
 struct finsFrame {
 	/* Common Fields between data and control */
-	unsigned char dataOrCtrl; // data frame or control frame; use #def values above
+	uint8_t dataOrCtrl; // data frame or control frame; use #def values above
 	struct destinationList destinationID; // destination module ID
 	metadata *metaData; // metadata
 	union {
@@ -109,6 +104,18 @@ struct finsFrame {
 	};
 
 };
+
+uint32_t gen_control_serial_num(void);
+
+struct finsFrame * buildFinsFrame(void);
+
+void print_finsFrame(struct finsFrame *fins_in);
+
+void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
+
+struct finsFrame *copyFinsFrame(struct finsFrame *ff);
+
+int freeFinsFrame(struct finsFrame *f);
 
 /* needed function defs */
 int serializeCtrlFrame(struct finsFrame *, unsigned char **);
@@ -126,17 +133,6 @@ struct finsFrame * unserializeCtrlFrame(unsigned char *, int);
  * -- struct.
  * - called by the receiver
  */
-
-uint32_t gen_control_serial_num(void);
-
-typedef enum {
-	SS_FREE = 0, /* not allocated                */
-	SS_UNCONNECTED, /* unconnected to any socket    */
-	SS_CONNECTING, /* in process of connecting     */
-	SS_CONNECTED, /* connected to socket          */
-	SS_DISCONNECTING
-/* in process of disconnecting  */
-} socket_state;
 
 #ifndef IP4_ADR_P2H
 /* macro to convert IPv4 address from human readable format Presentation to long int in Host format*/

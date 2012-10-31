@@ -22,7 +22,7 @@
 
 extern struct udp_statistics udpStat;
 
-void udp_out(struct finsFrame* ff) {
+void udp_out_fdf(struct finsFrame* ff) {
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != 0) {
 		// release FDF here

@@ -208,21 +208,10 @@ void capture_init(char *interface) {
 	//char filter_exp[] = "ether src 00:1e:2a:52:ec:9c";		/* filter expression [3] */
 	//	getDevice_MACAddress(dev_macAddress,dev);
 	//	strcat(filter_exp,dev_macAddress);
-	//strcat(filter_exp," not arp and not tcp");
-	//strcat(filter_exp," and udp and");
-	//strcat(filter_exp, "icmp");
-	//strcat(filter_exp,"dst host 127.0.0.1 and udp and port 5001");
-	//strcat(filter_exp, "udp and port 5000");
 	//strcat(filter_exp, ""); //everything
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	//strcat(filter_exp, "(ether dst 080027445566) or (broadcast and (not ether src 080027445566)) or (dst 192.168.1.20)"); //final? eth0, bridged
-	strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //final? eth0, bridged
-	//strcat(filter_exp, "(ether dst 080027112233) or (broadcast and (not ether src 080027112233)) or (dst 192.168.1.20)"); //final? eth1, nat
-	//strcat(filter_exp, "(ether dst 080027123456) or (broadcast and (not ether src 080027123456)) or (dst 192.168.1.20)"); //final? made up
+	strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))");
 
-	//strcat(filter_exp, "(ether dst 080027a55f13) or (broadcast and (not ether src 080027a55f13)) or multicast or (dst 192.168.20)"); //final? eth1
-	//strcat(filter_exp, "(ether dst 001cbf871afd) or broadcast or multicast or icmp[0] == 8 or icmp[0] == 0"); //broken, icmp request/reply
-	//strcat(filter_exp, "((ether dst 001cbf871afd) or broadcast or multicast) and (not icmp src and dst host)"); //192.168.1.12
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet((char *)dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);

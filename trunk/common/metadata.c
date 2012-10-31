@@ -29,10 +29,10 @@
  //cfgptr = metadata_create2();
 
 
- ethernet = metadata_add(cfgptr,"ethernet",META_TYPE_INT);
+ ethernet = metadata_add(cfgptr,"ethernet",META_TYPE_INT32);
  network = metadata_add(cfgptr, "network", META_TYPE_STRING);
 
- metadata_write(cfgptr,"ethernet",&l,META_TYPE_INT);
+ metadata_write(cfgptr,"ethernet",&l,META_TYPE_INT32);
  metadata_set_element(network,lolo);
 
  metadata_write(cfgptr,"transport",lolo, META_TYPE_STRING);
@@ -74,23 +74,23 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
 	handle = config_setting_get_member(root, target);
 	if (handle == NULL) {
 		//PRINT_DEBUG("%s is not found in the metadata", target);
-		status = CONFIG_FALSE;
+		status = META_FALSE;
 		PRINT_DEBUG("meta=%p, '%s', %d", cfgptr, target, status);
 
 	} else {
 		switch (config_setting_type(handle)) {
-		case CONFIG_TYPE_INT:
+		case META_TYPE_INT32:
 			status = config_setting_lookup_int(root, target, (int *) value);
 			break;
-		case CONFIG_TYPE_INT64:
+		case META_TYPE_INT64:
 			status = config_setting_lookup_int64(root, target, (int64_t *) value);
 			break;
-		case CONFIG_TYPE_STRING:
+		case META_TYPE_STRING:
 			status = config_setting_lookup_string(root, target, (const char **) value); //unsure of credibility, check strings?
 			break;
 		default:
 			PRINT_ERROR(" Asking for wrong type \n");
-			status = CONFIG_FALSE;
+			status = META_FALSE;
 			break;
 
 		}
@@ -112,21 +112,21 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 	root = config_root_setting(cfgptr);
 
 	switch (type) {
-	case CONFIG_TYPE_INT:
+	case META_TYPE_INT32:
 		handle = config_setting_get_member(root, target);
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT);
 		status = config_setting_set_int(handle, *(int *) value);
 		break;
 
-	case CONFIG_TYPE_INT64:
+	case META_TYPE_INT64:
 		handle = config_setting_get_member(root, target);
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT64);
 		status = config_setting_set_int64(handle, *(int64_t *) value);
 		break;
 
-	case CONFIG_TYPE_STRING:
+	case META_TYPE_STRING:
 		handle = config_setting_get_member(root, target);
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_STRING);
@@ -135,7 +135,7 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 	default:
 		PRINT_ERROR(" wrong type to be written\n");
 		printf("wrong type to be written to meta data!! ");
-		status = CONFIG_FALSE;
+		status = META_FALSE;
 		break;
 	}
 
@@ -151,7 +151,7 @@ int metadata_setElement(metadata_element *element, void *value) {
 
 	int status;
 	switch (config_setting_type(element)) {
-	case META_TYPE_INT:
+	case META_TYPE_INT32:
 		status = config_setting_set_int(element, *((int *) value));
 		break;
 	case META_TYPE_INT64:
@@ -163,7 +163,7 @@ int metadata_setElement(metadata_element *element, void *value) {
 	default:
 		PRINT_ERROR(" wrong type to be written\n");
 		printf("wrong type to be written to meta data!! ");
-		status = CONFIG_FALSE;
+		status = META_FALSE;
 		break;
 
 	}
@@ -208,25 +208,27 @@ int metadata_print(metadata *cfgptr) {
 		name = config_setting_name(handle);
 
 		type = config_setting_type(handle);
-		PRINT_DEBUG("\n%s \\", name);
+		//PRINT_DEBUG("\n%s \\", name);
 		switch (type) {
 		case CONFIG_TYPE_INT:
 			value = config_setting_get_int(handle);
-			PRINT_DEBUG("%d", value);
+			//PRINT_DEBUG("%d", value);
+			PRINT_DEBUG("meta=%p, '%s'=%d", cfgptr, name, value);
 			break;
 		case CONFIG_TYPE_INT64:
 			val64 = config_setting_get_int64(handle);
-			PRINT_DEBUG("%lld", val64);
+			//PRINT_DEBUG("%lld", val64);
+			PRINT_DEBUG("meta=%p, '%s'=%lld", cfgptr, name, val64);
 			break;
 		case CONFIG_TYPE_STRING:
 			stringValue = (char *) config_setting_get_string(handle);
-			PRINT_DEBUG("%s", stringValue);
+			//PRINT_DEBUG("%s", stringValue);
+			PRINT_DEBUG("meta=%p, '%s'='%s'", cfgptr, name, stringValue);
 			break;
 		default:
 			PRINT_ERROR(" wrong type found\n");
 			break;
 		}
-
 	}
 
 	return (i);
@@ -284,7 +286,7 @@ int metadata_copy(metadata *cfgptr, metadata *cfgptr_copy) {
 			break;
 		default:
 			PRINT_ERROR(" wrong type found, type=%d", type);
-			status = CONFIG_FALSE;
+			status = META_FALSE;
 			break;
 		}
 		PRINT_DEBUG("meta=%p, '%s', %d", cfgptr_copy, target, status);

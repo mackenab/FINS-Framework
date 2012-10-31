@@ -29,7 +29,7 @@ void udp_to_switch(struct finsFrame * newFF){
 	PRINT_DEBUG("PortSrc:%u, PortSrc:%u",meta.u_srcPort, meta.u_destPort);
 	PRINT_DEBUG("IPsrc:%u, IPdst:%u",meta.u_IPsrc, meta.u_IPdst)
 }
-void udp_in(struct finsFrame* ff) {
+void udp_in_fdf(struct finsFrame* ff) {
 	PRINT_DEBUG("UDP_in has been just called");
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != 0) {

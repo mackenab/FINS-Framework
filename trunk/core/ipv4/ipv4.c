@@ -15,8 +15,9 @@ sem_t Switch_to_IPv4_Qsem;
 finsQueue Switch_to_IPv4_Queue;
 
 IP4addr my_ip_addr;
-IP4addr loopback = IP4_ADR_P2H(127, 0, 0, 1);
 IP4addr my_mask;
+IP4addr loopback; // = IP4_ADR_P2H(127, 0, 0, 1);
+IP4addr loopback_mask;
 
 /*
  IP4addr my_ip_addr;
@@ -37,15 +38,14 @@ void *switch_to_ipv4(void *local) {
 	while (ipv4_running) {
 		IP4_receive_fdf();
 		PRINT_DEBUG("");
-		//	free(ff);
 	}
 
 	PRINT_DEBUG("Exited");
 	pthread_exit(NULL);
 }
 
-struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, u_char *pdu) {
-	PRINT_DEBUG("Entered: ff=%p, serial_num=%u", ff, serial_num);
+struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_t *pdu) {
+	PRINT_DEBUG("Entered: serial_num=%u, ff=%p, pdu=%p", serial_num, ff, pdu);
 
 	struct ip4_store *store = (struct ip4_store *) malloc(sizeof(struct ip4_store));
 	if (store == NULL) {
@@ -58,6 +58,7 @@ struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, u_char
 	store->ff = ff;
 	store->pdu = pdu;
 
+	PRINT_DEBUG("Exited: serial_num=%u, ff=%p, pdu=%p, store=%p", serial_num, ff, pdu, store);
 	return store;
 }
 
@@ -92,6 +93,8 @@ int store_list_insert(struct ip4_store *store) {
 	}
 
 	store_num++;
+
+	PRINT_DEBUG("")
 	return 1;
 }
 
@@ -104,6 +107,7 @@ struct ip4_store *store_list_find(uint32_t serial_num) {
 		temp = temp->next;
 	}
 
+	PRINT_DEBUG("Exited: serial_num=%u, store=%p", serial_num, temp);
 	return temp;
 }
 
@@ -156,8 +160,7 @@ void ipv4_init(void) {
 	//my_ip_addr = IP4_ADR_P2H(172, 31, 63, 231);
 	//my_ip_addr = IP4_ADR_P2H(172, 31, 53, 114);
 	//PRINT_DEBUG("%lu", my_ip_addr);
-	my_mask = IP4_ADR_P2H(255, 255, 255, 0); //TODO move to core/central place
-
+	//my_mask = IP4_ADR_P2H(255, 255, 255, 0); //TODO move to core/central place
 	//ADDED mrd015 !!!!!
 #ifndef BUILD_FOR_ANDROID
 	IP4_init();
@@ -167,6 +170,11 @@ void ipv4_init(void) {
 void set_interface(uint32_t IP_address, uint32_t mask) {
 	my_ip_addr = IP_address;
 	my_mask = mask;
+}
+
+void set_loopback(uint32_t IP_address, uint32_t mask) {
+	loopback = IP_address;
+	loopback_mask = mask;
 }
 
 void ipv4_run(pthread_attr_t *fins_pthread_attr) {

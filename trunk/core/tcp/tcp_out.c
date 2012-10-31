@@ -45,7 +45,7 @@ void *write_thread(void *local) {
 	}
 	if (conn->running_flag) {
 		PRINT_DEBUG("state=%d", conn->state);
-		if (conn->state == TCP_SYN_SENT || conn->state == TCP_SYN_RECV) { //equiv to non blocking
+		if (conn->state == TS_SYN_SENT || conn->state == TS_SYN_RECV) { //equiv to non blocking
 			PRINT_DEBUG("non-blocking");
 			space = conn->write_queue->max - conn->write_queue->len;
 			if (space >= called_len) {
@@ -62,9 +62,12 @@ void *write_thread(void *local) {
 				conn_send_fcf(conn, serial_num, EXEC_TCP_SEND, 0, 2);
 				free(called_data);
 			}
-		} else if (conn->state == TCP_ESTABLISHED || conn->state == TCP_CLOSE_WAIT) { //essentially blocking
+		} else if (conn->state == TS_ESTABLISHED || conn->state == TS_CLOSE_WAIT) { //essentially blocking
 			PRINT_DEBUG("blocking");
+			sem_init(&conn->write_wait_sem, 0, 0);
+
 			while (conn->running_flag && index < called_len) {
+				PRINT_DEBUG("index=%d, called_len=%u", index, called_len);
 				space = conn->write_queue->max - conn->write_queue->len;
 				if (space > 0) {
 					len = called_len - index;
@@ -73,11 +76,15 @@ void *write_thread(void *local) {
 					}
 
 					buf = (uint8_t *) malloc(len * sizeof(uint8_t));
+					if (buf == NULL) {
+						PRINT_ERROR("Error, unable to create node");
+						exit(-1);
+					}
 					memcpy(buf, pt, len);
 					pt += len;
 					index += len;
 
-					node = node_create(buf, len, 0, 0);
+					node = node_create(buf, len, index - len, index - 1);
 					queue_append(conn->write_queue, node);
 
 					if (conn->main_wait_flag) {
@@ -149,6 +156,21 @@ void *write_thread(void *local) {
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn->write_sem);
 
+	if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+		int val;
+		sem_getvalue(&conn->write_sem, &val);
+		if (val) {
+			space = conn->write_queue->max - conn->write_queue->len;
+			PRINT_DEBUG("conn=%p, conn->write_sem=%d, space=%d", conn, val, space);
+			if (space > 0) {
+				conn_send_exec(conn, EXEC_TCP_POLL_POST, 1, POLLOUT | POLLWRNORM | POLLWRBAND);
+				conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+			}
+		} else {
+			PRINT_DEBUG("conn=%p, conn->write_sem=%d", conn, val);
+		}
+	}
+
 	/*#*/PRINT_DEBUG("");
 	if (sem_wait(&conn_list_sem)) {
 		PRINT_ERROR("conn_list_sem wait prob");
@@ -170,8 +192,8 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	//receiving straight data from the APP layer, process/package into segment
 	uint32_t src_ip;
 	uint32_t dst_ip;
-	uint16_t src_port;
-	uint16_t dst_port;
+	uint32_t src_port;
+	uint32_t dst_port;
 
 	uint32_t flags;
 	uint32_t serial_num;
@@ -181,14 +203,13 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	metadata *params = ff->metaData;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "flags", &flags) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "flags", &flags) == META_FALSE;
+	ret += metadata_readFromElement(params, "serial_num", &serial_num) == META_FALSE;
 
-	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE; //host
-	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE; //remote
-	ret += metadata_readFromElement(params, "src_port", &src_port) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "dst_port", &dst_port) == CONFIG_FALSE;
-
-	ret += metadata_readFromElement(params, "serial_num", &serial_num) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "host_ip", &src_ip) == META_FALSE; //host
+	ret += metadata_readFromElement(params, "host_port", &src_port) == META_FALSE;
+	ret += metadata_readFromElement(params, "rem_ip", &dst_ip) == META_FALSE; //remote
+	ret += metadata_readFromElement(params, "rem_port", &dst_port) == META_FALSE;
 
 	if (ret) {
 		//TODO error
@@ -200,7 +221,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 		PRINT_ERROR("conn_list_sem wait prob");
 		exit(-1);
 	}
-	struct tcp_connection *conn = conn_list_find(src_ip, src_port, dst_ip, dst_port); //TODO check if right
+	struct tcp_connection *conn = conn_list_find(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port); //TODO check if right
 	int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 	//if (start) {conn->write_threads++;}
 	/*#*/PRINT_DEBUG("");
@@ -211,14 +232,14 @@ void tcp_out_fdf(struct finsFrame *ff) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn = conn;
-			thread_data->data_raw = ff->dataFrame.pdu;
 			thread_data->data_len = ff->dataFrame.pduLength;
+			thread_data->data_raw = ff->dataFrame.pdu;
 			thread_data->flags = flags;
 			thread_data->serial_num = serial_num;
-
 			ff->dataFrame.pdu = NULL;
 
-			//spin off thread to handle
+			PRINT_DEBUG("starting: id=%u, conn=%p, pdu=%p, len=%u, flags=0x%x, serial_num=%u",
+					thread_data->id, thread_data->conn, thread_data->data_raw, thread_data->data_len, thread_data->flags, thread_data->serial_num);
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, write_thread, (void *) thread_data)) {
 				PRINT_ERROR("ERROR: unable to create write_thread thread.");
@@ -294,8 +315,8 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
-			thread_data->flags = 1;
 			thread_data->ff = ff;
+			thread_data->flags = 1;
 
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, close_stub_thread, (void *) thread_data)) {
@@ -317,23 +338,26 @@ void *poll_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
 	struct tcp_connection *conn = thread_data->conn;
-	//uint32_t send_ack = thread_data->flags;
-	uint32_t events = thread_data->flags; //events
 	struct finsFrame *ff = thread_data->ff;
+	uint32_t initial = thread_data->data_len;
+	uint32_t events = thread_data->flags;
 	free(thread_data);
 
-	uint32_t mask = 0;
+	PRINT_DEBUG("Entered: id=%u, conn=%p, ff=%p,  initial=0x%x, events=0x%x", id, conn, ff, initial, events);
 
-	PRINT_DEBUG("Entered: id=%u", id);
+	uint32_t mask = 0;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	if (sem_wait(&conn->sem)) {
 		PRINT_ERROR("conn->sem wait prob");
 		exit(-1);
 	}
-
 	if (conn->running_flag) {
 		//TODO redo, for now mostly does POLLOUT
+
+		if (events & (POLLERR)) {
+			//TODO errors
+		}
 
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) { //TODO remove - handled by daemon
 			//mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
@@ -342,60 +366,40 @@ void *poll_thread(void *local) {
 		}
 
 		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-			/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
-			sem_post(&conn->sem);
-
-			if (sem_wait(&conn->write_sem)) {
-				PRINT_ERROR("conn->write_sem wait prob");
-				exit(-1);
-			}
-
-			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->sem wait prob");
-				exit(-1);
-			}
-			while (conn->running_flag) { //TODO optimize
-				//POLLOUT, returns if writing then won't block
-				//TODO decide if means no write_threads or simply there's write_queue space //returns if have >=1 space in write_queue
-
-				if (queue_has_space(conn->write_queue, 1)) {
+			int val;
+			sem_getvalue(&conn->write_sem, &val);
+			PRINT_DEBUG("conn=%p, conn->write_sem=%d", conn, val);
+			if (val) {
+				int space = conn->write_queue->max - conn->write_queue->len;
+				if (space > 0) {
 					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-					break;
 				} else {
-					/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
-					sem_post(&conn->sem);
-
-					/*#*/PRINT_DEBUG("");
-					if (sem_wait(&conn->write_wait_sem)) {
-						PRINT_ERROR("conn->send_wait_sem prob");
-						exit(-1);
-					}
-					sem_init(&conn->write_wait_sem, 0, 0);
-					PRINT_DEBUG("left conn->send_wait_sem\n");
-
-					/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-					if (sem_wait(&conn->sem)) {
-						PRINT_ERROR("conn->sem wait prob");
-						exit(-1);
+					if (initial) {
+						conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+						PRINT_DEBUG("adding: poll_events=0x%x", conn->poll_events);
+					} else {
+						conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+						PRINT_DEBUG("removing: poll_events=0x%x", conn->poll_events);
 					}
 				}
-			}
-
-			if (conn->running_flag) {
-				//conn_send_daemon(conn, EXEC_TCP_POLL, 1, mask);
-				tcp_reply_fcf(ff, 1, mask);
 			} else {
-				//conn_send_daemon(conn, EXEC_TCP_POLL, 1, 0);
-				tcp_reply_fcf(ff, 1, POLLHUP); //TODO check on value?
+				if (initial) {
+					conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+					PRINT_DEBUG("adding: poll_events=0x%x", conn->poll_events);
+				} else {
+					conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+					PRINT_DEBUG("removing: poll_events=0x%x", conn->poll_events);
+				}
 			}
-
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn->write_sem);
 		}
+
+		if (events & (POLLHUP)) {
+			//TODO errors
+		}
+
+		tcp_reply_fcf(ff, 1, mask);
 	} else {
 		PRINT_ERROR("todo error");
-		//conn_send_daemon(conn, EXEC_TCP_POLL, 1, 0);
 		tcp_reply_fcf(ff, 1, POLLHUP); //TODO check on value?
 	}
 
@@ -419,43 +423,58 @@ void *poll_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
 	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
-	//uint32_t send_ack = thread_data->flags;
-	uint32_t events = thread_data->flags; //events
 	struct finsFrame *ff = thread_data->ff;
+	uint32_t initial = thread_data->data_len;
+	uint32_t events = thread_data->flags;
 	free(thread_data);
 
-	uint32_t mask = 0;
-
 	PRINT_DEBUG("Entered: id=%u", id);
+
+	uint32_t mask = 0;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	if (sem_wait(&conn_stub->sem)) {
 		PRINT_ERROR("conn_stub->sem wait prob");
 		exit(-1);
 	}
-
-	//TODO finish
 	if (conn_stub->running_flag) {
+		//TODO redo, for now mostly does POLLOUT
 
-		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
+		if (events & (POLLERR)) {
+			//TODO errors
+		}
+
+		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) { //TODO remove - handled by daemon
 			//mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+
+			//add a check to see if conn moves to CLOSE_WAIT, post: POLLHUP
 		}
 
 		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-			//mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-			//TODO contact TCP for
+			int val = 0;
+			//val = conn_stub->
+			//sem_getvalue(&conn->write_sem, &val);
+			//PRINT_DEBUG("conn_stub=%p, conn->write_sem=%d", conn_stub, val);
+
+			if (val) {
+				mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
+			} else {
+				if (initial) {
+					conn_stub->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+				} else {
+					conn_stub->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+				}
+			}
 		}
 
-		if (events & mask) {
-
+		if (events & (POLLHUP)) {
+			//TODO errors
 		}
 
-		//conn_stub_send_daemon(conn_stub, EXEC_TCP_POLL, 1, mask);
 		tcp_reply_fcf(ff, 1, mask);
 	} else {
 		PRINT_ERROR("todo error");
-		//conn_stub_send_daemon(conn_stub, EXEC_TCP_POLL, 1, 0);
-		tcp_reply_fcf(ff, 0, 0);
+		tcp_reply_fcf(ff, 1, POLLHUP); //TODO check on value?
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -474,13 +493,14 @@ void *poll_stub_thread(void *local) {
 	pthread_exit(NULL);
 }
 
-void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags) {
+void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t initial,
+		uint32_t flags) {
 	int start;
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
 	if (state > SS_UNCONNECTED) {
-		PRINT_DEBUG("Entered: state=%u host=%u/%u rem=%u/%u", state, host_ip, host_port, rem_ip, rem_port);
+		PRINT_DEBUG("Entered: state=%u, host=%u/%u, rem=%u/%u, initial=%u, events=0x%x", state, host_ip, host_port, rem_ip, rem_port, initial, flags);
 		if (sem_wait(&conn_list_sem)) {
 			PRINT_ERROR("conn_list_sem wait prob");
 			exit(-1);
@@ -495,8 +515,9 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
-				thread_data->flags = flags;
 				thread_data->ff = ff;
+				thread_data->data_len = initial;
+				thread_data->flags = flags;
 
 				if (pthread_create(&thread, NULL, poll_thread, (void *) thread_data)) {
 					PRINT_ERROR("ERROR: unable to create poll_thread thread.");
@@ -515,7 +536,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 			tcp_reply_fcf(ff, 1, POLLERR); //TODO check on value?
 		}
 	} else {
-		PRINT_DEBUG("Entered: state=%u host=%u/%u", state, host_ip, host_port);
+		PRINT_DEBUG("Entered: state=%u host=%u/%u, initial=%u, flags=%u", state, host_ip, host_port, initial, flags);
 		if (sem_wait(&conn_stub_list_sem)) {
 			PRINT_ERROR("conn_stub_list_sem wait prob");
 			exit(-1);
@@ -530,8 +551,9 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn_stub = conn_stub;
-				thread_data->flags = flags;
 				thread_data->ff = ff;
+				thread_data->data_len = initial;
+				thread_data->flags = flags;
 
 				if (pthread_create(&thread, NULL, poll_stub_thread, (void *) thread_data)) {
 					PRINT_ERROR("ERROR: unable to create poll_stub_thread thread.");
@@ -571,14 +593,14 @@ void *connect_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		if (conn->state == TCP_CLOSED || conn->state == TCP_LISTEN) {
+		if (conn->state == TS_CLOSED || conn->state == TS_LISTEN) {
 			//if CONNECT, send SYN, SYN_SENT
-			if (conn->state == TCP_CLOSED) {
+			if (conn->state == TS_CLOSED) {
 				PRINT_DEBUG("CLOSED: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
 			} else {
 				PRINT_DEBUG("LISTEN: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
 			}
-			conn->state = TCP_SYN_SENT;
+			conn->state = TS_SYN_SENT;
 			conn->active_open = 1;
 			conn->ff = ff;
 
@@ -686,8 +708,8 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 				struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
-				thread_data->flags = flags;
 				thread_data->ff = ff;
+				thread_data->flags = flags;
 
 				pthread_t thread;
 				if (pthread_create(&thread, NULL, connect_thread, (void *) thread_data)) {
@@ -814,9 +836,10 @@ void *accept_thread(void *local) {
 						if (conn->running_flag) { //LISTENING state
 							//if SYN, send SYN ACK, SYN_RECV
 							PRINT_DEBUG("SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
-							conn->state = TCP_SYN_RECV;
+							conn->state = TS_SYN_RECV;
 							conn->active_open = 0;
 							conn->ff = ff;
+							conn->poll_events = conn_stub->poll_events; //TODO specify more
 
 							if (flags & (1)) {
 								//TODO do specific flags/settings
@@ -940,7 +963,7 @@ void *accept_thread(void *local) {
 }
 
 void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags) {
-	PRINT_DEBUG("Entered: host=%u/%u, flags=%x", host_ip, host_port, flags);
+	PRINT_DEBUG("Entered: host=%u/%u, flags=0x%x", host_ip, host_port, flags);
 
 	if (sem_wait(&conn_stub_list_sem)) {
 		PRINT_ERROR("conn_stub_list_sem wait prob");
@@ -956,8 +979,8 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
-			thread_data->flags = flags;
 			thread_data->ff = ff;
+			thread_data->flags = flags;
 
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, accept_thread, (void *) thread_data)) {
@@ -1001,9 +1024,9 @@ void *close_thread(void *local) {
 		exit(-1);
 	}
 	if (conn->running_flag) {
-		if (conn->state == TCP_ESTABLISHED || conn->state == TCP_SYN_RECV) {
+		if (conn->state == TS_ESTABLISHED || conn->state == TS_SYN_RECV) {
 			PRINT_DEBUG("CLOSE, send FIN, FIN_WAIT_1: state=%d conn=%p", conn->state, conn);
-			conn->state = TCP_FIN_WAIT_1;
+			conn->state = TS_FIN_WAIT_1;
 			conn->ff_close = ff;
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
@@ -1013,7 +1036,7 @@ void *close_thread(void *local) {
 			//if CLOSE, send FIN, FIN_WAIT_1
 			if (queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
 				//send FIN
-				if (conn->state == TCP_ESTABLISHED) {
+				if (conn->state == TS_ESTABLISHED) {
 					PRINT_DEBUG("ESTABLISHED: done, send FIN: state=%d conn=%p", conn->state, conn);
 				} else {
 					PRINT_DEBUG("SYN_RECV: done, send FIN: state=%d conn=%p", conn->state, conn);
@@ -1034,9 +1057,9 @@ void *close_thread(void *local) {
 			} else {
 				//else piggy back it
 			}
-		} else if (conn->state == TCP_CLOSE_WAIT) {
+		} else if (conn->state == TS_CLOSE_WAIT) {
 			PRINT_DEBUG("CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d conn=%p", conn->state, conn);
-			conn->state = TCP_LAST_ACK;
+			conn->state = TS_LAST_ACK;
 			conn->ff_close = ff;
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u) win=(%u/%u), rem: seqs=(%u, %u) (%u, %u) win=(%u/%u)",
@@ -1063,10 +1086,10 @@ void *close_thread(void *local) {
 			} else {
 				//else piggy back it
 			}
-		} else if (conn->state == TCP_SYN_SENT) {
+		} else if (conn->state == TS_SYN_SENT) {
 			//if CLOSE, send -, CLOSED
 			PRINT_DEBUG("SYN_SENT: CLOSE, send -, CLOSED: state=%d conn=%p", conn->state, conn);
-			conn->state = TCP_CLOSED;
+			conn->state = TS_CLOSED;
 
 			if (conn->ff) {
 				tcp_reply_fcf(conn->ff, 0, 0); //send NACK about connect call
@@ -1080,8 +1103,8 @@ void *close_thread(void *local) {
 
 			conn_shutdown(conn);
 
-		} else if (conn->state == TCP_CLOSED || conn->state == TCP_TIME_WAIT) {
-			if (conn->state == TCP_CLOSED) {
+		} else if (conn->state == TS_CLOSED || conn->state == TS_TIME_WAIT) {
+			if (conn->state == TS_CLOSED) {
 				PRINT_DEBUG("CLOSED: CLOSE, -, CLOSED: state=%d conn=%p", conn->state, conn);
 			} else {
 				PRINT_DEBUG("TIME_WAIT: CLOSE, -, TIME_WAIT: state=%d conn=%p", conn->state, conn);
@@ -1187,7 +1210,7 @@ void *read_param_conn_thread(void *local) {
 			} else {
 				ret_val = 1;
 				value = conn->recv_win;
-				metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT);
+				metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
 			}
 
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
@@ -1275,7 +1298,7 @@ void *read_param_conn_stub_thread(void *local) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
-			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
+			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1299,7 +1322,7 @@ void *read_param_conn_stub_thread(void *local) {
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
-			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
+			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1471,7 +1494,7 @@ void *set_param_conn_thread(void *local) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
-			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
+			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1494,7 +1517,7 @@ void *set_param_conn_thread(void *local) {
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
-			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
+			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1577,7 +1600,7 @@ void *set_param_conn_stub_thread(void *local) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
-			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
+			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1602,7 +1625,7 @@ void *set_param_conn_stub_thread(void *local) {
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
-			ret = metadata_readFromElement(params, "value", &value) == CONFIG_FALSE;
+			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack

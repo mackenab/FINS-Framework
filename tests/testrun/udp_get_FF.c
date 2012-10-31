@@ -33,10 +33,10 @@ udpStat.totalRecieved++;
 		// send to something to deal with FCF
 	}
 	if(ff.dataOrCtrl == DATA && ff.dataFrame.directionFlag == UP){
-		udp_in(&ff);
+		udp_in_fdf(&ff);
 	}
 	if(ff.dataOrCtrl == DATA && ff.dataFrame.directionFlag == DOWN){
-		udp_out(&ff);
+		udp_out_fdf(&ff);
 	}
 
 

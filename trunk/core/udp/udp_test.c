@@ -163,7 +163,7 @@ char str[45] = "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
 str[45] = '\0';
 strcpy(packet2.u_data, str);
 lolo = UDP_checksum(&packet2, &pseudoheader2);
-	PRINT_DEBUG("The checksums value is %x \n ", lolo);
+	PRINT_DEBUG("The checksums value is 0x%x \n ", lolo);
 
 
 

@@ -21,7 +21,7 @@
 
 extern struct udp_statistics udpStat;
 
-void udp_in(struct finsFrame* ff) {
+void udp_in_fdf(struct finsFrame* ff) {
 
 	//struct finsFrame *newFF;
 
@@ -48,16 +48,16 @@ void udp_in(struct finsFrame* ff) {
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
 	metadata *params = ff->metaData;
 
-	uint8_t protocol;
+	uint32_t protocol;
 	uint32_t src_ip;
 	uint32_t dst_ip;
-	uint16_t src_port;
-	uint16_t dst_port;
+	uint32_t src_port;
+	uint32_t dst_port;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
+	ret += metadata_readFromElement(params, "recv_src_ip", &src_ip) == META_FALSE;
+	ret += metadata_readFromElement(params, "recv_dst_ip", &dst_ip) == META_FALSE;
 
 	if (ret) {
 		//TODO error
@@ -93,14 +93,14 @@ void udp_in(struct finsFrame* ff) {
 	src_port = ntohs(packet->u_src);
 	dst_port = ntohs(packet->u_dst);
 
-	PRINT_DEBUG("proto=%u , src=%u/%u, dst=%u/%u", protocol, src_ip, src_port, dst_ip, dst_port);
+	PRINT_DEBUG("proto=%u , src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 	PRINT_DEBUG("UDP_checksum=%u checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
 			udpStat.badChecksum++;
 			udpStat.totalBadDatagrams++;
-			PRINT_ERROR("bad checksum=%x, calc=%x", packet->u_cksum, checksum);
+			PRINT_ERROR("bad checksum=0x%x, calc=0x%x", packet->u_cksum, checksum);
 
 			return;
 		}
@@ -112,8 +112,8 @@ void udp_in(struct finsFrame* ff) {
 	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
 
-	metadata_writeToElement(params, "src_port", &src_port, META_TYPE_INT);
-	metadata_writeToElement(params, "dst_port", &dst_port, META_TYPE_INT);
+	metadata_writeToElement(params, "recv_src_port", &src_port, META_TYPE_INT32);
+	metadata_writeToElement(params, "recv_dst_port", &dst_port, META_TYPE_INT32);
 
 	/* put the header into the meta data*/
 	//	meta->u_destPort = packet->u_dst;
@@ -128,13 +128,13 @@ void udp_in(struct finsFrame* ff) {
 	int leng = ff->dataFrame.pduLength;
 	ff->dataFrame.pduLength = leng - U_HEADER_LEN;
 
-	u_char *pdu = ff->dataFrame.pdu;
-	u_char *data = (u_char *) malloc(ff->dataFrame.pduLength);
+	uint8_t *pdu = ff->dataFrame.pdu;
+	uint8_t *data = (uint8_t *) malloc(ff->dataFrame.pduLength);
 	memcpy(data, pdu + U_HEADER_LEN, ff->dataFrame.pduLength);
 	ff->dataFrame.pdu = data;
 
 	//#########################
-	u_char *temp = (u_char *) malloc(ff->dataFrame.pduLength + 1);
+	uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
 	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	temp[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
@@ -154,9 +154,6 @@ void udp_in(struct finsFrame* ff) {
 	udp_to_switch(ff);
 
 	//PRINT_DEBUG("freeing: ff=%p", ff);
-	//freeFinsFrame(ff); //can't since using meta
-	//free(ff->dataFrame.pdu); //TODO fix free problem right here
-	//free(ff);
 
 	PRINT_DEBUG("Freeing pdu=%p", pdu);
 	free(pdu);

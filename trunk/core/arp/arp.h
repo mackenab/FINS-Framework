@@ -44,20 +44,20 @@
 struct arp_hdr {
 	uint16_t hardware_type;
 	uint16_t protocol_type;
-	unsigned char hardware_addrs_length;
-	unsigned char protocol_addrs_length;
+	uint8_t hardware_addrs_length;
+	uint8_t protocol_addrs_length;
 	uint16_t operation;
-	unsigned char sender_MAC_addrs[ARP_HDW_ADDR_LEN];
-	unsigned char sender_IP_addrs[ARP_PROTOCOL_ADDR_LEN];
-	unsigned char target_MAC_addrs[ARP_HDW_ADDR_LEN];
-	unsigned char target_IP_addrs[ARP_PROTOCOL_ADDR_LEN];
+	uint8_t sender_MAC_addrs[ARP_HDW_ADDR_LEN];
+	uint8_t sender_IP_addrs[ARP_PROTOCOL_ADDR_LEN];
+	uint8_t target_MAC_addrs[ARP_HDW_ADDR_LEN];
+	uint8_t target_IP_addrs[ARP_PROTOCOL_ADDR_LEN];
 
 };
 
 uint64_t gen_MAC_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f);
 uint32_t gen_IP_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-void MAC_addrs_conversion(uint64_t MAC_int_addrs, unsigned char *MAC_addrs);
-void IP_addrs_conversion(uint32_t IP_int_addrs, unsigned char *IP_char_addrs);
+void MAC_addrs_conversion(uint64_t MAC_int_addrs, uint8_t *MAC_addrs);
+void IP_addrs_conversion(uint32_t IP_int_addrs, uint8_t *IP_char_addrs);
 
 /**struct ARP_message is used for internal use for the module and stores all the traditional
  * fields in more convenient format (e.g. uint64_t instead of unsigned char array[6] etc.).

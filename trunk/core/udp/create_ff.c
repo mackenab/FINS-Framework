@@ -22,7 +22,7 @@
 
 extern struct udp_statistics udpStat;
 
-struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, unsigned char* PDU, metadata *meta) {
+struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t* PDU, metadata *meta) {
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
 	data = (char *) malloc(PDU_length);

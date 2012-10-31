@@ -87,6 +87,26 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 
 	PRINT_DEBUG("RTM has started");
 
+	/*
+	 //added to include code from fins_daemon.sh -- mrd015 !!!!! //TODO move this to RTM module
+	 if (mkfifo(RTM_PIPE_IN, 0777) != 0) {
+	 if (errno == EEXIST) {
+	 PRINT_DEBUG("mkfifo(" RTM_PIPE_IN ", 0777) already exists.");
+	 } else {
+	 PRINT_ERROR("mkfifo(" RTM_PIPE_IN ", 0777) failed.");
+	 exit(-1);
+	 }
+	 }
+	 if (mkfifo(RTM_PIPE_OUT, 0777) != 0) {
+	 if (errno == EEXIST) {
+	 PRINT_DEBUG("mkfifo(" RTM_PIPE_OUT ", 0777) already exists.");
+	 } else {
+	 PRINT_ERROR("mkfifo(" RTM_PIPE_OUT ", 0777) failed.");
+	 exit(-1);
+	 }
+	 }
+	 */
+
 	//int datalen;
 	int numBytes;
 	//int val_len;

@@ -5,6 +5,12 @@
 #include <sys/socket.h>
 #endif
 
+extern uint32_t my_host_ip_addr;
+extern uint32_t my_host_mask;
+extern uint32_t loopback_ip_addr;
+//uint32_t loopback_mask;
+extern uint32_t any_ip_addr;
+
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 	struct ip4_routing_table *current_pointer;
 	current_pointer = table_pointer;
@@ -17,8 +23,7 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 				(unsigned int) (current_pointer->gw >> 8) & 0xFF, (unsigned int) current_pointer->gw & 0xFF);
 		printf("%u \t", (unsigned int) current_pointer->mask);
 		printf("%u \t", current_pointer->metric);
-		//printf("%u", current_pointer->interface);
-		printf("%lu", current_pointer->interface);
+		printf("%u", current_pointer->interface);
 		printf("\n");
 		current_pointer = current_pointer->next_entry;
 	}
@@ -102,8 +107,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 					break;
 				case RTA_OIF: //interface
 					memcpy(&table_pointer->interface, RTA_DATA(rta), sizeof(interface)); //TODO won't work with current hack
-					//PRINT_DEBUG("interface:%u", table_pointer->interface);
-					PRINT_DEBUG("interface:%lu", table_pointer->interface);
+					PRINT_DEBUG("interface:%u", table_pointer->interface);
 					break;
 				case RTA_PRIORITY: //metric
 					memcpy(&table_pointer->metric, RTA_DATA(rta), sizeof(priority));
@@ -190,46 +194,43 @@ struct ip4_routing_table * IP4_get_routing_table_old() {
 
 struct ip4_routing_table * IP4_get_routing_table() {
 	struct ip4_routing_table *routing_table;
-	struct ip4_routing_table *row0;
-	struct ip4_routing_table *row1;
-	struct ip4_routing_table *row2;
 
-	row0 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	struct ip4_routing_table *row0 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	if (row0 == NULL) {
 		PRINT_ERROR("table alloc fail");
 		exit(-1);
 	}
-	row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	struct ip4_routing_table *row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	if (row1 == NULL) {
 		PRINT_ERROR("table alloc fail");
 		exit(-1);
 	}
-	row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+	struct ip4_routing_table *row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	if (row2 == NULL) {
 		PRINT_ERROR("table alloc fail");
 		exit(-1);
 	}
 
 	if (1) {
-		row0->dst = IP4_ADR_P2H(192,168,1,0);
-		row0->gw = IP4_ADR_P2H(0,0,0,0);
+		row0->dst = my_host_ip_addr & my_host_mask;
+		row0->gw = any_ip_addr;
 		row0->mask = 24;
 		row0->metric = 10;
-		row0->interface = IP4_ADR_P2H(192,168,1,20); //TODO change back to number? so looks up in interface list
+		row0->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
 		row0->next_entry = row1;
 
-		row1->dst = IP4_ADR_P2H(0,0,0,0);
-		row1->gw = IP4_ADR_P2H(192,168,1,1);
+		row1->dst = any_ip_addr;
+		row1->gw = (my_host_ip_addr & my_host_mask) | 1;
 		row1->mask = 24;
 		row1->metric = 10;
-		row1->interface = IP4_ADR_P2H(192,168,1,20); //TODO change back to number? so looks up in interface list
+		row1->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
 		row1->next_entry = row2;
 
-		row2->dst = IP4_ADR_P2H(127,0,0,1);
+		row2->dst = loopback_ip_addr;
 		row2->gw = IP4_ADR_P2H(10,0,2,2);
 		row2->mask = 0;
 		row2->metric = 0;
-		row2->interface = IP4_ADR_P2H(192,168,1,20);
+		row2->interface = my_host_ip_addr;
 		row2->next_entry = NULL;
 	}
 
@@ -238,7 +239,7 @@ struct ip4_routing_table * IP4_get_routing_table() {
 		row0->gw = IP4_ADR_P2H(0,0,0,0);
 		row0->mask = 24;
 		row0->metric = 1;
-		row0->interface = 3; //number assiociated with IP?
+		row0->interface = 3; //number assiociated with interface & thus IP?
 		row0->next_entry = row1;
 
 		row1->dst = IP4_ADR_P2H(169,254,0,0);
@@ -257,6 +258,5 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	}
 
 	routing_table = row0;
-
 	return routing_table;
 }

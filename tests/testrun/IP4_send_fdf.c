@@ -35,7 +35,7 @@ void IP4_send_fdf_in(struct ip4_header* pheader, struct ip4_packet* ppacket)
 	meta.u_prcl = pheader->protocol;
 	PRINT_DEBUG("IP plength:%u", meta.u_pslen = pheader->packet_length-IP4_MIN_HLEN);
 	memcpy(&fins_frame.dataFrame.metaData, &meta, sizeof(struct udp_metadata_parsed));
-	udp_in(&fins_frame);
+	udp_in_fdf(&fins_frame);
 
 }
 

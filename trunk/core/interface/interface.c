@@ -13,6 +13,7 @@
 #include <pthread.h>
 //#include <finstypes.h>
 //#include <queueModule.h>
+#include <sys/time.h>
 #include <finsdebug.h>
 
 #include "interface.h"
@@ -157,7 +158,7 @@ int interface_setBlocking(int fd) {
 void *capturer_to_interface(void *local) {
 	PRINT_DEBUG("Entered");
 
-	u_char *frame;
+	uint8_t *frame;
 	int frame_len;
 	struct sniff_ethernet *hdr;
 	int numBytes;
@@ -169,7 +170,7 @@ void *capturer_to_interface(void *local) {
 	//struct sniff_ethernet *ethernet_header;
 	uint64_t dst_mac;
 	uint64_t src_mac;
-	uint16_t ether_type;
+	uint32_t ether_type;
 
 	while (interface_running) {
 		interface_setNonblocking(capture_pipe_fd);
@@ -187,7 +188,7 @@ void *capturer_to_interface(void *local) {
 			PRINT_ERROR("numBytes written %d\n", numBytes);
 			break;
 		}
-		frame = (u_char *) malloc(frame_len);
+		frame = (uint8_t *) malloc(frame_len);
 		if (frame == NULL) {
 			PRINT_ERROR("allocation fail");
 			exit(-1);
@@ -216,21 +217,24 @@ void *capturer_to_interface(void *local) {
 		hdr = (struct sniff_ethernet *) frame;
 		ether_type = ntohs(hdr->ether_type);
 
-		PRINT_DEBUG("recv frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x",
-				(uint8_t) hdr->ether_dhost[0], (uint8_t) hdr->ether_dhost[1], (uint8_t) hdr->ether_dhost[2], (uint8_t) hdr->ether_dhost[3], (uint8_t) hdr->ether_dhost[4], (uint8_t) hdr->ether_dhost[5], (uint8_t) hdr->ether_shost[0], (uint8_t) hdr->ether_shost[1], (uint8_t) hdr->ether_shost[2], (uint8_t) hdr->ether_shost[3], (uint8_t) hdr->ether_shost[4], (uint8_t) hdr->ether_shost[5], ether_type);
+		struct timeval current;
+		gettimeofday(&current, 0);
+
+		PRINT_DEBUG("recv frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x, stamp=%u.%u",
+				(uint8_t) hdr->ether_dhost[0], (uint8_t) hdr->ether_dhost[1], (uint8_t) hdr->ether_dhost[2], (uint8_t) hdr->ether_dhost[3], (uint8_t) hdr->ether_dhost[4], (uint8_t) hdr->ether_dhost[5], (uint8_t) hdr->ether_shost[0], (uint8_t) hdr->ether_shost[1], (uint8_t) hdr->ether_shost[2], (uint8_t) hdr->ether_shost[3], (uint8_t) hdr->ether_shost[4], (uint8_t) hdr->ether_shost[5], ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
 				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];
 		src_mac = ((uint64_t) hdr->ether_shost[0] << 40) + ((uint64_t) hdr->ether_shost[1] << 32) + ((uint64_t) hdr->ether_shost[2] << 24)
 				+ ((uint64_t) hdr->ether_shost[3] << 16) + ((uint64_t) hdr->ether_shost[4] << 8) + (uint64_t) hdr->ether_shost[5];
 
-		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
+		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x, stamp=%u.%u",
+				dst_mac, src_mac, ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
 		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 		if (ff == NULL) {
 			PRINT_ERROR("ff creation failed, dropping frame");
-			free(frame);
-			continue;
+			exit(-1);
 		}
 
 		PRINT_DEBUG("ff=%p", ff);
@@ -243,11 +247,10 @@ void *capturer_to_interface(void *local) {
 		params = (metadata *) malloc(sizeof(metadata));
 		if (params == NULL) {
 			PRINT_ERROR("metadata creation failed");
-			//free(ff);
-			//free(frame);
 			exit(-1);
 		}
 		metadata_create(params);
+		metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
 
 		ff->dataOrCtrl = DATA;
 		ff->metaData = params;
@@ -263,12 +266,14 @@ void *capturer_to_interface(void *local) {
 		} else if (ether_type == ETH_TYPE_IP6) { //0x86dd == 34525, IPv6
 			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
 			//drop, don't handle & don't catch sys calls
+			ff->dataFrame.pdu = NULL;
 			freeFinsFrame(ff);
 			free(frame);
 			continue;
 		} else {
-			PRINT_ERROR("default: proto=%x (%u)", ether_type, ether_type);
+			PRINT_ERROR("default: proto=0x%x (%u)", ether_type, ether_type);
 			//drop
+			ff->dataFrame.pdu = NULL;
 			freeFinsFrame(ff);
 			free(frame);
 			continue;
@@ -276,21 +281,19 @@ void *capturer_to_interface(void *local) {
 
 		ff->dataFrame.directionFlag = UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
-		ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
+		ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 		if (ff->dataFrame.pdu == NULL) {
 			PRINT_ERROR("todo error");
-			//freeFinsFrame(ff);
-			//free(frame);
 			exit(-1);
 		}
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
-		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
-		metadata_writeToElement(params, "ether_type", &ether_type, META_TYPE_INT);
+		metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "recv_src_mac", &src_mac, META_TYPE_INT64);
+		metadata_writeToElement(params, "recv_ether_type", &ether_type, META_TYPE_INT32);
 
 		if (!interface_to_switch(ff)) {
-			//free(ff->dataFrame.pdu);
+			PRINT_ERROR("send to switch error, ff=%p", ff)
 			freeFinsFrame(ff);
 		}
 
@@ -349,7 +352,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	uint64_t dst_mac;
 	uint64_t src_mac;
-	uint16_t ether_type;
+	uint32_t ether_type;
 
 	char *frame;
 	struct sniff_ethernet *hdr;
@@ -359,9 +362,9 @@ void interface_out_fdf(struct finsFrame *ff) {
 	metadata *params = ff->metaData;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "dst_mac", &dst_mac) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "src_mac", &src_mac) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "ether_type", &ether_type) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "send_dst_mac", &dst_mac) == META_FALSE;
+	ret += metadata_readFromElement(params, "send_src_mac", &src_mac) == META_FALSE;
+	ret += metadata_readFromElement(params, "send_ether_type", &ether_type) == META_FALSE;
 
 	if (ret) {
 		//TODO error
@@ -404,7 +407,6 @@ void interface_out_fdf(struct finsFrame *ff) {
 	} else {
 		PRINT_ERROR("todo error");
 		//TODO create error fcf?
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -418,7 +420,6 @@ void interface_out_fdf(struct finsFrame *ff) {
 	numBytes = write(inject_pipe_fd, &framelen, sizeof(int));
 	if (numBytes <= 0) {
 		PRINT_ERROR("numBytes written %d\n", numBytes);
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -427,13 +428,11 @@ void interface_out_fdf(struct finsFrame *ff) {
 	numBytes = write(inject_pipe_fd, frame, framelen);
 	if (numBytes <= 0) {
 		PRINT_ERROR("numBytes written %d\n", numBytes);
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
 	}
 
-	//free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 	free(frame);
 }

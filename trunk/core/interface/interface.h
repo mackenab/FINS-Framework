@@ -31,10 +31,10 @@
 
 /* Ethernet header */
 struct sniff_ethernet {
-	u_char ether_dhost[ETHER_ADDR_LEN]; /* destination host address */
-	u_char ether_shost[ETHER_ADDR_LEN]; /* source host address */
+	uint8_t ether_dhost[ETHER_ADDR_LEN]; /* destination host address */
+	uint8_t ether_shost[ETHER_ADDR_LEN]; /* source host address */
 	u_short ether_type; /* IP? ARP? RARP? etc */
-	u_char data[1];
+	uint8_t data[1];
 };
 
 void interface_init(void);

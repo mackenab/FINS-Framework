@@ -140,7 +140,7 @@ struct ip4_routing_table {
 	IP4addr mask;
 	unsigned int metric;
 	//unsigned int interface;
-	unsigned long interface; //TODO change back
+	uint32_t interface; //TODO change back
 
 	struct ip4_routing_table * next_entry;
 };
@@ -148,7 +148,7 @@ struct ip4_routing_table {
 struct ip4_next_hop_info {
 	IP4addr address;
 	//int interface;
-	unsigned long interface;
+	uint32_t interface;
 };
 
 //struct ip_
@@ -223,13 +223,13 @@ struct ip4_store {
 	struct ip4_store *next;
 	uint32_t serial_num;
 	struct finsFrame *ff;
-	u_char *pdu;
+	uint8_t *pdu;
 };
 
-struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, u_char *pdu);
+struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_t *pdu);
 void store_free(struct ip4_store *store);
 
-#define IP4_STORE_LIST_MAX 200
+#define IP4_STORE_LIST_MAX 1000
 
 int store_list_insert(struct ip4_store *store);
 struct ip4_store *store_list_find(uint32_t serial_num);
@@ -246,9 +246,10 @@ void ipv4_shutdown(void);
 void ipv4_release(void);
 
 void set_interface(uint32_t IP_address, uint32_t mask);
+void set_loopback(uint32_t IP_address, uint32_t mask);
 
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);
-unsigned short IP4_checksum(struct ip4_packet* ptr, int length);
+uint16_t IP4_checksum(struct ip4_packet* ptr, int length);
 int IP4_dest_check(IP4addr destination);
 //void IP4_reass(void);
 void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header*, struct ip4_packet*);
@@ -269,19 +270,18 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t prot
 struct ip4_routing_table * IP4_get_routing_table();
 struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * table_pointer);
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer);
-void IP4_init();
+void IP4_init(void);
 struct ip4_next_hop_info IP4_next_hop(IP4addr dst);
 int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length);
-void IP4_receive_fdf();
+void IP4_receive_fdf(void);
 
 void ipv4_fcf(struct finsFrame *ff);
 void ipv4_exec_reply(struct finsFrame *ff);
 void ipv4_error(struct finsFrame *ff);
 
-
 #define EXEC_ARP_GET_ADDR 0
 
 int InputQueue_Read_local(struct finsFrame *pff);
 int ipv4_to_switch(struct finsFrame *fins_frame);
-void IP4_exit();
+void IP4_exit(void);
 #endif /* IPV4_H_ */

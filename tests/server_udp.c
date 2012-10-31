@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 
 	int j = 0;
 	while (++j <= 3) {
-		pID = fork();
+		//pID = fork();
 		if (pID == 0) { // child -- Capture process
 			continue;
 		} else if (pID < 0) { // failed to fork
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
 	if (pID != 0 || 1) {
 		j = 0;
 		int k = 0;
-		while (j < 4) {
+		while (1) {
 			//printf("\n pID=%d poll before", pID);
 			//fflush(stdout);
 			ret = poll(fds, nfds, time);
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
 		}
 	} else {
 		i = 0;
-		while (i < 5) {
+		while (1) {
 			//printf("\n pID=%d recvfrom before", pID);
 			//fflush(stdout);
 			bytes_read = recvfrom(sock, recv_data, 2000, 0, (struct sockaddr *) client_addr, &addr_len);
@@ -208,11 +208,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-
-	printf("\n After");
-	fflush(stdout);
-	while (1)
-		;
 
 	printf("\n Closing server socket");
 	fflush(stdout);

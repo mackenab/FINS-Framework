@@ -7,20 +7,21 @@
 #ifndef TCP_H_
 #define TCP_H_
 
-#include <finstypes.h>
-#include <metadata.h>
 #include <finsdebug.h>
+#include <finstypes.h>
+#include <linux/net.h>
+#include <math.h>
+#include <metadata.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <pthread.h>
+#include <queueModule.h>
+#include <semaphore.h>
 #include <stdint.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
-#include <semaphore.h>
-#include <math.h>
 #include <time.h>
-#include <netinet/in.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <queueModule.h>
-#include <poll.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.
@@ -96,6 +97,7 @@ void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *
 int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end);
 struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num);
 struct tcp_node *queue_remove_front(struct tcp_queue *queue);
+int queue_check(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 void queue_free(struct tcp_queue *queue);
@@ -113,6 +115,7 @@ struct tcp_connection_stub {
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
 
+	uint32_t poll_events;
 	//int syn_threads;
 
 	//int accept_threads;
@@ -137,17 +140,7 @@ int conn_stub_list_is_empty(void);
 int conn_stub_list_has_space(uint32_t len);
 
 typedef enum {
-	TCP_CLOSED = 0,
-	TCP_SYN_SENT,
-	TCP_LISTEN,
-	TCP_SYN_RECV,
-	TCP_ESTABLISHED,
-	TCP_FIN_WAIT_1,
-	TCP_FIN_WAIT_2,
-	TCP_CLOSING,
-	TCP_TIME_WAIT,
-	TCP_CLOSE_WAIT,
-	TCP_LAST_ACK
+	TS_CLOSED = 0, TS_SYN_SENT, TS_LISTEN, TS_SYN_RECV, TS_ESTABLISHED, TS_FIN_WAIT_1, TS_FIN_WAIT_2, TS_CLOSING, TS_TIME_WAIT, TS_CLOSE_WAIT, TS_LAST_ACK
 } tcp_state;
 
 typedef enum {
@@ -228,6 +221,7 @@ struct tcp_connection {
 	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
 	sem_t write_wait_sem;
 	int index;
+	uint32_t poll_events;
 
 	//int recv_threads;
 	//sem_t read_sem; //TODO: prob don't need
@@ -353,27 +347,27 @@ struct tcp_connection {
 #define TCP_SYNACK_RETRIES
 
 //TCP Options
-#define TCP_EOL 0
-#define TCP_NOP 1
-#define TCP_MSS 2
-#define TCP_MSS_BYTES 4
-#define TCP_WS 3
-#define TCP_WS_BYTES 3
-#define TCP_WS_DEFAULT 2 //default value?
-#define TCP_WS_MAX 14
-#define TCP_SACK_PERM 4
-#define TCP_SACK_PERM_BYTES 2
-#define TCP_SACK 5
-#define TCP_SACK_BYTES(x) (8*x+2)
-#define TCP_SACK_MIN_BYTES TCP_SACK_BYTES(0)
-#define TCP_SACK_MAX_BYTES TCP_SACK_BYTES(3)
-#define TCP_SACK_LEN(x) ((x-2)/8)
-#define TCP_TS 8
-#define TCP_TS_BYTES 10
+#define TCP_OPT_EOL 0
+#define TCP_OPT_NOP 1
+#define TCP_OPT_MSS 2
+#define TCP_OPT_MSS_BYTES 4
+#define TCP_OPT_WS 3
+#define TCP_OPT_WS_BYTES 3
+#define TCP_OPT_WS_DEFAULT 2 //default value?
+#define TCP_OPT_WS_MAX 14
+#define TCP_OPT_SACK_PERM 4
+#define TCP_OPT_SACK_PERM_BYTES 2
+#define TCP_OPT_SACK 5
+#define TCP_OPT_SACK_BYTES(x) (8*x+2)
+#define TCP_OPT_SACK_MIN_BYTES TCP_OPT_SACK_BYTES(0)
+#define TCP_OPT_SACK_MAX_BYTES TCP_OPT_SACK_BYTES(3)
+#define TCP_OPT_SACK_LEN(x) ((x-2)/8)
+#define TCP_OPT_TS 8
+#define TCP_OPT_TS_BYTES 10
 
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 //int conn_send_jinni(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val);
-int conn_send_daemon(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 int conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_msg);
 void conn_shutdown(struct tcp_connection *conn);
@@ -462,7 +456,7 @@ void tcp_release(void);
 void tcp_get_ff(void);
 int tcp_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
 int tcp_fcf_to_daemon(uint32_t status, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
-int tcp_fdf_to_daemon(u_char *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
 #define EXEC_TCP_CONNECT 0
@@ -474,6 +468,7 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 #define EXEC_TCP_CLOSE_STUB 6
 #define EXEC_TCP_OPT 7
 #define EXEC_TCP_POLL 8
+#define EXEC_TCP_POLL_POST 9
 
 #define SET_PARAM_TCP_HOST_WINDOW 0
 #define SET_PARAM_TCP_SOCK_OPT 1
@@ -498,7 +493,8 @@ void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags);
 void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port);
-void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags);
+void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t initial,
+		uint32_t flags);
 
 void tcp_set_param(struct finsFrame *ff);
 void tcp_read_param(struct finsFrame *ff);

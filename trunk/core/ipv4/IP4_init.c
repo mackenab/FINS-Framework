@@ -9,7 +9,7 @@
 extern struct ip4_routing_table* routing_table;
 extern struct ip4_stats stats;
 
-void IP4_init() {
+void IP4_init(void) {
 	PRINT_DEBUG("entered IP4_init");
 	//construct_packet_buffer = (struct ip4_packet*) malloc(IP4_PCK_LEN);
 	PRINT_DEBUG("after constr pckt buff");

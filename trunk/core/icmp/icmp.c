@@ -20,7 +20,7 @@ finsQueue ICMP_to_Switch_Queue;
 sem_t Switch_to_ICMP_Qsem;
 finsQueue Switch_to_ICMP_Queue;
 
-struct icmp_sent_list *sent_packet_list;
+struct icmp_sent_list *icmp_sent_packet_list;
 
 double icmp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	double decimal = 0, diff = 0;
@@ -44,8 +44,8 @@ double icmp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - 
 	return diff;
 }
 
-struct icmp_sent *sent_create(uint32_t src_ip, uint32_t dst_ip, u_char *data, uint32_t data_len) {
-	PRINT_DEBUG("Entered: src_ip=%u, dst_ip=%u, data=%p, data_len=%u", src_ip, dst_ip, data, data_len);
+struct icmp_sent *icmp_sent_create(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	struct icmp_sent *sent = (struct icmp_sent *) malloc(sizeof(struct icmp_sent));
 	if (sent == NULL) {
@@ -55,29 +55,25 @@ struct icmp_sent *sent_create(uint32_t src_ip, uint32_t dst_ip, u_char *data, ui
 
 	sent->next = NULL;
 
-	sent->src_ip = src_ip;
-	sent->dst_ip = dst_ip;
-
-	sent->data = data;
-	sent->data_len = data_len;
+	sent->ff = ff;
 
 	memset(&sent->stamp, 0, sizeof(struct timeval));
 
-	PRINT_DEBUG("Exited: src_ip=%u, dst_ip=%u, data=%p, data_len=%u, sent=%p", src_ip, dst_ip, data, data_len, sent);
+	PRINT_DEBUG("Exited: ff=%p, sent=%p", ff, sent);
 	return sent;
 }
 
-void sent_free(struct icmp_sent *sent) {
+void icmp_sent_free(struct icmp_sent *sent) {
 	PRINT_DEBUG("Entered: sent=%p", sent);
 
-	if (sent->data) {
-		free(sent->data);
+	if (sent->ff) {
+		freeFinsFrame(sent->ff);
 	}
 
 	free(sent);
 }
 
-struct icmp_sent_list *sent_list_create(uint32_t max) {
+struct icmp_sent_list *icmp_sent_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
 	struct icmp_sent_list *sent_list = (struct icmp_sent_list *) malloc(sizeof(struct icmp_sent_list));
@@ -96,11 +92,11 @@ struct icmp_sent_list *sent_list_create(uint32_t max) {
 	return sent_list;
 }
 
-void sent_list_append(struct icmp_sent_list *sent_list, struct icmp_sent *sent) {
+void icmp_sent_list_append(struct icmp_sent_list *sent_list, struct icmp_sent *sent) {
 	PRINT_DEBUG("Entered: sent_list=%p, sent=%p", sent_list, sent);
 
 	sent->next = NULL;
-	if (sent_list_is_empty(sent_list)) {
+	if (icmp_sent_list_is_empty(sent_list)) {
 		//queue empty
 		sent_list->front = sent;
 	} else {
@@ -111,18 +107,34 @@ void sent_list_append(struct icmp_sent_list *sent_list, struct icmp_sent *sent) 
 	sent_list->len++;
 }
 
-struct icmp_sent *sent_list_find(struct icmp_sent_list *sent_list, u_char *data, uint32_t data_len) {
+struct icmp_sent *icmp_sent_list_find(struct icmp_sent_list *sent_list, uint8_t *data, uint32_t data_len) {
 	PRINT_DEBUG("Entered: sent_list=%p, data=%p, data_len=%u", sent_list, data, data_len);
 
 	struct icmp_sent *sent = sent_list->front;
 
 	while (sent != NULL) {
-		if (sent->data_len >= data_len) { //TODO change? always assume that frag is smaller
-			if (strncmp((char *) sent->data, (char *) data, data_len) == 0) {
-				break;
+		if (sent->ff && sent->ff->dataOrCtrl == DATA && sent->ff->dataFrame.pdu) {
+			PRINT_DEBUG("ff=%p, meta=%p, pduLen=%u, pdu=%p", sent->ff, sent->ff->metaData, sent->ff->dataFrame.pduLength, sent->ff->dataFrame.pdu);
+			if (sent->ff->dataFrame.pduLength >= data_len) { //TODO check if this logic is sound
+				if (strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, data_len) == 0) {
+					break;
+				}
+			} else {
+				if (strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, sent->ff->dataFrame.pduLength) == 0) {
+					break;
+				}
+			}
+		} else {
+			if (sent->ff) {
+				if (sent->ff->dataOrCtrl == DATA) {
+					PRINT_ERROR("todo error, ff=%p, meta=%p, pdu=%p", sent->ff, sent->ff->metaData, sent->ff->dataFrame.pdu);
+				} else {
+					PRINT_ERROR("todo error, ff=%p, meta=%p, CONTROL", sent->ff, sent->ff->metaData);
+				}
+			} else {
+				PRINT_ERROR("todo error, ff=%p", sent->ff);
 			}
 		}
-
 		sent = sent->next;
 	}
 
@@ -130,7 +142,7 @@ struct icmp_sent *sent_list_find(struct icmp_sent_list *sent_list, u_char *data,
 	return sent;
 }
 
-struct icmp_sent *sent_list_remove_front(struct icmp_sent_list *sent_list) {
+struct icmp_sent *icmp_sent_list_remove_front(struct icmp_sent_list *sent_list) {
 	PRINT_DEBUG("Entered: sent_list=%p", sent_list);
 
 	struct icmp_sent *sent = sent_list->front;
@@ -146,7 +158,7 @@ struct icmp_sent *sent_list_remove_front(struct icmp_sent_list *sent_list) {
 	return sent;
 }
 
-void sent_list_remove(struct icmp_sent_list *sent_list, struct icmp_sent *sent) {
+void icmp_sent_list_remove(struct icmp_sent_list *sent_list, struct icmp_sent *sent) {
 	PRINT_DEBUG("Entered: sent_list=%p, sent=%p", sent_list, sent);
 
 	if (sent_list->len == 0) {
@@ -176,30 +188,27 @@ void sent_list_remove(struct icmp_sent_list *sent_list, struct icmp_sent *sent) 
 	}
 }
 
-int sent_list_is_empty(struct icmp_sent_list *sent_list) {
+int icmp_sent_list_is_empty(struct icmp_sent_list *sent_list) {
 	return sent_list->len == 0;
 }
 
-int sent_list_has_space(struct icmp_sent_list *sent_list) {
+int icmp_sent_list_has_space(struct icmp_sent_list *sent_list) {
 	return sent_list->len < sent_list->max;
 }
 
-void sent_list_free(struct icmp_sent_list *sent_list) {
+void icmp_sent_list_free(struct icmp_sent_list *sent_list) {
 	PRINT_DEBUG("Entered: sent_list=%p", sent_list);
 
 	struct icmp_sent *sent;
-	while (!sent_list_is_empty(sent_list)) {
-		sent = sent_list_remove_front(sent_list);
-		sent_free(sent);
+	while (!icmp_sent_list_is_empty(sent_list)) {
+		sent = icmp_sent_list_remove_front(sent_list);
+		icmp_sent_free(sent);
 	}
 
 	free(sent_list);
 }
 
-//--------------------------------------------
-// We're getting an ICMP packet in. Process it
-//--------------------------------------------
-void icmp_in(struct finsFrame *ff) {
+void icmp_in_fdf(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	struct ip4_packet *ipv4_pkt = (struct ip4_packet *) ff->dataFrame.pdu;
@@ -213,7 +222,6 @@ void icmp_in(struct finsFrame *ff) {
 	if (icmp_len < ICMP_HEADER_SIZE) {
 		PRINT_DEBUG("packet too small: icmp_len=%u, icmp_req=%u", icmp_len, ICMP_HEADER_SIZE);
 
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -222,27 +230,22 @@ void icmp_in(struct finsFrame *ff) {
 	if (params == NULL) {
 		PRINT_ERROR("todo error");
 
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
 
-	uint8_t protocol;
+	uint32_t protocol;
 
 	int ret = 0;
-	ret += metadata_readFromElement(params, "protocol", &protocol) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
 	if (ret) {
 		PRINT_ERROR("todo error");
-
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
 
 	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
 		PRINT_ERROR("Protocol =/= ICMP! Discarding frame...");
-
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -252,8 +255,6 @@ void icmp_in(struct finsFrame *ff) {
 	} else {
 		if (icmp_checksum(ipv4_pkt->ip_data, icmp_len) != 0) {
 			PRINT_ERROR("Error in checksum of packet. Discarding...");
-
-			//free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 			return;
 		} else {
@@ -262,8 +263,6 @@ void icmp_in(struct finsFrame *ff) {
 	}
 
 	uint32_t data_len = icmp_len - ICMP_HEADER_SIZE;
-
-	//icmp_create_control_error(ff, icmp_pkt->type, icmp_pkt->code);
 
 	PRINT_DEBUG("ff=%p, type=%u, code=%u, data_len=%u", ff, icmp_pkt->type, icmp_pkt->code, data_len);
 	switch (icmp_pkt->type) {
@@ -281,26 +280,25 @@ void icmp_in(struct finsFrame *ff) {
 			icmp_to_switch(ff);
 		} else {
 			PRINT_ERROR("Error in ICMP packet code. Dropping...");
-			//free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 		}
 		break;
 	case TYPE_DESTUNREACH:
 		PRINT_DEBUG("Destination unreachable");
-
 		if (icmp_pkt->code == CODE_NETUNREACH) {
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
+			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_HOSTUNREACH) {
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
+			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_PROTOUNREACH) {
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
+			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_PORTUNREACH) {
 			if (data_len < IP4_MIN_HLEN) {
 				PRINT_ERROR("data too small: data_len=%u, ipv4_req=%u", data_len, IP4_MIN_HLEN);
 				//stats.badhlen++;
 				//stats.droppedtotal++;
-
-				//free(ff->dataFrame.pdu);
 				freeFinsFrame(ff);
 				return;
 			}
@@ -308,39 +306,34 @@ void icmp_in(struct finsFrame *ff) {
 			struct ip4_packet *ipv4_pkt_sent = (struct ip4_packet *) icmp_pkt->data;
 			uint16_t sent_data_len = data_len - IP4_HLEN(ipv4_pkt_sent);
 
-			uint16_t src_port;
-			uint16_t dst_port;
+			uint32_t type = icmp_pkt->type;
+			metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
+			uint32_t code = icmp_pkt->code;
+			metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
+
+			uint32_t src_port;
+			uint32_t dst_port;
 			metadata *params_err;
 			struct finsFrame *ff_err;
 
+			PRINT_DEBUG("sent: proto=%u, data_len=%u", ipv4_pkt_sent->ip_proto, sent_data_len);
 			switch (ipv4_pkt_sent->ip_proto) {
 			case ICMP_PROTOCOL:
 				//cast first 8 bytes of ip->data to TCP frag, store in metadata
 				if (sent_data_len < ICMP_FRAG_SIZE) {
 					PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, ICMP_FRAG_SIZE);
-
-					//free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 					return;
 				}
 
-				if (sent_list_is_empty(sent_packet_list)) {
+				if (icmp_sent_list_is_empty(icmp_sent_packet_list)) {
 					PRINT_ERROR("todo error");
 					//TODO drop
 				} else {
-					struct icmp_sent *sent = sent_list_find(sent_packet_list, ipv4_pkt_sent->ip_data, sent_data_len);
+					struct icmp_sent *sent = icmp_sent_list_find(icmp_sent_packet_list, ipv4_pkt_sent->ip_data, sent_data_len);
 					if (sent) {
-						//cast first 8 bytes of ip->data to TCP frag, store in metadata
-						params_err = (metadata *) malloc(sizeof(metadata));
-						if (params_err == NULL) {
-							PRINT_ERROR("metadata creation failed");
-							exit(-1);
-						}
-						metadata_create(params_err);
-
-						metadata_writeToElement(params_err, "protocol", &ipv4_pkt_sent->ip_proto, META_TYPE_INT);
-						metadata_writeToElement(params_err, "src_ip", &sent->src_ip, META_TYPE_INT);
-						metadata_writeToElement(params_err, "dst_ip", &sent->dst_ip, META_TYPE_INT);
+						metadata *params_err = sent->ff->metaData;
+						metadata_copy(params, params_err);
 
 						ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 						if (ff_err == NULL) {
@@ -352,20 +345,21 @@ void icmp_in(struct finsFrame *ff) {
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
 						ff_err->metaData = params_err;
+						sent->ff->metaData = NULL;
 
 						ff_err->ctrlFrame.senderID = ICMP_ID;
 						ff_err->ctrlFrame.serial_num = gen_control_serial_num();
 						ff_err->ctrlFrame.opcode = CTRL_ERROR;
 						ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
 
-						ff_err->ctrlFrame.data_len = sent->data_len;
-						ff_err->ctrlFrame.data = sent->data;
-						sent->data = NULL;
+						ff_err->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
+						ff_err->ctrlFrame.data = sent->ff->dataFrame.pdu;
+						sent->ff->dataFrame.pdu = NULL;
 
 						icmp_to_switch(ff_err);
 
-						sent_list_remove(sent_packet_list, sent);
-						sent_free(sent);
+						icmp_sent_list_remove(icmp_sent_packet_list, sent);
+						icmp_sent_free(sent);
 					} else {
 						PRINT_ERROR("todo error");
 						//TODO drop?
@@ -376,18 +370,12 @@ void icmp_in(struct finsFrame *ff) {
 				//cast first 8 bytes of ip->data to TCP frag, store in metadata
 				if (sent_data_len < TCP_FRAG_SIZE) {
 					PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, TCP_FRAG_SIZE);
-
-					//free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 					return;
 				}
 
-				params_err = (metadata *) malloc(sizeof(metadata));
-				if (params_err == NULL) {
-					PRINT_ERROR("metadata creation failed");
-					exit(-1);
-				}
-				metadata_create(params_err);
+				params_err = params;
+				ff->metaData = NULL;
 
 				struct tcp_header_frag *tcp_hdr = (struct tcp_header_frag *) ipv4_pkt_sent->ip_data;
 				src_port = ntohs(tcp_hdr->src_port);
@@ -395,9 +383,9 @@ void icmp_in(struct finsFrame *ff) {
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
 				//TODO src/dst_ip should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "src_port", &src_port, META_TYPE_INT);
-				metadata_writeToElement(params_err, "dst_port", &dst_port, META_TYPE_INT);
-				metadata_writeToElement(params_err, "seq_num", &seq_num, META_TYPE_INT);
+				metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
+				metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
+				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
@@ -415,35 +403,23 @@ void icmp_in(struct finsFrame *ff) {
 				ff_err->ctrlFrame.opcode = CTRL_ERROR;
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
 
+				ff_err->ctrlFrame.data_len = sent_data_len;
+				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
+				if (ff_err->ctrlFrame.data == NULL) {
+					PRINT_ERROR("data alloc error");
+					exit(-1);
+				}
+				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
+
 				icmp_to_switch(ff_err);
 				break;
 			case UDP_PROTOCOL:
 				//cast first 8 bytes of ip->data to udp frag, store in metadata
 				if (sent_data_len < UDP_FRAG_SIZE) {
 					PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, UDP_FRAG_SIZE);
-
-					//free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 					return;
 				}
-
-				params_err = (metadata *) malloc(sizeof(metadata));
-				if (params_err == NULL) {
-					PRINT_ERROR("metadata creation failed");
-					exit(-1);
-				}
-				metadata_create(params_err);
-
-				struct udp_header_frag *udp_hdr = (struct udp_header_frag *) ipv4_pkt_sent->ip_data;
-				src_port = ntohs(udp_hdr->src_port);
-				dst_port = ntohs(udp_hdr->dst_port);
-				uint16_t udp_len = ntohs(udp_hdr->len);
-				uint16_t checksum = ntohs(udp_hdr->checksum);
-
-				metadata_writeToElement(params_err, "src_port", &src_port, META_TYPE_INT); //TODO remove? should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "dst_port", &dst_port, META_TYPE_INT);
-				metadata_writeToElement(params_err, "udp_len", &udp_len, META_TYPE_INT);
-				metadata_writeToElement(params_err, "checksum", &checksum, META_TYPE_INT);
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
@@ -454,12 +430,21 @@ void icmp_in(struct finsFrame *ff) {
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
-				ff_err->metaData = params_err;
+				ff_err->metaData = params;
+				ff->metaData = NULL;
 
 				ff_err->ctrlFrame.senderID = ICMP_ID;
 				ff_err->ctrlFrame.serial_num = gen_control_serial_num();
 				ff_err->ctrlFrame.opcode = CTRL_ERROR;
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
+
+				ff_err->ctrlFrame.data_len = sent_data_len;
+				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
+				if (ff_err->ctrlFrame.data == NULL) {
+					PRINT_ERROR("data alloc error");
+					exit(-1);
+				}
+				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
 				break;
@@ -467,15 +452,18 @@ void icmp_in(struct finsFrame *ff) {
 				PRINT_ERROR("todo error");
 				break;
 			}
+			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_FRAGNEEDED) {
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
 
 			//TODO use icmp_pkt->param_2 as Next-Hop MTU
-
+			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_SRCROUTEFAIL) {
-			PRINT_DEBUG("todo");
+			PRINT_ERROR("todo");
+			freeFinsFrame(ff);
 		} else {
 			PRINT_ERROR("Unrecognized code. Dropping...");
+			freeFinsFrame(ff);
 			return;
 		}
 		break;
@@ -485,7 +473,6 @@ void icmp_in(struct finsFrame *ff) {
 			icmp_ping_reply(ff, icmp_pkt, data_len);
 		} else {
 			PRINT_ERROR("Error in ICMP packet code. Dropping...");
-			//free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 		}
 		break;
@@ -496,8 +483,6 @@ void icmp_in(struct finsFrame *ff) {
 				PRINT_ERROR("data too small: data_len=%u, ipv4_req=%u", data_len, IP4_MIN_HLEN);
 				//stats.badhlen++;
 				//stats.droppedtotal++;
-
-				//free(ff->dataFrame.pdu);
 				freeFinsFrame(ff);
 				return;
 			}
@@ -505,39 +490,34 @@ void icmp_in(struct finsFrame *ff) {
 			struct ip4_packet *ipv4_pkt_sent = (struct ip4_packet *) icmp_pkt->data;
 			uint16_t sent_data_len = data_len - IP4_HLEN(ipv4_pkt_sent);
 
-			uint16_t src_port;
-			uint16_t dst_port;
+			uint32_t type = icmp_pkt->type;
+			metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
+			uint32_t code = icmp_pkt->code;
+			metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
+
+			uint32_t src_port;
+			uint32_t dst_port;
 			metadata *params_err;
 			struct finsFrame *ff_err;
 
+			PRINT_DEBUG("sent: proto=%u, data_len=%u", ipv4_pkt_sent->ip_proto, sent_data_len);
 			switch (ipv4_pkt_sent->ip_proto) {
 			case ICMP_PROTOCOL:
 				//cast first 8 bytes of ip->data to TCP frag, store in metadata
 				if (sent_data_len < ICMP_FRAG_SIZE) {
 					PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, ICMP_FRAG_SIZE);
-
-					//free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 					return;
 				}
 
-				if (sent_list_is_empty(sent_packet_list)) {
+				if (icmp_sent_list_is_empty(icmp_sent_packet_list)) {
 					PRINT_ERROR("todo error");
 					//TODO drop
 				} else {
-					struct icmp_sent *sent = sent_list_find(sent_packet_list, ipv4_pkt_sent->ip_data, sent_data_len);
+					struct icmp_sent *sent = icmp_sent_list_find(icmp_sent_packet_list, ipv4_pkt_sent->ip_data, sent_data_len);
 					if (sent) {
-						//cast first 8 bytes of ip->data to TCP frag, store in metadata
-						params_err = (metadata *) malloc(sizeof(metadata));
-						if (params_err == NULL) {
-							PRINT_ERROR("metadata creation failed");
-							exit(-1);
-						}
-						metadata_create(params_err);
-
-						metadata_writeToElement(params_err, "protocol", &ipv4_pkt_sent->ip_proto, META_TYPE_INT);
-						metadata_writeToElement(params_err, "src_ip", &sent->src_ip, META_TYPE_INT);
-						metadata_writeToElement(params_err, "dst_ip", &sent->dst_ip, META_TYPE_INT);
+						metadata *params_err = sent->ff->metaData;
+						metadata_copy(params, params_err);
 
 						ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 						if (ff_err == NULL) {
@@ -549,20 +529,21 @@ void icmp_in(struct finsFrame *ff) {
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
 						ff_err->metaData = params_err;
+						sent->ff->metaData = NULL;
 
 						ff_err->ctrlFrame.senderID = ICMP_ID;
 						ff_err->ctrlFrame.serial_num = gen_control_serial_num();
 						ff_err->ctrlFrame.opcode = CTRL_ERROR;
 						ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
 
-						ff_err->ctrlFrame.data_len = sent->data_len;
-						ff_err->ctrlFrame.data = sent->data;
-						sent->data = NULL;
+						ff_err->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
+						ff_err->ctrlFrame.data = sent->ff->dataFrame.pdu;
+						sent->ff->dataFrame.pdu = NULL;
 
 						icmp_to_switch(ff_err);
 
-						sent_list_remove(sent_packet_list, sent);
-						sent_free(sent);
+						icmp_sent_list_remove(icmp_sent_packet_list, sent);
+						icmp_sent_free(sent);
 					} else {
 						PRINT_ERROR("todo error");
 						//TODO drop?
@@ -573,18 +554,12 @@ void icmp_in(struct finsFrame *ff) {
 				//cast first 8 bytes of ip->data to TCP frag, store in metadata
 				if (sent_data_len < TCP_FRAG_SIZE) {
 					PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, TCP_FRAG_SIZE);
-
-					//free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 					return;
 				}
 
-				params_err = (metadata *) malloc(sizeof(metadata));
-				if (params_err == NULL) {
-					PRINT_ERROR("metadata creation failed");
-					exit(-1);
-				}
-				metadata_create(params_err);
+				params_err = params;
+				ff->metaData = NULL;
 
 				struct tcp_header_frag *tcp_hdr = (struct tcp_header_frag *) ipv4_pkt_sent->ip_data;
 				src_port = ntohs(tcp_hdr->src_port);
@@ -592,9 +567,10 @@ void icmp_in(struct finsFrame *ff) {
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
 				//TODO src/dst_ip should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "src_port", &src_port, META_TYPE_INT);
-				metadata_writeToElement(params_err, "dst_port", &dst_port, META_TYPE_INT);
-				metadata_writeToElement(params_err, "seq_num", &seq_num, META_TYPE_INT);
+				metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
+				metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
+				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
+				//TODO err_src_ip/port, recv_ttl, stamp
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
@@ -612,35 +588,23 @@ void icmp_in(struct finsFrame *ff) {
 				ff_err->ctrlFrame.opcode = CTRL_ERROR;
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
 
+				ff_err->ctrlFrame.data_len = sent_data_len;
+				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
+				if (ff_err->ctrlFrame.data == NULL) {
+					PRINT_ERROR("data alloc error");
+					exit(-1);
+				}
+				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
+
 				icmp_to_switch(ff_err);
 				break;
 			case UDP_PROTOCOL:
 				//cast first 8 bytes of ip->data to udp frag, store in metadata
 				if (sent_data_len < UDP_FRAG_SIZE) {
 					PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, UDP_FRAG_SIZE);
-
-					//free(ff->dataFrame.pdu);
 					freeFinsFrame(ff);
 					return;
 				}
-
-				params_err = (metadata *) malloc(sizeof(metadata));
-				if (params_err == NULL) {
-					PRINT_ERROR("metadata creation failed");
-					exit(-1);
-				}
-				metadata_create(params_err);
-
-				struct udp_header_frag *udp_hdr = (struct udp_header_frag *) ipv4_pkt_sent->ip_data;
-				src_port = ntohs(udp_hdr->src_port);
-				dst_port = ntohs(udp_hdr->dst_port);
-				uint16_t udp_len = ntohs(udp_hdr->len);
-				uint16_t checksum = ntohs(udp_hdr->checksum);
-
-				metadata_writeToElement(params_err, "src_port", &src_port, META_TYPE_INT); //TODO remove? should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "dst_port", &dst_port, META_TYPE_INT);
-				metadata_writeToElement(params_err, "udp_len", &udp_len, META_TYPE_INT);
-				metadata_writeToElement(params_err, "checksum", &checksum, META_TYPE_INT);
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
@@ -651,12 +615,21 @@ void icmp_in(struct finsFrame *ff) {
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
-				ff_err->metaData = params_err;
+				ff_err->metaData = params;
+				ff->metaData = NULL;
 
 				ff_err->ctrlFrame.senderID = ICMP_ID;
 				ff_err->ctrlFrame.serial_num = gen_control_serial_num();
 				ff_err->ctrlFrame.opcode = CTRL_ERROR;
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
+
+				ff_err->ctrlFrame.data_len = sent_data_len;
+				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
+				if (ff_err->ctrlFrame.data == NULL) {
+					PRINT_ERROR("data alloc error");
+					exit(-1);
+				}
+				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
 				break;
@@ -664,15 +637,12 @@ void icmp_in(struct finsFrame *ff) {
 				PRINT_ERROR("todo error");
 				break;
 			}
+			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_DEFRAGTIMEEXCEEDED) {
-			PRINT_DEBUG("todo");
-			//icmp_create_control_error(ff, icmp_pkt->type, icmp_pkt->code);
-
-			//cName = (unsigned char*) malloc(strlen("TTLfragtime") + 1);
-			//strcpy((char *) cName, "TTLfragtime");
+			PRINT_ERROR("todo");
+			freeFinsFrame(ff);
 		} else {
 			PRINT_ERROR("Error in ICMP packet code. Dropping...");
-			//free(ff->dataFrame.pdu);
 			freeFinsFrame(ff);
 		}
 		break;
@@ -694,7 +664,7 @@ void icmp_in(struct finsFrame *ff) {
 	}
 }
 
-void icmp_sent_gc(void) {
+void icmp_sent_list_gc(struct icmp_sent_list *sent_list, double timeout) {
 	PRINT_DEBUG("Entered");
 
 	struct timeval current;
@@ -702,24 +672,21 @@ void icmp_sent_gc(void) {
 
 	struct icmp_sent *old;
 
-	struct icmp_sent *temp = sent_packet_list->front;
+	struct icmp_sent *temp = sent_list->front;
 	while (temp) {
-		if (icmp_time_diff(&temp->stamp, &current) >= ICMP_MSL_TO_DEFAULT) {
+		if (icmp_time_diff(&temp->stamp, &current) >= timeout) {
 			old = temp;
 			temp = temp->next;
 
-			sent_list_remove(sent_packet_list, old);
-			sent_free(old);
+			icmp_sent_list_remove(sent_list, old);
+			icmp_sent_free(old);
 		} else {
 			temp = temp->next;
 		}
 	}
 }
 
-//-------------------------------------------------------
-// We're sending an ICMP packet out. Process it and send.
-//-------------------------------------------------------
-void icmp_out(struct finsFrame *ff) {
+void icmp_out_fdf(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	if (ff->metaData == NULL) {
@@ -734,21 +701,19 @@ void icmp_out(struct finsFrame *ff) {
 
 	metadata *params = ff->metaData;
 	int ret = 0;
-	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "send_src_ip", &src_ip) == META_FALSE;
+	ret += metadata_readFromElement(params, "send_dst_ip", &dst_ip) == META_FALSE;
 
 	if (ret) {
 		PRINT_ERROR("todo error");
-
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
 
-	uint8_t protocol = ICMP_PROTOCOL;
-	metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT);
-	//metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT);
-	//metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT);
+	uint32_t protocol = ICMP_PROTOCOL;
+	metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
+	//metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
+	//metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
 
 	//struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	//ff->dataOrCtrl = DATA;
@@ -758,48 +723,39 @@ void icmp_out(struct finsFrame *ff) {
 
 	//ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	//ff->dataFrame.pduLength = data_len; //Add in the header size for this, too
-	//ff->dataFrame.pdu = (u_char *) malloc(ff->dataFrame.pduLength);
+	//ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 
-	uint32_t pdu_len = ff->dataFrame.pduLength;
-	u_char *pdu = (u_char *) malloc(pdu_len);
-	if (pdu == NULL) {
-		PRINT_ERROR("pdu alloc fail");
-		exit(-1);
-	}
-	memcpy(pdu, ff->dataFrame.pdu, pdu_len);
+	struct finsFrame *ff_copy = copyFinsFrame(ff);
 
 	if (icmp_to_switch(ff)) {
-		struct icmp_sent *sent = sent_create(src_ip, dst_ip, pdu, pdu_len);
+		struct icmp_sent *sent = icmp_sent_create(ff_copy);
 
-		if (sent_list_has_space(sent_packet_list)) {
-			sent_list_append(sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", sent_packet_list, sent_packet_list->len, sent_packet_list->max)
+		if (icmp_sent_list_has_space(icmp_sent_packet_list)) {
+			icmp_sent_list_append(icmp_sent_packet_list, sent);
+			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max)
 
 			gettimeofday(&sent->stamp, 0);
 		} else {
 			PRINT_DEBUG("Clearing sent_packet_list");
-			icmp_sent_gc();
+			icmp_sent_list_gc(icmp_sent_packet_list, ICMP_MSL_TO_DEFAULT);
 
-			if (sent_list_has_space(sent_packet_list)) {
-				sent_list_append(sent_packet_list, sent);
-				PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", sent_packet_list, sent_packet_list->len, sent_packet_list->max)
+			if (icmp_sent_list_has_space(icmp_sent_packet_list)) {
+				icmp_sent_list_append(icmp_sent_packet_list, sent);
+				PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max)
 
 				gettimeofday(&sent->stamp, 0);
 			} else {
 				PRINT_ERROR("todo error");
+				icmp_sent_free(sent);
 			}
 		}
 	} else {
 		PRINT_ERROR("todo error");
-
-		//free(ff->dataFrame.pdu);
+		freeFinsFrame(ff_copy);
 		freeFinsFrame(ff);
 	}
 }
 
-//---------------------------------------------------
-// Retrieve a finsFrame from the queue and process it
-//---------------------------------------------------
 void icmp_get_ff(void) {
 	struct finsFrame *ff;
 
@@ -817,9 +773,9 @@ void icmp_get_ff(void) {
 		icmp_fcf(ff);
 	} else if (ff->dataOrCtrl == DATA) {
 		if (ff->dataFrame.directionFlag == UP) { //Incoming ICMP packet (coming in from teh internets)
-			icmp_in(ff);
+			icmp_in_fdf(ff);
 		} else if (ff->dataFrame.directionFlag == DOWN) { //Outgoing ICMP packet (going out from us to teh internets)
-			icmp_out(ff);
+			icmp_out_fdf(ff);
 		}
 	} else {
 		PRINT_ERROR("todo error");
@@ -844,9 +800,6 @@ int icmp_to_switch(struct finsFrame *ff) {
 	return 0;
 }
 
-//-------------------------------------------
-// Calculate the checksum of this ICMP packet
-//-------------------------------------------
 uint16_t icmp_checksum(uint8_t *pt, uint32_t len) {
 	PRINT_DEBUG("Entered: pt=%p, len=%u", pt, len);
 	uint32_t sum = 0;
@@ -866,20 +819,17 @@ uint16_t icmp_checksum(uint8_t *pt, uint32_t len) {
 	}
 	sum = ~sum;
 
-//hdr->checksum = htons((uint16_t) sum);
+	//hdr->checksum = htons((uint16_t) sum);
 
-	PRINT_DEBUG("checksum=%x", (uint16_t) sum);
+	PRINT_DEBUG("checksum=0x%x", (uint16_t) sum);
 	return (uint16_t) sum;
 }
 
-//------------------------------------------------------------------------------
-// Create a ping reply message (from the ping request message) when we're pinged
-//------------------------------------------------------------------------------
 void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_t data_len) {
 	PRINT_DEBUG("Entered: ff=%p, icmp_pkt=%p", ff, icmp_pkt);
 
 	uint32_t pdu_len_reply = data_len + ICMP_HEADER_SIZE;
-	u_char *pdu_reply = (u_char *) malloc(pdu_len_reply);
+	uint8_t *pdu_reply = (uint8_t *) malloc(pdu_len_reply);
 	if (pdu_reply == NULL) {
 		PRINT_ERROR("pdu alloc fail");
 		exit(-1);
@@ -902,12 +852,10 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 
 	metadata *params = ff->metaData;
 	int ret = 0;
-	ret += metadata_readFromElement(params, "src_ip", &src_ip) == CONFIG_FALSE;
-	ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == CONFIG_FALSE;
+	ret += metadata_readFromElement(params, "recv_src_ip", &src_ip) == META_FALSE;
+	ret += metadata_readFromElement(params, "recv_dst_ip", &dst_ip) == META_FALSE;
 	if (ret) {
 		PRINT_ERROR("todo error");
-
-		//free(ff->dataFrame.pdu);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -915,16 +863,14 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	metadata *params_reply = (metadata *) malloc(sizeof(metadata));
 	if (params_reply == NULL) {
 		PRINT_ERROR("failed to create matadata: ff=%p", ff);
-		//free(ff->dataFrame.pdu);
-		//freeFinsFrame(ff);
 		exit(-1);
 	}
 	metadata_create(params_reply);
 
-	uint8_t protocol = ICMP_PROTOCOL;
-	metadata_writeToElement(params_reply, "protocol", &protocol, META_TYPE_INT);
-	metadata_writeToElement(params_reply, "src_ip", &dst_ip, META_TYPE_INT);
-	metadata_writeToElement(params_reply, "dst_ip", &src_ip, META_TYPE_INT);
+	uint32_t protocol = ICMP_PROTOCOL;
+	metadata_writeToElement(params_reply, "send_protocol", &protocol, META_TYPE_INT32);
+	metadata_writeToElement(params_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
+	metadata_writeToElement(params_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
 
 	struct finsFrame *ff_reply = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff_reply == NULL) {
@@ -944,7 +890,6 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 
 	icmp_to_switch(ff_reply);
 
-	//free(ff->dataFrame.pdu);
 	freeFinsFrame(ff);
 }
 
@@ -991,242 +936,6 @@ void icmp_fcf(struct finsFrame *ff) {
 	}
 }
 
-//-----------------------------------------------------------------------------------------------------
-// Handles what we do when we receive a control frame. We'll probably create some kind of error message
-//-----------------------------------------------------------------------------------------------------
-void icmp_control_handler(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-
-	uint8_t Type, Code;
-//Figure out what message we've received and create the appropriate message accordingly.
-	if (strncmp((char *) ff->ctrlFrame.name, "DU", 2) == 0) //Destination unreachable
-			{
-		ff->ctrlFrame.name = &(ff->ctrlFrame.name[2]); //Pass along only the "protounreach" or whatever
-		PRINT_DEBUG("");
-		Type = TYPE_DESTUNREACH; //Set the error type
-		//And find the right error code
-		if (strcmp((char *) ff->ctrlFrame.name, "netunreach") == 0) {
-			Code = CODE_NETUNREACH;
-		} else if (strcmp((char *) ff->ctrlFrame.name, "hostunreach") == 0) {
-			Code = CODE_HOSTUNREACH;
-		} else if (strcmp((char *) ff->ctrlFrame.name, "protounreach") == 0) {
-			Code = CODE_PROTOUNREACH;
-		} else if (strcmp((char *) ff->ctrlFrame.name, "portunreach") == 0) {
-			Code = CODE_PORTUNREACH;
-		} else if (strcmp((char *) ff->ctrlFrame.name, "fragneeded") == 0) {
-			Code = CODE_FRAGNEEDED;
-		} else if (strcmp((char *) ff->ctrlFrame.name, "srcroute") == 0) {
-			Code = CODE_SRCROUTEFAIL;
-		} else {
-			PRINT_DEBUG("Error: Unsupported code. Dropping...");
-			return;
-		}
-	} else if (strncmp((char *) ff->ctrlFrame.name, "TTL", 3) == 0) //Time to live exceeded
-			{
-		ff->ctrlFrame.name = &(ff->ctrlFrame.name[3]); //Pass along only the "exceeded" or "fragtime"
-		PRINT_DEBUG("");
-		Type = TYPE_TTLEXCEED; //Set the error type
-		//And find the right error code
-		if (strcmp((char *) ff->ctrlFrame.name, "exceeded") == 0) {
-			Code = CODE_TTLEXCEEDED;
-		} else if (strcmp((char *) ff->ctrlFrame.name, "fragtime") == 0) {
-			Code = CODE_DEFRAGTIMEEXCEEDED;
-		} else {
-			PRINT_DEBUG("Error: Unsupported code. Dropping...");
-			return;
-		}
-	} else {
-		PRINT_DEBUG("Unsupported ICMP control frame type. Dropping...");
-		return;
-	}
-	icmp_create_error(ff, Type, Code); //Create an error message from this type & code & send it out
-}
-
-//--------------------------------------------------------------------------------------------------------
-// Create an ICMP error message from the specified error type and code and control frame. Also send it out
-//--------------------------------------------------------------------------------------------------------
-void icmp_create_error(struct finsFrame *ff, uint8_t Type, uint8_t Code) {
-	struct finsFrame* ffout = (struct finsFrame*) (malloc(sizeof(struct finsFrame)));
-	int totallen = 0; //How many bytes we want our ICMP message to be
-	int checksum = 0;
-
-//Manually grab an int value from the first four bytes of this data
-	int i;
-	for (i = 0; i < sizeof(int); i++) {
-		totallen += ((int) (ff->ctrlFrame.data_old) << (8 * i));
-		(ff->ctrlFrame.data_old)++; //increment pointer
-	}
-
-//How many bytes is all this?
-	totallen += ICMP_HEADER_SIZE; //The length we want is the length of the IP data we want to include + the 8 byte ICMP header
-//Now that we have the total length, we can create the finsFrame that has the PDU length we want
-
-	ffout->dataOrCtrl = DATA; //We're sending a data packet here
-	ffout->destinationID.id = IPV4_ID; //Go out across the wire
-	ffout->destinationID.next = NULL;
-	ffout->dataFrame.directionFlag = DOWN; //Out
-	ffout->dataFrame.pduLength = totallen; //Make the total length correct
-	ffout->dataFrame.pdu = (unsigned char *) malloc(totallen); //Allocate memory for the data we'll be sticking in
-	metadata_create(ffout->metaData);
-//Fill the metadata with dest IP.
-	metadata_writeToElement(ffout->metaData, "dst_ip", &(((struct ip4_packet*) ff->ctrlFrame.data_old)->ip_src), META_TYPE_INT);
-//I treat all the ICMP stuff as raw data, rather than encapsulating it in structs, due to working with such structs earlier this summer
-//and running into a ton of little-vs-big-endian issues. Handling the raw data this way is easier for me than remembering to htons()
-//everything, especially because most ICMP headers contain variable-sized data anyway.
-
-	PRINT_DEBUG("");
-//Fill in the ICMP header data.
-	ffout->dataFrame.pdu[0] = Type; //Fill in the correct type and code
-	ffout->dataFrame.pdu[1] = Code;
-//Clear the checksum and "unused" fields
-	memset(&(ffout->dataFrame.pdu[2]), 0, ICMP_HEADER_SIZE - 2);
-
-//Copy the rest of the data over
-	memcpy(&(ffout->dataFrame.pdu[ICMP_HEADER_SIZE]), ff->ctrlFrame.data_old, totallen - ICMP_HEADER_SIZE);
-
-//Compute the checksum
-//checksum = icmp_checksum(ffout); //TODO uncomment
-//And set the checksum field(s)
-	ffout->dataFrame.pdu[2] = checksum >> 8;
-	ffout->dataFrame.pdu[3] = (checksum & 0xFF);
-
-//Done! Send out the frame
-//icmp_send_FF(ffout);
-}
-
-//----------------------------------------------------------------------
-// Create an error control frame from an ICMP error message that came in
-//----------------------------------------------------------------------
-void icmp_create_control_error(struct finsFrame* ff, uint8_t Type, uint8_t Code) {
-	struct finsFrame* ffout = (struct finsFrame*) (malloc(sizeof(struct finsFrame)));
-//int checksum = 0;
-	unsigned char* cName = NULL;
-	unsigned char* cData = NULL;
-	int iLen = 0;
-
-	ffout->dataOrCtrl = CONTROL; //We're sending a control here
-	ffout->destinationID.id = UDP_ID; //Go to the UDP stub. TODO: Should probably also send one to TCP whenever TCP is finished
-	ffout->destinationID.next = NULL;
-	ffout->ctrlFrame.senderID = ICMP_ID; //Coming from the ICMP module
-	ffout->ctrlFrame.opcode = CTRL_ERROR; //Error code comin' through!
-	ffout->ctrlFrame.serial_num = 0; //No use for this currently. Probably should use for some kind of tracking later.
-//Figure out the name from the passed type and code
-	if (Type == TYPE_DESTUNREACH) {
-		if (Code == CODE_NETUNREACH) {
-			cName = (unsigned char*) malloc(strlen("DUnetunreach") + 1);
-			strcpy((char *) cName, "DUnetunreach");
-		} else if (Code == CODE_HOSTUNREACH) {
-			cName = (unsigned char*) malloc(strlen("DUhostunreach") + 1);
-			strcpy((char *) cName, "DUhostunreach");
-		} else if (Code == CODE_PROTOUNREACH) {
-			cName = (unsigned char*) malloc(strlen("DUprotounreach") + 1);
-			strcpy((char *) cName, "DUprotounreach");
-		} else if (Code == CODE_PORTUNREACH) {
-			cName = (unsigned char*) malloc(strlen("DUportunreach") + 1);
-			strcpy((char *) cName, "DUportunreach");
-		} else if (Code == CODE_FRAGNEEDED) {
-			cName = (unsigned char*) malloc(strlen("DUfragneeded") + 1);
-			strcpy((char *) cName, "DUfragneeded");
-		} else if (Code == CODE_SRCROUTEFAIL) {
-			cName = (unsigned char*) malloc(strlen("DUsrcroute") + 1);
-			strcpy((char *) cName, "DUsrcroute");
-		} else {
-			PRINT_DEBUG("Unrecognized code. Dropping...");
-			return;
-		}
-	} else if (Type == TYPE_TTLEXCEED) {
-		if (Code == CODE_TTLEXCEEDED) {
-			cName = (unsigned char*) malloc(strlen("TTLexceeded") + 1);
-			strcpy((char *) cName, "TTLexceeded");
-		} else if (Code == CODE_DEFRAGTIMEEXCEEDED) {
-			cName = (unsigned char*) malloc(strlen("TTLfragtime") + 1);
-			strcpy((char *) cName, "TTLfragtime");
-		} else {
-			PRINT_DEBUG("Unrecognized code. Dropping...");
-			return;
-		}
-	} else {
-		PRINT_DEBUG("Unrecognized type. Dropping...");
-		return;
-	}
-
-//Stick the right stuff into the data
-//Start by ripping off the ICMP header from the original data
-	ff->dataFrame.pdu += ICMP_HEADER_SIZE;
-	ff->dataFrame.pduLength -= ICMP_HEADER_SIZE;
-
-//Get the total length of the data we're sending inside the control frame's data field
-	iLen = ff->dataFrame.pduLength;
-
-//Now create the data
-	cData = (unsigned char*) malloc(iLen + sizeof(int)); //With enough room for the size at the beginning
-
-//Stick in the size of the data
-	int i;
-	for (i = 0; i < sizeof(int); i++) {
-		cData[i] = (iLen >> (sizeof(int) - (8 * i + 1))) & 0xFF;
-	}
-
-//Now copy this data into cData
-	memcpy(&(cData[4]), ff->dataFrame.pdu, iLen);
-
-//Now copy the name and data fields into the final finsFrame
-	ffout->ctrlFrame.data_old = cData;
-	ffout->ctrlFrame.name = cName;
-
-//Done! Send out the frame
-//icmp_send_FF(ffout);
-}
-
-//-----------------------------------------------------------------------------
-// Create a "Destination Unreachable" ICMP message with data given from the UDP
-//-----------------------------------------------------------------------------
-void icmp_create_unreach(struct finsFrame* ff) {
-	int totallen = 0; //How many bytes we want our ICMP message to be
-	struct finsFrame* ffout; //The final "destination unreachable" finsFrame that we'll send out
-	int checksum = 0;
-
-//So this finsFrame has the IP header and UDP stuff. As per RFC 792 spec, we need the IP header + 64 bits of the UDP datagram.
-//How many bytes is all this?
-	totallen = (ff->dataFrame.pdu[0]) & 0x0F; //Grab the first 8 bits. Header length is in bits 4-7 of this.
-	totallen *= 4; //Since this length is the number of 32-bit words in the header, we multiply by 4 to get the number of bytes
-	totallen += 8 + ICMP_HEADER_SIZE; //The length we want is the length of the IP header + (64 bits = 8 bytes) + 8 byte ICMP header
-//Now that we have the total length, we can create the finsFrame that has the PDU length we want
-
-	ffout = (struct finsFrame *) malloc(sizeof(struct finsFrame)); //Allocate memory for the frame
-	ffout->dataOrCtrl = DATA; //We're sending a data packet here
-	ffout->destinationID.id = DAEMON_ID; //Go to the socket stub
-	ffout->destinationID.next = NULL; //TODO: Still no idea what this does
-	ffout->dataFrame.directionFlag = DOWN; //Out
-	ffout->dataFrame.pduLength = totallen; //Make the total length correct
-	ffout->dataFrame.pdu = (u_char *) malloc(totallen); //Allocate memory for the data we'll be sticking in
-	metadata_create(ffout->metaData); //TODO: Right?
-
-//I treat all the ICMP stuff as raw data, rather than encapsulating it in structs, due to working with such structs earlier this summer
-//and running into a ton of little-vs-big-endian issues. Handling the raw data this way is easier for me than remembering to htons()
-//everything, especially because most ICMP headers contain variably-sized data.
-
-//Fill in the ICMP header data.
-	ffout->dataFrame.pdu[0] = TYPE_DESTUNREACH; //set to destination unreachable message
-	ffout->dataFrame.pdu[1] = CODE_PORTUNREACH; //MAYBE. TODO: get info about what unreachable code we should here, from the metadata.
-//Clear the checksum and "unused" fields
-//memset(ffout->dataFrame.pdu[2], 0, ICMP_HEADER_SIZE - 2);
-	memset(&ffout->dataFrame.pdu[2], 0, ICMP_HEADER_SIZE - 2);
-
-//Copy the rest of the data over
-//memcpy(ffout->dataFrame.pdu[ICMP_HEADER_SIZE], ff->dataFrame.pdu, totallen - ICMP_HEADER_SIZE);
-	memcpy(&ffout->dataFrame.pdu[ICMP_HEADER_SIZE], ff->dataFrame.pdu, totallen - ICMP_HEADER_SIZE);
-
-//Compute the checksum
-//checksum = icmp_checksum(ffout); //TODO uncomment
-//And set the checksum field(s)
-	ffout->dataFrame.pdu[2] = checksum >> 8;
-	ffout->dataFrame.pdu[3] = (checksum & 0xFF);
-
-//Done! Send out the frame
-//icmp_send_FF(ffout);
-}
-
 void *switch_to_icmp(void *local) {
 	PRINT_DEBUG("Entered");
 
@@ -1244,7 +953,7 @@ void icmp_init(void) {
 	PRINT_DEBUG("Entered");
 	icmp_running = 1;
 
-	sent_packet_list = sent_list_create(ICMP_SENT_LIST_MAX);
+	icmp_sent_packet_list = icmp_sent_list_create(ICMP_SENT_LIST_MAX);
 }
 
 void icmp_run(pthread_attr_t *fins_pthread_attr) {
@@ -1265,7 +974,7 @@ void icmp_shutdown(void) {
 void icmp_release(void) {
 	PRINT_DEBUG("Entered");
 
-	sent_list_free(sent_packet_list);
+	icmp_sent_list_free(icmp_sent_packet_list);
 
 	//TODO free all module related mem
 

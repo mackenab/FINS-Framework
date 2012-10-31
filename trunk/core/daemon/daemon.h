@@ -13,13 +13,16 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <linux/socket.h>
-#include <linux/netlink.h>
+#include <linux/errqueue.h>
 #include <linux/if_ether.h>
 #include <linux/ip.h>
-#include <linux/tcp.h> //TODO remove?
+#include <linux/net.h>
+#include <linux/netlink.h>
+#include <linux/socket.h>
+//#include <linux/tcp.h> //TODO remove?
 #include <math.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <net/if.h>
 #include <poll.h>
@@ -57,6 +60,8 @@
 #define MAX_port 61000
 #define DEFAULT_BACKLOG 5
 #define DAEMON_BLOCK_DEFAULT 100
+#define CONTROL_LEN_MAX 10240
+#define CONTROL_LEN_DEFAULT 1024
 
 /** Socket related calls and their codes */
 #define socket_call 1
@@ -97,6 +102,24 @@ struct sockaddr_nl local_sockaddress; // sockaddr_nl for this process (source)
 struct sockaddr_nl kernel_sockaddress; // sockaddr_nl for the kernel (destination)
 int nl_sockfd; //temp for now
 sem_t nl_sem;
+
+enum sock_flags {
+	SOCK_DEAD = 0, SOCK_DONE, SOCK_URGINLINE, SOCK_KEEPOPEN, SOCK_LINGER, SOCK_DESTROY, SOCK_BROADCAST, SOCK_TIMESTAMP, SOCK_ZAPPED, SOCK_USE_WRITE_QUEUE, /* whether to call sk->sk_write_space in sock_wfree */
+	SOCK_DBG, /* %SO_DEBUG setting */
+	SOCK_RCVTSTAMP, /* %SO_TIMESTAMP setting */
+	SOCK_RCVTSTAMPNS, /* %SO_TIMESTAMPNS setting */
+	SOCK_LOCALROUTE, /* route locally only, %SO_DONTROUTE setting */
+	SOCK_QUEUE_SHRUNK, /* write queue has been shrunk recently */
+	SOCK_TIMESTAMPING_TX_HARDWARE, /* %SOF_TIMESTAMPING_TX_HARDWARE */
+	SOCK_TIMESTAMPING_TX_SOFTWARE, /* %SOF_TIMESTAMPING_TX_SOFTWARE */
+	SOCK_TIMESTAMPING_RX_HARDWARE, /* %SOF_TIMESTAMPING_RX_HARDWARE */
+	SOCK_TIMESTAMPING_RX_SOFTWARE, /* %SOF_TIMESTAMPING_RX_SOFTWARE */
+	SOCK_TIMESTAMPING_SOFTWARE, /* %SOF_TIMESTAMPING_SOFTWARE */
+	SOCK_TIMESTAMPING_RAW_HARDWARE, /* %SOF_TIMESTAMPING_RAW_HARDWARE */
+	SOCK_TIMESTAMPING_SYS_HARDWARE, /* %SOF_TIMESTAMPING_SYS_HARDWARE */
+	SOCK_FASYNC, /* fasync() active */
+	SOCK_RXQ_OVFL,
+};
 
 enum sol_sockOptions {
 
@@ -192,10 +215,11 @@ struct tcp_Parameters {
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
 uint64_t my_host_mac_addr;
-uint32_t my_host_ip_addr; // = IP4_ADR_P2H(192,168,1,20);
+uint32_t my_host_ip_addr;
 uint32_t my_host_mask;
-uint32_t loopback_ip_addr; // = IP4_ADR_P2H(127,0,0,1);
-uint32_t any_ip_addr; // = IP4_ADR_P2H(0,0,0,0);
+uint32_t loopback_ip_addr;
+uint32_t loopback_mask;
+uint32_t any_ip_addr;
 
 struct daemon_to_thread_data {
 	int id;
@@ -237,6 +261,7 @@ struct nl_daemon_to_wedge {
 
 struct daemon_call {
 	struct daemon_call *next;
+	uint8_t alloc;
 
 	uint32_t call_id;
 	int call_index;
@@ -250,6 +275,7 @@ struct daemon_call {
 	uint32_t serial_num;
 	uint32_t data;
 	uint32_t flags;
+	uint32_t ret;
 
 	uint64_t sock_id_new;
 	int sock_index_new;
@@ -358,7 +384,7 @@ int randoming(int min, int max);
 
 #define RECV_BUFFER_SIZE	1024// Pick an appropriate value here
 int init_fins_nl(void);
-int send_wedge(int sockfd, u_char *buf, size_t len, int flags);
+int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags);
 int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
 int ack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
 
@@ -366,24 +392,24 @@ int get_fdf(int sock_index, uint64_t sock_id, struct finsFrame **ff, int non_blo
 int get_fcf(int sock_index, uint64_t sock_id, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
 
 /** calls handling functions */
-void socket_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void bind_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void listen_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void connect_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void accept_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void getname_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void ioctl_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void sendmsg_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void recvmsg_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void getsockopt_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void setsockopt_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void release_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void poll_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void mmap_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void socketpair_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void shutdown_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void close_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
-void sendpage_out(struct nl_wedge_to_daemon *hdr, u_char *buf, ssize_t len);
+void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void socketpair_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void sendpage_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
 
 void connect_interrupt();
 void accept_interrupt();
@@ -403,6 +429,7 @@ void daemon_get_ff(void);
 void daemon_fcf(struct finsFrame *ff);
 void daemon_read_param_reply(struct finsFrame *ff);
 void daemon_set_param_reply(struct finsFrame *ff);
+void daemon_exec(struct finsFrame *ff);
 void daemon_exec_reply(struct finsFrame *ff);
 void daemon_error(struct finsFrame *ff);
 
@@ -421,9 +448,15 @@ void daemon_interrupt(void);
 #define EXEC_TCP_CLOSE_STUB 6
 #define EXEC_TCP_OPT 7
 #define EXEC_TCP_POLL 8
+#define EXEC_TCP_POLL_POST 9
 
 #define ERROR_ICMP_TTL 0
 #define ERROR_ICMP_DEST_UNREACH 1
+
+struct errhdr {
+	struct sock_extended_err ee;
+	struct sockaddr_in offender;
+};
 
 #include "udpHandling.h"
 #include "tcpHandling.h"

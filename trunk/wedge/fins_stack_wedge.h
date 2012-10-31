@@ -142,6 +142,7 @@ void wedge_calls_init(void);
 int wedge_calls_insert(u_int id, unsigned long long sock_id, int sock_index, u_int type);
 int wedge_calls_find(unsigned long long sock_id, int sock_index, u_int type);
 int wedge_calls_remove(u_int id);
+void wedge_calls_remove_all(void);
 
 struct fins_wedge_socket {
 	int running; //TODO remove? merge with release_flag
@@ -160,7 +161,8 @@ struct fins_wedge_socket {
 void wedge_sockets_init(void);
 int wedge_sockets_insert(unsigned long long sock_id, struct sock *sk);
 int wedge_sockets_find(unsigned long long sock_id);
-int wedge_socket_remove(unsigned long long sock_id, int sock_index, u_int type);
+int wedge_sockets_remove(unsigned long long sock_id, int sock_index, u_int type);
+void wedge_socket_remove_all(void);
 int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltype);
 int checkConfirmation(int sock_index);
 

@@ -31,6 +31,6 @@ int main(int argc, char *argv[]) {
 	ff.dataFrame.directionFlag = DOWN;
 
 	memcpy(&ff.dataFrame.metaData, &meta, 16);
-	udp_out(&ff);
+	udp_out_fdf(&ff);
 	return EXIT_SUCCESS;
 }
