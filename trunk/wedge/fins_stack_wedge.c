@@ -1990,6 +1990,8 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	*(int *) pt = flags;
 	pt += sizeof(int);
 
+	//sk->sk_rcvtimeo;
+
 	PRINT_DEBUG("msg_namelen=%d, data_buf_len=%d, msg_controllen=%u, flags=0x%x", msg->msg_namelen, (int)len, msg->msg_controllen, flags);
 
 	/*

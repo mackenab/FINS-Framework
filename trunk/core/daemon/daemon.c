@@ -2278,8 +2278,18 @@ void accept_interrupt() {
 void sendmsg_interrupt() {
 
 }
-void recvmsg_interrupt() {
+void recvmsg_interrupt(int call_index) {
+	PRINT_DEBUG("Entered: call_index=%d", call_index);
 
+	if (daemon_sockets[daemon_calls[call_index].sock_index].sock_id != daemon_calls[call_index].sock_id) {
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
+				daemon_calls[call_index].sock_index, daemon_sockets[daemon_calls[call_index].sock_index].sock_id, daemon_calls[call_index].sock_id);
+
+		nack_send(daemon_calls[call_index].call_id, call_index, daemon_calls[call_index].call_type, EAGAIN);
+
+		//remove socket
+		return;
+	}
 }
 void poll_interrupt() {
 
@@ -2702,22 +2712,20 @@ void *switch_to_daemon(void *local) {
 	pthread_exit(NULL);
 }
 
-void daemon_handle_to(int call_index) {
+void daemon_handle_to(int call_index) { //TODO finish transitioning to this TO system
 	PRINT_DEBUG("Entered: call_index=%d", call_index);
 
-	return; //TODO remove
-
 	//uint32_t call_id = daemon_calls[call_index].call_id;
-	uint32_t call_type = daemon_calls[call_index].call_type;
+	//uint32_t call_type = ;
 
 	//uint64_t sock_id = daemon_calls[call_index].sock_id;
 	//int sock_index = daemon_calls[call_index].sock_index;
 
 	//uint32_t data = daemon_calls[call_index].data;
 
-	daemon_calls_remove(call_index);
+	//daemon_calls_remove(call_index);
 
-	switch (call_type) {
+	switch (daemon_calls[call_index].call_type) {
 	case connect_call:
 		connect_interrupt(); //TODO hdr, call, or vars?
 		break;
@@ -2728,13 +2736,13 @@ void daemon_handle_to(int call_index) {
 		sendmsg_interrupt(); //TODO finish
 		break;
 	case recvmsg_call:
-		recvmsg_interrupt();
+		recvmsg_interrupt(call_index);
 		break;
 	case poll_call:
 		poll_interrupt();
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", daemon_calls[call_index].call_type);
 		//exit(1);
 		break;
 	}
@@ -3200,7 +3208,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 		temp2->s_addr = htonl(dst_ip);
 	} else {
 		temp2->s_addr = 0;
-	} PRINT_DEBUG("ff=%p, prot=%u", ff, protocol); PRINT_DEBUG("src=%s (%u)", inet_ntoa(*temp), src_ip); PRINT_DEBUG("dst=%s (%u)", inet_ntoa(*temp2), dst_ip);
+	}PRINT_DEBUG("ff=%p, prot=%u", ff, protocol);PRINT_DEBUG("src=%s (%u)", inet_ntoa(*temp), src_ip);PRINT_DEBUG("dst=%s (%u)", inet_ntoa(*temp2), dst_ip);
 
 	free(temp);
 	free(temp2);
@@ -3293,7 +3301,7 @@ void daemon_init(void) {
 	if (ret != 0) {
 		perror("sendfins() caused an error");
 		exit(-1);
-	} PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	}PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
 }
 
 void daemon_run(pthread_attr_t *fins_pthread_attr) {
@@ -3313,7 +3321,7 @@ void daemon_shutdown(void) {
 	if (ret) {
 		PRINT_DEBUG("send_wedge failure");
 		//perror("sendfins() caused an error");
-	} PRINT_DEBUG("Disconnecting to wedge at %d", nl_sockfd);
+	}PRINT_DEBUG("Disconnecting to wedge at %d", nl_sockfd);
 
 	pthread_join(switch_to_daemon_thread, NULL);
 	pthread_join(wedge_to_daemon_thread, NULL);

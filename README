@@ -3,47 +3,50 @@ This is a README file for the FINS checkout.
 ########################
 Introduction
 ########################
-Flexible Internetwork Stack (FINS) Framework v0.9.0 is a platform made to move the traditional TCP/IP stack to the user-space and enable easier research and development of new protocols. More detail on FINS can be found at the wiki: http://finsframework.org/mediawiki/index.php/Documentation_-_FINS_v0.9.0.
+Flexible Internetwork Stack (FINS) Framework v1.0.0 is a platform made to move the traditional TCP/IP stack to the user-space and enable easier research and development of new protocols. More detail on FINS can be found at the wiki: http://finsframework.org/mediawiki/index.php/Documentation_-_FINS_v1.0.0.
 
 ########################
 Dependencies
 ########################
 The FINS Framework requires the following libraries:
+	C: libc
 	Pcap: libpcap
 	Config: libconfig
 	Pthread: libpthread
-	Dl: libdl
-	C: libc
 
 ########################
 Build steps
 ########################
-Provided in the root directory of FINS (FINS_ROOT) is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command.
+Provided in the root directory of FINS (<FINS_root>) is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command.
 
 ########################
 Run steps
 ########################
 
-From FINS_ROOT directory:
+From <FINS_root> directory:
 
-1) insmod wedge/FINS_stack_wedge.ko
+1) Insert the wedge LKM:
+$ insmod <FINS_ROOT>/trunk/wedge/FINS_stack_wedge.ko
+or
+$ ./inswedge.sh
 
-2) sudo capturer/capturer
+2) In a second terminal run the Capturer executable:
+$ ./<FINS_root>/trunk/capturer/capturer
 
-3) sudo socketdaemon/socketdaemon
+3) In a third terminal run the Core executable:
+$ ./<FINS_root>/trunk/core/core
 
-4) Run applications
+4)Run the application(s).
 
 ########################
 Shutdown steps
 ########################
 
-From FINS_ROOT directory:
+1) Quit any application(s) or kill any application main process using FINS (typically any internet related programs).
 
-1) Close all applications
+2) Terminate the FINS core, typically through “Control + C” (^C)
 
-2) Close socketdaemon
+3) Terminate the Capturer process, typically through “Control + C” (^C)
 
-3) Close capturer
-
-4) rmmod -f FINS_stack_wedge
+4) Remove the wedge LKM through:
+$ rmmod -f trunk/wedge/FINS_stack_wedge

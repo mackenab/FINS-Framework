@@ -414,7 +414,7 @@ void sendpage_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
 void connect_interrupt();
 void accept_interrupt();
 void sendmsg_interrupt();
-void recvmsg_interrupt();
+void recvmsg_interrupt(int call_index);
 void poll_interrupt();
 
 void daemon_init(void);
