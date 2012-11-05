@@ -113,7 +113,7 @@ void print_finsFrame(struct finsFrame *fins_in);
 
 void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
 
-struct finsFrame *copyFinsFrame(struct finsFrame *ff);
+struct finsFrame *cloneFinsFrame(struct finsFrame *ff);
 
 int freeFinsFrame(struct finsFrame *f);
 

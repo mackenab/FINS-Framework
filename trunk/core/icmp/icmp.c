@@ -725,10 +725,10 @@ void icmp_out_fdf(struct finsFrame *ff) {
 	//ff->dataFrame.pduLength = data_len; //Add in the header size for this, too
 	//ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 
-	struct finsFrame *ff_copy = copyFinsFrame(ff);
+	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
 	if (icmp_to_switch(ff)) {
-		struct icmp_sent *sent = icmp_sent_create(ff_copy);
+		struct icmp_sent *sent = icmp_sent_create(ff_clone);
 
 		if (icmp_sent_list_has_space(icmp_sent_packet_list)) {
 			icmp_sent_list_append(icmp_sent_packet_list, sent);
@@ -751,7 +751,7 @@ void icmp_out_fdf(struct finsFrame *ff) {
 		}
 	} else {
 		PRINT_ERROR("todo error");
-		freeFinsFrame(ff_copy);
+		freeFinsFrame(ff_clone);
 		freeFinsFrame(ff);
 	}
 }

@@ -296,6 +296,21 @@ int metadata_copy(metadata *cfgptr, metadata *cfgptr_copy) {
 	return total == num_settings;
 }
 
+metadata *metadata_clone(metadata *cfgptr) {
+	PRINT_DEBUG("Entered: meta=%p", cfgptr);
+
+	metadata *cfgptr_clone = (metadata *) malloc(sizeof(metadata));
+	if (cfgptr_clone == NULL) {
+		PRINT_ERROR("failed to create matadata: meta=%p", cfgptr);
+		exit(-1);
+	}
+	metadata_create(cfgptr_clone);
+
+	metadata_copy(cfgptr, cfgptr_clone);
+
+	return cfgptr_clone;
+}
+
 /*---------------------------------------------------------------
  * Functions code that might be reused later
  * */

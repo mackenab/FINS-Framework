@@ -7,7 +7,7 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-//#define DEBUG
+#define DEBUG
 #define ERROR
 
 #ifdef DEBUG

@@ -315,7 +315,7 @@ int threads_decr(int sock_index, u_int call) {
 int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltype) {
 	//int error = 0;
 
-	PRINT_DEBUG("Entered for sock=%llu sock_index=%d call=%u", sock_id, sock_index, calltype);
+	PRINT_DEBUG("Entered for sock=%llu, sock_index=%d, call=%u", sock_id, sock_index, calltype);
 
 	return print_exit(__FUNCTION__, __LINE__, 0);
 }
@@ -329,7 +329,7 @@ int checkConfirmation(int call_index) {
 		if (wedge_calls[call_index].len == 0) {
 			return 0;
 		} else {
-			PRINT_ERROR("wedge_calls[sock_index].reply_buf error, wedge_calls[%d].len=%d wedge_calls[%d].buf=%p",
+			PRINT_ERROR("wedge_calls[sock_index].reply_buf error, wedge_calls[%d].len=%d, wedge_calls[%d].buf=%p",
 					call_index, wedge_calls[call_index].len, call_index, wedge_calls[call_index].buf);
 			return -1;
 		}
@@ -548,7 +548,7 @@ void nl_data_ready(struct sk_buff *skb) {
 	buf = (u_char *) (NLMSG_DATA(nlh));
 	len = NLMSG_PAYLOAD(nlh, 0);
 
-	PRINT_DEBUG("nl_pid=%d nl_len=%d", pid, len);
+	PRINT_DEBUG("nl_pid=%d, nl_len=%d", pid, len);
 
 	// **** Remember the LKM must be up first, then the daemon,
 	// but the daemon must make contact before any applications try to use socket()
@@ -567,7 +567,7 @@ void nl_data_ready(struct sk_buff *skb) {
 			 * This is preemptive as with multithreading we may have to add a shared queue
 			 */
 
-			PRINT_DEBUG("Reply: call_type=%u, call_id=%u, call_index=%d, sock_id=%llu, sock_index=%d, ret=%u, msg=%u len=%d",
+			PRINT_DEBUG("Reply: call_type=%u, call_id=%u, call_index=%d, sock_id=%llu, sock_index=%d, ret=%u, msg=%u, len=%d",
 					hdr->call_type, hdr->call_id, hdr->call_index, hdr->sock_id, hdr->sock_index, hdr->ret, hdr->msg, len);
 
 			if (hdr->call_type == 0) { //set to different calls
@@ -581,20 +581,20 @@ void nl_data_ready(struct sk_buff *skb) {
 				}
 				if (wedge_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 					up(&wedge_sockets_sem);
-					PRINT_ERROR("socket removed: sock_index=%d sock_id=%llu", hdr->sock_index, hdr->sock_id);
+					PRINT_ERROR("socket removed: sock_index=%d, sock_id=%llu", hdr->sock_index, hdr->sock_id);
 					goto end;
 				}
 
-				PRINT_DEBUG("sock_index=%d type=%u threads=%d", hdr->sock_index, hdr->call_type, wedge_sockets[hdr->sock_index].threads[hdr->call_type]);
+				PRINT_DEBUG("sock_index=%d, type=%u, threads=%d", hdr->sock_index, hdr->call_type, wedge_sockets[hdr->sock_index].threads[hdr->call_type]);
 				if (wedge_sockets[hdr->sock_index].threads[hdr->call_type] < 1) { //TODO may be unnecessary, since have call_index/call_id
 					up(&wedge_sockets_sem);
-					PRINT_ERROR("Exiting: no waiting threads found: sock_index=%d type=%u", hdr->sock_index, hdr->call_type);
+					PRINT_ERROR("Exiting: no waiting threads found: sock_index=%d, type=%u", hdr->sock_index, hdr->call_type);
 					goto end;
 				}
 				up(&wedge_sockets_sem);
 
 				if (wedge_sockets[hdr->sock_index].release_flag && (hdr->call_type != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
-					PRINT_DEBUG("socket released, dropping for sock_index=%d sock_id=%llu type=%d", hdr->sock_index, hdr->sock_id, hdr->call_type);
+					PRINT_DEBUG("socket released, dropping for sock_index=%d, sock_id=%llu, type=%d", hdr->sock_index, hdr->sock_id, hdr->call_type);
 					//goto end; //TODO uncomment or remove
 				}
 			} else if (hdr->call_type == poll_event_call) {
@@ -622,7 +622,7 @@ void nl_data_ready(struct sk_buff *skb) {
 						PRINT_ERROR("todo error");
 					}
 				} else {
-					PRINT_ERROR("socket mismatched: sock_index=%d sock_id=%llu hdr->sock_id=%llu",
+					PRINT_ERROR("socket mismatched: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
 							hdr->sock_index, wedge_calls[hdr->sock_index].sock_id, hdr->sock_id);
 				}
 				up(&wedge_sockets_sem);
@@ -639,7 +639,7 @@ void nl_data_ready(struct sk_buff *skb) {
 				}
 				if (wedge_calls[hdr->call_index].call_id == hdr->call_id) {
 					if (wedge_calls[hdr->call_index].call_type != hdr->call_type) { //TODO remove type check ~ unnecessary? shouldn't ever happen
-						PRINT_ERROR("call mismatched: call_index=%d call_type=%u hdr->type=%u",
+						PRINT_ERROR("call mismatched: call_index=%d, call_type=%u, hdr->type=%u",
 								hdr->call_index, wedge_calls[hdr->call_index].call_type, hdr->call_type);
 					}
 					wedge_calls[hdr->call_index].ret = hdr->ret;
@@ -647,12 +647,12 @@ void nl_data_ready(struct sk_buff *skb) {
 					wedge_calls[hdr->call_index].buf = buf + sizeof(struct nl_daemon_to_wedge);
 					wedge_calls[hdr->call_index].len = len;
 					wedge_calls[hdr->call_index].reply = 1;
-					PRINT_DEBUG("shared created: sockID=%llu, call_id=%d, ret=%u, msg=%u, len=%d",
+					PRINT_DEBUG("shared created: sock_id=%llu, call_id=%d, ret=%u, msg=%u, len=%d",
 							wedge_calls[hdr->call_index].sock_id, wedge_calls[hdr->call_index].call_id, wedge_calls[hdr->call_index].ret, wedge_calls[hdr->call_index].msg, wedge_calls[hdr->call_index].len);
 					up(&wedge_calls[hdr->call_index].wait_sem); //DON"T reference wedge_calls[hdr->call_index] after this
 
 				} else {
-					PRINT_ERROR("call mismatched: call_index=%d id=%u hdr->id=%u", hdr->call_index, wedge_calls[hdr->call_index].call_id, hdr->call_id);
+					PRINT_ERROR("call mismatched: call_index=%d, id=%u, hdr->id=%u", hdr->call_index, wedge_calls[hdr->call_index].call_id, hdr->call_id);
 				}
 				up(&wedge_calls_sem);
 			} else {
@@ -693,7 +693,7 @@ void nl_data_ready(struct sk_buff *skb) {
 		} else {
 			//TODO error
 			PRINT_ERROR("todo error");
-			PRINT_DEBUG("Exiting: len too small: len=%d hdr=%d", len, sizeof(struct nl_daemon_to_wedge));
+			PRINT_DEBUG("Exiting: len too small: len=%d, hdr=%d", len, sizeof(struct nl_daemon_to_wedge));
 		}
 	}
 
@@ -790,7 +790,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 		//TODO error
 	}
 	sock_index = wedge_sockets_insert(sock_id, sk);
-	PRINT_DEBUG("insert: sock_id=%llu sock_index=%d", sock_id, sock_index);
+	PRINT_DEBUG("insert: sock_id=%llu, sock_index=%d", sock_id, sock_index);
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		fins_sk_destroy(sock);
@@ -807,7 +807,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, socket_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto removeSocket;
@@ -842,14 +842,14 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto removeSocket;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", socket_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", socket_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -870,7 +870,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 
 	//lock_sock(sk); //no one else can use, since socket creates
 	//wedge_calls[call_index].sem
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -960,7 +960,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, bind_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -995,14 +995,14 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	pt += sizeof(u_int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", bind_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", bind_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1023,7 +1023,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -1100,7 +1100,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, listen_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -1129,14 +1129,14 @@ static int fins_listen(struct socket *sock, int backlog) {
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", listen_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", bind_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1157,7 +1157,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -1210,7 +1210,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	lock_sock(sk);
 
 	sock_id = get_unique_sock_id(sk);
-	PRINT_DEBUG("Entered: sock_id=%llu, addr_len=%d flags=0x%x", sock_id, addr_len, flags);
+	PRINT_DEBUG("Entered: sock_id=%llu, addr_len=%d, flags=0x%x", sock_id, addr_len, flags);
 
 	if (down_interruptible(&wedge_sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
@@ -1234,7 +1234,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, connect_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -1269,14 +1269,14 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", connect_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", connect_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1297,7 +1297,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -1376,13 +1376,13 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 		sk_new = sock_new->sk;
 		lock_sock(sk_new);
 
-		//sock_new->sk = NULL; //TODO comment?
+		sock_new->sk = NULL; //if return rc!=0 sock_new released, gens release_call
 
 		sock_id_new = get_unique_sock_id(sk_new);
-		PRINT_DEBUG("Created new=%llu", sock_id_new);
+		PRINT_DEBUG("Created new: sock_id=%llu", sock_id_new);
 
 		index_new = wedge_sockets_insert(sock_id_new, sk_new);
-		PRINT_DEBUG("insert new: sock_id=%llu sock_index=%d", sock_id_new, index_new);
+		PRINT_DEBUG("insert new: sock_id=%llu, sock_index=%d", sock_id_new, index_new);
 		if (index_new == -1) {
 			up(&wedge_sockets_sem);
 			fins_sk_destroy(sock_new);
@@ -1395,10 +1395,10 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 		lock_sock(sk_new);
 
 		sock_id_new = get_unique_sock_id(sk_new);
-		PRINT_DEBUG("Created new=%llu", sock_id_new);
+		PRINT_DEBUG("Retrived new: sock_id=%llu", sock_id_new);
 
 		index_new = wedge_sockets_find(sock_id_new);
-		PRINT_DEBUG("sock_index new=%d", sock_index);
+		PRINT_DEBUG("new: sock_index=%d", sock_index);
 		if (sock_index == -1) {
 			/*
 			 index_new = insert_wedge_socket(uniqueSockID_new, sk_new);
@@ -1427,7 +1427,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, accept_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -1462,14 +1462,14 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", accept_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", accept_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1492,7 +1492,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 
 	lock_sock(sk);
 	lock_sock(sk_new);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -1559,7 +1559,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	lock_sock(sk);
 
 	sock_id = get_unique_sock_id(sk);
-	PRINT_DEBUG("Entered: sock_id=%llu, len=%d peer=0x%x", sock_id, *len, peer);
+	PRINT_DEBUG("Entered: sock_id=%llu, len=%d, peer=0x%x", sock_id, *len, peer);
 
 	if (down_interruptible(&wedge_sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
@@ -1583,7 +1583,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, getname_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -1612,14 +1612,14 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", getname_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", getname_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1640,7 +1640,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		if (wedge_calls[call_index].ret == ACK) {
@@ -1664,13 +1664,13 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 				//########
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				} else {
 					rc = 0;
 				}
 			} else {
-				PRINT_ERROR("wedge_calls[call_index].buf error, wedge_calls[call_index].len=%d wedge_calls[call_index].buf=%p",
+				PRINT_ERROR("wedge_calls[call_index].buf error, wedge_calls[call_index].len=%d, wedge_calls[call_index].buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -1759,7 +1759,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, sendmsg_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -1823,7 +1823,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
@@ -1833,7 +1833,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	PRINT_DEBUG("data_len=%d", data_len);
 	PRINT_DEBUG("data='%s'", temp);
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", sendmsg_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", sendmsg_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1854,7 +1854,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		//rc = checkConfirmation(call_index);
@@ -1953,7 +1953,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, recvmsg_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -2002,14 +2002,14 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	 pt += msg->msg_controllen;
 	 */
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", recvmsg_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", recvmsg_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -2030,7 +2030,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		if (wedge_calls[call_index].ret == ACK) {
@@ -2121,11 +2121,11 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				msg->msg_control = ((u_char *) msg->msg_control) + msg->msg_controllen; //required for kernel
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2137,7 +2137,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				rc = -1;
 			}
 		} else {
-			PRINT_ERROR("error, acknowledgement: %u %u", wedge_calls[call_index].ret, wedge_calls[call_index].msg);
+			PRINT_ERROR("error, acknowledgement: ret=%u, msg=%u", wedge_calls[call_index].ret, wedge_calls[call_index].msg);
 			rc = -1;
 		}
 	} else {
@@ -2224,7 +2224,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, ioctl_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -2277,7 +2277,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		pt += sizeof(int);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
@@ -2295,7 +2295,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			return print_exit(__FUNCTION__, __LINE__, -1);
 		}
 
-		PRINT_DEBUG("cmd=%d name='%s'", cmd, ifr.ifr_name);
+		PRINT_DEBUG("cmd=%d, name='%s'", cmd, ifr.ifr_name);
 
 		// Build the message
 		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int) + sizeof(int) + IFNAMSIZ;
@@ -2326,7 +2326,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		pt += IFNAMSIZ;
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
@@ -2359,7 +2359,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		pt += sizeof(u_int);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
@@ -2405,7 +2405,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		pt += sizeof(u_int);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
@@ -2419,7 +2419,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", ioctl_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", ioctl_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -2440,7 +2440,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 
 	if (!wedge_calls[call_index].reply) {
@@ -2460,9 +2460,9 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				len = *(int *) pt;
 				pt += sizeof(int);
 
-				PRINT_DEBUG("SIOCGIFCONF len=%d ifc_len=%d", len, ifc.ifc_len);
+				PRINT_DEBUG("SIOCGIFCONF len=%d, ifc_len=%d", len, ifc.ifc_len);
 				ifc.ifc_len = len;
-				PRINT_DEBUG("SIOCGIFCONF len=%d ifc_len=%d", len, ifc.ifc_len);
+				PRINT_DEBUG("SIOCGIFCONF len=%d, ifc_len=%d", len, ifc.ifc_len);
 
 				if (copy_to_user(ifc.ifc_buf, pt, len)) { //TODO remove?? think this is wrong
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
@@ -2482,11 +2482,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2511,11 +2511,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2539,11 +2539,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2567,11 +2567,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2594,12 +2594,12 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2622,11 +2622,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2649,11 +2649,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				pt += len;
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("READING ERROR! diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 					rc = -1;
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2673,7 +2673,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			//TODO implement cases above
 			if (wedge_calls[call_index].buf && (wedge_calls[call_index].len == 0)) {
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = -1;
 			}
@@ -2775,7 +2775,7 @@ static int fins_release(struct socket *sock) {
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, release_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -2801,14 +2801,14 @@ static int fins_release(struct socket *sock) {
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", release_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", release_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -2829,7 +2829,7 @@ static int fins_release(struct socket *sock) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -2906,13 +2906,13 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, poll_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = 0;
 		goto end;
 	}
 
-	PRINT_DEBUG("file=%p sock=%p table=%p", file, sock, table);
+	PRINT_DEBUG("file=%p sock=%p, table=%p", file, sock, table);
 	if (table) {
 		events = table->key;
 	} else {
@@ -2943,14 +2943,14 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = 0;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", poll_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", poll_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -2971,7 +2971,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		if (wedge_calls[call_index].ret == ACK) {
@@ -3002,7 +3002,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 					poll_wait(file, sk_sleep(sk), table); //TODO move to earlier?
 				}
 			} else {
-				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR("wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 						wedge_calls[call_index].len, wedge_calls[call_index].buf);
 				rc = 0;
 			}
@@ -3089,7 +3089,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, shutdown_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -3118,14 +3118,14 @@ static int fins_shutdown(struct socket *sock, int how) {
 	pt += sizeof(int);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", shutdown_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", shutdown_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3146,7 +3146,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -3263,7 +3263,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, mmap_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -3289,14 +3289,14 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", mmap_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", mmap_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3317,7 +3317,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -3394,7 +3394,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, sendpage_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 	if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -3420,14 +3420,14 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", sendpage_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", sendpage_call, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3448,7 +3448,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -3534,7 +3534,7 @@ if (sock_index == -1) {
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, getsockopt_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -3588,14 +3588,14 @@ kfree(buf);
 	}
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", getsockopt_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", getsockopt_call, sock_id, buf_len);
 
 // Send message to fins_daemon
 ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3616,7 +3616,7 @@ if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 	PRINT_DEBUG("relocked my semaphore");
 
 lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 		wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 if (wedge_calls[call_index].reply) {
 		if (wedge_calls[call_index].ret == ACK) {
@@ -3644,11 +3644,11 @@ rc = -1;
 				}
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-					PRINT_ERROR("write error: diff=%d len=%d", pt-wedge_calls[call_index].buf, wedge_calls[call_index].len);
+					PRINT_ERROR("write error: diff=%d, len=%d", pt-wedge_calls[call_index].buf, wedge_calls[call_index].len);
 rc = -1;
 				}
 			} else {
-				PRINT_ERROR( "wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d wedgeSockets[sock_index].reply_buf=%p",
+				PRINT_ERROR( "wedgeSockets[sock_index].reply_buf error, wedgeSockets[sock_index].reply_len=%d, wedgeSockets[sock_index].reply_buf=%p",
 		wedge_calls[call_index].len, wedge_calls[call_index].buf);
 rc = -1;
 			}
@@ -3733,7 +3733,7 @@ if (sock_index == -1) {
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, setsockopt_call);
 	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u call_index=%d", call_id, call_index);
+	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
 if (call_index == -1) {
 		rc = -ENOMEM;
 		goto end;
@@ -3778,14 +3778,14 @@ kfree(buf);
 	}
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
 kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("socket_call=%d sock_id=%llu buf_len=%d", setsockopt_call, sock_id, buf_len);
+	PRINT_DEBUG("socket_call=%d, sock_id=%llu, buf_len=%d", setsockopt_call, sock_id, buf_len);
 
 // Send message to fins_daemon
 ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3806,7 +3806,7 @@ if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 	PRINT_DEBUG("relocked my semaphore");
 
 lock_sock(sk);
-	PRINT_DEBUG("shared recv: sockID=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
+	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%u, ret=%u, msg=%u, len=%d",
 		wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len);
 if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);

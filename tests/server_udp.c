@@ -51,14 +51,32 @@ int main(int argc, char *argv[]) {
 	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
 	}
 
 	printf("Provided with sock=%d\n", sock);
+
+	struct timeval tv_1;
+	int size_1 = sizeof(struct timeval);
+	getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv_1, &size_1);
+
+	struct timeval tv_2;
+	int size_2 = sizeof(struct timeval);
+	getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv_2, &size_2);
+
+	printf("size_1=%d, size_2=%d, SO_RCVTIMEO=%u,%u, SO_SNDTIMEO=%u,%u\n", size_1, size_2, (uint32_t) tv_1.tv_sec, (uint32_t) tv_1.tv_usec,
+			(uint32_t) tv_2.tv_sec, (uint32_t) tv_2.tv_usec);
+
+	//tv.tv_sec = 30; /* 30 Secs Timeout */
+
+	//int FSO_RCVTIMEO = 0;
+	//getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &FSO_RCVTIMEO, sizeof(FSO_RCVTIMEO));
+	//int FSO_SNDTIMEO = 0;
+	//setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &FSO_SNDTIMEO, sizeof(FSO_SNDTIMEO));
 
 	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
@@ -140,11 +158,11 @@ int main(int argc, char *argv[]) {
 		while (1) {
 			//printf("\n pID=%d poll before", pID);
 			//fflush(stdout);
-			ret = poll(fds, nfds, time);
-			printf("\n poll: pID=%d, ret=%d, revents=%x", pID, ret, fds[ret].revents);
-			fflush(stdout);
-			if (ret || 0) {
-				if (1) {
+			//ret = poll(fds, nfds, time);
+			//printf("\n poll: pID=%d, ret=%d, revents=%x", pID, ret, fds[ret].revents);
+			//fflush(stdout);
+			if (ret || 1) {
+				if (0) {
 					printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 					printf("\n POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d ",
 							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
@@ -154,8 +172,8 @@ int main(int argc, char *argv[]) {
 					fflush(stdout);
 				}
 
-				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
-					bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, &addr_len);
+				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+					bytes_read = recvfrom(sock, recv_data, 4000, MSG_DONTWAIT, (struct sockaddr *) client_addr, &addr_len);
 					//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 					//bytes_read = recv(sock,recv_data,1024,0);
 					if (bytes_read > 0) {
@@ -169,11 +187,11 @@ int main(int argc, char *argv[]) {
 						if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
 							break;
 						}
-					} else if (errno != EWOULDBLOCK && errno != EAGAIN) {
+					} else /*if (errno != EWOULDBLOCK && errno != EAGAIN)*/{
 						printf("\n Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
 						perror("Error:");
 						fflush(stdout);
-						break;
+						sleep(2);
 					}
 				}
 			}

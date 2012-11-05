@@ -59,7 +59,7 @@
 #define MIN_port 32768
 #define MAX_port 61000
 #define DEFAULT_BACKLOG 5
-#define DAEMON_BLOCK_DEFAULT 100
+#define DAEMON_BLOCK_DEFAULT 500
 #define CONTROL_LEN_MAX 10240
 #define CONTROL_LEN_DEFAULT 1024
 
@@ -288,6 +288,7 @@ struct daemon_call {
 };
 
 struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index);
+struct daemon_call *call_clone(struct daemon_call *call);
 void call_free(struct daemon_call *call);
 
 int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index);
@@ -306,7 +307,7 @@ struct daemon_call_list {
 
 struct daemon_call_list *call_list_create(uint32_t max);
 void call_list_append(struct daemon_call_list *call_list, struct daemon_call *call);
-struct daemon_call *call_list_find(struct daemon_call_list *call_list, int call_pid, uint32_t call_type, uint64_t sock_id);
+struct daemon_call *call_list_find_pid(struct daemon_call_list *call_list, int call_pid, uint32_t call_type, uint64_t sock_id);
 struct daemon_call *call_list_remove_front(struct daemon_call_list *call_list);
 void call_list_remove(struct daemon_call_list *call_list, struct daemon_call *call);
 int call_list_check(struct daemon_call_list *call_list);
@@ -324,41 +325,37 @@ struct daemon_socket {
 
 	uint64_t sock_id;
 	socket_state state;
-	uint8_t bound;
 
 	int type;
 	int protocol;
 
-	int listening;
-	int backlog;
-
-	/** check the opt_name to find which bit to access in the options variable then use
-	 * the following code to handle the bits individually
-	 * setting a bit   number |= 1 << x;  That will set bit x.
-	 * Clearing a bit number &= ~(1 << x); That will clear bit x.
-	 * The XOR operator (^) can be used to toggle a bit. number ^= 1 << x; That will toggle bit x.
-	 * Checking a bit      value = number & (1 << x);
-	 */
-	//uint32_t socketoptions;
-	struct socket_options sockopts;
-
-	/** All the above already initialized using the insert function
-	 * the remaining below is handled using the update function*/
 	uint32_t host_ip; //host format
 	uint16_t host_port; //host format
 	uint32_t dst_ip; //host format
 	uint16_t dst_port; //host format
 
+	uint8_t bound;
+	uint8_t listening;
+	int backlog;
+
+	uint64_t sock_id_new;
+	int sock_index_new;
+
+	struct daemon_call_list *call_list;
+	struct timeval stamp;
+
 	finsQueue data_queue;
 	int data_buf;
 	//sem_t data_sem; //TODO remove? not used or tie calls to this sem somehow
-	struct timeval stamp;
 
 	finsQueue error_queue;
 	int error_buf;
 	//sem_t error_sem; //TODO remove? not used or tie calls to this sem somehow
 
-	struct daemon_call_list *call_list;
+	uint32_t error_msg;
+	uint32_t error_call;
+
+	struct socket_options sockopts;
 };
 
 int daemon_sockets_insert(uint64_t sock_id, int sock_index, int sock_type, int protocol);
@@ -411,11 +408,11 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
 void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
 void sendpage_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
 
-void connect_interrupt();
-void accept_interrupt();
-void sendmsg_interrupt();
-void recvmsg_interrupt(int call_index);
-void poll_interrupt();
+void connect_timeout(struct daemon_call *call);
+void accept_timeout(struct daemon_call *call);
+//void sendmsg_timeout(struct daemon_call *call); //udp/icmp no TO, tcp TO in module
+void recvmsg_timeout(struct daemon_call *call);
+//void poll_timeout(struct daemon_call *call); //poll is special
 
 void daemon_init(void);
 void daemon_run(pthread_attr_t *fins_pthread_attr);

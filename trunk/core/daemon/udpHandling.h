@@ -40,4 +40,6 @@ void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, u
 void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint16_t addr_port, uint32_t flags);
 
+void recvmsg_timeout_udp(struct daemon_call *call);
+
 #endif /* UDPHANDLING_H_ */

@@ -176,7 +176,7 @@ void queue_append(struct tcp_queue *queue, struct tcp_node *node) {
 	queue->end = node;
 	queue->len += node->len;
 
-	queue_check(queue);
+	//queue_check(queue);
 }
 
 void queue_prepend(struct tcp_queue *queue, struct tcp_node *node) {
@@ -203,13 +203,13 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	int ret;
 
 	PRINT_DEBUG("Entered: queue=%p, len=%u, node=%p, win_seq_num=%u, win_seq_end=%u", queue, queue->len, node, win_seq_num, win_seq_end);
-	queue_check(queue);
+	//queue_check(queue);
 
 	//empty
 	if (queue_is_empty(queue)) {
 		queue_prepend(queue, node);
 
-		queue_check(queue);
+		//queue_check(queue);
 		return 1;
 	}
 
@@ -218,11 +218,11 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	if (ret == -1) { // [ <> () ] |
 		queue_prepend(queue, node);
 
-		queue_check(queue);
+		//queue_check(queue);
 		return 1;
 	} else if (ret == 0) {
 
-		queue_check(queue);
+		//queue_check(queue);
 		return 0;
 	}
 
@@ -231,11 +231,11 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	if (ret == 1) { // [ {} <> ] |
 		queue_append(queue, node);
 
-		queue_check(queue);
+		//queue_check(queue);
 		return 1;
 	} else if (ret == 0) {
 
-		queue_check(queue);
+		//queue_check(queue);
 		return 0;
 	}
 
@@ -246,11 +246,11 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 		if (ret == -1) {
 			queue_add(queue, node, temp_node);
 
-			queue_check(queue);
+			//queue_check(queue);
 			return 1;
 		} else if (ret == 0) {
 
-			queue_check(queue);
+			//queue_check(queue);
 			return 0;
 		}
 
@@ -289,11 +289,11 @@ struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
 		queue->len = 0;
 	}
 
-	queue_check(queue);
+	//queue_check(queue);
 	return old;
 }
 
-int queue_check(struct tcp_queue *queue) {
+int queue_check(struct tcp_queue *queue) { //TODO remove all references
 	PRINT_DEBUG("Entered: queue=%p, len=%u", queue, queue->len);
 
 	int count = 0;
@@ -319,11 +319,10 @@ int queue_check(struct tcp_queue *queue) {
 
 	PRINT_DEBUG("Exited: call_list=%p, count=%u, check=%u", queue, count, count == queue->len);
 	return count == queue->len;
-
 }
 
 int queue_is_empty(struct tcp_queue *queue) {
-	return queue->front == NULL;
+	return queue->front == NULL; //Use so can add 0 len nodes, signals/flags?
 	//return queue->len == 0;
 }
 

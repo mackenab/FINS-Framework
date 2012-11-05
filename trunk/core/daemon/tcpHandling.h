@@ -52,6 +52,14 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint16_t addr_port, uint32_t flags);
 
+void connect_timeout_tcp(struct daemon_call *call);
+void accept_timeout_tcp(struct daemon_call *call);
+//void sendmsg_timeout_tcp(struct daemon_call *call);
+void recvmsg_timeout_tcp(struct daemon_call *call);
+
+void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+
 #define SET_PARAM_TCP_HOST_WINDOW 0
 #define SET_PARAM_TCP_SOCK_OPT 1
 

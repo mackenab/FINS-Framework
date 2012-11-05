@@ -16,7 +16,7 @@ finsQueue Switch_to_IPv4_Queue;
 
 IP4addr my_ip_addr;
 IP4addr my_mask;
-IP4addr loopback; // = IP4_ADR_P2H(127, 0, 0, 1);
+IP4addr loopback;
 IP4addr loopback_mask;
 
 /*

@@ -18,6 +18,23 @@
 
 int i = 0;
 
+int interface_setNonblocking(int fd) { //TODO move to common file?
+	int flags;
+
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 1;
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
+
 void termination_handler(int sig) {
 	printf("\n**********Number of packers that have been received = %d *******\n", i);
 	exit(2);
@@ -90,8 +107,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
-	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
+		//if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
@@ -159,7 +176,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			printf("\n failed accept: errno=%d errno='%s'", errno, strerror(errno));
 			fflush(stdout);
-			sleep(1);
+			//sleep(1);
 		}
 	}
 	//*/
@@ -167,6 +184,8 @@ int main(int argc, char *argv[]) {
 	printf("\n Connection establisehed pID=%d sock_client=%d to (%s/%d) netw=%u", pID, sock_client, inet_ntoa(client_addr.sin_addr),
 			ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	fflush(stdout);
+
+	//interface_setNonblocking(sock_client);
 
 	int nfds = 2;
 	struct pollfd fds[nfds];

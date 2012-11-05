@@ -135,80 +135,80 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 
 }
 
-struct finsFrame *copyFinsFrame(struct finsFrame *ff) {
+struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params_copy = (metadata *) malloc(sizeof(metadata));
-	if (params_copy == NULL) {
+	metadata *params_clone = (metadata *) malloc(sizeof(metadata));
+	if (params_clone == NULL) {
 		PRINT_ERROR("metadata creation failed");
 		exit(-1);
 	}
-	metadata_create(params_copy);
+	metadata_create(params_clone);
 
 	metadata *params = ff->metaData;
 	if (params) {
-		if (metadata_copy(params, params_copy) == META_FALSE) {
+		if (metadata_copy(params, params_clone) == META_FALSE) {
 			PRINT_ERROR("todo error");
 		}
 	} else {
 		PRINT_ERROR("todo error");
 	}
 
-	struct finsFrame *ff_copy = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff_copy == NULL) {
-		PRINT_ERROR("ff_copy alloc failed");
+	struct finsFrame *ff_clone = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff_clone == NULL) {
+		PRINT_ERROR("ff_clone alloc failed");
 		exit(-1);
 	}
 
-	ff_copy->dataOrCtrl = ff->dataOrCtrl;
-	ff_copy->destinationID.id = ff->destinationID.id;
-	ff_copy->destinationID.next = ff->destinationID.next; //TODO this is a list copy all of them?
-	ff_copy->metaData = params_copy;
+	ff_clone->dataOrCtrl = ff->dataOrCtrl;
+	ff_clone->destinationID.id = ff->destinationID.id;
+	ff_clone->destinationID.next = ff->destinationID.next; //TODO this is a list copy all of them?
+	ff_clone->metaData = params_clone;
 
-	if (ff_copy->dataOrCtrl == CONTROL) {
-		ff_copy->ctrlFrame.senderID = ff->ctrlFrame.senderID;
-		ff_copy->ctrlFrame.serial_num = gen_control_serial_num(); //ff->ctrlFrame.serial_num; //TODO should this occur?
-		ff_copy->ctrlFrame.opcode = ff->ctrlFrame.opcode;
-		ff_copy->ctrlFrame.param_id = ff->ctrlFrame.param_id; //TODO error msg code
+	if (ff_clone->dataOrCtrl == CONTROL) {
+		ff_clone->ctrlFrame.senderID = ff->ctrlFrame.senderID;
+		ff_clone->ctrlFrame.serial_num = gen_control_serial_num(); //ff->ctrlFrame.serial_num; //TODO should this occur?
+		ff_clone->ctrlFrame.opcode = ff->ctrlFrame.opcode;
+		ff_clone->ctrlFrame.param_id = ff->ctrlFrame.param_id; //TODO error msg code
 
-		ff_copy->ctrlFrame.data_len = ff->ctrlFrame.data_len; //Add in the header size for this, too
-		if (ff_copy->ctrlFrame.data_len) {
-			ff_copy->ctrlFrame.data = (uint8_t *) malloc(ff_copy->ctrlFrame.data_len);
-			if (ff_copy->ctrlFrame.data == NULL) {
-				PRINT_ERROR("failed to create data: ff=%p", ff_copy);
+		ff_clone->ctrlFrame.data_len = ff->ctrlFrame.data_len; //Add in the header size for this, too
+		if (ff_clone->ctrlFrame.data_len) {
+			ff_clone->ctrlFrame.data = (uint8_t *) malloc(ff_clone->ctrlFrame.data_len);
+			if (ff_clone->ctrlFrame.data == NULL) {
+				PRINT_ERROR("failed to create data: ff=%p", ff_clone);
 				exit(-1);
 			}
 
-			memcpy(ff_copy->ctrlFrame.data, ff->ctrlFrame.data, ff_copy->ctrlFrame.data_len);
+			memcpy(ff_clone->ctrlFrame.data, ff->ctrlFrame.data, ff_clone->ctrlFrame.data_len);
 		} else {
 			PRINT_DEBUG("here");
-			ff_copy->ctrlFrame.data = NULL;
+			ff_clone->ctrlFrame.data = NULL;
 		}
-		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; copy: ff=%p, meta=%p, data=%p",
-				ff, ff->metaData, ff->ctrlFrame.data, ff_copy, ff_copy->metaData, ff_copy->ctrlFrame.data);
-	} else if (ff_copy->dataOrCtrl == DATA) {
-		ff_copy->dataFrame.directionFlag = ff->dataFrame.directionFlag;
+		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
+				ff, ff->metaData, ff->ctrlFrame.data, ff_clone, ff_clone->metaData, ff_clone->ctrlFrame.data);
+	} else if (ff_clone->dataOrCtrl == DATA) {
+		ff_clone->dataFrame.directionFlag = ff->dataFrame.directionFlag;
 
-		ff_copy->dataFrame.pduLength = ff->dataFrame.pduLength; //Add in the header size for this, too
-		if (ff_copy->dataFrame.pduLength) {
-			ff_copy->dataFrame.pdu = (uint8_t *) malloc(ff_copy->dataFrame.pduLength);
-			if (ff_copy->dataFrame.pdu == NULL) {
-				PRINT_ERROR("failed to create pdu: ff=%p", ff_copy);
+		ff_clone->dataFrame.pduLength = ff->dataFrame.pduLength; //Add in the header size for this, too
+		if (ff_clone->dataFrame.pduLength) {
+			ff_clone->dataFrame.pdu = (uint8_t *) malloc(ff_clone->dataFrame.pduLength);
+			if (ff_clone->dataFrame.pdu == NULL) {
+				PRINT_ERROR("failed to create pdu: ff=%p", ff_clone);
 				exit(-1);
 			}
 
-			memcpy(ff_copy->dataFrame.pdu, ff->dataFrame.pdu, ff_copy->dataFrame.pduLength);
+			memcpy(ff_clone->dataFrame.pdu, ff->dataFrame.pdu, ff_clone->dataFrame.pduLength);
 		} else {
 			PRINT_DEBUG("here");
-			ff_copy->dataFrame.pdu = NULL;
+			ff_clone->dataFrame.pdu = NULL;
 		}
-		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; copy: ff=%p, meta=%p, pdu=%p",
-				ff, ff->metaData, ff->dataFrame.pdu, ff_copy, ff_copy->metaData, ff_copy->dataFrame.pdu);
+		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
+				ff, ff->metaData, ff->dataFrame.pdu, ff_clone, ff_clone->metaData, ff_clone->dataFrame.pdu);
 	} else {
 		PRINT_ERROR("todo error");
 	}
 
-	return ff_copy;
+	return ff_clone;
 }
 
 int freeFinsFrame(struct finsFrame *ff) {

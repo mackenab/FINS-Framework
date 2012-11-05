@@ -41,4 +41,6 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint32_t flags);
 
+void recvmsg_timeout_icmp(struct daemon_call *call);
+
 #endif /* ICMPHANDLING_H_ */

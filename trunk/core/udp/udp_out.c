@@ -140,10 +140,10 @@ void udp_out_fdf(struct finsFrame* ff) {
 	//print_finsFrame(ff);
 	udpStat.totalSent++;
 
-	struct finsFrame *ff_copy = copyFinsFrame(ff);
+	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
 	if (udp_to_switch(ff)) {
-		struct udp_sent *sent = udp_sent_create(ff_copy);
+		struct udp_sent *sent = udp_sent_create(ff_clone);
 
 		if (udp_sent_list_has_space(udp_sent_packet_list)) {
 			udp_sent_list_append(udp_sent_packet_list, sent);
@@ -166,7 +166,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 		}
 	} else {
 		PRINT_ERROR("todo error");
-		freeFinsFrame(ff_copy);
+		freeFinsFrame(ff_clone);
 		freeFinsFrame(ff);
 	}
 

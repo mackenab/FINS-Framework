@@ -17,13 +17,13 @@ The FINS Framework requires the following libraries:
 ########################
 Build steps
 ########################
-Provided in the root directory of FINS (<FINS_root>) is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command.
+Provided in the root directory of FINS (<FINS_ROOT>) is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command.
 
 ########################
 Run steps
 ########################
 
-From <FINS_root> directory:
+From <FINS_ROOT> directory:
 
 1) Insert the wedge LKM:
 $ insmod <FINS_ROOT>/trunk/wedge/FINS_stack_wedge.ko
@@ -31,10 +31,10 @@ or
 $ ./inswedge.sh
 
 2) In a second terminal run the Capturer executable:
-$ ./<FINS_root>/trunk/capturer/capturer
+$ ./<FINS_ROOT>/trunk/capturer/capturer
 
 3) In a third terminal run the Core executable:
-$ ./<FINS_root>/trunk/core/core
+$ ./<FINS_ROOT>/trunk/core/core
 
 4)Run the application(s).
 
