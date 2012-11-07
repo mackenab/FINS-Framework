@@ -26,7 +26,7 @@ struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
 sem_t daemon_calls_sem; //TODO remove?
 struct daemon_call daemon_calls[MAX_CALLS];
-struct daemon_call_list *timeout_call_list;
+struct daemon_call_list *expired_call_list;
 
 int daemon_thread_count;
 sem_t daemon_thread_sem;
@@ -243,6 +243,14 @@ struct daemon_call *call_clone(struct daemon_call *call) {
 	call_clone->sock_id = call->sock_id;
 	call_clone->sock_index = call->sock_index;
 
+	call_clone->serial_num = call->serial_num;
+	call_clone->data = call->data;
+	call_clone->flags = call->flags;
+	call_clone->ret = call->ret;
+
+	call_clone->sock_id_new = call->sock_id_new;
+	call_clone->sock_index_new = call->sock_index_new;
+
 	PRINT_DEBUG("Exited: call=%p, clone=%p", call, call_clone);
 	return call_clone;
 }
@@ -265,6 +273,7 @@ int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t
 				&& (daemon_calls[call_index].call_type == poll_call || daemon_calls[call_index].call_type == recvmsg_call)) {
 			call_list_remove(daemon_sockets[daemon_calls[call_index].sock_index].call_list, &daemon_calls[call_index]);
 		}
+
 		//this should only occur on a ^C which breaks the wedge sem_wait(), thus exiting the call before hearing back from the daemon and then re-using the index
 		//since the wedge side call already returned and the program is exiting, replying to the wedge for the old call is unnecessary as it would be dropped
 		//also the associated daemon_in function from a returning FCF for the old call does not need to be executed as the socket will soon be removed
@@ -289,6 +298,11 @@ int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t
 
 	daemon_calls[call_index].sock_id_new = 0;
 	daemon_calls[call_index].sock_index_new = 0;
+
+	if (daemon_calls[call_index].running_flag) {
+		daemon_calls[call_index].to_flag = 0;
+		daemon_stop_timer(daemon_calls[call_index].to_fd);
+	}
 
 	return 1;
 }
@@ -357,7 +371,7 @@ struct daemon_call_list *call_list_create(uint32_t max) {
 }
 
 void call_list_append(struct daemon_call_list *call_list, struct daemon_call *call) {
-	PRINT_DEBUG("Entered: call_list=%p, call=%p", call_list, call);
+	PRINT_DEBUG("Entered: call_list=%p, call=%p, serial_num=%u", call_list, call, call->serial_num);
 
 	call->next = NULL;
 	if (call_list_is_empty(call_list)) {
@@ -3163,9 +3177,9 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 		PRINT_ERROR("daemon_sockets_sem wait prob");
 		exit(-1);
 	}
-	struct daemon_call *call = call_list_find_serial_num(timeout_call_list, ff->ctrlFrame.serial_num);
+	struct daemon_call *call = call_list_find_serial_num(expired_call_list, ff->ctrlFrame.serial_num);
 	if (call) {
-		call_list_remove(timeout_call_list, call);
+		call_list_remove(expired_call_list, call);
 
 		if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
 			PRINT_ERROR("Exited, socket closed: ff=%p", ff);
@@ -3422,7 +3436,7 @@ void daemon_init(void) {
 		}
 	}
 
-	timeout_call_list = call_list_create(MAX_CALLS);
+	expired_call_list = call_list_create(MAX_CALLS);
 
 //init the netlink socket connection to daemon
 	nl_sockfd = init_fins_nl();

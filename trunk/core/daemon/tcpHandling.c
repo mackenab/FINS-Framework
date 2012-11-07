@@ -16,7 +16,7 @@ extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
 extern sem_t daemon_calls_sem; //TODO remove?
 extern struct daemon_call daemon_calls[MAX_CALLS];
-extern struct daemon_call_list *timeout_call_list;
+extern struct daemon_call_list *expired_call_list;
 
 extern int daemon_thread_count;
 extern sem_t daemon_thread_sem;
@@ -568,7 +568,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 			daemon_calls[hdr->call_index].sock_id_new = sock_id_new; //TODO redo so not in call? or in struct inside call as void *pt;
 			daemon_calls[hdr->call_index].sock_index_new = sock_index_new;
 
-			if (flags & (SOCK_NONBLOCK | MSG_DONTWAIT)) {
+			if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
 				daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 			}
 
@@ -853,19 +853,6 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 			"MSG_CMSG_CLOEXEC=%d (0x%x), MSG_DONTWAIT=%d (0x%x), MSG_ERRQUEUE=%d (0x%x), MSG_OOB=%d (0x%x), MSG_PEEK=%d (0x%x), MSG_TRUNC=%d (0x%x), MSG_WAITALL=%d (0x%x)",
 			(MSG_CMSG_CLOEXEC & flags)>0, MSG_CMSG_CLOEXEC, (MSG_DONTWAIT & flags)>0, MSG_DONTWAIT, (MSG_ERRQUEUE & flags)>0, MSG_ERRQUEUE, (MSG_OOB & flags)>0, MSG_OOB, (MSG_PEEK & flags)>0, MSG_PEEK, (MSG_TRUNC & flags)>0, MSG_TRUNC, (MSG_WAITALL & flags)>0, MSG_WAITALL);
 
-	/** TODO handle flags cases */
-	switch (flags) {
-	case MSG_CONFIRM:
-	case MSG_DONTROUTE:
-	case MSG_DONTWAIT:
-	case MSG_EOR:
-	case MSG_MORE:
-	case MSG_NOSIGNAL:
-	case MSG_OOB: /** case of recieving a (write call)*/
-	default:
-		break;
-	}
-
 	if (data_len == 0) {
 		PRINT_DEBUG("data_len == 0, send ACK");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -896,11 +883,9 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
 			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
 
-	/** check if this socket already connected to a destined address or not */
-	if (daemon_sockets[hdr->sock_index].state < SS_CONNECTING) {
-		/** socket is not connected to an address. Send call will fail */
-
-		PRINT_ERROR("socketdaemon failed to accomplish send, socket found unconnected !!!");
+	switch (daemon_sockets[hdr->sock_index].state) {
+	case SS_UNCONNECTED:
+		PRINT_ERROR("todo error");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -912,35 +897,47 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 		if (addr)
 			free(addr);
 		return;
+	case SS_CONNECTING:
+	case SS_CONNECTED:
+		break;
+	case SS_DISCONNECTING:
+		PRINT_ERROR("todo error");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+
+		free(data);
+		if (addr)
+			free(addr);
+		return;
+	default:
+		PRINT_ERROR("todo error");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+
+		free(data);
+		if (addr)
+			free(addr);
+		return;
 	}
 
-	/** Keep all ports and addresses in host order until later  action taken
-	 * in IPv4 module
-	 *  */
 	dst_port = daemon_sockets[hdr->sock_index].dst_port;
 	dst_ip = daemon_sockets[hdr->sock_index].dst_ip;
 
-	/** addresses are in host format given that there are by default already filled
-	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
-
 	/**
-	 * Default current host port to be assigned is 58088
-	 * It is supposed to be randomly selected from the range found in
+	 * Default current host port is supposed to be randomly selected from the range found in
 	 * /proc/sys/net/ipv4/ip_local_port_range
 	 * default range in Ubuntu is 32768 - 61000
 	 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 	host_port = daemon_sockets[hdr->sock_index].host_port;
-	/**
-	 * the current value of host_IP is zero but to be filled later with
-	 * the current IP using the IPv4 modules unless a binding has occured earlier
-	 */
 	host_ip = daemon_sockets[hdr->sock_index].host_ip;
 
 	PRINT_DEBUG("host=%u/%u, dst=%u/%u", host_ip, host_port, dst_ip, dst_port);
-
-	//int blocking_flag = 1; //TODO get from flags
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -967,7 +964,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 			daemon_calls[hdr->call_index].data = data_len;
 
 			if (flags & (MSG_DONTWAIT)) {
-				daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -989,9 +986,8 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 		free(data);
 	}
 
-	if (addr) {
+	if (addr)
 		free(addr);
-	}
 }
 
 /**
@@ -1025,6 +1021,35 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
 			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+
+	switch (daemon_sockets[hdr->sock_index].state) {
+	case SS_UNCONNECTED:
+		PRINT_ERROR("todo error");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		//TODO buffer data & send ACK
+
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		return;
+	case SS_CONNECTING:
+	case SS_CONNECTED:
+		break;
+	case SS_DISCONNECTING:
+		PRINT_ERROR("todo error");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		return;
+	default:
+		PRINT_ERROR("todo error");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		return;
+	}
 
 	if (flags & MSG_ERRQUEUE) {
 		//TODO no error queue for TCP
@@ -1256,7 +1281,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 		if (call_list_has_space(call_list)) {
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
-			if (flags & (SOCK_NONBLOCK | MSG_DONTWAIT)) {
+			if (flags & (MSG_DONTWAIT)) {
 				daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2251,11 +2276,15 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint64_t sock_id_new,
 		int sock_index_new, uint32_t flags) {
-	uint32_t rem_ip = 0;
-	uint32_t rem_port = 0;
-
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, sock_id_new=%llu, sock_index_new=%d flags=%u",
 			ff, call_id, call_index, call_type, sock_id, sock_index, sock_id_new, sock_index_new, flags);
+
+	if (ff->ctrlFrame.param_id != EXEC_TCP_ACCEPT) {
+		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
+		nack_send(call_id, call_index, call_type, 0);
+		freeFinsFrame(ff);
+		return;
+	}
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
@@ -2265,55 +2294,84 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 		return;
 	}
 
+	uint32_t ret_msg;
+	uint32_t rem_ip;
+	uint32_t rem_port;
+
 	int ret = 0;
+	ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
 	ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == META_FALSE;
 	ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
 
-	if (ret || ff->ctrlFrame.param_id != EXEC_TCP_ACCEPT || ff->ctrlFrame.ret_val == 0) {
-		PRINT_DEBUG("Exiting, NACK: ff=%p, ret=%d, param_id=%d, ret_val=%d", ff, ret, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
+	if (ret) {
+		PRINT_ERROR("prob reading metadata, ret=%d", ret);
 		nack_send(call_id, call_index, call_type, 0);
-	} else {
-		PRINT_DEBUG("");
-		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("daemon_sockets_sem wait prob");
-			exit(-1);
-		}
-		if (daemon_sockets[sock_index].sock_id != sock_id) {
+		freeFinsFrame(ff);
+		return;
+	}
+
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	if (sem_wait(&daemon_sockets_sem)) {
+		PRINT_ERROR("daemon_sockets_sem wait prob");
+		exit(-1);
+	}
+	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
+		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		nack_send(call_id, call_index, call_type, 0);
+		freeFinsFrame(ff);
+		return;
+	}
+
+	if (ff->ctrlFrame.ret_val) {
+		if (daemon_sockets_insert(sock_id_new, sock_index_new, daemon_sockets[sock_index].type, daemon_sockets[sock_index].protocol)) {
+			daemon_sockets[sock_index_new].state = SS_CONNECTED;
+			daemon_sockets[sock_index_new].host_ip = daemon_sockets[sock_index].host_ip;
+			daemon_sockets[sock_index_new].host_port = daemon_sockets[sock_index].host_port;
+			daemon_sockets[sock_index_new].dst_ip = rem_ip;
+			daemon_sockets[sock_index_new].dst_port = (uint16_t) rem_port;
+
+			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
+					daemon_sockets[sock_index_new].sock_id, sock_index_new, daemon_sockets[sock_index_new].state, daemon_sockets[sock_index_new].host_ip, daemon_sockets[sock_index_new].host_port, daemon_sockets[sock_index_new].dst_ip, daemon_sockets[sock_index_new].dst_port);
+
+			daemon_sockets[sock_index].state = SS_UNCONNECTED;
+			daemon_sockets[sock_index].sock_id_new = -1;
+			daemon_sockets[sock_index].sock_index_new = -1;
+
+			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
+					daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			PRINT_ERROR("Exited: socket closed: ff=%p", ff);
-			nack_send(call_id, call_index, call_type, 0);
+			ack_send(call_id, call_index, call_type, 0);
 		} else {
-			if (daemon_sockets_insert(sock_id_new, sock_index_new, daemon_sockets[sock_index].type, daemon_sockets[sock_index].protocol)) {
-				daemon_sockets[sock_index_new].host_ip = daemon_sockets[sock_index].host_ip;
-				daemon_sockets[sock_index_new].host_port = daemon_sockets[sock_index].host_port;
-				daemon_sockets[sock_index_new].dst_ip = rem_ip;
-				daemon_sockets[sock_index_new].dst_port = (uint16_t) rem_port;
-				daemon_sockets[sock_index_new].state = SS_CONNECTED;
-				PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-						daemon_sockets[sock_index_new].sock_id, sock_index_new, daemon_sockets[sock_index_new].state, daemon_sockets[sock_index_new].host_ip, daemon_sockets[sock_index_new].host_port, daemon_sockets[sock_index_new].dst_ip, daemon_sockets[sock_index_new].dst_port);
+			PRINT_ERROR("Exited: insert failed: ff=%p", ff);
 
-				daemon_sockets[sock_index].state = SS_UNCONNECTED;
-				daemon_sockets[sock_index].sock_id_new = -1;
-				daemon_sockets[sock_index].sock_index_new = -1;
+			daemon_sockets[sock_index].state = SS_UNCONNECTED;
+			daemon_sockets[sock_index].error_call = call_type;
+			daemon_sockets[sock_index].error_msg = 0; //TODO fill in special value?
 
-				PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-						daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
-				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
+					daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
 
-				PRINT_DEBUG("Exiting, ACK: ff=%p", ff);
-				ack_send(call_id, call_index, call_type, 0);
-			} else {
-				PRINT_ERROR("Exited: insert failed: ff=%p", ff);
-				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			sem_post(&daemon_sockets_sem);
 
-				nack_send(call_id, call_index, call_type, 0);
-			}
+			nack_send(call_id, call_index, call_type, 0);
 		}
+	} else {
+		daemon_sockets[sock_index].state = SS_UNCONNECTED;
+		daemon_sockets[sock_index].error_call = call_type;
+		daemon_sockets[sock_index].error_msg = ret_msg;
+
+		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&daemon_sockets_sem);
+
+		nack_send(call_id, call_index, call_type, ECONNREFUSED); //TODO change based off of timeout, refused etc
 	}
 
 	freeFinsFrame(ff);
@@ -2323,6 +2381,13 @@ void sendmsg_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, flags=%u",
 			ff, call_id, call_index, call_type, sock_id, sock_index, flags);
 
+	if (ff->ctrlFrame.param_id != EXEC_TCP_SEND) {
+		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
+		nack_send(call_id, call_index, call_type, 0);
+		freeFinsFrame(ff);
+		return;
+	}
+
 	metadata *params = ff->metaData;
 	if (params == NULL) {
 		PRINT_ERROR("Exiting, fcf errors: ff=%p, meta=%p", ff, params);
@@ -2331,15 +2396,22 @@ void sendmsg_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 		return;
 	}
 
-	uint32_t ret_msg = 0;
+	uint32_t ret_msg;
 
 	int ret = 0;
 	ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
 
-	if (ret || ff->ctrlFrame.param_id != EXEC_TCP_SEND || ff->ctrlFrame.ret_val == 0) {
-		nack_send(call_id, call_index, call_type, 1);
-	} else {
+	if (ret) {
+		PRINT_ERROR("prob reading metadata, ret=%d", ret);
+		nack_send(call_id, call_index, call_type, 0);
+		freeFinsFrame(ff);
+		return;
+	}
+
+	if (ff->ctrlFrame.ret_val) {
 		ack_send(call_id, call_index, call_type, ret_msg);
+	} else {
+		nack_send(call_id, call_index, call_type, ret_msg);
 	}
 
 	freeFinsFrame(ff);
@@ -3011,7 +3083,7 @@ void connect_timeout_tcp(struct daemon_call *call) {
 
 		if (call->serial_num) { //was sent outside of module
 			struct daemon_call *clone = call_clone(call);
-			call_list_append(timeout_call_list, clone);
+			call_list_append(expired_call_list, clone);
 		}
 		break;
 	case SS_CONNECTED:
@@ -3052,7 +3124,7 @@ void accept_timeout_tcp(struct daemon_call *call) {
 
 		if (call->serial_num) { //was sent outside of module
 			struct daemon_call *clone = call_clone(call);
-			call_list_append(timeout_call_list, clone);
+			call_list_append(expired_call_list, clone);
 		}
 		break;
 	default:

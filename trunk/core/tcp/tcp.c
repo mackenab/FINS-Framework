@@ -1155,7 +1155,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->rem_ip = rem_ip;
 	conn->rem_port = rem_port;
 
-	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT & 0x1); //TODO: could wait on this
+	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT /*& 0x1*/); //TODO change back
 	conn->send_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
 	conn->recv_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
 	//conn->read_queue = queue_create(DEFAULT_MAX_QUEUE); //commented, since buffer in Daemon

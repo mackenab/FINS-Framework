@@ -302,7 +302,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 					}
 				}
 			} else {
-				PRINT_ERROR("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip);
+				PRINT_ERROR("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip); //TODO change to PRINT_ERROR
 			}
 		} else {
 			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);

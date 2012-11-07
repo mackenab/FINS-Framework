@@ -7,8 +7,7 @@
 #ifndef TCP_H_
 #define TCP_H_
 
-#include <finsdebug.h>
-#include <finstypes.h>
+#include <errno.h>
 #include <linux/net.h>
 #include <math.h>
 #include <metadata.h>
@@ -22,6 +21,9 @@
 #include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
+
+#include <finsdebug.h>
+#include <finstypes.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.

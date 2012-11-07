@@ -13,7 +13,7 @@ extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
 extern sem_t daemon_calls_sem; //TODO remove?
 extern struct daemon_call daemon_calls[MAX_CALLS];
-extern struct daemon_call_list *timeout_call_list;
+extern struct daemon_call_list *expired_call_list;
 
 extern int daemon_thread_count; //for TO threads
 extern sem_t daemon_thread_sem;
@@ -1185,7 +1185,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 		if (call_list_has_space(call_list)) {
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
-			if (flags & (SOCK_NONBLOCK | MSG_DONTWAIT)) {
+			if (flags & (MSG_DONTWAIT)) {
 				daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1958,7 +1958,9 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 
 		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVERR && (flags & MSG_ERRQUEUE)) { //TODO remove?
 			uint32_t err_src_ip;
-			ret += metadata_readFromElement(params, "recv_src_ip", &err_src_ip) == META_FALSE;
+			uint32_t icmp_type;
+			ret += metadata_readFromElement(params, "recv_src_ip", &err_src_ip) == META_FALSE; //add port?
+			ret += metadata_readFromElement(params, "recv_icmp_type", &icmp_type) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("todo error");
@@ -1977,7 +1979,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 				struct errhdr *err = (struct errhdr *) CMSG_DATA(cmsg);
 				err->ee.ee_errno = EHOSTUNREACH; //113
 				err->ee.ee_origin = SO_EE_ORIGIN_ICMP; //2
-				err->ee.ee_type = 11; //code?
+				err->ee.ee_type = icmp_type; //11
 
 				err->ee.ee_code = 0;
 				err->ee.ee_pad = 0;

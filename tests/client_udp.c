@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
 	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+		//if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	//fcntl64(3, F_SETFL, O_RDONLY|O_NONBLOCK) = 0
 	//fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/16-22:31:09, st_mtime=2012/10/16-22:31:09, st_ctime=2012/10/16-19:33:02}) = 0
 
-	val = 1;
+	val = 3;
 	setsockopt(sock, SOL_IP, IP_TTL, &val, sizeof(val));
 
 	if (argc > 1) {
@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
-	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
+	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	bzero(&(server_addr.sin_zero), 8);

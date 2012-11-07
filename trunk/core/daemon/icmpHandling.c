@@ -13,7 +13,7 @@ extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
 extern sem_t daemon_calls_sem; //TODO remove?
 extern struct daemon_call daemon_calls[MAX_CALLS];
-extern struct daemon_call_list *timeout_call_list;
+extern struct daemon_call_list *expired_call_list;
 
 extern int daemon_thread_count; //for TO threads
 extern sem_t daemon_thread_sem;
@@ -1177,7 +1177,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 		if (call_list_has_space(call_list)) {
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
-			if (flags & (SOCK_NONBLOCK | MSG_DONTWAIT)) {
+			if (flags & (MSG_DONTWAIT)) {
 				daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");

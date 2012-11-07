@@ -1395,7 +1395,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 		lock_sock(sk_new);
 
 		sock_id_new = get_unique_sock_id(sk_new);
-		PRINT_DEBUG("Retrived new: sock_id=%llu", sock_id_new);
+		PRINT_DEBUG("Retrieved new: sock_id=%llu", sock_id_new);
 
 		index_new = wedge_sockets_find(sock_id_new);
 		PRINT_DEBUG("new: sock_index=%d", sock_index);
@@ -2739,6 +2739,7 @@ static int fins_release(struct socket *sock) {
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
+		//fins_sk_destroy(sock); //NULL reference
 		return print_exit(__FUNCTION__, __LINE__, 0);
 	}
 	lock_sock(sk);
