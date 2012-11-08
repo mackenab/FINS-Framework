@@ -18,7 +18,7 @@ double arp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - t
 
 	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
 
-	//PRINT_DEBUG("getting seqEndRTT=%d current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
 	if (time1->tv_usec > time2->tv_usec) {
 		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
@@ -42,7 +42,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 	uint64_t dst_mac;
 	uint64_t src_mac;
 
-	PRINT_DEBUG("Entered: ff=%p dst_ip=%u src_ip=%u", ff, dst_ip, src_ip);
+	PRINT_DEBUG("Entered: ff=%p, dst_ip=%u, src_ip=%u", ff, dst_ip, src_ip);
 
 	metadata *params = ff->metaData;
 
@@ -302,7 +302,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 					}
 				}
 			} else {
-				PRINT_ERROR("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip); //TODO change to PRINT_ERROR
+				PRINT_DEBUG("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip); //TODO change to PRINT_ERROR
 			}
 		} else {
 			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);

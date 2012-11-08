@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <poll.h>
 #include <linux/errqueue.h>
+#include <math.h>
+#include <time.h>
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
@@ -24,6 +26,28 @@
 
 
  */
+
+double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
+	double decimal = 0, diff = 0;
+
+	printf("Entered: time1=%p, time2=%p\n", time1, time2);
+
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+
+	if (time1->tv_usec > time2->tv_usec) {
+		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec - 1.0;
+	} else {
+		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec;
+	}
+	diff += decimal;
+
+	diff *= 1000.0;
+
+	printf("diff=%f\n", diff);
+	return diff;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -140,6 +164,33 @@ int main(int argc, char *argv[]) {
 	int len;
 	int ret = 0;
 
+	struct msghdr recv_msg;
+	int name_len = 64;
+	char name_buf[name_len];
+	struct iovec iov[1];
+	int recv_len = 1000;
+	char recv_buf[recv_len];
+	int control_len = 4000;
+	char control_buf[control_len];
+	iov[0].iov_len = recv_len;
+	iov[0].iov_base = recv_buf;
+
+	recv_msg.msg_namelen = name_len;
+	recv_msg.msg_name = name_buf;
+
+	recv_msg.msg_iovlen = 1;
+	recv_msg.msg_iov = iov;
+
+	recv_msg.msg_controllen = control_len;
+	recv_msg.msg_control = control_buf;
+
+	struct cmsghdr *cmsg;
+	int *ttlptr;
+	int received_ttl;
+
+	struct timeval curr;
+	struct timeval *stamp;
+
 	int i = 0;
 	while (i < 100) {
 		i++;
@@ -151,6 +202,7 @@ int main(int argc, char *argv[]) {
 			printf("\nlen=%d, str='%s'\n", len, send_data);
 			fflush(stdout);
 			if (len > 0 && len < 1024) {
+				gettimeofday(&curr, 0);
 				numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 				//sleep(1);
 
@@ -167,35 +219,11 @@ int main(int argc, char *argv[]) {
 					fflush(stdout);
 					//*/
 
-					struct msghdr recv_msg;
-					int name_len = 64;
-					char name_buf[name_len];
-					struct iovec iov[1];
-					int recv_len = 1000;
-					char recv_buf[recv_len];
-					int control_len = 4000;
-					char control_buf[control_len];
-					iov[0].iov_len = recv_len;
-					iov[0].iov_base = recv_buf;
-
-					recv_msg.msg_namelen = name_len;
-					recv_msg.msg_name = name_buf;
-
-					recv_msg.msg_iovlen = 1;
-					recv_msg.msg_iov = iov;
-
-					recv_msg.msg_controllen = control_len;
-					recv_msg.msg_control = control_buf;
-
 					int recv_bytes;
 					if ((fds[ret].revents & (POLLERR)) || 0) {
 						recv_bytes = recvmsg(sock, &recv_msg, MSG_ERRQUEUE);
 						if (recv_bytes > 0) {
 							printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
-
-							struct cmsghdr *cmsg;
-							int *ttlptr;
-							int received_ttl;
 
 							/* Receive auxiliary data in msgh */
 							for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
@@ -215,6 +243,7 @@ int main(int argc, char *argv[]) {
 								} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
 									struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
 									printf("stamp=%u.%u\n", (uint32_t) stamp->tv_sec, (uint32_t) stamp->tv_usec);
+									printf("diff=%f\n", time_diff(&curr, stamp));
 								}
 							}
 							if (cmsg == NULL) {
@@ -232,10 +261,6 @@ int main(int argc, char *argv[]) {
 						recv_bytes = recvmsg(sock, &recv_msg, 0);
 						if (recv_bytes > 0) {
 							printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
-
-							struct cmsghdr *cmsg;
-							int *ttlptr;
-							int received_ttl;
 
 							/* Receive auxiliary data in msgh */
 							for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {

@@ -83,7 +83,7 @@ int daemon_fcf_to_tcp(metadata *params, uint32_t serial_num, uint16_t opcode, ui
 }
 
 void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol) {
-	PRINT_DEBUG("Entered: hdr=%p domain=%d type=%d proto=%d", hdr, domain, type, protocol);
+	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -91,7 +91,7 @@ void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int pr
 		exit(-1);
 	}
 	int ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("sock_index=%d ret=%d", hdr->sock_index, ret);
+	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
@@ -119,7 +119,7 @@ void bind_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	host_ip = ntohl(addr->sin_addr.s_addr);
 	host_port = ntohs(addr->sin_port);
 
-	PRINT_DEBUG("bind address: host=%u (%s):%d host_IP_netformat=%u", host_ip, inet_ntoa(addr->sin_addr), host_port, htonl(host_ip));
+	PRINT_DEBUG("bind address: host=%u (%s):%d, host_IP_netformat=%u", host_ip, inet_ntoa(addr->sin_addr), host_port, htonl(host_ip));
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -183,7 +183,7 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	uint32_t host_ip;
 	uint32_t host_port;
 
-	PRINT_DEBUG("Entered: hdr=%p backlog=%d", hdr, backlog);
+	PRINT_DEBUG("Entered: hdr=%p, backlog=%d", hdr, backlog);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -247,8 +247,8 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	uint32_t rem_ip;
 	uint32_t rem_port;
 
-	PRINT_DEBUG("Entered: hdr=%p flags=%d", hdr, flags);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x) O_NONBLOCK=%d (0x%x) O_ASYNC=%d (0x%x)",
+	PRINT_DEBUG("Entered: hdr=%p, flags=%d", hdr, flags);
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x), O_NONBLOCK=%d (0x%x), O_ASYNC=%d (0x%x)",
 			(SOCK_NONBLOCK & flags)>0, SOCK_NONBLOCK, (SOCK_CLOEXEC & flags)>0, SOCK_CLOEXEC, (O_NONBLOCK & flags)>0, O_NONBLOCK, (O_ASYNC & flags)>0, O_ASYNC);
 	PRINT_DEBUG(
 			"MSG_CMSG_CLOEXEC=%d (0x%x), MSG_DONTWAIT=%d (0x%x), MSG_ERRQUEUE=%d (0x%x), MSG_OOB=%d (0x%x), MSG_PEEK=%d (0x%x), MSG_TRUNC=%d (0x%x), MSG_WAITALL=%d (0x%x)",
@@ -282,7 +282,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the daemonSockets database
 	 */
-	PRINT_DEBUG("address: rem=%u (%s):%u rem_IP_netformat=%u", rem_ip, inet_ntoa(addr->sin_addr), rem_port, htonl(rem_ip));
+	PRINT_DEBUG("address: rem=%u (%s):%u, rem_IP_netformat=%u", rem_ip, inet_ntoa(addr->sin_addr), rem_port, htonl(rem_ip));
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -464,8 +464,8 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 	uint32_t host_ip;
 	uint32_t host_port;
 
-	PRINT_DEBUG("Entered: hdr=%p sock_id_new=%llu sock_index_new=%d flags=%d", hdr, sock_id_new, sock_index_new, flags);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x) O_NONBLOCK=%d (0x%x) O_ASYNC=%d (0x%x)",
+	PRINT_DEBUG("Entered: hdr=%p, sock_id_new=%llu, sock_index_new=%d, flags=%d", hdr, sock_id_new, sock_index_new, flags);
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x), O_NONBLOCK=%d (0x%x), O_ASYNC=%d (0x%x)",
 			(SOCK_NONBLOCK & flags)>0, SOCK_NONBLOCK, (SOCK_CLOEXEC & flags)>0, SOCK_CLOEXEC, (O_NONBLOCK & flags)>0, O_NONBLOCK, (O_ASYNC & flags)>0, O_ASYNC);
 	PRINT_DEBUG(
 			"MSG_CMSG_CLOEXEC=%d (0x%x), MSG_DONTWAIT=%d (0x%x), MSG_ERRQUEUE=%d (0x%x), MSG_OOB=%d (0x%x), MSG_PEEK=%d (0x%x), MSG_TRUNC=%d (0x%x), MSG_WAITALL=%d (0x%x)",
@@ -602,7 +602,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
-	PRINT_DEBUG("Entered: hdr=%p peer=%d", hdr, peer);
+	PRINT_DEBUG("Entered: hdr=%p, peer=%d", hdr, peer);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -698,7 +698,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	pt += len;
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 		free(msg);
 		free(addr);
 
@@ -706,7 +706,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -725,7 +725,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 	struct nl_daemon_to_wedge *hdr_ret;
 	uint8_t *pt;
 
-	PRINT_DEBUG("Entered: hdr=%p cmd=%d len=%d", hdr, cmd, buf_len);
+	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -773,7 +773,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		pt += sizeof(uint32_t);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -811,7 +811,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		pt += len;
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -826,7 +826,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		break;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
@@ -847,7 +847,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	uint32_t dst_port;
 
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d", hdr, data_len, flags);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x) O_NONBLOCK=%d (0x%x) O_ASYNC=%d (0x%x)",
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x), O_NONBLOCK=%d (0x%x), O_ASYNC=%d (0x%x)",
 			(SOCK_NONBLOCK & flags)>0, SOCK_NONBLOCK, (SOCK_CLOEXEC & flags)>0, SOCK_CLOEXEC, (O_NONBLOCK & flags)>0, O_NONBLOCK, (O_ASYNC & flags)>0, O_ASYNC);
 	PRINT_DEBUG(
 			"MSG_CMSG_CLOEXEC=%d (0x%x), MSG_DONTWAIT=%d (0x%x), MSG_ERRQUEUE=%d (0x%x), MSG_OOB=%d (0x%x), MSG_PEEK=%d (0x%x), MSG_TRUNC=%d (0x%x), MSG_WAITALL=%d (0x%x)",
@@ -999,7 +999,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_controllen, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, msg_controllen=%u, flags=%d", hdr, data_len, msg_controllen, flags);
 
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x) O_NONBLOCK=%d (0x%x) O_ASYNC=%d (0x%x)",
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x), O_NONBLOCK=%d (0x%x), O_ASYNC=%d (0x%x)",
 			(SOCK_NONBLOCK & flags)>0, SOCK_NONBLOCK, (SOCK_CLOEXEC & flags)>0, SOCK_CLOEXEC, (O_NONBLOCK & flags)>0, O_NONBLOCK, (O_ASYNC & flags)>0, O_ASYNC);
 	PRINT_DEBUG(
 			"MSG_CMSG_CLOEXEC=%d (0x%x), MSG_DONTWAIT=%d (0x%x), MSG_ERRQUEUE=%d (0x%x), MSG_OOB=%d (0x%x), MSG_PEEK=%d (0x%x), MSG_TRUNC=%d (0x%x), MSG_WAITALL=%d (0x%x)",
@@ -1220,7 +1220,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			pt += control_len;
 
 			if (pt - msg != msg_len) {
-				PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+				PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 				free(msg);
@@ -1228,14 +1228,14 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				return;
 			}
 
-			PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+			PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			} else {
 //TODO send size back to TCP handlers
 //if (state > SS_UNCONNECTED) { //shouldn't be able to get data if not connected
-				PRINT_DEBUG("recvfrom address: host=%u/%u rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+				PRINT_DEBUG("recvfrom address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 //} else {
 //	PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
 //}
@@ -1338,7 +1338,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 	//TODO process flags?
 
 	if (state > SS_UNCONNECTED) {
-		PRINT_DEBUG("release address: host=%u/%u rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+		PRINT_DEBUG("release address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 	} else {
 		PRINT_DEBUG("release address: host=%u/%u", host_ip, host_port);
 	}
@@ -1390,7 +1390,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 }
 
 void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
-	PRINT_DEBUG("Entered: hdr=%p events=0x%x", hdr, events);
+	PRINT_DEBUG("Entered: hdr=%p, events=0x%x", hdr, events);
 
 	uint32_t mask = 0;
 
@@ -1408,7 +1408,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 		return;
 	}
 	if (events) { //initial
-		PRINT_DEBUG("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x",
+		PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 				(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 		if (events & (POLLERR)) {
@@ -1436,7 +1436,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 			uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
 
 			if (state > SS_UNCONNECTED) {
-				PRINT_DEBUG("poll address: host=%u/%u rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+				PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 			} else {
 				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 			}
@@ -1551,7 +1551,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
-				PRINT_DEBUG("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x",
+				PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
@@ -1579,7 +1579,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 					uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
 
 					if (state > SS_UNCONNECTED) {
-						PRINT_DEBUG("poll address: host=%u/%u rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+						PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 					} else {
 						PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 					}
@@ -1674,7 +1674,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 			uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
 
 			if (state > SS_UNCONNECTED) {
-				PRINT_DEBUG("poll address: host=%u/%u rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+				PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 			} else {
 				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 			}
@@ -1753,7 +1753,7 @@ void shutdown_out_tcp(struct nl_wedge_to_daemon *hdr, int how) {
 	//	PRINT_ERROR("socket descriptor not found into daemon sockets");
 	//	exit(-1);
 	//}
-	PRINT_DEBUG("Entered: hdr=%p how=%d", hdr, how);
+	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
 
 	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
@@ -1765,7 +1765,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	uint32_t rem_ip;
 	uint32_t rem_port;
 
-	PRINT_DEBUG("Entered: hdr=%p level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
+	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
 		PRINT_ERROR("daemon_sockets_sem wait prob");
@@ -1950,14 +1950,14 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		}
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			PRINT_DEBUG("Exited:, No fdf: hdr=%p", hdr);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
 		}
 
-		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+		PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2276,7 +2276,7 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint32_t call_type, uint64_t sock_id, int sock_index, uint64_t sock_id_new,
 		int sock_index_new, uint32_t flags) {
-	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, sock_id_new=%llu, sock_index_new=%d flags=%u",
+	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, sock_id_new=%llu, sock_index_new=%d, flags=%u",
 			ff, call_id, call_index, call_type, sock_id, sock_index, sock_id_new, sock_index_new, flags);
 
 	if (ff->ctrlFrame.param_id != EXEC_TCP_ACCEPT) {
@@ -2464,7 +2464,7 @@ void getsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, u
 		}
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 
 			nack_send(call_id, call_index, call_type, 0);
@@ -2472,7 +2472,7 @@ void getsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, u
 			return;
 		}
 
-		PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+		PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: ff=%p", ff);
 			nack_send(call_id, call_index, call_type, 0);
@@ -2622,7 +2622,7 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 
 	uint32_t events = call->data;
 
-	PRINT_DEBUG("POLLIN=0x%x POLLPRI=0x%x POLLOUT=0x%x POLLERR=0x%x POLLHUP=0x%x POLLNVAL=0x%x POLLRDNORM=0x%x POLLRDBAND=0x%x POLLWRNORM=0x%x POLLWRBAND=0x%x",
+	PRINT_DEBUG("POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 			events & POLLIN, events & POLLPRI, events & POLLOUT, events & POLLERR, events & POLLHUP, events & POLLNVAL, events & POLLRDNORM, events & POLLRDBAND, events & POLLWRNORM, events & POLLWRBAND);
 
 	uint32_t mask = 0;
@@ -2659,12 +2659,12 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 		uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			return;
 		}
 
-		PRINT_DEBUG("msg_len=%d msg='%s'", msg_len, msg);
+		PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: send_wedge error: call=%p", call);
 		} else {
@@ -2803,7 +2803,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 	pt += control_len;
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 		if (control_msg)
 			free(control_msg);
 		free(msg);
@@ -2813,7 +2813,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: send_wedge error: call_list=%p, call=%p", call_list, call);
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
@@ -2865,7 +2865,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 }
 
 void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
-	PRINT_DEBUG("Entered: ff=%p src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
+	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
 	metadata *params = ff->metaData;
 
@@ -2904,7 +2904,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 
 		freeFinsFrame(ff);
 	} else {
-		PRINT_DEBUG( "Matched: sock_id=%llu sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
+		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
 
 		//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
@@ -2949,7 +2949,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 }
 
 void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
-	PRINT_DEBUG("Entered: ff=%p src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
+	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
 	metadata *params = ff->metaData;
 
@@ -2986,7 +2986,7 @@ void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	if (sock_index == -1) {
 		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t) src_port, dst_ip, (uint16_t)dst_port);
 	} else {
-		PRINT_DEBUG( "Matched: sock_id=%llu sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
+		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
 
 		//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
@@ -3046,7 +3046,7 @@ void daemon_tcp_in_poll(struct finsFrame *ff, uint32_t ret_msg) {
 	if (sock_index == -1) {
 		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
 	} else {
-		PRINT_DEBUG( "Matched: sock_id=%llu sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
+		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
 
 		struct daemon_call_list *call_list = daemon_sockets[sock_index].call_list;

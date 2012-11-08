@@ -27,7 +27,7 @@ double icmp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - 
 
 	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
 
-	//PRINT_DEBUG("getting seqEndRTT=%d current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
 	if (time1->tv_usec > time2->tv_usec) {
 		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
@@ -154,7 +154,7 @@ struct icmp_sent *icmp_sent_list_remove_front(struct icmp_sent_list *sent_list) 
 		sent_list->len = 0;
 	}
 
-	PRINT_DEBUG("Exited: sent_list=%p sent=%p", sent_list, sent);
+	PRINT_DEBUG("Exited: sent_list=%p, sent=%p", sent_list, sent);
 	return sent;
 }
 

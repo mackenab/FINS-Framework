@@ -383,8 +383,8 @@ void conn_list_remove(struct tcp_connection *conn);
 int conn_list_is_empty(void);
 int conn_list_has_space(void);
 
-void startTimer(int fd, double millis);
-void stopTimer(int fd);
+void tcp_start_timer(int fd, double millis);
+void tcp_stop_timer(int fd);
 
 //Object for TCP segments all values are in host format
 struct tcp_segment {
@@ -480,6 +480,8 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
 #define ERROR_ICMP_TTL 0
 #define ERROR_ICMP_DEST_UNREACH 1
+
+#define TCP_BLOCK_DEFAULT 500 //default block time (ms) for sendmsg
 
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);

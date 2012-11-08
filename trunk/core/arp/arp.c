@@ -340,11 +340,11 @@ void *arp_to_thread(void *local) {
 		}
 		if (ret != sizeof(uint64_t)) {
 			//read error
-			PRINT_ERROR("Read error: id=%d fd=%d", id, fd);
+			PRINT_ERROR("Read error: id=%d, fd=%d", id, fd);
 			continue;
 		}
 
-		PRINT_DEBUG("Throwing TO flag: id=%d fd=%d", id, fd);
+		PRINT_DEBUG("Throwing TO flag: id=%d, fd=%d", id, fd);
 		*interrupt = 1;
 		*flag = 1;
 	}
@@ -369,7 +369,7 @@ void arp_stop_timer(int fd) {
 }
 
 void arp_start_timer(int fd, double millis) {
-	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
+	PRINT_DEBUG("starting timer=%d, m=%f", fd, millis);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);
@@ -689,7 +689,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("failed to create ff: msg=%p meta=%p", msg, params);
+		PRINT_ERROR("failed to create ff: msg=%p, meta=%p", msg, params);
 		//metadata_destroy(params);
 		exit(-1);
 	}
@@ -703,7 +703,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
 	ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 	if (ff->dataFrame.pdu == NULL) {
-		PRINT_ERROR("failed to create pdu: msg=%p meta=%p", msg, params);
+		PRINT_ERROR("failed to create pdu: msg=%p, meta=%p", msg, params);
 		exit(-1);
 	}
 
@@ -760,7 +760,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
 			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
-	PRINT_DEBUG("Exited: ff=%p, meta=%p, msg=%p ", ff, ff->metaData, msg);
+	PRINT_DEBUG("Exited: ff=%p, meta=%p, msg=%p", ff, ff->metaData, msg);
 	return msg;
 }
 

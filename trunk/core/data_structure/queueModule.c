@@ -34,7 +34,7 @@ int TerminateFinsQueue(finsQueue Q) {
 	int min;
 	int max;
 
-	PRINT_DEBUG("Front=%d, Rear=%d Cap=%d", Q->Front, Q->Rear, Q->Capacity);
+	PRINT_DEBUG("Front=%d, Rear=%d, Cap=%d", Q->Front, Q->Rear, Q->Capacity);
 
 	if (Q->Front <= Q->Rear) {
 		min = Q->Front;

@@ -62,7 +62,7 @@ void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int p
 		exit(-1);
 	}
 	ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &icmp_ops
-	PRINT_DEBUG("sock_index=%d ret=%d", hdr->sock_index, ret);
+	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
@@ -100,7 +100,7 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the daemonSockets database
 	 */
-	PRINT_DEBUG("bind address: host=%s/%d host_IP_netformat=%d", inet_ntoa(addr->sin_addr), host_port, addr->sin_addr.s_addr);
+	PRINT_DEBUG("bind address: host=%s/%d, host_IP_netformat=%d", inet_ntoa(addr->sin_addr), host_port, addr->sin_addr.s_addr);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -189,7 +189,7 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 	uint16_t dst_port;
 
 	PRINT_DEBUG("Entered: hdr=%p, flags=%d", hdr, flags);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d), O_NONBLOCK=%d (%d), O_ASYNC=%d (%d)",
 			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
 
 	if (addr->sin_family != AF_INET) {
@@ -280,7 +280,7 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 void accept_out_icmp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int sock_index_new, int flags) {
 
 	PRINT_DEBUG("Entered: hdr=%p, sock_id_new=%llu, index_new=%d, flags=%d", hdr, sock_id_new, sock_index_new, flags);
-	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d) O_NONBLOCK=%d (%d) O_ASYNC=%d (%d)",
+	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d), O_NONBLOCK=%d (%d), O_ASYNC=%d (%d)",
 			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
 
 	//TODO: finish this
@@ -405,13 +405,13 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	pt += len;
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 		free(msg);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -471,7 +471,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		pt += sizeof(uint32_t);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -513,7 +513,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		pt += len;
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -530,7 +530,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
@@ -553,7 +553,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	struct in_addr *temp;
 
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d", hdr, data_len, flags);
-	PRINT_DEBUG("MSG_CONFIRM=%d (%d) MSG_DONTROUTE=%d (%d) MSG_DONTWAIT=%d (%d) MSG_EOR=%d (%d) MSG_MORE=%d (%d) MSG_NOSIGNAL=%d (%d) MSG_OOB=%d (%d)",
+	PRINT_DEBUG("MSG_CONFIRM=%d (%d), MSG_DONTROUTE=%d (%d), MSG_DONTWAIT=%d (%d), MSG_EOR=%d (%d), MSG_MORE=%d (%d), MSG_NOSIGNAL=%d (%d), MSG_OOB=%d (%d)",
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
 	/** TODO handle flags cases */
@@ -939,7 +939,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				pt += control_len;
 
 				if (pt - msg != msg_len) {
-					PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+					PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 					if (control_msg)
@@ -949,7 +949,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 					return;
 				}
 
-				PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+				PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 				if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 					PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1142,7 +1142,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			pt += control_len;
 
 			if (pt - msg != msg_len) {
-				PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+				PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 				if (control_msg)
@@ -1152,7 +1152,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				return;
 			}
 
-			PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+			PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1223,7 +1223,7 @@ void release_out_icmp(struct nl_wedge_to_daemon *hdr) {
 }
 
 void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
-	PRINT_DEBUG("Entered: hdr=%p events=0x%x", hdr, events);
+	PRINT_DEBUG("Entered: hdr=%p, events=0x%x", hdr, events);
 
 	uint32_t mask = 0;
 
@@ -1241,7 +1241,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 		return;
 	}
 	if (events) { //initial
-		PRINT_DEBUG("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x",
+		PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 				(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 		if (events & (POLLERR)) {
@@ -1318,7 +1318,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
-				PRINT_DEBUG("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x",
+				PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
@@ -1382,7 +1382,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 /** .......................................................................*/
 
 void shutdown_out_icmp(struct nl_wedge_to_daemon *hdr, int how) {
-	PRINT_DEBUG("Entered: hdr=%p how=%d", hdr, how);
+	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
 
 	/**
 	 *
@@ -1767,13 +1767,13 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 	}
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 		free(msg);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1788,7 +1788,7 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 
 	uint32_t events = call->data;
 
-	PRINT_DEBUG("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x",
+	PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 			(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 	uint32_t mask = 0;
@@ -1825,12 +1825,12 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 		uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			return;
 		}
 
-		PRINT_DEBUG("msg_len=%d msg='%s'", msg_len, msg);
+		PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: send_wedge error: call=%p", call);
 		} else {
@@ -2025,7 +2025,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 	pt += control_len;
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 		if (control_msg)
 			free(control_msg);
 		free(msg);
@@ -2035,7 +2035,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: send_wedge error: call_list=%p, call=%p", call_list, call);
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
@@ -2051,7 +2051,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 }
 
 void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
-	PRINT_DEBUG("Entered: ff=%p src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
+	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
 	metadata *params = ff->metaData;
 
@@ -2075,7 +2075,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].protocol == IPPROTO_ICMP && daemon_sockets[i].host_ip == dst_ip) {
-			PRINT_DEBUG( "Matched: sock_id=%llu sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
+			PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].dst_ip, daemon_sockets[i].dst_port, daemon_sockets[i].protocol);
 
 			//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
@@ -2121,7 +2121,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 }
 
 void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
-	PRINT_DEBUG("Entered: ff=%p src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
+	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
 	metadata *params = ff->metaData;
 
@@ -2141,7 +2141,7 @@ void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].protocol == IPPROTO_ICMP && daemon_sockets[i].host_ip == src_ip) {
-			PRINT_DEBUG( "Matched: sock_id=%llu sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
+			PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].dst_ip, daemon_sockets[i].dst_port, daemon_sockets[i].protocol);
 
 			if (daemon_sockets[i].sockopts.FIP_RECVERR) {

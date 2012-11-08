@@ -144,11 +144,11 @@ void *daemon_to_thread(void *local) {
 		}
 		if (ret != sizeof(uint64_t)) {
 			//read error
-			PRINT_DEBUG("Read error: id=%d fd=%d", id, fd);
+			PRINT_DEBUG("Read error: id=%d, fd=%d", id, fd);
 			continue;
 		}
 
-		PRINT_DEBUG("Throwing TO flag: id=%d fd=%d", id, fd);
+		PRINT_DEBUG("Throwing TO flag: id=%d, fd=%d", id, fd);
 		*interrupt = 1;
 		*flag = 1;
 	}
@@ -173,7 +173,7 @@ void daemon_stop_timer(int fd) {
 }
 
 void daemon_start_timer(int fd, double millis) {
-	PRINT_DEBUG("starting timer=%d m=%f", fd, millis);
+	PRINT_DEBUG("starting timer=%d, m=%f", fd, millis);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);
@@ -863,7 +863,7 @@ void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int protocol;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -877,7 +877,7 @@ void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -898,7 +898,7 @@ void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		socket_out_udp(hdr, domain, type, protocol);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -909,7 +909,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int reuseaddr;
 	uint8_t *pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -936,12 +936,12 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
 
-	PRINT_DEBUG("addr=%u/%d family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
+	PRINT_DEBUG("addr=%u/%d, family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -975,7 +975,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		bind_out_udp(hdr, addr);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		free(addr);
 	}
@@ -985,7 +985,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int backlog;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -993,7 +993,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -1028,7 +1028,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		listen_out_udp(hdr, backlog);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -1039,7 +1039,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int flags;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -1065,13 +1065,13 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		free(addr);
 		return;
 	}
 
-	PRINT_DEBUG("addr=%u/%d family=%d flags=0x%x", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, flags);
+	PRINT_DEBUG("addr=%u/%d, family=%d, flags=0x%x", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, flags);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
@@ -1102,7 +1102,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		connect_out_udp(hdr, addr, flags);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		free(addr);
 	}
@@ -1114,7 +1114,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int flags;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -1128,7 +1128,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -1162,7 +1162,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		accept_out_udp(hdr, sock_id_new, sock_index_new, flags);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -1172,7 +1172,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int peer;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -1180,7 +1180,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -1214,7 +1214,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		getname_out_udp(hdr, peer);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -1231,7 +1231,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 	struct ifreq ifr;
 	int total;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, buf_len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, buf_len);
 
 	pt = buf;
 
@@ -1246,7 +1246,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		pt += sizeof(int);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
 		}
@@ -1304,7 +1304,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("total=%d (%d)", total, total/32);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1325,12 +1325,12 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		pt += len;
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1353,7 +1353,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1376,7 +1376,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1397,12 +1397,12 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		pt += len;
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1425,7 +1425,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1448,7 +1448,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1469,12 +1469,12 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		pt += len;
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1497,7 +1497,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1520,7 +1520,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1541,12 +1541,12 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		pt += len;
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, buf_len);
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp=%s", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1569,7 +1569,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("%s", temp);
 		}
 
-		PRINT_DEBUG("temp=%s addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1592,7 +1592,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1646,7 +1646,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		break;
 	}
 
-	PRINT_DEBUG("msg_len=%d msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exiting, fail send_wedge: sock_id=%llu", hdr->sock_id);
@@ -1682,7 +1682,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 			ioctl_out_udp(hdr, cmd, buf, buf_len);
 		} else {
-			PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+			PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		}
 	}
@@ -1700,7 +1700,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	uint8_t *data = NULL;
 	uint8_t *pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -1723,7 +1723,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 			memcpy(addr, pt, addr_len);
 			pt += addr_len;
 
-			PRINT_DEBUG("addr_len=%d addr=%s/%d", addr_len, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+			PRINT_DEBUG("addr_len=%d, addr=%s/%d", addr_len, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
 		} else {
 			//TODO error?
 			PRINT_ERROR("todo error: addr_len=%d", addr_len);
@@ -1766,7 +1766,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (msg_controllen)
 			free(msg_control);
@@ -1824,7 +1824,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		sendmsg_out_udp(hdr, data, data_len, msg_flags, addr, addr_len);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (data_len)
 			free(data);
@@ -1842,7 +1842,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int flags;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -1877,7 +1877,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	 */
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		//if (msg_controllen) {
 		//	free(msg_control);
 		//}
@@ -1925,7 +1925,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		recvmsg_out_udp(hdr, data_len, msg_controllen, flags);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 
@@ -1942,7 +1942,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	uint8_t *optval;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -1967,7 +1967,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (optlen > 0)
 			free(optval);
@@ -2005,7 +2005,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		getsockopt_out_udp(hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (optlen > 0)
 			free(optval);
@@ -2020,7 +2020,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	uint8_t *optval;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -2045,7 +2045,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (optlen > 0)
 			free(optval);
@@ -2083,7 +2083,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		setsockopt_out_udp(hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (optlen > 0)
 			free(optval);
@@ -2093,12 +2093,12 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -2132,7 +2132,7 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		release_out_udp(hdr);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -2141,14 +2141,14 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	uint8_t * pt;
 	int events;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	pt = buf;
 
 	events = *(int *) pt;
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLERR);
 		return;
 	}
@@ -2182,7 +2182,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		poll_out_udp(hdr, events);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLERR);
 	}
 }
@@ -2191,10 +2191,10 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	uint8_t * pt;
 	pt = buf;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -2234,14 +2234,14 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		PRINT_DEBUG("implement mmap_udp");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
 
 void socketpair_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 }
 
@@ -2250,7 +2250,7 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int how;
 	uint8_t * pt;
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	pt = buf;
 
@@ -2258,7 +2258,7 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (pt - buf != len) {
-		PRINT_ERROR("READING ERROR! CRASH, diff=%d len=%d", pt - buf, len);
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	}
@@ -2292,14 +2292,14 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		shutdown_out_udp(hdr, how);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
 
 void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	if (sem_wait(&daemon_sockets_sem)) {
 		PRINT_ERROR("daemon_sockets_sem wait prob");
@@ -2328,7 +2328,7 @@ void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 void sendpage_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
-	PRINT_DEBUG("Entered: hdr=%p len=%d", hdr, len);
+	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 }
 
@@ -2356,7 +2356,7 @@ void connect_timeout(struct daemon_call *call) {
 		PRINT_ERROR("todo error");
 		//shouldn't occur
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 	}
 }
@@ -2385,7 +2385,7 @@ void accept_timeout(struct daemon_call *call) {
 		PRINT_ERROR("todo error");
 		//shouldn't occur
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 	}
 }
@@ -2412,7 +2412,7 @@ void recvmsg_timeout(struct daemon_call *call) {
 	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
 		recvmsg_timeout_udp(call);
 	} else {
-		PRINT_ERROR("non supported socket type=%d protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 	}
 }
@@ -2758,7 +2758,7 @@ void *wedge_to_daemon(void *local) {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d part_len=%d pos=%d seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
+				PRINT_DEBUG("msg_len=%d, part_len=%d, pos=%d, seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {

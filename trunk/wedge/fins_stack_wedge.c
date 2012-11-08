@@ -2913,7 +2913,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 		goto end;
 	}
 
-	PRINT_DEBUG("file=%p sock=%p, table=%p", file, sock, table);
+	PRINT_DEBUG("file=%p, sock=%p, table=%p", file, sock, table);
 	if (table) {
 		events = table->key;
 	} else {
@@ -2988,7 +2988,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 
 				/*
 				 if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
-				 PRINT_DEBUG("READING ERROR! CRASH, diff=%d len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
+				 PRINT_DEBUG("READING ERROR! CRASH, diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
 				 rc = 0;
 				 }
 				 */
