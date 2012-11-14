@@ -122,7 +122,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 	rtm_in_fd = open(RTM_PIPE_IN, O_RDWR);
 
 	if (rtm_in_fd == -1) {
-		PRINT_DEBUG("rtm_in_fd Pipe failure \n");
+		PRINT_DEBUG("rtm_in_fd Pipe failure ");
 		exit(EXIT_FAILURE);
 	}
 

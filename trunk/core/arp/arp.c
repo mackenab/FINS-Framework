@@ -440,7 +440,7 @@ void cache_shutdown(struct arp_cache *cache) {
 	cache->running_flag = 0;
 
 	//stop threads
-	arp_start_timer(cache->to_fd, 1);
+	arp_start_timer(cache->to_fd, 0.00001);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -613,24 +613,24 @@ void print_arp_hdr(struct arp_hdr *pckt) {
 
 	int i;
 
-	PRINT_DEBUG("\n\nPrinting of an external format arp message");
-	PRINT_DEBUG("\nSender hardware (MAC) address = ");
+	PRINT_DEBUG("Printing of an external format arp message");
+	PRINT_DEBUG("Sender hardware (MAC) address = ");
 	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
 		PRINT_DEBUG("0x%x:", pckt->sender_MAC_addrs[i]);
-	PRINT_DEBUG("\nSender IP address = ");
+	PRINT_DEBUG("Sender IP address = ");
 	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
 		PRINT_DEBUG("%d.", pckt->sender_IP_addrs[i]);
-	PRINT_DEBUG("\nTarget hardware (MAC) address= ");
+	PRINT_DEBUG("Target hardware (MAC) address= ");
 	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
 		PRINT_DEBUG("0x%x:", pckt->target_MAC_addrs[i]);
-	PRINT_DEBUG("\nTarget IP address = ");
+	PRINT_DEBUG("Target IP address = ");
 	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
 		PRINT_DEBUG("%d.", pckt->target_IP_addrs[i]);
-	PRINT_DEBUG("\nHardware type: %d", pckt->hardware_type);
-	PRINT_DEBUG("\nProtocol type: %d", pckt->protocol_type);
-	PRINT_DEBUG("\nHardware length: %d", pckt->hardware_addrs_length);
-	PRINT_DEBUG("\nHardware length: %d", pckt->protocol_addrs_length);
-	PRINT_DEBUG("\nOperation: %d\n\n", pckt->operation);
+	PRINT_DEBUG("Hardware type: %d", pckt->hardware_type);
+	PRINT_DEBUG("Protocol type: %d", pckt->protocol_type);
+	PRINT_DEBUG("Hardware length: %d", pckt->hardware_addrs_length);
+	PRINT_DEBUG("Hardware length: %d", pckt->protocol_addrs_length);
+	PRINT_DEBUG("Operation: %d", pckt->operation);
 }
 
 /**
@@ -640,13 +640,13 @@ void print_arp_hdr(struct arp_hdr *pckt) {
 void print_cache(void) { //TODO fix/update?
 	//struct arp_cache *ptr_elementInList;
 
-	//PRINT_DEBUG("\nHost Interface:");
+	//PRINT_DEBUG("Host Interface:");
 	//ptr_elementInList = cache_list;
 	//print_IP_addrs(ptr_elementInList->ip_addr);
 	//print_MAC_addrs(ptr_elementInList->mac_addr);
 	//ptr_elementInList = ptr_elementInList->next; //move the pointer to the stored node
 	print_neighbors(cache_list);
-	PRINT_DEBUG("\n\n");
+	PRINT_DEBUG("");
 }
 
 /**
@@ -659,12 +659,12 @@ void print_neighbors(struct arp_cache *ptr_list_neighbors) {
 	struct arp_cache *ptr_elementInList;
 
 	ptr_elementInList = ptr_list_neighbors;
-	PRINT_DEBUG("\nList of addresses of neighbors:\n");
+	PRINT_DEBUG("List of addresses of neighbors:");
 
 	while (ptr_elementInList != NULL) {
 		print_IP_addrs(ptr_elementInList->ip_addr);
 		print_MAC_addrs(ptr_elementInList->mac_addr);
-		PRINT_DEBUG("\n");
+		PRINT_DEBUG("");
 		ptr_elementInList = ptr_elementInList->next;
 	}
 }

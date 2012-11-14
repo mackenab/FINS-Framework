@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
-	if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
-		//if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
@@ -190,8 +190,8 @@ int main(int argc, char *argv[]) {
 
 		if (len > 0 && len < 1024) {
 			if (pID == 0) {
-				ret = poll(fds, nfds, time);
-				printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
+				//ret = poll(fds, nfds, time);
+				//printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
 			}
 			if (ret || 1) {
 				///*
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
 					//numbytes = send(sock, send_data, strlen(send_data), 0);
 					printf("\n sending: pID=%d", pID);
 					fflush(stdout);
-					numbytes = send(sock, msg, len, 0);
+					numbytes = send(sock, msg, len, MSG_DONTWAIT);
 					//for (j = 0, numbytes = 0; j < len; j++) {
 					//	numbytes += send(sock, msg, 1, 0);
 					//}

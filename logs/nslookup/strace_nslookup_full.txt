@@ -1,0 +1,431 @@
+2487  1351062563.862359 execve("/usr/bin/nslookup", ["nslookup", "materiamagica.com"], ["SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "MAIL=/var/mail/root", "PATH=/usr/local/sbin:/usr/local/"..., "PWD=/home/bucknell/Jonathan/FINS"..., "ANDROID_SDK=/opt/android-sdk_r20"..., "LANG=en_US.UTF-8", "SHLVL=1", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "ANDROID_NDK=/opt/android-ndk-r8b", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace", "OLDPWD=/home/bucknell/Jonathan/F"...]) = 0
+2487  1351062563.870144 brk(0)          = 0xb7b86000
+2487  1351062563.870760 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.871303 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78bc000
+2487  1351062563.872123 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.878009 open("/etc/ld.so.cache", O_RDONLY) = 3
+2487  1351062563.878448 fstat64(3, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/23-20:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+2487  1351062563.879235 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb78ac000
+2487  1351062563.879606 close(3)        = 0
+2487  1351062563.879998 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.880485 open("/usr/lib/liblwres.so.60", O_RDONLY) = 3
+2487  1351062563.883836 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x80\x1f\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.884642 fstat64(3, {st_dev=makedev(8, 1), st_ino=2228554, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=136, st_size=66792, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/09-09:33:57, st_ctime=2012/10/10-10:39:40}) = 0
+2487  1351062563.885170 mmap2(NULL, 69748, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb789a000
+2487  1351062563.885511 mmap2(0xb78aa000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xf) = 0xb78aa000
+2487  1351062563.885896 close(3)        = 0
+2487  1351062563.886234 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.886649 open("/usr/lib/libdns.so.69", O_RDONLY) = 3
+2487  1351062563.890645 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x60\x5a\x01\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.891197 fstat64(3, {st_dev=makedev(8, 1), st_ino=2229382, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=3000, st_size=1533472, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/09-09:33:57, st_ctime=2012/10/10-10:39:40}) = 0
+2487  1351062563.891682 mmap2(NULL, 1534088, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7723000
+2487  1351062563.891997 mmap2(0xb7896000, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x173) = 0xb7896000
+2487  1351062563.893092 close(3)        = 0
+2487  1351062563.893583 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.893977 open("/usr/lib/i386-linux-gnu/libgssapi_krb5.so.2", O_RDONLY) = 3
+2487  1351062563.894614 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x30\x4e\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.895011 fstat64(3, {st_dev=makedev(8, 1), st_ino=2230877, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=376, st_size=191240, st_atime=2012/10/24-02:34:37, st_mtime=2012/07/24-05:37:31, st_ctime=2012/08/01-17:56:15}) = 0
+2487  1351062563.895517 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7722000
+2487  1351062563.896909 mmap2(NULL, 194184, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb76f2000
+2487  1351062563.897246 mmap2(0xb7720000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2d) = 0xb7720000
+2487  1351062563.897609 close(3)        = 0
+2487  1351062563.897962 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.899113 open("/lib/libcrypto.so.0.9.8", O_RDONLY) = 3
+2487  1351062563.899589 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x40\x88\x03\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.900024 fstat64(3, {st_dev=makedev(8, 1), st_ino=2359329, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2632, st_size=1345460, st_atime=2012/10/24-02:34:36, st_mtime=2012/05/22-19:25:07, st_ctime=2012/06/03-16:49:20}) = 0
+2487  1351062563.900562 mmap2(NULL, 1356940, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb75a6000
+2487  1351062563.900929 mmap2(0xb76d8000, 94208, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x132) = 0xb76d8000
+2487  1351062563.901346 mmap2(0xb76ef000, 9356, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb76ef000
+2487  1351062563.901925 close(3)        = 0
+2487  1351062563.902490 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.903043 open("/usr/lib/libbind9.so.60", O_RDONLY) = 3
+2487  1351062563.903519 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x10\x19\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.903980 fstat64(3, {st_dev=makedev(8, 1), st_ino=2229492, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=96, st_size=46216, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/09-09:33:57, st_ctime=2012/10/10-10:39:41}) = 0
+2487  1351062563.904469 mmap2(NULL, 49164, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7599000
+2487  1351062563.904782 mmap2(0xb75a4000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xa) = 0xb75a4000
+2487  1351062563.905177 close(3)        = 0
+2487  1351062563.905519 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.905946 open("/usr/lib/libisccfg.so.62", O_RDONLY) = 3
+2487  1351062563.906315 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xe0\x5c\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.906700 fstat64(3, {st_dev=makedev(8, 1), st_ino=2232652, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=160, st_size=80696, st_atime=2012/10/24-02:34:49, st_mtime=2012/10/09-09:33:57, st_ctime=2012/10/10-10:39:40}) = 0
+2487  1351062563.907167 mmap2(NULL, 86916, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7583000
+2487  1351062563.907473 mmap2(0xb7594000, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x10) = 0xb7594000
+2487  1351062563.907819 mmap2(0xb7598000, 900, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7598000
+2487  1351062563.908177 close(3)        = 0
+2487  1351062563.908505 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.908850 open("/usr/lib/libisc.so.62", O_RDONLY) = 3
+2487  1351062563.909195 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x60\x94\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.909572 fstat64(3, {st_dev=makedev(8, 1), st_ino=2228811, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=632, st_size=321712, st_atime=2012/10/24-02:34:49, st_mtime=2012/10/09-09:33:57, st_ctime=2012/10/10-10:39:40}) = 0
+2487  1351062563.910044 mmap2(NULL, 324964, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7533000
+2487  1351062563.910357 mmap2(0xb7581000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x4d) = 0xb7581000
+2487  1351062563.910737 close(3)        = 0
+2487  1351062563.911063 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.911409 open("/lib/libcap.so.2", O_RDONLY) = 3
+2487  1351062563.911752 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x70\x0d\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.912132 fstat64(3, {st_dev=makedev(8, 1), st_ino=2359333, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=32, st_size=13816, st_atime=2012/10/23-20:17:01, st_mtime=2011/02/15-14:35:29, st_ctime=2011/06/10-10:45:10}) = 0
+2487  1351062563.912608 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7532000
+2487  1351062563.912932 mmap2(NULL, 16692, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb752d000
+2487  1351062563.913382 mmap2(0xb7530000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2) = 0xb7530000
+2487  1351062563.913757 close(3)        = 0
+2487  1351062563.914049 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.915080 open("/lib/i386-linux-gnu/libpthread.so.0", O_RDONLY) = 3
+2487  1351062563.915485 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x10\x4d\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.915887 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378197, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=240, st_size=121644, st_atime=2012/10/23-20:17:01, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+2487  1351062563.916376 mmap2(NULL, 98824, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7514000
+2487  1351062563.916711 mmap2(0xb7529000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15) = 0xb7529000
+2487  1351062563.917052 mmap2(0xb752b000, 4616, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb752b000
+2487  1351062563.917423 close(3)        = 0
+2487  1351062563.917770 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.918124 open("/usr/lib/libxml2.so.2", O_RDONLY) = 3
+2487  1351062563.918485 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xf0\xb8\x01\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.918875 fstat64(3, {st_dev=makedev(8, 1), st_ino=2228750, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2376, st_size=1212980, st_atime=2012/10/24-02:34:47, st_mtime=2012/09/26-14:09:57, st_ctime=2012/09/28-12:21:15}) = 0
+2487  1351062563.919353 mmap2(NULL, 1215508, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb73eb000
+2487  1351062563.919659 mmap2(0xb750e000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x123) = 0xb750e000
+2487  1351062563.920040 mmap2(0xb7513000, 3092, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7513000
+2487  1351062563.920558 close(3)        = 0
+2487  1351062563.921062 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.921388 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3
+2487  1351062563.921749 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.922146 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378196, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2864, st_size=1462852, st_atime=2012/10/23-20:17:01, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+2487  1351062563.922647 mmap2(NULL, 1473032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7283000
+2487  1351062563.922953 mprotect(0xb73e4000, 4096, PROT_NONE) = 0
+2487  1351062563.923284 mmap2(0xb73e5000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x161) = 0xb73e5000
+2487  1351062563.923632 mmap2(0xb73e8000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb73e8000
+2487  1351062563.924090 close(3)        = 0
+2487  1351062563.924497 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.924995 open("/usr/lib/libGeoIP.so.1", O_RDONLY) = 3
+2487  1351062563.925451 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xe0\x25\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.925871 fstat64(3, {st_dev=makedev(8, 1), st_ino=2231943, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=448, st_size=227808, st_atime=2012/10/24-02:34:49, st_mtime=2010/10/15-07:20:49, st_ctime=2011/06/10-10:45:37}) = 0
+2487  1351062563.926388 mmap2(NULL, 230704, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb724a000
+2487  1351062563.926715 mmap2(0xb7281000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x36) = 0xb7281000
+2487  1351062563.927128 close(3)        = 0
+2487  1351062563.927461 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.927811 open("/usr/lib/i386-linux-gnu/libkrb5.so.3", O_RDONLY) = 3
+2487  1351062563.928198 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xc0\xdc\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.928591 fstat64(3, {st_dev=makedev(8, 1), st_ino=2230883, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=1392, st_size=711308, st_atime=2012/10/24-02:34:37, st_mtime=2012/07/24-05:37:31, st_ctime=2012/08/01-17:56:16}) = 0
+2487  1351062563.929068 mmap2(NULL, 710364, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb719c000
+2487  1351062563.929387 mmap2(0xb7244000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xa8) = 0xb7244000
+2487  1351062563.929768 close(3)        = 0
+2487  1351062563.930112 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.930473 open("/usr/lib/i386-linux-gnu/libk5crypto.so.3", O_RDONLY) = 3
+2487  1351062563.930863 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x00\x25\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.931260 fstat64(3, {st_dev=makedev(8, 1), st_ino=2230873, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=280, st_size=140788, st_atime=2012/10/24-02:34:37, st_mtime=2012/07/24-05:37:31, st_ctime=2012/08/01-17:56:15}) = 0
+2487  1351062563.931737 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb719b000
+2487  1351062563.932073 mmap2(NULL, 144340, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7177000
+2487  1351062563.932385 mprotect(0xb7198000, 4096, PROT_NONE) = 0
+2487  1351062563.932716 mmap2(0xb7199000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x21) = 0xb7199000
+2487  1351062563.933200 close(3)        = 0
+2487  1351062563.933583 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.934018 open("/lib/i386-linux-gnu/libcom_err.so.2", O_RDONLY) = 3
+2487  1351062563.934421 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xa0\x0d\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.934993 fstat64(3, {st_dev=makedev(8, 1), st_ino=2360134, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9608, st_atime=2012/10/24-02:34:37, st_mtime=2011/03/17-14:06:42, st_ctime=2011/06/10-10:45:14}) = 0
+2487  1351062563.935601 mmap2(NULL, 12480, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7173000
+2487  1351062563.936265 mmap2(0xb7175000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1) = 0xb7175000
+2487  1351062563.936841 close(3)        = 0
+2487  1351062563.937364 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.937951 open("/usr/lib/i386-linux-gnu/libkrb5support.so.0", O_RDONLY) = 3
+2487  1351062563.938402 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xa0\x16\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.938841 fstat64(3, {st_dev=makedev(8, 1), st_ino=2231108, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=56, st_size=26112, st_atime=2012/10/24-02:34:37, st_mtime=2012/07/24-05:37:31, st_ctime=2012/08/01-17:56:16}) = 0
+2487  1351062563.939339 mmap2(NULL, 29012, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb716b000
+2487  1351062563.939652 mmap2(0xb7171000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x5) = 0xb7171000
+2487  1351062563.940031 close(3)        = 0
+2487  1351062563.940350 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.940703 open("/lib/i386-linux-gnu/libdl.so.2", O_RDONLY) = 3
+2487  1351062563.941068 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x40\x0a\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.941473 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378191, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9736, st_atime=2012/10/23-23:38:57, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+2487  1351062563.942003 mmap2(NULL, 12408, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7167000
+2487  1351062563.942310 mmap2(0xb7169000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1) = 0xb7169000
+2487  1351062563.942678 close(3)        = 0
+2487  1351062563.943000 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.943344 open("/lib/i386-linux-gnu/libkeyutils.so.1", O_RDONLY) = 3
+2487  1351062563.943715 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x10\x09\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.944097 fstat64(3, {st_dev=makedev(8, 1), st_ino=2360165, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9460, st_atime=2012/10/24-02:34:37, st_mtime=2011/03/24-13:23:37, st_ctime=2011/06/10-10:45:14}) = 0
+2487  1351062563.944565 mmap2(NULL, 12324, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7163000
+2487  1351062563.944869 mmap2(0xb7165000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1) = 0xb7165000
+2487  1351062563.945242 close(3)        = 0
+2487  1351062563.945546 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.945892 open("/lib/i386-linux-gnu/libresolv.so.2", O_RDONLY) = 3
+2487  1351062563.946292 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x30\x26\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.946767 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378195, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=144, st_size=71432, st_atime=2012/10/24-01:53:42, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+2487  1351062563.947389 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7162000
+2487  1351062563.947782 mmap2(NULL, 84040, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb714d000
+2487  1351062563.948130 mmap2(0xb715e000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x10) = 0xb715e000
+2487  1351062563.948491 mmap2(0xb7160000, 6216, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7160000
+2487  1351062563.948844 close(3)        = 0
+2487  1351062563.949179 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.949652 open("/lib/i386-linux-gnu/libz.so.1", O_RDONLY) = 3
+2487  1351062563.950079 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x60\x17\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.950597 fstat64(3, {st_dev=makedev(8, 1), st_ino=2360212, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=160, st_size=79476, st_atime=2012/10/24-01:52:39, st_mtime=2011/03/21-04:35:28, st_ctime=2011/06/10-10:45:14}) = 0
+2487  1351062563.951097 mmap2(NULL, 82192, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7138000
+2487  1351062563.951405 mmap2(0xb714b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x12) = 0xb714b000
+2487  1351062563.951799 close(3)        = 0
+2487  1351062563.952123 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.952480 open("/usr/lib/libisccc.so.60", O_RDONLY) = 3
+2487  1351062563.952884 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xe0\x17\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.953271 fstat64(3, {st_dev=makedev(8, 1), st_ino=2229259, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=56, st_size=25888, st_atime=2012/10/24-02:34:50, st_mtime=2012/10/09-09:33:57, st_ctime=2012/10/10-10:39:40}) = 0
+2487  1351062563.953835 mmap2(NULL, 28900, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7130000
+2487  1351062563.954151 mmap2(0xb7136000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x5) = 0xb7136000
+2487  1351062563.954582 close(3)        = 0
+2487  1351062563.955069 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+2487  1351062563.955459 open("/lib/i386-linux-gnu/libm.so.6", O_RDONLY) = 3
+2487  1351062563.955828 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xb0\x34\x00\x00\x34\x00\x00\x00"..., 512) = 512
+2487  1351062563.956245 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378198, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=296, st_size=149392, st_atime=2012/10/24-01:52:39, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+2487  1351062563.956769 mmap2(NULL, 151680, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb710a000
+2487  1351062563.957170 mmap2(0xb712e000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x23) = 0xb712e000
+2487  1351062563.957575 close(3)        = 0
+2487  1351062563.957963 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7109000
+2487  1351062563.958425 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7108000
+2487  1351062563.958785 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7107000
+2487  1351062563.959112 set_thread_area({entry_number:-1 -> 6, base_addr:0xb71076e0, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+2487  1351062563.959617 mprotect(0xb712e000, 4096, PROT_READ) = 0
+2487  1351062563.960342 mprotect(0xb7136000, 4096, PROT_READ) = 0
+2487  1351062563.960714 mprotect(0xb714b000, 4096, PROT_READ) = 0
+2487  1351062563.961064 mprotect(0xb715e000, 4096, PROT_READ) = 0
+2487  1351062563.961396 mprotect(0xb7165000, 4096, PROT_READ) = 0
+2487  1351062563.961744 mprotect(0xb7169000, 4096, PROT_READ) = 0
+2487  1351062563.962101 mprotect(0xb7171000, 4096, PROT_READ) = 0
+2487  1351062563.962441 mprotect(0xb7175000, 4096, PROT_READ) = 0
+2487  1351062563.962782 mprotect(0xb7199000, 4096, PROT_READ) = 0
+2487  1351062563.963336 mprotect(0xb7244000, 20480, PROT_READ) = 0
+2487  1351062563.963733 mprotect(0xb7281000, 4096, PROT_READ) = 0
+2487  1351062563.964153 mprotect(0xb73e5000, 8192, PROT_READ) = 0
+2487  1351062563.964906 mprotect(0xb750e000, 16384, PROT_READ) = 0
+2487  1351062563.965285 mprotect(0xb7529000, 4096, PROT_READ) = 0
+2487  1351062563.965778 mprotect(0xb7530000, 4096, PROT_READ) = 0
+2487  1351062563.966329 mprotect(0xb7581000, 4096, PROT_READ) = 0
+2487  1351062563.966979 mprotect(0xb7594000, 4096, PROT_READ) = 0
+2487  1351062563.967483 mprotect(0xb75a4000, 4096, PROT_READ) = 0
+2487  1351062563.969077 mprotect(0xb76d8000, 32768, PROT_READ) = 0
+2487  1351062563.969523 mprotect(0xb7720000, 4096, PROT_READ) = 0
+2487  1351062563.970199 mprotect(0xb7896000, 4096, PROT_READ) = 0
+2487  1351062563.970602 mprotect(0xb78aa000, 4096, PROT_READ) = 0
+2487  1351062563.971099 mprotect(0xb78f5000, 4096, PROT_READ) = 0
+2487  1351062563.971552 mprotect(0xb78db000, 4096, PROT_READ) = 0
+2487  1351062563.971918 munmap(0xb78ac000, 61759) = 0
+2487  1351062563.972314 set_tid_address(0xb7107748) = 2487
+2487  1351062563.972652 set_robust_list(0xb7107750, 0xc) = 0
+2487  1351062563.973000 futex(0xbfbeaee0, FUTEX_WAKE_PRIVATE, 1) = 0
+2487  1351062563.973433 futex(0xbfbeaee0, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 1, NULL, bfbeaef0) = -1 EAGAIN (Resource temporarily unavailable)
+2487  1351062563.973828 rt_sigaction(SIGRTMIN, {0xb75186e0, [], SA_SIGINFO}, NULL, 8) = 0
+2487  1351062563.974323 rt_sigaction(SIGRT_1, {0xb7518760, [], SA_RESTART|SA_SIGINFO}, NULL, 8) = 0
+2487  1351062563.974803 rt_sigprocmask(SIG_UNBLOCK, [RTMIN RT_1], NULL, 8) = 0
+2487  1351062563.975187 getrlimit(RLIMIT_STACK, {rlim_cur=8192*1024, rlim_max=RLIM_INFINITY}) = 0
+2487  1351062563.975629 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+2487  1351062563.977212 rt_sigaction(SIGINT, {0xb7562640, ~[RTMIN RT_1], 0}, NULL, 8) = 0
+2487  1351062563.977704 rt_sigaction(SIGTERM, {0xb7562640, ~[RTMIN RT_1], 0}, NULL, 8) = 0
+2487  1351062563.978192 rt_sigaction(SIGPIPE, {SIG_IGN, ~[RTMIN RT_1], 0}, NULL, 8) = 0
+2487  1351062563.978657 rt_sigaction(SIGHUP, {SIG_DFL, ~[RTMIN RT_1], 0}, NULL, 8) = 0
+2487  1351062563.979110 rt_sigprocmask(SIG_BLOCK, [HUP INT TERM], NULL, 8) = 0
+2487  1351062563.979534 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+2487  1351062563.979878 close(3)        = 0
+2487  1351062563.980357 socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 3
+2487  1351062563.980690 getsockname(3, {sa_family=AF_INET6, sin6_port=htons(0), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 0
+2487  1351062563.981075 close(3)        = 0
+2487  1351062563.981402 socket(PF_FILE, SOCK_STREAM, 0) = 3
+2487  1351062563.981929 close(3)        = 0
+2487  1351062563.982367 futex(0xb758251c, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062563.982819 futex(0xb758244c, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062563.983280 brk(0)          = 0xb7b86000
+2487  1351062563.983657 brk(0xb7ba7000) = 0xb7ba7000
+2487  1351062563.984294 mmap2(NULL, 266240, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb70c6000
+2487  1351062563.985995 mmap2(NULL, 8392704, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0xb68c5000
+2487  1351062563.986367 mprotect(0xb68c5000, 4096, PROT_NONE) = 0
+2487  1351062563.986744 clone(child_stack=0xb70c5474, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xb70c5bd8, {entry_number:6, base_addr:0xb70c5b70, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}, child_tidptr=0xb70c5bd8) = 2488
+2487  1351062563.987197 mmap2(NULL, 8392704, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0xb60c4000
+2487  1351062563.987596 mprotect(0xb60c4000, 4096, PROT_NONE) = 0
+2487  1351062563.988169 clone(child_stack=0xb68c4474, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xb68c4bd8, {entry_number:6, base_addr:0xb68c4b70, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}, child_tidptr=0xb68c4bd8) = 2489
+2487  1351062563.989098 pipe([3, 4])    = 0
+2488  1351062563.989808 set_robust_list(0xb70c5be0, 0xc <unfinished ...>
+2487  1351062563.990070 fcntl64(3, F_GETFL <unfinished ...>
+2488  1351062563.990373 <... set_robust_list resumed> ) = 0
+2487  1351062563.990627 <... fcntl64 resumed> ) = 0 (flags O_RDONLY)
+2488  1351062563.990953 futex(0xb70cb050, FUTEX_WAIT_PRIVATE, 1, NULL <unfinished ...>
+2487  1351062563.991215 fcntl64(3, F_SETFL, O_RDONLY|O_NONBLOCK) = 0
+2487  1351062563.991729 epoll_create(64) = 5
+2487  1351062563.992230 epoll_ctl(5, EPOLL_CTL_ADD, 3, {EPOLLIN, {u32=3, u64=3}}) = 0
+2487  1351062563.992636 mmap2(NULL, 8392704, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0xb58c3000
+2487  1351062563.993058 mprotect(0xb58c3000, 4096, PROT_NONE) = 0
+2487  1351062563.993411 clone( <unfinished ...>
+2489  1351062563.993592 set_robust_list(0xb68c4be0, 0xc <unfinished ...>
+2487  1351062563.993695 <... clone resumed> child_stack=0xb60c3474, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xb60c3bd8, {entry_number:6, base_addr:0xb60c3b70, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}, child_tidptr=0xb60c3bd8) = 2490
+2489  1351062563.994156 <... set_robust_list resumed> ) = 0
+2487  1351062563.994426 open("/usr/share/locale/en_US.UTF-8/libdst.cat", O_RDONLY <unfinished ...>
+2489  1351062563.994711 gettimeofday( <unfinished ...>
+2487  1351062563.994815 <... open resumed> ) = -1 ENOENT (No such file or directory)
+2489  1351062563.994947 <... gettimeofday resumed> {1351062563, 994916}, NULL) = 0
+2489  1351062563.995260 futex(0xb70cc04c, FUTEX_WAIT_PRIVATE, 1, NULL <unfinished ...>
+2487  1351062563.995423 open("/usr/share/locale/en_US.UTF-8/LC_MESSAGES/libdst.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062563.995840 open("/usr/share/locale/en/libdst.cat", O_RDONLY <unfinished ...>
+2490  1351062563.996062 set_robust_list(0xb60c3be0, 0xc <unfinished ...>
+2487  1351062563.996161 <... open resumed> ) = -1 ENOENT (No such file or directory)
+2490  1351062563.996434 <... set_robust_list resumed> ) = 0
+2487  1351062563.996540 open("/usr/share/locale/en/LC_MESSAGES/libdst.cat", O_RDONLY <unfinished ...>
+2490  1351062563.996788 epoll_wait(5,  <unfinished ...>
+2487  1351062563.996889 <... open resumed> ) = -1 ENOENT (No such file or directory)
+2487  1351062563.997044 futex(0xb7899880, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062563.997544 open("/usr/share/locale/en_US.UTF-8/libisc.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062563.997943 open("/usr/share/locale/en_US.UTF-8/LC_MESSAGES/libisc.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062563.998343 open("/usr/share/locale/en/libisc.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062563.998703 open("/usr/share/locale/en/LC_MESSAGES/libisc.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062563.999092 futex(0xb7582430, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062563.999563 futex(0xb758248c, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062563.999984 futex(0xb7899884, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062564.000957 open("/usr/lib/ssl/openssl.cnf", O_RDONLY|O_LARGEFILE) = 6
+2487  1351062564.001464 fstat64(6, {st_dev=makedev(8, 1), st_ino=133128, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9374, st_atime=2012/10/24-02:34:54, st_mtime=2011/02/22-19:45:17, st_ctime=2011/06/10-10:45:10}) = 0
+2487  1351062564.001950 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78bb000
+2487  1351062564.002260 read(6, "#\n# OpenSSL example configuratio"..., 4096) = 4096
+2487  1351062564.002824 read(6, "_name ]\ncountryName\t\t\t= Country "..., 4096) = 4096
+2487  1351062564.003330 read(6, " an SSL server.\n# nsCertType\t\t\t="..., 4096) = 1182
+2487  1351062564.003791 read(6, "", 4096) = 0
+2487  1351062564.004137 close(6)        = 0
+2487  1351062564.004439 munmap(0xb78bb000, 4096) = 0
+2487  1351062564.004964 open("/usr/share/locale/en_US.UTF-8/libdns.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062564.005383 open("/usr/share/locale/en_US.UTF-8/LC_MESSAGES/libdns.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062564.005947 open("/usr/share/locale/en/libdns.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062564.006320 open("/usr/share/locale/en/LC_MESSAGES/libdns.cat", O_RDONLY) = -1 ENOENT (No such file or directory)
+2487  1351062564.006727 futex(0xb78993b0, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062564.007032 futex(0xb78993f4, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2487  1351062564.007515 time(NULL)      = 1351062564
+2487  1351062564.007865 open("/etc/resolv.conf", O_RDONLY|O_LARGEFILE) = 6
+2487  1351062564.008237 fstat64(6, {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/24-02:34:45, st_ctime=2012/10/24-02:34:45}) = 0
+2487  1351062564.008723 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78bb000
+2487  1351062564.009023 read(6, "# Generated by NetworkManager\nna"..., 4096) = 53
+2487  1351062564.009493 read(6, "", 4096) = 0
+2487  1351062564.009909 close(6)        = 0
+2487  1351062564.010325 munmap(0xb78bb000, 4096) = 0
+2487  1351062564.010874 futex(0xb70cb050, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0xb70cb04c, {FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1} <unfinished ...>
+2488  1351062564.011043 <... futex resumed> ) = 0
+2488  1351062564.011200 futex(0xb70cb018, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+2487  1351062564.011348 <... futex resumed> ) = 1
+2487  1351062564.011504 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2488  1351062564.011666 <... futex resumed> ) = 0
+2488  1351062564.011823 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1) = 0
+2488  1351062564.012120 gettimeofday({1351062564, 12241}, NULL) = 0
+2488  1351062564.012671 futex(0xb78993b8, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2488  1351062564.012979 brk(0xb7bcb000) = 0xb7bcb000
+2488  1351062564.013414 time(NULL)      = 1351062564
+2488  1351062564.013766 futex(0xb7582488, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2488  1351062564.014831 gettimeofday({1351062564, 14958}, NULL) = 0
+2488  1351062564.015194 brk(0xb7bec000) = 0xb7bec000
+2488  1351062564.015972 futex(0xb70cc04c, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0xb70cc048, {FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1} <unfinished ...>
+2489  1351062564.016172 <... futex resumed> ) = 0
+2489  1351062564.016330 futex(0xb70cc018, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+2488  1351062564.016477 <... futex resumed> ) = 1
+2488  1351062564.016635 futex(0xb70cc018, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2489  1351062564.016799 <... futex resumed> ) = 0
+2489  1351062564.016950 gettimeofday({1351062564, 17065}, NULL) = 0
+2489  1351062564.017412 futex(0xb70cc018, FUTEX_WAKE_PRIVATE, 1) = 0
+2489  1351062564.017775 clock_gettime(CLOCK_REALTIME, {1351062564, 17891848}) = 0
+2489  1351062564.018096 futex(0xb70cc04c, FUTEX_WAIT_PRIVATE, 3, {4, 997066152} <unfinished ...>
+2488  1351062564.018269 <... futex resumed> ) = 1
+2488  1351062564.018424 rt_sigprocmask(SIG_UNBLOCK, [INT TERM], NULL, 8) = 0
+2488  1351062564.018802 rt_sigprocmask(SIG_BLOCK, [INT TERM], NULL, 8) = 0
+2488  1351062564.019240 socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP) = 6
+2488  1351062564.019551 fcntl64(6, F_DUPFD, 20) = 20
+2488  1351062564.019848 close(6)        = 0
+2488  1351062564.020144 fcntl64(20, F_GETFL) = 0x2 (flags O_RDWR)
+2488  1351062564.020442 fcntl64(20, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+2488  1351062564.020789 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+2488  1351062564.021819 futex(0xb7582528, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+2488  1351062564.022152 setsockopt(20, SOL_SOCKET, SO_TIMESTAMP, [1], 4) = 0
+2488  1351062564.022506 setsockopt(20, SOL_IP, IP_MTU_DISCOVER, [0], 4) = 0
+2488  1351062564.022864 getsockopt(20, SOL_SOCKET, SO_RCVBUF, [114688], [4]) = 0
+2488  1351062564.023237 bind(20, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("0.0.0.0")}, 16) = 0
+2488  1351062564.023778 recvmsg(20, 0xb70c50e8, 0) = -1 EAGAIN (Resource temporarily unavailable)
+2488  1351062564.024164 write(4, "\x14\x00\x00\x00\xfd\xff\xff\xff", 8 <unfinished ...>
+2490  1351062564.024435 <... epoll_wait resumed> {{EPOLLIN, {u32=3, u64=3}}}, 64, -1) = 1
+2490  1351062564.024652 read(3, "\x14\x00\x00\x00\xfd\xff\xff\xff", 8) = 8
+2490  1351062564.025080 epoll_ctl(5, EPOLL_CTL_ADD, 20, {EPOLLIN, {u32=20, u64=20}}) = 0
+2490  1351062564.026124 read(3, 0xb60c3250, 8) = -1 EAGAIN (Resource temporarily unavailable)
+2490  1351062564.026565 epoll_wait(5,  <unfinished ...>
+2488  1351062564.026757 <... write resumed> ) = 8
+2488  1351062564.026943 gettimeofday({1351062564, 27089}, NULL) = 0
+2488  1351062564.027379 sendmsg(20, {msg_name(16)={sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, msg_iov(1)=[{"\x2f\x1b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x0d\x6d\x61\x74\x65\x72\x69\x61\x6d\x61\x67\x69\x63\x61\x03\x63\x6f\x6d\x00\x00"..., 35}], msg_controllen=0, msg_flags=0}, 0) = 35
+2488  1351062564.028192 futex(0xb70cb050, FUTEX_WAIT_PRIVATE, 3, NULL <unfinished ...>
+2487  1351062564.028424 <... futex resumed> ) = 1
+2487  1351062564.028610 rt_sigaction(SIGHUP, {0xb7562660, ~[RTMIN RT_1], 0}, NULL, 8) = 0
+2487  1351062564.029177 rt_sigsuspend([] <unfinished ...>
+2490  1351062564.048290 <... epoll_wait resumed> {{EPOLLIN, {u32=20, u64=20}}}, 64, -1) = 1
+2490  1351062564.048684 futex(0xb70cb050, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0xb70cb04c, {FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1}) = 1
+2490  1351062564.049062 epoll_ctl(5, EPOLL_CTL_DEL, 20, {EPOLLIN, {u32=20, u64=20}}) = 0
+2490  1351062564.049460 epoll_wait(5,  <unfinished ...>
+2488  1351062564.049627 <... futex resumed> ) = 0
+2488  1351062564.049811 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1) = 0
+2488  1351062564.050152 gettimeofday({1351062564, 50285}, NULL) = 0
+2488  1351062564.050547 recvmsg(20, {msg_name(16)={sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, msg_iov(1)=[{"\x2f\x1b\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x0d\x6d\x61\x74\x65\x72\x69\x61\x6d\x61\x67\x69\x63\x61\x03\x63\x6f\x6d\x00\x00"..., 65535}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 51
+2488  1351062564.051342 fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/24-03:09:23, st_mtime=2012/10/24-03:09:23, st_ctime=2012/10/24-02:40:39}) = 0
+2488  1351062564.051840 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78bb000
+2488  1351062564.052165 write(1, "Server:\t\t192.168.1.1\n", 21) = 21
+2488  1351062564.053152 write(1, "Address:\t192.168.1.1#53\n", 24) = 24
+2488  1351062564.054055 write(1, "\n", 1) = 1
+2488  1351062564.054473 write(1, "Non-authoritative answer:\n", 26) = 26
+2488  1351062564.055031 write(1, "Name:\tmateriamagica.com\n", 24) = 24
+2488  1351062564.055927 write(1, "Address: 66.219.44.169\n", 23) = 23
+2488  1351062564.056519 futex(0xb70cc04c, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0xb70cc048, {FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1} <unfinished ...>
+2489  1351062564.056693 <... futex resumed> ) = 0
+2489  1351062564.056862 futex(0xb70cc018, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+2488  1351062564.057010 <... futex resumed> ) = 1
+2488  1351062564.057167 futex(0xb70cc018, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2489  1351062564.057367 <... futex resumed> ) = 0
+2489  1351062564.057521 gettimeofday({1351062564, 57635}, NULL) = 0
+2489  1351062564.057850 futex(0xb70cc018, FUTEX_WAKE_PRIVATE, 1) = 0
+2489  1351062564.058151 futex(0xb70cc04c, FUTEX_WAIT_PRIVATE, 5, NULL <unfinished ...>
+2488  1351062564.058303 <... futex resumed> ) = 1
+2488  1351062564.058483 write(4, "\x14\x00\x00\x00\xfb\xff\xff\xff", 8 <unfinished ...>
+2490  1351062564.058688 <... epoll_wait resumed> {{EPOLLIN, {u32=3, u64=3}}}, 64, -1) = 1
+2490  1351062564.058867 read(3, "\x14\x00\x00\x00\xfb\xff\xff\xff", 8) = 8
+2490  1351062564.059191 epoll_ctl(5, EPOLL_CTL_DEL, 20, {EPOLLIN, {u32=20, u64=20}}) = -1 ENOENT (No such file or directory)
+2490  1351062564.059516 epoll_ctl(5, EPOLL_CTL_DEL, 20, {EPOLLOUT, {u32=20, u64=20}}) = -1 ENOENT (No such file or directory)
+2490  1351062564.059842 close(20)       = 0
+2490  1351062564.060150 read(3, 0xb60c3250, 8) = -1 EAGAIN (Resource temporarily unavailable)
+2490  1351062564.060456 epoll_wait(5,  <unfinished ...>
+2488  1351062564.060604 <... write resumed> ) = 8
+2488  1351062564.060798 tgkill(2487, 2487, SIGTERM) = 0
+2488  1351062564.061143 futex(0xb70cb050, FUTEX_WAIT_PRIVATE, 5, NULL <unfinished ...>
+2487  1351062564.061313 <... rt_sigsuspend resumed> ) = ? ERESTARTNOHAND (To be restarted)
+2487  1351062564.061470 --- SIGTERM (Terminated) @ 0 (0) ---
+2487  1351062564.061637 sigreturn()     = ? (mask now [HUP INT TERM])
+2487  1351062564.062113 write(1, "\n", 1) = 1
+2487  1351062564.062527 futex(0xb70cb050, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0xb70cb04c, {FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1} <unfinished ...>
+2488  1351062564.062697 <... futex resumed> ) = 0
+2488  1351062564.062853 futex(0xb70cb018, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+2487  1351062564.062999 <... futex resumed> ) = 1
+2487  1351062564.063154 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2488  1351062564.063362 <... futex resumed> ) = 0
+2488  1351062564.064455 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1) = 0
+2488  1351062564.064790 gettimeofday({1351062564, 64906}, NULL) = 0
+2488  1351062564.065143 futex(0xb70cb050, FUTEX_WAIT_PRIVATE, 7, NULL <unfinished ...>
+2487  1351062564.065290 <... futex resumed> ) = 1
+2487  1351062564.065457 futex(0xb70cb050, FUTEX_CMP_REQUEUE_PRIVATE, 1, 2147483647, 0xb70cb018, 8 <unfinished ...>
+2488  1351062564.065619 <... futex resumed> ) = 0
+2488  1351062564.065776 futex(0xb70cb018, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+2487  1351062564.066044 <... futex resumed> ) = 1
+2487  1351062564.066207 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2488  1351062564.066370 <... futex resumed> ) = 0
+2488  1351062564.066535 futex(0xb70cb018, FUTEX_WAKE_PRIVATE, 1) = 0
+2488  1351062564.066865 madvise(0xb68c5000, 8372224, MADV_DONTNEED) = 0
+2488  1351062564.067192 _exit(0)        = ?
+2487  1351062564.067572 <... futex resumed> ) = 1
+2487  1351062564.067778 write(4, "\x00\x00\x00\x00\xff\xff\xff\xff", 8 <unfinished ...>
+2490  1351062564.067975 <... epoll_wait resumed> {{EPOLLIN, {u32=3, u64=3}}}, 64, -1) = 1
+2490  1351062564.068157 read(3, "\x00\x00\x00\x00\xff\xff\xff\xff", 8) = 8
+2490  1351062564.068483 madvise(0xb58c3000, 8372224, MADV_DONTNEED) = 0
+2490  1351062564.068795 _exit(0)        = ?
+2487  1351062564.069041 <... write resumed> ) = 8
+2487  1351062564.069205 epoll_ctl(5, EPOLL_CTL_DEL, 3, {EPOLLIN, {u32=3, u64=3}}) = 0
+2487  1351062564.069527 close(5)        = 0
+2487  1351062564.069862 close(3)        = 0
+2487  1351062564.070251 close(4)        = 0
+2487  1351062564.070598 futex(0xb70cc04c, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0xb70cc048, {FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1} <unfinished ...>
+2489  1351062564.070768 <... futex resumed> ) = 0
+2489  1351062564.070923 futex(0xb70cc018, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+2487  1351062564.071070 <... futex resumed> ) = 1
+2487  1351062564.071232 futex(0xb70cc018, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2489  1351062564.071393 <... futex resumed> ) = 0
+2489  1351062564.071549 futex(0xb70cc018, FUTEX_WAKE_PRIVATE, 1) = 0
+2489  1351062564.071848 madvise(0xb60c4000, 8372224, MADV_DONTNEED) = 0
+2489  1351062564.072161 _exit(0)        = ?
+2487  1351062564.072406 <... futex resumed> ) = 1
+2487  1351062564.072593 brk(0xb7bc5000) = 0xb7bc5000
+2487  1351062564.073052 munmap(0xb70c6000, 266240) = 0
+2487  1351062564.073646 exit_group(0)   = ?

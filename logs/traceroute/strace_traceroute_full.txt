@@ -1,0 +1,696 @@
+9477  1350441069.850986 execve("/usr/sbin/traceroute", ["traceroute", "-I", "74.125.224.72"], ["SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "MAIL=/var/mail/root", "PATH=/usr/local/sbin:/usr/local/"..., "PWD=/home/bucknell/Jonathan/FINS"..., "ANDROID_SDK=/opt/android-sdk_r20"..., "LANG=en_US.UTF-8", "SHLVL=1", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "ANDROID_NDK=/opt/android-ndk-r8b", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace", "OLDPWD=/home/bucknell/Jonathan/F"...]) = 0
+9477  1350441069.854314 brk(0)          = 0x82a1000
+9477  1350441069.854880 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.855486 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78bd000
+9477  1350441069.856153 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.856670 open("/etc/ld.so.cache", O_RDONLY) = 3
+9477  1350441069.857080 fstat64(3, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/16-19:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+9477  1350441069.857965 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb78ad000
+9477  1350441069.858357 close(3)        = 0
+9477  1350441069.858953 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.859640 open("/lib/i386-linux-gnu/libm.so.6", O_RDONLY) = 3
+9477  1350441069.860102 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xb0\x34\x00\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441069.860541 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378198, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=296, st_size=149392, st_atime=2012/10/16-20:44:47, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+9477  1350441069.861088 mmap2(NULL, 151680, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7887000
+9477  1350441069.861421 mmap2(0xb78ab000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x23) = 0xb78ab000
+9477  1350441069.861784 close(3)        = 0
+9477  1350441069.862103 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.862481 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3
+9477  1350441069.862833 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441069.863220 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378196, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2864, st_size=1462852, st_atime=2012/10/16-19:18:03, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+9477  1350441069.863690 mmap2(NULL, 1473032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb771f000
+9477  1350441069.863978 mprotect(0xb7880000, 4096, PROT_NONE) = 0
+9477  1350441069.864290 mmap2(0xb7881000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x161) = 0xb7881000
+9477  1350441069.864613 mmap2(0xb7884000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7884000
+9477  1350441069.864945 close(3)        = 0
+9477  1350441069.873840 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb771e000
+9477  1350441069.874604 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb771d000
+9477  1350441069.875155 set_thread_area({entry_number:-1 -> 6, base_addr:0xb771eb40, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+9477  1350441069.875893 mprotect(0xb7881000, 8192, PROT_READ) = 0
+9477  1350441069.876618 mprotect(0xb78ab000, 4096, PROT_READ) = 0
+9477  1350441069.877537 mprotect(0x8052000, 4096, PROT_READ) = 0
+9477  1350441069.877912 mprotect(0xb78dc000, 4096, PROT_READ) = 0
+9477  1350441069.878279 munmap(0xb78ad000, 61759) = 0
+9477  1350441069.881444 times(NULL)     = 1719149259
+9477  1350441069.881849 getpid()        = 9477
+9477  1350441069.882574 brk(0)          = 0x82a1000
+9477  1350441069.882934 brk(0x82c2000)  = 0x82c2000
+9477  1350441069.883371 open("/usr/lib/locale/locale-archive", O_RDONLY|O_LARGEFILE) = 3
+9477  1350441069.889491 fstat64(3, {st_dev=makedev(8, 1), st_ino=2236270, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=16256, st_size=8322432, st_atime=2012/10/16-20:44:46, st_mtime=2011/09/12-19:58:37, st_ctime=2011/09/12-19:58:37}) = 0
+9477  1350441069.890283 mmap2(NULL, 2097152, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb751d000
+9477  1350441069.890700 mmap2(NULL, 4096, PROT_READ, MAP_PRIVATE, 3, 0x2a1) = 0xb78bc000
+9477  1350441069.891047 close(3)        = 0
+9477  1350441069.891662 socket(PF_NETLINK, SOCK_RAW, 0) = 3
+9477  1350441069.892045 bind(3, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+9477  1350441069.892431 getsockname(3, {sa_family=AF_NETLINK, pid=9477, groups=00000000}, [12]) = 0
+9477  1350441069.895670 time(NULL)      = 1350441069
+9477  1350441069.896343 sendto(3, "\x14\x00\x00\x00\x16\x00\x01\x03\x6d\x18\x7e\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+9477  1350441069.896780 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x6d\x18\x7e\x50\x05\x25\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 108
+9477  1350441069.897366 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x6d\x18\x7e\x50\x05\x25\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 128
+9477  1350441069.897906 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x6d\x18\x7e\x50\x05\x25\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+9477  1350441069.898410 close(3)        = 0
+9477  1350441069.904842 geteuid32()     = 0
+9477  1350441069.905353 fcntl64(0, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441069.905681 fcntl64(1, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441069.906021 fcntl64(2, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441069.906415 socket(PF_INET, SOCK_RAW, IPPROTO_ICMP) = 3
+9477  1350441069.906771 bind(3, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("0.0.0.0")}, 28) = 0
+9477  1350441069.907205 setsockopt(3, SOL_IP, IP_MTU_DISCOVER, [0], 4) = 0
+9477  1350441069.907600 setsockopt(3, SOL_SOCKET, SO_TIMESTAMP, [1], 4) = 0
+9477  1350441069.907980 setsockopt(3, SOL_IP, IP_RECVTTL, [1], 4) = 0
+9477  1350441069.908332 fcntl64(3, F_SETFL, O_RDONLY|O_NONBLOCK) = 0
+9477  1350441069.908636 connect(3, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, 28) = 0
+9477  1350441069.909005 setsockopt(3, SOL_IP, IP_RECVERR, [1], 4) = 0
+9477  1350441069.909968 fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/16-22:31:09, st_mtime=2012/10/16-22:31:09, st_ctime=2012/10/16-19:33:02}) = 0
+9477  1350441069.910442 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78bb000
+9477  1350441069.910766 write(1, "traceroute to 74.125.224.72 (74."..., 73) = 73
+9477  1350441069.911290 gettimeofday({1350441069, 911405}, NULL) = 0
+9477  1350441069.911665 setsockopt(3, SOL_IP, IP_TTL, [1], 4) = 0
+9477  1350441069.911976 gettimeofday({1350441069, 912085}, NULL) = 0
+9477  1350441069.912337 send(3, "\x08\x00\x5d\x74\x25\x05\x00\x01\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.912842 gettimeofday({1350441069, 912950}, NULL) = 0
+9477  1350441069.913193 send(3, "\x08\x00\x5d\x73\x25\x05\x00\x02\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.913824 gettimeofday({1350441069, 913934}, NULL) = 0
+9477  1350441069.914256 send(3, "\x08\x00\x5d\x72\x25\x05\x00\x03\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.914853 setsockopt(3, SOL_IP, IP_TTL, [2], 4) = 0
+9477  1350441069.916369 gettimeofday({1350441069, 916626}, NULL) = 0
+9477  1350441069.917018 send(3, "\x08\x00\x5d\x71\x25\x05\x00\x04\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.917823 gettimeofday({1350441069, 918001}, NULL) = 0
+9477  1350441069.918417 send(3, "\x08\x00\x5d\x70\x25\x05\x00\x05\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.919316 gettimeofday({1350441069, 919531}, NULL) = 0
+9477  1350441069.919960 send(3, "\x08\x00\x5d\x6f\x25\x05\x00\x06\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.920659 setsockopt(3, SOL_IP, IP_TTL, [3], 4) = 0
+9477  1350441069.920996 gettimeofday({1350441069, 921106}, NULL) = 0
+9477  1350441069.922452 send(3, "\x08\x00\x5d\x6e\x25\x05\x00\x07\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.922990 gettimeofday({1350441069, 923105}, NULL) = 0
+9477  1350441069.923351 send(3, "\x08\x00\x5d\x6d\x25\x05\x00\x08\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.923796 gettimeofday({1350441069, 923907}, NULL) = 0
+9477  1350441069.924164 send(3, "\x08\x00\x5d\x6c\x25\x05\x00\x09\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.924656 setsockopt(3, SOL_IP, IP_TTL, [4], 4) = 0
+9477  1350441069.924981 gettimeofday({1350441069, 925091}, NULL) = 0
+9477  1350441069.925477 send(3, "\x08\x00\x5d\x6b\x25\x05\x00\x0a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.925930 gettimeofday({1350441069, 926041}, NULL) = 0
+9477  1350441069.926295 send(3, "\x08\x00\x5d\x6a\x25\x05\x00\x0b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.926736 gettimeofday({1350441069, 926847}, NULL) = 0
+9477  1350441069.927137 send(3, "\x08\x00\x5d\x69\x25\x05\x00\x0c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.927703 setsockopt(3, SOL_IP, IP_TTL, [5], 4) = 0
+9477  1350441069.928019 gettimeofday({1350441069, 928128}, NULL) = 0
+9477  1350441069.928381 send(3, "\x08\x00\x5d\x68\x25\x05\x00\x0d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.928891 gettimeofday({1350441069, 929024}, NULL) = 0
+9477  1350441069.929275 send(3, "\x08\x00\x5d\x67\x25\x05\x00\x0e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.929879 gettimeofday({1350441069, 929989}, NULL) = 0
+9477  1350441069.930243 send(3, "\x08\x00\x5d\x66\x25\x05\x00\x0f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.930727 setsockopt(3, SOL_IP, IP_TTL, [6], 4) = 0
+9477  1350441069.931037 gettimeofday({1350441069, 931146}, NULL) = 0
+9477  1350441069.931398 send(3, "\x08\x00\x5d\x65\x25\x05\x00\x10\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441069.931880 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5019) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441069.932336 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x5d\x74\x25\x05\x00\x01\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 40
+
+recvmsg(
+	3,
+	 {
+		 msg_name(16)={
+		 	sa_family=AF_INET, 
+		 	sin_port=htons(0), 
+		 	sin_addr=inet_addr("74.125.224.72")
+		 }, 
+		 msg_iov(1)=[{
+		 	"\x08\x00\x5d\x74\x25\x05\x00\x01\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 
+		 	1280
+		 }],
+		 msg_controllen=80, 
+		 {
+		 	cmsg_len=20, 
+		 	cmsg_level=SOL_SOCKET, 
+		 	cmsg_type=0x1d /* SCM_??? */, 
+		 	...
+		 }, 
+		 msg_flags=MSG_ERRQUEUE
+	}, 
+	MSG_ERRQUEUE
+) = 40
+
+
+
+9477  1350441069.932979 gettimeofday({1350441069, 933090}, NULL) = 0
+9477  1350441069.933453 write(1, "\n", 1) = 1
+9477  1350441069.934011 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+9477  1350441069.934484 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+9477  1350441069.935094 close(4)        = 0
+9477  1350441069.935514 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+9477  1350441069.935866 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+9477  1350441069.936529 close(4)        = 0
+9477  1350441069.937035 open("/etc/nsswitch.conf", O_RDONLY) = 4
+9477  1350441069.937541 fstat64(4, {st_dev=makedev(8, 1), st_ino=131264, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=513, st_atime=2012/10/16-12:12:55, st_mtime=2011/04/25-19:04:59, st_ctime=2011/06/10-10:45:09}) = 0
+9477  1350441069.945980 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78ba000
+9477  1350441069.946687 read(4, "# /etc/nsswitch.conf\n#\n# Example"..., 4096) = 513
+9477  1350441069.947603 read(4, "", 4096) = 0
+9477  1350441069.948130 close(4)        = 0
+9477  1350441069.948793 munmap(0xb78ba000, 4096) = 0
+9477  1350441069.949567 open("/etc/ld.so.cache", O_RDONLY) = 4
+9477  1350441069.949976 fstat64(4, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/16-19:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+9477  1350441069.957514 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb750d000
+9477  1350441069.958085 close(4)        = 0
+9477  1350441069.958490 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.959276 open("/lib/i386-linux-gnu/libnss_files.so.2", O_RDONLY) = 4
+9477  1350441069.959901 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x1a\x00\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441069.960359 fstat64(4, {st_dev=makedev(8, 1), st_ino=2378180, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=88, st_size=42580, st_atime=2012/10/16-12:12:55, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+9477  1350441069.965477 mmap2(NULL, 45780, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb7501000
+9477  1350441069.966061 mmap2(0xb750b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x9) = 0xb750b000
+9477  1350441069.966471 close(4)        = 0
+9477  1350441069.966853 mprotect(0xb750b000, 4096, PROT_READ) = 0
+9477  1350441069.967219 munmap(0xb750d000, 61759) = 0
+9477  1350441069.967685 open("/etc/resolv.conf", O_RDONLY) = 4
+9477  1350441069.968063 fstat64(4, {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441069.968836 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78ba000
+9477  1350441069.974829 read(4, "# Generated by NetworkManager\nna"..., 4096) = 53
+9477  1350441069.975301 read(4, "", 4096) = 0
+9477  1350441069.975754 close(4)        = 0
+9477  1350441069.976053 munmap(0xb78ba000, 4096) = 0
+9477  1350441069.976378 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+9477  1350441069.977706 open("/etc/host.conf", O_RDONLY) = 4
+9477  1350441069.978081 fstat64(4, {st_dev=makedev(8, 1), st_ino=131227, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=92, st_atime=2012/10/16-12:13:00, st_mtime=2010/10/21-08:47:40, st_ctime=2011/06/10-10:45:09}) = 0
+9477  1350441069.978633 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78ba000
+9477  1350441069.979204 read(4, "# The \"order\" line is only used "..., 4096) = 92
+9477  1350441069.979798 read(4, "", 4096) = 0
+9477  1350441069.980093 close(4)        = 0
+9477  1350441069.984124 munmap(0xb78ba000, 4096) = 0
+9477  1350441069.984520 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441069.984872 fcntl64(4, F_GETFD) = 0x1 (flags FD_CLOEXEC)
+9477  1350441069.985162 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441069.985660 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78ba000
+9477  1350441069.985962 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441069.986539 read(4, "", 4096) = 0
+9477  1350441069.986828 close(4)        = 0
+9477  1350441069.987111 munmap(0xb78ba000, 4096) = 0
+9477  1350441069.987435 open("/etc/ld.so.cache", O_RDONLY) = 4
+9477  1350441069.987767 fstat64(4, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/16-19:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+9477  1350441069.988218 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb750d000
+9477  1350441069.988523 close(4)        = 0
+9477  1350441069.988839 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.989243 open("/lib/libnss_mdns4_minimal.so.2", O_RDONLY) = 4
+9477  1350441069.989609 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x00\x08\x00\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441069.989992 fstat64(4, {st_dev=makedev(8, 1), st_ino=2359364, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9580, st_atime=2012/10/16-12:13:22, st_mtime=2010/11/15-11:02:41, st_ctime=2011/06/10-10:45:10}) = 0
+9477  1350441069.990457 mmap2(NULL, 12388, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb78b7000
+9477  1350441069.990753 mmap2(0xb78b9000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x1) = 0xb78b9000
+9477  1350441069.991107 close(4)        = 0
+9477  1350441069.991418 mprotect(0xb78b9000, 4096, PROT_READ) = 0
+9477  1350441069.991751 munmap(0xb750d000, 61759) = 0
+9477  1350441069.992074 open("/etc/ld.so.cache", O_RDONLY) = 4
+9477  1350441069.992405 fstat64(4, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/16-19:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+9477  1350441069.992867 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb750d000
+9477  1350441069.993150 close(4)        = 0
+9477  1350441069.993486 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.993889 open("/lib/i386-linux-gnu/libnss_dns.so.2", O_RDONLY) = 4
+9477  1350441069.994292 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xb0\x0b\x00\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441069.994661 fstat64(4, {st_dev=makedev(8, 1), st_ino=2378199, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=48, st_size=22032, st_atime=2012/10/16-12:13:22, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+9477  1350441069.995136 mmap2(NULL, 20612, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb78b1000
+9477  1350441069.995433 mmap2(0xb78b5000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x4) = 0xb78b5000
+9477  1350441069.995795 close(4)        = 0
+9477  1350441069.996095 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441069.996438 open("/lib/i386-linux-gnu/libresolv.so.2", O_RDONLY) = 4
+9477  1350441069.996800 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x30\x26\x00\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441069.997167 fstat64(4, {st_dev=makedev(8, 1), st_ino=2378195, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=144, st_size=71432, st_atime=2012/10/16-12:13:00, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+9477  1350441069.997665 mmap2(NULL, 84040, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb74ec000
+9477  1350441069.997955 mmap2(0xb74fd000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x10) = 0xb74fd000
+9477  1350441069.998304 mmap2(0xb74ff000, 6216, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb74ff000
+9477  1350441069.999246 close(4)        = 0
+9477  1350441069.999647 mprotect(0xb74fd000, 4096, PROT_READ) = 0
+9477  1350441070.000186 mprotect(0xb78b5000, 4096, PROT_READ) = 0
+9477  1350441070.000622 munmap(0xb750d000, 61759) = 0
+9477  1350441070.001009 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441070.001706 open("/etc/resolv.conf", O_RDONLY) = 4
+9477  1350441070.002058 fstat64(4, {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441070.002514 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb78b0000
+9477  1350441070.002809 read(4, "# Generated by NetworkManager\nna"..., 4096) = 53
+9477  1350441070.003244 read(4, "", 4096) = 0
+9477  1350441070.003536 close(4)        = 0
+9477  1350441070.003828 munmap(0xb78b0000, 4096) = 0
+9477  1350441070.004136 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+9477  1350441070.005173 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441070.005535 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441070.005861 gettimeofday({1350441070, 5969}, NULL) = 0
+9477  1350441070.006167 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441070.006534 send(4, "\x21\x3f\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x01\x31\x01\x31\x03\x31\x36\x38\x03\x31\x39\x32\x07\x69\x6e\x2d\x61\x64\x64\x72"..., 42, MSG_NOSIGNAL) = 42
+9477  1350441070.006974 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441070.040681 ioctl(4, FIONREAD, [42]) = 0
+9477  1350441070.041178 recvfrom(4, "\x21\x3f\x81\x83\x00\x01\x00\x00\x00\x00\x00\x00\x01\x31\x01\x31\x03\x31\x36\x38\x03\x31\x39\x32\x07\x69\x6e\x2d\x61\x64\x64\x72"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 42
+9477  1350441070.042017 close(4)        = 0
+9477  1350441070.042378 open("/etc/ld.so.cache", O_RDONLY) = 4
+9477  1350441070.042823 fstat64(4, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/16-19:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+9477  1350441070.043330 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb750d000
+9477  1350441070.043661 close(4)        = 0
+9477  1350441070.044026 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9477  1350441070.044542 open("/lib/libnss_mdns4.so.2", O_RDONLY) = 4
+9477  1350441070.044938 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x70\x08\x00\x00\x34\x00\x00\x00"..., 512) = 512
+9477  1350441070.045354 fstat64(4, {st_dev=makedev(8, 1), st_ino=2359363, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9584, st_atime=2012/10/16-22:27:13, st_mtime=2010/11/15-11:02:41, st_ctime=2011/06/10-10:45:10}) = 0
+9477  1350441070.045831 mmap2(NULL, 12400, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb78ad000
+9477  1350441070.046125 mmap2(0xb78af000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x1) = 0xb78af000
+9477  1350441070.046488 close(4)        = 0
+9477  1350441070.046799 mprotect(0xb78af000, 4096, PROT_READ) = 0
+9477  1350441070.047132 munmap(0xb750d000, 61759) = 0
+9477  1350441070.047521 socket(PF_FILE, SOCK_STREAM, 0) = 4
+9477  1350441070.047818 fcntl64(4, F_GETFD) = 0
+9477  1350441070.048108 fcntl64(4, F_SETFD, FD_CLOEXEC) = 0
+9477  1350441070.048557 connect(4, {sa_family=AF_FILE, path="/var/run/avahi-daemon/socket"}, 110) = 0
+9477  1350441070.049222 fcntl64(4, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441070.049521 fstat64(4, {st_dev=makedev(0, 7), st_ino=20870, st_mode=S_IFSOCK|0777, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=0, st_size=0, st_atime=0, st_mtime=0, st_ctime=0}) = 0
+9477  1350441070.049966 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441070.050272 _llseek(4, 0, 0xbfc49b80, SEEK_CUR) = -1 ESPIPE (Illegal seek)
+9477  1350441070.050621 write(4, "RESOLVE-ADDRESS 192.168.1.1\n", 28) = 28
+9477  1350441070.051152 read(4, "-15 Timeout reached\n", 4096) = 20
+9477  1350441075.053824 close(4)        = 0
+9477  1350441075.054207 munmap(0xb751c000, 4096) = 0
+9477  1350441075.054722 write(1, " 1  192.168.1.1 (192.168.1.1)  1"..., 39) = 39
+9477  1350441075.055302 gettimeofday({1350441075, 55453}, NULL) = 0
+9477  1350441075.055701 send(3, "\x08\x00\x5d\x64\x25\x05\x00\x11\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.056178 poll([{fd=3, events=POLLIN|POLLERR}], 1, 10122) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.056568 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x5d\x73\x25\x05\x00\x02\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 40
+9477  1350441075.057225 gettimeofday({1350441075, 57339}, NULL) = 0
+9477  1350441075.057617 write(1, "  1.066 ms", 10) = 10
+9477  1350441075.058104 write(1, " *", 2) = 2
+9477  1350441075.058802 write(1, "\n", 1) = 1
+9477  1350441075.059363 write(1, " 2  *", 5) = 5
+9477  1350441075.059838 write(1, " *", 2) = 2
+9477  1350441075.060302 write(1, " *", 2) = 2
+9477  1350441075.060787 write(1, "\n", 1) = 1
+9477  1350441075.061364 write(1, " 3  *", 5) = 5
+9477  1350441075.061820 write(1, " *", 2) = 2
+9477  1350441075.062282 write(1, " *", 2) = 2
+9477  1350441075.062763 write(1, "\n", 1) = 1
+9477  1350441075.063436 write(1, " 4  *", 5) = 5
+9477  1350441075.064112 write(1, " *", 2) = 2
+9477  1350441075.064668 write(1, " *", 2) = 2
+9477  1350441075.065131 write(1, "\n", 1) = 1
+9477  1350441075.066304 write(1, " 5  *", 5) = 5
+9477  1350441075.066776 write(1, " *", 2) = 2
+9477  1350441075.067230 write(1, " *", 2) = 2
+9477  1350441075.067772 write(1, "\n", 1) = 1
+9477  1350441075.068211 write(1, " 6  *", 5) = 5
+9477  1350441075.068652 gettimeofday({1350441075, 68761}, NULL) = 0
+9477  1350441075.069006 send(3, "\x08\x00\x5d\x63\x25\x05\x00\x12\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.069521 setsockopt(3, SOL_IP, IP_TTL, [7], 4) = 0
+9477  1350441075.069837 gettimeofday({1350441075, 69946}, NULL) = 0
+9477  1350441075.070208 send(3, "\x08\x00\x5d\x62\x25\x05\x00\x13\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.070659 gettimeofday({1350441075, 70817}, NULL) = 0
+9477  1350441075.071108 send(3, "\x08\x00\x5d\x61\x25\x05\x00\x14\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.071597 gettimeofday({1350441075, 71728}, NULL) = 0
+9477  1350441075.072006 send(3, "\x08\x00\x5d\x60\x25\x05\x00\x15\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.072515 setsockopt(3, SOL_IP, IP_TTL, [8], 4) = 0
+9477  1350441075.072875 gettimeofday({1350441075, 73002}, NULL) = 0
+9477  1350441075.073269 send(3, "\x08\x00\x5d\x5f\x25\x05\x00\x16\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.074095 gettimeofday({1350441075, 74228}, NULL) = 0
+9477  1350441075.074491 send(3, "\x08\x00\x5d\x5e\x25\x05\x00\x17\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.075050 gettimeofday({1350441075, 75181}, NULL) = 0
+9477  1350441075.075432 send(3, "\x08\x00\x5d\x5d\x25\x05\x00\x18\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.075909 setsockopt(3, SOL_IP, IP_TTL, [9], 4) = 0
+9477  1350441075.076221 gettimeofday({1350441075, 76331}, NULL) = 0
+9477  1350441075.076586 send(3, "\x08\x00\x5d\x5c\x25\x05\x00\x19\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.077031 gettimeofday({1350441075, 77142}, NULL) = 0
+9477  1350441075.077475 send(3, "\x08\x00\x5d\x5b\x25\x05\x00\x1a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.077941 gettimeofday({1350441075, 78120}, NULL) = 0
+9477  1350441075.078425 send(3, "\x08\x00\x5d\x5a\x25\x05\x00\x1b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.079103 setsockopt(3, SOL_IP, IP_TTL, [10], 4) = 0
+9477  1350441075.079541 gettimeofday({1350441075, 79745}, NULL) = 0
+9477  1350441075.080081 send(3, "\x08\x00\x5d\x59\x25\x05\x00\x1c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.080637 gettimeofday({1350441075, 80770}, NULL) = 0
+9477  1350441075.081037 send(3, "\x08\x00\x5d\x58\x25\x05\x00\x1d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.089455 gettimeofday({1350441075, 89837}, NULL) = 0
+9477  1350441075.090308 send(3, "\x08\x00\x5d\x57\x25\x05\x00\x1e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.091063 setsockopt(3, SOL_IP, IP_TTL, [11], 4) = 0
+9477  1350441075.091421 gettimeofday({1350441075, 91568}, NULL) = 0
+9477  1350441075.091832 send(3, "\x08\x00\x5d\x56\x25\x05\x00\x1f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.092361 gettimeofday({1350441075, 92499}, NULL) = 0
+9477  1350441075.092762 send(3, "\x08\x00\x5d\x55\x25\x05\x00\x20\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.097978 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5035) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.098610 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x5d\x72\x25\x05\x00\x03\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 40
+9477  1350441075.099458 gettimeofday({1350441075, 99605}, NULL) = 0
+9477  1350441075.099845 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4992) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.100290 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x31\x25\x05\x00\x04\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.105491 gettimeofday({1350441075, 105819}, NULL) = 0
+9477  1350441075.106076 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4986) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.107291 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\xb8\x25\x05\x00\x07\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.108339 gettimeofday({1350441075, 108473}, NULL) = 0
+9477  1350441075.108807 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4984) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.109342 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x20\x25\x05\x00\x05\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.112469 gettimeofday({1350441075, 112624}, NULL) = 0
+9477  1350441075.112850 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4979) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.113239 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\xb7\x25\x05\x00\x08\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.113843 gettimeofday({1350441075, 113953}, NULL) = 0
+9477  1350441075.114178 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4978) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.114556 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\xaf\x25\x05\x00\x09\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.122346 gettimeofday({1350441075, 122500}, NULL) = 0
+9477  1350441075.122758 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4969) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.124123 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf3\x25\x05\x00\x0a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.127037 gettimeofday({1350441075, 127355}, NULL) = 0
+9477  1350441075.127749 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4965) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.128190 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf2\x25\x05\x00\x0b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.128970 gettimeofday({1350441075, 129113}, NULL) = 0
+9477  1350441075.129341 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4963) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.129770 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf1\x25\x05\x00\x0c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.130606 gettimeofday({1350441075, 130737}, NULL) = 0
+9477  1350441075.130979 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4961) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.131407 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x85\x60\x25\x05\x00\x06\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.132048 gettimeofday({1350441075, 132178}, NULL) = 0
+9477  1350441075.132445 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4960) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.132891 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xef\x25\x05\x00\x0e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.133657 gettimeofday({1350441075, 134070}, NULL) = 0
+9477  1350441075.134471 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4958) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.135050 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf0\x25\x05\x00\x0d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.136131 gettimeofday({1350441075, 136275}, NULL) = 0
+9477  1350441075.136534 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4956) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.136965 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xee\x25\x05\x00\x0f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.137707 gettimeofday({1350441075, 137845}, NULL) = 0
+9477  1350441075.138083 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4954) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.138601 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xed\x25\x05\x00\x10\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.139317 gettimeofday({1350441075, 139453}, NULL) = 0
+9477  1350441075.139691 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4953) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.140179 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x70\x25\x05\x00\x11\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.140853 gettimeofday({1350441075, 140995}, NULL) = 0
+9477  1350441075.141238 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441075.141619 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441075.142119 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441075.142416 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441075.142852 read(4, "", 4096) = 0
+9477  1350441075.143264 close(4)        = 0
+9477  1350441075.143614 munmap(0xb751c000, 4096) = 0
+9477  1350441075.143982 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441075.144506 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441075.144822 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441075.145143 gettimeofday({1350441075, 145253}, NULL) = 0
+9477  1350441075.145489 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441075.145953 send(4, "\x1e\xa0\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x32\x31\x02\x38\x39\x02\x38\x36\x02\x36\x38\x07\x69\x6e\x2d\x61\x64\x64\x72"..., 42, MSG_NOSIGNAL) = 42
+9477  1350441075.146381 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441075.191347 ioctl(4, FIONREAD, [104]) = 0
+9477  1350441075.191836 recvfrom(4, "\x1e\xa0\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x02\x32\x31\x02\x38\x39\x02\x38\x36\x02\x36\x38\x07\x69\x6e\x2d\x61\x64\x64\x72"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 104
+9477  1350441075.192520 close(4)        = 0
+9477  1350441075.192934 write(1, " pos-3-8-0-0-cr01.56marietta.ga."..., 74) = 74
+9477  1350441075.193526 gettimeofday({1350441075, 193655}, NULL) = 0
+9477  1350441075.193921 send(3, "\x08\x00\x5d\x54\x25\x05\x00\x21\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.194426 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5052) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.194858 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x2b\x25\x05\x00\x12\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.195527 gettimeofday({1350441075, 195657}, NULL) = 0
+9477  1350441075.195898 write(1, "  38.312 ms", 11) = 11
+9477  1350441075.196466 setsockopt(3, SOL_IP, IP_TTL, [12], 4) = 0
+9477  1350441075.196861 gettimeofday({1350441075, 197002}, NULL) = 0
+9477  1350441075.197505 send(3, "\x08\x00\x5d\x53\x25\x05\x00\x22\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.197953 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5001) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.198372 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\x9a\x25\x05\x00\x13\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.199112 gettimeofday({1350441075, 199222}, NULL) = 0
+9477  1350441075.199442 write(1, "\n", 1) = 1
+9477  1350441075.199868 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441075.200189 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441075.200651 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441075.200983 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441075.201460 read(4, "", 4096) = 0
+9477  1350441075.201762 close(4)        = 0
+9477  1350441075.202047 munmap(0xb751c000, 4096) = 0
+9477  1350441075.202363 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441075.202886 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441075.203200 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441075.203522 gettimeofday({1350441075, 203632}, NULL) = 0
+9477  1350441075.204635 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441075.205080 send(4, "\x81\xb1\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x31\x38\x36\x02\x38\x38\x02\x38\x36\x02\x36\x38\x07\x69\x6e\x2d\x61\x64\x64"..., 43, MSG_NOSIGNAL) = 43
+9477  1350441075.205597 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441075.239801 ioctl(4, FIONREAD, [106]) = 0
+9477  1350441075.240255 recvfrom(4, "\x81\xb1\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x03\x31\x38\x36\x02\x38\x38\x02\x38\x36\x02\x36\x38\x07\x69\x6e\x2d\x61\x64\x64"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 106
+9477  1350441075.240948 close(4)        = 0
+9477  1350441075.241407 write(1, " 7  pos-0-11-0-0-pe01.56marietta"..., 79) = 79
+9477  1350441075.241878 gettimeofday({1350441075, 242013}, NULL) = 0
+9477  1350441075.242283 send(3, "\x08\x00\x5d\x52\x25\x05\x00\x23\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.245487 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5042) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.245930 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\x93\x25\x05\x00\x14\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.246712 gettimeofday({1350441075, 246843}, NULL) = 0
+9477  1350441075.250522 write(1, "  36.878 ms", 11) = 11
+9477  1350441075.251348 gettimeofday({1350441075, 251497}, NULL) = 0
+9477  1350441075.251780 send(3, "\x08\x00\x5d\x51\x25\x05\x00\x24\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.252689 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5004) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.253537 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\x87\x25\x05\x00\x15\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.254756 gettimeofday({1350441075, 254928}, NULL) = 0
+9477  1350441075.255511 write(1, "  36.312 ms", 11) = 11
+9477  1350441075.256244 setsockopt(3, SOL_IP, IP_TTL, [13], 4) = 0
+9477  1350441075.256597 gettimeofday({1350441075, 256730}, NULL) = 0
+9477  1350441075.257013 send(3, "\x08\x00\x5d\x50\x25\x05\x00\x25\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.257675 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5001) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.258095 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf0\x25\x05\x00\x19\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.258804 gettimeofday({1350441075, 258945}, NULL) = 0
+9477  1350441075.259373 gettimeofday({1350441075, 259506}, NULL) = 0
+9477  1350441075.259774 send(3, "\x08\x00\x5d\x4f\x25\x05\x00\x26\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.260337 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.260882 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xef\x25\x05\x00\x1a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.261640 gettimeofday({1350441075, 261770}, NULL) = 0
+9477  1350441075.262009 gettimeofday({1350441075, 262139}, NULL) = 0
+9477  1350441075.262402 send(3, "\x08\x00\x5d\x4e\x25\x05\x00\x27\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.262887 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.263315 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xee\x25\x05\x00\x1b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.263943 gettimeofday({1350441075, 264101}, NULL) = 0
+9477  1350441075.264352 setsockopt(3, SOL_IP, IP_TTL, [14], 4) = 0
+9477  1350441075.264662 gettimeofday({1350441075, 264772}, NULL) = 0
+9477  1350441075.265021 send(3, "\x08\x00\x5d\x4d\x25\x05\x00\x28\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.265615 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.265992 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xed\x25\x05\x00\x1c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441075.266696 gettimeofday({1350441075, 266807}, NULL) = 0
+9477  1350441075.267032 gettimeofday({1350441075, 267244}, NULL) = 0
+9477  1350441075.267494 send(3, "\x08\x00\x5d\x4c\x25\x05\x00\x29\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.267943 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.268411 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xeb\x25\x05\x00\x1d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441075.269139 gettimeofday({1350441075, 269271}, NULL) = 0
+9477  1350441075.269502 gettimeofday({1350441075, 269609}, NULL) = 0
+9477  1350441075.269851 send(3, "\x08\x00\x5d\x4b\x25\x05\x00\x2a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.270306 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.270683 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xea\x25\x05\x00\x1e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441075.271305 gettimeofday({1350441075, 271414}, NULL) = 0
+9477  1350441075.271669 setsockopt(3, SOL_IP, IP_TTL, [15], 4) = 0
+9477  1350441075.271982 gettimeofday({1350441075, 272090}, NULL) = 0
+9477  1350441075.272332 send(3, "\x08\x00\x5d\x4a\x25\x05\x00\x2b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441075.272764 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLERR}])
+9477  1350441075.273142 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf3\x25\x05\x00\x16\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441075.274003 gettimeofday({1350441075, 274113}, NULL) = 0
+9477  1350441075.274330 write(1, "\n", 1) = 1
+9477  1350441075.274784 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441075.275110 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441075.275565 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441075.281953 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441075.282628 read(4, "", 4096) = 0
+9477  1350441075.283327 close(4)        = 0
+9477  1350441075.289990 munmap(0xb751c000, 4096) = 0
+9477  1350441075.290323 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441075.290855 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441075.291190 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441075.291538 gettimeofday({1350441075, 291912}, NULL) = 0
+9477  1350441075.292323 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441075.292987 send(4, "\x3a\x2f\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x38\x36\x03\x32\x33\x31\x03\x31\x34\x39\x02\x37\x35\x07\x69\x6e\x2d\x61\x64"..., 44, MSG_NOSIGNAL) = 44
+9477  1350441075.293818 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441075.335514 ioctl(4, FIONREAD, [136]) = 0
+9477  1350441075.335930 recvfrom(4, "\x3a\x2f\x81\x83\x00\x01\x00\x00\x00\x01\x00\x00\x02\x38\x36\x03\x32\x33\x31\x03\x31\x34\x39\x02\x37\x35\x07\x69\x6e\x2d\x61\x64"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 136
+9477  1350441075.336708 close(4)        = 0
+9477  1350441075.337086 socket(PF_FILE, SOCK_STREAM, 0) = 4
+9477  1350441075.337486 fcntl64(4, F_GETFD) = 0
+9477  1350441075.337859 fcntl64(4, F_SETFD, FD_CLOEXEC) = 0
+9477  1350441075.338246 connect(4, {sa_family=AF_FILE, path="/var/run/avahi-daemon/socket"}, 110) = 0
+9477  1350441075.339017 fcntl64(4, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441075.339355 fstat64(4, {st_dev=makedev(0, 7), st_ino=20915, st_mode=S_IFSOCK|0777, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=0, st_size=0, st_atime=0, st_mtime=0, st_ctime=0}) = 0
+9477  1350441075.339886 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441075.340333 _llseek(4, 0, 0xbfc49b80, SEEK_CUR) = -1 ESPIPE (Illegal seek)
+9477  1350441075.340662 write(4, "RESOLVE-ADDRESS 75.149.231.86\n", 30) = 30
+9477  1350441075.341182 read(4, "-15 Timeout reached\n", 4096) = 20
+9477  1350441080.341961 close(4)        = 0
+9477  1350441080.342333 munmap(0xb751c000, 4096) = 0
+9477  1350441080.342732 write(1, " 8  75.149.231.86 (75.149.231.86"..., 44) = 44
+9477  1350441080.343288 gettimeofday({1350441080, 343422}, NULL) = 0
+9477  1350441080.343687 send(3, "\x08\x00\x5d\x49\x25\x05\x00\x2c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441080.344365 poll([{fd=3, events=POLLIN|POLLERR}], 1, 10069) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441080.344785 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf2\x25\x05\x00\x17\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441080.345484 gettimeofday({1350441080, 345627}, NULL) = 0
+9477  1350441080.345880 write(1, "  71.555 ms", 11) = 11
+9477  1350441080.346343 write(1, " *", 2) = 2
+9477  1350441080.346765 write(1, "\n", 1) = 1
+9477  1350441080.347182 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441080.347503 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441080.348048 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441080.348401 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441080.348828 read(4, "", 4096) = 0
+9477  1350441080.349136 close(4)        = 0
+9477  1350441080.349479 munmap(0xb751c000, 4096) = 0
+9477  1350441080.349849 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441080.350431 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441080.350785 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441080.351144 gettimeofday({1350441080, 351253}, NULL) = 0
+9477  1350441080.351447 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441080.351866 send(4, "\x4f\x82\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x01\x32\x03\x31\x37\x34\x03\x32\x33\x33\x02\x36\x34\x07\x69\x6e\x2d\x61\x64\x64"..., 43, MSG_NOSIGNAL) = 43
+9477  1350441080.352339 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441080.395577 ioctl(4, FIONREAD, [103]) = 0
+9477  1350441080.395996 recvfrom(4, "\x4f\x82\x81\x83\x00\x01\x00\x00\x00\x01\x00\x00\x01\x32\x03\x31\x37\x34\x03\x32\x33\x33\x02\x36\x34\x07\x69\x6e\x2d\x61\x64\x64"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 103
+9477  1350441080.396865 close(4)        = 0
+9477  1350441080.397261 socket(PF_FILE, SOCK_STREAM, 0) = 4
+9477  1350441080.397642 fcntl64(4, F_GETFD) = 0
+9477  1350441080.397927 fcntl64(4, F_SETFD, FD_CLOEXEC) = 0
+9477  1350441080.398318 connect(4, {sa_family=AF_FILE, path="/var/run/avahi-daemon/socket"}, 110) = 0
+9477  1350441080.399606 fcntl64(4, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441080.399960 fstat64(4, {st_dev=makedev(0, 7), st_ino=20919, st_mode=S_IFSOCK|0777, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=0, st_size=0, st_atime=0, st_mtime=0, st_ctime=0}) = 0
+9477  1350441080.400780 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441080.403093 _llseek(4, 0, 0xbfc49b80, SEEK_CUR) = -1 ESPIPE (Illegal seek)
+9477  1350441080.403749 write(4, "RESOLVE-ADDRESS 64.233.174.2\n", 29) = 29
+9477  1350441080.404423 read(4, "-15 Timeout reached\n", 4096) = 20
+9477  1350441085.406580 close(4)        = 0
+9477  1350441085.406948 munmap(0xb751c000, 4096) = 0
+9477  1350441085.407522 write(1, " 9  64.233.174.2 (64.233.174.2) "..., 42) = 42
+9477  1350441085.408110 write(1, "  38.815 ms", 11) = 11
+9477  1350441085.408691 write(1, "  37.844 ms", 11) = 11
+9477  1350441085.409198 write(1, "\n", 1) = 1
+9477  1350441085.409689 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441085.410023 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441085.410507 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441085.410796 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441085.411359 read(4, "", 4096) = 0
+9477  1350441085.411657 close(4)        = 0
+9477  1350441085.411950 munmap(0xb751c000, 4096) = 0
+9477  1350441085.412267 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441085.412850 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441085.413213 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441085.413613 gettimeofday({1350441085, 413756}, NULL) = 0
+9477  1350441085.413971 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441085.414510 send(4, "\x15\xee\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x32\x32\x02\x39\x34\x03\x32\x34\x39\x02\x36\x36\x07\x69\x6e\x2d\x61\x64\x64"..., 43, MSG_NOSIGNAL) = 43
+9477  1350441085.415012 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441085.470172 ioctl(4, FIONREAD, [103]) = 0
+9477  1350441085.470886 recvfrom(4, "\x15\xee\x81\x83\x00\x01\x00\x00\x00\x01\x00\x00\x02\x32\x32\x02\x39\x34\x03\x32\x34\x39\x02\x36\x36\x07\x69\x6e\x2d\x61\x64\x64"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 103
+9477  1350441085.472187 close(4)        = 0
+9477  1350441085.472643 socket(PF_FILE, SOCK_STREAM, 0) = 4
+9477  1350441085.472983 fcntl64(4, F_GETFD) = 0
+9477  1350441085.473366 fcntl64(4, F_SETFD, FD_CLOEXEC) = 0
+9477  1350441085.473796 connect(4, {sa_family=AF_FILE, path="/var/run/avahi-daemon/socket"}, 110) = 0
+9477  1350441085.474534 fcntl64(4, F_GETFL) = 0x2 (flags O_RDWR)
+9477  1350441085.474954 fstat64(4, {st_dev=makedev(0, 7), st_ino=20922, st_mode=S_IFSOCK|0777, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=0, st_size=0, st_atime=0, st_mtime=0, st_ctime=0}) = 0
+9477  1350441085.475470 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441085.475800 _llseek(4, 0, 0xbfc49b80, SEEK_CUR) = -1 ESPIPE (Illegal seek)
+9477  1350441085.476133 write(4, "RESOLVE-ADDRESS 66.249.94.22\n", 29) = 29
+9477  1350441085.476698 read(4, "-15 Timeout reached\n", 4096) = 20
+9477  1350441090.478413 close(4)        = 0
+9477  1350441090.478814 munmap(0xb751c000, 4096) = 0
+9477  1350441090.479352 write(1, "10  66.249.94.22 (66.249.94.22) "..., 42) = 42
+9477  1350441090.479923 write(1, "  35.803 ms", 11) = 11
+9477  1350441090.480415 write(1, "  34.134 ms", 11) = 11
+9477  1350441090.480888 write(1, "\n", 1) = 1
+9477  1350441090.481444 write(1, "11  *", 5) = 5
+9477  1350441090.481868 write(1, " *", 2) = 2
+9477  1350441090.482293 write(1, " *", 2) = 2
+9477  1350441090.482736 write(1, "\n", 1) = 1
+9477  1350441090.483208 write(1, "12  *", 5) = 5
+9477  1350441090.483723 write(1, " *", 2) = 2
+9477  1350441090.484237 write(1, " *", 2) = 2
+9477  1350441090.484652 write(1, "\n", 1) = 1
+9477  1350441090.485063 write(1, "13  *", 5) = 5
+9477  1350441090.485608 write(1, " *", 2) = 2
+9477  1350441090.486021 write(1, " *", 2) = 2
+9477  1350441090.486442 write(1, "\n", 1) = 1
+9477  1350441090.487042 write(1, "14  *", 5) = 5
+9477  1350441090.487471 write(1, " *", 2) = 2
+9477  1350441090.487919 write(1, " *", 2) = 2
+9477  1350441090.488338 write(1, "\n", 1) = 1
+9477  1350441090.488828 write(1, "15  *", 5) = 5
+9477  1350441090.489274 gettimeofday({1350441090, 489350}, NULL) = 0
+9477  1350441090.489605 send(3, "\x08\x00\x5d\x48\x25\x05\x00\x2d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.491647 setsockopt(3, SOL_IP, IP_TTL, [16], 4) = 0
+9477  1350441090.492300 gettimeofday({1350441090, 492412}, NULL) = 0
+9477  1350441090.492722 send(3, "\x08\x00\x5d\x47\x25\x05\x00\x2e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.493550 gettimeofday({1350441090, 493724}, NULL) = 0
+9477  1350441090.494019 send(3, "\x08\x00\x5d\x46\x25\x05\x00\x2f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.494620 gettimeofday({1350441090, 494760}, NULL) = 0
+9477  1350441090.495029 send(3, "\x08\x00\x5d\x45\x25\x05\x00\x30\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.495577 setsockopt(3, SOL_IP, IP_TTL, [17], 4) = 0
+9477  1350441090.495896 gettimeofday({1350441090, 496022}, NULL) = 0
+9477  1350441090.496301 send(3, "\x08\x00\x5d\x44\x25\x05\x00\x31\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.496817 gettimeofday({1350441090, 496953}, NULL) = 0
+9477  1350441090.497225 send(3, "\x08\x00\x5d\x43\x25\x05\x00\x32\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.497958 gettimeofday({1350441090, 498093}, NULL) = 0
+9477  1350441090.498435 send(3, "\x08\x00\x5d\x42\x25\x05\x00\x33\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.499089 setsockopt(3, SOL_IP, IP_TTL, [18], 4) = 0
+9477  1350441090.499445 gettimeofday({1350441090, 499556}, NULL) = 0
+9477  1350441090.499802 send(3, "\x08\x00\x5d\x41\x25\x05\x00\x34\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.500291 gettimeofday({1350441090, 500546}, NULL) = 0
+9477  1350441090.500901 send(3, "\x08\x00\x5d\x40\x25\x05\x00\x35\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.501559 gettimeofday({1350441090, 501677}, NULL) = 0
+9477  1350441090.501930 send(3, "\x08\x00\x5d\x3f\x25\x05\x00\x36\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.502415 setsockopt(3, SOL_IP, IP_TTL, [19], 4) = 0
+9477  1350441090.502728 gettimeofday({1350441090, 502861}, NULL) = 0
+9477  1350441090.503288 send(3, "\x08\x00\x5d\x3e\x25\x05\x00\x37\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.503901 gettimeofday({1350441090, 504111}, NULL) = 0
+9477  1350441090.504393 send(3, "\x08\x00\x5d\x3d\x25\x05\x00\x38\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.504917 gettimeofday({1350441090, 505050}, NULL) = 0
+9477  1350441090.505480 send(3, "\x08\x00\x5d\x3c\x25\x05\x00\x39\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.513587 setsockopt(3, SOL_IP, IP_TTL, [20], 4) = 0
+9477  1350441090.514309 gettimeofday({1350441090, 514460}, NULL) = 0
+9477  1350441090.514724 send(3, "\x08\x00\x5d\x3b\x25\x05\x00\x3a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.515254 gettimeofday({1350441090, 515575}, NULL) = 0
+9477  1350441090.515853 send(3, "\x08\x00\x5d\x3a\x25\x05\x00\x3b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.516351 poll([{fd=3, events=POLLIN|POLLERR}], 1, 15169) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.516810 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf1\x25\x05\x00\x18\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.521857 gettimeofday({1350441090, 522000}, NULL) = 0
+9477  1350441090.522260 write(1, " *", 2) = 2
+9477  1350441090.522806 gettimeofday({1350441090, 523120}, NULL) = 0
+9477  1350441090.523573 send(3, "\x08\x00\x5d\x39\x25\x05\x00\x3c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+9477  1350441090.524086 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5001) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.524715 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x70\x25\x05\x00\x1f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441090.529452 gettimeofday({1350441090, 529611}, NULL) = 0
+9477  1350441090.529856 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4993) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.530286 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xe9\x25\x05\x00\x20\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441090.530993 gettimeofday({1350441090, 531131}, NULL) = 0
+9477  1350441090.531387 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4991) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.531826 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x70\x25\x05\x00\x21\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441090.532489 gettimeofday({1350441090, 537039}, NULL) = 0
+9477  1350441090.537316 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4986) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.537710 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x86\x2b\x25\x05\x00\x22\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441090.538349 gettimeofday({1350441090, 538461}, NULL) = 0
+9477  1350441090.538769 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4984) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.539244 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\x9a\x25\x05\x00\x23\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441090.539892 gettimeofday({1350441090, 540023}, NULL) = 0
+9477  1350441090.540271 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4983) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.540891 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\x93\x25\x05\x00\x24\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 120
+9477  1350441090.541550 gettimeofday({1350441090, 541679}, NULL) = 0
+9477  1350441090.546292 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4981) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.547201 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x84\x87\x25\x05\x00\x25\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.547944 gettimeofday({1350441090, 548083}, NULL) = 0
+9477  1350441090.548333 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4975) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.548977 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf2\x25\x05\x00\x27\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.549627 gettimeofday({1350441090, 549766}, NULL) = 0
+9477  1350441090.553551 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4973) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.554351 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf3\x25\x05\x00\x26\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.555242 gettimeofday({1350441090, 555588}, NULL) = 0
+9477  1350441090.555870 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4967) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.556305 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf1\x25\x05\x00\x28\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.557081 gettimeofday({1350441090, 557589}, NULL) = 0
+9477  1350441090.557875 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4965) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.558680 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xf0\x25\x05\x00\x29\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.559569 gettimeofday({1350441090, 559774}, NULL) = 0
+9477  1350441090.560029 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4963) = 1 ([{fd=3, revents=POLLIN|POLLERR}])
+9477  1350441090.560468 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x08\x00\x7f\xef\x25\x05\x00\x2a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 1280}], msg_controllen=80, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=MSG_ERRQUEUE}, MSG_ERRQUEUE) = 8
+9477  1350441090.561100 gettimeofday({1350441090, 561241}, NULL) = 0
+9477  1350441090.561471 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4961) = 1 ([{fd=3, revents=POLLIN}])
+9477  1350441090.561852 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x20\x00\x3c\x1f\x52\x00\x00\x33\x01\x7b\xda\x4a\x7d\xe0\x48\xc0\xa8\x01\x07\x00\x00\x65\x4a\x25\x05\x00\x2b\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+9477  1350441090.562386 gettimeofday({1350441090, 562505}, NULL) = 0
+9477  1350441090.562724 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4960) = 1 ([{fd=3, revents=POLLIN}])
+9477  1350441090.563095 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x20\x00\x3c\x1f\x52\x00\x00\x33\x01\x7b\xda\x4a\x7d\xe0\x48\xc0\xa8\x01\x07\x00\x00\x65\x49\x25\x05\x00\x2c\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+9477  1350441090.563618 gettimeofday({1350441090, 563729}, NULL) = 0
+9477  1350441090.563946 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4959) = 1 ([{fd=3, revents=POLLIN}])
+9477  1350441090.585254 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x20\x00\x3c\x1f\x52\x00\x00\x33\x01\x7b\xda\x4a\x7d\xe0\x48\xc0\xa8\x01\x07\x00\x00\x65\x48\x25\x05\x00\x2d\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+9477  1350441090.585952 gettimeofday({1350441090, 586087}, NULL) = 0
+9477  1350441090.586333 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+9477  1350441090.586771 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/16-12:13:00, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+9477  1350441090.587277 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb751c000
+9477  1350441090.587640 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+9477  1350441090.588111 read(4, "", 4096) = 0
+9477  1350441090.588441 close(4)        = 0
+9477  1350441090.588864 munmap(0xb751c000, 4096) = 0
+9477  1350441090.589297 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/16-19:30:25, st_mtime=2012/10/16-19:30:25, st_ctime=2012/10/16-19:30:25}) = 0
+9477  1350441090.589971 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+9477  1350441090.590456 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+9477  1350441090.590785 gettimeofday({1350441090, 590894}, NULL) = 0
+9477  1350441090.591107 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+9477  1350441090.591498 send(4, "\x6d\xec\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x37\x32\x03\x32\x32\x34\x03\x31\x32\x35\x02\x37\x34\x07\x69\x6e\x2d\x61\x64"..., 44, MSG_NOSIGNAL) = 44
+9477  1350441090.591977 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+9477  1350441090.651110 ioctl(4, FIONREAD, [82]) = 0
+9477  1350441090.651471 recvfrom(4, "\x6d\xec\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x02\x37\x32\x03\x32\x32\x34\x03\x31\x32\x35\x02\x37\x34\x07\x69\x6e\x2d\x61\x64"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 82
+9477  1350441090.652177 close(4)        = 0
+9477  1350441090.652526 write(1, " nuq04s07-in-f8.1e100.net (74.12"..., 52) = 52
+9477  1350441090.653060 write(1, "\n", 1) = 1
+9477  1350441090.653657 exit_group(0)   = ?

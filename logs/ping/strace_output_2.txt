@@ -1,0 +1,51 @@
+11461 1349409098.744331 socket(PF_INET, SOCK_RAW, IPPROTO_ICMP) = 3
+11461 1349409098.748497 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 4
+11461 1349409098.754988 connect(4, {sa_family=AF_INET, sin_port=htons(1025), sin_addr=inet_addr("192.168.1.5")}, 16) = 0
+11461 1349409098.756289 getsockname(4, {sa_family=AF_INET, sin_port=htons(60192), sin_addr=inet_addr("192.168.1.8")}, [16]) = 0
+11461 1349409098.757893 setsockopt(3, SOL_RAW, ICMP_FILTER, ~(ICMP_ECHOREPLY|ICMP_DEST_UNREACH|ICMP_SOURCE_QUENCH|ICMP_REDIRECT|ICMP_TIME_EXCEEDED|ICMP_PARAMETERPROB), 4) = 0
+11461 1349409098.763653 setsockopt(3, SOL_IP, IP_RECVERR, [1], 4) = 0
+11461 1349409098.764816 setsockopt(3, SOL_SOCKET, SO_SNDBUF, [324], 4) = 0
+11461 1349409098.767505 setsockopt(3, SOL_SOCKET, SO_RCVBUF, [65536], 4) = 0
+11461 1349409098.768720 getsockopt(3, SOL_SOCKET, SO_RCVBUF, [131072], [4]) = 0
+11461 1349409098.788804 setsockopt(3, SOL_SOCKET, SO_TIMESTAMP, [1], 4) = 0
+11461 1349409098.790898 setsockopt(3, SOL_SOCKET, SO_SNDTIMEO, "\x01\x00\x00\x00\x00\x00\x00\x00", 8) = 0
+11461 1349409098.792197 setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, "\x01\x00\x00\x00\x00\x00\x00\x00", 8) = 0
+11461 1349409098.800435 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x08\x00\x54\x58\x2c\xc5\x00\x01\x4a\x59\x6e\x50\xc7\x34\x0c\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, 0) = 64
+
+\x08 - type
+\x00 - code
+\x54\x58 - checksum
+\x2c\xc5 - id
+\x00\x01 - seq
+\x4a\x59\x6e\x50\xc7\x34\x0c\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17 - data
+
+11461 1349409098.802431 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x45\x00\x00\x54\x2c\x1d\x00\x00\x80\x01\x8b\x2e\xc0\xa8\x01\x05\xc0\xa8\x01\x08\x00\x00\x5c\x58\x2c\xc5\x00\x01\x4a\x59\x6e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+
+IP header:
+\x45 - version
+\x00 - services field
+\x00\x54 - total length
+\x2c\x1d - id
+\x00\x00 - flags/fragment
+\x80 - ttl
+\x01 - icmp proto
+\x8b\x2e - header checksum
+\xc0\xa8\x01\x05 - src 
+\xc0\xa8\x01\x08 - dst
+
+\x00
+\x00
+\x5c\x58
+\x2c\xc5
+\x00\x01
+\x4a\x59\x6e\x50 - first 4 bytes of req data
+
+11461 1349409099.802855 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x08\x00\xa4\x4d\x2c\xc5\x00\x02\x4b\x59\x6e\x50\x76\x3e\x0c\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+11461 1349409099.804875 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x45\x00\x00\x54\x2c\xda\x00\x00\x80\x01\x8a\x71\xc0\xa8\x01\x05\xc0\xa8\x01\x08\x00\x00\xac\x4d\x2c\xc5\x00\x02\x4b\x59\x6e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+11461 1349409100.805312 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x08\x00\x1a\x43\x2c\xc5\x00\x03\x4c\x59\x6e\x50\xff\x47\x0c\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+11461 1349409100.807228 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x45\x00\x00\x54\x2d\x51\x00\x00\x80\x01\x89\xfa\xc0\xa8\x01\x05\xc0\xa8\x01\x08\x00\x00\x22\x43\x2c\xc5\x00\x03\x4c\x59\x6e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+11461 1349409101.808528 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x08\x00\x80\x35\x2c\xc5\x00\x04\x4d\x59\x6e\x50\x98\x54\x0c\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+11461 1349409101.810380 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x45\x00\x00\x54\x2d\xfe\x00\x00\x80\x01\x89\x4d\xc0\xa8\x01\x05\xc0\xa8\x01\x08\x00\x00\x88\x35\x2c\xc5\x00\x04\x4d\x59\x6e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+11461 1349409102.811254 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x08\x00\xdd\x29\x2c\xc5\x00\x05\x4e\x59\x6e\x50\x3a\x5f\x0c\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+11461 1349409102.813631 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.5")}, msg_iov(1)=[{"\x45\x00\x00\x54\x2e\x98\x00\x00\x80\x01\x88\xb3\xc0\xa8\x01\x05\xc0\xa8\x01\x08\x00\x00\xe5\x29\x2c\xc5\x00\x05\x4e\x59\x6e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+11461 1349409103.275459 --- SIGINT (Interrupt) @ 0 (0) ---

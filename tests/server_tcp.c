@@ -107,8 +107,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	//client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
-		//if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
+	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
@@ -219,6 +219,7 @@ int main(int argc, char *argv[]) {
 	//while (1);
 
 	i = 0;
+	int total = 0;
 	while (i < 10000) {
 		//ret = poll(fds, nfds, time);
 		if (ret || 1) {
@@ -243,7 +244,8 @@ int main(int argc, char *argv[]) {
 					recv_data[bytes_read] = '\0';
 					//printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 					//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
-					printf("\n frame=%d, pID=%d, client_port=%u: said='%s'\n", ++i, pID, ntohs(client_addr.sin_port), recv_data);
+					total += bytes_read;
+					printf("\n frame=%d, total=%d, pID=%d, client_port=%u: said='%s'\n", ++i, total, pID, ntohs(client_addr.sin_port), recv_data);
 					fflush(stdout);
 
 					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {

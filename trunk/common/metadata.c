@@ -89,7 +89,7 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
 			status = config_setting_lookup_string(root, target, (const char **) value); //unsure of credibility, check strings?
 			break;
 		default:
-			PRINT_ERROR(" Asking for wrong type \n");
+			PRINT_ERROR(" Asking for wrong type ");
 			status = META_FALSE;
 			break;
 
@@ -133,7 +133,7 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		status = config_setting_set_string(handle, (char *) value);
 		break;
 	default:
-		PRINT_ERROR(" wrong type to be written\n");
+		PRINT_ERROR(" wrong type to be written");
 		printf("wrong type to be written to meta data!! ");
 		status = META_FALSE;
 		break;
@@ -161,7 +161,7 @@ int metadata_setElement(metadata_element *element, void *value) {
 		status = config_setting_set_string(element, (char *) value);
 		break;
 	default:
-		PRINT_ERROR(" wrong type to be written\n");
+		PRINT_ERROR(" wrong type to be written");
 		printf("wrong type to be written to meta data!! ");
 		status = META_FALSE;
 		break;
@@ -208,7 +208,7 @@ int metadata_print(metadata *cfgptr) {
 		name = config_setting_name(handle);
 
 		type = config_setting_type(handle);
-		//PRINT_DEBUG("\n%s \\", name);
+		//PRINT_DEBUG("%s \\", name);
 		switch (type) {
 		case CONFIG_TYPE_INT:
 			value = config_setting_get_int(handle);
@@ -226,7 +226,7 @@ int metadata_print(metadata *cfgptr) {
 			PRINT_DEBUG("meta=%p, '%s'='%s'", cfgptr, name, stringValue);
 			break;
 		default:
-			PRINT_ERROR(" wrong type found\n");
+			PRINT_ERROR(" wrong type found");
 			break;
 		}
 	}
@@ -343,7 +343,7 @@ metadata *metadata_clone(metadata *cfgptr) {
 
  }
  type= config_setting_type(handle);
- PRINT_DEBUG("\n%s \\",name);
+ PRINT_DEBUG("%s \\",name);
  switch (type)
  {
  case CONFIG_TYPE_INT:
@@ -368,7 +368,7 @@ metadata *metadata_clone(metadata *cfgptr) {
  break;
 
  default:
- PRINT_DEBUG(" Default\n");
+ PRINT_DEBUG(" Default");
  printf("No Matching for Meta Data Type!! ");
  //exit();
  break;

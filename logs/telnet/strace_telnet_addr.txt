@@ -1,0 +1,249 @@
+1933  1351061227.645893 execve("/usr/bin/telnet", ["telnet", "66.219.44.166", "4000"], ["SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "MAIL=/var/mail/root", "PATH=/usr/local/sbin:/usr/local/"..., "PWD=/home/bucknell/Jonathan/FINS"..., "ANDROID_SDK=/opt/android-sdk_r20"..., "LANG=en_US.UTF-8", "SHLVL=1", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "ANDROID_NDK=/opt/android-ndk-r8b", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace", "OLDPWD=/home/bucknell/Jonathan/F"...]) = 0
+1933  1351061227.650621 brk(0)          = 0x9c8f000
+1933  1351061227.651126 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.651686 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7805000
+1933  1351061227.652127 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.652594 open("/etc/ld.so.cache", O_RDONLY) = 3
+1933  1351061227.653014 fstat64(3, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/23-20:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+1933  1351061227.653895 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb77f5000
+1933  1351061227.654302 close(3)        = 0
+1933  1351061227.654758 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.655262 open("/lib/libncurses.so.5", O_RDONLY) = 3
+1933  1351061227.655661 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x83\x00\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.656135 fstat64(3, {st_dev=makedev(8, 1), st_ino=2359355, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=440, st_size=223468, st_atime=2012/10/24-01:52:48, st_mtime=2011/01/07-09:58:51, st_ctime=2011/06/10-10:45:10}) = 0
+1933  1351061227.656792 mmap2(NULL, 227540, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb77bd000
+1933  1351061227.657131 mprotect(0xb77f1000, 4096, PROT_NONE) = 0
+1933  1351061227.658257 mmap2(0xb77f2000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x34) = 0xb77f2000
+1933  1351061227.658682 close(3)        = 0
+1933  1351061227.659057 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.659460 open("/usr/lib/i386-linux-gnu/libstdc++.so.6", O_RDONLY) = 3
+1933  1351061227.659838 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xe0\x42\x04\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.660233 fstat64(3, {st_dev=makedev(8, 1), st_ino=2234820, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=1824, st_size=930044, st_atime=2012/10/24-01:52:39, st_mtime=2011/04/18-16:18:52, st_ctime=2011/06/10-10:45:58}) = 0
+1933  1351061227.660722 mmap2(NULL, 959532, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb76d2000
+1933  1351061227.661029 mmap2(0xb77b1000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xde) = 0xb77b1000
+1933  1351061227.661370 mmap2(0xb77b6000, 25644, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb77b6000
+1933  1351061227.661720 close(3)        = 0
+1933  1351061227.662047 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.662412 open("/lib/i386-linux-gnu/libm.so.6", O_RDONLY) = 3
+1933  1351061227.662900 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xb0\x34\x00\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.663413 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378198, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=296, st_size=149392, st_atime=2012/10/24-01:52:39, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+1933  1351061227.670285 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76d1000
+1933  1351061227.673944 mmap2(NULL, 151680, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb76ab000
+1933  1351061227.674687 mmap2(0xb76cf000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x23) = 0xb76cf000
+1933  1351061227.675078 close(3)        = 0
+1933  1351061227.675410 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.675837 open("/lib/i386-linux-gnu/libgcc_s.so.1", O_RDONLY) = 3
+1933  1351061227.676235 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x50\x1f\x00\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.681820 fstat64(3, {st_dev=makedev(8, 1), st_ino=2360157, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=216, st_size=108040, st_atime=2012/10/24-01:52:39, st_mtime=2011/04/18-16:14:38, st_ctime=2011/06/10-10:45:14}) = 0
+1933  1351061227.682317 mmap2(NULL, 111148, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb768f000
+1933  1351061227.682625 mmap2(0xb76a9000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x19) = 0xb76a9000
+1933  1351061227.683003 close(3)        = 0
+1933  1351061227.683338 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.683720 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3
+1933  1351061227.684078 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.684467 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378196, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2864, st_size=1462852, st_atime=2012/10/23-20:17:01, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+1933  1351061227.684937 mmap2(NULL, 1473032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7527000
+1933  1351061227.685243 mprotect(0xb7688000, 4096, PROT_NONE) = 0
+1933  1351061227.685741 mmap2(0xb7689000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x161) = 0xb7689000
+1933  1351061227.686081 mmap2(0xb768c000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb768c000
+1933  1351061227.686445 close(3)        = 0
+1933  1351061227.686804 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.693478 open("/lib/i386-linux-gnu/libdl.so.2", O_RDONLY) = 3
+1933  1351061227.694168 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x40\x0a\x00\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.694571 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378191, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9736, st_atime=2012/10/23-23:38:57, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+1933  1351061227.695043 mmap2(NULL, 12408, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7523000
+1933  1351061227.695357 mmap2(0xb7525000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1) = 0xb7525000
+1933  1351061227.695941 close(3)        = 0
+1933  1351061227.696368 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7522000
+1933  1351061227.696720 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7521000
+1933  1351061227.699863 set_thread_area({entry_number:-1 -> 6, base_addr:0xb75216d0, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+1933  1351061227.700462 mprotect(0xb7525000, 4096, PROT_READ) = 0
+1933  1351061227.701088 mprotect(0xb7689000, 8192, PROT_READ) = 0
+1933  1351061227.701469 mprotect(0xb76a9000, 4096, PROT_READ) = 0
+1933  1351061227.701800 mprotect(0xb76cf000, 4096, PROT_READ) = 0
+1933  1351061227.704951 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7520000
+1933  1351061227.705603 mprotect(0xb77b1000, 16384, PROT_READ) = 0
+1933  1351061227.706544 mprotect(0xb77f2000, 8192, PROT_READ) = 0
+1933  1351061227.707242 mprotect(0x805a000, 4096, PROT_READ) = 0
+1933  1351061227.707576 mprotect(0xb7824000, 4096, PROT_READ) = 0
+1933  1351061227.707900 munmap(0xb77f5000, 61759) = 0
+1933  1351061227.709069 brk(0)          = 0x9c8f000
+1933  1351061227.709497 brk(0x9cb4000)  = 0x9cb4000
+1933  1351061227.710327 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+1933  1351061227.711467 getpid()        = 1933
+1933  1351061227.712041 open("/etc/resolv.conf", O_RDONLY) = 3
+1933  1351061227.712671 fstat64(3, {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/24-02:34:45, st_ctime=2012/10/24-02:34:45}) = 0
+1933  1351061227.713365 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7804000
+1933  1351061227.713693 read(3, "# Generated by NetworkManager\nna"..., 4096) = 53
+1933  1351061227.714225 read(3, "", 4096) = 0
+1933  1351061227.714544 close(3)        = 0
+1933  1351061227.714846 munmap(0xb7804000, 4096) = 0
+1933  1351061227.715175 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+1933  1351061227.717114 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/24-02:34:45, st_ctime=2012/10/24-02:34:45}) = 0
+1933  1351061227.717659 open("/etc/resolv.conf", O_RDONLY) = 3
+1933  1351061227.718008 fstat64(3, {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/24-02:34:45, st_ctime=2012/10/24-02:34:45}) = 0
+1933  1351061227.718469 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7804000
+1933  1351061227.718778 read(3, "# Generated by NetworkManager\nna"..., 4096) = 53
+1933  1351061227.719212 read(3, "", 4096) = 0
+1933  1351061227.719517 close(3)        = 0
+1933  1351061227.719813 munmap(0xb7804000, 4096) = 0
+1933  1351061227.720141 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+1933  1351061227.721326 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 3
+1933  1351061227.721724 connect(3, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+1933  1351061227.722325 close(3)        = 0
+1933  1351061227.722685 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 3
+1933  1351061227.723015 connect(3, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+1933  1351061227.723560 close(3)        = 0
+1933  1351061227.723892 open("/etc/nsswitch.conf", O_RDONLY) = 3
+1933  1351061227.724259 fstat64(3, {st_dev=makedev(8, 1), st_ino=131264, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=513, st_atime=2012/10/24-01:53:37, st_mtime=2011/04/25-19:04:59, st_ctime=2011/06/10-10:45:09}) = 0
+1933  1351061227.724759 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7804000
+1933  1351061227.725093 read(3, "# /etc/nsswitch.conf\n#\n# Example"..., 4096) = 513
+1933  1351061227.725826 read(3, "", 4096) = 0
+1933  1351061227.726151 close(3)        = 0
+1933  1351061227.726458 munmap(0xb7804000, 4096) = 0
+1933  1351061227.726863 open("/etc/ld.so.cache", O_RDONLY) = 3
+1933  1351061227.727211 fstat64(3, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/23-20:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+1933  1351061227.727706 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb77f5000
+1933  1351061227.728009 close(3)        = 0
+1933  1351061227.728330 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1933  1351061227.728748 open("/lib/i386-linux-gnu/libnss_files.so.2", O_RDONLY) = 3
+1933  1351061227.729117 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x1a\x00\x00\x34\x00\x00\x00"..., 512) = 512
+1933  1351061227.729512 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378180, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=88, st_size=42580, st_atime=2012/10/24-01:53:37, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+1933  1351061227.729977 mmap2(NULL, 45780, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb7514000
+1933  1351061227.730280 mmap2(0xb751e000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x9) = 0xb751e000
+1933  1351061227.730655 close(3)        = 0
+1933  1351061227.730990 mprotect(0xb751e000, 4096, PROT_READ) = 0
+1933  1351061227.731328 munmap(0xb77f5000, 61759) = 0
+1933  1351061227.731676 open("/etc/host.conf", O_RDONLY) = 3
+1933  1351061227.732125 fstat64(3, {st_dev=makedev(8, 1), st_ino=131227, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=92, st_atime=2012/10/24-01:53:37, st_mtime=2010/10/21-08:47:40, st_ctime=2011/06/10-10:45:09}) = 0
+1933  1351061227.732592 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7804000
+1933  1351061227.732892 read(3, "# The \"order\" line is only used "..., 4096) = 92
+1933  1351061227.733347 read(3, "", 4096) = 0
+1933  1351061227.733645 close(3)        = 0
+1933  1351061227.733951 munmap(0xb7804000, 4096) = 0
+1933  1351061227.734313 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 3
+1933  1351061227.734657 fcntl64(3, F_GETFD) = 0x1 (flags FD_CLOEXEC)
+1933  1351061227.734968 fstat64(3, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/24-01:53:37, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+1933  1351061227.735436 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7804000
+1933  1351061227.735733 read(3, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+1933  1351061227.736179 read(3, "", 4096) = 0
+1933  1351061227.736485 close(3)        = 0
+1933  1351061227.736781 munmap(0xb7804000, 4096) = 0
+1933  1351061227.737189 rt_sigaction(SIGTSTP, {0x80536c0, [TSTP], SA_RESTART}, {SIG_DFL, [], 0}, 8) = 0
+1933  1351061227.737846 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061227.738400 rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+1933  1351061227.738823 socket(PF_NETLINK, SOCK_RAW, 0) = 3
+1933  1351061227.739153 bind(3, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+1933  1351061227.739505 getsockname(3, {sa_family=AF_NETLINK, pid=1933, groups=00000000}, [12]) = 0
+1933  1351061227.739853 time(NULL)      = 1351061227
+1933  1351061227.740209 sendto(3, "\x14\x00\x00\x00\x16\x00\x01\x03\xeb\x8e\x87\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+1933  1351061227.740610 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xeb\x8e\x87\x50\x8d\x07\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 108
+1933  1351061227.741122 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xeb\x8e\x87\x50\x8d\x07\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 128
+1933  1351061227.741752 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xeb\x8e\x87\x50\x8d\x07\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+1933  1351061227.742272 close(3)        = 0
+1933  1351061227.742784 fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/24-02:47:07, st_mtime=2012/10/24-02:47:07, st_ctime=2012/10/24-02:40:39}) = 0
+1933  1351061227.743254 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7804000
+1933  1351061227.743582 write(1, "Trying 66.219.44.166...\n", 24) = 24
+1933  1351061227.744161 close(-1)       = -1 EBADF (Bad file descriptor)
+1933  1351061227.744511 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+1933  1351061227.744865 setsockopt(3, SOL_IP, IP_TOS, [16], 4) = 0
+1933  1351061227.745205 connect(3, {sa_family=AF_INET, sin_port=htons(4000), sin_addr=inet_addr("66.219.44.166")}, 16) = 0
+1933  1351061227.824641 open("/etc/telnetrc", O_RDONLY) = -1 ENOENT (No such file or directory)
+1933  1351061227.825144 open("/root/.telnetrc", O_RDONLY) = -1 ENOENT (No such file or directory)
+1933  1351061227.825559 write(1, "Connected to 66.219.44.166.\n", 28) = 28
+1933  1351061227.826280 write(1, "Escape character is '^]'.\n", 26) = 26
+1933  1351061227.826828 rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+1933  1351061227.827266 rt_sigaction(SIGINT, {0x804f690, [INT], SA_RESTART}, {SIG_DFL, [], 0}, 8) = 0
+1933  1351061227.827940 rt_sigaction(SIGQUIT, {0x804f640, [QUIT], SA_RESTART}, {SIG_DFL, [], 0}, 8) = 0
+1933  1351061227.828531 rt_sigaction(SIGWINCH, {0x804f620, [WINCH], SA_RESTART}, {SIG_DFL, [], 0}, 8) = 0
+1933  1351061227.829129 rt_sigaction(SIGTSTP, {0x80536c0, [TSTP], SA_RESTART}, {0x80536c0, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061227.829737 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061227.830103 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061227.830585 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061227.830975 ioctl(0, FIONBIO, [1]) = 0
+1933  1351061227.831288 ioctl(1, FIONBIO, [1]) = 0
+1933  1351061227.831594 ioctl(3, FIONBIO, [1]) = 0
+1933  1351061227.831963 setsockopt(3, SOL_SOCKET, SO_OOBINLINE, [1], 4) = 0
+1933  1351061227.832313 select(4, [0 3], [], [3], {0, 0}) = 0 (Timeout)
+1933  1351061227.832664 select(4, [0 3], [], [3], NULL) = 1 (in [3])
+1933  1351061227.925021 recv(3, "\xff\xfb\x03", 8191, 0) = 3
+1933  1351061227.925601 rt_sigaction(SIGTSTP, {0x80536c0, [TSTP], SA_RESTART}, {0x80536c0, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061227.926240 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061227.926664 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6002, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a38, c_line=0, c_cc[VMIN]=1, c_cc[VTIME]=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x00\xff\x00\x00"}) = 0
+1933  1351061227.927190 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6002, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a38, c_line=0, c_cc[VMIN]=1, c_cc[VTIME]=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x00\xff\x00\x00"}) = 0
+1933  1351061227.927593 ioctl(0, FIONBIO, [1]) = 0
+1933  1351061227.927956 ioctl(1, FIONBIO, [1]) = 0
+1933  1351061227.928295 select(4, [0 3], [3], [3], {0, 0}) = 1 (out [3], left {0, 0})
+1933  1351061227.928700 send(3, "\xff\xfd\x03", 3, 0) = 3
+1933  1351061227.929170 select(4, [0 3], [], [3], {0, 0}) = 0 (Timeout)
+1933  1351061227.929530 select(4, [0 3], [], [3], NULL) = 1 (in [3])
+1933  1351061227.998691 recv(3, "\xff\xfb\x18\xff\xfb\x19\xff\xfd\x1f\xff\xfd\x27\xff\xfd\x2a\xff\xfb\x46\xff\xfb\x56\xff\xfb\x5a\xff\xfb\x5b\xff\xfb\xc9", 8189, 0) = 30
+1933  1351061227.999116 ioctl(0, TIOCGWINSZ, {ws_row=49, ws_col=157, ws_xpixel=0, ws_ypixel=0}) = 0
+1933  1351061227.999462 select(4, [0 3], [3], [3], {0, 0}) = 1 (out [3], left {0, 0})
+1933  1351061227.999874 send(3, "\xff\xfe\x18\xff\xfe\x19\xff\xfb\x1f\xff\xfa\x1f\x00\x9d\x00\x31\xff\xf0\xff\xfb\x27\xff\xfc\x2a\xff\xfe\x46\xff\xfe\x56\xff\xfe"..., 39, 0) = 39
+1933  1351061228.000287 select(4, [0 3], [], [3], {0, 0}) = 0 (Timeout)
+1933  1351061228.000629 select(4, [0 3], [], [3], NULL) = 1 (in [3])
+1933  1351061228.079764 recv(3, "\r\nCONNECT OK\n\rWelcome to Materia"..., 8159, 0) = 931
+1933  1351061228.080241 select(4, [0 3], [1], [3], {0, 0}) = 1 (out [1], left {0, 0})
+1933  1351061228.080675 write(1, "\nCONNECT OK\n\rWelcome to Materia "..., 908) = 908
+1933  1351061228.085536 select(4, [0 3], [], [3], {0, 0}) = 0 (Timeout)
+1933  1351061228.085994 select(4, [0 3], [], [3], NULL) = 1 (in [3])
+1933  1351061228.190644 recv(3, "\xff\xfa\x27\x01\x00\x53\x59\x53\x54\x45\x4d\x54\x59\x50\x45\xff\xf0", 7228, 0) = 17
+1933  1351061228.191058 select(4, [0 3], [3], [3], {0, 0}) = 1 (out [3], left {0, 0})
+1933  1351061228.191508 send(3, "\xff\xfa\x27\x00\xff\xf0", 6, 0) = 6
+1933  1351061228.192126 select(4, [0 3], [], [3], {0, 0}) = 0 (Timeout)
+1933  1351061228.192508 select(4, [0 3], [], [3], NULL) = 1 (in [0])
+1933  1351061230.441252 read(0, "\x1d", 8191) = 1
+1933  1351061230.441722 rt_sigaction(SIGTSTP, {SIG_DFL, [TSTP], SA_RESTART}, {0x80536c0, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061230.442347 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6002, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a38, c_line=0, c_cc[VMIN]=1, c_cc[VTIME]=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x00\xff\x00\x00"}) = 0
+1933  1351061230.442718 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061230.443105 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061230.443486 ioctl(0, FIONBIO, [0]) = 0
+1933  1351061230.443804 ioctl(1, FIONBIO, [0]) = 0
+1933  1351061230.444560 write(1, "\n", 1) = 1
+1933  1351061230.445127 fstat64(0, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/24-02:47:10, st_mtime=2012/10/24-02:47:10, st_ctime=2012/10/24-02:40:39}) = 0
+1933  1351061230.445628 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7803000
+1933  1351061230.446004 write(1, "telnet> ", 8) = 8
+1933  1351061230.446409 read(0, "quit\n", 1024) = 5
+1933  1351061232.423752 shutdown(3, 2 /* send and receive */) = 0
+1933  1351061232.424495 close(3)        = 0
+1933  1351061232.424857 write(1, "Connection closed.\n", 19) = 19
+1933  1351061232.425709 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+1933  1351061232.426704 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/24-02:34:45, st_ctime=2012/10/24-02:34:45}) = 0
+1933  1351061232.427865 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=132663, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/24-02:34:48, st_mtime=2012/10/24-02:34:45, st_ctime=2012/10/24-02:34:45}) = 0
+1933  1351061232.428463 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 3
+1933  1351061232.428929 fstat64(3, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/24-01:53:37, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+1933  1351061232.429471 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7802000
+1933  1351061232.429821 read(3, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+1933  1351061232.430261 read(3, "", 4096) = 0
+1933  1351061232.430560 close(3)        = 0
+1933  1351061232.430860 munmap(0xb7802000, 4096) = 0
+1933  1351061232.431230 rt_sigaction(SIGTSTP, {0x80536c0, [TSTP], SA_RESTART}, {SIG_DFL, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061232.431829 rt_sigaction(SIGTSTP, {0x80536c0, [TSTP], SA_RESTART}, {0x80536c0, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061232.432442 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.432826 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.433221 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.433627 ioctl(0, FIONBIO, [1]) = 0
+1933  1351061232.433936 ioctl(1, FIONBIO, [1]) = 0
+1933  1351061232.434367 select(2, NULL, [1], NULL, NULL) = 1 (out [1])
+1933  1351061232.435762 rt_sigaction(SIGTSTP, {SIG_DFL, [TSTP], SA_RESTART}, {0x80536c0, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061232.436428 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.436869 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.437353 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.437760 ioctl(0, FIONBIO, [0]) = 0
+1933  1351061232.438077 ioctl(1, FIONBIO, [0]) = 0
+1933  1351061232.438388 rt_sigaction(SIGTSTP, {0x80536c0, [TSTP], SA_RESTART}, {SIG_DFL, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061232.438973 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.439340 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.439734 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.440213 ioctl(0, FIONBIO, [1]) = 0
+1933  1351061232.440522 ioctl(1, FIONBIO, [1]) = 0
+1933  1351061232.440844 select(2, NULL, [1], NULL, NULL) = 1 (out [1])
+1933  1351061232.441177 rt_sigaction(SIGTSTP, {SIG_DFL, [TSTP], SA_RESTART}, {0x80536c0, [TSTP], SA_RESTART}, 8) = 0
+1933  1351061232.441812 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6102, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.442184 ioctl(0, SNDCTL_TMR_STOP or TCSETSW, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.442607 ioctl(0, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+1933  1351061232.442980 ioctl(0, FIONBIO, [0]) = 0
+1933  1351061232.443384 ioctl(1, FIONBIO, [0]) = 0
+1933  1351061232.443876 close(-1)       = -1 EBADF (Bad file descriptor)
+1933  1351061232.444403 exit_group(0)   = ?

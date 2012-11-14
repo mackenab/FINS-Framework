@@ -185,7 +185,7 @@ void *capturer_to_interface(void *local) {
 		interface_setBlocking(capture_pipe_fd);
 
 		if (numBytes <= 0) {
-			PRINT_ERROR("numBytes written %d\n", numBytes);
+			PRINT_ERROR("numBytes written %d", numBytes);
 			break;
 		}
 		frame = (uint8_t *) malloc(frame_len);
@@ -196,13 +196,13 @@ void *capturer_to_interface(void *local) {
 
 		numBytes = read(capture_pipe_fd, frame, frame_len);
 		if (numBytes <= 0) {
-			PRINT_ERROR("numBytes written %d\n", numBytes);
+			PRINT_ERROR("numBytes written %d", numBytes);
 			free(frame);
 			break;
 		}
 
 		if (numBytes != frame_len) {
-			PRINT_ERROR("bytes read not equal to datalen,  numBytes=%d\n", numBytes);
+			PRINT_ERROR("bytes read not equal to datalen,  numBytes=%d", numBytes);
 			free(frame);
 			continue;
 		}
@@ -329,7 +329,7 @@ void interface_get_ff(void) {
 		return;
 	}
 
-	PRINT_DEBUG("\n At least one frame has been read from the Switch to Etherstub ff=%p", ff);
+	PRINT_DEBUG(" At least one frame has been read from the Switch to Etherstub ff=%p", ff);
 
 	if (ff->dataOrCtrl == CONTROL) {
 		interface_fcf(ff);
@@ -415,11 +415,11 @@ void interface_out_fdf(struct finsFrame *ff) {
 	//memcpy(frame + SIZE_ETHERNET, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	memcpy(hdr->data, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	//	print_finsFrame(ff);
-	PRINT_DEBUG("daemon inject to ethernet stub \n");
+	PRINT_DEBUG("daemon inject to ethernet stub ");
 
 	numBytes = write(inject_pipe_fd, &framelen, sizeof(int));
 	if (numBytes <= 0) {
-		PRINT_ERROR("numBytes written %d\n", numBytes);
+		PRINT_ERROR("numBytes written %d", numBytes);
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -427,7 +427,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	numBytes = write(inject_pipe_fd, frame, framelen);
 	if (numBytes <= 0) {
-		PRINT_ERROR("numBytes written %d\n", numBytes);
+		PRINT_ERROR("numBytes written %d", numBytes);
 		freeFinsFrame(ff);
 		free(frame);
 		return;

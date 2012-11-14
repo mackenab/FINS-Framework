@@ -1,0 +1,128 @@
+9482  1350441112.499458 execve("/bin/ping", ["ping", "192.168.1.2"], ["SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "MAIL=/var/mail/root", "PATH=/usr/local/sbin:/usr/local/"..., "PWD=/home/bucknell/Jonathan/FINS"..., "ANDROID_SDK=/opt/android-sdk_r20"..., "LANG=en_US.UTF-8", "SHLVL=1", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "ANDROID_NDK=/opt/android-ndk-r8b", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace", "OLDPWD=/home/bucknell/Jonathan/F"...]) = 0
+9482  1350441112.502551 brk(0)          = 0x858e000
+9482  1350441112.503153 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9482  1350441112.503913 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb786a000
+9482  1350441112.504478 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+9482  1350441112.504861 open("/etc/ld.so.cache", O_RDONLY) = 3
+9482  1350441112.505218 fstat64(3, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/16-19:17:01, st_mtime=2012/10/10-10:39:52, st_ctime=2012/10/10-10:39:52}) = 0
+9482  1350441112.505959 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb785a000
+9482  1350441112.506256 close(3)        = 0
+9482  1350441112.506592 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+9482  1350441112.507012 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3
+9482  1350441112.507401 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512
+9482  1350441112.507814 fstat64(3, {st_dev=makedev(8, 1), st_ino=2378196, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2864, st_size=1462852, st_atime=2012/10/16-19:18:03, st_mtime=2012/09/21-03:46:47, st_ctime=2012/10/04-12:30:27}) = 0
+9482  1350441112.508313 mmap2(NULL, 1473032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb76f2000
+9482  1350441112.508695 mprotect(0xb7853000, 4096, PROT_NONE) = 0
+9482  1350441112.509010 mmap2(0xb7854000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x161) = 0xb7854000
+9482  1350441112.509388 mmap2(0xb7857000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7857000
+9482  1350441112.509717 close(3)        = 0
+9482  1350441112.510143 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76f1000
+9482  1350441112.510489 set_thread_area({entry_number:-1 -> 6, base_addr:0xb76f18d0, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+9482  1350441112.511210 mprotect(0xb7854000, 8192, PROT_READ) = 0
+9482  1350441112.511559 mprotect(0x8050000, 4096, PROT_READ) = 0
+9482  1350441112.511877 mprotect(0xb7889000, 4096, PROT_READ) = 0
+9482  1350441112.512189 munmap(0xb785a000, 61759) = 0
+9482  1350441112.512763 socket(PF_INET, SOCK_RAW, IPPROTO_ICMP) = 3
+9482  1350441112.513134 getuid32()      = 0
+9482  1350441112.513473 setuid32(0)     = 0
+9482  1350441112.513957 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 4
+9482  1350441112.514290 connect(4, {sa_family=AF_INET, sin_port=htons(1025), sin_addr=inet_addr("192.168.1.2")}, 16) = 0
+9482  1350441112.514658 getsockname(4, {sa_family=AF_INET, sin_port=htons(49679), sin_addr=inet_addr("192.168.1.7")}, [16]) = 0
+9482  1350441112.515018 close(4)        = 0
+9482  1350441112.515351 setsockopt(3, SOL_RAW, ICMP_FILTER, ~(ICMP_ECHOREPLY|ICMP_DEST_UNREACH|ICMP_SOURCE_QUENCH|ICMP_REDIRECT|ICMP_TIME_EXCEEDED|ICMP_PARAMETERPROB), 4) = 0
+9482  1350441112.515692 setsockopt(3, SOL_IP, IP_RECVERR, [1], 4) = 0
+9482  1350441112.516055 setsockopt(3, SOL_SOCKET, SO_SNDBUF, [324], 4) = 0
+9482  1350441112.516392 setsockopt(3, SOL_SOCKET, SO_RCVBUF, [65536], 4) = 0
+9482  1350441112.516854 getsockopt(3, SOL_SOCKET, SO_RCVBUF, [131072], [4]) = 0
+9482  1350441112.517348 brk(0)          = 0x858e000
+9482  1350441112.518679 brk(0x85af000)  = 0x85af000
+9482  1350441112.519350 fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/16-22:31:52, st_mtime=2012/10/16-22:31:52, st_ctime=2012/10/16-19:33:02}) = 0
+9482  1350441112.519852 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7869000
+9482  1350441112.520179 write(1, "PING 192.168.1.2 (192.168.1.2) 5"..., 53) = 53
+9482  1350441112.520809 setsockopt(3, SOL_SOCKET, SO_TIMESTAMP, [1], 4) = 0
+9482  1350441112.521147 setsockopt(3, SOL_SOCKET, SO_SNDTIMEO, "\x01\x00\x00\x00\x00\x00\x00\x00", 8) = 0
+9482  1350441112.521673 setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, "\x01\x00\x00\x00\x00\x00\x00\x00", 8) = 0
+9482  1350441112.522024 getpid()        = 9482
+9482  1350441112.522334 rt_sigaction(SIGINT, {0x804b760, [], SA_INTERRUPT}, NULL, 8) = 0
+9482  1350441112.522814 rt_sigaction(SIGALRM, {0x804b760, [], SA_INTERRUPT}, NULL, 8) = 0
+9482  1350441112.523227 rt_sigaction(SIGQUIT, {0x804b770, [], SA_INTERRUPT}, NULL, 8) = 0
+9482  1350441112.523643 gettimeofday({1350441112, 523769}, NULL) = 0
+9482  1350441112.524000 ioctl(1, SNDCTL_TMR_TIMEBASE or TCGETS, {c_iflags=0x6d02, c_oflags=0x5, c_cflags=0x4bf, c_lflags=0x8a3b, c_line=0, c_cc="\x03\x1c\x7f\x15\x04\x00\x01\xff\x11\x13\x1a\xff\x12\x0f\x17\x16\xff\x00\x00"}) = 0
+9482  1350441112.524434 ioctl(1, TIOCGWINSZ, {ws_row=49, ws_col=157, ws_xpixel=0, ws_ypixel=0}) = 0
+9482  1350441112.524754 gettimeofday({1350441112, 524864}, NULL) = 0
+9482  1350441112.525057 gettimeofday({1350441112, 525165}, NULL) = 0
+9482  1350441112.525579 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x5c\x85\x25\x0a\x00\x01\x98\x18\x7e\x50\x6d\x03\x08\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, 0) = 64
+9482  1350441112.526936 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xda\x00\x00\x80\x01\x45\x75\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x64\x85\x25\x0a\x00\x01\x98\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441112.527621 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441112.528228 gettimeofday({1350441112, 528361}, NULL) = 0
+9482  1350441112.528582 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441113.527064 gettimeofday({1350441113, 527207}, NULL) = 0
+9482  1350441113.527470 gettimeofday({1350441113, 527675}, NULL) = 0
+9482  1350441113.527920 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x8d\x7a\x25\x0a\x00\x02\x99\x18\x7e\x50\x3b\x0d\x08\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441113.528910 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xdc\x00\x00\x80\x01\x45\x73\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x95\x7a\x25\x0a\x00\x02\x99\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441113.529498 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441113.530129 gettimeofday({1350441113, 530258}, NULL) = 0
+9482  1350441113.530486 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441114.528233 gettimeofday({1350441114, 528394}, NULL) = 0
+9482  1350441114.528624 gettimeofday({1350441114, 528954}, NULL) = 0
+9482  1350441114.529219 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x8d\x74\x25\x0a\x00\x03\x9a\x18\x7e\x50\x3a\x12\x08\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441114.530687 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xdf\x00\x00\x80\x01\x45\x70\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x95\x74\x25\x0a\x00\x03\x9a\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441114.531337 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441114.531977 gettimeofday({1350441114, 532106}, NULL) = 0
+9482  1350441114.532322 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441115.530754 gettimeofday({1350441115, 530897}, NULL) = 0
+9482  1350441115.531182 gettimeofday({1350441115, 531317}, NULL) = 0
+9482  1350441115.531551 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x51\x6a\x25\x0a\x00\x04\x9b\x18\x7e\x50\x75\x1b\x08\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441115.532312 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xe4\x00\x00\x80\x01\x45\x6b\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x59\x6a\x25\x0a\x00\x04\x9b\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441115.532887 write(1, "64 bytes from 192.168.1.2: icmp_"..., 60) = 60
+9482  1350441115.533587 gettimeofday({1350441115, 533700}, NULL) = 0
+9482  1350441115.533897 poll([{fd=3, events=POLLIN|POLLERR}], 1, 998) = 0 (Timeout)
+9482  1350441116.532641 gettimeofday({1350441116, 532784}, NULL) = 0
+9482  1350441116.533010 gettimeofday({1350441116, 533149}, NULL) = 0
+9482  1350441116.533434 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x28\x62\x25\x0a\x00\x05\x9c\x18\x7e\x50\x9d\x22\x08\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441116.534946 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xe6\x00\x00\x80\x01\x45\x69\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x30\x62\x25\x0a\x00\x05\x9c\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441116.535646 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441116.536351 gettimeofday({1350441116, 536489}, NULL) = 0
+9482  1350441116.536714 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441117.535465 gettimeofday({1350441117, 535608}, NULL) = 0
+9482  1350441117.535839 gettimeofday({1350441117, 536072}, NULL) = 0
+9482  1350441117.536355 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\xbc\x55\x25\x0a\x00\x06\x9d\x18\x7e\x50\x08\x2e\x08\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441117.537211 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xee\x00\x00\x80\x01\x45\x61\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\xc4\x55\x25\x0a\x00\x06\x9d\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441117.537886 write(1, "64 bytes from 192.168.1.2: icmp_"..., 60) = 60
+9482  1350441117.538531 gettimeofday({1350441117, 538660}, NULL) = 0
+9482  1350441117.538891 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441118.982259 gettimeofday({1350441118, 982484}, NULL) = 0
+9482  1350441118.982737 gettimeofday({1350441118, 982870}, NULL) = 0
+9482  1350441118.983201 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x66\x83\x25\x0a\x00\x07\x9e\x18\x7e\x50\x56\xff\x0e\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441118.984079 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xf2\x00\x00\x80\x01\x45\x5d\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x6e\x83\x25\x0a\x00\x07\x9e\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441118.984651 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441118.985468 gettimeofday({1350441118, 985598}, NULL) = 0
+9482  1350441118.985815 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441119.984360 gettimeofday({1350441119, 984505}, NULL) = 0
+9482  1350441119.984729 gettimeofday({1350441119, 984901}, NULL) = 0
+9482  1350441119.985150 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x76\x7a\x25\x0a\x00\x08\x9f\x18\x7e\x50\x45\x07\x0f\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441119.986429 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xfb\x00\x00\x80\x01\x45\x54\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x7e\x7a\x25\x0a\x00\x08\x9f\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441119.987037 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441119.987697 gettimeofday({1350441119, 987841}, NULL) = 0
+9482  1350441119.988056 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441120.986686 gettimeofday({1350441120, 986829}, NULL) = 0
+9482  1350441120.987075 gettimeofday({1350441120, 987203}, NULL) = 0
+9482  1350441120.987449 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x77\x70\x25\x0a\x00\x09\xa0\x18\x7e\x50\x43\x10\x0f\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441120.988874 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x71\xfe\x00\x00\x80\x01\x45\x51\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x7f\x70\x25\x0a\x00\x09\xa0\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441120.989451 write(1, "64 bytes from 192.168.1.2: icmp_"..., 59) = 59
+9482  1350441120.990158 gettimeofday({1350441120, 990292}, NULL) = 0
+9482  1350441120.990517 poll([{fd=3, events=POLLIN|POLLERR}], 1, 997) = 0 (Timeout)
+9482  1350441121.988779 gettimeofday({1350441121, 988922}, NULL) = 0
+9482  1350441121.989148 gettimeofday({1350441121, 989341}, NULL) = 0
+9482  1350441121.989603 sendmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x08\x00\x1c\x67\x25\x0a\x00\x0a\xa1\x18\x7e\x50\x9d\x18\x0f\x00\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17"..., 64}], msg_controllen=0, msg_flags=0}, MSG_CONFIRM) = 64
+9482  1350441121.990344 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("192.168.1.2")}, msg_iov(1)=[{"\x45\x00\x00\x54\x72\x01\x00\x00\x80\x01\x45\x4e\xc0\xa8\x01\x02\xc0\xa8\x01\x07\x00\x00\x24\x67\x25\x0a\x00\x0a\xa1\x18\x7e\x50"..., 192}], msg_controllen=20, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 84
+9482  1350441121.991010 write(1, "64 bytes from 192.168.1.2: icmp_"..., 61) = 61
+9482  1350441121.991745 gettimeofday({1350441121, 991874}, NULL) = 0
+9482  1350441121.992095 poll([{fd=3, events=POLLIN|POLLERR}], 1, 998) = ? ERESTART_RESTARTBLOCK (To be restarted)
+9482  1350441122.386709 --- SIGINT (Interrupt) @ 0 (0) ---
+9482  1350441122.386789 sigreturn()     = ? (mask now [])
+9482  1350441122.387611 write(1, "\n", 1) = 1
+9482  1350441122.388396 write(1, "--- 192.168.1.2 ping statistics "..., 36) = 36
+9482  1350441122.389126 write(1, "10 packets transmitted, 10 recei"..., 65) = 65
+9482  1350441122.389759 write(1, "rtt min/avg/max/mdev = 0.784/1.1"..., 50) = 50
+9482  1350441122.390374 exit_group(0)   = ?

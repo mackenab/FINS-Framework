@@ -75,7 +75,7 @@ void print_finsFrame(struct finsFrame *ff) {
 	if (ff->dataOrCtrl == DATA) {
 		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);
 		PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
-		//PRINT_DEBUG("Meta data (first element) 0x%x\n", fins_in->metaData);
+		//PRINT_DEBUG("Meta data (first element) 0x%x", fins_in->metaData);
 		PRINT_DEBUG("PDU size (bytes) %d", ff->dataFrame.pduLength);
 		int i = 0;
 		while (i < ff->dataFrame.pduLength) {
@@ -94,7 +94,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);
 		PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);
 		PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
-		//		PRINT_DEBUG("\nReply Record (first element) 0x%x\n", fins_in->ctrlFrame.replyRecord);
+		//		PRINT_DEBUG("Reply Record (first element) 0x%x", fins_in->ctrlFrame.replyRecord);
 		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);
 		PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
 	}
@@ -120,7 +120,7 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 
 	} else if (src->dataOrCtrl == CONTROL) {
 
-		PRINT_DEBUG("\ncontrol fins frame\n");
+		PRINT_DEBUG("control fins frame");
 
 		dst->destinationID = src->destinationID;
 		dst->dataOrCtrl = src->dataOrCtrl;
@@ -274,7 +274,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	PRINT_DEBUG("In serializeCtrlFrame!")
 
-	//PRINT_DEBUG("\ntemp_buffer: %s\nsize of temp_buffer: %d",temp_buffer,sizeof(temp_buffer));
+	//PRINT_DEBUG("temp_buffer: %ssize of temp_buffer: %d",temp_buffer,sizeof(temp_buffer));
 
 	//initialize buffer
 
@@ -289,7 +289,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//DATA OR CONTROL
 	memcpy((unsigned char *) *buffer, &(ff->dataOrCtrl), sizeof(unsigned char));
-	//PRINT_DEBUG("\nbuffer1:%s", *buffer);
+	//PRINT_DEBUG("buffer1:%s", *buffer);
 
 	//increment pointer
 	*buffer += sizeof(unsigned char);
@@ -400,7 +400,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	struct finsFrame * ff = malloc(sizeof(struct finsFrame));
 	memset(ff, 0, sizeof(struct finsFrame));
 
-//	PRINT_DEBUG("\nThe value of buffer = %s", buffer,length);
+//	PRINT_DEBUG("The value of buffer = %s", buffer,length);
 
 	//DATA OR CONTROL
 	memcpy(&(ff->dataOrCtrl), (unsigned char *) buffer, sizeof(unsigned char));

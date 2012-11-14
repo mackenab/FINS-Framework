@@ -403,7 +403,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	pt += len;
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
@@ -469,7 +469,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		pt += sizeof(uint32_t);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -511,7 +511,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		pt += len;
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -942,7 +942,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				pt += control_len;
 
 				if (pt - msg != msg_len) {
-					PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+					PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 					if (control_msg)
@@ -1150,7 +1150,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			pt += control_len;
 
 			if (pt - msg != msg_len) {
-				PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+				PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 				if (control_msg)
@@ -1776,7 +1776,7 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	}
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
@@ -1837,7 +1837,7 @@ void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, u
 		uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 			return;
 		}
@@ -2045,7 +2045,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 	pt += control_len;
 
 	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		if (control_msg)
 			free(control_msg);
 		free(msg);

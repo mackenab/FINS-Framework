@@ -299,7 +299,7 @@ int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t
 	daemon_calls[call_index].sock_id_new = 0;
 	daemon_calls[call_index].sock_index_new = 0;
 
-	if (daemon_calls[call_index].running_flag) {
+	if (daemon_calls[call_index].to_running) {
 		daemon_calls[call_index].to_flag = 0;
 		daemon_stop_timer(daemon_calls[call_index].to_fd);
 	}
@@ -335,10 +335,10 @@ void daemon_calls_remove(int call_index) {
 void daemon_calls_shutdown(int call_index) {
 	PRINT_DEBUG("Entered: call_index=%d", call_index);
 
-	daemon_calls[call_index].running_flag = 0;
+	daemon_calls[call_index].to_running = 0;
 
 	//stop threads
-	daemon_start_timer(daemon_calls[call_index].to_fd, 1);
+	daemon_start_timer(daemon_calls[call_index].to_fd, 0.00001);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -366,7 +366,7 @@ struct daemon_call_list *call_list_create(uint32_t max) {
 
 	//call_list_check(call_list);
 
-	PRINT_DEBUG("Entered: max=%u, call_list=%p", max, call_list);
+	PRINT_DEBUG("Exited: max=%u, call_list=%p", max, call_list);
 	return call_list;
 }
 
@@ -442,7 +442,7 @@ struct daemon_call *call_list_remove_front(struct daemon_call_list *call_list) {
 void call_list_remove(struct daemon_call_list *call_list, struct daemon_call *call) {
 	PRINT_DEBUG("Entered: call_list=%p, call=%p", call_list, call);
 
-	if (call_list->len == 0) {
+	if (call_list_is_empty(call_list)) {
 		//call_list_check(call_list);
 
 		PRINT_DEBUG("Exited: call_list=%p, len=%u", call_list, call_list->len);
@@ -1304,7 +1304,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("total=%d (%d)", total, total/32);
 
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1376,7 +1376,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1448,7 +1448,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1520,7 +1520,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -1592,7 +1592,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		free(temp);
 		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d\n", pt - msg, msg_len);
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			return;
@@ -2677,7 +2677,7 @@ void *wedge_to_daemon(void *local) {
 
 	int pos;
 
-	PRINT_DEBUG("Waiting for message from kernel\n");
+	PRINT_DEBUG("Waiting for message from kernel");
 
 	int counter = 0;
 	while (daemon_running) {
@@ -3409,7 +3409,7 @@ void daemon_init(void) {
 	for (i = 0; i < MAX_CALLS; i++) {
 		daemon_calls[i].call_id = -1;
 
-		daemon_calls[i].running_flag = 1;
+		daemon_calls[i].to_running = 1;
 		daemon_calls[i].to_flag = 0;
 		daemon_calls[i].to_fd = timerfd_create(CLOCK_REALTIME, 0);
 		if (daemon_calls[i].to_fd == -1) {
@@ -3427,7 +3427,7 @@ void daemon_init(void) {
 		//int id = ;
 		to_data->id = ++daemon_thread_count;
 		to_data->fd = daemon_calls[i].to_fd;
-		to_data->running = &daemon_calls[i].running_flag;
+		to_data->running = &daemon_calls[i].to_running;
 		to_data->flag = &daemon_calls[i].to_flag;
 		to_data->interrupt = &daemon_interrupt_flag;
 		if (pthread_create(&daemon_calls[i].to_thread, NULL, daemon_to_thread, (void *) to_data)) {

@@ -70,6 +70,19 @@
 //#define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_TCP_HEADER_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
 
+struct tcp_request {
+	uint8_t *data;
+	uint32_t len;
+	uint32_t flags;
+	uint32_t serial_num;
+	//TO?
+
+	pthread_t to_thread; //TODO encapsulate into TO obj
+	int to_fd;
+	uint8_t to_running;
+	uint8_t to_flag;
+};
+
 //structure for a record of a tcp_queue
 struct tcp_node {
 	struct tcp_node *next; //Next item in the list
@@ -92,15 +105,17 @@ struct tcp_queue {
 	struct tcp_node *end;
 };
 
-struct tcp_queue *queue_create(uint32_t max);
+struct tcp_queue *queue_create(uint32_t max); //TODO change to struct common_list in common
 void queue_append(struct tcp_queue *queue, struct tcp_node *node);
 void queue_prepend(struct tcp_queue *queue, struct tcp_node *node);
 void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev);
-int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end);
-struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num);
+int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end); //TCP specific
+struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num); //TCP specific
 struct tcp_node *queue_remove_front(struct tcp_queue *queue);
+void queue_remove(struct tcp_queue *queue, struct tcp_node *node);
 int queue_check(struct tcp_queue *queue);
 int queue_is_empty(struct tcp_queue *queue);
+int queue_is_full(struct tcp_queue *queue);
 int queue_has_space(struct tcp_queue *queue, uint32_t len);
 void queue_free(struct tcp_queue *queue);
 
@@ -203,31 +218,25 @@ struct tcp_connection {
 	uint8_t running_flag; //signifies if it is running, 0 when shutting down
 	tcp_state state;
 
-	//some type of options state
-
 	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
 	uint32_t rem_ip; //IP address of remote machine
 	uint16_t rem_port; //Port on remote machine
 
-	struct tcp_queue *write_queue; //buffer for raw data to be transfered
+	struct tcp_queue *request_queue; //buffer for sendmsg requests to be added to write_queue - nonblocking requests may TO and be removed
+	struct tcp_queue *write_queue; //buffer for raw data to be transfered - guaranteed to be transfered
 	struct tcp_queue *send_queue; //buffer for sent tcp_seg that are unACKed
-	struct tcp_queue *recv_queue; //buffer for recv tcp_seg that are unACKed
-	//struct tcp_queue *read_queue; //buffer for raw data that have been transfered //TODO push straight to daemon?
+	struct tcp_queue *recv_queue; //buffer for recv tcp_seg that are unACKed - ordered out of order packets
+	//struct tcp_queue *read_queue; //buffer for raw data that has been transfered //TODO push straight to daemon?
 
 	pthread_t main_thread;
 	uint8_t main_wait_flag;
 	sem_t main_wait_sem;
 
-	//int write_threads; //number of write threads called (i.e. # processes calling write on same TCP socket)
-	sem_t write_sem; //so that only 1 write thread can add to write_queue at a time
-	sem_t write_wait_sem;
-	int index;
+	uint8_t request_interrupt;
+	int request_index;
+	int write_index;
 	uint32_t poll_events;
-
-	//int recv_threads;
-	//sem_t read_sem; //TODO: prob don't need
-	//int connect_threads;
 
 	uint8_t first_flag;
 	uint32_t duplicate;
@@ -238,14 +247,14 @@ struct tcp_connection {
 	uint8_t to_msl_flag; //MSL timeout occurred
 	//uint8_t msl_flag; //MSL performing GBN
 
-	int to_gbn_fd; //GBN timeout occurred
 	pthread_t to_gbn_thread;
+	int to_gbn_fd; //GBN timeout occurred
 	uint8_t to_gbn_flag; //1 GBN timeout occurred
 	uint8_t gbn_flag; //1 performing GBN
 	struct tcp_node *gbn_node;
 
-	int to_delayed_fd; //delayed ACK TO occurred
 	pthread_t to_delayed_thread;
+	int to_delayed_fd; //delayed ACK TO occurred
 	uint8_t to_delayed_flag; //1 delayed ack timeout occured
 	uint8_t delayed_flag; //0 no delayed ack, 1 delayed ack
 	uint16_t delayed_ack_flags;
@@ -259,7 +268,9 @@ struct tcp_connection {
 	uint32_t issn; //initial send seq num
 	uint32_t fssn; //final send seq num, seq of FIN
 	//uint32_t fsse; //final send seq end, so fsse == final ACK
+
 	uint32_t irsn; //initial recv seq num
+	//uint32_t frsn; //final recv seq num, so frsn == figure out?
 
 	uint32_t send_max_win; //max bytes in rem recv buffer, tied with host_seq_num/send_queue
 	uint32_t send_win; //avail bytes in rem recv buffer
@@ -290,6 +301,7 @@ struct tcp_connection {
 	struct finsFrame *ff;
 	struct finsFrame *ff_close;
 
+	//some type of options state
 	uint8_t tsopt_attempt; //attempt time stamp option
 	uint8_t tsopt_enabled; //time stamp option enabled
 	uint32_t ts_rem; //latest ts val from rem
@@ -481,8 +493,8 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 #define ERROR_ICMP_TTL 0
 #define ERROR_ICMP_DEST_UNREACH 1
 
+#define TCP_REQUEST_LIST_MAX 30 //equal to DAEMON_CALL_LIST_MAX
 #define TCP_BLOCK_DEFAULT 500 //default block time (ms) for sendmsg
-
 void tcp_out_fdf(struct finsFrame *ff);
 void tcp_in_fdf(struct finsFrame *ff);
 void tcp_fcf(struct finsFrame *ff);

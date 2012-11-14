@@ -280,9 +280,9 @@ struct daemon_call {
 	uint64_t sock_id_new;
 	int sock_index_new;
 
-	uint8_t running_flag;
-	int to_fd;
 	pthread_t to_thread;
+	int to_fd;
+	uint8_t to_running;
 	uint8_t to_flag;
 	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 };

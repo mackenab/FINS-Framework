@@ -78,7 +78,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	switch (msg->nlmsg_type) {
 	case NLMSG_ERROR: {
 		struct nlmsgerr* errorMsg = (struct nlmsgerr*) NLMSG_DATA(msg);
-		PRINT_DEBUG("\nrecvd NLMSG_ERROR error seq:%d code:%d...", msg->nlmsg_seq, errorMsg->error);
+		PRINT_DEBUG("recvd NLMSG_ERROR error seq:%d code:%d...", msg->nlmsg_seq, errorMsg->error);
 		break;
 	}
 	case RTM_NEWROUTE: {

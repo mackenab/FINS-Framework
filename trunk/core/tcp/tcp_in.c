@@ -16,7 +16,7 @@ double tcp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - t
 
 	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
 
-	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
 	if (time1->tv_usec > time2->tv_usec) {
 		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
@@ -40,10 +40,10 @@ void calcRTT(struct tcp_connection *conn) {
 
 	gettimeofday(&current, 0);
 
-	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)\n", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
-	PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
-	PRINT_DEBUG("old sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f\n", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
+	PRINT_DEBUG("old sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 
 	conn->rtt_flag = 0;
 
@@ -74,7 +74,7 @@ void calcRTT(struct tcp_connection *conn) {
 		conn->timeout = TCP_GBN_TO_MAX;
 	}
 
-	PRINT_DEBUG("new sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f\n", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
+	PRINT_DEBUG("new sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 }
 
 void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
@@ -102,10 +102,10 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+
 			//TODO process ACK options
 
-			conn->duplicate++;
+			conn->duplicate++; //creating duplicate from ACK or FIN ACK.
 			//check for FR
 			if (conn->duplicate == 3) {
 				conn->duplicate = 0;
@@ -163,7 +163,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			//TODO process ACK options
 
@@ -217,7 +216,6 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 						conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-				//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 				//flags
 				if (conn->gbn_flag) {
@@ -254,7 +252,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 		}
 
 		if (conn->main_wait_flag) {
-			PRINT_DEBUG("posting to main_wait_sem\n");
+			PRINT_DEBUG("posting to main_wait_sem");
 			sem_post(&conn->main_wait_sem);
 		}
 
@@ -282,9 +280,10 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-		//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+
 	} else {
-		PRINT_ERROR("Invalid ACK: out of sent window.");
+		PRINT_ERROR("Invalid ACK: out of sent window: conn=%p, seg=%p, state=%d, ACK=%u, send=(%u, %u)",
+				conn, seg, conn->state, seg->ack_num-conn->issn, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn);
 	}
 }
 
@@ -839,7 +838,6 @@ int process_seg(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *
 
 	PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 			conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-	//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 	if (seg->data_len) {
 		//send data to daemon
@@ -914,7 +912,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				seg = (struct tcp_segment *) node->data;
 
 				if (process_seg(conn, seg, &send_flags)) {
-					PRINT_DEBUG("Connected to seq=%u, datalen:%d\n", seg->seq_num, seg->data_len);
+					PRINT_DEBUG("Connected to seq=%u, datalen:%d", seg->seq_num, seg->data_len);
 				} else {
 					PRINT_ERROR("todo error");
 					//TODO error
@@ -961,16 +959,16 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				if (ret) {
 					conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
 				} else {
-					PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
+					PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 					seg_free(seg);
 					free(node);
 				}
 			} else {
-				PRINT_DEBUG("Dropping out of window rem=(%u, %u), got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
+				PRINT_DEBUG("Dropping out of window rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 				seg_free(seg);
 			}
 		} else {
-			PRINT_DEBUG("Dropping window full host_window=%u\n", conn->recv_win);
+			PRINT_DEBUG("Dropping window full host_window=%u", conn->recv_win);
 			seg_free(seg);
 		}
 	}
@@ -1053,7 +1051,7 @@ void *syn_thread(void *local) {
 				seg_free(seg);
 			}
 		} else {
-			PRINT_ERROR("Checksum: recv=%u, calc=%u\n", seg->checksum, calc);
+			PRINT_ERROR("Checksum: recv=%u, calc=%u", seg->checksum, calc);
 			seg_free(seg);
 		}
 	} else {
@@ -1158,7 +1156,6 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 						conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-				//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 				//flags
 				conn->first_flag = 1;
@@ -1227,7 +1224,6 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			temp_seg = seg_create(conn);
 			seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
@@ -1280,7 +1276,6 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			//flags
 			conn->first_flag = 1;
@@ -1336,7 +1331,6 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-		//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 		//conn_change_options(conn, tcp->options, SYN); //?
 
@@ -1538,7 +1532,6 @@ void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-			//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			tcp_start_timer(conn->to_gbn_fd, 2 /* *DEFAULT_MSL*/); //TODO uncomment
 		} else {
@@ -1662,7 +1655,6 @@ void recv_last_ack_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 						conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-				//conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 				//TODO process ACK options
 
@@ -1757,7 +1749,7 @@ void *recv_thread(void *local) {
 				break;
 			}
 		} else {
-			PRINT_ERROR("Checksum: recv=%u, calc=%u\n", seg->checksum, calc);
+			PRINT_ERROR("Checksum: recv=%u, calc=%u", seg->checksum, calc);
 			seg_free(seg);
 		}
 	} else {
@@ -2168,12 +2160,12 @@ int recv_other_test(struct tcp_connection *conn, struct tcp_segment *seg) {
 			if (ret) {
 				conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
 			} else {
-				PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)\n", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
+				PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 				free(node);
 				seg_free(seg);
 			}
 		} else {
-			PRINT_DEBUG("Dropping window full host_window=%d\n", conn->recv_win);
+			PRINT_DEBUG("Dropping window full host_window=%d", conn->recv_win);
 			seg_free(seg);
 		}
 	} else {
@@ -2229,7 +2221,7 @@ void *recv_thread_test(void *local) {
 				recv_other_test(conn, seg);
 			}
 		} else {
-			PRINT_ERROR("Checksum: recv=%u, calc=%u\n", seg->checksum, calc);
+			PRINT_ERROR("Checksum: recv=%u, calc=%u", seg->checksum, calc);
 			seg_free(seg);
 		}
 	} else {

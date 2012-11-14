@@ -1,0 +1,433 @@
+14473 1351302966.786539 execve("/usr/sbin/traceroute", ["traceroute", "-I", "74.125.224.72"], ["SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=561842e061f77"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=bucknell", "SUDO_UID=1000", "USERNAME=root", "MAIL=/var/mail/root", "PATH=/usr/local/sbin:/usr/local/"..., "PWD=/home/bucknell/Jonathan/FINS"..., "ANDROID_SDK=/opt/android-sdk_r20"..., "LANG=en_US.UTF-8", "SHLVL=1", "SUDO_COMMAND=/bin/su", "HOME=/root", "LANGUAGE=en_US:en", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "ANDROID_NDK=/opt/android-ndk-r8b", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "XAUTHORITY=/var/run/gdm/auth-for"..., "COLORTERM=gnome-terminal", "_=/usr/bin/strace", "OLDPWD=/home/bucknell/Jonathan/F"...]) = 0
+14473 1351302966.794364 brk(0)          = 0x9edc000
+14473 1351302966.795161 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302966.807728 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7750000
+14473 1351302966.808485 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+14473 1351302966.809287 open("/etc/ld.so.cache", O_RDONLY) = 3
+14473 1351302966.814184 fstat64(3, {st_dev=makedev(8, 1), st_ino=131683, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/26-21:41:33, st_mtime=2012/08/14-14:37:38, st_ctime=2012/08/14-14:37:38}) = 0
+14473 1351302966.816364 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7740000
+14473 1351302966.816832 close(3)        = 0
+14473 1351302966.822527 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302966.823421 open("/lib/i386-linux-gnu/libm.so.6", O_RDONLY) = 3
+14473 1351302966.824419 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xb0\x34\x00\x00\x34\x00\x00\x00"..., 512) = 512
+14473 1351302966.825158 fstat64(3, {st_dev=makedev(8, 1), st_ino=2363897, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=296, st_size=149392, st_atime=2012/10/26-21:41:39, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/03-16:48:04}) = 0
+14473 1351302966.826443 mmap2(NULL, 151680, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb771a000
+14473 1351302966.826935 mmap2(0xb773e000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x23) = 0xb773e000
+14473 1351302966.827515 close(3)        = 0
+14473 1351302966.834611 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302966.835627 open("/lib/i386-linux-gnu/libc.so.6", O_RDONLY) = 3
+14473 1351302966.836302 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x6f\x01\x00\x34\x00\x00\x00"..., 512) = 512
+14473 1351302966.837673 fstat64(3, {st_dev=makedev(8, 1), st_ino=2363887, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2824, st_size=1442372, st_atime=2012/10/26-21:41:33, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/03-16:48:04}) = 0
+14473 1351302966.839450 mmap2(NULL, 1448456, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xb75b8000
+14473 1351302966.839927 mmap2(0xb7714000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15c) = 0xb7714000
+14473 1351302966.846366 mmap2(0xb7717000, 10760, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7717000
+14473 1351302966.846931 close(3)        = 0
+14473 1351302966.847633 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb75b7000
+14473 1351302966.848216 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb75b6000
+14473 1351302966.848712 set_thread_area({entry_number:-1 -> 6, base_addr:0xb75b7b40, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+14473 1351302966.850374 mprotect(0xb7714000, 8192, PROT_READ) = 0
+14473 1351302966.851499 mprotect(0xb773e000, 4096, PROT_READ) = 0
+14473 1351302966.858558 mprotect(0x8052000, 4096, PROT_READ) = 0
+14473 1351302966.859596 mprotect(0xb776f000, 4096, PROT_READ) = 0
+14473 1351302966.860061 munmap(0xb7740000, 61759) = 0
+14473 1351302966.861111 times(NULL)     = 1755494953
+14473 1351302966.861631 getpid()        = 14473
+14473 1351302966.867009 brk(0)          = 0x9edc000
+14473 1351302966.867492 brk(0x9efd000)  = 0x9efd000
+14473 1351302966.868208 open("/usr/lib/locale/locale-archive", O_RDONLY|O_LARGEFILE) = 3
+14473 1351302966.868900 fstat64(3, {st_dev=makedev(8, 1), st_ino=2236270, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=16256, st_size=8322432, st_atime=2012/10/26-21:42:50, st_mtime=2011/09/12-19:58:37, st_ctime=2011/09/12-19:58:37}) = 0
+14473 1351302966.874212 mmap2(NULL, 2097152, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb73b6000
+14473 1351302966.874916 mmap2(NULL, 4096, PROT_READ, MAP_PRIVATE, 3, 0x2a1) = 0xb774f000
+14473 1351302966.875377 close(3)        = 0
+14473 1351302966.876419 socket(PF_NETLINK, SOCK_RAW, 0) = 3
+14473 1351302966.877020 bind(3, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+14473 1351302966.877597 getsockname(3, {sa_family=AF_NETLINK, pid=14473, groups=00000000}, [12]) = 0
+14473 1351302966.882277 time(NULL)      = 1351302966
+14473 1351302966.883069 sendto(3, "\x14\x00\x00\x00\x16\x00\x01\x03\x36\x3f\x8b\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+14473 1351302966.884219 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\x36\x3f\x8b\x50\x89\x38\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+14473 1351302966.885397 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x36\x3f\x8b\x50\x89\x38\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+14473 1351302966.888148 recvmsg(3, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x36\x3f\x8b\x50\x89\x38\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+14473 1351302966.890261 close(3)        = 0
+14473 1351302966.891218 geteuid32()     = 0
+14473 1351302966.891750 fcntl64(0, F_GETFL) = 0x2 (flags O_RDWR)
+14473 1351302966.892191 fcntl64(1, F_GETFL) = 0x2 (flags O_RDWR)
+14473 1351302966.892631 fcntl64(2, F_GETFL) = 0x2 (flags O_RDWR)
+14473 1351302966.893211 socket(PF_INET, SOCK_RAW, IPPROTO_ICMP) = 3
+14473 1351302966.893763 bind(3, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("0.0.0.0")}, 28) = 0
+14473 1351302966.894713 setsockopt(3, SOL_IP, IP_MTU_DISCOVER, [0], 4) = 0
+14473 1351302966.895300 setsockopt(3, SOL_SOCKET, SO_TIMESTAMP, [1], 4) = 0
+14473 1351302966.895914 setsockopt(3, SOL_IP, IP_RECVTTL, [1], 4) = 0
+14473 1351302966.897015 fcntl64(3, F_SETFL, O_RDONLY|O_NONBLOCK) = 0
+14473 1351302966.898019 connect(3, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, 28) = 0
+14473 1351302966.899753 setsockopt(3, SOL_IP, IP_RECVERR, [1], 4) = 0
+14473 1351302966.900831 fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/26-21:56:06, st_mtime=2012/10/26-21:56:06, st_ctime=2012/10/26-21:45:39}) = 0
+14473 1351302966.902688 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb774e000
+14473 1351302966.903245 write(1, "traceroute to 74.125.224.72 (74."..., 73) = 73
+14473 1351302966.904117 gettimeofday({1351302966, 904334}, NULL) = 0
+14473 1351302966.904827 setsockopt(3, SOL_IP, IP_TTL, [1], 4) = 0
+14473 1351302966.905308 gettimeofday({1351302966, 905431}, NULL) = 0
+14473 1351302966.906370 send(3, "\x08\x00\x49\xf0\x38\x89\x00\x01\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.907260 gettimeofday({1351302966, 907590}, NULL) = 0
+14473 1351302966.908388 send(3, "\x08\x00\x49\xef\x38\x89\x00\x02\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.910008 gettimeofday({1351302966, 910167}, NULL) = 0
+14473 1351302966.910651 send(3, "\x08\x00\x49\xee\x38\x89\x00\x03\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.911606 setsockopt(3, SOL_IP, IP_TTL, [2], 4) = 0
+14473 1351302966.912105 gettimeofday({1351302966, 912394}, NULL) = 0
+14473 1351302966.912998 send(3, "\x08\x00\x49\xed\x38\x89\x00\x04\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.913994 gettimeofday({1351302966, 914806}, NULL) = 0
+14473 1351302966.915283 send(3, "\x08\x00\x49\xec\x38\x89\x00\x05\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.916060 gettimeofday({1351302966, 916184}, NULL) = 0
+14473 1351302966.916694 send(3, "\x08\x00\x49\xeb\x38\x89\x00\x06\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.917619 setsockopt(3, SOL_IP, IP_TTL, [3], 4) = 0
+14473 1351302966.918759 gettimeofday({1351302966, 918886}, NULL) = 0
+14473 1351302966.919351 send(3, "\x08\x00\x49\xea\x38\x89\x00\x07\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.920110 gettimeofday({1351302966, 920235}, NULL) = 0
+14473 1351302966.920704 send(3, "\x08\x00\x49\xe9\x38\x89\x00\x08\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.921502 gettimeofday({1351302966, 921627}, NULL) = 0
+14473 1351302966.922252 send(3, "\x08\x00\x49\xe8\x38\x89\x00\x09\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.923165 setsockopt(3, SOL_IP, IP_TTL, [4], 4) = 0
+14473 1351302966.924003 gettimeofday({1351302966, 924155}, NULL) = 0
+14473 1351302966.924651 send(3, "\x08\x00\x49\xe7\x38\x89\x00\x0a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.926503 gettimeofday({1351302966, 926631}, NULL) = 0
+14473 1351302966.927108 send(3, "\x08\x00\x49\xe6\x38\x89\x00\x0b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.927873 gettimeofday({1351302966, 927999}, NULL) = 0
+14473 1351302966.928552 send(3, "\x08\x00\x49\xe5\x38\x89\x00\x0c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.929482 setsockopt(3, SOL_IP, IP_TTL, [5], 4) = 0
+14473 1351302966.930842 gettimeofday({1351302966, 930977}, NULL) = 0
+14473 1351302966.931468 send(3, "\x08\x00\x49\xe4\x38\x89\x00\x0d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.932210 gettimeofday({1351302966, 932335}, NULL) = 0
+14473 1351302966.932802 send(3, "\x08\x00\x49\xe3\x38\x89\x00\x0e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.933565 gettimeofday({1351302966, 933687}, NULL) = 0
+14473 1351302966.934835 send(3, "\x08\x00\x49\xe2\x38\x89\x00\x0f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.935684 setsockopt(3, SOL_IP, IP_TTL, [6], 4) = 0
+14473 1351302966.936219 gettimeofday({1351302966, 936377}, NULL) = 0
+14473 1351302966.936844 send(3, "\x08\x00\x49\xe1\x38\x89\x00\x10\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302966.937663 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5032) = 0 (Timeout)
+14473 1351302971.975975 gettimeofday({1351302971, 976123}, NULL) = 0
+14473 1351302971.976632 write(1, "\n", 1) = 1
+14473 1351302971.978075 write(1, " 1  *", 5) = 5
+14473 1351302971.978955 write(1, " *", 2) = 2
+14473 1351302971.979647 write(1, " *", 2) = 2
+14473 1351302971.980335 write(1, "\n", 1) = 1
+14473 1351302971.981115 write(1, " 2  *", 5) = 5
+14473 1351302971.981988 write(1, " *", 2) = 2
+14473 1351302971.982882 write(1, " *", 2) = 2
+14473 1351302971.983592 write(1, "\n", 1) = 1
+14473 1351302971.984275 write(1, " 3  *", 5) = 5
+14473 1351302971.984977 write(1, " *", 2) = 2
+14473 1351302971.985659 write(1, " *", 2) = 2
+14473 1351302971.986499 write(1, "\n", 1) = 1
+14473 1351302971.987288 write(1, " 4  *", 5) = 5
+14473 1351302971.988002 write(1, " *", 2) = 2
+14473 1351302971.988716 write(1, " *", 2) = 2
+14473 1351302971.990944 write(1, "\n", 1) = 1
+14473 1351302971.991666 write(1, " 5  *", 5) = 5
+14473 1351302971.992412 write(1, " *", 2) = 2
+14473 1351302971.993137 write(1, " *", 2) = 2
+14473 1351302971.993963 write(1, "\n", 1) = 1
+14473 1351302971.994693 write(1, " 6  *", 5) = 5
+14473 1351302971.995391 gettimeofday({1351302971, 995579}, NULL) = 0
+14473 1351302971.996067 send(3, "\x08\x00\x49\xe0\x38\x89\x00\x11\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302971.997474 gettimeofday({1351302971, 997722}, NULL) = 0
+14473 1351302971.998489 send(3, "\x08\x00\x49\xdf\x38\x89\x00\x12\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302971.999471 setsockopt(3, SOL_IP, IP_TTL, [7], 4) = 0
+14473 1351302971.999994 gettimeofday({1351302972, 136}, NULL) = 0
+14473 1351302972.000741 send(3, "\x08\x00\x49\xde\x38\x89\x00\x13\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.001672 gettimeofday({1351302972, 2442}, NULL) = 0
+14473 1351302972.003075 send(3, "\x08\x00\x49\xdd\x38\x89\x00\x14\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.004428 gettimeofday({1351302972, 4587}, NULL) = 0
+14473 1351302972.005177 send(3, "\x08\x00\x49\xdc\x38\x89\x00\x15\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.011229 setsockopt(3, SOL_IP, IP_TTL, [8], 4) = 0
+14473 1351302972.011751 gettimeofday({1351302972, 11894}, NULL) = 0
+14473 1351302972.018209 send(3, "\x08\x00\x49\xdb\x38\x89\x00\x16\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.019263 gettimeofday({1351302972, 19419}, NULL) = 0
+14473 1351302972.019916 send(3, "\x08\x00\x49\xda\x38\x89\x00\x17\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.026577 gettimeofday({1351302972, 27317}, NULL) = 0
+14473 1351302972.027825 send(3, "\x08\x00\x49\xd9\x38\x89\x00\x18\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.028675 setsockopt(3, SOL_IP, IP_TTL, [9], 4) = 0
+14473 1351302972.029160 gettimeofday({1351302972, 29284}, NULL) = 0
+14473 1351302972.029750 send(3, "\x08\x00\x49\xd8\x38\x89\x00\x19\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.034448 gettimeofday({1351302972, 34596}, NULL) = 0
+14473 1351302972.035164 send(3, "\x08\x00\x49\xd7\x38\x89\x00\x1a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.036237 gettimeofday({1351302972, 42059}, NULL) = 0
+14473 1351302972.042770 send(3, "\x08\x00\x49\xd6\x38\x89\x00\x1b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.043897 setsockopt(3, SOL_IP, IP_TTL, [10], 4) = 0
+14473 1351302972.044648 gettimeofday({1351302972, 44795}, NULL) = 0
+14473 1351302972.045285 send(3, "\x08\x00\x49\xd5\x38\x89\x00\x1c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.049312 gettimeofday({1351302972, 49476}, NULL) = 0
+14473 1351302972.050206 send(3, "\x08\x00\x49\xd4\x38\x89\x00\x1d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.054193 gettimeofday({1351302972, 54541}, NULL) = 0
+14473 1351302972.055070 send(3, "\x08\x00\x49\xd3\x38\x89\x00\x1e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.056028 setsockopt(3, SOL_IP, IP_TTL, [11], 4) = 0
+14473 1351302972.056679 gettimeofday({1351302972, 56817}, NULL) = 0
+14473 1351302972.057287 send(3, "\x08\x00\x49\xd2\x38\x89\x00\x1f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.062352 gettimeofday({1351302972, 62480}, NULL) = 0
+14473 1351302972.062955 send(3, "\x08\x00\x49\xd1\x38\x89\x00\x20\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302972.063755 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5086) = 0 (Timeout)
+14473 1351302977.155740 gettimeofday({1351302977, 155899}, NULL) = 0
+14473 1351302977.156338 write(1, " *", 2) = 2
+14473 1351302977.157090 write(1, " *", 2) = 2
+14473 1351302977.157786 write(1, "\n", 1) = 1
+14473 1351302977.158594 write(1, " 7  *", 5) = 5
+14473 1351302977.159365 write(1, " *", 2) = 2
+14473 1351302977.160070 write(1, " *", 2) = 2
+14473 1351302977.160762 write(1, "\n", 1) = 1
+14473 1351302977.161452 write(1, " 8  *", 5) = 5
+14473 1351302977.162209 write(1, " *", 2) = 2
+14473 1351302977.162895 write(1, " *", 2) = 2
+14473 1351302977.163679 write(1, "\n", 1) = 1
+14473 1351302977.164363 write(1, " 9  *", 5) = 5
+14473 1351302977.165069 write(1, " *", 2) = 2
+14473 1351302977.165910 write(1, " *", 2) = 2
+14473 1351302977.166714 write(1, "\n", 1) = 1
+14473 1351302977.170087 write(1, "10  *", 5) = 5
+14473 1351302977.170810 write(1, " *", 2) = 2
+14473 1351302977.171474 write(1, " *", 2) = 2
+14473 1351302977.172117 write(1, "\n", 1) = 1
+14473 1351302977.172758 write(1, "11  *", 5) = 5
+14473 1351302977.173432 write(1, " *", 2) = 2
+14473 1351302977.174167 gettimeofday({1351302977, 174292}, NULL) = 0
+14473 1351302977.174762 send(3, "\x08\x00\x49\xd0\x38\x89\x00\x21\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.175651 setsockopt(3, SOL_IP, IP_TTL, [12], 4) = 0
+14473 1351302977.176121 gettimeofday({1351302977, 176244}, NULL) = 0
+14473 1351302977.176704 send(3, "\x08\x00\x49\xcf\x38\x89\x00\x22\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.177410 gettimeofday({1351302977, 177534}, NULL) = 0
+14473 1351302977.178700 send(3, "\x08\x00\x49\xce\x38\x89\x00\x23\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.179689 gettimeofday({1351302977, 179816}, NULL) = 0
+14473 1351302977.180287 send(3, "\x08\x00\x49\xcd\x38\x89\x00\x24\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.181122 setsockopt(3, SOL_IP, IP_TTL, [13], 4) = 0
+14473 1351302977.181595 gettimeofday({1351302977, 181718}, NULL) = 0
+14473 1351302977.186018 send(3, "\x08\x00\x49\xcc\x38\x89\x00\x25\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.194744 gettimeofday({1351302977, 195038}, NULL) = 0
+14473 1351302977.195687 send(3, "\x08\x00\x49\xcb\x38\x89\x00\x26\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.202197 gettimeofday({1351302977, 202560}, NULL) = 0
+14473 1351302977.203063 send(3, "\x08\x00\x49\xca\x38\x89\x00\x27\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.204339 setsockopt(3, SOL_IP, IP_TTL, [14], 4) = 0
+14473 1351302977.204854 gettimeofday({1351302977, 204996}, NULL) = 0
+14473 1351302977.205484 send(3, "\x08\x00\x49\xc9\x38\x89\x00\x28\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.210671 gettimeofday({1351302977, 211004}, NULL) = 0
+14473 1351302977.211521 send(3, "\x08\x00\x49\xc8\x38\x89\x00\x29\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.212711 gettimeofday({1351302977, 212857}, NULL) = 0
+14473 1351302977.213350 send(3, "\x08\x00\x49\xc7\x38\x89\x00\x2a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.219025 setsockopt(3, SOL_IP, IP_TTL, [15], 4) = 0
+14473 1351302977.219985 gettimeofday({1351302977, 220146}, NULL) = 0
+14473 1351302977.220635 send(3, "\x08\x00\x49\xc6\x38\x89\x00\x2b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.221410 gettimeofday({1351302977, 221553}, NULL) = 0
+14473 1351302977.222545 send(3, "\x08\x00\x49\xc5\x38\x89\x00\x2c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.226988 gettimeofday({1351302977, 227134}, NULL) = 0
+14473 1351302977.227626 send(3, "\x08\x00\x49\xc4\x38\x89\x00\x2d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.228522 setsockopt(3, SOL_IP, IP_TTL, [16], 4) = 0
+14473 1351302977.229066 gettimeofday({1351302977, 229209}, NULL) = 0
+14473 1351302977.229696 send(3, "\x08\x00\x49\xc3\x38\x89\x00\x2e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.234510 gettimeofday({1351302977, 234874}, NULL) = 0
+14473 1351302977.235558 send(3, "\x08\x00\x49\xc2\x38\x89\x00\x2f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.236494 gettimeofday({1351302977, 236645}, NULL) = 0
+14473 1351302977.237179 send(3, "\x08\x00\x49\xc1\x38\x89\x00\x30\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302977.242659 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5080) = 0 (Timeout)
+14473 1351302982.328773 gettimeofday({1351302982, 328951}, NULL) = 0
+14473 1351302982.329614 write(1, " *", 2) = 2
+14473 1351302982.330500 write(1, "\n", 1) = 1
+14473 1351302982.331580 write(1, "12  *", 5) = 5
+14473 1351302982.332284 write(1, " *", 2) = 2
+14473 1351302982.332937 write(1, " *", 2) = 2
+14473 1351302982.333573 write(1, "\n", 1) = 1
+14473 1351302982.334367 write(1, "13  *", 5) = 5
+14473 1351302982.335154 write(1, " *", 2) = 2
+14473 1351302982.335867 write(1, " *", 2) = 2
+14473 1351302982.336673 write(1, "\n", 1) = 1
+14473 1351302982.337364 write(1, "14  *", 5) = 5
+14473 1351302982.338294 write(1, " *", 2) = 2
+14473 1351302982.338992 write(1, " *", 2) = 2
+14473 1351302982.339634 write(1, "\n", 1) = 1
+14473 1351302982.340276 write(1, "15  *", 5) = 5
+14473 1351302982.343292 write(1, " *", 2) = 2
+14473 1351302982.344012 write(1, " *", 2) = 2
+14473 1351302982.344990 write(1, "\n", 1) = 1
+14473 1351302982.346013 write(1, "16  *", 5) = 5
+14473 1351302982.347019 write(1, " *", 2) = 2
+14473 1351302982.347904 write(1, " *", 2) = 2
+14473 1351302982.349115 setsockopt(3, SOL_IP, IP_TTL, [17], 4) = 0
+14473 1351302982.349623 gettimeofday({1351302982, 349748}, NULL) = 0
+14473 1351302982.350846 send(3, "\x08\x00\x49\xc0\x38\x89\x00\x31\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.351783 gettimeofday({1351302982, 351942}, NULL) = 0
+14473 1351302982.352435 send(3, "\x08\x00\x49\xbf\x38\x89\x00\x32\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.353214 gettimeofday({1351302982, 353369}, NULL) = 0
+14473 1351302982.353973 send(3, "\x08\x00\x49\xbe\x38\x89\x00\x33\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.354892 setsockopt(3, SOL_IP, IP_TTL, [18], 4) = 0
+14473 1351302982.355485 gettimeofday({1351302982, 355739}, NULL) = 0
+14473 1351302982.356238 send(3, "\x08\x00\x49\xbd\x38\x89\x00\x34\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.362653 gettimeofday({1351302982, 362863}, NULL) = 0
+14473 1351302982.363371 send(3, "\x08\x00\x49\xbc\x38\x89\x00\x35\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.370202 gettimeofday({1351302982, 370966}, NULL) = 0
+14473 1351302982.372171 send(3, "\x08\x00\x49\xbb\x38\x89\x00\x36\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.378895 setsockopt(3, SOL_IP, IP_TTL, [19], 4) = 0
+14473 1351302982.379527 gettimeofday({1351302982, 379676}, NULL) = 0
+14473 1351302982.380363 send(3, "\x08\x00\x49\xba\x38\x89\x00\x37\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.382942 gettimeofday({1351302982, 383070}, NULL) = 0
+14473 1351302982.383557 send(3, "\x08\x00\x49\xb9\x38\x89\x00\x38\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.384311 gettimeofday({1351302982, 389984}, NULL) = 0
+14473 1351302982.390597 send(3, "\x08\x00\x49\xb8\x38\x89\x00\x39\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.391482 setsockopt(3, SOL_IP, IP_TTL, [20], 4) = 0
+14473 1351302982.392000 gettimeofday({1351302982, 392147}, NULL) = 0
+14473 1351302982.392647 send(3, "\x08\x00\x49\xb7\x38\x89\x00\x3a\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.393635 gettimeofday({1351302982, 393794}, NULL) = 0
+14473 1351302982.395784 send(3, "\x08\x00\x49\xb6\x38\x89\x00\x3b\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.398905 gettimeofday({1351302982, 399241}, NULL) = 0
+14473 1351302982.399914 send(3, "\x08\x00\x49\xb5\x38\x89\x00\x3c\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.400814 setsockopt(3, SOL_IP, IP_TTL, [21], 4) = 0
+14473 1351302982.406121 gettimeofday({1351302982, 406317}, NULL) = 0
+14473 1351302982.406865 send(3, "\x08\x00\x49\xb4\x38\x89\x00\x3d\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.407926 gettimeofday({1351302982, 408330}, NULL) = 0
+14473 1351302982.408849 send(3, "\x08\x00\x49\xb3\x38\x89\x00\x3e\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.409703 gettimeofday({1351302982, 410011}, NULL) = 0
+14473 1351302982.414713 send(3, "\x08\x00\x49\xb2\x38\x89\x00\x3f\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.415707 setsockopt(3, SOL_IP, IP_TTL, [22], 4) = 0
+14473 1351302982.416508 gettimeofday({1351302982, 416653}, NULL) = 0
+14473 1351302982.417144 send(3, "\x08\x00\x49\xb1\x38\x89\x00\x40\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.418682 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5087) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.448510 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x59\x00\x00\x33\x01\x50\x94\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xb1\x38\x89\x00\x40\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.450774 gettimeofday({1351302982, 451036}, NULL) = 0
+14473 1351302982.451502 gettimeofday({1351302982, 451674}, NULL) = 0
+14473 1351302982.452191 send(3, "\x08\x00\x49\xb0\x38\x89\x00\x41\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.453022 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.473476 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x5a\x00\x00\x33\x01\x50\x93\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xb0\x38\x89\x00\x41\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.474973 gettimeofday({1351302982, 475138}, NULL) = 0
+14473 1351302982.475531 gettimeofday({1351302982, 475686}, NULL) = 0
+14473 1351302982.476264 send(3, "\x08\x00\x49\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"..., 40, 0) = 40
+14473 1351302982.477282 poll([{fd=3, events=POLLIN|POLLERR}], 1, 5000) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.478200 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x5b\x00\x00\x33\x01\x50\x92\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xb0\x38\x89\x00\x41\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.479575 gettimeofday({1351302982, 479722}, NULL) = 0
+14473 1351302982.480128 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4995) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.480961 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x5c\x00\x00\x33\x01\x50\x91\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xb0\x38\x89\x00\x41\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.482577 gettimeofday({1351302982, 482737}, NULL) = 0
+14473 1351302982.483148 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4992) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.483809 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x5d\x00\x00\x33\x01\x50\x90\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.484979 gettimeofday({1351302982, 485102}, NULL) = 0
+14473 1351302982.485480 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4924) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.486220 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x5e\x00\x00\x33\x01\x50\x8f\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.487369 gettimeofday({1351302982, 487493}, NULL) = 0
+14473 1351302982.487872 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4922) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.488524 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x5f\x00\x00\x33\x01\x50\x8e\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.489788 gettimeofday({1351302982, 490003}, NULL) = 0
+14473 1351302982.490392 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4920) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.498026 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x60\x00\x00\x33\x01\x50\x8d\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.499730 gettimeofday({1351302982, 499921}, NULL) = 0
+14473 1351302982.500398 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4910) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.502122 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x61\x00\x00\x33\x01\x50\x8c\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.503619 gettimeofday({1351302982, 503783}, NULL) = 0
+14473 1351302982.504393 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4906) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.505192 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x62\x00\x00\x33\x01\x50\x8b\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.506789 gettimeofday({1351302982, 506963}, NULL) = 0
+14473 1351302982.507425 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4903) = 1 ([{fd=3, revents=POLLIN}])
+14473 1351302982.508416 recvmsg(3, {msg_name(16)={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.224.72")}, msg_iov(1)=[{"\x45\x00\x00\x3c\x00\x63\x00\x00\x33\x01\x50\x8a\x4a\x7d\xe0\x48\x0a\x00\x02\x0f\x00\x00\x51\xaf\x38\x89\x00\x42\x48\x49\x4a\x4b"..., 1280}], msg_controllen=36, {cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=0x1d /* SCM_??? */, ...}, msg_flags=0}, 0) = 60
+14473 1351302982.509801 gettimeofday({1351302982, 510058}, NULL) = 0
+14473 1351302982.510714 poll([{fd=3, events=POLLIN|POLLERR}], 1, 4899) = 0 (Timeout)
+14473 1351302987.415248 gettimeofday({1351302987, 415377}, NULL) = 0
+14473 1351302987.415783 write(1, "\n", 1) = 1
+14473 1351302987.416741 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+14473 1351302987.417333 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+14473 1351302987.419082 close(4)        = 0
+14473 1351302987.419660 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+14473 1351302987.420228 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+14473 1351302987.421679 close(4)        = 0
+14473 1351302987.422569 open("/etc/nsswitch.conf", O_RDONLY) = 4
+14473 1351302987.423609 fstat64(4, {st_dev=makedev(8, 1), st_ino=131264, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=513, st_atime=2012/10/26-21:41:36, st_mtime=2011/04/25-19:04:59, st_ctime=2011/06/10-10:45:09}) = 0
+14473 1351302987.425029 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb774d000
+14473 1351302987.425557 read(4, "# /etc/nsswitch.conf\n#\n# Example"..., 4096) = 513
+14473 1351302987.429439 read(4, "", 4096) = 0
+14473 1351302987.430092 close(4)        = 0
+14473 1351302987.430642 munmap(0xb774d000, 4096) = 0
+14473 1351302987.431258 open("/etc/ld.so.cache", O_RDONLY) = 4
+14473 1351302987.431921 fstat64(4, {st_dev=makedev(8, 1), st_ino=131683, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/26-21:41:33, st_mtime=2012/08/14-14:37:38, st_ctime=2012/08/14-14:37:38}) = 0
+14473 1351302987.433048 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb73a6000
+14473 1351302987.433544 close(4)        = 0
+14473 1351302987.434338 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302987.435671 open("/lib/i386-linux-gnu/libnss_files.so.2", O_RDONLY) = 4
+14473 1351302987.436969 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x90\x1a\x00\x00\x34\x00\x00\x00"..., 512) = 512
+14473 1351302987.438008 fstat64(4, {st_dev=makedev(8, 1), st_ino=2363912, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=88, st_size=42580, st_atime=2012/10/26-21:41:36, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/03-16:48:04}) = 0
+14473 1351302987.439375 mmap2(NULL, 45780, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb739a000
+14473 1351302987.440023 mmap2(0xb73a4000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x9) = 0xb73a4000
+14473 1351302987.440719 close(4)        = 0
+14473 1351302987.441471 mprotect(0xb73a4000, 4096, PROT_READ) = 0
+14473 1351302987.446337 munmap(0xb73a6000, 61759) = 0
+14473 1351302987.454293 open("/etc/resolv.conf", O_RDONLY) = 4
+14473 1351302987.455202 fstat64(4, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/26-21:41:40, st_mtime=2012/10/26-21:41:40, st_ctime=2012/10/26-21:41:40}) = 0
+14473 1351302987.462278 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb774d000
+14473 1351302987.463394 read(4, "# Generated by NetworkManager\nna"..., 4096) = 53
+14473 1351302987.464345 read(4, "", 4096) = 0
+14473 1351302987.464848 close(4)        = 0
+14473 1351302987.465352 munmap(0xb774d000, 4096) = 0
+14473 1351302987.470163 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+14473 1351302987.478246 open("/etc/host.conf", O_RDONLY) = 4
+14473 1351302987.479305 fstat64(4, {st_dev=makedev(8, 1), st_ino=131227, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=92, st_atime=2012/10/26-21:41:40, st_mtime=2010/10/21-08:47:40, st_ctime=2011/06/10-10:45:09}) = 0
+14473 1351302987.480629 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb774d000
+14473 1351302987.481237 read(4, "# The \"order\" line is only used "..., 4096) = 92
+14473 1351302987.487020 read(4, "", 4096) = 0
+14473 1351302987.487608 close(4)        = 0
+14473 1351302987.488048 munmap(0xb774d000, 4096) = 0
+14473 1351302987.490451 open("/etc/hosts", O_RDONLY|O_CLOEXEC) = 4
+14473 1351302987.491117 fcntl64(4, F_GETFD) = 0x1 (flags FD_CLOEXEC)
+14473 1351302987.498515 fstat64(4, {st_dev=makedev(8, 1), st_ino=131229, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=234, st_atime=2012/10/26-21:41:40, st_mtime=2011/06/10-10:50:05, st_ctime=2011/06/10-10:50:05}) = 0
+14473 1351302987.500501 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb774d000
+14473 1351302987.501397 read(4, "127.0.0.1\tlocalhost\n127.0.1.1\tbu"..., 4096) = 234
+14473 1351302987.502821 read(4, "", 4096) = 0
+14473 1351302987.503456 close(4)        = 0
+14473 1351302987.503887 munmap(0xb774d000, 4096) = 0
+14473 1351302987.511014 open("/etc/ld.so.cache", O_RDONLY) = 4
+14473 1351302987.511675 fstat64(4, {st_dev=makedev(8, 1), st_ino=131683, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/26-21:41:33, st_mtime=2012/08/14-14:37:38, st_ctime=2012/08/14-14:37:38}) = 0
+14473 1351302987.512822 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb73a6000
+14473 1351302987.513288 close(4)        = 0
+14473 1351302987.518141 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302987.519112 open("/lib/libnss_mdns4_minimal.so.2", O_RDONLY) = 4
+14473 1351302987.519777 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x00\x08\x00\x00\x34\x00\x00\x00"..., 512) = 512
+14473 1351302987.520471 fstat64(4, {st_dev=makedev(8, 1), st_ino=2359364, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=9580, st_atime=2012/10/26-21:41:40, st_mtime=2010/11/15-11:02:41, st_ctime=2011/06/10-10:45:10}) = 0
+14473 1351302987.521639 mmap2(NULL, 12388, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb774a000
+14473 1351302987.526314 mmap2(0xb774c000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x1) = 0xb774c000
+14473 1351302987.527024 close(4)        = 0
+14473 1351302987.527516 mprotect(0xb774c000, 4096, PROT_READ) = 0
+14473 1351302987.528057 munmap(0xb73a6000, 61759) = 0
+14473 1351302987.528551 open("/etc/ld.so.cache", O_RDONLY) = 4
+14473 1351302987.529120 fstat64(4, {st_dev=makedev(8, 1), st_ino=131683, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=128, st_size=61759, st_atime=2012/10/26-21:41:33, st_mtime=2012/08/14-14:37:38, st_ctime=2012/08/14-14:37:38}) = 0
+14473 1351302987.533638 mmap2(NULL, 61759, PROT_READ, MAP_PRIVATE, 4, 0) = 0xb73a6000
+14473 1351302987.534382 close(4)        = 0
+14473 1351302987.534942 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302987.535756 open("/lib/i386-linux-gnu/libnss_dns.so.2", O_RDONLY) = 4
+14473 1351302987.536457 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\xb0\x0b\x00\x00\x34\x00\x00\x00"..., 512) = 512
+14473 1351302987.537176 fstat64(4, {st_dev=makedev(8, 1), st_ino=2363909, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=48, st_size=22032, st_atime=2012/10/26-21:41:40, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/03-16:48:04}) = 0
+14473 1351302987.538672 mmap2(NULL, 20612, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb7744000
+14473 1351302987.539641 mmap2(0xb7748000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x4) = 0xb7748000
+14473 1351302987.541234 close(4)        = 0
+14473 1351302987.543713 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+14473 1351302987.545529 open("/lib/i386-linux-gnu/libresolv.so.2", O_RDONLY) = 4
+14473 1351302987.547678 read(4, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x30\x26\x00\x00\x34\x00\x00\x00"..., 512) = 512
+14473 1351302987.548623 fstat64(4, {st_dev=makedev(8, 1), st_ino=2363930, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=144, st_size=71432, st_atime=2012/10/26-21:41:37, st_mtime=2012/03/06-17:05:04, st_ctime=2012/06/03-16:48:04}) = 0
+14473 1351302987.550296 mmap2(NULL, 84040, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0xb7385000
+14473 1351302987.551715 mmap2(0xb7396000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x10) = 0xb7396000
+14473 1351302987.553018 mmap2(0xb7398000, 6216, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb7398000
+14473 1351302987.554256 close(4)        = 0
+14473 1351302987.555667 mprotect(0xb7396000, 4096, PROT_READ) = 0
+14473 1351302987.556949 mprotect(0xb7748000, 4096, PROT_READ) = 0
+14473 1351302987.558061 munmap(0xb73a6000, 61759) = 0
+14473 1351302987.558666 stat64("/etc/resolv.conf", {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/26-21:41:40, st_mtime=2012/10/26-21:41:40, st_ctime=2012/10/26-21:41:40}) = 0
+14473 1351302987.560067 open("/etc/resolv.conf", O_RDONLY) = 4
+14473 1351302987.560699 fstat64(4, {st_dev=makedev(8, 1), st_ino=131680, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=53, st_atime=2012/10/26-21:41:40, st_mtime=2012/10/26-21:41:40, st_ctime=2012/10/26-21:41:40}) = 0
+14473 1351302987.562071 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7743000
+14473 1351302987.562589 read(4, "# Generated by NetworkManager\nna"..., 4096) = 53
+14473 1351302987.563438 read(4, "", 4096) = 0
+14473 1351302987.563901 close(4)        = 0
+14473 1351302987.564430 munmap(0xb7743000, 4096) = 0
+14473 1351302987.564951 uname({sysname="Linux", nodename="bucknell-VirtualBox", release="2.6.39.4-opts", version="#1 SMP Mon Apr 16 02:24:32 EDT 2012", machine="i686"}) = 0
+14473 1351302987.568282 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+14473 1351302987.568905 connect(4, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+14473 1351302987.569524 gettimeofday({1351302987, 569670}, NULL) = 0
+14473 1351302987.570246 poll([{fd=4, events=POLLOUT}], 1, 0) = 1 ([{fd=4, revents=POLLOUT}])
+14473 1351302987.570948 send(4, "\x57\xb2\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x37\x32\x03\x32\x32\x34\x03\x31\x32\x35\x02\x37\x34\x07\x69\x6e\x2d\x61\x64"..., 44, MSG_NOSIGNAL) = 44
+14473 1351302987.571862 poll([{fd=4, events=POLLIN}], 1, 5000) = 1 ([{fd=4, revents=POLLIN}])
+14473 1351302987.600234 ioctl(4, FIONREAD, [82]) = 0
+14473 1351302987.600980 recvfrom(4, "\x57\xb2\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x02\x37\x32\x03\x32\x32\x34\x03\x31\x32\x35\x02\x37\x34\x07\x69\x6e\x2d\x61\x64"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 82
+14473 1351302987.602734 close(4)        = 0
+14473 1351302987.603418 write(1, "17  nuq04s07-in-f8.1e100.net (74"..., 55) = 55
+14473 1351302987.604351 write(1, "  20.887 ms", 11) = 11
+14473 1351302987.605089 write(1, "  2.266 ms", 10) = 10
+14473 1351302987.605934 write(1, "\n", 1) = 1
+14473 1351302987.606639 exit_group(0)   = ?

@@ -147,8 +147,8 @@ struct arp_cache {
 	uint8_t seeking;
 	struct timeval updated_stamp;
 
-	int to_fd;
 	pthread_t to_thread;
+	int to_fd;
 	uint8_t to_flag;
 	int retries;
 };
