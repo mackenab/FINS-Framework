@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,4);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	//bzero(&(client_addr.sin_zero), 8); //TODO what's this for?
 
-	/*
+	///*
 	 printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	 if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
 	 perror("Bind");
@@ -235,8 +235,7 @@ int main(int argc, char *argv[]) {
 
 	printf("\n After");
 	fflush(stdout);
-	while (1)
-		;
+	//while (1);
 
 	printf("\n Closing socket");
 	fflush(stdout);

@@ -268,7 +268,6 @@ struct tcp_connection {
 	uint32_t issn; //initial send seq num
 	uint32_t fssn; //final send seq num, seq of FIN
 	//uint32_t fsse; //final send seq end, so fsse == final ACK
-
 	uint32_t irsn; //initial recv seq num
 	//uint32_t frsn; //final recv seq num, so frsn == figure out?
 

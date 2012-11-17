@@ -354,7 +354,7 @@ void *arp_to_thread(void *local) {
 }
 
 void arp_stop_timer(int fd) {
-	PRINT_DEBUG("stopping timer=%d", fd);
+	PRINT_DEBUG("Entered: fd=%d", fd);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = 0;
@@ -369,7 +369,7 @@ void arp_stop_timer(int fd) {
 }
 
 void arp_start_timer(int fd, double millis) {
-	PRINT_DEBUG("starting timer=%d, m=%f", fd, millis);
+	PRINT_DEBUG("Entered: fd=%d, m=%f", fd, millis);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);

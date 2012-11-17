@@ -744,26 +744,59 @@ void handle_requests(struct tcp_connection *conn) {
 void main_closed(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
+	if (conn->request_interrupt) {
+		conn->request_interrupt = 0;
+	}
+
+	if (conn->to_gbn_flag) {
+		conn->to_gbn_flag = 0;
+	}
+
+	if (conn->to_delayed_flag) {
+		conn->to_delayed_flag = 0;
+	}
+
 	//wait
 	conn->main_wait_flag = 1;
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_listen(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	//shouldn't happen? leave if combine stub/conn
+
+	if (conn->request_interrupt) {
+		conn->request_interrupt = 0;
+	}
+
+	if (conn->to_gbn_flag) {
+		conn->to_gbn_flag = 0;
+	}
+
+	if (conn->to_delayed_flag) {
+		conn->to_delayed_flag = 0;
+	}
+
 	//wait
 	conn->main_wait_flag = 1;
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_syn_sent(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	struct tcp_segment *temp_seg;
 
+	if (conn->request_interrupt) {
+		conn->request_interrupt = 0;
+	}
+
 	if (conn->to_gbn_flag) {
-		//TO, resend SYN, -
 		conn->to_gbn_flag = 0;
 
+		//TO, resend SYN, -
 		conn->issn = tcp_rand();
 		conn->send_seq_num = conn->issn;
 		conn->send_seq_end = conn->send_seq_num;
@@ -795,6 +828,10 @@ void main_syn_sent(struct tcp_connection *conn) {
 		conn->main_wait_flag = 1;
 	}
 
+	if (conn->to_delayed_flag) {
+		conn->to_delayed_flag = 0;
+	}
+
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
@@ -802,12 +839,17 @@ void main_syn_recv(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	struct tcp_segment *temp_seg;
 
+	if (conn->request_interrupt) {
+		conn->request_interrupt = 0;
+	}
+
 	//wait
 	if (conn->to_gbn_flag) {
+		conn->to_gbn_flag = 0;
+
 		//TO, close connection, -
 		if (conn->active_open) {
 			//TO, resend SYN, SYN_SENT (?) //TODO check if correct
-			conn->to_gbn_flag = 0;
 
 			conn->state = TS_SYN_SENT;
 			conn->issn = tcp_rand();
@@ -838,6 +880,12 @@ void main_syn_recv(struct tcp_connection *conn) {
 	} else {
 		conn->main_wait_flag = 1;
 	}
+
+	if (conn->to_delayed_flag) {
+		conn->to_delayed_flag = 0;
+	}
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_established(struct tcp_connection *conn) {
@@ -859,8 +907,9 @@ void main_established(struct tcp_connection *conn) {
 
 	//can receive, send ACKs, send/resend data, & get ACKs
 	if (conn->to_gbn_flag) {
-		//gbn timeout
 		conn->to_gbn_flag = 0;
+
+		//gbn timeout
 		conn->first_flag = 0;
 		conn->fast_flag = 0;
 
@@ -1038,6 +1087,7 @@ void main_established(struct tcp_connection *conn) {
 
 				if (conn->first_flag) {
 					conn->first_flag = 0;
+					conn->to_gbn_flag = 0;
 					tcp_start_timer(conn->to_gbn_fd, conn->timeout);
 				}
 
@@ -1083,13 +1133,39 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 
 	//merge with established, can still get ACKs, receive, send ACKs, & send/resend data (don't accept new data)
 	main_established(conn);
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_fin_wait_2(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
+	if (conn->request_interrupt) {
+		conn->request_interrupt = 0;
+	}
+
+	if (conn->to_gbn_flag) {
+		conn->to_gbn_flag = 0;
+	}
+
+	struct tcp_segment *seg;
+	if (conn->to_delayed_flag) {
+		//delayed ACK timeout, send ACK
+		conn->delayed_flag = 0;
+		conn->to_delayed_flag = 0;
+
+		//send ack
+		seg = seg_create(conn);
+		seg_update(seg, conn, conn->delayed_ack_flags);
+		seg_send(seg);
+
+		seg_free(seg);
+	}
+
 	//can still receive, send ACKs
 	conn->main_wait_flag = 1;
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_closing(struct tcp_connection *conn) {
@@ -1097,13 +1173,20 @@ void main_closing(struct tcp_connection *conn) {
 
 	//self, can still get ACKs & send/resend data (don't accept new data)
 	main_established(conn);
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_time_wait(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	struct tcp_segment *seg;
 
+	if (conn->request_interrupt) {
+		conn->request_interrupt = 0;
+	}
+
 	if (conn->to_gbn_flag) {
+		conn->to_gbn_flag = 0;
 		//TO, CLOSE
 
 		if (conn->delayed_flag) {
@@ -1119,14 +1202,12 @@ void main_time_wait(struct tcp_connection *conn) {
 			seg_free(seg);
 		}
 
-		conn->to_gbn_flag = 0;
 		PRINT_DEBUG("TO, CLOSE: state=%d, conn=%p", conn->state, conn);
 		conn->state = TS_CLOSED;
 
 		//send ACK to close handler
 		if (conn->ff_close) {
-			//conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
-			tcp_reply_fcf(conn->ff_close, 1, 0);
+			tcp_reply_fcf(conn->ff_close, 1, 0); //TODO check move to end of last_ack/start of time_wait?
 			conn->ff_close = NULL;
 		} else {
 			PRINT_ERROR("todo error");
@@ -1160,6 +1241,8 @@ void main_close_wait(struct tcp_connection *conn) {
 
 	//can still send & get ACKs
 	main_established(conn);
+
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void main_last_ack(struct tcp_connection *conn) {
@@ -1169,6 +1252,7 @@ void main_last_ack(struct tcp_connection *conn) {
 	main_established(conn);
 
 	//TODO augment so that on final ack, call conn_shutdown(conn);
+	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
 void *main_thread(void *local) {
@@ -1185,8 +1269,8 @@ void *main_thread(void *local) {
 		PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
-		PRINT_DEBUG("flags: interrupt=%u, to_gbn=%u, fast=%u, gbn=%u, delayed=%u, to_delay=%u, first=%u, wait=%u",
-				conn->request_interrupt, conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag, conn->delayed_flag, conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
+		PRINT_DEBUG("flags: staste=%u, interrupt=%u, to_gbn=%u, fast=%u, gbn=%u, delayed=%u, to_delay=%u, first=%u, wait=%u",
+				conn->state, conn->request_interrupt, conn->to_gbn_flag, conn->fast_flag, conn->gbn_flag, conn->delayed_flag, conn->to_delayed_flag, conn->first_flag, conn->main_wait_flag);
 
 		switch (conn->state) {
 		case TS_CLOSED:
@@ -1272,7 +1356,7 @@ void *main_thread(void *local) {
 }
 
 void tcp_stop_timer(int fd) {
-	PRINT_DEBUG("stopping timer=%d", fd);
+	PRINT_DEBUG("Entered: fd=%d", fd);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = 0;
@@ -1287,7 +1371,7 @@ void tcp_stop_timer(int fd) {
 }
 
 void tcp_start_timer(int fd, double millis) {
-	PRINT_DEBUG("starting timer=%d, m=%f", fd, millis);
+	PRINT_DEBUG("Entered: fd=%d, m=%f", fd, millis);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);
@@ -1336,15 +1420,15 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->request_interrupt = 0;
 	conn->request_index = 0;
 	conn->write_index = 0;
+	conn->poll_events = 0;
 
 	conn->first_flag = 1;
 	conn->duplicate = 0;
 	conn->fast_flag = 0;
-	conn->fin_sent = 0;
-	conn->fin_sep = 0;
 
 	conn->to_gbn_flag = 0;
 	conn->gbn_flag = 0;
+	conn->gbn_node = NULL;
 	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
 	if (conn->to_gbn_fd == -1) {
 		PRINT_ERROR("ERROR: unable to create to_fd.");
@@ -1359,6 +1443,14 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 		PRINT_ERROR("ERROR: unable to create delayed_fd.");
 		exit(-1);
 	}
+
+	conn->fin_sent = 0;
+	conn->fin_sep = 0;
+	conn->fin_ack = 0;
+
+	conn->issn = 0;
+	conn->fssn = 0;
+	conn->irsn = 0;
 
 	conn->send_max_win = TCP_MAX_WINDOW_DEFAULT;
 	conn->send_win = conn->send_max_win;
@@ -1375,6 +1467,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->MSS = TCP_MSS_DEFAULT_LARGE;
 	conn->cong_state = RENO_SLOWSTART;
 	conn->cong_window = conn->MSS;
+	conn->threshhold = 0;
 
 	conn->rtt_flag = 0;
 	conn->rtt_first = 1;
@@ -1385,6 +1478,8 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->timeout = TCP_GBN_TO_DEFAULT;
 
 	conn->active_open = 0;
+	conn->ff = NULL;
+	conn->ff_close = NULL;
 
 	conn->tsopt_attempt = 0; //1; //TODO change to 0, trial values atm
 	conn->tsopt_enabled = 0;
@@ -1416,15 +1511,8 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->send_pkt->ip_hdr.protocol = IPPROTO_TCP;
 	conn->send_pkt->tcp_hdr.src_port = conn->host_port;
 	conn->send_pkt->tcp_hdr.dst_port = conn->rem_port;
-	/*
-	 conn->send_pkt.ip_hdr.src_ip = conn->host_ip;
-	 conn->send_pkt.ip_hdr.dst_ip = conn->rem_ip;
-	 conn->send_pkt.ip_hdr.zeros = 0;
-	 conn->send_pkt.ip_hdr.protocol = TCP_PROTOCOL;
-	 conn->send_pkt->tcp_hdr.src_port = conn->host_port;
-	 conn->send_pkt->tcp_hdr.dst_port = conn->rem_port;
-	 */
 	//##################################################################
+
 	//start timers
 	struct tcp_to_thread_data *gbn_data = (struct tcp_to_thread_data *) malloc(sizeof(struct tcp_to_thread_data));
 	gbn_data->id = tcp_gen_thread_id();
@@ -1433,7 +1521,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	gbn_data->flag = &conn->to_gbn_flag;
 	gbn_data->waiting = &conn->main_wait_flag;
 	gbn_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u, conn=%p, id=%u, to_gbn_fd=%d", host_ip, host_port, rem_ip, rem_port, conn, gbn_data->id, conn->to_gbn_fd);
+	PRINT_DEBUG("to_gbn_fd: conn=%p, id=%u, to_gbn_fd=%d", conn, gbn_data->id, conn->to_gbn_fd);
 	if (pthread_create(&conn->to_gbn_thread, NULL, tcp_to_thread, (void *) gbn_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);
@@ -1446,8 +1534,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	delayed_data->flag = &conn->to_delayed_flag;
 	delayed_data->waiting = &conn->main_wait_flag;
 	delayed_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_gbn_fd: host=%u/%u, rem=%u/%u, conn=%p, id=%u, to_gbn_fd=%d",
-			host_ip, host_port, rem_ip, rem_port, conn, delayed_data->id, conn->to_delayed_fd);
+	PRINT_DEBUG("to_delayed_fd: conn=%p, id=%u, to_gbn_fd=%d", conn, delayed_data->id, conn->to_delayed_fd);
 	if (pthread_create(&conn->to_delayed_thread, NULL, tcp_to_thread, (void *) delayed_data)) {
 		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 		exit(-1);

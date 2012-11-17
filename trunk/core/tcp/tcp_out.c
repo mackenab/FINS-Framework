@@ -637,13 +637,11 @@ void *connect_thread(void *local) {
 		} else {
 			//TODO error
 			PRINT_ERROR("todo error");
-			//conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 0);
 			tcp_reply_fcf(ff, 0, 0);
 		}
 	} else {
 		PRINT_ERROR("todo error");
 		//send NACK to connect handler
-		//conn_send_daemon(conn, EXEC_TCP_CONNECT, 0, 1);
 		tcp_reply_fcf(ff, 0, 1);
 	}
 
@@ -878,6 +876,7 @@ void *accept_thread(void *local) {
 							seg_send(temp_seg);
 							seg_free(temp_seg);
 
+							//conn->to_gbn_flag = 0;
 							tcp_start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
 						} else {
 							PRINT_ERROR("todo error");
@@ -1086,8 +1085,7 @@ void *close_thread(void *local) {
 				PRINT_ERROR("todo error");
 			}
 
-			//conn_send_daemon(conn, EXEC_TCP_CLOSE, 1, 0); //TODO check move to end of last_ack/start of time_wait?
-			tcp_reply_fcf(ff, 1, 0);
+			tcp_reply_fcf(ff, 1, 0); //TODO check move to end of last_ack/start of time_wait?
 
 			conn_shutdown(conn);
 

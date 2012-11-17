@@ -220,10 +220,11 @@ int main(int argc, char *argv[]) {
 
 	i = 0;
 	int total = 0;
+	int temp = 1;
 	while (i < 10000) {
-		//ret = poll(fds, nfds, time);
-		if (ret || 1) {
-			/*
+		ret = poll(fds, nfds, time);
+		if (ret || 0) {
+			///*
 			 printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 			 printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
 			 (fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
@@ -231,16 +232,21 @@ int main(int argc, char *argv[]) {
 			 (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 			 fflush(stdout);
 			 //*/
-			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
 				if (pID || 1) {
-					bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
+					if (temp) {
+						bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
+						temp = 0;
+					} else {
+						bytes_read = recv(sock_client, recv_data, 25, 0);
+					}
 				} else {
 					sleep(2);
 					bytes_read = recv(sock_client, recv_data, recv_buf_size, MSG_DONTWAIT);
 				}
 				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 				//bytes_read = recv(sock,recv_data,1024,0);
-				if (bytes_read > 0) {
+				if (bytes_read >= 0) {
 					recv_data[bytes_read] = '\0';
 					//printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 					//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
@@ -251,6 +257,13 @@ int main(int argc, char *argv[]) {
 					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {
 						break;
 					}
+
+					if (bytes_read == 0) {
+						sleep(1);
+					}
+
+				} else if (bytes_read == 0) {
+					sleep(1);
 				} else /*if (errno != EWOULDBLOCK && errno != EAGAIN)*/{
 					printf("\n Error recv at the Server: pID=%d ret=%d errno='%s' (%d)\n", pID, bytes_read, strerror(errno), errno);
 					perror("Error:");
@@ -264,9 +277,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	printf("After\n");
-
-	while (1)
-		;
+	fflush(stdout);
+	//while (1);
 
 	printf("\n Closing client socket");
 	fflush(stdout);
