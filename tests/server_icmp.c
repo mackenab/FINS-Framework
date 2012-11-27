@@ -13,6 +13,24 @@
 #include <signal.h>
 #include <poll.h>
 
+//--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
+#ifndef POLLRDNORM
+#define POLLRDNORM POLLIN
+#endif
+
+#ifndef POLLRDBAND
+#define POLLRDBAND POLLIN
+#endif
+
+#ifndef POLLWRNORM
+#define POLLWRNORM POLLOUT
+#endif
+
+#ifndef POLLWRBAND
+#define POLLWRBAND POLLOUT
+#endif
+//---------------------------------------------------
+
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
 int i = 0;
@@ -142,9 +160,9 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	int temp = fds[1].events;
-	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)",
-			(temp & POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0,
-			(temp & POLLRDNORM) > 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
+	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)", (temp
+			& POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0, (temp & POLLRDNORM)
+			> 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
 
 	struct timeval tv;
 
@@ -188,10 +206,9 @@ int main(int argc, char *argv[]) {
 				if (1) {
 					printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 					printf("\n POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d ",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
-							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-							(fds[ret].revents & POLLWRBAND) > 0);
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR)
+									> 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+							(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 					fflush(stdout);
 				}
 

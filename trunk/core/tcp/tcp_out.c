@@ -4,10 +4,6 @@
  * @author Jonathan Reed
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 #include "tcp.h"
 
 void *tcp_to_write_thread(void *local) {
@@ -627,7 +623,7 @@ void *connect_thread(void *local) {
 			//conn_change_options(conn, tcp->options, SYN);
 
 			//send SYN
-			temp_seg = seg_create(conn);
+			temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 			seg_update(temp_seg, conn, FLAG_SYN);
 			seg_send(temp_seg);
 			seg_free(temp_seg);
@@ -871,7 +867,7 @@ void *accept_thread(void *local) {
 							//conn_change_options(conn, tcp->options, SYN);
 
 							//send SYN ACK
-							temp_seg = seg_create(conn);
+							temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 							seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
 							seg_send(temp_seg);
 							seg_free(temp_seg);
@@ -1038,7 +1034,7 @@ void *close_thread(void *local) {
 				conn->fssn = conn->send_seq_num;
 				conn->fin_ack = conn->send_seq_end + 1;
 
-				seg = seg_create(conn);
+				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
 				seg_send(seg);
 				seg_free(seg);
@@ -1064,7 +1060,7 @@ void *close_thread(void *local) {
 				conn->fssn = conn->send_seq_num;
 				conn->fin_ack = conn->send_seq_end + 1;
 
-				seg = seg_create(conn);
+				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
 				seg_send(seg);
 				seg_free(seg);

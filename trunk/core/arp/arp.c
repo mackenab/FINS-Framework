@@ -65,12 +65,12 @@ uint32_t gen_IP_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
  *  */
 /**register shifting is used to extract individual bytes in the code below*/
 void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs) {
-	char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FF))); //least sig.
-	char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00)) >> 8);
-	char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000)) >> 16);
-	char_addrs[2] = (unsigned char) ((int_addrs & (0x00000000FF000000)) >> 24);
-	char_addrs[1] = (unsigned char) ((int_addrs & (0x000000FF00000000)) >> 32);
-	char_addrs[0] = (unsigned char) ((int_addrs & (0x0000FF0000000000)) >> 40); //most sig.
+	char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FFull))); //least sig.
+	char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00ull)) >> 8);
+	char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000ull)) >> 16);
+	char_addrs[2] = (unsigned char) ((int_addrs & (0x00000000FF000000ull)) >> 24);
+	char_addrs[1] = (unsigned char) ((int_addrs & (0x000000FF00000000ull)) >> 32);
+	char_addrs[0] = (unsigned char) ((int_addrs & (0x0000FF0000000000ull)) >> 40); //most sig.
 }
 
 /**

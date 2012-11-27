@@ -16,7 +16,11 @@
 #include <pthread.h>
 #include <queueModule.h>
 #include <semaphore.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
 #include <time.h>
@@ -417,9 +421,9 @@ struct tcp_segment {
 	uint32_t dst_ip; //Destination addr
 	uint32_t seq_end;
 
-	//uint32_t ts_val;
-	//uint32_t ts_secr;
-	//uint32_t sack_len;
+//uint32_t ts_val;
+//uint32_t ts_secr;
+//uint32_t sack_len;
 };
 
 void tcp_srand(void); //Seed the random number generator
@@ -429,12 +433,13 @@ uint32_t tcp_gen_thread_id(void);
 struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
 struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
 
-struct tcp_segment *seg_create(struct tcp_connection *conn);
-void seg_add_data(struct tcp_segment *seg, struct tcp_connection *conn, int data_len);
-void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t flags);
+struct tcp_segment *seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port, uint32_t seq_num, uint32_t seq_end);
+int seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, int index, int data_len);
 uint16_t seg_checksum(struct tcp_segment *seg);
 int seg_send(struct tcp_segment *seg);
 void seg_free(struct tcp_segment *seg);
+
+void seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t flags);
 void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn);
 
 int in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
@@ -526,5 +531,24 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg);
 
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application
+
+//--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
+#ifndef POLLRDNORM
+#define POLLRDNORM POLLIN
+#endif
+
+#ifndef POLLRDBAND
+#define POLLRDBAND POLLIN
+#endif
+
+#ifndef POLLWRNORM
+#define POLLWRNORM POLLOUT
+#endif
+
+#ifndef POLLWRBAND
+#define POLLWRBAND POLLOUT
+#endif
+//---------------------------------------------------
+
 #endif /* TCP_H_ */
 

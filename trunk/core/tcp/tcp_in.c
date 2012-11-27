@@ -4,11 +4,6 @@
  * @author Jonathan Reed
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <errno.h>
 #include "tcp.h"
 
 double tcp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
@@ -720,10 +715,12 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 		kind = pt[i++];
 		switch (kind) {
 		case TCP_OPT_EOL:
-			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len);
+			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len)
+			;
 			return 1;
 		case TCP_OPT_NOP:
-			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len);
+			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len)
+			;
 			continue;
 		case TCP_OPT_MSS:
 			len = pt[i++];
@@ -846,7 +843,7 @@ int process_seg(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *
 	} else {
 		//send data
 	}
-	
+
 	//conn->recv_seq_num += (uint32_t) seg->data_len;
 	//conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
 
@@ -1022,7 +1019,7 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 			conn->delayed_flag = 0;
 			conn->to_delayed_flag = 0;
 
-			seg = seg_create(conn);
+			seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 			seg_update(seg, conn, flags);
 			seg_send(seg);
 			seg_free(seg);
@@ -1033,7 +1030,7 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 			tcp_start_timer(conn->to_delayed_fd, TCP_DELAYED_TO_DEFAULT);
 		}
 	} else {
-		seg = seg_create(conn);
+		seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		seg_update(seg, conn, flags);
 		seg_send(seg);
 		seg_free(seg);
@@ -1195,7 +1192,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				//TODO piggy back data? release to established with delayed TO on
 				//send ACK
-				temp_seg = seg_create(conn);
+				temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				seg_update(temp_seg, conn, FLAG_ACK);
 				seg_send(temp_seg);
 				seg_free(temp_seg);
@@ -1217,7 +1214,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//TODO remove dup SYN packet from send_queue
 
 				//send RST
-				temp_seg = seg_create(conn);
+				temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				temp_seg->seq_num = seg->ack_num;
 				seg_update(temp_seg, conn, FLAG_RST);
 				seg_send(temp_seg);
@@ -1245,7 +1242,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
-			temp_seg = seg_create(conn);
+			temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 			seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
 			seg_send(temp_seg);
 			seg_free(temp_seg);
@@ -1354,7 +1351,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//conn_change_options(conn, tcp->options, SYN); //?
 
 		//send SYN ACK
-		temp_seg = seg_create(conn);
+		temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
 		seg_send(temp_seg);
 		seg_free(temp_seg);
@@ -1798,9 +1795,10 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_segment *seg;
 	struct tcp_connection *conn;
 	int start;
-	struct tcp_connection_stub *conn_stub;
 	struct tcp_thread_data *thread_data;
 	pthread_t thread;
+	struct tcp_connection_stub *conn_stub;
+	struct tcp_segment *temp_seg;
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
@@ -1875,6 +1873,19 @@ void tcp_in_fdf(struct finsFrame *ff) {
 
 				//TODO if ACK, send <SEQ=SEG.ACK><CTL=RST>
 				//TODO else, <SEQ=0><ACK=seq+len><CTL=RST>
+
+				if (seg->flags & FLAG_ACK) {
+					temp_seg = seg_create(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port, seg->ack_num, seg->ack_num + 1);
+					temp_seg->flags |= (FLAG_RST & (FLAG_CONTROL | FLAG_ECN));
+				} else {
+					temp_seg = seg_create(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port, 0, seg->data_len);
+					temp_seg->flags |= ((FLAG_RST | FLAG_ACK) & (FLAG_CONTROL | FLAG_ECN));
+				}
+				temp_seg->flags |= ((MIN_TCP_HEADER_WORDS + 0) << 12) & FLAG_DATAOFFSET;
+
+				//seg_update(temp_seg, conn, flags);
+				//seg_send(temp_seg);
+				seg_free(temp_seg);
 
 				seg_free(seg);
 			}
@@ -2064,7 +2075,7 @@ int recv_syn_sent_test(struct tcp_connection *conn, struct tcp_segment *seg) {
 void conn_send_ack_test(struct tcp_connection *conn) {
 	struct tcp_segment *seg;
 
-	seg = seg_create(conn);
+	seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 
 	seg_update(seg, conn, FLAG_ACK);
 	seg_send(seg);
@@ -2076,7 +2087,7 @@ void conn_send_reset_test(struct tcp_connection *conn, struct tcp_segment *seg) 
 	struct tcp_segment *temp_seg;
 
 	//<SEQ=SEG.ACK><CTL=RST>
-	temp_seg = seg_create(conn);
+	temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 	seg_update(temp_seg, conn, FLAG_RST);
 
 	if (seg->flags & FLAG_ACK) {

@@ -99,7 +99,7 @@ extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 int main() {
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
-	my_host_mac_addr = 0x080027445566;
+	my_host_mac_addr = 0x080027445566ull;
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
 	my_host_mask = IP4_ADR_P2H(255,255,255,0);
 

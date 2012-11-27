@@ -13,6 +13,24 @@
 #include <math.h>
 #include <time.h>
 
+//--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
+#ifndef POLLRDNORM
+#define POLLRDNORM POLLIN
+#endif
+
+#ifndef POLLRDBAND
+#define POLLRDBAND POLLIN
+#endif
+
+#ifndef POLLWRNORM
+#define POLLWRNORM POLLOUT
+#endif
+
+#ifndef POLLWRBAND
+#define POLLWRBAND POLLOUT
+#endif
+//---------------------------------------------------
+
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
 /*

@@ -284,7 +284,7 @@ struct daemon_call {
 	int to_fd;
 	uint8_t to_running;
 	uint8_t to_flag;
-	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
+//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 };
 
 struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index);
@@ -454,6 +454,29 @@ struct errhdr {
 	struct sock_extended_err ee;
 	struct sockaddr_in offender;
 };
+
+
+//--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
+#ifndef POLLRDNORM
+#define POLLRDNORM POLLIN
+#endif
+
+#ifndef POLLRDBAND
+#define POLLRDBAND POLLIN
+#endif
+
+#ifndef POLLWRNORM
+#define POLLWRNORM POLLOUT
+#endif
+
+#ifndef POLLWRBAND
+#define POLLWRBAND POLLOUT
+#endif
+
+#ifndef SO_RXQ_OVFL
+#define SO_RXQ_OVFL 40
+#endif
+//---------------------------------------------------
 
 #include "udpHandling.h"
 #include "tcpHandling.h"
