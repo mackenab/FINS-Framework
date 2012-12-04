@@ -968,6 +968,7 @@ void icmp_shutdown(void) {
 
 	//TODO expand this
 
+	PRINT_DEBUG("Joining switch_to_icmp_thread");
 	pthread_join(switch_to_icmp_thread, NULL);
 }
 

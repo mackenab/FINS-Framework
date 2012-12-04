@@ -514,6 +514,7 @@ void udp_shutdown(void) {
 
 	//TODO expand this
 
+	PRINT_DEBUG("Joining switch_to_udp_thread");
 	pthread_join(switch_to_udp_thread, NULL);
 }
 

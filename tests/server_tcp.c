@@ -91,8 +91,8 @@ int main(int argc, char *argv[]) {
 	int sock_client;
 	int addr_len = sizeof(struct sockaddr);
 	int bytes_read;
-	int recv_buf_size = 4000;
-	char recv_data[4000];
+	int recv_buf_size = 65536; //4000;
+	char recv_data[recv_buf_size + 1];
 	int ret;
 	pid_t pID = 0;
 
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			printf("\n failed accept: errno=%d errno='%s'", errno, strerror(errno));
 			fflush(stdout);
-			//sleep(1);
+			sleep(1);
 		}
 	}
 	//*/
@@ -202,6 +202,8 @@ int main(int argc, char *argv[]) {
 	printf("\n Connection establisehed pID=%d sock_client=%d to (%s/%d) netw=%u", pID, sock_client, inet_ntoa(client_addr.sin_addr),
 			ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	fflush(stdout);
+
+	//gets(recv_data);
 
 	//interface_setNonblocking(sock_client);
 
@@ -240,21 +242,21 @@ int main(int argc, char *argv[]) {
 	int total = 0;
 	int temp = 1;
 	while (i < 10000) {
-		ret = poll(fds, nfds, time);
-		if (ret || 0) {
-			///*
-			printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
-			printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
-					(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
-					(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND)
-							> 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
-			fflush(stdout);
-			//*/
-			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
+		//ret = poll(fds, nfds, time);
+		if (ret || 1) {
+			if (0) {
+				printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
+				printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
+						(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
+						(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+				fflush(stdout);
+			}
+			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
 				if (pID || 1) {
 					if (temp) {
 						bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
-						temp = 0;
+						//temp = 0;
 					} else {
 						bytes_read = recv(sock_client, recv_data, 25, 0);
 					}
@@ -269,7 +271,7 @@ int main(int argc, char *argv[]) {
 					//printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 					//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));
 					total += bytes_read;
-					printf("\n frame=%d, total=%d, pID=%d, client_port=%u: said='%s'\n", ++i, total, pID, ntohs(client_addr.sin_port), recv_data);
+					printf("\n frame=%d, len=%d, total=%d, pID=%d, client_port=%u: said=''", ++i, bytes_read, total, pID, ntohs(client_addr.sin_port) /*,recv_data*/);
 					fflush(stdout);
 
 					if ((strcmp(recv_data, "q") == 0) || strcmp(recv_data, "Q") == 0) {

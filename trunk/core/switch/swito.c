@@ -248,6 +248,7 @@ void switch_shutdown(void) {
 
 	//TODO expand this
 
+	PRINT_DEBUG("Joining switch_thread");
 	pthread_join(switch_thread, NULL);
 }
 

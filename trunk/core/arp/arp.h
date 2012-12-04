@@ -157,6 +157,7 @@ struct arp_cache {
 #define ARP_RETRANS_TO_DEFAULT 1000
 #define ARP_CACHE_TO_DEFAULT 15000
 #define ARP_RETRIES 2
+#define ARP_TO_MIN 0.00001
 
 struct arp_cache *cache_create(uint32_t ip_addr);
 void cache_shutdown(struct arp_cache *cache);

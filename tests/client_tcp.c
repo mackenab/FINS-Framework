@@ -49,14 +49,14 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in client_addr;
 	int numbytes;
 	struct hostent *host;
-	char send_data[1024];
-	char msg[1032];
+	char send_data[131072 + 1];
+	char msg[131092];
 	int port;
 	int client_port;
 	pid_t pID = 0;
 
-	memset(msg, 89, 1000);
-	msg[1000] = '\0';
+	memset(msg, 89, 131072);
+	msg[131072] = '\0';
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,4);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,8);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	//bzero(&(client_addr.sin_zero), 8); //TODO what's this for?
 
-	///*
+	/*
 	 printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	 if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
 	 perror("Bind");
@@ -170,6 +170,8 @@ int main(int argc, char *argv[]) {
 
 	//while (1);
 
+	gets(send_data);
+
 	int nfds = 2;
 	struct pollfd fds[nfds];
 	fds[0].fd = -1;
@@ -184,54 +186,70 @@ int main(int argc, char *argv[]) {
 	int ret;
 	int recv_bytes;
 
-	pID = fork();
+	//pID = fork();
 
 	int i = 0;
 	int j;
+	int total = 0;
 	while (i < 1) {
-		i++;
-		printf("(%d) Input msg (q or Q to quit):", i);
+		//i++;
+		//printf("(%d) Input msg (q or Q to quit):", i);
 		//gets(send_data);
 
-		len = strlen(send_data);
+		//len = strlen(send_data);
 		//printf("\nlen=%d, str='%s'\n", len, send_data);
-		fflush(stdout);
+		//fflush(stdout);
 
 		//memcpy(msg, send_data, len);
 		len = 50;
+		//len = 131072;
+		//len = 31072;
+
+		msg[len] = 'a';
 
 		//if (pID == 0)
 		//	sleep(1);
 
-		printf("\nDoing pID=%d\n", pID);
-		fflush(stdout);
+		//printf("\nDoing pID=%d\n", pID);
+		//fflush(stdout);
 
-		if (len > 0 && len < 1024) {
+		if ((len > 0 && len < 1024) || 1) {
 			if (pID == 0) {
 				//ret = poll(fds, nfds, time);
 				//printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
 			}
 			if (ret || 1) {
-				///*
-				printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
-				printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-						(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
-						(fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
-						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
-				fflush(stdout);
-				//*/
+				if (0) {
+					printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
+					printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+							(fds[ret].revents & POLLWRBAND) > 0);
+					fflush(stdout);
+				}
 
 				if ((fds[ret].revents & (POLLOUT)) || 1) {
 					//numbytes = send(sock, send_data, strlen(send_data), 0);
-					printf("\n sending: pID=%d", pID);
-					fflush(stdout);
-					numbytes = send(sock, msg, len, MSG_DONTWAIT);
+					//printf("\n sending: pID=%d", pID);
+					//fflush(stdout);
+					numbytes = send(sock, msg, len, 0);
+					//numbytes = send(sock, msg, len, MSG_DONTWAIT);
+
 					//for (j = 0, numbytes = 0; j < len; j++) {
 					//	numbytes += send(sock, msg, 1, 0);
 					//}
 
-					printf("\n After: numbytes=%d", numbytes);
-					fflush(stdout);
+					if (numbytes >= 0) {
+						total += numbytes;
+
+						printf("\n frame=%d, len=%d, total=%d, pID=%d", ++i, numbytes, total, pID);
+						fflush(stdout);
+
+						if (numbytes == 0) {
+							sleep(1);
+						}
+					}
 				} else {
 				}
 			}
@@ -240,7 +258,7 @@ int main(int argc, char *argv[]) {
 			fflush(stdout);
 		}
 
-		if (1) {
+		if (0) {
 			if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
 				break;
 			}
@@ -255,13 +273,18 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 	//while (1);
 
+	gets(send_data);
+
+	msg[0] = 'q';
+	msg[1] = '\0';
+	numbytes = send(sock, msg, 1, 0);
+
 	printf("\n Closing socket");
 	fflush(stdout);
 	close(sock);
 
 	printf("\n FIN");
 	fflush(stdout);
-	while (1)
-		;
+	while (1);
 }
 

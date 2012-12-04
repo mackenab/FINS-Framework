@@ -68,6 +68,7 @@ void termination_handler(int sig) {
 
 	//shutdown all module threads in backwards order of startup
 	//rtm_shutdown();
+
 	udp_shutdown();
 	tcp_shutdown();
 	icmp_shutdown();
@@ -95,6 +96,18 @@ void termination_handler(int sig) {
 }
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
+
+void uint32_decrease_test(uint32_t *data, uint32_t value) {
+	PRINT_DEBUG("Entered: data=%p, value=%u", data, value);
+
+	if (*data > value) {
+		*data -= value;
+	} else {
+		*data = 0;
+	}
+
+	PRINT_DEBUG("Exited: data=%u", *data);
+}
 
 int main() {
 	//###################################################################### //TODO get this from config file eventually

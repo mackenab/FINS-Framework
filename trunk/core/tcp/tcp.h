@@ -74,6 +74,9 @@
 //#define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_TCP_HEADER_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
 
+void uint32_increase(uint32_t *data, uint32_t value);
+void uint32_decrease(uint32_t *data, uint32_t value);
+
 struct tcp_request {
 	uint8_t *data;
 	uint32_t len;
@@ -218,6 +221,8 @@ struct tcp_connection {
 	uint32_t write_threads;
 	//##
 
+	uint32_t total;
+
 	sem_t sem; //for next, state, write_threads
 	uint8_t running_flag; //signifies if it is running, 0 when shutting down
 	tcp_state state;
@@ -239,7 +244,7 @@ struct tcp_connection {
 
 	uint8_t request_interrupt;
 	int request_index;
-	int write_index;
+	uint32_t write_index;
 	uint32_t poll_events;
 
 	uint8_t first_flag;
@@ -267,11 +272,10 @@ struct tcp_connection {
 
 	uint8_t fin_sent;
 	uint8_t fin_sep; //TODO replace with fin_seq
-	uint32_t fin_ack;
 
 	uint32_t issn; //initial send seq num
 	uint32_t fssn; //final send seq num, seq of FIN
-	//uint32_t fsse; //final send seq end, so fsse == final ACK
+	uint32_t fsse; //final send seq end, so fsse == ACK of FIN
 	uint32_t irsn; //initial recv seq num
 	//uint32_t frsn; //final recv seq num, so frsn == figure out?
 
@@ -302,7 +306,7 @@ struct tcp_connection {
 
 	uint8_t active_open;
 	struct finsFrame *ff;
-	struct finsFrame *ff_close;
+	//struct finsFrame *ff_close;
 
 	//some type of options state
 	uint8_t tsopt_attempt; //attempt time stamp option
@@ -354,6 +358,7 @@ struct tcp_connection {
 #define TCP_MSS_DEFAULT_SMALL 536 //also said to be, 536
 #define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO
 #define TCP_KA_TO_DEFAULT 7200000 //keep alive TO
+#define TCP_TO_MIN 0.00001
 #define TCP_SEND_MIN 4096
 #define TCP_SEND_MAX 3444736
 #define TCP_SEND_DEFAULT 16384
@@ -387,9 +392,12 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 int conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_msg);
+int conn_is_finished(struct tcp_connection *conn);
 void conn_shutdown(struct tcp_connection *conn);
 void conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
 void conn_free(struct tcp_connection *conn);
+
+void handle_requests(struct tcp_connection *conn);
 
 sem_t conn_list_sem;
 int conn_list_insert(struct tcp_connection *conn);
@@ -434,7 +442,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
 struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
 
 struct tcp_segment *seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port, uint32_t seq_num, uint32_t seq_end);
-int seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, int index, int data_len);
+uint32_t seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, uint32_t index, int data_len);
 uint16_t seg_checksum(struct tcp_segment *seg);
 int seg_send(struct tcp_segment *seg);
 void seg_free(struct tcp_segment *seg);
@@ -508,11 +516,11 @@ void tcp_error(struct finsFrame *ff);
 int metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 
-void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags);
-void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog);
-void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags);
 void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port);
+void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog);
+void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags);
+void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags);
 void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t initial,
 		uint32_t flags);
 
@@ -531,7 +539,6 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg);
 
 //void tcp_send_out();	//Send the data out that's currently in the queue (outgoing frames)
 //void tcp_send_in();		//Send the incoming frames in to the application
-
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
 #define POLLRDNORM POLLIN

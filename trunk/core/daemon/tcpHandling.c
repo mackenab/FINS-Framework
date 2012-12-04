@@ -659,12 +659,15 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	if (peer == 0) { //getsockname
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(host_ip);
 		addr->sin_port = htons(host_port);
 	} else if (peer == 1) { //getpeername
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(rem_ip);
 		addr->sin_port = htons(rem_port);
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(rem_ip);
 		addr->sin_port = htons(rem_port);
 	} else {
@@ -1551,7 +1554,8 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
-				PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+				PRINT_DEBUG(
+						"POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
@@ -2622,7 +2626,8 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 
 	uint32_t events = call->data;
 
-	PRINT_DEBUG("POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
+	PRINT_DEBUG(
+			"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 			events & POLLIN, events & POLLPRI, events & POLLOUT, events & POLLERR, events & POLLHUP, events & POLLNVAL, events & POLLRDNORM, events & POLLRDBAND, events & POLLWRNORM, events & POLLWRBAND);
 
 	uint32_t mask = 0;

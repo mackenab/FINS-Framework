@@ -126,8 +126,8 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
 
-	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
-	server_addr.sin_addr.s_addr = xxx(74,125,224,72);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	bzero(&(server_addr.sin_zero), 8);

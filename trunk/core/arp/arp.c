@@ -440,7 +440,7 @@ void cache_shutdown(struct arp_cache *cache) {
 	cache->running_flag = 0;
 
 	//stop threads
-	arp_start_timer(cache->to_fd, 0.00001);
+	arp_start_timer(cache->to_fd, ARP_TO_MIN);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -987,6 +987,7 @@ void arp_shutdown(void) {
 
 	//TODO fill this out
 
+	PRINT_DEBUG("Joining switch_to_arp_thread");
 	pthread_join(switch_to_arp_thread, NULL);
 }
 

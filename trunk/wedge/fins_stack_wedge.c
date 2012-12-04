@@ -27,7 +27,7 @@
 
 #include "fins_stack_wedge.h"	/* Defs for this module */
 
-#define RECV_BUFFER_SIZE	1024	// Same as userspace, Pick an appropriate value here
+#define RECV_BUFFER_SIZE	1024//4096//16384//8192	// Same as userspace, Pick an appropriate value here
 #define AF_FINS 2
 #define PF_FINS AF_FINS
 #define NETLINK_FINS 20
@@ -363,7 +363,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 	u_char *pt;
 	int i;
 
-	PRINT_DEBUG("pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
+	PRINT_DEBUG("Entered: pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
 
 	print_buf = (u_char *) kmalloc(5 * len, GFP_KERNEL);
 	if (print_buf == NULL) {
@@ -404,12 +404,16 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 	memcpy(NLMSG_DATA(nlh), buf, len);
 
 	// Send the message
-	ret_val = nlmsg_unicast(fins_nl_sk, skb, pid);
+	//ret_val = nlmsg_unicast(fins_nl_sk, skb, pid);
+	ret_val = netlink_unicast(fins_nl_sk, skb, pid, 0);
+
 	if (ret_val < 0) {
 		PRINT_ERROR("netlink error sending to user");
+
 		return -1;
 	}
 
+	PRINT_DEBUG("Exited: pid=%d, seq=%d, type=%d, len=%d, ret_val=%d", pid, seq, type, len, ret_val);
 	return 0;
 }
 
@@ -432,6 +436,8 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	u_char *pt;
 	int i;
 	//####################
+
+	PRINT_DEBUG("Entered: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x", pid, msg_buf, msg_len, flags);
 
 	if (down_interruptible(&link_sem)) {
 		PRINT_ERROR("link_sem acquire fail");
@@ -496,8 +502,10 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 		if (ret < 0) {
 			PRINT_ERROR("netlink error sending seq %d to user", seq);
 			up(&link_sem);
+			PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 			return -1;
 		}
+		msleep(10);
 
 		msg_pt += part_len;
 		pos += part_len;
@@ -514,12 +522,14 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	if (ret < 0) {
 		PRINT_ERROR("netlink error sending seq %d to user", seq);
 		up(&link_sem);
+		PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 		return -1;
 	}
 
 	kfree(part_buf);
 	up(&link_sem);
 
+	PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, 0);
 	return 0;
 }
 
@@ -697,7 +707,8 @@ void nl_data_ready(struct sk_buff *skb) {
 		}
 	}
 
-	end: PRINT_DEBUG("Exited: skb=%p", skb);
+	end: //
+	PRINT_DEBUG("Exited: skb=%p", skb);
 }
 
 /* This function is called from within fins_release and is modeled after ipx_destroy_socket() */
@@ -750,7 +761,6 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -797,7 +807,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 		return print_exit(__FUNCTION__, __LINE__, -ENOMEM);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[socket_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[socket_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -910,7 +920,6 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -950,7 +959,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[bind_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[bind_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -1050,7 +1059,6 @@ static int fins_listen(struct socket *sock, int backlog) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -1090,7 +1098,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[listen_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[listen_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -1184,7 +1192,6 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -1224,7 +1231,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[connect_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[connect_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -1324,7 +1331,6 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	struct sock *sk, *sk_new;
 	unsigned long long sock_id, sock_id_new;
 	int sock_index, index_new;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -1417,7 +1423,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 		}
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[accept_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[accept_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -1532,7 +1538,6 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -1573,7 +1578,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[getname_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[getname_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -1704,7 +1709,6 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 
@@ -1749,7 +1753,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[sendmsg_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[sendmsg_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -1901,7 +1905,6 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	struct sockaddr_in *addr_in;
@@ -1943,7 +1946,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[recvmsg_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[recvmsg_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -2163,7 +2166,6 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -2214,7 +2216,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[ioctl_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[ioctl_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -2718,7 +2720,6 @@ static int fins_release(struct socket *sock) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -2766,7 +2767,7 @@ static int fins_release(struct socket *sock) {
 	}
 
 	wedge_sockets[sock_index].release_flag = 1;
-	call_threads = ++wedge_sockets[sock_index].threads[release_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[release_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -2856,7 +2857,6 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	int events;
@@ -2897,7 +2897,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 		return print_exit(__FUNCTION__, __LINE__, 0);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[poll_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[poll_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -3040,7 +3040,6 @@ static int fins_shutdown(struct socket *sock, int how) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -3080,7 +3079,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[shutdown_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[shutdown_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -3214,7 +3213,6 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -3254,7 +3252,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[mmap_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[mmap_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -3345,7 +3343,6 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -3385,7 +3382,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[sendpage_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[sendpage_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -3477,7 +3474,6 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -3525,7 +3521,7 @@ if (sock_index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[getsockopt_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[getsockopt_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -3684,7 +3680,6 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	int call_threads;
 	u_int call_id;
 	int call_index;
 	ssize_t buf_len;
@@ -3724,7 +3719,7 @@ if (sock_index == -1) {
 		return print_exit(__FUNCTION__, __LINE__, -1);
 	}
 
-	call_threads = ++wedge_sockets[sock_index].threads[setsockopt_call]; //TODO change to single int threads?
+	wedge_sockets[sock_index].threads[setsockopt_call]++;
 	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
 	if (down_interruptible(&wedge_calls_sem)) {
@@ -3920,22 +3915,23 @@ static int __init fins_stack_wedge_init(void) {
 	PRINT_DEBUG("############################################");
 PRINT_DEBUG("Unregistering AF_INET");
 sock_unregister(AF_INET);
-	PRINT_DEBUG("Loading the fins_stack_wedge module");
+ 	 PRINT_DEBUG("Loading the fins_stack_wedge module");
 setup_fins_protocol();
-	setup_fins_netlink();
+ 	 setup_fins_netlink();
 	wedge_calls_init();
 	wedge_sockets_init();
 	fins_daemon_pid = -1;
 	PRINT_DEBUG("Made it through the fins_stack_wedge initialization");
+
 return 0;
 }
 
 static void __exit fins_stack_wedge_exit(void) {
 	PRINT_DEBUG("Unloading the fins_stack_wedge module");
 teardown_fins_netlink();
-	teardown_fins_protocol();
+	teardown_fins_protocol(); //uncomment
 	PRINT_DEBUG("Made it through the fins_stack_wedge removal");
- // the system call wrapped by rmmod frees all memory that is allocated in the module
+ //the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
 /* Macros defining the init and exit functions */

@@ -150,6 +150,8 @@ void *write_thread(void *local) {
 				node = node_create((uint8_t *) request, 1, 0, 0);
 				queue_append(conn->request_queue, node);
 
+				handle_requests(conn);
+
 				if (conn->main_wait_flag) {
 					PRINT_DEBUG("posting to main_wait_sem");
 					sem_post(&conn->main_wait_sem);
@@ -264,6 +266,167 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	freeFinsFrame(ff);
 }
 
+void *close_thread(void *local) {
+	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	uint32_t id = thread_data->id;
+	struct tcp_connection *conn = thread_data->conn;
+	struct finsFrame *ff = thread_data->ff;
+	free(thread_data);
+
+	struct tcp_segment *seg;
+
+	PRINT_DEBUG("Entered: id=%u", id);
+
+	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
+	if (sem_wait(&conn->sem)) {
+		PRINT_ERROR("conn->sem wait prob");
+		exit(-1);
+	}
+	if (conn->running_flag) {
+		if (conn->state == TS_ESTABLISHED || conn->state == TS_SYN_RECV) {
+			//if CLOSE, send FIN, FIN_WAIT_1
+			PRINT_DEBUG("CLOSE, send FIN, FIN_WAIT_1: state=%d, conn=%p", conn->state, conn);
+			conn->state = TS_FIN_WAIT_1;
+			//conn->ff_close = ff;
+
+			tcp_reply_fcf(ff, 1, 0);
+
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+
+			if (conn_is_finished(conn)) {
+				//send FIN
+				conn->fin_sent = 1;
+				conn->fin_sep = 1;
+				conn->fssn = conn->send_seq_end;
+				conn->fsse = conn->fssn + 1;
+				PRINT_DEBUG("setting: fin_sent=%u, fin_sep=%u, fssn=%u, fsse=%u", conn->fin_sent, conn->fin_sep, conn->fssn, conn->fsse);
+
+				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
+				seg_send(seg);
+				seg_free(seg);
+
+				//conn->send_seq_end++;
+
+				//TODO add TO
+			} //else piggy back it
+		} else if (conn->state == TS_CLOSE_WAIT) {
+			//if CLOSE_WAIT: CLOSE, send FIN, LAST_ACK
+			PRINT_DEBUG("CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d, conn=%p", conn->state, conn);
+			conn->state = TS_LAST_ACK;
+			//conn->ff_close = ff;
+
+			tcp_reply_fcf(ff, 1, 0);
+
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+
+			PRINT_DEBUG("request_queue->len=%u, write_queue->len=%u", conn->request_queue->len, conn->write_queue->len);
+			if (conn_is_finished(conn)) {
+				//send FIN
+				conn->fin_sent = 1;
+				conn->fin_sep = 1;
+				conn->fssn = conn->send_seq_end;
+				conn->fsse = conn->fssn + 1;
+				PRINT_DEBUG("setting: fin_sent=%u, fin_sep=%u, fssn=%u, fsse=%u", conn->fin_sent, conn->fin_sep, conn->fssn, conn->fsse);
+
+				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
+				seg_send(seg);
+				seg_free(seg);
+
+				//conn->send_seq_end++;
+
+				//TODO add TO
+			} //else piggy back it
+		} else if (conn->state == TS_SYN_SENT) {
+			//if CLOSE, send -, CLOSED
+			PRINT_DEBUG("SYN_SENT: CLOSE, send -, CLOSED: state=%d, conn=%p", conn->state, conn);
+			conn->state = TS_CLOSED;
+
+			/*
+			 if (conn->ff) {
+			 tcp_reply_fcf(conn->ff, 0, 0); //send NACK about connect call
+			 conn->ff = NULL;
+			 } else {
+			 PRINT_ERROR("todo error");
+			 }
+			 */
+
+			tcp_reply_fcf(ff, 1, 0); //TODO check move to end of last_ack/start of time_wait?
+
+			conn_shutdown(conn);
+		} else if (conn->state == TS_CLOSED || conn->state == TS_TIME_WAIT) {
+			if (conn->state == TS_CLOSED) {
+				PRINT_DEBUG("CLOSED: CLOSE, -, CLOSED: state=%d, conn=%p", conn->state, conn);
+			} else {
+				PRINT_DEBUG("TIME_WAIT: CLOSE, -, TIME_WAIT: state=%d, conn=%p", conn->state, conn);
+			}
+			tcp_reply_fcf(ff, 1, 0);
+		} else {
+			PRINT_ERROR("todo error");
+
+			PRINT_DEBUG("conn=%p, state=%u", conn, conn->state);
+			//TODO figure out:
+		}
+	} else {
+		//TODO figure out: conn shutting down already?
+		PRINT_ERROR("todo error");
+	}
+
+	/*#*/PRINT_DEBUG("");
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	conn->threads--;
+	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
+	sem_post(&conn_list_sem);
+
+	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
+	sem_post(&conn->sem);
+
+	PRINT_DEBUG("Exited: id=%u", id);
+
+	pthread_exit(NULL);
+}
+
+void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
+	if (conn) {
+		int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
+		/*#*/PRINT_DEBUG("");
+		sem_post(&conn_list_sem);
+
+		if (start) {
+			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			thread_data->id = tcp_gen_thread_id();
+			thread_data->conn = conn;
+			thread_data->ff = ff;
+
+			pthread_t thread;
+			if (pthread_create(&thread, NULL, close_thread, (void *) thread_data)) {
+				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+				exit(-1);
+			}
+			pthread_detach(thread);
+		} else {
+			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		sem_post(&conn_list_sem);
+		//TODO error trying to close closed connection
+	}
+}
+
 void *close_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
@@ -336,6 +499,430 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 		PRINT_ERROR("todo error");
 		sem_post(&conn_stub_list_sem);
 		//TODO error
+	}
+}
+
+void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
+	struct tcp_connection_stub *conn_stub;
+
+	PRINT_DEBUG("Entered: addr=%u/%u, backlog=%u", host_ip, host_port, backlog);
+	if (sem_wait(&conn_stub_list_sem)) { //TODO change from conn_stub to conn in listen
+		PRINT_ERROR("conn_stub_list_sem wait prob");
+		exit(-1);
+	}
+	conn_stub = conn_stub_list_find(host_ip, host_port);
+	if (conn_stub == NULL) {
+		if (conn_stub_list_has_space(1)) {
+			conn_stub = conn_stub_create(host_ip, host_port, backlog);
+			if (conn_stub_list_insert(conn_stub)) {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
+			} else {
+				PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
+
+				//error - shouldn't happen
+				PRINT_ERROR("conn_stub_insert fail");
+				conn_stub_free(conn_stub);
+			}
+		} else {
+			PRINT_ERROR("todo error");
+			sem_post(&conn_stub_list_sem);
+			//TODO throw minor error
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		sem_post(&conn_stub_list_sem);
+		//TODO error
+	}
+
+	//TODO send ACK to listen handler - don't? have nonblocking
+	freeFinsFrame(ff);
+}
+
+void *accept_thread(void *local) { //this will need to be changed
+	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	uint32_t id = thread_data->id;
+	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	uint32_t flags = thread_data->flags;
+	struct finsFrame *ff = thread_data->ff;
+	free(thread_data);
+
+	struct tcp_node *node;
+	struct tcp_segment *seg;
+	struct tcp_connection *conn;
+	//int start;
+	struct tcp_segment *temp_seg;
+
+	PRINT_DEBUG("Entered: id=%u", id);
+
+	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
+	if (sem_wait(&conn_stub->sem)) {
+		PRINT_ERROR("conn_stub->sem wait prob");
+		exit(-1);
+	}
+	while (conn_stub->running_flag) {
+		if (!queue_is_empty(conn_stub->syn_queue)) {
+			node = queue_remove_front(conn_stub->syn_queue);
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
+			sem_post(&conn_stub->sem);
+
+			seg = (struct tcp_segment *) node->data;
+
+			/*#*/PRINT_DEBUG("");
+			if (sem_wait(&conn_list_sem)) {
+				PRINT_ERROR("conn_list_sem wait prob");
+				exit(-1);
+			}
+			conn = conn_list_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
+			if (conn == NULL) {
+				if (conn_list_has_space()) {
+					conn = conn_create(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
+					if (conn_list_insert(conn)) {
+						conn->threads++;
+						/*#*/PRINT_DEBUG("");
+						sem_post(&conn_list_sem);
+
+						/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
+						if (sem_wait(&conn->sem)) {
+							PRINT_ERROR("conn->sem wait prob");
+							exit(-1);
+						}
+						if (conn->running_flag) { //LISTENING state
+							//if SYN, send SYN ACK, SYN_RECV
+							PRINT_DEBUG("SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
+							conn->state = TS_SYN_RECV;
+							conn->active_open = 0;
+							conn->ff = ff;
+							conn->poll_events = conn_stub->poll_events; //TODO specify more
+
+							if (flags & (1)) {
+								//TODO do specific flags/settings
+							}
+
+							conn->issn = tcp_rand();
+							conn->send_seq_num = conn->issn;
+							conn->send_seq_end = conn->send_seq_num;
+							conn->send_win = (uint32_t) seg->win_size;
+							conn->send_max_win = conn->send_win;
+
+							conn->irsn = seg->seq_num;
+							conn->recv_seq_num = seg->seq_num + 1;
+							conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
+
+							PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
+									conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+
+							//TODO process options, decide: MSS, max window size!!
+							//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+
+							if (seg->opt_len) {
+								process_options(conn, seg);
+							}
+
+							//conn_change_options(conn, tcp->options, SYN);
+
+							//send SYN ACK
+							temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+							seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
+							seg_send(temp_seg);
+							seg_free(temp_seg);
+
+							tcp_start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
+							conn->to_gbn_flag = 0;
+						} else {
+							PRINT_ERROR("todo error");
+							//TODO error
+						}
+
+						/*#*/PRINT_DEBUG("");
+						if (sem_wait(&conn_list_sem)) {
+							PRINT_ERROR("conn_list_sem wait prob");
+							exit(-1);
+						}
+						conn->threads--;
+						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
+						sem_post(&conn_list_sem);
+
+						/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
+						sem_post(&conn->sem);
+
+						seg_free(seg);
+						free(node);
+						break;
+					} else {
+						PRINT_DEBUG("");
+						sem_post(&conn_list_sem);
+
+						//error - shouldn't happen
+						PRINT_ERROR("conn_insert fail");
+						//conn->running_flag = 0;
+						//sem_post(&conn->main_wait_sem);
+						conn_shutdown(conn);
+						//conn_free(conn);
+					}
+				} else {
+					PRINT_ERROR("todo error");
+					sem_post(&conn_list_sem);
+					//TODO throw minor error
+				}
+			} else {
+				PRINT_ERROR("todo error");
+				sem_post(&conn_list_sem);
+				//TODO error
+			}
+
+			seg_free(seg);
+			free(node);
+		} else {
+			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
+			sem_post(&conn_stub->sem);
+
+			/*#*/PRINT_DEBUG("");
+			if (sem_wait(&conn_stub->accept_wait_sem)) {
+				PRINT_ERROR("conn_stub->accept_wait_sem prob");
+				exit(-1);
+			}
+			sem_init(&conn_stub->accept_wait_sem, 0, 0);
+			PRINT_DEBUG("left conn_stub->accept_wait_sem");
+		}
+
+		/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
+		if (sem_wait(&conn_stub->sem)) {
+			PRINT_ERROR("conn_stub->sem prod");
+			exit(-1);
+		}
+	}
+
+	if (!conn_stub->running_flag) {
+		PRINT_ERROR("todo error");
+		//conn_stub_send_daemon(conn_stub, EXEC_TCP_ACCEPT, 0, 0);
+		tcp_reply_fcf(ff, 0, 0);
+	}
+
+	/*#*/PRINT_DEBUG("");
+	if (sem_wait(&conn_stub_list_sem)) {
+		PRINT_ERROR("conn_stub_list_sem wait prob");
+		exit(-1);
+	}
+	conn_stub->threads--;
+	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
+	sem_post(&conn_stub_list_sem);
+
+	/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
+	sem_post(&conn_stub->sem);
+
+	PRINT_DEBUG("Exited: id=%u", id);
+
+	pthread_exit(NULL);
+}
+
+void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags) {
+	PRINT_DEBUG("Entered: host=%u/%u, flags=0x%x", host_ip, host_port, flags);
+
+	if (sem_wait(&conn_stub_list_sem)) {
+		PRINT_ERROR("conn_stub_list_sem wait prob");
+		exit(-1);
+	}
+	struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
+	if (conn_stub) {
+		int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
+		/*#*/PRINT_DEBUG("");
+		sem_post(&conn_stub_list_sem);
+
+		if (start) {
+			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			thread_data->id = tcp_gen_thread_id();
+			thread_data->conn_stub = conn_stub;
+			thread_data->ff = ff;
+			thread_data->flags = flags;
+
+			pthread_t thread;
+			if (pthread_create(&thread, NULL, accept_thread, (void *) thread_data)) {
+				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+				exit(-1);
+			}
+			pthread_detach(thread);
+		} else {
+			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
+			//TODO send NACK
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		sem_post(&conn_stub_list_sem);
+		//TODO error, no listening stub
+
+		//send NACK to accept handler
+		tcp_reply_fcf(ff, 0, 1);
+	}
+}
+
+void *connect_thread(void *local) {
+	//this will need to be changed
+	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
+	uint32_t id = thread_data->id;
+	struct tcp_connection *conn = thread_data->conn;
+	uint32_t flags = thread_data->flags;
+	struct finsFrame *ff = thread_data->ff;
+	free(thread_data);
+
+	struct tcp_segment *temp_seg;
+
+	PRINT_DEBUG("Entered: id=%u", id);
+
+	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
+	if (sem_wait(&conn->sem)) {
+		PRINT_ERROR("conn->sem wait prob");
+		exit(-1);
+	}
+	if (conn->running_flag) {
+		if (conn->state == TS_CLOSED || conn->state == TS_LISTEN) {
+			//if CONNECT, send SYN, SYN_SENT
+			if (conn->state == TS_CLOSED) {
+				PRINT_DEBUG("CLOSED: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
+			} else {
+				PRINT_DEBUG("LISTEN: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
+			}
+			conn->state = TS_SYN_SENT;
+			conn->active_open = 1;
+			conn->ff = ff;
+
+			if (flags & (1)) {
+				//TODO do specific flags/settings
+			}
+
+			conn->issn = tcp_rand();
+			conn->send_seq_num = conn->issn;
+			conn->send_seq_end = conn->send_seq_num;
+
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+
+			//TODO add options, for: MSS, max window size!!
+			//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+
+			//conn_change_options(conn, tcp->options, SYN);
+
+			//send SYN
+			temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+			seg_update(temp_seg, conn, FLAG_SYN);
+			seg_send(temp_seg);
+			seg_free(temp_seg);
+
+			conn->timeout = TCP_GBN_TO_DEFAULT;
+			//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
+		} else {
+			//TODO error
+			PRINT_ERROR("todo error");
+			tcp_reply_fcf(ff, 0, 0);
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		//send NACK to connect handler
+		tcp_reply_fcf(ff, 0, 1);
+	}
+
+	/*#*/PRINT_DEBUG("");
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	conn->threads--;
+	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
+	sem_post(&conn_list_sem);
+
+	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
+	sem_post(&conn->sem);
+
+	PRINT_DEBUG("Exited: id=%u", id);
+	pthread_exit(NULL);
+}
+
+void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags) {
+	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+
+	if (sem_wait(&conn_list_sem)) {
+		PRINT_ERROR("conn_list_sem wait prob");
+		exit(-1);
+	}
+	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
+	if (conn == NULL) {
+		if (conn_list_has_space()) {
+			conn = conn_create(host_ip, host_port, rem_ip, rem_port);
+			if (conn_list_insert(conn)) {
+				conn->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
+
+				//if listening stub remove
+				/*#*/PRINT_DEBUG("");
+				if (sem_wait(&conn_stub_list_sem)) {
+					PRINT_ERROR("conn_list_sem wait prob");
+					exit(-1);
+				}
+				struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
+				if (conn_stub) {
+					conn_stub_list_remove(conn_stub);
+					int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
+					/*#*/PRINT_DEBUG("");
+					sem_post(&conn_stub_list_sem);
+
+					if (start) {
+						struct tcp_thread_data *stub_thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						stub_thread_data->id = tcp_gen_thread_id();
+						stub_thread_data->conn_stub = conn_stub;
+						stub_thread_data->flags = 0;
+
+						pthread_t stub_thread;
+						if (pthread_create(&stub_thread, NULL, close_stub_thread, (void *) stub_thread_data)) {
+							PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+							exit(-1);
+						}
+						pthread_detach(stub_thread);
+					}
+				} else {
+					/*#*/PRINT_DEBUG("");
+					sem_post(&conn_stub_list_sem);
+				}
+
+				struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_gen_thread_id();
+				thread_data->conn = conn;
+				thread_data->ff = ff;
+				thread_data->flags = flags;
+
+				pthread_t thread;
+				if (pthread_create(&thread, NULL, connect_thread, (void *) thread_data)) {
+					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
+					exit(-1);
+				}
+				pthread_detach(thread);
+			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
+
+				//error - shouldn't happen
+				PRINT_ERROR("conn_insert fail");
+				//conn->running_flag = 0;
+				//sem_post(&conn->main_wait_sem);
+				conn_shutdown(conn);
+				//conn_free(conn);
+
+				//TODO send NACK
+			}
+		} else {
+			PRINT_ERROR("todo error");
+			sem_post(&conn_list_sem);
+
+			//TODO throw minor error, list full
+			//TODO send NACK
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		sem_post(&conn_list_sem);
+
+		//TODO error, existing connection already connected there
+		//TODO send NACK?
 	}
 }
 
@@ -573,585 +1160,6 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 
 			tcp_reply_fcf(ff, 1, POLLERR); //TODO check on value?
 		}
-	}
-}
-
-void *connect_thread(void *local) {
-	//this will need to be changed
-	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
-	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
-	uint32_t flags = thread_data->flags;
-	struct finsFrame *ff = thread_data->ff;
-	free(thread_data);
-
-	struct tcp_segment *temp_seg;
-
-	PRINT_DEBUG("Entered: id=%u", id);
-
-	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	if (sem_wait(&conn->sem)) {
-		PRINT_ERROR("conn->sem wait prob");
-		exit(-1);
-	}
-	if (conn->running_flag) {
-		if (conn->state == TS_CLOSED || conn->state == TS_LISTEN) {
-			//if CONNECT, send SYN, SYN_SENT
-			if (conn->state == TS_CLOSED) {
-				PRINT_DEBUG("CLOSED: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
-			} else {
-				PRINT_DEBUG("LISTEN: CONNECT, send SYN, SYN_SENT: state=%d", conn->state);
-			}
-			conn->state = TS_SYN_SENT;
-			conn->active_open = 1;
-			conn->ff = ff;
-
-			if (flags & (1)) {
-				//TODO do specific flags/settings
-			}
-
-			conn->issn = tcp_rand(); //TODO uncomment
-			conn->send_seq_num = conn->issn;
-			conn->send_seq_end = conn->send_seq_num;
-
-			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-			//TODO add options, for: MSS, max window size!!
-			//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
-
-			//conn_change_options(conn, tcp->options, SYN);
-
-			//send SYN
-			temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-			seg_update(temp_seg, conn, FLAG_SYN);
-			seg_send(temp_seg);
-			seg_free(temp_seg);
-
-			conn->timeout = TCP_GBN_TO_DEFAULT;
-			//startTimer(conn->to_gbn_fd, conn->timeout); //TODO fix
-		} else {
-			//TODO error
-			PRINT_ERROR("todo error");
-			tcp_reply_fcf(ff, 0, 0);
-		}
-	} else {
-		PRINT_ERROR("todo error");
-		//send NACK to connect handler
-		tcp_reply_fcf(ff, 0, 1);
-	}
-
-	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
-	conn->threads--;
-	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
-	sem_post(&conn_list_sem);
-
-	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
-	sem_post(&conn->sem);
-
-	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
-}
-
-void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags) {
-	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
-
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
-	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
-	if (conn == NULL) {
-		if (conn_list_has_space()) {
-			conn = conn_create(host_ip, host_port, rem_ip, rem_port);
-			if (conn_list_insert(conn)) {
-				conn->threads++;
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_list_sem);
-
-				//if listening stub remove
-				/*#*/PRINT_DEBUG("");
-				if (sem_wait(&conn_stub_list_sem)) {
-					PRINT_ERROR("conn_list_sem wait prob");
-					exit(-1);
-				}
-				struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
-				if (conn_stub) {
-					conn_stub_list_remove(conn_stub);
-					int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-					/*#*/PRINT_DEBUG("");
-					sem_post(&conn_stub_list_sem);
-
-					if (start) {
-						struct tcp_thread_data *stub_thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-						stub_thread_data->id = tcp_gen_thread_id();
-						stub_thread_data->conn_stub = conn_stub;
-						stub_thread_data->flags = 0;
-
-						pthread_t stub_thread;
-						if (pthread_create(&stub_thread, NULL, close_stub_thread, (void *) stub_thread_data)) {
-							PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-							exit(-1);
-						}
-						pthread_detach(stub_thread);
-					}
-				} else {
-					/*#*/PRINT_DEBUG("");
-					sem_post(&conn_stub_list_sem);
-				}
-
-				struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-				thread_data->id = tcp_gen_thread_id();
-				thread_data->conn = conn;
-				thread_data->ff = ff;
-				thread_data->flags = flags;
-
-				pthread_t thread;
-				if (pthread_create(&thread, NULL, connect_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-					exit(-1);
-				}
-				pthread_detach(thread);
-			} else {
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_list_sem);
-
-				//error - shouldn't happen
-				PRINT_ERROR("conn_insert fail");
-				//conn->running_flag = 0;
-				//sem_post(&conn->main_wait_sem);
-				conn_shutdown(conn);
-				//conn_free(conn);
-
-				//TODO send NACK
-			}
-		} else {
-			PRINT_ERROR("todo error");
-			sem_post(&conn_list_sem);
-
-			//TODO throw minor error, list full
-			//TODO send NACK
-		}
-	} else {
-		PRINT_ERROR("todo error");
-		sem_post(&conn_list_sem);
-
-		//TODO error, existing connection already connected there
-		//TODO send NACK?
-	}
-}
-
-void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
-	struct tcp_connection_stub *conn_stub;
-
-	PRINT_DEBUG("Entered: addr=%u/%u, backlog=%u", host_ip, host_port, backlog);
-	if (sem_wait(&conn_stub_list_sem)) { //TODO change from conn_stub to conn in listen
-		PRINT_ERROR("conn_stub_list_sem wait prob");
-		exit(-1);
-	}
-	conn_stub = conn_stub_list_find(host_ip, host_port);
-	if (conn_stub == NULL) {
-		if (conn_stub_list_has_space(1)) {
-			conn_stub = conn_stub_create(host_ip, host_port, backlog);
-			if (conn_stub_list_insert(conn_stub)) {
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_stub_list_sem);
-			} else {
-				PRINT_DEBUG("");
-				sem_post(&conn_stub_list_sem);
-
-				//error - shouldn't happen
-				PRINT_ERROR("conn_stub_insert fail");
-				conn_stub_free(conn_stub);
-			}
-		} else {
-			PRINT_ERROR("todo error");
-			sem_post(&conn_stub_list_sem);
-			//TODO throw minor error
-		}
-	} else {
-		PRINT_ERROR("todo error");
-		sem_post(&conn_stub_list_sem);
-		//TODO error
-	}
-
-	//TODO send ACK to listen handler - don't? have nonblocking
-	freeFinsFrame(ff);
-}
-
-void *accept_thread(void *local) {
-	//this will need to be changed
-	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
-	uint32_t id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
-	uint32_t flags = thread_data->flags;
-	struct finsFrame *ff = thread_data->ff;
-	free(thread_data);
-
-	struct tcp_node *node;
-	struct tcp_segment *seg;
-	struct tcp_connection *conn;
-	//int start;
-	struct tcp_segment *temp_seg;
-
-	PRINT_DEBUG("Entered: id=%u", id);
-
-	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	if (sem_wait(&conn_stub->sem)) {
-		PRINT_ERROR("conn_stub->sem wait prob");
-		exit(-1);
-	}
-	while (conn_stub->running_flag) {
-		if (!queue_is_empty(conn_stub->syn_queue)) {
-			node = queue_remove_front(conn_stub->syn_queue);
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
-			sem_post(&conn_stub->sem);
-
-			seg = (struct tcp_segment *) node->data;
-
-			/*#*/PRINT_DEBUG("");
-			if (sem_wait(&conn_list_sem)) {
-				PRINT_ERROR("conn_list_sem wait prob");
-				exit(-1);
-			}
-			conn = conn_list_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
-			if (conn == NULL) {
-				if (conn_list_has_space()) {
-					conn = conn_create(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
-					if (conn_list_insert(conn)) {
-						conn->threads++;
-						/*#*/PRINT_DEBUG("");
-						sem_post(&conn_list_sem);
-
-						/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-						if (sem_wait(&conn->sem)) {
-							PRINT_ERROR("conn->sem wait prob");
-							exit(-1);
-						}
-						if (conn->running_flag) { //LISTENING state
-							//if SYN, send SYN ACK, SYN_RECV
-							PRINT_DEBUG("SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
-							conn->state = TS_SYN_RECV;
-							conn->active_open = 0;
-							conn->ff = ff;
-							conn->poll_events = conn_stub->poll_events; //TODO specify more
-
-							if (flags & (1)) {
-								//TODO do specific flags/settings
-							}
-
-							conn->issn = tcp_rand(); //TODO uncomment
-							conn->send_seq_num = conn->issn;
-							conn->send_seq_end = conn->send_seq_num;
-							conn->send_win = (uint32_t) seg->win_size;
-							conn->send_max_win = conn->send_win;
-
-							conn->irsn = seg->seq_num;
-							conn->recv_seq_num = seg->seq_num + 1;
-							conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
-
-							PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
-									conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-							//TODO process options, decide: MSS, max window size!!
-							//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
-
-							if (seg->opt_len) {
-								process_options(conn, seg);
-							}
-
-							//conn_change_options(conn, tcp->options, SYN);
-
-							//send SYN ACK
-							temp_seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-							seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
-							seg_send(temp_seg);
-							seg_free(temp_seg);
-
-							//conn->to_gbn_flag = 0;
-							tcp_start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
-						} else {
-							PRINT_ERROR("todo error");
-							//TODO error
-						}
-
-						/*#*/PRINT_DEBUG("");
-						if (sem_wait(&conn_list_sem)) {
-							PRINT_ERROR("conn_list_sem wait prob");
-							exit(-1);
-						}
-						conn->threads--;
-						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
-						sem_post(&conn_list_sem);
-
-						/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
-						sem_post(&conn->sem);
-
-						seg_free(seg);
-						free(node);
-						break;
-					} else {
-						PRINT_DEBUG("");
-						sem_post(&conn_list_sem);
-
-						//error - shouldn't happen
-						PRINT_ERROR("conn_insert fail");
-						//conn->running_flag = 0;
-						//sem_post(&conn->main_wait_sem);
-						conn_shutdown(conn);
-						//conn_free(conn);
-					}
-				} else {
-					PRINT_ERROR("todo error");
-					sem_post(&conn_list_sem);
-					//TODO throw minor error
-				}
-			} else {
-				PRINT_ERROR("todo error");
-				sem_post(&conn_list_sem);
-				//TODO error
-			}
-
-			seg_free(seg);
-			free(node);
-		} else {
-			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
-			sem_post(&conn_stub->sem);
-
-			/*#*/PRINT_DEBUG("");
-			if (sem_wait(&conn_stub->accept_wait_sem)) {
-				PRINT_ERROR("conn_stub->accept_wait_sem prob");
-				exit(-1);
-			}
-			sem_init(&conn_stub->accept_wait_sem, 0, 0);
-			PRINT_DEBUG("left conn_stub->accept_wait_sem");
-		}
-
-		/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-		if (sem_wait(&conn_stub->sem)) {
-			PRINT_ERROR("conn_stub->sem prod");
-			exit(-1);
-		}
-	}
-
-	if (!conn_stub->running_flag) {
-		PRINT_ERROR("todo error");
-		//conn_stub_send_daemon(conn_stub, EXEC_TCP_ACCEPT, 0, 0);
-		tcp_reply_fcf(ff, 0, 0);
-	}
-
-	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_stub_list_sem)) {
-		PRINT_ERROR("conn_stub_list_sem wait prob");
-		exit(-1);
-	}
-	conn_stub->threads--;
-	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
-	sem_post(&conn_stub_list_sem);
-
-	/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
-	sem_post(&conn_stub->sem);
-
-	PRINT_DEBUG("Exited: id=%u", id);
-
-	pthread_exit(NULL);
-}
-
-void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags) {
-	PRINT_DEBUG("Entered: host=%u/%u, flags=0x%x", host_ip, host_port, flags);
-
-	if (sem_wait(&conn_stub_list_sem)) {
-		PRINT_ERROR("conn_stub_list_sem wait prob");
-		exit(-1);
-	}
-	struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
-	if (conn_stub) {
-		int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_stub_list_sem);
-
-		if (start) {
-			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-			thread_data->id = tcp_gen_thread_id();
-			thread_data->conn_stub = conn_stub;
-			thread_data->ff = ff;
-			thread_data->flags = flags;
-
-			pthread_t thread;
-			if (pthread_create(&thread, NULL, accept_thread, (void *) thread_data)) {
-				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-				exit(-1);
-			}
-			pthread_detach(thread);
-		} else {
-			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
-			//TODO send NACK
-		}
-	} else {
-		PRINT_ERROR("todo error");
-		sem_post(&conn_stub_list_sem);
-		//TODO error, no listening stub
-
-		//TODO send NACK
-	}
-}
-
-void *close_thread(void *local) {
-	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
-	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
-	struct finsFrame *ff = thread_data->ff;
-	free(thread_data);
-
-	struct tcp_segment *seg;
-
-	PRINT_DEBUG("Entered: id=%u", id);
-
-	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	if (sem_wait(&conn->sem)) {
-		PRINT_ERROR("conn->sem wait prob");
-		exit(-1);
-	}
-	if (conn->running_flag) {
-		if (conn->state == TS_ESTABLISHED || conn->state == TS_SYN_RECV) {
-			PRINT_DEBUG("CLOSE, send FIN, FIN_WAIT_1: state=%d, conn=%p", conn->state, conn);
-			conn->state = TS_FIN_WAIT_1;
-			conn->ff_close = ff;
-
-			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-			//if CLOSE, send FIN, FIN_WAIT_1
-			if (queue_is_empty(conn->request_queue) && queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
-				//send FIN
-				PRINT_DEBUG("done, send FIN: state=%d, conn=%p", conn->state, conn);
-				conn->fin_sent = 1;
-				conn->fin_sep = 1;
-				conn->fssn = conn->send_seq_num;
-				conn->fin_ack = conn->send_seq_end + 1;
-
-				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
-				seg_send(seg);
-				seg_free(seg);
-
-				conn->send_seq_end++;
-
-				//TODO add TO
-			} //else piggy back it
-		} else if (conn->state == TS_CLOSE_WAIT) {
-			PRINT_DEBUG("CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d, conn=%p", conn->state, conn);
-			conn->state = TS_LAST_ACK;
-			conn->ff_close = ff;
-
-			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-			//if CLOSE, send FIN, FIN_WAIT_1
-			if (queue_is_empty(conn->request_queue) && queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end) {
-				//send FIN
-				PRINT_DEBUG("done, send FIN: state=%d, conn=%p", conn->state, conn);
-				conn->fin_sent = 1;
-				conn->fin_sep = 1;
-				conn->fssn = conn->send_seq_num;
-				conn->fin_ack = conn->send_seq_end + 1;
-
-				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-				seg_update(seg, conn, FLAG_FIN | FLAG_ACK);
-				seg_send(seg);
-				seg_free(seg);
-
-				conn->send_seq_end++;
-
-				//TODO add TO
-			} //else piggy back it
-		} else if (conn->state == TS_SYN_SENT) {
-			//if CLOSE, send -, CLOSED
-			PRINT_DEBUG("SYN_SENT: CLOSE, send -, CLOSED: state=%d, conn=%p", conn->state, conn);
-			conn->state = TS_CLOSED;
-
-			if (conn->ff) {
-				tcp_reply_fcf(conn->ff, 0, 0); //send NACK about connect call
-				conn->ff = NULL;
-			} else {
-				PRINT_ERROR("todo error");
-			}
-
-			tcp_reply_fcf(ff, 1, 0); //TODO check move to end of last_ack/start of time_wait?
-
-			conn_shutdown(conn);
-
-		} else if (conn->state == TS_CLOSED || conn->state == TS_TIME_WAIT) {
-			if (conn->state == TS_CLOSED) {
-				PRINT_DEBUG("CLOSED: CLOSE, -, CLOSED: state=%d, conn=%p", conn->state, conn);
-			} else {
-				PRINT_DEBUG("TIME_WAIT: CLOSE, -, TIME_WAIT: state=%d, conn=%p", conn->state, conn);
-			}
-			tcp_reply_fcf(ff, 1, 0);
-		} else {
-			PRINT_ERROR("todo error");
-
-			PRINT_DEBUG("conn=%p, state=%u", conn, conn->state);
-			//TODO figure out:
-		}
-	} else {
-		//TODO figure out: conn shutting down already?
-		PRINT_ERROR("todo error");
-	}
-
-	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
-	conn->threads--;
-	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
-	sem_post(&conn_list_sem);
-
-	/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
-	sem_post(&conn->sem);
-
-	PRINT_DEBUG("Exited: id=%u", id);
-
-	pthread_exit(NULL);
-}
-
-void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
-
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
-	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
-	if (conn) {
-		int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_list_sem);
-
-		if (start) {
-			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-			thread_data->id = tcp_gen_thread_id();
-			thread_data->conn = conn;
-			thread_data->ff = ff;
-
-			pthread_t thread;
-			if (pthread_create(&thread, NULL, close_thread, (void *) thread_data)) {
-				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-				exit(-1);
-			}
-			pthread_detach(thread);
-		} else {
-			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
-		}
-	} else {
-		PRINT_ERROR("todo error");
-		sem_post(&conn_list_sem);
-		//TODO error trying to close closed connection
 	}
 }
 

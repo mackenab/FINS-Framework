@@ -338,7 +338,7 @@ void daemon_calls_shutdown(int call_index) {
 	daemon_calls[call_index].to_running = 0;
 
 	//stop threads
-	daemon_start_timer(daemon_calls[call_index].to_fd, 0.00001);
+	daemon_start_timer(daemon_calls[call_index].to_fd, DAEMON_TO_MIN);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -883,8 +883,6 @@ void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	PRINT_DEBUG("domain=%d, type=%u, protocol=%d", domain, type, protocol);
-
-	PRINT_DEBUG("%d,%d,%u", domain, protocol, type);
 	if (domain != AF_INET) {
 		PRINT_ERROR("Wrong domain, only AF_INET us supported");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2644,6 +2642,57 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 	}
 }
 
+void test_func_daemon(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_len) {
+	PRINT_DEBUG("Entered: hdr=%p, sock_id=%llu, sock_index=%d, call_pid=%d, call_type=%u, call_id=%u, call_index=%d, len=%d",
+			hdr, hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index, msg_len);
+
+	//############################### Debug
+	uint8_t *temp;
+	temp = (uint8_t *) malloc(msg_len + 1);
+	memcpy(temp, msg_pt, msg_len);
+	temp[msg_len] = '\0';
+	PRINT_DEBUG("msg='%s'", temp);
+	free(temp);
+
+	uint8_t *pt;
+	temp = (uint8_t *) malloc(3 * msg_len + 1);
+	pt = temp;
+	int i;
+	for (i = 0; i < msg_len; i++) {
+		if (i == 0) {
+			sprintf((char *) pt, "%02x", msg_pt[i]);
+			pt += 2;
+		} else if (i % 4 == 0) {
+			sprintf((char *) pt, ":%02x", msg_pt[i]);
+			pt += 3;
+		} else {
+			sprintf((char *) pt, " %02x", msg_pt[i]);
+			pt += 3;
+		}
+	}
+	temp[3 * msg_len] = '\0';
+	PRINT_DEBUG("msg='%s'", temp);
+	free(temp);
+	//###############################
+
+	if (hdr->call_index < 0 || hdr->call_index > MAX_CALLS) {
+		PRINT_ERROR("call_index out of range: call_index=%d", hdr->call_index)
+		return;
+	}
+
+	int events;
+	pt = msg_pt;
+
+	events = *(int *) pt;
+	pt += sizeof(int);
+
+	if (pt - msg_pt != msg_len) {
+		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - msg_pt, msg_len);
+		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		return;
+	}
+}
+
 void *wedge_to_daemon(void *local) {
 	PRINT_DEBUG("Entered");
 
@@ -2708,9 +2757,9 @@ void *wedge_to_daemon(void *local) {
 				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
 				break;
 			case NLMSG_ERROR:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_ERROR");
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR");
 			case NLMSG_OVERRUN:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_OVERRUN");
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN");
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
@@ -2721,7 +2770,7 @@ void *wedge_to_daemon(void *local) {
 				nl_buf = NLMSG_DATA(nlh);
 				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				PRINT_DEBUG("nl_len= %d", nl_len);
+				PRINT_DEBUG("nl_len=%d", nl_len);
 
 				part_pt = nl_buf;
 				test_msg_len = *(ssize_t *) part_pt;
@@ -2733,7 +2782,7 @@ void *wedge_to_daemon(void *local) {
 					msg_len = test_msg_len;
 				} else if (test_msg_len != msg_len) {
 					okFlag = 0;
-					PRINT_DEBUG("test_msg_len != msg_len");
+					PRINT_ERROR("test_msg_len != msg_len");
 					//could just malloc msg_buff again
 					break;//might comment out or make so start new
 				}
@@ -2750,9 +2799,9 @@ void *wedge_to_daemon(void *local) {
 				part_pt += sizeof(int);
 				if (pos > msg_len || pos != msg_pt - msg_buf) {
 					if (pos > msg_len) {
-						PRINT_DEBUG("pos > msg_len");
+						PRINT_ERROR("pos > msg_len");
 					} else {
-						PRINT_DEBUG("pos != msg_pt - msg_buf");
+						PRINT_ERROR("pos != msg_pt - msg_buf");
 					}
 				}
 
@@ -2762,7 +2811,7 @@ void *wedge_to_daemon(void *local) {
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
-						PRINT_DEBUG("error: msg_buf != NULL at new sequence, freeing");
+						PRINT_ERROR("error: msg_buf != NULL at new sequence, freeing");
 						free(msg_buf);
 					}
 					msg_buf = (uint8_t *) malloc(msg_len);
@@ -2778,7 +2827,7 @@ void *wedge_to_daemon(void *local) {
 					memcpy(msg_pt, part_pt, part_len);
 					msg_pt += part_len;
 				} else {
-					PRINT_DEBUG("error: msg_pt is NULL");
+					PRINT_ERROR("error: msg_pt is NULL");
 				}
 
 				if ((nlh->nlmsg_flags & NLM_F_MULTI) == 0) {
@@ -2805,7 +2854,7 @@ void *wedge_to_daemon(void *local) {
 			msg_pt = msg_buf + sizeof(struct nl_wedge_to_daemon);
 			msg_len -= sizeof(struct nl_wedge_to_daemon);
 
-			daemon_out_ff(hdr, msg_pt, msg_len);
+			daemon_out_ff(hdr, msg_pt, msg_len); //TODO uncomment
 
 			free(msg_buf);
 			doneFlag = 0;
@@ -3476,7 +3525,9 @@ void daemon_shutdown(void) {
 	}
 	PRINT_DEBUG("Disconnecting to wedge at %d", nl_sockfd);
 
+	PRINT_DEBUG("Joining switch_to_daemon_thread");
 	pthread_join(switch_to_daemon_thread, NULL);
+	PRINT_DEBUG("Joining wedge_to_daemon_thread");
 	pthread_join(wedge_to_daemon_thread, NULL);
 }
 

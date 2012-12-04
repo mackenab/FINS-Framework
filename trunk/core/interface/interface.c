@@ -502,7 +502,9 @@ void interface_shutdown(void) {
 
 	//TODO expand this
 
+	PRINT_DEBUG("Joining switch_to_interface_thread");
 	pthread_join(switch_to_interface_thread, NULL);
+	PRINT_DEBUG("Joining capturer_to_interface_thread");
 	pthread_join(capturer_to_interface_thread, NULL);
 }
 
