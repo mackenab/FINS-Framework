@@ -330,6 +330,30 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	if (peer == 0) { //getsockname
 		host_ip = daemon_sockets[hdr->sock_index].host_ip;
 		host_port = daemon_sockets[hdr->sock_index].host_port;
+
+		if (daemon_sockets[hdr->sock_index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+			daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
+		}
+		host_ip = daemon_sockets[hdr->sock_index].host_ip;
+
+		/**
+		 * Default current host port to be assigned is 58088
+		 * It is supposed to be randomly selected from the range found in
+		 * /proc/sys/net/ipv4/ip_local_port_range
+		 * default range in Ubuntu is 32768 - 61000
+		 * The value has been chosen randomly when the socket firstly inserted into the daemonsockets
+		 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
+		 */
+		host_port = daemon_sockets[hdr->sock_index].host_port;
+		if ((uint16_t) host_port == 0) {
+			while (1) {
+				host_port = (uint16_t) randoming(MIN_port, MAX_port);
+				if (daemon_sockets_check_ports((uint16_t) host_port, host_ip)) {
+					break;
+				}
+			}
+			daemon_sockets[hdr->sock_index].host_port = (uint16_t) host_port;
+		}
 	} else if (peer == 1) { //getpeername
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
@@ -364,18 +388,22 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	if (peer == 0) { //getsockname
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(host_ip);
 		addr->sin_port = htons(host_port);
 	} else if (peer == 1) { //getpeername
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(rem_ip);
 		addr->sin_port = htons(rem_port);
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(rem_ip);
 		addr->sin_port = htons(rem_port);
 	} else {
 		//TODO error
 		PRINT_ERROR("todo error");
 	}
+	PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port), addr->sin_addr.s_addr);
 
 	int len = sizeof(struct sockaddr_in);
 
@@ -550,7 +578,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	struct in_addr *temp;
 
-	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d", hdr, data_len, flags);
+	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	PRINT_DEBUG("MSG_CONFIRM=%d (%d), MSG_DONTROUTE=%d (%d), MSG_DONTWAIT=%d (%d), MSG_EOR=%d (%d), MSG_MORE=%d (%d), MSG_NOSIGNAL=%d (%d), MSG_OOB=%d (%d)",
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
@@ -615,7 +643,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	if (addr_len == 0) {
 		dst_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		dst_port = daemon_sockets[hdr->sock_index].dst_ip;
+		dst_port = daemon_sockets[hdr->sock_index].dst_port;
 	}
 
 	/**
@@ -625,7 +653,6 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	if (daemon_sockets[hdr->sock_index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
 		daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
 	}
-
 	host_ip = daemon_sockets[hdr->sock_index].host_ip;
 
 	/**
@@ -1327,7 +1354,8 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
-				PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+				PRINT_DEBUG(
+						"POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
@@ -2101,7 +2129,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	}
 	int sock_index = daemon_sockets_match((uint16_t) dst_port, dst_ip, IPPROTO_UDP); //TODO change for multicast
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_DEBUG("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 		//TODO change back  to PRINT_ERROR
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);

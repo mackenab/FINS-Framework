@@ -306,7 +306,6 @@ struct tcp_connection {
 
 	uint8_t active_open;
 	struct finsFrame *ff;
-	//struct finsFrame *ff_close;
 
 	//some type of options state
 	uint8_t tsopt_attempt; //attempt time stamp option
@@ -346,14 +345,14 @@ struct tcp_connection {
 
 //TODO raise any of these?
 #define TCP_THREADS_MAX 50 //TODO set thread limits by call?
-#define TCP_MAX_QUEUE_DEFAULT 65535
+#define TCP_MAX_QUEUE_DEFAULT 131072//65535
 #define TCP_CONN_MAX 512
 #define TCP_GBN_TO_MIN 1000
 #define TCP_GBN_TO_MAX 64000
 #define TCP_GBN_TO_DEFAULT 5000
 #define TCP_DELAYED_TO_DEFAULT 200
 #define TCP_MAX_SEQ_NUM 4294967295.0
-#define TCP_MAX_WINDOW_DEFAULT 8191
+#define TCP_MAX_WINDOW_DEFAULT 65535//8191
 #define TCP_MSS_DEFAULT_LARGE 1460 //also said to be, 536
 #define TCP_MSS_DEFAULT_SMALL 536 //also said to be, 536
 #define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO

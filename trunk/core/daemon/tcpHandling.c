@@ -674,6 +674,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 		//TODO error
 		PRINT_ERROR("todo error");
 	}
+	PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port), addr->sin_addr.s_addr);
 
 	int len = sizeof(struct sockaddr_in);
 
@@ -849,7 +850,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	uint32_t dst_ip;
 	uint32_t dst_port;
 
-	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d", hdr, data_len, flags);
+	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	PRINT_DEBUG("SOCK_NONBLOCK=%d (0x%x), SOCK_CLOEXEC=%d (0x%x), O_NONBLOCK=%d (0x%x), O_ASYNC=%d (0x%x)",
 			(SOCK_NONBLOCK & flags)>0, SOCK_NONBLOCK, (SOCK_CLOEXEC & flags)>0, SOCK_CLOEXEC, (O_NONBLOCK & flags)>0, O_NONBLOCK, (O_ASYNC & flags)>0, O_ASYNC);
 	PRINT_DEBUG(

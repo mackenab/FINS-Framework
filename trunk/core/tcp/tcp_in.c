@@ -35,8 +35,7 @@ void calcRTT(struct tcp_connection *conn) {
 
 	gettimeofday(&current, 0);
 
-	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
-	PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
 	PRINT_DEBUG("old sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 
@@ -85,8 +84,8 @@ void handle_RST(struct tcp_connection *conn, struct tcp_segment *seg) {
 		conn_shutdown(conn);
 	} else {
 		PRINT_ERROR(
-				"RST out of window: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u, send=(%u, %u) (%u, %u)",
-				conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
+				"RST out of window: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u (%u), send=(%u, %u) (%u, %u)",
+				conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num-conn->issn, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
 	}
 }
 
@@ -95,8 +94,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
-	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
-	PRINT_DEBUG("ack=%u, send=(%u, %u), sent=%u, sep=%u, fssn=%u, fsse=%u",
+	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);PRINT_DEBUG("ack=%u, send=(%u, %u), sent=%u, sep=%u, fssn=%u, fsse=%u",
 			seg->ack_num-conn->issn, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->fin_sent, conn->fin_sep, conn->fssn, conn->fsse);
 
 	//check if valid ACK
@@ -271,8 +269,8 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				}
 			} else {
 				PRINT_ERROR(
-						"Invalid ACK, was not sent: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u, send=(%u, %u) (%u, %u)",
-						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
+						"Invalid ACK, was not sent: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u (%u), send=(%u, %u) (%u, %u)",
+						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num-conn->issn, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
 			}
 		}
 
@@ -307,8 +305,8 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 	} else {
 		PRINT_ERROR(
-				"Invalid ACK, out of sent window: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u, send=(%u, %u) (%u, %u)",
-				conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
+				"Invalid ACK, out of sent window: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u (%u), send=(%u, %u) (%u, %u)",
+				conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num-conn->issn, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
 	}
 }
 
@@ -1779,16 +1777,6 @@ void recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 		flags = handle_data(conn, seg); //change to process of some sort, since no data & only flags
 
 		if (conn->state == TS_CLOSED) {
-			/*
-			if (conn->ff_close) {
-				tcp_reply_fcf(conn->ff_close, 1, 0); //TODO check move to end of last_ack/start of time_wait?
-				conn->ff_close = NULL;
-			} else {
-				PRINT_ERROR("todo error");
-				//TODO error
-			}
-			*/
-
 			conn_shutdown(conn);
 		}
 
@@ -1826,16 +1814,6 @@ void recv_last_ack_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//if ACK, send -, CLOSED
 				PRINT_DEBUG("ACK, send -, CLOSED: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 				conn->state = TS_CLOSED;
-
-				/*
-				if (conn->ff_close) {
-					tcp_reply_fcf(conn->ff_close, 1, 0);
-					conn->ff_close = NULL;
-				} else {
-					PRINT_ERROR("todo error");
-					//TODO error
-				}
-				*/
 
 				conn_shutdown(conn);
 			} else {
@@ -1911,6 +1889,11 @@ void *recv_thread(void *local) {
 				break;
 			case TS_LAST_ACK:
 				recv_last_ack(conn, seg);
+				break;
+			default:
+				PRINT_ERROR( "Incorrect state: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p",
+						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg);
+				PRINT_ERROR("todo error");
 				break;
 			}
 		} else {

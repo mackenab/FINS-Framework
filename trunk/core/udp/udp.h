@@ -31,7 +31,7 @@
 #define IGNORE_CHEKSUM  0									/* the checksum value when it is not being used */
 
 #define UDP_MSL_TO_DEFAULT 512000
-#define UDP_SENT_LIST_MAX 300
+#define UDP_SENT_LIST_MAX 2048
 
 struct udp_sent { //TODO move this functionality to common, or data_structure
 	struct udp_sent *next;

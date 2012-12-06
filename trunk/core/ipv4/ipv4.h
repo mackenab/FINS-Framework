@@ -229,7 +229,7 @@ struct ip4_store {
 struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_t *pdu);
 void store_free(struct ip4_store *store);
 
-#define IP4_STORE_LIST_MAX 2000
+#define IP4_STORE_LIST_MAX 2048
 
 int store_list_insert(struct ip4_store *store);
 struct ip4_store *store_list_find(uint32_t serial_num);

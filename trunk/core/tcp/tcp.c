@@ -1403,17 +1403,6 @@ void main_time_wait(struct tcp_connection *conn) {
 		PRINT_DEBUG("TO, CLOSE: state=%d, conn=%p", conn->state, conn);
 		conn->state = TS_CLOSED;
 
-		/*
-		//send ACK to close handler
-		if (conn->ff_close) {
-			tcp_reply_fcf(conn->ff_close, 1, 0); //TODO check move to end of last_ack/start of time_wait?
-			conn->ff_close = NULL;
-		} else {
-			PRINT_ERROR("todo error");
-			//TODO error
-		}
-		*/
-
 		//conn->main_wait_flag = 0;
 		conn_shutdown(conn);
 	} else {
@@ -1680,7 +1669,6 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	conn->active_open = 0;
 	conn->ff = NULL;
-	//conn->ff_close = NULL;
 
 	conn->tsopt_attempt = 0; //1; //TODO change to 0, trial values atm
 	conn->tsopt_enabled = 0;

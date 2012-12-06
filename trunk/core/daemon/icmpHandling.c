@@ -366,18 +366,22 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	if (peer == 0) { //getsockname
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(host_ip);
 		addr->sin_port = htons(host_port);
 	} else if (peer == 1) { //getpeername
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(rem_ip);
 		addr->sin_port = htons(rem_port);
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
+		addr->sin_family = AF_INET;
 		addr->sin_addr.s_addr = htonl(rem_ip);
 		addr->sin_port = htons(rem_port);
 	} else {
 		//TODO error
 		PRINT_ERROR("todo error");
 	}
+	PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port), addr->sin_addr.s_addr);
 
 	int len = sizeof(struct sockaddr_in);
 
@@ -552,7 +556,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 
 	struct in_addr *temp;
 
-	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d", hdr, data_len, flags);
+	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	PRINT_DEBUG("MSG_CONFIRM=%d (%d), MSG_DONTROUTE=%d (%d), MSG_DONTWAIT=%d (%d), MSG_EOR=%d (%d), MSG_MORE=%d (%d), MSG_NOSIGNAL=%d (%d), MSG_OOB=%d (%d)",
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
@@ -617,7 +621,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 
 	if (addr_len == 0) {
 		dst_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		dst_port = daemon_sockets[hdr->sock_index].dst_ip;
+		dst_port = daemon_sockets[hdr->sock_index].dst_port;
 	}
 
 	/**
@@ -627,7 +631,6 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	if (daemon_sockets[hdr->sock_index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
 		daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
 	}
-
 	host_ip = daemon_sockets[hdr->sock_index].host_ip;
 
 	/**

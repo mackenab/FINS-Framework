@@ -287,7 +287,6 @@ void *close_thread(void *local) {
 			//if CLOSE, send FIN, FIN_WAIT_1
 			PRINT_DEBUG("CLOSE, send FIN, FIN_WAIT_1: state=%d, conn=%p", conn->state, conn);
 			conn->state = TS_FIN_WAIT_1;
-			//conn->ff_close = ff;
 
 			tcp_reply_fcf(ff, 1, 0);
 
@@ -315,7 +314,6 @@ void *close_thread(void *local) {
 			//if CLOSE_WAIT: CLOSE, send FIN, LAST_ACK
 			PRINT_DEBUG("CLOSE_WAIT: CLOSE, send FIN, LAST_ACK: state=%d, conn=%p", conn->state, conn);
 			conn->state = TS_LAST_ACK;
-			//conn->ff_close = ff;
 
 			tcp_reply_fcf(ff, 1, 0);
 

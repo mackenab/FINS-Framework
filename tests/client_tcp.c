@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,8);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,4);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
 	int i = 0;
 	int j;
 	int total = 0;
-	while (i < 1) {
+	while (i < 20) {
 		//i++;
 		//printf("(%d) Input msg (q or Q to quit):", i);
 		//gets(send_data);
@@ -201,8 +201,8 @@ int main(int argc, char *argv[]) {
 		//fflush(stdout);
 
 		//memcpy(msg, send_data, len);
-		len = 50;
-		//len = 131072;
+		//len = 50;
+		len = 131072;
 		//len = 31072;
 
 		msg[len] = 'a';
