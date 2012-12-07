@@ -1328,7 +1328,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1348,10 +1348,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_addr.s_addr = htonl(loopback_ip_addr);
 			addr.sin_port = 0;
 		} else {
-			PRINT_DEBUG("%s", temp);
+			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1400,7 +1400,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1420,10 +1420,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_addr.s_addr = htonl(loopback_ip_addr);
 			addr.sin_port = 0;
 		} else {
-			PRINT_DEBUG("%s", temp);
+			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1472,7 +1472,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1492,10 +1492,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_addr.s_addr = htonl(any_ip_addr);
 			addr.sin_port = 0;
 		} else {
-			PRINT_DEBUG("%s", temp);
+			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1544,7 +1544,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp=%s", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1564,10 +1564,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_addr.s_addr = htonl(loopback_mask);
 			addr.sin_port = 0;
 		} else {
-			PRINT_DEBUG("%s", temp);
+			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp=%s, addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1607,6 +1607,203 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_ERROR("todo");
 		break;
 		//case TIOCINQ: //equiv to FIONREAD??
+	case SIOCGIFNAME:
+		PRINT_DEBUG("SIOCGIFNAME=%d", cmd);
+		len = *(int *) pt; //IFNAMSIZ
+		pt += sizeof(int);
+
+		total = *(int *) pt; //ifr_ifindex
+		pt += sizeof(int);
+
+		if (pt - buf != buf_len) {
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFNAME), index=%d", cmd, total);
+
+		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_ERROR("todo error");
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			exit(-1);
+		}
+
+		//TODO get correct values from IP?
+		if (total == 0) {
+			strcpy((char *) temp, "lo");
+		} else if (total == 1) {
+			strcpy((char *) temp, "lo");
+		} else if (total == 2) {
+			strcpy((char *) temp, "eth2");
+		} else if (total == 3) {
+			strcpy((char *) temp, "lo");
+		} else {
+			PRINT_DEBUG("index=%d", total);
+		}
+
+		PRINT_DEBUG("index=%d, temp='%s'", total, temp);
+
+		msg_len = sizeof(struct nl_daemon_to_wedge) + len;
+		msg = (uint8_t *) malloc(msg_len);
+		if (msg == NULL) {
+			PRINT_ERROR("ERROR: buf alloc fail");
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			exit(-1);
+		}
+
+		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret->call_type = hdr->call_type;
+		hdr_ret->call_id = hdr->call_id;
+		hdr_ret->call_index = hdr->call_index;
+		hdr_ret->ret = ACK;
+		hdr_ret->msg = 0;
+		pt = msg + sizeof(struct nl_daemon_to_wedge);
+
+		memcpy(pt, temp, len);
+		pt += len;
+
+		free(temp);
+		if (pt - msg != msg_len) {
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
+			free(msg);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			return;
+		}
+		break;
+	case SIOCGIFFLAGS:
+		PRINT_DEBUG("SIOCGIFFLAGS=%d", cmd);
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_ERROR("todo error");
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			exit(-1);
+		}
+		memcpy(temp, pt, len);
+		pt += len;
+
+		if (pt - buf != buf_len) {
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFFLAGS), len=%d, temp='%s'", cmd, len, temp);
+
+		//TODO get correct values from IP? ifr_flags
+		if (strcmp((char *) temp, "eth0") == 0) {
+			total = 0;
+		} else if (strcmp((char *) temp, "eth1") == 0) {
+			total = 0;
+		} else if (strcmp((char *) temp, "eth2") == 0) {
+			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
+		} else if (strcmp((char *) temp, "lo") == 0) {
+			total = IFF_UP | IFF_LOOPBACK | IFF_RUNNING;
+		} else {
+			PRINT_DEBUG("temp='%s'", temp);
+		}
+
+		PRINT_DEBUG("temp='%s', ifr_flags=0x%x", temp, total);
+
+		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
+		msg = (uint8_t *) malloc(msg_len);
+		if (msg == NULL) {
+			PRINT_ERROR("ERROR: buf alloc fail");
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			exit(-1);
+		}
+
+		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret->call_type = hdr->call_type;
+		hdr_ret->call_id = hdr->call_id;
+		hdr_ret->call_index = hdr->call_index;
+		hdr_ret->ret = ACK;
+		hdr_ret->msg = 0;
+		pt = msg + sizeof(struct nl_daemon_to_wedge);
+
+		*(int *) pt = total;
+		pt += sizeof(int);
+
+		free(temp);
+		if (pt - msg != msg_len) {
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
+			free(msg);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			return;
+		}
+		break;
+	case SIOCSIFFLAGS:
+		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
+		PRINT_ERROR("todo");
+		break;
+	case SIOCGIFMTU:
+		PRINT_DEBUG("SIOCGIFMTU=%d", cmd);
+		len = *(int *) pt;
+		pt += sizeof(int);
+
+		temp = malloc(len);
+		if (temp == NULL) {
+			PRINT_ERROR("todo error");
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			exit(-1);
+		}
+		memcpy(temp, pt, len);
+		pt += len;
+
+		if (pt - buf != buf_len) {
+			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			return;
+		}
+
+		PRINT_DEBUG("cmd=%d (SIOCGIFMTU), len=%d, temp='%s'", cmd, len, temp);
+
+		//TODO get correct values from IP? ifr_mtu
+		if (strcmp((char *) temp, "eth0") == 0) {
+			total = 0;
+		} else if (strcmp((char *) temp, "eth1") == 0) {
+			total = 0;
+		} else if (strcmp((char *) temp, "eth2") == 0) {
+			total = 1500;
+		} else if (strcmp((char *) temp, "lo") == 0) {
+			total = 16436;
+		} else {
+			PRINT_DEBUG("temp='%s'", temp);
+		}
+
+		PRINT_DEBUG("temp='%s', ifr_mtu=%d", temp, total);
+
+		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
+		msg = (uint8_t *) malloc(msg_len);
+		if (msg == NULL) {
+			PRINT_ERROR("ERROR: buf alloc fail");
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			exit(-1);
+		}
+
+		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret->call_type = hdr->call_type;
+		hdr_ret->call_id = hdr->call_id;
+		hdr_ret->call_index = hdr->call_index;
+		hdr_ret->ret = ACK;
+		hdr_ret->msg = 0;
+		pt = msg + sizeof(struct nl_daemon_to_wedge);
+
+		*(int *) pt = total;
+		pt += sizeof(int);
+
+		free(temp);
+		if (pt - msg != msg_len) {
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
+			free(msg);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			return;
+		}
+		break;
 	case SIOCADDRT:
 		PRINT_DEBUG("SIOCADDRT=%d", cmd);
 		PRINT_ERROR("todo");
@@ -1644,7 +1841,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		break;
 	}
 
-	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exiting, fail send_wedge: sock_id=%llu", hdr->sock_id);

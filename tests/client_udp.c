@@ -68,7 +68,6 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 }
 
 int main(int argc, char *argv[]) {
-
 	printf("SOCK_RAW=%u\n", SOCK_RAW);
 	printf("SOCK_STREAM=%u\n", SOCK_STREAM);
 	printf("SOCK_DGRAM=%u\n", SOCK_DGRAM);
@@ -124,9 +123,11 @@ int main(int argc, char *argv[]) {
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
 	server_addr.sin_family = PF_INET;
-	server_addr.sin_port = htons(port);
+	//server_addr.sin_port = htons(port);
+	server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);

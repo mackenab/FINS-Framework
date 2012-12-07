@@ -415,7 +415,7 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -534,7 +534,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
-	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
@@ -952,7 +952,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 					return;
 				}
 
-				PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+				PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 				if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 					PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1155,7 +1155,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				return;
 			}
 
-			PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+			PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1776,7 +1776,7 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2038,7 +2038,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		return;
 	}
 
-	PRINT_DEBUG("msg_len=%d, msg=%s", msg_len, msg);
+	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: send_wedge error: call_list=%p, call=%p", call_list, call);
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
