@@ -1,0 +1,70 @@
+     0.000000 --- SIGCHLD (Child exited) @ 0 (0) ---
+     0.163486 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+     0.001704 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.003018 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+     0.005485 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.010992 --- SIGCHLD (Child exited) @ 0 (0) ---
+     0.029017 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 4
+     0.000786 connect(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.001348 getpeername(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0
+     0.005047 getsockname(4, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.633812 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 4
+     0.000903 connect(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.001938 getpeername(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0
+     0.004764 getsockname(4, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.047132 --- SIGCHLD (Child exited) @ 0 (0) ---
+     0.006501 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 11
+     0.002184 connect(11, {sa_family=AF_FILE, path=@"/tmp/dbus-QK621yfTuo"...}, 23) = 0
+     0.004102 sendmsg(11, {msg_name(0)=NULL, msg_iov(1)=[{"\x00", 1}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=2964, uid=0, gid=0}}, msg_flags=0}, MSG_NOSIGNAL) = 1
+     0.001999 send(11, "AUTH\r\n", 6, MSG_NOSIGNAL) = 6
+     0.002488 recv(11, "REJECTED EXTERNAL DBUS_COOKIE_SH"..., 4096, 0) = 46
+     0.001580 send(11, "AUTH EXTERNAL 30\r\n", 18, MSG_NOSIGNAL) = 18
+     0.001458 recv(11, "OK 1b94cd3cb101f80991d1dcb900001"..., 4096, 0) = 37
+     0.001378 send(11, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19
+     0.001449 recv(11, "AGREE_UNIX_FD\r\n", 4096, 0) = 15
+     0.001253 send(11, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7
+     0.011900 socket(PF_FILE, SOCK_STREAM, 0) = 11
+     0.002689 connect(11, {sa_family=AF_FILE, path="/tmp/orbit-root/linc-869-0-79c76564720c5"}, 43) = 0
+     0.004129 socket(PF_FILE, SOCK_STREAM, 0) = 14
+     0.000799 setsockopt(14, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+     0.000894 bind(14, {sa_family=AF_FILE, path="/tmp/orbit-root/linc-b94-0-6538a346282b5"}, 43) = 0
+     0.002376 listen(14, 10)            = 0
+     0.002450 getsockname(14, {sa_family=AF_FILE, path="/tmp/orbit-root/linc-b94-0-6538a346282b5"}, [43]) = 0
+     0.003977 accept(14, {sa_family=AF_FILE, NULL}, [2]) = 15
+     0.054288 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 17
+     0.427704 connect(17, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.002032 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 17
+     0.000774 connect(17, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.021616 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 22
+     0.001205 connect(22, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.001339 getpeername(22, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"...}, [20]) = 0
+     0.004581 getsockname(22, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.513115 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 28
+     0.000852 connect(28, {sa_family=AF_FILE, path="/var/run/dbus/system_bus_socket"}, 33) = 0
+     0.006745 getsockname(28, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.002756 send(28, "\x00", 1, MSG_NOSIGNAL) = 1
+     0.001045 send(28, "AUTH EXTERNAL 30\r\n", 18, MSG_NOSIGNAL) = 18
+     0.003466 send(28, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19
+     0.002779 send(28, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7
+     0.001473 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6e\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128
+     0.006927 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0a\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x36\x31\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 260
+     0.001408 recvmsg(28, 0xbfe01ea8, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable)
+     0.002375 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x8c\x00\x00\x00\x02\x00\x00\x00\x7f\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 144}, {"\x87\x00\x00\x00\x74\x79\x70\x65\x3d\x27\x73\x69\x67\x6e\x61\x6c\x27\x2c\x69\x6e\x74\x65\x72\x66\x61\x63\x65\x3d\x27\x6f\x72\x67"..., 140}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 284
+     0.002822 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x00\x00\x00\x00\x03\x00\x00\x00\x35\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x36\x31\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 72
+     0.001352 recvmsg(28, 0xbfe01ee8, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001230 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x86\x00\x00\x00\x01\x01\x6f\x00\x1f\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 152}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 152
+     0.340619 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x04\x00\x00\x00\xe0\x00\x00\x00\x2d\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x36\x31\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 68
+     0.001373 recvmsg(28, 0xbfe02048, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable)
+     2.102959 socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 34
+     0.212536 getsockname(38, {sa_family=AF_INET, sin_port=htons(58852), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.031311 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.061910 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.206614 getsockname(54, {sa_family=AF_INET, sin_port=htons(50969), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.010637 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.044140 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.056046 getsockname(57, {sa_family=AF_INET, sin_port=htons(51240), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.150485 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.001793 getsockname(57, {sa_family=AF_INET, sin_port=htons(51240), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.028958 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.044929 getsockname(53, {sa_family=AF_INET, sin_port=htons(51238), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.067564 getsockname(54, {sa_family=AF_INET, sin_port=htons(50969), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0

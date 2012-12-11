@@ -1,0 +1,8 @@
+     0.385405 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3
+     0.001102 connect(3, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.001447 getpeername(3, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0
+     0.005011 getsockname(3, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.019885 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+     0.000831 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.002002 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+     0.000802 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)

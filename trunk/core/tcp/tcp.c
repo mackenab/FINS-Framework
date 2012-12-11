@@ -934,6 +934,7 @@ void main_established(struct tcp_connection *conn) {
 			conn->rtt_flag = 0;
 
 			//cong control
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 			switch (conn->cong_state) {
 			case RENO_SLOWSTART:
 				conn->cong_state = RENO_AVOIDANCE;
@@ -950,6 +951,7 @@ void main_established(struct tcp_connection *conn) {
 				conn->cong_window = (double) conn->MSS;
 				break;
 			}
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1146,6 +1148,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 			conn->rtt_flag = 0;
 
 			//cong control
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 			switch (conn->cong_state) {
 			case RENO_SLOWSTART:
 				conn->cong_state = RENO_AVOIDANCE;
@@ -1162,6 +1165,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				conn->cong_window = (double) conn->MSS;
 				break;
 			}
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;

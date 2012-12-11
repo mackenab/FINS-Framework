@@ -1,0 +1,28 @@
+     0.023559 socket(PF_NETLINK, SOCK_RAW, 0) = 35
+     0.001237 bind(35, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000517 getsockname(35, {sa_family=AF_NETLINK, pid=29036, groups=00000000}, [12]) = 0
+     0.001306 sendto(35, "\x14\x00\x00\x00\x16\x00\x01\x03\xd9\x7e\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.004459 recvmsg(35, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xd9\x7e\x03\x50\x6c\x71\x00\x00\x0a\x40\x80\xfd\x02\x00\x00\x00\x14\x00\x01\x00\xfe\x80\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 128
+     0.000750 recvmsg(35, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xd9\x7e\x03\x50\x6c\x71\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x14\x00\x01\x00\xfe\x80\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.016412 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.347720 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.579990 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.130242 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.457137 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.253654 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.283016 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.324921 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.138487 socket(PF_NETLINK, SOCK_RAW, 0) = 38
+     0.000978 bind(38, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000672 getsockname(38, {sa_family=AF_NETLINK, pid=29036, groups=00000000}, [12]) = 0
+     0.000681 sendto(38, "\x14\x00\x00\x00\x16\x00\x01\x03\x08\x7f\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.002552 recvmsg(38, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\x08\x7f\x03\x50\x6c\x71\x00\x00\x0a\x40\x80\xfd\x02\x00\x00\x00\x14\x00\x01\x00\xfe\x80\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 128
+     0.001029 recvmsg(38, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\x08\x7f\x03\x50\x6c\x71\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x14\x00\x01\x00\xfe\x80\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.006143 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.175096 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.202507 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.178946 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.988036 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.143914 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+    11.381828 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 38
+     0.698982 connect(38, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0

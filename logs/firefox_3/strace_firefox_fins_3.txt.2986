@@ -1,0 +1,234 @@
+     0.023446 socket(PF_NETLINK, SOCK_RAW, 0) = 35
+     0.001035 bind(35, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000819 getsockname(35, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001345 sendto(35, "\x14\x00\x00\x00\x16\x00\x01\x03\xb8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.001014 recvmsg(35, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xb8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001312 recvmsg(35, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xb8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001283 recvmsg(35, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xb8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.023626 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 35
+     0.001073 connect(35, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.002511 send(35, "\xd5\xec\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05\x73\x74\x61\x72\x74\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01"..., 34, MSG_NOSIGNAL) = 34
+     0.028697 recvfrom(35, "\xd5\xec\x81\x80\x00\x01\x00\x03\x00\x00\x00\x00\x05\x73\x74\x61\x72\x74\x06\x75\x62\x75\x6e\x74\x75\x03\x63\x6f\x6d\x00\x00\x01"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 82
+     0.005816 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 35
+     0.000773 connect(35, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("91.189.90.40")}, 16) = 0
+     0.000849 getsockname(35, {sa_family=AF_INET, sin_port=htons(57523), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000903 connect(35, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000839 connect(35, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("91.189.90.41")}, 16) = 0
+     0.000926 getsockname(35, {sa_family=AF_INET, sin_port=htons(46426), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000887 connect(35, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000908 connect(35, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("91.189.89.88")}, 16) = 0
+     0.000829 getsockname(35, {sa_family=AF_INET, sin_port=htons(40156), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.929867 socket(PF_NETLINK, SOCK_RAW, 0) = 53
+     0.000843 bind(53, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000954 getsockname(53, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001440 sendto(53, "\x14\x00\x00\x00\x16\x00\x01\x03\xb9\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.001070 recvmsg(53, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xb9\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.002059 recvmsg(53, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xb9\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001523 recvmsg(53, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xb9\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.005279 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 53
+     0.000831 connect(53, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.001741 send(53, "\xb7\x54\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01", 32, MSG_NOSIGNAL) = 32
+     0.002233 recvfrom(53, "\xb7\x54\x81\x80\x00\x01\x00\x07\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 148
+     0.002247 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 53
+     0.000815 connect(53, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("173.194.75.104")}, 16) = 0
+     0.000885 getsockname(53, {sa_family=AF_INET, sin_port=htons(58843), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.001003 connect(53, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001023 connect(53, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("173.194.75.105")}, 16) = 0
+     0.000852 getsockname(53, {sa_family=AF_INET, sin_port=htons(44939), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000891 connect(53, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000995 connect(53, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("173.194.75.106")}, 16) = 0
+     0.000938 getsockname(53, {sa_family=AF_INET, sin_port=htons(45037), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000896 connect(53, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001075 connect(53, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("173.194.75.103")}, 16) = 0
+     0.000920 getsockname(53, {sa_family=AF_INET, sin_port=htons(59531), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000915 connect(53, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000928 connect(53, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("173.194.75.99")}, 16) = 0
+     0.000873 getsockname(53, {sa_family=AF_INET, sin_port=htons(48774), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.001064 connect(53, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000919 connect(53, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("173.194.75.147")}, 16) = 0
+     0.000874 getsockname(53, {sa_family=AF_INET, sin_port=htons(44198), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.285770 socket(PF_NETLINK, SOCK_RAW, 0) = 58
+     0.000849 bind(58, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000833 getsockname(58, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001312 sendto(58, "\x14\x00\x00\x00\x16\x00\x01\x03\xc8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.000992 recvmsg(58, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001369 recvmsg(58, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001498 recvmsg(58, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.007914 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 58
+     0.000756 connect(58, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.005904 send(58, "\x07\x65\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x04\x70\x6c\x75\x73\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 33, MSG_NOSIGNAL) = 33
+     0.002435 recvfrom(58, "\x07\x65\x81\x80\x00\x01\x00\x0b\x00\x00\x00\x00\x04\x70\x6c\x75\x73\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 209
+     0.003830 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 58
+     0.000842 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.102")}, 16) = 0
+     0.000856 getsockname(58, {sa_family=AF_INET, sin_port=htons(45804), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.003849 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000922 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.105")}, 16) = 0
+     0.000848 getsockname(58, {sa_family=AF_INET, sin_port=htons(47887), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000879 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000958 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.97")}, 16) = 0
+     0.000993 getsockname(58, {sa_family=AF_INET, sin_port=htons(46886), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000997 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001060 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.100")}, 16) = 0
+     0.000853 getsockname(58, {sa_family=AF_INET, sin_port=htons(51239), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000901 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001867 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.98")}, 16) = 0
+     0.000843 getsockname(58, {sa_family=AF_INET, sin_port=htons(45535), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000888 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000948 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.110")}, 16) = 0
+     0.000837 getsockname(58, {sa_family=AF_INET, sin_port=htons(45307), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.001028 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000940 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.99")}, 16) = 0
+     0.000844 getsockname(58, {sa_family=AF_INET, sin_port=htons(37083), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000908 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000927 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.104")}, 16) = 0
+     0.000841 getsockname(58, {sa_family=AF_INET, sin_port=htons(57555), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000873 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001008 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.96")}, 16) = 0
+     0.000883 getsockname(58, {sa_family=AF_INET, sin_port=htons(32842), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000980 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000993 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.103")}, 16) = 0
+     0.000902 getsockname(58, {sa_family=AF_INET, sin_port=htons(36693), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000899 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000945 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.101")}, 16) = 0
+     0.000836 getsockname(58, {sa_family=AF_INET, sin_port=htons(56784), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.004743 socket(PF_NETLINK, SOCK_RAW, 0) = 59
+     0.000778 bind(59, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000830 getsockname(59, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001291 sendto(59, "\x14\x00\x00\x00\x16\x00\x01\x03\xc8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.002097 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001464 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001280 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.006286 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 59
+     0.000912 connect(59, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.001802 send(59, "\xa9\xcc\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x07\x79\x6f\x75\x74\x75\x62\x65\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 33, MSG_NOSIGNAL) = 33
+     0.004187 recvfrom(59, "\xa9\xcc\x81\x80\x00\x01\x00\x0c\x00\x00\x00\x00\x03\x77\x77\x77\x07\x79\x6f\x75\x74\x75\x62\x65\x03\x63\x6f\x6d\x00\x00\x01\x00"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 243
+     0.002967 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 58
+     0.000820 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.98")}, 16) = 0
+     0.000859 getsockname(58, {sa_family=AF_INET, sin_port=htons(33815), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000902 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000959 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.97")}, 16) = 0
+     0.000934 getsockname(58, {sa_family=AF_INET, sin_port=htons(47515), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.001017 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.002070 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.102")}, 16) = 0
+     0.000961 getsockname(58, {sa_family=AF_INET, sin_port=htons(56397), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000920 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001020 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.105")}, 16) = 0
+     0.000848 getsockname(58, {sa_family=AF_INET, sin_port=htons(60182), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000886 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001015 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.104")}, 16) = 0
+     0.000939 getsockname(58, {sa_family=AF_INET, sin_port=htons(59675), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.001460 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001000 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.110")}, 16) = 0
+     0.000832 getsockname(58, {sa_family=AF_INET, sin_port=htons(40978), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000943 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000933 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.103")}, 16) = 0
+     0.001309 getsockname(58, {sa_family=AF_INET, sin_port=htons(34736), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000926 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000922 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.96")}, 16) = 0
+     0.000830 getsockname(58, {sa_family=AF_INET, sin_port=htons(43423), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000868 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001040 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.100")}, 16) = 0
+     0.000837 getsockname(58, {sa_family=AF_INET, sin_port=htons(53117), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000875 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000913 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.99")}, 16) = 0
+     0.001230 getsockname(58, {sa_family=AF_INET, sin_port=htons(48777), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000888 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000920 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.101")}, 16) = 0
+     0.000844 getsockname(58, {sa_family=AF_INET, sin_port=htons(39857), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.005506 socket(PF_NETLINK, SOCK_RAW, 0) = 60
+     0.000835 bind(60, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000833 getsockname(60, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001413 sendto(60, "\x14\x00\x00\x00\x16\x00\x01\x03\xc8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.001090 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001645 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001425 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.005780 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 60
+     0.000824 connect(60, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.001784 send(60, "\x4c\x9f\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x09\x74\x72\x61\x6e\x73\x6c\x61\x74\x65\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f"..., 38, MSG_NOSIGNAL) = 38
+     0.002059 recvfrom(60, "\x4c\x9f\x81\x80\x00\x01\x00\x0c\x00\x00\x00\x00\x09\x74\x72\x61\x6e\x73\x6c\x61\x74\x65\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 235
+     0.001394 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 60
+     0.000772 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.105")}, 16) = 0
+     0.000847 getsockname(60, {sa_family=AF_INET, sin_port=htons(53324), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000886 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001433 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.96")}, 16) = 0
+     0.000898 getsockname(60, {sa_family=AF_INET, sin_port=htons(46797), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000977 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001442 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.98")}, 16) = 0
+     0.000902 getsockname(60, {sa_family=AF_INET, sin_port=htons(57074), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000953 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000954 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.101")}, 16) = 0
+     0.001540 getsockname(60, {sa_family=AF_INET, sin_port=htons(41209), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000890 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001012 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.100")}, 16) = 0
+     0.000839 getsockname(60, {sa_family=AF_INET, sin_port=htons(34114), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000827 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000925 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.97")}, 16) = 0
+     0.000884 getsockname(60, {sa_family=AF_INET, sin_port=htons(37068), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000883 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.005102 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.110")}, 16) = 0
+     0.000860 getsockname(60, {sa_family=AF_INET, sin_port=htons(51792), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000915 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000931 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.104")}, 16) = 0
+     0.000842 getsockname(60, {sa_family=AF_INET, sin_port=htons(39426), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000884 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000948 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.103")}, 16) = 0
+     0.000871 getsockname(60, {sa_family=AF_INET, sin_port=htons(44570), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000885 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000926 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.102")}, 16) = 0
+     0.000857 getsockname(60, {sa_family=AF_INET, sin_port=htons(37353), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000972 connect(60, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001168 connect(60, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.99")}, 16) = 0
+     0.001248 getsockname(60, {sa_family=AF_INET, sin_port=htons(42283), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.003722 socket(PF_NETLINK, SOCK_RAW, 0) = 60
+     0.005553 bind(60, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000814 getsockname(60, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001286 sendto(60, "\x14\x00\x00\x00\x16\x00\x01\x03\xc8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.000899 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001328 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001288 recvmsg(60, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.006965 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 58
+     0.000846 connect(58, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.001814 send(58, "\xb9\x0e\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x08\x77\x65\x62\x63\x61\x63\x68\x65\x11\x67\x6f\x6f\x67\x6c\x65\x75\x73\x65\x72"..., 48, MSG_NOSIGNAL) = 48
+     0.006307 recvfrom(58, "\xb9\x0e\x81\x80\x00\x01\x00\x04\x00\x00\x00\x00\x08\x77\x65\x62\x63\x61\x63\x68\x65\x11\x67\x6f\x6f\x67\x6c\x65\x75\x73\x65\x72"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 125
+     0.002257 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 58
+     0.000766 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.108")}, 16) = 0
+     0.000865 getsockname(58, {sa_family=AF_INET, sin_port=htons(56811), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000884 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.001402 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.106")}, 16) = 0
+     0.001032 getsockname(58, {sa_family=AF_INET, sin_port=htons(53401), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.000882 connect(58, {sa_family=AF_UNSPEC, sa_data="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}, 16) = 0
+     0.000934 connect(58, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("74.125.228.107")}, 16) = 0
+     0.000892 getsockname(58, {sa_family=AF_INET, sin_port=htons(45709), sin_addr=inet_addr("10.0.2.15")}, [16]) = 0
+     0.003812 socket(PF_NETLINK, SOCK_RAW, 0) = 58
+     0.004450 bind(58, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000834 getsockname(58, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001326 sendto(58, "\x14\x00\x00\x00\x16\x00\x01\x03\xc8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.000986 recvmsg(58, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001289 recvmsg(58, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001346 recvmsg(58, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.005784 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 58
+     0.000808 connect(58, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.001672 send(58, "\xdb\x8b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x65\x6e\x09\x77\x69\x6b\x69\x70\x65\x64\x69\x61\x03\x6f\x72\x67\x00\x00\x01"..., 34, MSG_NOSIGNAL) = 34
+     0.002068 recvfrom(58, "\xdb\x8b\x81\x80\x00\x01\x00\x03\x00\x00\x00\x00\x02\x65\x6e\x09\x77\x69\x6b\x69\x70\x65\x64\x69\x61\x03\x6f\x72\x67\x00\x00\x01"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 120
+     0.006461 socket(PF_NETLINK, SOCK_RAW, 0) = 59
+     0.000843 bind(59, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000824 getsockname(59, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.001392 sendto(59, "\x14\x00\x00\x00\x16\x00\x01\x03\xc8\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.001089 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.001853 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.001286 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc8\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.006241 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 59
+     0.000863 connect(59, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.011090 send(59, "\x45\xf7\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x0c\x68\x75\x6d\x61\x6e\x6d\x65\x74\x72\x69\x63\x73\x03\x63\x6f"..., 38, MSG_NOSIGNAL) = 38
+     0.002251 recvfrom(59, "\x45\xf7\x81\x80\x00\x01\x00\x02\x00\x00\x00\x00\x03\x77\x77\x77\x0c\x68\x75\x6d\x61\x6e\x6d\x65\x74\x72\x69\x63\x73\x03\x63\x6f"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 68
+     0.005986 socket(PF_NETLINK, SOCK_RAW, 0) = 59
+     0.000839 bind(59, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 0
+     0.000805 getsockname(59, {sa_family=AF_NETLINK, pid=2964, groups=00000000}, [12]) = 0
+     0.008309 sendto(59, "\x14\x00\x00\x00\x16\x00\x01\x03\xc9\x7c\x03\x50\x00\x00\x00\x00\x00\x00\x00\x00", 20, 0, {sa_family=AF_NETLINK, pid=0, groups=00000000}, 12) = 20
+     0.023011 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x30\x00\x00\x00\x14\x00\x02\x00\xc9\x7c\x03\x50\x94\x0b\x00\x00\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x01\x00\x7f\x00\x00\x01"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 168
+     0.005170 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x40\x00\x00\x00\x14\x00\x02\x00\xc9\x7c\x03\x50\x94\x0b\x00\x00\x0a\x80\x80\xfe\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 192
+     0.003929 recvmsg(59, {msg_name(12)={sa_family=AF_NETLINK, pid=0, groups=00000000}, msg_iov(1)=[{"\x14\x00\x00\x00\x03\x00\x02\x00\xc9\x7c\x03\x50\x94\x0b\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00\x01\x00\x00\x00\x00\x00"..., 4096}], msg_controllen=0, msg_flags=0}, 0) = 20
+     0.014603 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 58
+     0.000853 connect(58, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, 16) = 0
+     0.001608 send(58, "\xe8\xf5\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x09\x6e\x65\x72\x64\x74\x65\x73\x74\x73\x03\x63\x6f\x6d\x00\x00"..., 35, MSG_NOSIGNAL) = 35
+     0.001994 recvfrom(58, "\xe8\xf5\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00\x03\x77\x77\x77\x09\x6e\x65\x72\x64\x74\x65\x73\x74\x73\x03\x63\x6f\x6d\x00\x00"..., 1024, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.1.1")}, [16]) = 51

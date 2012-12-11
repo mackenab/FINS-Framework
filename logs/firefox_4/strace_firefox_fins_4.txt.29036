@@ -1,0 +1,58 @@
+     0.000000 --- SIGCHLD (Child exited) @ 0 (0) ---
+     0.146954 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+     0.000986 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.001108 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 4
+     0.000758 connect(4, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.053587 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 4
+     0.000945 connect(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.000939 getpeername(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0
+     0.011647 getsockname(4, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.300672 --- SIGCHLD (Child exited) @ 0 (0) ---
+     0.181457 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 4
+     0.000871 connect(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.000833 getpeername(4, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0
+     0.003935 getsockname(4, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.039688 --- SIGCHLD (Child exited) @ 0 (0) ---
+     0.004297 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 11
+     0.001570 connect(11, {sa_family=AF_FILE, path=@"/tmp/dbus-cDDQnHKdTS"...}, 23) = 0
+     0.006770 sendmsg(11, {msg_name(0)=NULL, msg_iov(1)=[{"\x00", 1}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=29036, uid=0, gid=0}}, msg_flags=0}, MSG_NOSIGNAL) = 1
+     0.000880 send(11, "AUTH\r\n", 6, MSG_NOSIGNAL) = 6
+     0.000603 recv(11, "REJECTED EXTERNAL DBUS_COOKIE_SH"..., 4096, 0) = 46
+     0.004981 send(11, "AUTH EXTERNAL 30\r\n", 18, MSG_NOSIGNAL) = 18
+     0.000704 recv(11, "OK 4ce9d049b5a7b2477ac8809100000"..., 4096, 0) = 37
+     0.000750 send(11, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19
+     0.000958 recv(11, "AGREE_UNIX_FD\r\n", 4096, 0) = 15
+     0.000519 send(11, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7
+     0.008830 socket(PF_FILE, SOCK_STREAM, 0) = 11
+     0.001407 connect(11, {sa_family=AF_FILE, path="/tmp/orbit-root/linc-745-0-5f6d70ebf1337"}, 43) = 0
+     0.006838 socket(PF_FILE, SOCK_STREAM, 0) = 14
+     0.000479 setsockopt(14, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+     0.000398 bind(14, {sa_family=AF_FILE, path="/tmp/orbit-root/linc-716c-0-19343169e1a7e"}, 44) = 0
+     0.000992 listen(14, 10)            = 0
+     0.004251 getsockname(14, {sa_family=AF_FILE, path="/tmp/orbit-root/linc-716c-0-19343169e1a7e"}, [44]) = 0
+     0.001798 accept(14, {sa_family=AF_FILE, NULL}, [2]) = 15
+     0.049836 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 17
+     0.000771 connect(17, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.000778 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 17
+     0.002340 connect(17, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+     0.023241 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 22
+     0.004078 connect(22, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.000866 getpeername(22, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"...}, [20]) = 0
+     0.001810 getsockname(22, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.529491 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 28
+     0.000566 connect(28, {sa_family=AF_FILE, path="/var/run/dbus/system_bus_socket"}, 33) = 0
+     0.005033 getsockname(28, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.001114 send(28, "\x00", 1, MSG_NOSIGNAL) = 1
+     0.002131 send(28, "AUTH EXTERNAL 30\r\n", 18, MSG_NOSIGNAL) = 18
+     0.001113 send(28, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19
+     0.001901 send(28, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7
+     0.000765 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00\x6e\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 128}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 128
+     0.007168 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x0a\x00\x00\x00\x01\x00\x00\x00\x3d\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x34\x39\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 260
+     0.001446 recvmsg(28, 0xbfb40298, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable)
+     0.003519 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x8c\x00\x00\x00\x02\x00\x00\x00\x7f\x00\x00\x00\x01\x01\x6f\x00\x15\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 144}, {"\x87\x00\x00\x00\x74\x79\x70\x65\x3d\x27\x73\x69\x67\x6e\x61\x6c\x27\x2c\x69\x6e\x74\x65\x72\x66\x61\x63\x65\x3d\x27\x6f\x72\x67"..., 140}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 284
+     0.001224 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x00\x00\x00\x00\x03\x00\x00\x00\x35\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x34\x39\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 72
+     0.000599 recvmsg(28, 0xbfb402d8, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable)
+     0.000691 sendmsg(28, {msg_name(0)=NULL, msg_iov(2)=[{"\x6c\x01\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x86\x00\x00\x00\x01\x01\x6f\x00\x1f\x00\x00\x00\x2f\x6f\x72\x67\x2f\x66\x72\x65"..., 152}, {"", 0}], msg_controllen=0, msg_flags=0}, MSG_NOSIGNAL) = 152
+     0.387990 recvmsg(28, {msg_name(0)=NULL, msg_iov(1)=[{"\x6c\x02\x01\x01\x04\x00\x00\x00\x8d\x00\x00\x00\x2d\x00\x00\x00\x06\x01\x73\x00\x05\x00\x00\x00\x3a\x31\x2e\x34\x39\x00\x00\x00"..., 2048}], msg_controllen=0, msg_flags=MSG_CMSG_CLOEXEC}, MSG_CMSG_CLOEXEC) = 68
+     0.005264 recvmsg(28, 0xbfb40438, MSG_CMSG_CLOEXEC) = -1 EAGAIN (Resource temporarily unavailable)
+     1.781965 socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 34

@@ -93,8 +93,7 @@ int store_list_insert(struct ip4_store *store) {
 	}
 
 	store_num++;
-
-	PRINT_DEBUG("")
+	PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
 	return 1;
 }
 
@@ -115,12 +114,14 @@ void store_list_remove(struct ip4_store *store) {
 	PRINT_DEBUG("Entered: store=%p", store);
 
 	if (store_list == NULL) {
+		PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
 		return;
 	}
 
 	if (store_list == store) {
 		store_list = store_list->next;
 		store_num--;
+		PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
 		return;
 	}
 
@@ -129,10 +130,13 @@ void store_list_remove(struct ip4_store *store) {
 		if (temp->next == store) {
 			temp->next = store->next;
 			store_num--;
+			PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
 			return;
 		}
 		temp = temp->next;
 	}
+
+	PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
 }
 
 int store_list_is_empty(void) {

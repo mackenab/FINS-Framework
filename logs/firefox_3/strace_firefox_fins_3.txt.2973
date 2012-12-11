@@ -1,0 +1,96 @@
+     0.428410 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 38
+     0.002016 setsockopt(38, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+     0.005885 connect(38, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("91.189.90.40")}, 16) = -1 EINPROGRESS (Operation now in progress)
+     0.003343 getsockopt(38, SOL_SOCKET, SO_ERROR, [0], [4]) = 0
+     0.012291 send(38, "GET /11.04/Google/?sourceid=hp H"..., 414, 0) = 414
+     0.008336 recv(38, "HTTP/1.0 304 Not Modified\r\nDate:"..., 32768, 0) = 333
+     0.008300 recv(38, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+    10.094752 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 53
+     0.001829 setsockopt(53, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+     0.003118 connect(53, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("173.194.75.104")}, 16) = -1 EINPROGRESS (Operation now in progress)
+     0.007371 getsockopt(53, SOL_SOCKET, SO_ERROR, [0], [4]) = 0
+     0.007328 send(53, "GET /search?ie=UTF-8&sa=Search&c"..., 444, 0) = 444
+     0.054483 recv(53, "HTTP/1.1 200 OK\r\nSet-Cookie: NID"..., 32768, 0) = 11995
+     0.001477 recv(53, 0xaa765b6a, 21654, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.042215 recv(53, "\x34\x66\x63\x65\x0d\x0a\x67\xe2\x85\xb8\xba\x6d\xf4\x32\xa2\xae\xad\x1b\x90\xd6\x6d\x4b\x3f\x69\x8b\xee\x2f\xe2\xff\xdf\x2d\xba"..., 21654, 0) = 20438
+     0.001599 recv(53, 0xaa76ab38, 1224, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.063283 recv(53, "\x66\x66\x61\x0d\x0a\xd4\x3d\xeb\x52\xe2\x4a\xb7\xaf\xd2\x87\x5d\x67\xbb\x77\x8d\x28\x08\x02\x3a\x97\x5d\xdc\x44\x1d\x71\x44\x70"..., 1224, 0) = 1224
+     0.001245 recv(53, "\x71\x58\x98\x26\xc2", 5, 0) = 5
+     0.000845 recv(53, "\x80\x7e\xda\x48\x4a\xf7\x29\xa3\x14\xe1\x10\x93\x30\x18\xa0\x05\x86\x21\xbf\x10\x05\xb9\x4e\x55\x42\xe4\xb2\xfb\x42\xc9\x49\x24"..., 31544, 0) = 4916
+     0.001059 recv(53, 0xaab2d32b, 26637, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.057467 recv(53, "\x66\x66\x61\x0d\x0a\xcc\x1d\x69\x57\xe3\x38\xf2\x7b\x7e\x45\xda\xbb\xdb\xb1\xdf\xa8\x43\x1c\x08\xe4\x58\x6f\x3f\x9a\xbb\x07\x1a"..., 27861, 0) = 4229
+     0.058710 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.402321 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001301 send(53, "GET /images/nav_logo107.png HTTP"..., 606, 0) = 606
+     0.050362 recv(53, "HTTP/1.1 200 OK\r\nContent-Type: i"..., 32768, 0) = 11140
+     0.001114 recv(53, 0xaa765a4c, 21940, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.010878 recv(53, "\x2c\xed\xc3\x55\x2f\x03\xce\x3b\x8f\x53\x8c\xd6\x6d\x5c\x87\xe8\x8f\x87\x80\x4a\xc2\x69\x89\x1f\xb0\x12\xc3\x69\xae\x8f\x58\x59"..., 21940, 0) = 4096
+     0.001154 recv(53, 0xaa766a4c, 17844, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.034033 recv(53, "\xce\xa0\x4c\x58\x77\x3b\x01\xbe\xb9\x12\x04\xfb\x8f\x9f\x82\xff\xed\xfb\x1d\xf6\xec\x3d\x04\xc7\x8f\x1f\xb5\x08\x38\xdb\x4d\xda"..., 17844, 0) = 13769
+     0.003141 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.635333 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 54
+     0.001622 setsockopt(54, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+     0.005372 connect(54, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("74.125.228.111")}, 16) = -1 EINPROGRESS (Operation now in progress)
+     0.009651 getsockopt(54, SOL_SOCKET, SO_ERROR, [0], [4]) = 0
+     0.008327 send(54, "GET /gb/images/j_e6a6aca6.png HT"..., 391, 0) = 391
+     0.046875 recv(54, "HTTP/1.1 200 OK\r\nContent-Type: i"..., 32768, 0) = 8516
+     0.001411 recv(54, 0xa545b000, 24576, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.015709 recv(54, "\x36\xe1\x6f\xa1\x55\x63\xd7\x64\xf1\x0a\x45\xf8\x6b\x20\x2d\xa5\x39\x17\x54\xd5\x41\xdd\x2e\xf0\xb7\x34\xdc\xeb\x45\xc0\x40\x6f"..., 24576, 0) = 6938
+     0.005806 recv(54, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.064441 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001231 send(53, "GET /xjs/_/js/s/s,st,anim,c,sb,h"..., 749, 0) = 749
+     0.044756 recv(53, "HTTP/1.1 200 OK\r\nVary: Accept-En"..., 32768, 0) = 32768
+     0.001810 recv(53, "\xb4\x1a\x36\xd6\x69\xc4\x4b\xe8\x2e\xa5\xa3\xee\xd0\x20\x2c\xad\x50\x8a\x95\x95\x0d\x6c\x4a\x3a\x6c\xcb\xd4\x1b\x0c\x18\x35\x76"..., 393, 0) = 393
+     0.001134 recv(53, "\x06\x92\xb5\x20\x85\x98\x22\xa7\x3c\xe1\x84\xaa\xe9\xcc\x99\xbd\xd0\x6f\x07\xa1\x7d\xd4\xba\x80\x7a\x53\xbf\xe6\xb9\x61\x3d\xc3"..., 32768, 0) = 2224
+     0.001291 recv(53, 0xa53b18b0, 30544, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.017292 recv(53, "\x67\x0c\x6f\x79\x79\xdc\x81\x7f\xae\x7e\x3e\x94\x4a\x0b\xb3\x73\x0b\xff\xd7\xd5\xc2\xff\xfd\x4c\x14\x7e\xa9\xe4\xd4\xf0\xeb\xbd"..., 30544, 0) = 13888
+     0.001374 recv(53, 0xa53b4ef0, 16656, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.003897 recv(53, "\x9e\xd5\x34\x29\x09\x11\x3a\x16\x64\x47\x3d\x80\x11\x97\x61\xea\x5d\x9f\x43\xda\x97\x02\x2c\x4f\x2c\xfd\x01\xc6\x92\x85\x4a\x44"..., 16656, 0) = 13888
+     0.001762 recv(53, "\xf5\x33\x2f\x4a\xe6\xcd\xb5\x0c\xf2\x09\x33\x34\xfd\xf6\x8d\x0c\xc7\x21\x0b\x99\xd6\x91\xe1\x88\x5c\x41\xb7\x19\x21\x12\x3b\x85"..., 2768, 0) = 2768
+     0.001621 recv(53, "\xc5\xcc\xa5\x9b\x3c\xcd\xc9\xe0\x0b\x73\x17\x9d\xb4\x38\x83\x50\x39\x7c\x8d\x61\xe3\xac\x3b\xd4\x94\x79\x7a\x23\x78\x62\xaa\x89"..., 16112, 0) = 7648
+     0.001354 recv(53, "\x2d\x2c\x31\x99\x86\x47\xfe\xe6\x16\x29\xff\x2e\x97\xe1\x12\x8c\x0b\x52\x58\x2c\x56\xd5\x34\x1e\x1c\xe9\x12\xe7\x33\x81\x64\xb0"..., 8464, 0) = 3472
+     0.001316 recv(53, "\xf4\xa0\x11\xb0\xd7\xc9\xf4\xbb\xc9\x25\x0c\x01\xe2\x37\xc1\x56\x8e\x63\xfa\xf2\xe4\xa9\x5a\x45\x7c\x97\x5c\x25\x89\xb4\xce\xc5"..., 4992, 0) = 4992
+     0.002447 recv(53, "\xbf\x29\x3c\x11\x56\x27\x61\x2e\x7d\x87\xa2\xac\x1d\xc6\xb4\xdb\xe1\xa6\xd0\x7b\xab\x86\xcd\x21\x72\x6e\x42\xe9\x79\x6e\x37\x4f"..., 16656, 0) = 8896
+     0.001430 recv(53, "\x26\x59\x90\x0b\x3c\x82\x2e\x86\x36\x82\x1e\x1f\x10\xe6\x31\xd6\x54\xfd\xa7\x72\x69\x64\xe9\xf3\x8b\x96\x95\x1c\x99\x47\x66\x9a"..., 7760, 0) = 3472
+     0.001648 recv(53, "\xba\xc1\x15\xf3\x8c\x16\x0a\xd1\xe2\x3e\x45\x06\xbc\xa9\xd8\x2f\x9e\x99\xb7\x20\x3f\x8f\xe2\xeb\x15\xfc\x8a\x11\x6a\x12\x9a\x4e"..., 4288, 0) = 4288
+     0.001000 recv(53, "\x1f\x07\x8b\x9c\x3c\x69\xb1\x1b\xf5\x2f\x50\xbd\xa9\x08\x7c\x94\xd8\x65\x30\x77\x6c\x49\x64\x68\xaf\x13\xf0\xb6\x8e\xd0\x9f\xea"..., 16112, 0) = 2656
+     0.000996 recv(53, 0xa533da60, 13456, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.018251 recv(53, "\x85\x1d\x5a\xab\x0a\xe8\x88\x92\xe4\x0a\x69\xe8\x18\xe3\xbc\xfa\x9f\x5a\x72\xd6\xeb\xc5\x97\x76\x92\x42\xa0\x9e\x4f\xcf\x7b\x43"..., 30112, 0) = 24304
+     0.002387 recv(53, "\x81\xa2\xb7\x07\xae\xf1\xc0\xae\x34\xb6\xc4\x40\xb6\xd4\x40\xf2\x00\x2e\xd8\xb6\xa1\x07\xce\xe3\xe5\x29\x44\x53\x89\xdb\xcc\x59"..., 5808, 0) = 5808
+     0.001496 recv(53, "\xf7\xf0\x97\x1b\xb1\x11\xbe\x99\x7b\x3e\xed\xbb\x37\x41\x4c\x69\xf6\x2f\x3f\xa7\x10\x12\x0c\x6e\x5e\x5e\xa2\x77\xc7\xf7\xf8\xfc"..., 2656, 0) = 2656
+     0.002056 recv(53, "\x69\x41\x0c\xbd\x79\x7c\xce\x84\x48\x4e\x29\xdb\x87\xf3\xba\xca\xed\x85\x61\x3c\xee\x83\x80\xe2\x7a\x4d\x44\x71\xa4\x92\x37\x58"..., 30112, 0) = 13828
+     0.001581 recv(53, "\xa7\x95\xac\x0a\x52\x93\x95\x99\x01\x09\xf1\xb7\x3b\x77\xd4\xbc\xb2\xde\xd9\x36\xeb\x1e\x58\x34\x8a\x47\xb3\x80\xce\x17\xbe\x18"..., 16284, 0) = 190
+     0.002380 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.606332 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001698 send(53, "GET /extern_chrome/174a2985b6b67"..., 602, 0) = 602
+     0.026323 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 57
+     0.001644 setsockopt(57, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+     0.003130 connect(57, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("173.194.75.104")}, 16) = -1 EINPROGRESS (Operation now in progress)
+     0.003327 getsockopt(57, SOL_SOCKET, SO_ERROR, [0], [4]) = 0
+     0.007251 send(57, "GET /textinputassistant/tia.png "..., 610, 0) = 610
+     0.015029 recv(53, "HTTP/1.1 200 OK\r\nExpires: Sun, 1"..., 32768, 0) = 12980
+     0.002852 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.068214 recv(57, "HTTP/1.1 200 OK\r\nContent-Type: i"..., 32768, 0) = 697
+     0.005076 recv(57, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.131884 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001281 send(53, "GET /client_204?&biw=994&bih=627"..., 637, 0) = 637
+     0.013167 recv(57, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001503 send(57, "GET /images/swxa.gif HTTP/1.1\r\nH"..., 599, 0) = 599
+     0.025801 recv(53, "HTTP/1.1 204 No Content\r\nContent"..., 32768, 0) = 374
+     0.002307 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.021382 recv(57, "HTTP/1.1 200 OK\r\nContent-Type: i"..., 32768, 0) = 5534
+     0.002456 recv(57, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.099555 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001255 send(53, "GET /csi?v=3&s=web&action=&e=172"..., 881, 0) = 881
+     0.055313 recv(53, "HTTP/1.1 204 No Content\r\nContent"..., 32768, 0) = 215
+     0.010507 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.213239 recv(53, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001243 send(53, "GET /favicon.ico HTTP/1.1\r\nHost:"..., 515, 0) = 515
+     0.051074 recv(53, "HTTP/1.1 200 OK\r\nContent-Type: i"..., 32768, 0) = 1464
+     0.002429 recv(53, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.129803 recv(54, 0xb25fefff, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)
+     0.001245 send(54, "GET /gb/js/sem_0e1289051da7e9e36"..., 382, 0) = 382
+     0.024302 recv(54, "HTTP/1.1 200 OK\r\nVary: Accept-En"..., 32768, 0) = 12665
+     0.001396 recv(54, 0xa30de000, 20480, 0) = -1 EAGAIN (Resource temporarily unavailable)
+     0.015358 recv(54, "\xb6\x97\x2c\x2e\xf5\x01\x69\x7e\xe3\xf0\x2b\x4a\x32\x87\x77\xb0\x89\xda\x18\xbe\xc2\xd1\x78\x99\xf3\x3a\xc0\xbe\x9f\x75\x31\x50"..., 20480, 0) = 4639
+     0.002326 recv(54, 0xb25ff07f, 1, MSG_PEEK) = -1 EAGAIN (Resource temporarily unavailable)

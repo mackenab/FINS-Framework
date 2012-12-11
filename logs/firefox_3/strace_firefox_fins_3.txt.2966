@@ -1,0 +1,5 @@
+     0.369092 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3
+     0.001594 connect(3, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, 20) = 0
+     0.001465 getpeername(3, {sa_family=AF_FILE, path=@"/tmp/.X11-unix/X0"}, [20]) = 0
+     0.005015 getsockname(3, {sa_family=AF_FILE, NULL}, [2]) = 0
+     0.004105 --- SIGCHLD (Child exited) @ 0 (0) ---

@@ -1,0 +1,10 @@
+     0.014407 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC, 0) = 29
+     0.004541 connect(29, {sa_family=AF_FILE, path=@"/tmp/dbus-cDDQnHKdTS"...}, 23) = 0
+     0.005202 sendmsg(29, {msg_name(0)=NULL, msg_iov(1)=[{"\x00", 1}], msg_controllen=24, {cmsg_len=24, cmsg_level=SOL_SOCKET, cmsg_type=SCM_CREDENTIALS{pid=29036, uid=0, gid=0}}, msg_flags=0}, MSG_NOSIGNAL) = 1
+     0.006709 send(29, "AUTH\r\n", 6, MSG_NOSIGNAL) = 6
+     0.004208 recv(29, "REJECTED EXTERNAL DBUS_COOKIE_SH"..., 4096, 0) = 46
+     0.004801 send(29, "AUTH EXTERNAL 30\r\n", 18, MSG_NOSIGNAL) = 18
+     0.004703 recv(29, "OK 4ce9d049b5a7b2477ac8809100000"..., 4096, 0) = 37
+     0.003955 send(29, "NEGOTIATE_UNIX_FD\r\n", 19, MSG_NOSIGNAL) = 19
+     0.005623 recv(29, "AGREE_UNIX_FD\r\n", 4096, 0) = 15
+     0.005168 send(29, "BEGIN\r\n", 7, MSG_NOSIGNAL) = 7
