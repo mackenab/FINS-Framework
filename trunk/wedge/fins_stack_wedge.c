@@ -405,7 +405,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 
 	// Send the message
 	//ret_val = nlmsg_unicast(fins_nl_sk, skb, pid);
-	ret_val = netlink_unicast(fins_nl_sk, skb, pid, 0);
+	ret_val = netlink_unicast(fins_nl_sk, skb, pid, 0); //blocking
 
 	if (ret_val < 0) {
 		PRINT_ERROR("netlink error sending to user");

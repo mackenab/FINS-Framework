@@ -33,18 +33,6 @@
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
-/*
-
- int xxx(char a,char b,char c,char d)
- {
-
- return ((16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d)));
-
- }
-
-
- */
-
 double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	double decimal = 0, diff = 0;
 
@@ -210,10 +198,14 @@ int main(int argc, char *argv[]) {
 	struct timeval curr;
 	struct timeval *stamp;
 
+	struct timeval start, end;
+	gettimeofday(&start, 0);
+
+	int its = 1000;
 	int i = 0;
-	while (i < 100) {
+	while (i < its) {
 		i++;
-		if (1) {
+		if (0) {
 			printf("(%d) Input msg (q or Q to quit):", i);
 			gets(send_data);
 
@@ -321,10 +313,19 @@ int main(int argc, char *argv[]) {
 			fflush(stdout);
 		}
 
+		if (1) {
+			numbytes = sendto(sock, send_data, 1000, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+		}
+
 		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
 			break;
 		}
 	}
+
+	gettimeofday(&end, 0);
+	double diff = time_diff(&start, &end);
+	printf("\n diff=%f, avg=%f", diff, time_diff / its);
+	fflush(stdout);
 
 	printf("\n Closing socket");
 	fflush(stdout);

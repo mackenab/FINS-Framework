@@ -1494,7 +1494,7 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			break;
 		case IP_MTU_DISCOVER:
 			//TODO
-			PRINT_ERROR("todo");
+			PRINT_ERROR("todo: IP_MTU_DISCOVER");
 			break;
 		case IP_RECVTTL:
 			if (optlen >= sizeof(int)) {

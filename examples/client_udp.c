@@ -11,18 +11,6 @@
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
-/*
-
- int xxx(char a,char b,char c,char d)
- {
-
- return ((16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d)));
-
- }
-
-
- */
-
 int main(int argc, char *argv[]) {
 	int sock;
 	struct sockaddr_in server_addr;
@@ -54,7 +42,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_family = PF_INET;
 	server_addr.sin_port = htons(port);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
 	//server_addr.sin_addr.s_addr = xxx(172,31,50,160);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -83,7 +71,6 @@ int main(int argc, char *argv[]) {
 
 	int i = 0;
 	while (1) {
-
 		printf("Type Something (q or Q to quit):");
 		gets(send_data);
 		printf("%s", send_data);
@@ -95,6 +82,7 @@ int main(int argc, char *argv[]) {
 			//	if (i % 100 ==0 )
 			numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
 			printf("\n %d", numbytes);
+			fflush(stdout);
 		}
 	}
 

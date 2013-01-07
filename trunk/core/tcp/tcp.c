@@ -987,7 +987,8 @@ void main_established(struct tcp_connection *conn) {
 
 			//if (conn->send_win && cong_space > 0) { //TODO check if right
 			//if (recv_space >= (double) conn->MSS && cong_space >= (double) conn->MSS) {
-			if (recv_space > 1 && cong_space > 1) {
+			//if (recv_space > 1 && cong_space > 1) {
+			if (recv_space > 1) { //TODO remove, ignores cc
 				if (conn->first_flag) {
 					conn->gbn_node = conn->send_queue->front;
 				} else {
@@ -1025,7 +1026,8 @@ void main_established(struct tcp_connection *conn) {
 			//if (conn->send_win && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
-			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
+			//if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
+			if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -1037,7 +1039,7 @@ void main_established(struct tcp_connection *conn) {
 					data_len = conn->send_win;
 				}
 				if ((double) data_len > cong_space) { //TODO unneeded if (cong_space >= MSS) kept, keep if change to (cong_space > 0)
-					data_len = (uint32_t) cong_space; //TODO check if converts fine
+					//data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
 				}
 
 				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
@@ -1200,7 +1202,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 
 			//if (conn->send_win && cong_space > 0) { //TODO check if right
 			//if (recv_space >= (double) conn->MSS && cong_space >= (double) conn->MSS) {
-			if (recv_space > 1 && cong_space > 1) {
+			//if (recv_space > 1 && cong_space > 1) {
+			if (recv_space > 1) { //TODO remove, ignores cc
 				if (conn->first_flag) {
 					conn->gbn_node = conn->send_queue->front;
 				} else {
@@ -1252,7 +1255,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 			//if (conn->send_win && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
-			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
+			//if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
+			if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -1264,7 +1268,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 					data_len = (uint32_t) conn->send_win;
 				}
 				if ((double) data_len > cong_space) { //TODO unneeded if (cong_space >= MSS) kept, keep if change to (cong_space > 0)
-					data_len = (uint32_t) cong_space; //TODO check if converts fine
+					//data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
 				}
 
 				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
