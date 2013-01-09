@@ -939,7 +939,7 @@ void *switch_to_arp(void *local) {
 }
 
 void arp_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	arp_running = 1;
 
 	interface_list = NULL;
@@ -959,7 +959,7 @@ void arp_init(void) {
 }
 
 void arp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_to_arp_thread, fins_pthread_attr, switch_to_arp, fins_pthread_attr);
 }
@@ -982,17 +982,17 @@ int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 }
 
 void arp_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	arp_running = 0;
 
 	//TODO fill this out
 
-	PRINT_DEBUG("Joining switch_to_arp_thread");
+	PRINT_CRITICAL("Joining switch_to_arp_thread");
 	pthread_join(switch_to_arp_thread, NULL);
 }
 
 void arp_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	//TODO free all module related mem
 

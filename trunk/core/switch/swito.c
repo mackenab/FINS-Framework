@@ -229,7 +229,7 @@ void *switch_loop(void *local) {
 } // end of switch_init Function
 
 void switch_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	switch_running = 1;
 
 	Queues_init(); //TODO split & move to each module
@@ -237,23 +237,23 @@ void switch_init(void) {
 }
 
 void switch_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_thread, fins_pthread_attr, switch_loop, fins_pthread_attr);
 }
 
 void switch_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	switch_running = 0;
 
 	//TODO expand this
 
-	PRINT_DEBUG("Joining switch_thread");
+	PRINT_CRITICAL("Joining switch_thread");
 	pthread_join(switch_thread, NULL);
 }
 
 void switch_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	//TODO free all module related mem
 
 	term_queue(RTM_to_Switch_Queue); //TODO move to RTM module when that's updated

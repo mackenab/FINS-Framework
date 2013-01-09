@@ -7,7 +7,8 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-#define DEBUG
+//#define DEBUG
+#define CRITICAL
 #define ERROR
 
 #ifdef DEBUG
@@ -15,6 +16,13 @@
 #define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
 #else
 #define PRINT_DEBUG(format, args...)
+#endif
+
+#ifdef CRITICAL
+#include <stdio.h>
+#define PRINT_CRITICAL(format, args...) printf("CRITICAL(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#else
+#define PRINT_CRITICAL(format, args...)
 #endif
 
 #ifdef ERROR

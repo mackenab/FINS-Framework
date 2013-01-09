@@ -36,7 +36,7 @@
 double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	double decimal = 0, diff = 0;
 
-	printf("Entered: time1=%p, time2=%p\n", time1, time2);
+	//printf("Entered: time1=%p, time2=%p\n", time1, time2);
 
 	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
@@ -51,7 +51,7 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 
 	diff *= 1000.0;
 
-	printf("diff=%f\n", diff);
+	//printf("diff=%f\n", diff);
 	return diff;
 }
 
@@ -70,13 +70,14 @@ int main(int argc, char *argv[]) {
 	int addr_len = sizeof(struct sockaddr);
 	int numbytes;
 	//struct hostent *host;
-	char send_data[1024];
+	int send_len = 200000;
+	char send_data[send_len + 24];
 	int port;
 	int client_port;
 	pid_t pID;
 
-	memset(send_data, 89, 1000);
-	send_data[1000] = '\0';
+	memset(send_data, 89, send_len);
+	send_data[send_len] = '\0';
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
@@ -110,12 +111,13 @@ int main(int argc, char *argv[]) {
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
+	fflush(stdout);
 	server_addr.sin_family = PF_INET;
-	//server_addr.sin_port = htons(port);
-	server_addr.sin_port = htons(53);
+	server_addr.sin_port = htons(port);
+	//server_addr.sin_port = htons(53);
 
-	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
-	server_addr.sin_addr.s_addr = xxx(127,0,0,1);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,7);
+	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -123,6 +125,7 @@ int main(int argc, char *argv[]) {
 
 	printf("\n UDP Client sending to server at server_addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
 			server_addr.sin_addr.s_addr);
+	fflush(stdout);
 
 	if (argc > 2) {
 		client_port = atoi(argv[2]);
@@ -139,6 +142,7 @@ int main(int argc, char *argv[]) {
 	//bzero(&(client_addr.sin_zero), 8);
 
 	printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	fflush(stdout);
 	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr_in)) == -1) {
 		perror("Bind");
 		printf("Failure");
@@ -146,6 +150,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	fflush(stdout);
 
 	int nfds = 2;
 	struct pollfd fds[nfds];
@@ -155,6 +160,7 @@ int main(int argc, char *argv[]) {
 	fds[1].events = POLLIN | 0;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
+	fflush(stdout);
 	int time = 1000;
 
 	//pID = fork();
@@ -198,134 +204,147 @@ int main(int argc, char *argv[]) {
 	struct timeval curr;
 	struct timeval *stamp;
 
-	struct timeval start, end;
-	gettimeofday(&start, 0);
+	if (0) {
+		int i = 0;
+		while (1) {
+			i++;
+			if (1) {
+				printf("(%d) Input msg (q or Q to quit):", i);
+				fflush(stdout);
+				gets(send_data);
 
-	int its = 1000;
-	int i = 0;
-	while (i < its) {
-		i++;
-		if (0) {
-			printf("(%d) Input msg (q or Q to quit):", i);
-			gets(send_data);
+				len = strlen(send_data);
+				printf("\nlen=%d, str='%s'\n", len, send_data);
+				fflush(stdout);
+				if (len > 0 && len < 1024) {
+					gettimeofday(&curr, 0);
+					numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+					//sleep(1);
 
-			len = strlen(send_data);
-			printf("\nlen=%d, str='%s'\n", len, send_data);
-			fflush(stdout);
-			if (len > 0 && len < 1024) {
-				gettimeofday(&curr, 0);
-				numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-				//sleep(1);
+					ret = poll(fds, nfds, time);
 
-				ret = poll(fds, nfds, time);
+					if (ret || 0) {
+						///*
+						printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
+						printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
+								(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents
+										& POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM)
+										> 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+						fflush(stdout);
+						//*/
 
-				if (ret || 0) {
-					///*
-					printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
-					printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
-							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-							(fds[ret].revents & POLLWRBAND) > 0);
-					fflush(stdout);
-					//*/
+						int recv_bytes;
+						if ((fds[ret].revents & (POLLERR)) || 0) {
+							recv_bytes = recvmsg(sock, &recv_msg, MSG_ERRQUEUE);
+							if (recv_bytes > 0) {
+								printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
 
-					int recv_bytes;
-					if ((fds[ret].revents & (POLLERR)) || 0) {
-						recv_bytes = recvmsg(sock, &recv_msg, MSG_ERRQUEUE);
-						if (recv_bytes > 0) {
-							printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
+								/* Receive auxiliary data in msgh */
+								for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
+									printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
-							/* Receive auxiliary data in msgh */
-							for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
-								printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
+									if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
+										received_ttl = *(int *) CMSG_DATA(cmsg);
+										printf("received_ttl=%d\n", received_ttl);
+										//break;
+									} else if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVERR) {
+										struct sock_extended_err *err = (struct sock_extended_err *) CMSG_DATA(cmsg);
+										printf("ee_errno=%u, ee_origin=%u, ee_type=%u, ee_code=%u, ee_pad=%u, ee_info=%u, ee_data=%u\n", err->ee_errno,
+												err->ee_origin, err->ee_type, err->ee_code, err->ee_pad, err->ee_info, err->ee_data);
 
-								if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
-									received_ttl = *(int *) CMSG_DATA(cmsg);
-									printf("received_ttl=%d\n", received_ttl);
-									//break;
-								} else if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVERR) {
-									struct sock_extended_err *err = (struct sock_extended_err *) CMSG_DATA(cmsg);
-									printf("ee_errno=%u, ee_origin=%u, ee_type=%u, ee_code=%u, ee_pad=%u, ee_info=%u, ee_data=%u\n", err->ee_errno,
-											err->ee_origin, err->ee_type, err->ee_code, err->ee_pad, err->ee_info, err->ee_data);
-
-									struct sockaddr_in *offender = (struct sockaddr_in *) SO_EE_OFFENDER(err);
-									printf("family=%u, addr=%s/%u\n", offender->sin_family, inet_ntoa(offender->sin_addr), ntohs(offender->sin_port));
-								} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
-									struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
-									printf("stamp=%u.%u\n", (uint32_t) stamp->tv_sec, (uint32_t) stamp->tv_usec);
-									printf("diff=%f\n", time_diff(&curr, stamp));
+										struct sockaddr_in *offender = (struct sockaddr_in *) SO_EE_OFFENDER(err);
+										printf("family=%u, addr=%s/%u\n", offender->sin_family, inet_ntoa(offender->sin_addr), ntohs(offender->sin_port));
+									} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
+										struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
+										printf("stamp=%u.%u\n", (uint32_t) stamp->tv_sec, (uint32_t) stamp->tv_usec);
+										printf("diff=%f\n", time_diff(&curr, stamp));
+									}
 								}
-							}
-							if (cmsg == NULL) {
-								/*
-								 * Error: IP_TTL not enabled or small buffer
-								 * or I/O error.
-								 */
-							}
-
-						} else {
-							printf("errno=%d\n", errno);
-							perror("recvmsg");
-						}
-					} else if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
-						recv_bytes = recvmsg(sock, &recv_msg, 0);
-						if (recv_bytes > 0) {
-							printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
-
-							/* Receive auxiliary data in msgh */
-							for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
-								printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
-
-								if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
-									received_ttl = *(int *) CMSG_DATA(cmsg);
-									printf("received_ttl=%d\n", received_ttl);
-									//break;
-								} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
-									struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
+								if (cmsg == NULL) {
+									/*
+									 * Error: IP_TTL not enabled or small buffer
+									 * or I/O error.
+									 */
 								}
-							}
-							if (cmsg == NULL) {
-								/*
-								 * Error: IP_TTL not enabled or small buffer
-								 * or I/O error.
-								 */
-							}
 
+							} else {
+								printf("errno=%d\n", errno);
+								perror("recvmsg");
+							}
+						} else if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
+							recv_bytes = recvmsg(sock, &recv_msg, 0);
+							if (recv_bytes > 0) {
+								printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
+
+								/* Receive auxiliary data in msgh */
+								for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
+									printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
+
+									if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
+										received_ttl = *(int *) CMSG_DATA(cmsg);
+										printf("received_ttl=%d\n", received_ttl);
+										//break;
+									} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
+										struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
+									}
+								}
+								if (cmsg == NULL) {
+									/*
+									 * Error: IP_TTL not enabled or small buffer
+									 * or I/O error.
+									 */
+								}
+
+							}
 						}
 					}
+				} else {
+					printf("Error string len, len=%d\n", len);
 				}
-			} else {
-				printf("Error string len, len=%d\n", len);
 			}
-		}
 
-		if (0) {
-			if (pID == 0) {
-				numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-				printf("\n sent=%d", numbytes);
-				numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-				printf("\n sent=%d", numbytes);
-			} else {
-				//numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
-				printf("\n read=%d", numbytes);
+			if (0) {
+				if (pID == 0) {
+					numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+					printf("\n sent=%d", numbytes);
+					numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+					printf("\n sent=%d", numbytes);
+				} else {
+					//numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
+					printf("\n read=%d", numbytes);
+				}
+				fflush(stdout);
 			}
-			fflush(stdout);
-		}
 
-		if (1) {
-			numbytes = sendto(sock, send_data, 1000, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
-		}
-
-		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
-			break;
+			if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
+				break;
+			}
 		}
 	}
 
-	gettimeofday(&end, 0);
-	double diff = time_diff(&start, &end);
-	printf("\n diff=%f, avg=%f", diff, time_diff / its);
-	fflush(stdout);
+	if (1) {
+		struct timeval start, end;
+		int its = 10000;
+		//len = 1000;
+
+		int data_len = 0;
+		//while (data_len < 1500) {
+		//data_len += 100;
+		data_len = 1000;
+
+		gettimeofday(&start, 0);
+		int i = 0;
+		while (i < its) {
+			i++;
+			numbytes = sendto(sock, send_data, data_len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+		}
+		gettimeofday(&end, 0);
+
+		double diff = time_diff(&start, &end);
+		printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
+		fflush(stdout);
+		//}
+	}
 
 	printf("\n Closing socket");
 	fflush(stdout);

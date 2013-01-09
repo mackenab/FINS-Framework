@@ -9,6 +9,7 @@
 #include <queue.h>
 #include <fatal.h>
 #include <stdlib.h>
+#include <finsdebug.h>
 
 #define MinQueueSize ( 5 )
 
@@ -34,18 +35,22 @@ int IsFull(Queue Q) {
 Queue CreateQueue(const char* name, int MaxElements) {
 	Queue Q;
 
-	if (MaxElements < MinQueueSize)
-		Error( "Queue size is too small");
+	if (MaxElements < MinQueueSize) {
+		//Error( "Queue size is too small");
+		PRINT_ERROR( "Queue size is too small");
+	}
 
 	Q = malloc(sizeof(struct QueueRecord));
 	if (Q == NULL) {
-		FatalError( "Out of space!!!");
+		//FatalError( "Out of space!!!");
+		PRINT_ERROR( "Out of space!!!");
 		exit(-1);
 	}
 
 	Q->Array = malloc(sizeof(ElementType) * MaxElements);
 	if (Q->Array == NULL) {
-		FatalError( "Out of space!!!");
+		//FatalError( "Out of space!!!");
+		PRINT_ERROR( "Out of space!!!");
 		exit(-1);
 	}
 
@@ -96,7 +101,8 @@ static int Prev(int Value, Queue Q) {
 
 int Enqueue(ElementType X, Queue Q) {
 	if (IsFull(Q)) {
-		Error( "Full queue");
+		//Error( "Full queue");
+		PRINT_ERROR( "Full queue");
 		return (0);
 	} else {
 		Q->Size++;
@@ -108,7 +114,8 @@ int Enqueue(ElementType X, Queue Q) {
 
 int EnqueueFront(ElementType X, Queue Q) {
 	if (IsFull(Q)) {
-		Error( "Full queue");
+		//Error( "Full queue");
+		PRINT_ERROR( "Full queue");
 		return (0);
 	} else {
 		Q->Size++;
@@ -120,16 +127,19 @@ int EnqueueFront(ElementType X, Queue Q) {
 /* END */
 
 ElementType Front(Queue Q) {
-	if (!IsEmpty(Q))
+	if (!IsEmpty(Q)) {
 		return Q->Array[Q->Front];
-	Error( "Empty queue");
+	}
+	//Error( "Empty queue");
+	PRINT_ERROR( "Empty queue");
 	return 0; /* Return value used to avoid warning */
 }
 
 void Dequeue(Queue Q) {
-	if (IsEmpty(Q))
-		Error( "Empty queue");
-	else {
+	if (IsEmpty(Q)) {
+		//Error( "Empty queue");
+		PRINT_ERROR( "Empty queue");
+	} else {
 		Q->Size--;
 		Q->Front = Succ(Q->Front, Q);
 	}
@@ -156,8 +166,9 @@ ElementType FrontAndDequeue(Queue Q) {
 int TerminateQueue(Queue Q) {
 
 	int i = 0;
-	for (i = 0; i < Q->Size; i++)
+	for (i = 0; i < Q->Size; i++) {
 		free(Q->Array[i]);
+	}
 
 	Q->Size = 0;
 

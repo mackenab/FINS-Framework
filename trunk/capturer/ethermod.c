@@ -114,9 +114,9 @@ int main() {
 	pid_t pID;
 	char device[20];
 	//strcpy(device, "lo");
-	//strcpy(device, "eth0");
+	strcpy(device, "eth0");
 	//strcpy(device, "eth1");
-	strcpy(device, "eth2");
+	//strcpy(device, "eth2");
 	//strcpy(device, "wlan0");
 
 	/** Time to split into two processes

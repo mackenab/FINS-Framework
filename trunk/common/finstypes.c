@@ -272,7 +272,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 //	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID.id + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.senderID) + itoa(ff->ctrlFrame.serial_num) + sizeof((char)ff->ctrlFrame.data)))
 
-	PRINT_DEBUG("In serializeCtrlFrame!")
+	PRINT_DEBUG("In serializeCtrlFrame!");
 
 	//PRINT_DEBUG("temp_buffer: %ssize of temp_buffer: %d",temp_buffer,sizeof(temp_buffer));
 
@@ -395,7 +395,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	 * I'm OK with just doing what we know we'll pass back and forth and we
 	 * can worry about the rest later. -- MST
 	 */
-	PRINT_DEBUG("In unserializeCtrlFrame!")
+	PRINT_DEBUG("In unserializeCtrlFrame!");
 
 	struct finsFrame * ff = malloc(sizeof(struct finsFrame));
 	memset(ff, 0, sizeof(struct finsFrame));

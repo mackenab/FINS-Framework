@@ -74,7 +74,7 @@
 // Defined here as a macro for simplicity. 512 bits seems reasonable in my opinion, but it can be tweaked.
 
 #define ICMP_MSL_TO_DEFAULT 512000
-#define ICMP_SENT_LIST_MAX 2048
+#define ICMP_SENT_LIST_MAX 65536
 
 #define ERROR_ICMP_TTL 0
 #define ERROR_ICMP_DEST_UNREACH 1

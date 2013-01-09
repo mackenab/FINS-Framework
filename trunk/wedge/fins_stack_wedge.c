@@ -27,19 +27,26 @@
 
 #include "fins_stack_wedge.h"	/* Defs for this module */
 
-#define RECV_BUFFER_SIZE	1024//4096//16384//8192	// Same as userspace, Pick an appropriate value here
+#define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//16384//8192	// Same as userspace, Pick an appropriate value here //NLMSG_GOODSIZE
 #define AF_FINS 2
 #define PF_FINS AF_FINS
 #define NETLINK_FINS 20
 
 //commenting stops debug printout
-#define DEBUG
+//#define DEBUG
+#define CRITICAL
 #define ERROR
 
 #ifdef DEBUG
 #define PRINT_DEBUG(format, args...) printk("FINS: DEBUG: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #else
 #define PRINT_DEBUG(format, args...)
+#endif
+
+#ifdef CRITICAL
+#define PRINT_CRITICAL(format, args...) printk("FINS: CRITICAL: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
+#else
+#define PRINT_CRITICAL(format, args...)
 #endif
 
 #ifdef ERROR
@@ -64,10 +71,15 @@ struct semaphore link_sem;
 
 //extern static const struct net_proto_family __rcu *net_families[NPROTO] __read_mostly;
 
-int print_exit(const char *func, int line, int rc) {
+int print_exit_debug(const char *func, int line, int rc) {
 #ifdef DEBUG
 	printk(KERN_DEBUG "FINS: DEBUG: %s, %d: Exited: %d\n", func, line, rc);
 #endif
+	return rc;
+}
+
+int print_exit_critical(const char *func, int line, int rc) {
+	printk(KERN_DEBUG "FINS: CRITICAL: %s, %d: Exited: %d\n", func, line, rc);
 	return rc;
 }
 
@@ -106,11 +118,11 @@ int wedge_calls_insert(u_int call_id, unsigned long long sock_id, int sock_index
 
 			wedge_calls[i].ret = 0;
 
-			return print_exit(__FUNCTION__, __LINE__, i);
+			return print_exit_debug(__FUNCTION__, __LINE__, i);
 		}
 	}
 
-	return print_exit(__FUNCTION__, __LINE__, -1);
+	return print_exit_debug(__FUNCTION__, __LINE__, -1);
 }
 
 int wedge_calls_find(unsigned long long sock_id, int sock_index, u_int call_type) {
@@ -121,11 +133,11 @@ int wedge_calls_find(unsigned long long sock_id, int sock_index, u_int call_type
 	for (i = 0; i < MAX_CALLS; i++) {
 		if (wedge_calls[i].call_id != -1 && wedge_calls[i].sock_id == sock_id && wedge_calls[i].sock_index == sock_index
 				&& wedge_calls[i].call_type == call_type) { //TODO remove sock_index? maybe unnecessary
-			return print_exit(__FUNCTION__, __LINE__, i);
+			return print_exit_debug(__FUNCTION__, __LINE__, i);
 		}
 	}
 
-	return print_exit(__FUNCTION__, __LINE__, -1);
+	return print_exit_debug(__FUNCTION__, __LINE__, -1);
 }
 
 int wedge_calls_remove(u_int call_id) { //TODO remove? not used since id/index typicall tied, & removal doesn't need locking
@@ -198,12 +210,12 @@ int wedge_sockets_insert(unsigned long long sock_id, struct sock *sk) { //TODO m
 			wedge_sockets[i].release_flag = 0;
 			wedge_sockets[i].sk_new = NULL;
 
-			return print_exit(__FUNCTION__, __LINE__, i);
+			return print_exit_debug(__FUNCTION__, __LINE__, i);
 			//return i;
 		}
 	}
 
-	return print_exit(__FUNCTION__, __LINE__, -1);
+	return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	//return -1;
 }
 
@@ -214,11 +226,11 @@ int wedge_sockets_find(unsigned long long sock_id) {
 
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (wedge_sockets[i].sock_id == sock_id) {
-			return print_exit(__FUNCTION__, __LINE__, i);
+			return print_exit_debug(__FUNCTION__, __LINE__, i);
 		}
 	}
 
-	return print_exit(__FUNCTION__, __LINE__, -1);
+	return print_exit_debug(__FUNCTION__, __LINE__, -1);
 }
 
 int wedge_sockets_remove(unsigned long long sock_id, int sock_index, u_int call_type) {
@@ -317,7 +329,7 @@ int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltyp
 
 	PRINT_DEBUG("Entered for sock=%llu, sock_index=%d, call=%u", sock_id, sock_index, calltype);
 
-	return print_exit(__FUNCTION__, __LINE__, 0);
+	return print_exit_debug(__FUNCTION__, __LINE__, 0);
 }
 
 int checkConfirmation(int call_index) {
@@ -357,34 +369,39 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 	struct sk_buff *skb;
 	int ret_val;
 
-	//####################
+	//#################### Debug
 	u_char *print_buf;
 	u_char *print_pt;
 	u_char *pt;
 	int i;
+	//####################
+
 
 	PRINT_DEBUG("Entered: pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
 
-	print_buf = (u_char *) kmalloc(5 * len, GFP_KERNEL);
-	if (print_buf == NULL) {
-		PRINT_ERROR("print_buf allocation fail");
-	} else {
-		print_pt = print_buf;
-		pt = buf;
-		for (i = 0; i < len; i++) {
-			if (i == 0) {
-				sprintf(print_pt, "%02x", *(pt + i));
-				print_pt += 2;
-			} else if (i % 4 == 0) {
-				sprintf(print_pt, ":%02x", *(pt + i));
-				print_pt += 3;
-			} else {
-				sprintf(print_pt, " %02x", *(pt + i));
-				print_pt += 3;
+	//####################
+	if (0) {
+		print_buf = (u_char *) kmalloc(5 * len, GFP_KERNEL);
+		if (print_buf == NULL) {
+			PRINT_ERROR("print_buf allocation fail");
+		} else {
+			print_pt = print_buf;
+			pt = buf;
+			for (i = 0; i < len; i++) {
+				if (i == 0) {
+					sprintf(print_pt, "%02x", *(pt + i));
+					print_pt += 2;
+				} else if (i % 4 == 0) {
+					sprintf(print_pt, ":%02x", *(pt + i));
+					print_pt += 3;
+				} else {
+					sprintf(print_pt, " %02x", *(pt + i));
+					print_pt += 3;
+				}
 			}
+			PRINT_DEBUG("buf='%s'", print_buf);
+			kfree(print_buf);
 		}
-		PRINT_DEBUG("buf='%s'", print_buf);
-		kfree(print_buf);
 	}
 	//####################
 
@@ -444,26 +461,28 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	}
 
 	//#################### Debug
-	print_buf = (u_char *) kmalloc(5 * msg_len, GFP_KERNEL);
-	if (print_buf == NULL) {
-		PRINT_ERROR("print_buf allocation fail");
-	} else {
-		print_pt = print_buf;
-		pt = msg_buf;
-		for (i = 0; i < msg_len; i++) {
-			if (i == 0) {
-				sprintf(print_pt, "%02x", *(pt + i));
-				print_pt += 2;
-			} else if (i % 4 == 0) {
-				sprintf(print_pt, ":%02x", *(pt + i));
-				print_pt += 3;
-			} else {
-				sprintf(print_pt, " %02x", *(pt + i));
-				print_pt += 3;
+	if (0) {
+		print_buf = (u_char *) kmalloc(5 * msg_len, GFP_KERNEL);
+		if (print_buf == NULL) {
+			PRINT_ERROR("print_buf allocation fail");
+		} else {
+			print_pt = print_buf;
+			pt = msg_buf;
+			for (i = 0; i < msg_len; i++) {
+				if (i == 0) {
+					sprintf(print_pt, "%02x", *(pt + i));
+					print_pt += 2;
+				} else if (i % 4 == 0) {
+					sprintf(print_pt, ":%02x", *(pt + i));
+					print_pt += 3;
+				} else {
+					sprintf(print_pt, " %02x", *(pt + i));
+					print_pt += 3;
+				}
 			}
+			PRINT_DEBUG("msg_buf='%s'", print_buf);
+			kfree(print_buf);
 		}
-		PRINT_DEBUG("msg_buf='%s'", print_buf);
-		kfree(print_buf);
 	}
 	//####################
 
@@ -505,7 +524,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 			PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 			return -1;
 		}
-		msleep(10);
+		//msleep(1);
 
 		msg_pt += part_len;
 		pos += part_len;
@@ -673,13 +692,13 @@ void nl_data_ready(struct sk_buff *skb) {
 			reply_call = *(u_int *) buf;
 			if (reply_call == daemon_start_call) {
 				if (fins_daemon_pid != -1) {
-					PRINT_DEBUG("Daemon pID changed, old pid=%d", fins_daemon_pid);
+					PRINT_CRITICAL("### Daemon pID changed, old pid=%d", fins_daemon_pid);
 				}
 				//fins_stack_passthrough_enabled = 1;
 				fins_daemon_pid = pid;
-				PRINT_DEBUG("Daemon connected, pid=%d", fins_daemon_pid);
+				PRINT_CRITICAL("### Daemon connected, pid=%d", fins_daemon_pid);
 			} else if (reply_call == daemon_stop_call) {
-				PRINT_DEBUG("Daemon disconnected");
+				PRINT_CRITICAL("### Daemon disconnected");
 				//fins_stack_passthrough_enabled = 0;
 				fins_daemon_pid = -1; //TODO expand this functionality
 
@@ -698,7 +717,7 @@ void nl_data_ready(struct sk_buff *skb) {
 				up(&wedge_calls_sem);
 			} else {
 				//TODO drop?
-				PRINT_DEBUG("Dropping...");
+				PRINT_ERROR("todo error. Dropping...");
 			}
 		} else {
 			//TODO error
@@ -772,24 +791,24 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	// Required stuff for kernel side
 	rc = fins_sk_create(net, sock);
 	if (rc) {
 		PRINT_ERROR("allocation failed");
-		return print_exit(__FUNCTION__, __LINE__, rc);
+		return print_exit_debug(__FUNCTION__, __LINE__, rc);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -805,7 +824,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		fins_sk_destroy(sock);
-		return print_exit(__FUNCTION__, __LINE__, -ENOMEM);
+		return print_exit_debug(__FUNCTION__, __LINE__, -ENOMEM);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -901,7 +920,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 		up(&wedge_sockets_sem);
 
 		fins_sk_destroy(sock);
-		return print_exit(__FUNCTION__, __LINE__, rc);
+		return print_exit_debug(__FUNCTION__, __LINE__, rc);
 	}
 
 	if (down_interruptible(&wedge_sockets_sem)) {
@@ -913,7 +932,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, 0);
+	return print_exit_debug(__FUNCTION__, __LINE__, 0);
 }
 
 static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
@@ -932,17 +951,17 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -958,7 +977,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -1053,7 +1072,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_listen(struct socket *sock, int backlog) {
@@ -1072,17 +1091,17 @@ static int fins_listen(struct socket *sock, int backlog) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -1098,7 +1117,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -1187,7 +1206,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags) {
@@ -1206,17 +1225,17 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -1232,7 +1251,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -1327,7 +1346,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) { //TODO fix, two blocking accept calls
@@ -1346,17 +1365,17 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -1372,7 +1391,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk_new = wedge_sockets[sock_index].sk_new;
@@ -1382,7 +1401,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 			PRINT_ERROR("allocation failed");
 			up(&wedge_sockets_sem);
 			release_sock(sk);
-			return print_exit(__FUNCTION__, __LINE__, rc);
+			return print_exit_debug(__FUNCTION__, __LINE__, rc);
 		}
 		sk_new = sock_new->sk;
 		lock_sock(sk_new);
@@ -1398,7 +1417,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 			up(&wedge_sockets_sem);
 			fins_sk_destroy(sock_new);
 			release_sock(sk);
-			return print_exit(__FUNCTION__, __LINE__, rc);
+			return print_exit_debug(__FUNCTION__, __LINE__, rc);
 		}
 
 		wedge_sockets[sock_index].sk_new = sk_new;
@@ -1418,13 +1437,13 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 			 up(&sockets_sem);
 			 fins_sk_destroy(sock_new);
 			 release_sock(sk);
-			 return print_exit(__FUNCTION__, __LINE__, rc);
+			 return print_exit_debug(__FUNCTION__, __LINE__, rc);
 			 }
 			 */
 			up(&wedge_sockets_sem);
 			release_sock(sk_new);
 			release_sock(sk);
-			return print_exit(__FUNCTION__, __LINE__, -1);
+			return print_exit_debug(__FUNCTION__, __LINE__, -1);
 		}
 	}
 
@@ -1535,7 +1554,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 
 	release_sock(sk_new);
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer) {
@@ -1555,17 +1574,17 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -1581,7 +1600,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -1707,7 +1726,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len) {
@@ -1731,17 +1750,17 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -1757,7 +1776,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -1828,10 +1847,25 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	i = 0;
 	for (i = 0; i < msg->msg_iovlen; i++) {
-		memcpy(pt, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
-		pt += msg->msg_iov[i].iov_len;
+		if (msg->msg_iov[i].iov_base == NULL) {
+			if (msg->msg_iov[i].iov_len > 0) {
+				//len != 0
+				PRINT_ERROR("Buffer error: msg->msg_iov[%i].iov_base=NULL, msg->msg_iov[i].iov_len=%d", i, msg->msg_iov[i].iov_len);
+				kfree(buf);
+				wedge_calls[call_index].call_id = -1;
+				rc = -1;
+				goto end;
+			} else {
+				//len == 0, do nothing/skip?
+			}
+		} else {
+			memcpy(pt, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
+			pt += msg->msg_iov[i].iov_len;
+		}
 		//PRINT_DEBUG("current element %d , element length = %d", i ,(msg->msg_iov[i]).iov_len );
 	}
+
+	PRINT_DEBUG("msg_namelen=%d, data_buf_len=%d, msg_controllen=%u, msg_flags=0x%x, buf_len=%d", msg->msg_namelen, (int)len, msg->msg_controllen, msg->msg_flags, buf_len);
 
 	if (pt - buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
@@ -1904,7 +1938,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags) {
@@ -1925,17 +1959,17 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -1951,7 +1985,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -2003,7 +2037,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	//sk->sk_rcvtimeo;
 
-	PRINT_DEBUG("msg_namelen=%d, data_buf_len=%d, msg_controllen=%u, flags=0x%x", msg->msg_namelen, (int)len, msg->msg_controllen, flags);
+	PRINT_DEBUG("msg_namelen=%d, data_buf_len=%d, msg_controllen=%u, flags=0x%x, buf_len=%d", msg->msg_namelen, (int)len, msg->msg_controllen, flags, buf_len);
 
 	/*
 	 *(u_int *) pt = msg->msg_flags; //always 0, set on return
@@ -2166,7 +2200,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
@@ -2201,11 +2235,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	sk = sock->sk;
 	lock_sock(sk);
@@ -2222,7 +2256,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -2249,7 +2283,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_ERROR("ERROR: cmd=%d ==SIOCGIFDSTADDR", cmd);
 			//TODO error
 			release_sock(sk);
-			return print_exit(__FUNCTION__, __LINE__, -1);
+			return print_exit_debug(__FUNCTION__, __LINE__, -1);
 		}
 
 		pos = ifc.ifc_buf;
@@ -2305,7 +2339,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_ERROR("ERROR: cmd=%d", cmd);
 			//TODO error
 			release_sock(sk);
-			return print_exit(__FUNCTION__, __LINE__, -1);
+			return print_exit_debug(__FUNCTION__, __LINE__, -1);
 		}
 
 		PRINT_DEBUG("cmd=%d, name='%s'", cmd, ifr.ifr_name);
@@ -2389,7 +2423,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_ERROR("ERROR: cmd=%d ==SIOCGIFNAME", cmd);
 			//TODO error
 			release_sock(sk);
-			return print_exit(__FUNCTION__, __LINE__, -1);
+			return print_exit_debug(__FUNCTION__, __LINE__, -1);
 		}
 
 		PRINT_DEBUG("cmd=%d, index='%d'", cmd, ifr.ifr_ifindex);
@@ -2853,7 +2887,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 /*
@@ -2878,18 +2912,18 @@ static int fins_release(struct socket *sock) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, 0); //TODO should be -1, done to prevent stalls
+		return print_exit_debug(__FUNCTION__, __LINE__, 0); //TODO should be -1, done to prevent stalls
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
 		//fins_sk_destroy(sock); //NULL reference
-		return print_exit(__FUNCTION__, __LINE__, 0);
+		return print_exit_debug(__FUNCTION__, __LINE__, 0);
 	}
 	lock_sock(sk);
 
@@ -2905,13 +2939,13 @@ static int fins_release(struct socket *sock) {
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		fins_sk_destroy(sock);
-		return print_exit(__FUNCTION__, __LINE__, 0);
+		return print_exit_debug(__FUNCTION__, __LINE__, 0);
 	}
 
 	if (wedge_sockets[sock_index].release_flag) {
 		//check such that successive release calls return immediately, affectively release only performed once
 		up(&wedge_sockets_sem);
-		return print_exit(__FUNCTION__, __LINE__, 0);
+		return print_exit_debug(__FUNCTION__, __LINE__, 0);
 	}
 
 	wedge_sockets[sock_index].release_flag = 1;
@@ -2997,7 +3031,7 @@ static int fins_release(struct socket *sock) {
 	up(&wedge_sockets_sem);
 
 	fins_sk_destroy(sock);
-	return print_exit(__FUNCTION__, __LINE__, 0); //TODO should be rc, 0 to prevent stalling
+	return print_exit_debug(__FUNCTION__, __LINE__, 0); //TODO should be rc, 0 to prevent stalling
 }
 
 static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table *table) {
@@ -3017,17 +3051,17 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, 0);
+		return print_exit_debug(__FUNCTION__, __LINE__, 0);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, 0);
+		return print_exit_debug(__FUNCTION__, __LINE__, 0);
 	}
 	lock_sock(sk);
 
@@ -3043,7 +3077,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, 0);
+		return print_exit_debug(__FUNCTION__, __LINE__, 0);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -3180,7 +3214,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 //TODO figure out when this is called
@@ -3200,17 +3234,17 @@ static int fins_shutdown(struct socket *sock, int how) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -3226,7 +3260,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -3315,7 +3349,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
@@ -3325,7 +3359,7 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	char *buf; // used for test
 	ssize_t buffer_length; // used for test
 
-	PRINT_DEBUG("Called");
+	PRINT_CRITICAL("Called");
 	return -1;
 
 	sk1 = sock1->sk;
@@ -3339,7 +3373,7 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	// Notify FINS daemon
 	if (fins_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	//TODO: finish this & daemon side
@@ -3352,7 +3386,7 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	ret = nl_send(fins_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	return 0;
@@ -3374,17 +3408,17 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -3400,7 +3434,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -3486,7 +3520,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags) {
@@ -3505,17 +3539,17 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -3531,7 +3565,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -3617,7 +3651,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_getsockopt(struct socket *sock, int level, int optname, char __user*optval, int __user *optlen) {
@@ -3645,17 +3679,17 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	struct task_struct *curr = get_current();
 		pid_t call_pid = curr->pid;
-		PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+		PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -3671,7 +3705,7 @@ if (down_interruptible(&wedge_sockets_sem)) {
 if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -3824,7 +3858,7 @@ rc = -1;
 up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit(__FUNCTION__, __LINE__, rc);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
@@ -3844,17 +3878,17 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	struct task_struct *curr = get_current();
 		pid_t call_pid = curr->pid;
-		PRINT_DEBUG("Entered: call_pid=%d", call_pid);
+		PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
 
 if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
-return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	sk = sock->sk;
 	if (sk == NULL) {
 		PRINT_ERROR("sk null");
-return print_exit(__FUNCTION__, __LINE__, -1);
+return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 	lock_sock(sk);
 
@@ -3870,7 +3904,7 @@ if (down_interruptible(&wedge_sockets_sem)) {
 if (sock_index == -1) {
 		up(&wedge_sockets_sem);
 		release_sock(sk);
-		return print_exit(__FUNCTION__, __LINE__, -1);
+		return print_exit_debug(__FUNCTION__, __LINE__, -1);
 	}
 
 	wedge_sockets[sock_index].threads[call_type]++;
@@ -3975,7 +4009,7 @@ if (wedge_calls[call_index].reply) {
 up(&wedge_sockets_sem);
 
 release_sock(sk);
-return print_exit(__FUNCTION__, __LINE__, rc);
+return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 /* Data structures needed for protocol registration */
@@ -4066,26 +4100,26 @@ if (fins_nl_sk != NULL) {
  * Note: the init and exit functions must be defined (or declared/declared in header file) before the macros are called
  */
 static int __init fins_stack_wedge_init(void) {
-	PRINT_DEBUG("############################################");
-PRINT_DEBUG("Unregistering AF_INET");
-sock_unregister(AF_INET);
- 	 PRINT_DEBUG("Loading the fins_stack_wedge module");
-setup_fins_protocol();
- 	 setup_fins_netlink();
+	PRINT_CRITICAL("############################################");
+	PRINT_CRITICAL("Unregistering AF_INET");
+	sock_unregister(AF_INET);
+	PRINT_CRITICAL("Loading the fins_stack_wedge module");
+ 	setup_fins_protocol();
+ 	setup_fins_netlink();
 	wedge_calls_init();
 	wedge_sockets_init();
 	fins_daemon_pid = -1;
-	PRINT_DEBUG("Made it through the fins_stack_wedge initialization");
+	PRINT_CRITICAL("Made it through the fins_stack_wedge initialization");
 
-return 0;
+	return 0;
 }
 
 static void __exit fins_stack_wedge_exit(void) {
-	PRINT_DEBUG("Unloading the fins_stack_wedge module");
-teardown_fins_netlink();
-	teardown_fins_protocol(); //uncomment
-	PRINT_DEBUG("Made it through the fins_stack_wedge removal");
- //the system call wrapped by rmmod frees all memory that is allocated in the module
+	PRINT_CRITICAL("Unloading the fins_stack_wedge module");
+	teardown_fins_netlink();
+	teardown_fins_protocol();
+	PRINT_CRITICAL("Made it through the fins_stack_wedge removal");
+	//the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
 /* Macros defining the init and exit functions */

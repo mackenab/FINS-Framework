@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
 	int sock;
 	socklen_t addr_len = sizeof(struct sockaddr);
 	int bytes_read;
-	char recv_data[4000];
+	char recv_data[500000];
 	int ret;
 	pid_t pID = 0;
 
@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	//if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
@@ -191,7 +191,8 @@ int main(int argc, char *argv[]) {
 				}
 
 				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
-					bytes_read = recvfrom(sock, recv_data, 4000, MSG_DONTWAIT, (struct sockaddr *) client_addr, &addr_len);
+					//bytes_read = recvfrom(sock, recv_data, 200000, MSG_DONTWAIT, (struct sockaddr *) client_addr, &addr_len);
+					bytes_read = recvfrom(sock, recv_data, 200000, 0, (struct sockaddr *) client_addr, &addr_len);
 					//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 					//bytes_read = recv(sock,recv_data,1024,0);
 					if (bytes_read > 0) {

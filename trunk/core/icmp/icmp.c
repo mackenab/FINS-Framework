@@ -950,30 +950,30 @@ void *switch_to_icmp(void *local) {
 }
 
 void icmp_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	icmp_running = 1;
 
 	icmp_sent_packet_list = icmp_sent_list_create(ICMP_SENT_LIST_MAX);
 }
 
 void icmp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_to_icmp_thread, fins_pthread_attr, switch_to_icmp, fins_pthread_attr);
 }
 
 void icmp_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	icmp_running = 0;
 
 	//TODO expand this
 
-	PRINT_DEBUG("Joining switch_to_icmp_thread");
+	PRINT_CRITICAL("Joining switch_to_icmp_thread");
 	pthread_join(switch_to_icmp_thread, NULL);
 }
 
 void icmp_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	icmp_sent_list_free(icmp_sent_packet_list);
 

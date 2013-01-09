@@ -269,8 +269,8 @@ int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t
 		PRINT_ERROR("Error, call_index in use: daemon_calls[%d].call_id=%u", call_index, daemon_calls[call_index].call_id);
 		PRINT_ERROR("Overwriting with: daemon_calls[%d].call_id=%u", call_index, call_id);
 
-		if (daemon_sockets[daemon_calls[call_index].sock_index].sock_id == daemon_calls[call_index].sock_id
-				&& (daemon_calls[call_index].call_type == poll_call || daemon_calls[call_index].call_type == recvmsg_call)) {
+		if (daemon_sockets[daemon_calls[call_index].sock_index].sock_id == daemon_calls[call_index].sock_id && (daemon_calls[call_index].call_type == poll_call
+				|| daemon_calls[call_index].call_type == recvmsg_call)) {
 			call_list_remove(daemon_sockets[daemon_calls[call_index].sock_index].call_list, &daemon_calls[call_index]);
 		}
 
@@ -671,8 +671,8 @@ int daemon_sockets_match_connection(uint32_t host_ip, uint16_t host_port, uint32
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].host_ip == host_ip && daemon_sockets[i].host_port == host_port
-				&& daemon_sockets[i].dst_ip == rem_ip && daemon_sockets[i].dst_port == rem_port && daemon_sockets[i].protocol == protocol) {
+		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].host_ip == host_ip && daemon_sockets[i].host_port == host_port && daemon_sockets[i].dst_ip
+				== rem_ip && daemon_sockets[i].dst_port == rem_port && daemon_sockets[i].protocol == protocol) {
 			PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, sock_index=%d", host_ip, host_port, rem_ip, rem_port, i);
 			return (i);
 		}
@@ -1286,7 +1286,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 
 		if (total + sizeof(struct ifreq) <= len) {
-			strcpy(ifr.ifr_name, "eth2");
+			strcpy(ifr.ifr_name, "eth0");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(my_host_ip_addr);
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
@@ -1340,6 +1340,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
 			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "eth2") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
+			addr.sin_port = 0;
+		} else if (strcmp((char *) temp, "wlan0") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
 			addr.sin_port = 0;
@@ -1415,6 +1419,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
 			addr.sin_port = 0;
+		} else if (strcmp((char *) temp, "wlan0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
+			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(loopback_ip_addr);
@@ -1472,7 +1480,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp='%s'", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp='%s'", cmd, len, temp)
+		;
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1487,6 +1496,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl((my_host_ip_addr & my_host_mask) | (~my_host_mask));
 			addr.sin_port = 0;
+		} else if (strcmp((char *) temp, "wlan0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl((my_host_ip_addr & my_host_mask) | (~my_host_mask));
+			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(any_ip_addr);
@@ -1495,7 +1508,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1525,7 +1539,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFNETMASK:
-		PRINT_DEBUG("SIOCGIFNETMASK=%d", cmd);
+		PRINT_DEBUG("SIOCGIFNETMASK=%d", cmd)
+		;
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1544,7 +1559,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp='%s'", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp='%s'", cmd, len, temp)
+		;
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1559,6 +1575,10 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(my_host_mask);
 			addr.sin_port = 0;
+		} else if (strcmp((char *) temp, "wlan0") == 0) {
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(my_host_mask);
+			addr.sin_port = 0;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(loopback_mask);
@@ -1567,7 +1587,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1597,18 +1618,23 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case FIONREAD:
-		PRINT_DEBUG("FIONREAD=%d", cmd);
+		PRINT_DEBUG("FIONREAD=%d", cmd)
+		;
 		msg_len = 0; //handle per socket/protocol
 
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case TIOCOUTQ:
-		PRINT_DEBUG("TIOCOUTQ=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("TIOCOUTQ=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCGIFNAME:
-		PRINT_DEBUG("SIOCGIFNAME=%d", cmd);
+		PRINT_DEBUG("SIOCGIFNAME=%d", cmd)
+		;
 		len = *(int *) pt; //IFNAMSIZ
 		pt += sizeof(int);
 
@@ -1621,7 +1647,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFNAME), index=%d", cmd, total);
+		PRINT_DEBUG("cmd=%d (SIOCGIFNAME), index=%d", cmd, total)
+		;
 
 		temp = malloc(len);
 		if (temp == NULL) {
@@ -1632,18 +1659,19 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		//TODO get correct values from IP?
 		if (total == 0) {
-			strcpy((char *) temp, "lo");
+			strcpy((char *) temp, "eth0");
 		} else if (total == 1) {
 			strcpy((char *) temp, "lo");
 		} else if (total == 2) {
-			strcpy((char *) temp, "eth2");
+			strcpy((char *) temp, "wlan0");
 		} else if (total == 3) {
 			strcpy((char *) temp, "lo");
 		} else {
 			PRINT_DEBUG("index=%d", total);
 		}
 
-		PRINT_DEBUG("index=%d, temp='%s'", total, temp);
+		PRINT_DEBUG("index=%d, temp='%s'", total, temp)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + len;
 		msg = (uint8_t *) malloc(msg_len);
@@ -1673,7 +1701,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFFLAGS:
-		PRINT_DEBUG("SIOCGIFFLAGS=%d", cmd);
+		PRINT_DEBUG("SIOCGIFFLAGS=%d", cmd)
+		;
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1692,14 +1721,17 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFFLAGS), len=%d, temp='%s'", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFFLAGS), len=%d, temp='%s'", cmd, len, temp)
+		;
 
 		//TODO get correct values from IP? ifr_flags
 		if (strcmp((char *) temp, "eth0") == 0) {
-			total = 0;
+			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
 		} else if (strcmp((char *) temp, "eth1") == 0) {
-			total = 0;
+			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
 		} else if (strcmp((char *) temp, "eth2") == 0) {
+			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
+		} else if (strcmp((char *) temp, "wlan0") == 0) {
 			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			total = IFF_UP | IFF_LOOPBACK | IFF_RUNNING;
@@ -1707,7 +1739,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp='%s', ifr_flags=0x%x", temp, total);
+		PRINT_DEBUG("temp='%s', ifr_flags=0x%x", temp, total)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1737,11 +1770,14 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCSIFFLAGS:
-		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCGIFMTU:
-		PRINT_DEBUG("SIOCGIFMTU=%d", cmd);
+		PRINT_DEBUG("SIOCGIFMTU=%d", cmd)
+		;
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1760,14 +1796,17 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFMTU), len=%d, temp='%s'", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFMTU), len=%d, temp='%s'", cmd, len, temp)
+		;
 
 		//TODO get correct values from IP? ifr_mtu
 		if (strcmp((char *) temp, "eth0") == 0) {
-			total = 0;
+			total = 1500;
 		} else if (strcmp((char *) temp, "eth1") == 0) {
-			total = 0;
+			total = 1500;
 		} else if (strcmp((char *) temp, "eth2") == 0) {
+			total = 1500;
+		} else if (strcmp((char *) temp, "wlan0") == 0) {
 			total = 1500;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			total = 16436;
@@ -1775,7 +1814,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp='%s', ifr_mtu=%d", temp, total);
+		PRINT_DEBUG("temp='%s', ifr_mtu=%d", temp, total)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1805,39 +1845,54 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCADDRT:
-		PRINT_DEBUG("SIOCADDRT=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCADDRT=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCDELRT:
-		PRINT_DEBUG("SIOCDELRT=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCDELRT=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFADDR:
-		PRINT_DEBUG("SIOCSIFADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCSIFADDR=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 		//case SIOCAIPXITFCRT:
 		//case SIOCAIPXPRISLT:
 		//case SIOCIPXCFGDATA:
 		//case SIOCIPXNCPCONN:
 	case SIOCGSTAMP:
-		PRINT_DEBUG("SIOCGSTAMP=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCGSTAMP=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFDSTADDR:
-		PRINT_DEBUG("SIOCSIFDSTADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCSIFDSTADDR=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFBRDADDR:
-		PRINT_DEBUG("SIOCSIFBRDADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCSIFBRDADDR=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFNETMASK:
-		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd)
+		;
+		PRINT_ERROR("todo")
+		;
 		break;
 	default:
-		PRINT_ERROR("default: cmd=%d", cmd);
+		PRINT_ERROR("default: cmd=%d", cmd)
+		;
 		break;
 	}
 
@@ -2834,7 +2889,8 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 		sendpage_out(hdr, msg_pt, msg_len);
 		break;
 	default:
-		PRINT_ERROR("Dropping, received unknown call_type=%d", hdr->call_type);
+		PRINT_ERROR("Dropping, received unknown call_type=%d", hdr->call_type)
+		;
 		break;
 	}
 }
@@ -2897,8 +2953,8 @@ void *wedge_to_daemon(void *local) {
 
 	// Begin receive message section
 	// Allocate a buffer to hold contents of recvfrom call
-	void *recv_buf;
-	recv_buf = malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
+	uint8_t *recv_buf;
+	recv_buf = (uint8_t *)malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
 	if (recv_buf == NULL) {
 		PRINT_ERROR("buffer allocation failed");
 		exit(-1);
@@ -2951,23 +3007,29 @@ void *wedge_to_daemon(void *local) {
 		if ((okFlag = NLMSG_OK(nlh, ret))) {
 			switch (nlh->nlmsg_type) {
 			case NLMSG_NOOP:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP")
+				;
 				break;
 			case NLMSG_ERROR:
-				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR");
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR")
+				;
 			case NLMSG_OVERRUN:
-				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN");
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN")
+				;
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
-				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE");
+				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_DONE")
+				;
 				doneFlag = 1;
 			default:
-				PRINT_DEBUG("nlh->nlmsg_type=default");
+				PRINT_DEBUG("nlh->nlmsg_type=default")
+				;
 				nl_buf = NLMSG_DATA(nlh);
 				nl_len = NLMSG_PAYLOAD(nlh, 0);
 
-				PRINT_DEBUG("nl_len=%d", nl_len);
+				PRINT_DEBUG("nl_len=%d", nl_len)
+				;
 
 				part_pt = nl_buf;
 				test_msg_len = *(ssize_t *) part_pt;
@@ -2987,7 +3049,7 @@ void *wedge_to_daemon(void *local) {
 				part_len = *(ssize_t *) part_pt;
 				part_pt += sizeof(ssize_t);
 				if (part_len > RECV_BUFFER_SIZE) {
-					PRINT_DEBUG("part_len (%d) > RECV_BUFFER_SIZE (%d)", part_len, RECV_BUFFER_SIZE);
+					PRINT_ERROR("part_len (%d) > RECV_BUFFER_SIZE (%d)", part_len, RECV_BUFFER_SIZE);
 				}
 
 				//PRINT_DEBUG("part_len=%d", part_len);
@@ -3004,7 +3066,8 @@ void *wedge_to_daemon(void *local) {
 
 				//PRINT_DEBUG("pos=%d", pos);
 
-				PRINT_DEBUG("msg_len=%d, part_len=%d, pos=%d, seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq);
+				PRINT_DEBUG("msg_len=%d, part_len=%d, pos=%d, seq=%d", msg_len, part_len, pos, nlh->nlmsg_seq)
+				;
 
 				if (nlh->nlmsg_seq == 0) {
 					if (msg_buf != NULL) {
@@ -3098,7 +3161,8 @@ void daemon_handle_to(struct daemon_call *call) { //TODO finish transitioning to
 		break;
 		//Close or poll? sendmsg TO in TCP
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type)
+		;
 		//exit(1);
 		break;
 	}
@@ -3170,43 +3234,53 @@ void daemon_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		daemon_read_param_reply(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		daemon_set_param_reply(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		daemon_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		daemon_exec_reply(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		daemon_error(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3259,7 +3333,8 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 		getsockopt_in_tcp(ff, call_id, call_index, call_type, sock_id, sock_index, data); //CTRL_READ_PARAM_REPLY
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
+		;
 		//exit(1);
 		break;
 	}
@@ -3279,7 +3354,8 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 		switch (ff->ctrlFrame.param_id) {
 
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -3338,7 +3414,8 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 		setsockopt_in_tcp(ff, call_id, call_index, call_type, sock_id, sock_index, data); //CTRL_SET_PARAM_REPLY
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
+		;
 		//exit(1);
 		break;
 	}
@@ -3356,7 +3433,8 @@ void daemon_exec(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_TCP_POLL_POST: //TODO move to ALERT?
-			PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id)
+			;
 
 			ret += metadata_readFromElement(params, "protocol", &protocol) == META_FALSE;
 			ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
@@ -3375,14 +3453,16 @@ void daemon_exec(struct finsFrame *ff) {
 				switch (protocol) {
 				case IPPROTO_ICMP:
 					//daemon_icmp_in_error(ff, src_ip, dst_ip);
-					PRINT_ERROR("todo");
+					PRINT_ERROR("todo")
+					;
 					break;
 				case IPPROTO_TCP:
 					daemon_tcp_in_poll(ff, ret_msg);
 					break;
 				case IPPROTO_UDP:
 					//daemon_udp_in_error(ff, src_ip, dst_ip);
-					PRINT_ERROR("todo");
+					PRINT_ERROR("todo")
+					;
 					break;
 				default:
 					//PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -3392,7 +3472,8 @@ void daemon_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -3447,7 +3528,8 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 			accept_expired_tcp(ff, call, 0);
 			break;
 		default:
-			PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type);
+			PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type)
+			;
 			//exit(1);
 			break;
 		}
@@ -3510,7 +3592,8 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 				poll_in_tcp_fcf(ff, call_id, call_index, call_pid, call_type, sock_id, sock_index, data, flags); //CTRL_EXEC_REPLY
 				break;
 			default:
-				PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+				PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
+				;
 				//exit(1);
 				break;
 			}
@@ -3558,7 +3641,8 @@ void daemon_error(struct finsFrame *ff) { //TODO expand for different error type
 		daemon_udp_in_error(ff, src_ip, dst_ip);
 		break;
 	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+		PRINT_ERROR("Unknown protocol, protocol=%u", protocol)
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3630,17 +3714,18 @@ void daemon_in_fdf(struct finsFrame *ff) {
 		daemon_udp_in_fdf(ff, src_ip, dst_ip);
 		break;
 	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+		PRINT_ERROR("Unknown protocol, protocol=%u", protocol)
+		;
 		freeFinsFrame(ff);
 		break;
 	}
 }
 
 void daemon_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	daemon_running = 1;
 
-//init_daemonSockets();
+	//init_daemonSockets();
 	sem_init(&daemon_thread_sem, 0, 1);
 	daemon_thread_count = 0;
 
@@ -3684,14 +3769,14 @@ void daemon_init(void) {
 
 	expired_call_list = call_list_create(MAX_CALLS);
 
-//init the netlink socket connection to daemon
+	//init the netlink socket connection to daemon
 	nl_sockfd = init_fins_nl();
 	if (nl_sockfd == -1) {
 		perror("init_fins_nl() caused an error");
 		exit(-1);
 	}
 
-//prime the kernel to establish daemon's PID
+	//prime the kernel to establish daemon's PID
 	int daemoncode = daemon_start_call;
 	int ret;
 	ret = send_wedge(nl_sockfd, (uint8_t *) &daemoncode, sizeof(int), 0);
@@ -3699,37 +3784,37 @@ void daemon_init(void) {
 		perror("sendfins() caused an error");
 		exit(-1);
 	}
-	PRINT_DEBUG("Connected to wedge at %d", nl_sockfd);
+	PRINT_CRITICAL("Connected to wedge at %d", nl_sockfd);
 }
 
 void daemon_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, wedge_to_daemon, fins_pthread_attr);
 	pthread_create(&switch_to_daemon_thread, fins_pthread_attr, switch_to_daemon, fins_pthread_attr);
 }
 
 void daemon_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	daemon_running = 0;
 
-//prime the kernel to establish daemon's PID
+	//prime the kernel to establish daemon's PID
 	int daemoncode = daemon_stop_call;
 	int ret = send_wedge(nl_sockfd, (uint8_t *) &daemoncode, sizeof(int), 0);
 	if (ret) {
 		PRINT_DEBUG("send_wedge failure");
 		//perror("sendfins() caused an error");
 	}
-	PRINT_DEBUG("Disconnecting to wedge at %d", nl_sockfd);
+	PRINT_CRITICAL("Disconnecting to wedge at %d", nl_sockfd);
 
-	PRINT_DEBUG("Joining switch_to_daemon_thread");
+	PRINT_CRITICAL("Joining switch_to_daemon_thread");
 	pthread_join(switch_to_daemon_thread, NULL);
-	PRINT_DEBUG("Joining wedge_to_daemon_thread");
+	PRINT_CRITICAL("Joining wedge_to_daemon_thread");
 	pthread_join(wedge_to_daemon_thread, NULL);
 }
 
 void daemon_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	//unregister
 

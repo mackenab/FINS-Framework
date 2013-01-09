@@ -75,7 +75,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					if (request_list_has_space(cache->request_list)) {
 						request_list_append(cache->request_list, request);
 					} else {
-						PRINT_DEBUG("Error: request_list full");
+						PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
 						request_free(request);
 
 						ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
@@ -121,7 +121,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							if (request_list_has_space(cache->request_list)) {
 								request_list_append(cache->request_list, request);
 							} else {
-								PRINT_ERROR("Error: request_list full");
+								PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
 								request_free(request);
 
 								ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID

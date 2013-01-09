@@ -210,7 +210,9 @@ void capture_init(char *interface) {
 	//	strcat(filter_exp,dev_macAddress);
 	//strcat(filter_exp, ""); //everything
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))");
+	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))");
+	strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))");
+
 
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet((char *)dev, &net, &mask, errbuf) == -1) {

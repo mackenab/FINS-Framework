@@ -64,7 +64,7 @@ int read_configurations() {
 }
 
 void termination_handler(int sig) {
-	PRINT_DEBUG("**********Terminating *******");
+	PRINT_CRITICAL("**********Terminating *******");
 
 	//shutdown all module threads in backwards order of startup
 	//rtm_shutdown();
@@ -81,6 +81,7 @@ void termination_handler(int sig) {
 
 	//have each module free data & que/sem //TODO finish each of these
 	//rtm_release();
+
 	udp_release();
 	tcp_release();
 	icmp_release();
@@ -91,28 +92,39 @@ void termination_handler(int sig) {
 	daemon_release();
 	switch_release();
 
-	PRINT_DEBUG("FIN");
+	PRINT_CRITICAL("FIN");
 	exit(-1);
 }
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
-void uint32_decrease_test(uint32_t *data, uint32_t value) {
-	PRINT_DEBUG("Entered: data=%p, value=%u", data, value);
+double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
+	double decimal = 0, diff = 0;
 
-	if (*data > value) {
-		*data -= value;
+	PRINT_DEBUG("Entered: time1=%p, time2=%p\n", time1, time2);
+
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+
+	if (time1->tv_usec > time2->tv_usec) {
+		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec - 1.0;
 	} else {
-		*data = 0;
+		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec;
 	}
+	diff += decimal;
 
-	PRINT_DEBUG("Exited: data=%u", *data);
+	diff *= 1000.0;
+
+	PRINT_DEBUG("diff=%f\n", diff);
+	return diff;
 }
 
 int main() {
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
-	my_host_mac_addr = 0x080027445566ull;
+	//my_host_mac_addr = 0x080027445566ull;
+	my_host_mac_addr = 0x001d09b35512ull;
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
 	my_host_mask = IP4_ADR_P2H(255,255,255,0);
 
@@ -129,7 +141,7 @@ int main() {
 	signal(SIGINT, termination_handler); //register termination handler
 
 	// Start the driving thread of each module
-	PRINT_DEBUG("Initialize Modules");
+	PRINT_CRITICAL("Initialize Modules");
 	switch_init(); //should always be first
 	daemon_init(); //TODO improve how sets mac/ip
 	interface_init();
@@ -144,72 +156,132 @@ int main() {
 	icmp_init();
 	tcp_init();
 	udp_init();
+
 	//rtm_init(); //TODO when updated/fully implemented
 
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 
-	PRINT_DEBUG("Run/start Modules");
+	PRINT_CRITICAL("Run/start Modules");
 	switch_run(&fins_pthread_attr);
 	daemon_run(&fins_pthread_attr);
 	interface_run(&fins_pthread_attr);
+
 	arp_run(&fins_pthread_attr);
 	ipv4_run(&fins_pthread_attr);
 	icmp_run(&fins_pthread_attr);
 	tcp_run(&fins_pthread_attr);
 	udp_run(&fins_pthread_attr);
+
 	//rtm_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
-	/*
-	 if (0) {
-	 char recv_data[4000];
+	if (0) {
+		char recv_data[4000];
 
-	 while (1) {
-	 gets(recv_data);
+		while (1) {
+			gets(recv_data);
 
-	 PRINT_DEBUG("Sending ARP req");
+			PRINT_DEBUG("Sending ARP req");
 
-	 metadata *params_req = (metadata *) malloc(sizeof(metadata));
-	 if (params_req == NULL) {
-	 PRINT_ERROR("metadata alloc fail");
-	 exit(-1);
-	 }
-	 metadata_create(params_req);
+			metadata *params_req = (metadata *) malloc(sizeof(metadata));
+			if (params_req == NULL) {
+				PRINT_ERROR("metadata alloc fail");
+				exit(-1);
+			}
+			metadata_create(params_req);
 
-	 uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
-	 //uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
-	 uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
-	 //uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
+			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
+			//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
+			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
+			//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
 
-	 metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
-	 metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
+			metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+			metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
 
-	 struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-	 if (ff_req == NULL) {
-	 PRINT_ERROR("todo error");
-	 //metadata_destroy(params_req);
-	 exit(-1);
-	 }
+			struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
+			if (ff_req == NULL) {
+				PRINT_ERROR("todo error");
+				//metadata_destroy(params_req);
+				exit(-1);
+			}
 
-	 ff_req->dataOrCtrl = CONTROL;
-	 ff_req->destinationID.id = ARP_ID;
-	 ff_req->destinationID.next = NULL;
-	 ff_req->metaData = params_req;
+			ff_req->dataOrCtrl = CONTROL;
+			ff_req->destinationID.id = ARP_ID;
+			ff_req->destinationID.next = NULL;
+			ff_req->metaData = params_req;
 
-	 ff_req->ctrlFrame.senderID = IP_ID;
-	 ff_req->ctrlFrame.serial_num = gen_control_serial_num();
-	 ff_req->ctrlFrame.opcode = CTRL_EXEC;
-	 ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
+			ff_req->ctrlFrame.senderID = IP_ID;
+			ff_req->ctrlFrame.serial_num = gen_control_serial_num();
+			ff_req->ctrlFrame.opcode = CTRL_EXEC;
+			ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
 
-	 ff_req->ctrlFrame.data_len = 0;
-	 ff_req->ctrlFrame.data = NULL;
+			ff_req->ctrlFrame.data_len = 0;
+			ff_req->ctrlFrame.data = NULL;
 
-	 arp_to_switch(ff_req); //doesn't matter which queue
-	 }
-	 }
-	 //#############################
-	 */
+			arp_to_switch(ff_req); //doesn't matter which queue
+		}
+	}
+	if (0) {
+		char recv_data[4000];
+		while (1) {
+			gets(recv_data);
+
+			PRINT_CRITICAL("start timing");
+
+			struct timeval start, end;
+			gettimeofday(&start, 0);
+
+			int its = 10000;
+			int len = 1000;
+
+			int i = 0;
+			while (i < its) {
+				uint8_t *data = (uint8_t *) malloc(len);
+				if (data == NULL) {
+					PRINT_ERROR("data alloc fail");
+					exit(-1);
+				}
+				memset(data, 56, len);
+
+				metadata *params = (metadata *) malloc(sizeof(metadata));
+				if (params == NULL) {
+					PRINT_ERROR("metadata alloc fail");
+					exit(-1);
+				}
+				metadata_create(params);
+
+				uint32_t host_ip = IP4_ADR_P2H(192, 168, 1, 20);
+				uint32_t host_port = 55454;
+				uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 7);
+				uint32_t dst_port = 44444;
+				uint32_t ttl = 64;
+				uint32_t tos = 64;
+
+				metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
+				metadata_writeToElement(params, "send_src_port", &host_port, META_TYPE_INT32);
+				metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+				metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32);
+				metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
+				metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
+
+				if (daemon_fdf_to_udp(data, len, params)) {
+					i++;
+				} else {
+					PRINT_ERROR("error sending");
+					metadata_destroy(params);
+					free(data);
+					break;
+				}
+			}
+
+			gettimeofday(&end, 0);
+			double diff = time_diff(&start, &end);
+			PRINT_CRITICAL("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 1000/(diff/its)*len);
+		}
+	}
+	//#############################
+
 
 	while (1)
 		;

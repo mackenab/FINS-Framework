@@ -57,6 +57,11 @@ void udp_out_fdf(struct finsFrame* ff) {
 	//print_finsFrame(ff);
 
 	packet_length = ff->dataFrame.pduLength + U_HEADER_LEN;
+
+	if (packet_length > IP_MAXLEN) {
+		PRINT_ERROR("todo error, data too long max 65536, len=%d", packet_length);
+	}
+
 	uint8_t *udp_dataunit = (uint8_t *) malloc(packet_length);
 	packet_netw = (struct udp_packet *) udp_dataunit;
 	uint8_t *pdu = ff->dataFrame.pdu;
@@ -64,11 +69,13 @@ void udp_out_fdf(struct finsFrame* ff) {
 	/** constructs the UDP packet from the FDF and the meta data */
 
 	//#########################
-	uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
-	memcpy(temp, pdu, ff->dataFrame.pduLength);
-	temp[ff->dataFrame.pduLength] = '\0';
-	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
-	free(temp);
+	if (1) {
+		uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
+		memcpy(temp, pdu, ff->dataFrame.pduLength);
+		temp[ff->dataFrame.pduLength] = '\0';
+		PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
+		free(temp);
+	}
 	//#########################
 
 	uint32_t dst_port;

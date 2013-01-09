@@ -148,7 +148,7 @@ int store_list_has_space(void) {
 }
 
 void ipv4_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	ipv4_running = 1;
 
 	store_list = NULL;
@@ -182,23 +182,23 @@ void set_loopback(uint32_t IP_address, uint32_t mask) {
 }
 
 void ipv4_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_to_ipv4_thread, fins_pthread_attr, switch_to_ipv4, fins_pthread_attr);
 }
 
 void ipv4_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	ipv4_running = 0;
 
 	//TODO expand this
 
-	PRINT_DEBUG("Joining switch_to_ipv4_thread");
+	PRINT_CRITICAL("Joining switch_to_ipv4_thread");
 	pthread_join(switch_to_ipv4_thread, NULL);
 }
 
 void ipv4_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	//TODO free all module related mem
 

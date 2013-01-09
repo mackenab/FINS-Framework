@@ -496,30 +496,30 @@ void *switch_to_udp(void *local) {
 }
 
 void udp_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	udp_running = 1;
 
 	udp_sent_packet_list = udp_sent_list_create(UDP_SENT_LIST_MAX);
 }
 
 void udp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_to_udp_thread, fins_pthread_attr, switch_to_udp, fins_pthread_attr);
 }
 
 void udp_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	udp_running = 0;
 
 	//TODO expand this
 
-	PRINT_DEBUG("Joining switch_to_udp_thread");
+	PRINT_CRITICAL("Joining switch_to_udp_thread");
 	pthread_join(switch_to_udp_thread, NULL);
 }
 
 void udp_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	udp_sent_list_free(udp_sent_packet_list);
 

@@ -2926,7 +2926,7 @@ void *switch_to_tcp(void *local) {
 }
 
 void tcp_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	tcp_running = 1;
 
 	tcp_thread_id_num = 0;
@@ -2944,7 +2944,7 @@ void tcp_init(void) {
 }
 
 void tcp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_to_tcp_thread, fins_pthread_attr, switch_to_tcp, fins_pthread_attr);
 }
@@ -2982,7 +2982,7 @@ void tcp_get_ff(void) {
 }
 
 void tcp_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	tcp_running = 0;
 
 	//TODO expand this
@@ -3023,12 +3023,12 @@ void tcp_shutdown(void) {
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_stub_list_sem);
 
-	PRINT_DEBUG("Joining switch_to_tcp_thread");
+	PRINT_CRITICAL("Joining switch_to_tcp_thread");
 	pthread_join(switch_to_tcp_thread, NULL);
 }
 
 void tcp_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	//TODO free all module related mem
 

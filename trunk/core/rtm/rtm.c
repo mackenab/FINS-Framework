@@ -85,7 +85,7 @@ void rtm_get_ff() {
 //Is started as a thread in core.c
 void rtm_init(pthread_attr_t *fins_pthread_attr) {
 
-	PRINT_DEBUG("RTM has started");
+	PRINT_CRITICAL("RTM has started");
 
 	/*
 	 //added to include code from fins_daemon.sh -- mrd015 !!!!! //TODO move this to RTM module

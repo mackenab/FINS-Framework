@@ -88,7 +88,7 @@ struct arp_interface {
 struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr);
 void interface_free(struct arp_interface *interface);
 
-#define ARP_INTERFACE_LIST_MAX 20
+#define ARP_INTERFACE_LIST_MAX 256
 
 int interface_list_insert(struct arp_interface *interface);
 struct arp_interface *interface_list_find(uint32_t ip_addr);
@@ -113,7 +113,7 @@ struct arp_request_list {
 	struct arp_request *end;
 };
 
-#define ARP_REQUEST_LIST_MAX 50
+#define ARP_REQUEST_LIST_MAX 65536
 
 struct arp_request_list *request_list_create(uint32_t max);
 void request_list_append(struct arp_request_list *request_list, struct arp_request *request);
@@ -153,7 +153,7 @@ struct arp_cache {
 	int retries;
 };
 
-#define ARP_THREADS_MAX 50
+//#define ARP_THREADS_MAX 50
 #define ARP_RETRANS_TO_DEFAULT 1000
 #define ARP_CACHE_TO_DEFAULT 15000
 #define ARP_RETRIES 2
@@ -163,7 +163,7 @@ struct arp_cache *cache_create(uint32_t ip_addr);
 void cache_shutdown(struct arp_cache *cache);
 void cache_free(struct arp_cache *cache);
 
-#define ARP_CACHE_LIST_MAX 50
+#define ARP_CACHE_LIST_MAX 8192
 int cache_list_insert(struct arp_cache *cache);
 struct arp_cache *cache_list_find(uint32_t ip_addr);
 void cache_list_remove(struct arp_cache *cache);

@@ -471,7 +471,7 @@ int interface_to_switch(struct finsFrame *ff) {
 }
 
 void interface_init(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	interface_running = 1;
 
 	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
@@ -486,30 +486,30 @@ void interface_init(void) {
 		exit(-1); //exit(EXIT_FAILURE);
 	}
 
-	PRINT_DEBUG("");
+	PRINT_CRITICAL("PCAP processes connected");
 }
 
 void interface_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	pthread_create(&switch_to_interface_thread, fins_pthread_attr, switch_to_interface, fins_pthread_attr);
 	pthread_create(&capturer_to_interface_thread, fins_pthread_attr, capturer_to_interface, fins_pthread_attr);
 }
 
 void interface_shutdown(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	interface_running = 0;
 
 	//TODO expand this
 
-	PRINT_DEBUG("Joining switch_to_interface_thread");
+	PRINT_CRITICAL("Joining switch_to_interface_thread");
 	pthread_join(switch_to_interface_thread, NULL);
-	PRINT_DEBUG("Joining capturer_to_interface_thread");
+	PRINT_CRITICAL("Joining capturer_to_interface_thread");
 	pthread_join(capturer_to_interface_thread, NULL);
 }
 
 void interface_release(void) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 	//TODO free all module related mem
 
 	term_queue(Interface_to_Switch_Queue);
