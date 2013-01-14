@@ -82,8 +82,8 @@ int main(int argc, char *argv[]) {
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
 	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-		//if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
 	}
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,7);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
 	struct timeval curr;
 	struct timeval *stamp;
 
-	if (0) {
+	if (1) {
 		int i = 0;
 		while (1) {
 			i++;
@@ -213,25 +213,27 @@ int main(int argc, char *argv[]) {
 				fflush(stdout);
 				gets(send_data);
 
-				len = strlen(send_data);
+				//len = strlen(send_data);
+				len = 1000;
 				printf("\nlen=%d, str='%s'\n", len, send_data);
 				fflush(stdout);
-				if (len > 0 && len < 1024) {
+				if (len > 0 && len < send_len) {
 					gettimeofday(&curr, 0);
-					numbytes = sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+					numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 					//sleep(1);
 
 					ret = poll(fds, nfds, time);
-
 					if (ret || 0) {
-						///*
-						printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
-						printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-								(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents
-										& POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM)
-										> 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
-						fflush(stdout);
-						//*/
+						if (1) {
+							printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
+							printf(
+									"POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
+									(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents
+											& POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+									(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+									(fds[ret].revents & POLLWRBAND) > 0);
+							fflush(stdout);
+						}
 
 						int recv_bytes;
 						if ((fds[ret].revents & (POLLERR)) || 0) {
@@ -322,28 +324,46 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (1) {
+	if (0) {
 		struct timeval start, end;
 		int its = 10000;
-		//len = 1000;
 
-		int data_len = 0;
-		//while (data_len < 1500) {
-		//data_len += 100;
-		data_len = 1000;
+		int data_len = 1000;
+		while (data_len < 4000) {
+			//data_len += 100;
+			//data_len = 1000;
 
-		gettimeofday(&start, 0);
-		int i = 0;
-		while (i < its) {
-			i++;
-			numbytes = sendto(sock, send_data, data_len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+			int total_bytes = 0;
+			double total_time = 0;
+			int total_success = 0;
+			double diff;
+
+			int i = 0;
+			while (i < its) {
+				i++;
+
+				gettimeofday(&start, 0);
+				numbytes = sendto(sock, send_data, data_len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+				gettimeofday(&end, 0);
+				diff = time_diff(&start, &end);
+
+				if (numbytes > 0) {
+					total_success++;
+					total_bytes += numbytes;
+					total_time += diff;
+				}
+
+				//usleep(100);
+			}
+
+			//printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
+			printf("\n len=%d, time=%f, suc=%d, bytes=%d, avg=%f ms, eff=%f, thr=%f, calls=%f, act=%f", data_len, total_time, total_success, total_bytes,
+					total_time / total_success, total_success / (double) its, total_bytes / (double) its / data_len, 1000 / (total_time / total_success), 1000
+							/ (total_time / total_success) * data_len*8);
+			fflush(stdout);
+
+			//sleep(5);
 		}
-		gettimeofday(&end, 0);
-
-		double diff = time_diff(&start, &end);
-		printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
-		fflush(stdout);
-		//}
 	}
 
 	printf("\n Closing socket");

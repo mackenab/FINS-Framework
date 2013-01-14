@@ -31,7 +31,7 @@
 #define IGNORE_CHEKSUM  0									/* the checksum value when it is not being used */
 
 #define UDP_MSL_TO_DEFAULT 512000
-#define UDP_SENT_LIST_MAX 65536
+#define UDP_SENT_LIST_MAX (2*65536) //TODO change back to 2^16?
 
 struct udp_sent { //TODO move this functionality to common, or data_structure
 	struct udp_sent *next;
@@ -121,17 +121,20 @@ void udp_run(pthread_attr_t *fins_pthread_attr);
 void udp_shutdown(void);
 void udp_release(void);
 
-//unsigned short UDP_checksum(struct udp_packet *pcket, struct udp_metadata_parsed *meta);
+//unsigned short UDP_checksum(struct udp_packet *pcket, struct udp_metadata_parsed *params);
 uint16_t UDP_checksum(struct udp_packet *pcket, uint32_t src_ip, uint32_t dst_ip);
 
+#define EXEC_UDP_CLEAR_SENT 0
+
 void udp_fcf(struct finsFrame *ff);
+void udp_exec(struct finsFrame *ff);
 void udp_error(struct finsFrame *ff);
 
 void udp_in_fdf(struct finsFrame *ff);
 
 void udp_out_fdf(struct finsFrame *ff);
 
-struct finsFrame *create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t *PDU, metadata *meta);
+struct finsFrame *create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t *PDU, metadata *params);
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 void udp_get_ff(void);
 int udp_to_switch(struct finsFrame *ff);

@@ -17,16 +17,12 @@
 #include <finsdebug.h>
 
 #include "interface.h"
+#include <swito.h>
 
-int interface_running;
+static struct fins_proto_module interface_proto = { .module_id = INTERFACE_ID, .name = "interface", .running_flag = 1, };
+
 pthread_t switch_to_interface_thread;
 pthread_t capturer_to_interface_thread;
-
-sem_t Interface_to_Switch_Qsem;
-finsQueue Interface_to_Switch_Queue;
-
-sem_t Switch_to_Interface_Qsem;
-finsQueue Switch_to_Interface_Queue;
 
 int capture_pipe_fd; /** capture file descriptor to read from capturer */
 int inject_pipe_fd; /** inject file descriptor to read from capturer */
@@ -172,13 +168,13 @@ void *capturer_to_interface(void *local) {
 	uint64_t src_mac;
 	uint32_t ether_type;
 
-	while (interface_running) {
+	while (interface_proto.running_flag) {
 		interface_setNonblocking(capture_pipe_fd);
 		do {
 			numBytes = read(capture_pipe_fd, &frame_len, sizeof(int)); //TODO change to nonblocking in loop
-		} while (interface_running && numBytes <= 0);
+		} while (interface_proto.running_flag && numBytes <= 0);
 
-		if (!interface_running) {
+		if (!interface_proto.running_flag) {
 			break;
 		}
 
@@ -307,7 +303,7 @@ void *capturer_to_interface(void *local) {
 void *switch_to_interface(void *local) {
 	PRINT_DEBUG("Entered");
 
-	while (interface_running) {
+	while (interface_proto.running_flag) {
 		interface_get_ff();
 		PRINT_DEBUG("");
 	}
@@ -320,12 +316,16 @@ void interface_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(&Switch_to_Interface_Qsem);
-		ff = read_queue(Switch_to_Interface_Queue);
-		sem_post(&Switch_to_Interface_Qsem);
-	} while (interface_running && ff == NULL);
+		sem_wait(interface_proto.event_sem);
+		sem_wait(interface_proto.input_sem);
+		ff = read_queue(interface_proto.input_queue);
+		sem_post(interface_proto.input_sem);
+	} while (interface_proto.running_flag && ff == NULL);
 
-	if (!interface_running) {
+	if (!interface_proto.running_flag) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
@@ -453,26 +453,15 @@ void interface_exec(struct finsFrame *ff) {
 }
 
 int interface_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (sem_wait(&Interface_to_Switch_Qsem)) {
-		PRINT_ERROR("Interface_to_Switch_Qsem wait prob");
-		exit(-1);
-	}
-	if (write_queue(ff, Interface_to_Switch_Queue)) {
-		/*#*/PRINT_DEBUG("");
-		sem_post(&Interface_to_Switch_Qsem);
-		return 1;
-	}
-
-	PRINT_DEBUG("");
-	sem_post(&Interface_to_Switch_Qsem);
-
-	return 0;
+	return module_to_switch(&interface_proto, ff);
 }
 
 void interface_init(void) {
 	PRINT_CRITICAL("Entered");
-	interface_running = 1;
+	interface_proto.running_flag = 1;
+
+	module_create_ops(&interface_proto);
+	module_register(&interface_proto);
 
 	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
 	if (inject_pipe_fd == -1) {
@@ -498,7 +487,8 @@ void interface_run(pthread_attr_t *fins_pthread_attr) {
 
 void interface_shutdown(void) {
 	PRINT_CRITICAL("Entered");
-	interface_running = 0;
+	interface_proto.running_flag = 0;
+	sem_post(interface_proto.event_sem);
 
 	//TODO expand this
 
@@ -512,6 +502,6 @@ void interface_release(void) {
 	PRINT_CRITICAL("Entered");
 	//TODO free all module related mem
 
-	term_queue(Interface_to_Switch_Queue);
-	term_queue(Switch_to_Interface_Queue);
+	module_unregister(interface_proto.module_id);
+	module_destroy_ops(&interface_proto);
 }

@@ -33,22 +33,22 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	unsigned char fakeDatav[] = "loloa77a7";
 	unsigned char *fakeData = fakeDatav;
 
-	metadata *metaptr = (metadata *) malloc(sizeof(metadata));
+	metadata *params = (metadata *) malloc(sizeof(metadata));
 
-	//metadata *metaptr;
+	//metadata *params;
 	PRINT_DEBUG("2.2");
-	metadata_create(metaptr);
+	metadata_create(params);
 	PRINT_DEBUG("2.3");
-	metadata_addElement(metaptr, linkname, META_TYPE_INT32);
+	metadata_addElement(params, linkname, META_TYPE_INT32);
 	PRINT_DEBUG("2.4");
-	metadata_writeToElement(metaptr, linkname, &linkvalue, META_TYPE_INT32);
+	metadata_writeToElement(params, linkname, &linkvalue, META_TYPE_INT32);
 	PRINT_DEBUG("2.5");
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = (unsigned char) 200;
 	ff->destinationID.next = NULL;
 
 	ff->dataFrame.directionFlag = UP;
-	ff->metaData = metaptr;
+	ff->metaData = params;
 	ff->dataFrame.pdu = fakeData;
 	ff->dataFrame.pduLength = 10;
 
@@ -60,7 +60,6 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
  * */
 void print_finsFrame(struct finsFrame *ff) {
 
-	char *temp;
 	struct destinationList *dest;
 
 	PRINT_DEBUG("Printing FINS frame:");
@@ -83,12 +82,15 @@ void print_finsFrame(struct finsFrame *ff) {
 			i++;
 
 		}
-		temp = (char *) malloc(ff->dataFrame.pduLength + 1);
+		//######################
+#ifdef DEBUG
+		char *temp = (char *) malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 		temp[ff->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pdu=%s", temp);
 		free(temp);
-
+#endif
+		//######################
 	} else if (ff->dataOrCtrl == CONTROL) {
 		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);
 		PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);

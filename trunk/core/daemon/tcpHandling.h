@@ -12,9 +12,6 @@
 
 #include "daemon.h"
 
-int daemon_fdf_to_tcp(uint8_t *data, uint32_t data_len, metadata *params);
-int daemon_fcf_to_tcp(metadata *params, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
-
 void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol);
 void bind_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr);
 void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog);
@@ -59,6 +56,17 @@ void recvmsg_timeout_tcp(struct daemon_call *call);
 
 void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
 void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+
+#define EXEC_TCP_CONNECT 0
+#define EXEC_TCP_LISTEN 1
+#define EXEC_TCP_ACCEPT 2
+#define EXEC_TCP_SEND 3
+#define EXEC_TCP_RECV 4
+#define EXEC_TCP_CLOSE 5
+#define EXEC_TCP_CLOSE_STUB 6
+#define EXEC_TCP_OPT 7
+#define EXEC_TCP_POLL 8
+#define EXEC_TCP_POLL_POST 9 //only one that's used in daemon.c
 
 #define SET_PARAM_TCP_HOST_WINDOW 0
 #define SET_PARAM_TCP_SOCK_OPT 1

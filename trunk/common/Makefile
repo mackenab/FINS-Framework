@@ -7,7 +7,7 @@ PROJECT_NAME = common
 
 #This is the list of objects needed to build the FINS core. NOTE: object files
 #that contain a "main" function must NOT be included in this list!!!
-OBJS = getMAC_Address.o metadata.o finstypes.o
+OBJS = getMAC_Address.o metadata.o finstypes.o finstime.o
 
 #add the names of any executables that are added to this directory here.  This
 #ensures that they will be removed by clean

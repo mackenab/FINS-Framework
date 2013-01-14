@@ -13,8 +13,6 @@
 #include <linux/icmp.h>
 #include "daemon.h"
 
-int daemon_fdf_to_icmp(uint8_t *data, uint32_t data_len, metadata *params);
-
 void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol);
 void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr);
 void listen_out_icmp(struct nl_wedge_to_daemon *hdr, int backlog);
@@ -42,5 +40,9 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		uint32_t flags);
 
 void recvmsg_timeout_icmp(struct daemon_call *call);
+
+//TODO not used? what are these for in this module file?
+#define ERROR_ICMP_TTL 0
+#define ERROR_ICMP_DEST_UNREACH 1
 
 #endif /* ICMPHANDLING_H_ */

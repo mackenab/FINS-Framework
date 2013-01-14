@@ -16,46 +16,21 @@
 #include <queueModule.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <finstime.h>
 #include "udp.h"
 
 #define DUMMYA 123
 #define DUMMYB 456
 #define DUMMYC 789
 
-int udp_running;
+#include <swito.h>
+static struct fins_proto_module udp_proto = { .module_id = UDP_ID, .name = "udp", .running_flag = 1, };
+
 pthread_t switch_to_udp_thread;
-
-sem_t UDP_to_Switch_Qsem;
-finsQueue UDP_to_Switch_Queue;
-
-sem_t Switch_to_UDP_Qsem;
-finsQueue Switch_to_UDP_Queue;
 
 struct udp_statistics udpStat;
 
 struct udp_sent_list *udp_sent_packet_list;
-
-double udp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
-	double decimal = 0, diff = 0;
-
-	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
-
-	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
-
-	if (time1->tv_usec > time2->tv_usec) {
-		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec - 1.0;
-	} else {
-		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec;
-	}
-	diff += decimal;
-
-	diff *= 1000.0;
-
-	PRINT_DEBUG("diff=%f", diff);
-	return diff;
-}
 
 struct udp_sent *udp_sent_create(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
@@ -231,7 +206,7 @@ void udp_sent_list_gc(struct udp_sent_list *sent_list, double timeout) {
 
 	struct udp_sent *temp = sent_list->front;
 	while (temp) {
-		if (udp_time_diff(&temp->stamp, &current) >= timeout) {
+		if (time_diff(&temp->stamp, &current) >= timeout) {
 			old = temp;
 			temp = temp->next;
 
@@ -244,32 +219,23 @@ void udp_sent_list_gc(struct udp_sent_list *sent_list, double timeout) {
 }
 
 int udp_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (sem_wait(&UDP_to_Switch_Qsem)) {
-		PRINT_ERROR("UDP_to_Switch_Qsem wait prob");
-		exit(-1);
-	}
-	if (write_queue(ff, UDP_to_Switch_Queue)) {
-		/*#*/PRINT_DEBUG("");
-		sem_post(&UDP_to_Switch_Qsem);
-		return 1;
-	}
-
-	PRINT_DEBUG("");
-	sem_post(&UDP_to_Switch_Qsem);
-	return 0;
+	return module_to_switch(&udp_proto, ff);
 }
 
 void udp_get_ff(void) {
 
 	struct finsFrame *ff;
 	do {
-		sem_wait(&Switch_to_UDP_Qsem);
-		ff = read_queue(Switch_to_UDP_Queue);
-		sem_post(&Switch_to_UDP_Qsem);
-	} while (udp_running && ff == NULL);
+		sem_wait(udp_proto.event_sem);
+		sem_wait(udp_proto.input_sem);
+		ff = read_queue(udp_proto.input_queue);
+		sem_post(udp_proto.input_sem);
+	} while (udp_proto.running_flag && ff == NULL);
 
-	if (!udp_running) {
+	if (!udp_proto.running_flag) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
@@ -323,7 +289,7 @@ void udp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
-		freeFinsFrame(ff);
+		udp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -338,6 +304,67 @@ void udp_fcf(struct finsFrame *ff) {
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		freeFinsFrame(ff);
 		break;
+	}
+}
+
+void udp_exec(struct finsFrame *ff) {
+	int ret = 0;
+
+	uint32_t host_ip = 0;
+	uint32_t host_port = 0;
+	uint32_t rem_ip = 0;
+	uint32_t rem_port = 0;
+
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+
+	metadata *params = ff->metaData;
+	if (params) {
+		switch (ff->ctrlFrame.param_id) {
+		case EXEC_UDP_CLEAR_SENT:
+			PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id);
+
+			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
+			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
+
+			if (ret) {
+				PRINT_ERROR("ret=%d", ret);
+
+				ff->destinationID.id = ff->ctrlFrame.senderID;
+
+				ff->ctrlFrame.senderID = UDP_ID;
+				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+				ff->ctrlFrame.ret_val = 0;
+
+				udp_to_switch(ff);
+			} else {
+				//udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+			}
+			break;
+		default:
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			//TODO implement?
+
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = UDP_ID;
+			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
+			udp_to_switch(ff);
+			break;
+		}
+	} else {
+		PRINT_ERROR("Error fcf.metadata==NULL: ff=%p", ff);
+
+		//TODO create/add metadata?
+		ff->destinationID.id = ff->ctrlFrame.senderID;
+
+		ff->ctrlFrame.senderID = UDP_ID;
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+
+		udp_to_switch(ff);
 	}
 }
 
@@ -366,7 +393,8 @@ void udp_error(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case ERROR_ICMP_TTL:
-			PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id)
+			;
 
 			/*
 			 struct udp_packet *udp_hdr = (struct udp_packet *) ff->ctrlFrame.data;
@@ -427,7 +455,8 @@ void udp_error(struct finsFrame *ff) {
 			}
 			break;
 		case ERROR_ICMP_DEST_UNREACH:
-			PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id)
+			;
 
 			if (udp_sent_list_is_empty(udp_sent_packet_list)) {
 				PRINT_ERROR("todo error");
@@ -471,7 +500,8 @@ void udp_error(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -486,7 +516,7 @@ void udp_error(struct finsFrame *ff) {
 void *switch_to_udp(void *local) {
 	PRINT_DEBUG("Entered");
 
-	while (udp_running) {
+	while (udp_proto.running_flag) {
 		udp_get_ff();
 		PRINT_DEBUG("");
 	}
@@ -497,7 +527,10 @@ void *switch_to_udp(void *local) {
 
 void udp_init(void) {
 	PRINT_CRITICAL("Entered");
-	udp_running = 1;
+	udp_proto.running_flag = 1;
+
+	module_create_ops(&udp_proto);
+	module_register(&udp_proto);
 
 	udp_sent_packet_list = udp_sent_list_create(UDP_SENT_LIST_MAX);
 }
@@ -510,7 +543,8 @@ void udp_run(pthread_attr_t *fins_pthread_attr) {
 
 void udp_shutdown(void) {
 	PRINT_CRITICAL("Entered");
-	udp_running = 0;
+	udp_proto.running_flag = 0;
+	sem_post(udp_proto.event_sem);
 
 	//TODO expand this
 
@@ -520,11 +554,11 @@ void udp_shutdown(void) {
 
 void udp_release(void) {
 	PRINT_CRITICAL("Entered");
+	module_unregister(udp_proto.module_id);
 
 	udp_sent_list_free(udp_sent_packet_list);
 
 	//TODO free all module related mem
 
-	term_queue(UDP_to_Switch_Queue);
-	term_queue(Switch_to_UDP_Queue);
+	module_destroy_ops(&udp_proto);
 }

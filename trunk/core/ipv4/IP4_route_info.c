@@ -211,7 +211,7 @@ struct ip4_routing_table * IP4_get_routing_table() {
 		exit(-1);
 	}
 
-	if (1) {
+	if (1) { //laptop eth0
 		row0->dst = my_host_ip_addr & my_host_mask;
 		row0->gw = any_ip_addr;
 		row0->mask = 24;

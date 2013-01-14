@@ -13,14 +13,10 @@
 #include <pthread.h>
 #include "arp.h"
 
-int arp_running;
+#include <swito.h>
+static struct fins_proto_module arp_proto = { .module_id = ARP_ID, .name = "arp", .running_flag = 1, };
+
 pthread_t switch_to_arp_thread;
-
-sem_t ARP_to_Switch_Qsem;
-finsQueue ARP_to_Switch_Queue;
-
-sem_t Switch_to_ARP_Qsem;
-finsQueue Switch_to_ARP_Queue;
 
 struct arp_interface *interface_list;
 uint32_t interface_num;
@@ -130,10 +126,9 @@ void gen_replyARP(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t s
  */
 int check_valid_arp(struct arp_message *msg) {
 
-	return (msg->hardware_type == ARP_HWD_TYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY)
-			&& (msg->hardware_addrs_length == ARP_HDW_ADDR_LEN) && (msg->protocol_addrs_length == ARP_PROTOCOL_ADDR_LEN)
-			&& (msg->protocol_type == ARP_PROTOCOL_TYPE) && (msg->sender_MAC_addrs != ARP_MAC_NULL) && (msg->sender_IP_addrs != ARP_IP_NULL)
-			&& (msg->target_IP_addrs != ARP_IP_NULL);
+	return (msg->hardware_type == ARP_HWD_TYPE) && (msg->operation == ARP_OP_REQUEST || msg->operation == ARP_OP_REPLY) && (msg->hardware_addrs_length
+			== ARP_HDW_ADDR_LEN) && (msg->protocol_addrs_length == ARP_PROTOCOL_ADDR_LEN) && (msg->protocol_type == ARP_PROTOCOL_TYPE)
+			&& (msg->sender_MAC_addrs != ARP_MAC_NULL) && (msg->sender_IP_addrs != ARP_IP_NULL) && (msg->target_IP_addrs != ARP_IP_NULL);
 }
 
 struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr) {
@@ -319,70 +314,6 @@ void request_list_free(struct arp_request_list *request_list) {
 	free(request_list);
 }
 
-void *arp_to_thread(void *local) {
-	struct arp_to_thread_data *to_data = (struct arp_to_thread_data *) local;
-	int id = to_data->id;
-	int fd = to_data->fd;
-	uint8_t *running = to_data->running;
-	uint8_t *flag = to_data->flag;
-	uint8_t *interrupt = to_data->interrupt;
-	free(to_data);
-
-	int ret;
-	uint64_t exp;
-
-	PRINT_DEBUG("Entered: id=%d, fd=%d", id, fd);
-	while (*running) {
-		/*#*/PRINT_DEBUG("");
-		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
-		if (!(*running)) {
-			break;
-		}
-		if (ret != sizeof(uint64_t)) {
-			//read error
-			PRINT_ERROR("Read error: id=%d, fd=%d", id, fd);
-			continue;
-		}
-
-		PRINT_DEBUG("Throwing TO flag: id=%d, fd=%d", id, fd);
-		*interrupt = 1;
-		*flag = 1;
-	}
-
-	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
-	pthread_exit(NULL);
-}
-
-void arp_stop_timer(int fd) {
-	PRINT_DEBUG("Entered: fd=%d", fd);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = 0;
-	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-
-void arp_start_timer(int fd, double millis) {
-	PRINT_DEBUG("Entered: fd=%d, m=%f", fd, millis);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = (long int) (millis / 1000);
-	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-
 struct arp_cache *cache_create(uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: ip=%u", ip_addr);
 
@@ -413,9 +344,9 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	cache->retries = 0;
 
 	//start timer thread
-	struct arp_to_thread_data *to_data = (struct arp_to_thread_data *) malloc(sizeof(struct arp_to_thread_data));
+	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
 	if (to_data == NULL) {
-		PRINT_ERROR("arp_to_thread_data alloc fail");
+		PRINT_ERROR("interrupt_to_thread_data alloc fail");
 		exit(-1);
 	}
 
@@ -425,8 +356,9 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	to_data->running = &cache->running_flag;
 	to_data->flag = &cache->to_flag;
 	to_data->interrupt = &arp_interrupt_flag;
-	if (pthread_create(&cache->to_thread, NULL, arp_to_thread, (void *) to_data)) {
-		PRINT_ERROR("ERROR: unable to create arp_to_thread thread.");
+	to_data->sem = arp_proto.event_sem;
+	if (pthread_create(&cache->to_thread, NULL, intsem_to_thread, (void *) to_data)) {
+		PRINT_ERROR("ERROR: unable to create interrupt_to_thread thread.");
 		exit(-1);
 	}
 
@@ -440,7 +372,7 @@ void cache_shutdown(struct arp_cache *cache) {
 	cache->running_flag = 0;
 
 	//stop threads
-	arp_start_timer(cache->to_fd, ARP_TO_MIN);
+	start_timer(cache->to_fd, ARP_TO_MIN);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -768,12 +700,16 @@ void arp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(&Switch_to_ARP_Qsem);
-		ff = read_queue(Switch_to_ARP_Queue);
-		sem_post(&Switch_to_ARP_Qsem);
-	} while (arp_running && ff == NULL && !arp_interrupt_flag); //TODO change logic here, combine with switch_to_arp?
+		sem_wait(arp_proto.event_sem);
+		sem_wait(arp_proto.input_sem);
+		ff = read_queue(arp_proto.input_queue);
+		sem_post(arp_proto.input_sem);
+	} while (arp_proto.running_flag && ff == NULL && !arp_interrupt_flag); //TODO change logic here, combine with switch_to_arp?
 
-	if (!arp_running) {
+	if (!arp_proto.running_flag) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
@@ -807,39 +743,49 @@ void arp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		//arp_read_param(ff);
 		//TODO read interface_mac?
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		//arp_set_param(ff);
 		//TODO set interface_mac?
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		break;
 	}
 }
@@ -855,7 +801,8 @@ void arp_exec(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id)
+			;
 
 			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == META_FALSE;
 			ret += metadata_readFromElement(params, "src_ip", &src_ip) == META_FALSE;
@@ -874,7 +821,8 @@ void arp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -908,27 +856,13 @@ void arp_interrupt(void) {
 
 /**@brief to be completed. A fins frame is written to the 'wire'*/
 int arp_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (sem_wait(&ARP_to_Switch_Qsem)) {
-		PRINT_ERROR("ARP_to_Switch_Qsem wait prob");
-		exit(-1);
-	}
-	if (write_queue(ff, ARP_to_Switch_Queue)) {
-		/*#*/PRINT_DEBUG("");
-		sem_post(&ARP_to_Switch_Qsem);
-		return 1;
-	}
-
-	PRINT_DEBUG("");
-	sem_post(&ARP_to_Switch_Qsem);
-
-	return 0;
+	return module_to_switch(&arp_proto, ff);
 }
 
 void *switch_to_arp(void *local) {
 	PRINT_DEBUG("Entered");
 
-	while (arp_running) {
+	while (arp_proto.running_flag) {
 		arp_get_ff();
 		PRINT_DEBUG("");
 		//	free(pff);
@@ -940,22 +874,16 @@ void *switch_to_arp(void *local) {
 
 void arp_init(void) {
 	PRINT_CRITICAL("Entered");
-	arp_running = 1;
+	arp_proto.running_flag = 1;
+
+	module_create_ops(&arp_proto);
+	module_register(&arp_proto);
 
 	interface_list = NULL;
 	interface_num = 0;
 
 	cache_list = NULL;
 	cache_num = 0;
-
-	//#############
-	//uint64_t MACADDRESS = 0x080027445566; //eth0, bridged
-
-	//uint32_t IPADDRESS = IP4_ADR_P2H(192, 168, 1, 20);/**<IP address of host; sent to the arp module*/
-	//uint32_t IPADDRESS = IP4_ADR_P2H(172,31,50,160);/**<IP address of host; sent to the arp module*/
-
-	//arp_register_interface(MACADDRESS, IPADDRESS);
-	//#############
 }
 
 void arp_run(pthread_attr_t *fins_pthread_attr) {
@@ -983,7 +911,8 @@ int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 
 void arp_shutdown(void) {
 	PRINT_CRITICAL("Entered");
-	arp_running = 0;
+	arp_proto.running_flag = 0;
+	sem_post(arp_proto.event_sem);
 
 	//TODO fill this out
 
@@ -993,6 +922,8 @@ void arp_shutdown(void) {
 
 void arp_release(void) {
 	PRINT_CRITICAL("Entered");
+
+	module_unregister(arp_proto.module_id);
 
 	//TODO free all module related mem
 
@@ -1012,6 +943,5 @@ void arp_release(void) {
 		cache_free(cache);
 	}
 
-	term_queue(ARP_to_Switch_Queue);
-	term_queue(Switch_to_ARP_Queue);
+	module_destroy_ops(&arp_proto);
 }

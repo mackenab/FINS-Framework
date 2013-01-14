@@ -6,44 +6,6 @@
 
 #include "tcp.h"
 
-void *tcp_to_write_thread(void *local) {
-	struct tcp_to_thread_data *to_data = (struct tcp_to_thread_data *) local;
-	int id = to_data->id;
-	int fd = to_data->fd;
-	uint8_t *running = to_data->running;
-	uint8_t *flag = to_data->flag;
-	uint8_t *interrupt = to_data->waiting;
-	sem_t *sem = to_data->sem;
-	free(to_data);
-
-	int ret;
-	uint64_t exp;
-
-	PRINT_DEBUG("Entered: id=%u, fd=%d", id, fd);
-	while (*running) {
-		/*#*/PRINT_DEBUG("");
-		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
-		if (!(*running)) {
-			break;
-		}
-		if (ret != sizeof(uint64_t)) {
-			//read error
-			PRINT_ERROR("Read error: id=%u, fd=%d", id, fd);
-			continue;
-		}
-
-		PRINT_DEBUG("throwing flag: id=%u, fd=%d", id, fd);
-		*interrupt = 1;
-		*flag = 1;
-
-		PRINT_DEBUG("posting to wait_sem");
-		sem_post(sem);
-	}
-
-	PRINT_DEBUG("Exited: id=%u, fd=%d", id, fd);
-	pthread_exit(NULL);
-}
-
 void *write_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
@@ -119,7 +81,7 @@ void *write_thread(void *local) {
 				request->to_running = 1;
 				request->to_flag = 0;
 
-				struct tcp_to_thread_data *to_write_data = (struct tcp_to_thread_data *) malloc(sizeof(struct tcp_to_thread_data));
+				struct intsem_to_thread_data *to_write_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
 				if (to_write_data == NULL) {
 					PRINT_ERROR("alloc error.");
 					exit(-1);
@@ -129,15 +91,15 @@ void *write_thread(void *local) {
 				to_write_data->fd = request->to_fd;
 				to_write_data->running = &request->to_running;
 				to_write_data->flag = &request->to_flag;
-				to_write_data->waiting = &conn->request_interrupt;
+				to_write_data->interrupt = &conn->request_interrupt;
 				to_write_data->sem = &conn->main_wait_sem;
 
 				PRINT_DEBUG("to_write: conn=%p, id=%u, to_fd=%d", conn, to_write_data->id, to_write_data->fd);
-				if (pthread_create(&request->to_thread, NULL, tcp_to_write_thread, (void *) to_write_data)) {
+				if (pthread_create(&request->to_thread, NULL, intsem_to_thread, (void *) to_write_data)) {
 					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
 					exit(-1);
 				}
-				tcp_start_timer(request->to_fd, TCP_BLOCK_DEFAULT);
+				start_timer(request->to_fd, TCP_BLOCK_DEFAULT);
 			} else {
 				PRINT_DEBUG("blocking");
 
@@ -626,7 +588,7 @@ void *accept_thread(void *local) { //this will need to be changed
 							seg_send(temp_seg);
 							seg_free(temp_seg);
 
-							tcp_start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
+							start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
 							conn->to_gbn_flag = 0;
 						} else {
 							PRINT_ERROR("todo error");

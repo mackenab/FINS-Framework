@@ -113,6 +113,16 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	memcpy(ff->dataFrame.pdu, ppacket, IP4_MIN_HLEN);
 	memcpy(ff->dataFrame.pdu + IP4_MIN_HLEN, pdu, length);
 
+	uint64_t src_mac = 0x001d09b35512ull;
+	uint64_t dst_mac = 0xf46d0449baddull; //jreed HAF-reed
+	//uint64_t dst_mac = 0xa021b7710c87ull; //jreed home wifi
+	uint32_t ether_type = IP4_ETH_TYPE;
+	metadata_writeToElement(ff->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
+	metadata_writeToElement(ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+	metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
+	ipv4_to_switch(ff);
+
+	/*
 	if (store_list_has_space()) {
 		metadata *params = (metadata *) malloc(sizeof(metadata));
 		if (params == NULL) {
@@ -160,22 +170,5 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 		//TODO expand store space? remove first stored packet, send error message, & store new packet?
 		//free(pdu);
 	}
-}
-
-int ipv4_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (sem_wait(&IPv4_to_Switch_Qsem)) {
-		PRINT_ERROR("Interface_to_Switch_Qsem wait prob");
-		exit(-1);
-	}
-	if (write_queue(ff, IPv4_to_Switch_Queue)) {
-		/*#*/PRINT_DEBUG("");
-		sem_post(&IPv4_to_Switch_Qsem);
-		return 1;
-	}
-
-	PRINT_DEBUG("");
-	sem_post(&IPv4_to_Switch_Qsem);
-
-	return 0;
+	*/
 }

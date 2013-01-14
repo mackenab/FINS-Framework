@@ -69,6 +69,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 	/** constructs the UDP packet from the FDF and the meta data */
 
 	//#########################
+#ifdef DEBUG
 	if (1) {
 		uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, pdu, ff->dataFrame.pduLength);
@@ -76,6 +77,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 		PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
 		free(temp);
 	}
+#endif
 	//#########################
 
 	uint32_t dst_port;

@@ -134,11 +134,13 @@ void udp_in_fdf(struct finsFrame* ff) {
 	ff->dataFrame.pdu = data;
 
 	//#########################
+#ifdef DEBUG
 	uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
 	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	temp[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
 	free(temp);
+#endif
 	//#########################
 
 	ff->destinationID.id = DAEMON_ID;

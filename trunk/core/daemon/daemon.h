@@ -45,6 +45,10 @@
 #include <finsdebug.h>
 /** Additional header for meta-data manipulation */
 #include <metadata.h>
+#include <finstime.h>
+#include <finstypes.h>
+//#include <swito.h>
+
 //#include "arp.c"
 
 /** FINS Sockets database related defined constants */
@@ -222,17 +226,6 @@ uint32_t loopback_ip_addr;
 uint32_t loopback_mask;
 uint32_t any_ip_addr;
 
-struct daemon_to_thread_data {
-	int id;
-	int fd;
-	uint8_t *running;
-	uint8_t *flag;
-	uint8_t *interrupt;
-};
-
-void daemon_stop_timer(int fd);
-void daemon_start_timer(int fd, double millis);
-
 struct nl_wedge_to_daemon {
 	uint64_t sock_id;
 	int sock_index;
@@ -381,7 +374,6 @@ int randoming(int min, int max);
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//8192 //Pick an appropriate value here
-
 int init_fins_nl(void);
 int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags);
 int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
@@ -422,6 +414,8 @@ void daemon_shutdown(void);
 void daemon_release(void);
 
 int daemon_to_switch(struct finsFrame *ff);
+int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
+int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *params);
 
 void daemon_get_ff(void);
 
@@ -438,25 +432,25 @@ void daemon_out_fdf(struct finsFrame *ff);
 void daemon_interrupt(void);
 
 //TODO standardize these, so that there aren't different ones for each proto
-#define EXEC_TCP_CONNECT 0
-#define EXEC_TCP_LISTEN 1
-#define EXEC_TCP_ACCEPT 2
-#define EXEC_TCP_SEND 3
-#define EXEC_TCP_RECV 4
-#define EXEC_TCP_CLOSE 5
-#define EXEC_TCP_CLOSE_STUB 6
-#define EXEC_TCP_OPT 7
-#define EXEC_TCP_POLL 8
-#define EXEC_TCP_POLL_POST 9
+//#define EXEC_TCP_CONNECT 0
+//#define EXEC_TCP_LISTEN 1
+//#define EXEC_TCP_ACCEPT 2
+//#define EXEC_TCP_SEND 3
+//#define EXEC_TCP_RECV 4
+//#define EXEC_TCP_CLOSE 5
+//#define EXEC_TCP_CLOSE_STUB 6
+//#define EXEC_TCP_OPT 7
+//#define EXEC_TCP_POLL 8
+#define EXEC_TCP_POLL_POST 9 //only one that's used in daemon.c
 
-#define ERROR_ICMP_TTL 0
-#define ERROR_ICMP_DEST_UNREACH 1
+//TODO not used? what are these for in this module file?
+//#define ERROR_ICMP_TTL 0
+//#define ERROR_ICMP_DEST_UNREACH 1
 
 struct errhdr {
 	struct sock_extended_err ee;
 	struct sockaddr_in offender;
 };
-
 
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM

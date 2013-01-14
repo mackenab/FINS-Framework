@@ -13,28 +13,6 @@
 #include <metadata.h>
 #include "arp.h"
 
-double arp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
-	double decimal = 0, diff = 0;
-
-	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
-
-	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
-
-	if (time1->tv_usec > time2->tv_usec) {
-		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec - 1.0;
-	} else {
-		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec;
-	}
-	diff += decimal;
-
-	diff *= 1000.0;
-
-	PRINT_DEBUG("diff=%f", diff);
-	return diff;
-}
-
 void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 	struct arp_interface *interface;
 	struct arp_cache *cache;
@@ -92,7 +70,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					struct timeval current;
 					gettimeofday(&current, 0);
 
-					if (arp_time_diff(&cache->updated_stamp, &current) <= ARP_CACHE_TO_DEFAULT) {
+					if (time_diff(&cache->updated_stamp, &current) <= ARP_CACHE_TO_DEFAULT) {
 						PRINT_DEBUG("up to date cache: cache=%p", cache);
 
 						metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
@@ -115,7 +93,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							cache->retries = 0;
 
 							gettimeofday(&cache->updated_stamp, 0); //TODO use this value as start of seeking
-							arp_start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
+							start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
 
 							struct arp_request *request = request_create(ff, src_mac, src_ip);
 							if (request_list_has_space(cache->request_list)) {
@@ -199,7 +177,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					cache->retries = 0;
 
 					gettimeofday(&cache->updated_stamp, 0);
-					arp_start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
+					start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
 
 					struct arp_request *request = request_create(ff, src_mac, src_ip);
 					request_list_append(cache->request_list, request);
@@ -266,7 +244,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 					if (cache) {
 						if (cache->seeking) {
 							PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
-							arp_stop_timer(cache->to_fd);
+							stop_timer(cache->to_fd);
 							cache->to_flag = 0;
 							gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
 
@@ -346,7 +324,7 @@ void arp_handle_to(struct arp_cache *cache) {
 					cache->retries++;
 
 					//gettimeofday(&cache->updated_stamp, 0);
-					arp_start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
+					start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
 				} else {
 					PRINT_ERROR("todo error");
 					freeFinsFrame(ff_req);

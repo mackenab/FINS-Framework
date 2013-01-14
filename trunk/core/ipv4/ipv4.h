@@ -237,7 +237,6 @@ void store_list_remove(struct ip4_store *store);
 int store_list_is_empty(void);
 int store_list_has_space(void);
 
-int ipv4_running; //TODO move to ipv4.c
 pthread_t switch_to_ipv4_thread;
 
 void ipv4_init(void);
@@ -245,8 +244,8 @@ void ipv4_run(pthread_attr_t *fins_pthread_attr);
 void ipv4_shutdown(void);
 void ipv4_release(void);
 
-void set_interface(uint32_t IP_address, uint32_t mask);
-void set_loopback(uint32_t IP_address, uint32_t mask);
+void ipv4_set_interface(uint32_t IP_address, uint32_t mask);
+void ipv4_set_loopback(uint32_t IP_address, uint32_t mask);
 
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);
 uint16_t IP4_checksum(struct ip4_packet* ptr, int length);

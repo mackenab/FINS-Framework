@@ -98,33 +98,12 @@ void termination_handler(int sig) {
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
-double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
-	double decimal = 0, diff = 0;
-
-	PRINT_DEBUG("Entered: time1=%p, time2=%p\n", time1, time2);
-
-	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
-
-	if (time1->tv_usec > time2->tv_usec) {
-		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec - 1.0;
-	} else {
-		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec;
-	}
-	diff += decimal;
-
-	diff *= 1000.0;
-
-	PRINT_DEBUG("diff=%f\n", diff);
-	return diff;
-}
-
 int main() {
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
-	//my_host_mac_addr = 0x080027445566ull;
-	my_host_mac_addr = 0x001d09b35512ull;
+	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
+	my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
+	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
 	my_host_mask = IP4_ADR_P2H(255,255,255,0);
 
@@ -150,8 +129,8 @@ int main() {
 	arp_register_interface(my_host_mac_addr, my_host_ip_addr);
 
 	ipv4_init();
-	set_interface(my_host_ip_addr, my_host_mask);
-	set_loopback(loopback_ip_addr, loopback_mask);
+	ipv4_set_interface(my_host_ip_addr, my_host_mask);
+	ipv4_set_loopback(loopback_ip_addr, loopback_mask);
 
 	icmp_init();
 	tcp_init();
@@ -232,7 +211,7 @@ int main() {
 			struct timeval start, end;
 			gettimeofday(&start, 0);
 
-			int its = 10000;
+			int its = 30000;
 			int len = 1000;
 
 			int i = 0;
@@ -253,7 +232,7 @@ int main() {
 
 				uint32_t host_ip = IP4_ADR_P2H(192, 168, 1, 20);
 				uint32_t host_port = 55454;
-				uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 7);
+				uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 6);
 				uint32_t dst_port = 44444;
 				uint32_t ttl = 64;
 				uint32_t tos = 64;
@@ -265,7 +244,7 @@ int main() {
 				metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
 				metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
 
-				if (daemon_fdf_to_udp(data, len, params)) {
+				if (daemon_fdf_to_switch(UDP_ID, data, len, params)) {
 					i++;
 				} else {
 					PRINT_ERROR("error sending");
@@ -275,9 +254,11 @@ int main() {
 				}
 			}
 
+			//struct timeval start, end;
+			//gettimeofday(&start, 0);
 			gettimeofday(&end, 0);
 			double diff = time_diff(&start, &end);
-			PRINT_CRITICAL("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 1000/(diff/its)*len);
+			PRINT_CRITICAL("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
 		}
 	}
 	//#############################

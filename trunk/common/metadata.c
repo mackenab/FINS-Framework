@@ -16,7 +16,7 @@
  {
 
 
- metadata cfg, *cfgptr;
+ metadata cfg, *params;
  metadata_element *ethernet, *network;
 
  int l=45454;
@@ -24,40 +24,40 @@
  lolo = (char *)malloc(10);
  strcpy(lolo,"lolo");
 
- cfgptr=&cfg;
- metadata_create(cfgptr);
- //cfgptr = metadata_create2();
+ params=&cfg;
+ metadata_create(params);
+ //params = metadata_create2();
 
 
- ethernet = metadata_add(cfgptr,"ethernet",META_TYPE_INT32);
- network = metadata_add(cfgptr, "network", META_TYPE_STRING);
+ ethernet = metadata_add(params,"ethernet",META_TYPE_INT32);
+ network = metadata_add(params, "network", META_TYPE_STRING);
 
- metadata_write(cfgptr,"ethernet",&l,META_TYPE_INT32);
+ metadata_write(params,"ethernet",&l,META_TYPE_INT32);
  metadata_set_element(network,lolo);
 
- metadata_write(cfgptr,"transport",lolo, META_TYPE_STRING);
+ metadata_write(params,"transport",lolo, META_TYPE_STRING);
 
- metadata_print(cfgptr);
+ metadata_print(params);
 
- metadata_destroy(cfgptr);
+ metadata_destroy(params);
  return 1;
  }
 
  */
 
-void metadata_create(metadata *mptr) {
+void metadata_create(metadata *params) {
 
-	PRINT_DEBUG("Entered: meta=%p", mptr);
-	config_init(mptr);
+	PRINT_DEBUG("Entered: meta=%p", params);
+	config_init(params);
 
 }
 
-void metadata_destroy(metadata *metadata) {
-	PRINT_DEBUG("Entered: meta=%p", metadata);
+void metadata_destroy(metadata *params) {
+	PRINT_DEBUG("Entered: meta=%p", params);
 
-	if (metadata) {
-		config_destroy(metadata);
-		free(metadata);
+	if (params) {
+		config_destroy(params);
+		free(params);
 	}
 }
 
@@ -65,17 +65,17 @@ void metadata_destroy(metadata *metadata) {
  * returns the reading status FALSE/ TRUE
  */
 
-int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) {
+int metadata_readFromElement(metadata *params, const char *target, void *value) {
 
 	metadata_element *root, *handle;
 	int status;
 
-	root = config_root_setting(cfgptr);
+	root = config_root_setting(params);
 	handle = config_setting_get_member(root, target);
 	if (handle == NULL) {
 		//PRINT_DEBUG("%s is not found in the metadata", target);
 		status = META_FALSE;
-		PRINT_DEBUG("meta=%p, '%s', %d", cfgptr, target, status);
+		PRINT_DEBUG("meta=%p, '%s', %d", params, target, status);
 
 	} else {
 		switch (config_setting_type(handle)) {
@@ -94,7 +94,7 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
 			break;
 
 		}
-		PRINT_DEBUG("meta=%p, '%s', %d", cfgptr, target, status);
+		PRINT_DEBUG("meta=%p, '%s', %d", params, target, status);
 	}
 
 	return (status);
@@ -105,11 +105,11 @@ int metadata_readFromElement(metadata *cfgptr, const char *target, void *value) 
  * if it does not exist, it creates the element and set its value
  * if it already exists , it sets its value only
  */
-int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int type) {
+int metadata_writeToElement(metadata *params, char *target, void *value, int type) {
 
 	int status;
 	metadata_element *root, *handle;
-	root = config_root_setting(cfgptr);
+	root = config_root_setting(params);
 
 	switch (type) {
 	case META_TYPE_INT32:
@@ -139,7 +139,7 @@ int metadata_writeToElement(metadata *cfgptr, char *target, void *value, int typ
 		break;
 	}
 
-	PRINT_DEBUG("meta=%p, '%s', %d", cfgptr, target, status);
+	PRINT_DEBUG("meta=%p, '%s', %d", params, target, status);
 	return (status);
 }
 
@@ -175,9 +175,9 @@ int metadata_setElement(metadata_element *element, void *value) {
  * it returns a pointer to that new added element
  */
 
-metadata_element *metadata_addElement(metadata *cfgptr, char *elementName, int type) {
+metadata_element *metadata_addElement(metadata *params, char *elementName, int type) {
 	metadata_element *root;
-	root = config_root_setting(cfgptr);
+	root = config_root_setting(params);
 	return (config_setting_add(root, elementName, type));
 
 }
@@ -188,7 +188,7 @@ metadata_element *metadata_addElement(metadata *cfgptr, char *elementName, int t
  * It returns the number of printed items
  */
 
-int metadata_print(metadata *cfgptr) {
+int metadata_print(metadata *params) {
 
 	metadata_element *root, *handle;
 	int howManySettings;
@@ -199,7 +199,7 @@ int metadata_print(metadata *cfgptr) {
 	char *stringValue;
 	char *name;
 
-	root = config_root_setting(cfgptr);
+	root = config_root_setting(params);
 	howManySettings = config_setting_length(root);
 
 	for (i = 0; i < howManySettings; i++) {
@@ -213,17 +213,17 @@ int metadata_print(metadata *cfgptr) {
 		case CONFIG_TYPE_INT:
 			value = config_setting_get_int(handle);
 			//PRINT_DEBUG("%d", value);
-			PRINT_DEBUG("meta=%p, '%s'=%d", cfgptr, name, value);
+			PRINT_DEBUG("meta=%p, '%s'=%d", params, name, value);
 			break;
 		case CONFIG_TYPE_INT64:
 			val64 = config_setting_get_int64(handle);
 			//PRINT_DEBUG("%lld", val64);
-			PRINT_DEBUG("meta=%p, '%s'=%lld", cfgptr, name, val64);
+			PRINT_DEBUG("meta=%p, '%s'=%lld", params, name, val64);
 			break;
 		case CONFIG_TYPE_STRING:
 			stringValue = (char *) config_setting_get_string(handle);
 			//PRINT_DEBUG("%s", stringValue);
-			PRINT_DEBUG("meta=%p, '%s'='%s'", cfgptr, name, stringValue);
+			PRINT_DEBUG("meta=%p, '%s'='%s'", params, name, stringValue);
 			break;
 		default:
 			PRINT_ERROR(" wrong type found");
@@ -234,11 +234,11 @@ int metadata_print(metadata *cfgptr) {
 	return (i);
 }
 
-int metadata_copy(metadata *cfgptr, metadata *cfgptr_copy) {
-	PRINT_DEBUG("Entered: meta=%p, meta_copy=%p", cfgptr, cfgptr_copy);
+int metadata_copy(metadata *params, metadata *params_copy) {
+	PRINT_DEBUG("Entered: meta=%p, meta_copy=%p", params, params_copy);
 
-	metadata_element *root = config_root_setting(cfgptr);
-	metadata_element *root_copy = config_root_setting(cfgptr_copy);
+	metadata_element *root = config_root_setting(params);
+	metadata_element *root_copy = config_root_setting(params_copy);
 
 	int num_settings = config_setting_length(root);
 	int status;
@@ -289,26 +289,26 @@ int metadata_copy(metadata *cfgptr, metadata *cfgptr_copy) {
 			status = META_FALSE;
 			break;
 		}
-		PRINT_DEBUG("meta=%p, '%s', %d", cfgptr_copy, target, status);
+		PRINT_DEBUG("meta=%p, '%s', %d", params_copy, target, status);
 		total += (status == CONFIG_TRUE);
 	}
 
 	return total == num_settings;
 }
 
-metadata *metadata_clone(metadata *cfgptr) {
-	PRINT_DEBUG("Entered: meta=%p", cfgptr);
+metadata *metadata_clone(metadata *params) {
+	PRINT_DEBUG("Entered: meta=%p", params);
 
-	metadata *cfgptr_clone = (metadata *) malloc(sizeof(metadata));
-	if (cfgptr_clone == NULL) {
-		PRINT_ERROR("failed to create matadata: meta=%p", cfgptr);
+	metadata *params_clone = (metadata *) malloc(sizeof(metadata));
+	if (params_clone == NULL) {
+		PRINT_ERROR("failed to create matadata: meta=%p", params);
 		exit(-1);
 	}
-	metadata_create(cfgptr_clone);
+	metadata_create(params_clone);
 
-	metadata_copy(cfgptr, cfgptr_clone);
+	metadata_copy(params, params_clone);
 
-	return cfgptr_clone;
+	return params_clone;
 }
 
 /*---------------------------------------------------------------
@@ -316,7 +316,7 @@ metadata *metadata_clone(metadata *cfgptr) {
  * */
 
 /*
- void *metadata_read(metadata *cfgptr,char *target)
+ void *metadata_read(metadata *params,char *target)
  {
 
  config_setting_t *root, *ethernet, *network, *transport,*socket,*handle;
@@ -328,7 +328,7 @@ metadata *metadata_clone(metadata *cfgptr) {
  char *stringValue;
  char *name;
 
- root=config_root_setting(cfgptr);
+ root=config_root_setting(params);
  howManySettings= config_setting_length(root);
 
  for (i=0; i< howManySettings; i++)

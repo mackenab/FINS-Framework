@@ -8,11 +8,8 @@
 #include "ipv4.h"
 #include <queueModule.h>
 
-sem_t IPv4_to_Switch_Qsem;
-finsQueue IPv4_to_Switch_Queue;
-
-sem_t Switch_to_IPv4_Qsem;
-finsQueue Switch_to_IPv4_Queue;
+#include <swito.h>
+struct fins_proto_module ipv4_proto = { .module_id = IP_ID, .name = "ipv4", .running_flag = 1, }; //TODO make static?
 
 IP4addr my_ip_addr;
 IP4addr my_mask;
@@ -32,10 +29,14 @@ struct ip4_stats stats;
 struct ip4_store *store_list;
 uint32_t store_num;
 
+int ipv4_to_switch(struct finsFrame *ff) {
+	return module_to_switch(&ipv4_proto, ff);
+}
+
 void *switch_to_ipv4(void *local) {
 	PRINT_DEBUG("Entered");
 
-	while (ipv4_running) {
+	while (ipv4_proto.running_flag) {
 		IP4_receive_fdf();
 		PRINT_DEBUG("");
 	}
@@ -149,7 +150,10 @@ int store_list_has_space(void) {
 
 void ipv4_init(void) {
 	PRINT_CRITICAL("Entered");
-	ipv4_running = 1;
+	ipv4_proto.running_flag = 1;
+
+	module_create_ops(&ipv4_proto);
+	module_register(&ipv4_proto);
 
 	store_list = NULL;
 	store_num = 0;
@@ -171,12 +175,12 @@ void ipv4_init(void) {
 #endif
 }
 
-void set_interface(uint32_t IP_address, uint32_t mask) {
+void ipv4_set_interface(uint32_t IP_address, uint32_t mask) {
 	my_ip_addr = IP_address;
 	my_mask = mask;
 }
 
-void set_loopback(uint32_t IP_address, uint32_t mask) {
+void ipv4_set_loopback(uint32_t IP_address, uint32_t mask) {
 	loopback = IP_address;
 	loopback_mask = mask;
 }
@@ -189,7 +193,8 @@ void ipv4_run(pthread_attr_t *fins_pthread_attr) {
 
 void ipv4_shutdown(void) {
 	PRINT_CRITICAL("Entered");
-	ipv4_running = 0;
+	ipv4_proto.running_flag = 0;
+	sem_post(ipv4_proto.event_sem);
 
 	//TODO expand this
 
@@ -199,6 +204,7 @@ void ipv4_shutdown(void) {
 
 void ipv4_release(void) {
 	PRINT_CRITICAL("Entered");
+	module_unregister(ipv4_proto.module_id);
 
 	//TODO free all module related mem
 
@@ -217,6 +223,5 @@ void ipv4_release(void) {
 		free(table);
 	}
 
-	term_queue(IPv4_to_Switch_Queue); //TODO uncomment
-	term_queue(Switch_to_IPv4_Queue);
+	module_destroy_ops(&ipv4_proto);
 }

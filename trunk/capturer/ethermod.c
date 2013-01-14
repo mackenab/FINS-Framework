@@ -111,7 +111,7 @@ int main() {
 	//^^^^^END^^^^^ !!!!!	
 
 	fflush(stdout);
-	pid_t pID;
+	pid_t pID = 0;
 	char device[20];
 	//strcpy(device, "lo");
 	strcpy(device, "eth0");
@@ -125,30 +125,16 @@ int main() {
 	 */
 	pID = fork();
 
-	if (pID == 0) // child -- Capture process
-
-			{
-
+	if (pID == 0) { // child -- Capture process
 		// Code only executed by child process
 		PRINT_DEBUG("child started to capture \n");
 		//sleep(2);
 
 		capture_init(device);
-
-	}
-
-	else if (pID < 0) // failed to fork
-
-			{
-
+	} else if (pID < 0) { // failed to fork
 		PRINT_DEBUG("Failed to Fork \n");
 		exit(1);
-
-	}
-
-	else // parent
-
-	{
+	} else { // parent
 		// Code only executed by parent process
 
 		/** inject handler is supposed to be initialized earlier to make sure that forwarding
@@ -158,11 +144,6 @@ int main() {
 		 */
 		PRINT_DEBUG("parent started to Inject \n");
 		inject_init(device);
-		//char device2[] = "eth0";
-		//capture_init(device2);
-
-		// 	while (1);
-
 	}
 
 	/**

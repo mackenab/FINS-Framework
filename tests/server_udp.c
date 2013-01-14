@@ -33,6 +33,29 @@
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
+double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
+	double decimal = 0, diff = 0;
+
+	//printf("Entered: time1=%p, time2=%p\n", time1, time2);
+
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+
+	if (time1->tv_usec > time2->tv_usec) {
+		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec - 1.0;
+	} else {
+		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec;
+	}
+	diff += decimal;
+
+	diff *= 1000.0;
+
+	//printf("diff=%f\n", diff);
+	return diff;
+}
+
+
 int i = 0;
 
 void termination_handler(int sig) {
@@ -69,8 +92,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
@@ -138,9 +161,9 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	int temp = fds[1].events;
-	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)",
-			(temp & POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0,
-			(temp & POLLRDNORM) > 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
+	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)", (temp
+			& POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0, (temp & POLLRDNORM)
+			> 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
 
 	struct timeval tv;
 
@@ -170,7 +193,7 @@ int main(int argc, char *argv[]) {
 		//while (1);
 	}
 
-	if (pID != 0 || 1) {
+	if (0) {
 		j = 0;
 		int k = 0;
 		while (1) {
@@ -183,10 +206,9 @@ int main(int argc, char *argv[]) {
 				if (0) {
 					printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 					printf("\n POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d ",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
-							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-							(fds[ret].revents & POLLWRBAND) > 0);
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR)
+									> 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
+							(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 					fflush(stdout);
 				}
 
@@ -217,7 +239,8 @@ int main(int argc, char *argv[]) {
 			j++;
 			//break;
 		}
-	} else {
+	}
+	if (0) {
 		i = 0;
 		while (1) {
 			//printf("\n pID=%d recvfrom before", pID);
@@ -243,6 +266,50 @@ int main(int argc, char *argv[]) {
 				fflush(stdout);
 				break;
 			}
+		}
+	}
+
+	if (1) {
+		struct timeval start, end;
+		int its = 10000;
+		//len = 1000;
+
+		int data_len = 1000;
+		while (data_len < 4000) {
+			//data_len += 100;
+			//data_len = 1000;
+
+			int total_bytes = 0;
+			double total_time = 0;
+			int total_success = 0;
+			double diff;
+
+			int i = 0;
+			while (i < its) {
+				i++;
+
+				gettimeofday(&start, 0);
+				//numbytes = sendto(sock, send_data, data_len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+				bytes_read = recvfrom(sock, recv_data, 2000, 0, (struct sockaddr *) client_addr, &addr_len);
+				gettimeofday(&end, 0);
+				diff = time_diff(&start, &end);
+
+				if (bytes_read > 0) {
+					total_success++;
+					total_bytes += bytes_read;
+					total_time += diff;
+				} else {
+					perror("error");
+				}
+			}
+
+			//printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
+			printf("\n len=%d, time=%f, suc=%d, bytes=%d, avg=%f ms, eff=%f, thr=%f, calls=%f, act=%f", data_len, total_time, total_success, total_bytes,
+					total_time / total_success, total_success / (double) its, total_bytes / (double) its / data_len, 1000 / (total_time / total_success), 1000
+							/ (total_time / total_success) * data_len * 8);
+			fflush(stdout);
+
+			sleep(5);
 		}
 	}
 

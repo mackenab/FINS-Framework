@@ -22,7 +22,7 @@
 
 extern struct udp_statistics udpStat;
 
-struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t* PDU, metadata *meta) {
+struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t* PDU, metadata *params) {
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	char *data;
 	data = (char *) malloc(PDU_length);
@@ -36,7 +36,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 		ff->dataFrame.directionFlag = direction;
 		ff->dataFrame.pduLength = PDU_length;
 		ff->dataFrame.pdu = (u_char *)data;
-		ff->metaData = meta;
+		ff->metaData = params;
 		//	memcpy(&ff.metaData, metadata, MAX_METADATASIZE);
 	}
 
@@ -45,7 +45,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 		ff->destinationID.id = destID;
 
 		ff->destinationID.next = NULL;
-		ff->metaData = meta;
+		ff->metaData = params;
 		// fill the important FCF data in here
 	}
 	//print_finsFrame(ff);

@@ -28,6 +28,7 @@
 
 #include <finsdebug.h>
 #include <finstypes.h>
+#include <finstime.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.
@@ -405,9 +406,6 @@ void conn_list_remove(struct tcp_connection *conn);
 int conn_list_is_empty(void);
 int conn_list_has_space(void);
 
-void tcp_start_timer(int fd, double millis);
-void tcp_stop_timer(int fd);
-
 //Object for TCP segments all values are in host format
 struct tcp_segment {
 	uint16_t src_port; //Source port
@@ -462,15 +460,6 @@ struct tcp_thread_data {
 	uint32_t flags;
 	uint32_t serial_num;
 	struct finsFrame *ff;
-};
-
-struct tcp_to_thread_data {
-	uint32_t id;
-	int fd;
-	uint8_t *running;
-	uint8_t *flag;
-	uint8_t *waiting;
-	sem_t *sem;
 };
 
 //General functions for dealing with the incoming and outgoing frames

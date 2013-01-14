@@ -370,18 +370,21 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 	int ret_val;
 
 	//#################### Debug
+#ifdef DEBUG
 	u_char *print_buf;
 	u_char *print_pt;
 	u_char *pt;
 	int i;
+#endif
 	//####################
 
 
 	PRINT_DEBUG("Entered: pid=%d, seq=%d, type=%d, len=%d", pid, seq, type, len);
 
 	//####################
+#ifdef DEBUG
 	if (0) {
-		print_buf = (u_char *) kmalloc(5 * len, GFP_KERNEL);
+		print_buf = (u_char *) kmalloc(3 * len+1, GFP_KERNEL);
 		if (print_buf == NULL) {
 			PRINT_ERROR("print_buf allocation fail");
 		} else {
@@ -399,10 +402,12 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 					print_pt += 3;
 				}
 			}
+			*print_pt = '\0';
 			PRINT_DEBUG("buf='%s'", print_buf);
 			kfree(print_buf);
 		}
 	}
+#endif
 	//####################
 
 	// Allocate a new netlink message
@@ -448,10 +453,12 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	ssize_t part_len;
 
 	//#################### Debug
+#ifdef DEBUG
 	u_char *print_buf;
 	u_char *print_pt;
 	u_char *pt;
 	int i;
+#endif
 	//####################
 
 	PRINT_DEBUG("Entered: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x", pid, msg_buf, msg_len, flags);
@@ -461,8 +468,9 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	}
 
 	//#################### Debug
+#ifdef DEBUG
 	if (0) {
-		print_buf = (u_char *) kmalloc(5 * msg_len, GFP_KERNEL);
+		print_buf = (u_char *) kmalloc(3 * msg_len+1, GFP_KERNEL);
 		if (print_buf == NULL) {
 			PRINT_ERROR("print_buf allocation fail");
 		} else {
@@ -480,10 +488,12 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 					print_pt += 3;
 				}
 			}
+			*print_pt = '\0';
 			PRINT_DEBUG("msg_buf='%s'", print_buf);
 			kfree(print_buf);
 		}
 	}
+#endif
 	//####################
 
 	part_buf = (u_char *) kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
@@ -509,13 +519,11 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	*(ssize_t *) hdr_part_len = part_len;
 
 	while (msg_len - pos > part_len) {
-		PRINT_DEBUG("pos=%d", pos);
+		PRINT_DEBUG("pos=%d, seq=%d", pos, seq);
 
 		*(int *) hdr_pos = pos;
 
 		memcpy(msg_start, msg_pt, part_len);
-
-		PRINT_DEBUG("seq=%d", seq);
 
 		ret = nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
 		if (ret < 0) {
@@ -530,6 +538,8 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 		pos += part_len;
 		seq++;
 	}
+
+	PRINT_DEBUG("pos=%d, seq=%d", pos, seq);
 
 	part_len = msg_len - pos;
 	*(ssize_t *) hdr_part_len = part_len;
@@ -2114,10 +2124,13 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 				if (buf_len >= 0) {
 					//########
+#ifdef DEBUG
 					u_char *temp = (u_char *) kmalloc(buf_len + 1, GFP_KERNEL);
 					memcpy(temp, pt, buf_len);
 					temp[buf_len] = '\0';
 					PRINT_DEBUG("msg='%s'", temp);
+					kfree(temp);
+#endif
 					//########
 
 					ret = buf_len; //reuse as counter

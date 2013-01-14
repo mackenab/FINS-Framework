@@ -95,7 +95,7 @@ CAPTURER_INC = -I. -I$(FINS_ROOT_DIR)/trunk/common
 FINS_CORE_INC = -I. $(foreach module, $(CORE_MODULE_LIST), $(addprefix -I, $(module))) -I$(FINS_ROOT_DIR)/trunk/common
 
 #These are includes specifically for each module in the FINS core
-CORE_MODULES_INC = -I. -I.. -I../data_structure -I$(FINS_ROOT_DIR)/trunk/common
+CORE_MODULES_INC = -I. -I.. -I../data_structure -I../switch -I$(FINS_ROOT_DIR)/trunk/common
 
 #These are includes specifically for the Kernel Wedge
 WEDGE_INC = 

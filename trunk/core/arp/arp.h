@@ -8,9 +8,7 @@
 #define ARP_H_
 
 #include <inttypes.h>
-#include <finstypes.h>
 #include <metadata.h>
-#include <finsdebug.h>
 #include <stdint.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
@@ -18,6 +16,10 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <queueModule.h>
+
+#include <finsdebug.h>
+#include <finstypes.h>
+#include <finstime.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
@@ -113,7 +115,7 @@ struct arp_request_list {
 	struct arp_request *end;
 };
 
-#define ARP_REQUEST_LIST_MAX 65536
+#define ARP_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
 
 struct arp_request_list *request_list_create(uint32_t max);
 void request_list_append(struct arp_request_list *request_list, struct arp_request *request);
@@ -122,17 +124,6 @@ struct arp_request *request_list_remove_front(struct arp_request_list *request_l
 int request_list_is_empty(struct arp_request_list *request_list);
 int request_list_has_space(struct arp_request_list *request_list);
 void request_list_free(struct arp_request_list *request_list);
-
-struct arp_to_thread_data {
-	int id;
-	int fd;
-	uint8_t *running;
-	uint8_t *flag;
-	uint8_t *interrupt;
-};
-
-void arp_stop_timer(int fd);
-void arp_start_timer(int fd, double millis);
 
 /**This struct is used to store information about neighboring nodes of the host interface*/
 struct arp_cache {

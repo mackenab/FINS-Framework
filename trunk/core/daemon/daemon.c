@@ -10,16 +10,12 @@
  */
 
 #include "daemon.h"
+#include <swito.h>
 
-int daemon_running;
+static struct fins_proto_module daemon_proto = { .module_id = DAEMON_ID, .name = "daemon", .running_flag = 1, };
+
 pthread_t wedge_to_daemon_thread;
 pthread_t switch_to_daemon_thread;
-
-sem_t Daemon_to_Switch_Qsem;
-finsQueue Daemon_to_Switch_Queue;
-
-sem_t Switch_to_Daemon_Qsem;
-finsQueue Switch_to_Daemon_Queue;
 
 sem_t daemon_sockets_sem;
 struct daemon_socket daemon_sockets[MAX_SOCKETS];
@@ -111,79 +107,17 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 
 	// Send the message
 	PRINT_DEBUG("Sending message to kernel");
+
 	sem_wait(&nl_sem);
 	ret = sendmsg(sockfd, &msg, 0);
 	sem_post(&nl_sem);
+
 	free(nlh);
 
 	if (ret == -1) {
 		return -1;
 	} else {
 		return 0;
-	}
-}
-
-void *daemon_to_thread(void *local) {
-	struct daemon_to_thread_data *to_data = (struct daemon_to_thread_data *) local;
-	int id = to_data->id;
-	int fd = to_data->fd;
-	uint8_t *running = to_data->running;
-	uint8_t *flag = to_data->flag;
-	uint8_t *interrupt = to_data->interrupt;
-	free(to_data);
-
-	int ret;
-	uint64_t exp;
-
-	PRINT_DEBUG("Entered: id=%d, fd=%d", id, fd);
-	while (*running) {
-		PRINT_DEBUG("");
-		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
-		if (!(*running)) {
-			break;
-		}
-		if (ret != sizeof(uint64_t)) {
-			//read error
-			PRINT_DEBUG("Read error: id=%d, fd=%d", id, fd);
-			continue;
-		}
-
-		PRINT_DEBUG("Throwing TO flag: id=%d, fd=%d", id, fd);
-		*interrupt = 1;
-		*flag = 1;
-	}
-
-	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
-	pthread_exit(NULL);
-}
-
-void daemon_stop_timer(int fd) {
-	PRINT_DEBUG("Entered: fd=%d", fd);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = 0;
-	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-
-void daemon_start_timer(int fd, double millis) {
-	PRINT_DEBUG("Entered: fd=%d, m=%f", fd, millis);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = (long int) (millis / 1000);
-	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
 	}
 }
 
@@ -301,7 +235,7 @@ int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t
 
 	if (daemon_calls[call_index].to_running) {
 		daemon_calls[call_index].to_flag = 0;
-		daemon_stop_timer(daemon_calls[call_index].to_fd);
+		stop_timer(daemon_calls[call_index].to_fd);
 	}
 
 	return 1;
@@ -328,7 +262,7 @@ void daemon_calls_remove(int call_index) {
 
 	daemon_calls[call_index].call_id = -1;
 
-	daemon_stop_timer(daemon_calls[call_index].to_fd);
+	stop_timer(daemon_calls[call_index].to_fd);
 	daemon_calls[call_index].to_flag = 0;
 }
 
@@ -338,7 +272,7 @@ void daemon_calls_shutdown(int call_index) {
 	daemon_calls[call_index].to_running = 0;
 
 	//stop threads
-	daemon_start_timer(daemon_calls[call_index].to_fd, DAEMON_TO_MIN);
+	start_timer(daemon_calls[call_index].to_fd, DAEMON_TO_MIN);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -841,21 +775,90 @@ int ack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg)
 }
 
 int daemon_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (sem_wait(&Daemon_to_Switch_Qsem)) {
-		PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
-		exit(-1);
+	return module_to_switch(&daemon_proto, ff);
+}
+
+int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num, uint16_t opcode, uint32_t param_id) {
+	PRINT_DEBUG("Entered: module_id=%d, meta=%p, serial_num=%u, opcode=%u, param_id=%u", dest_id, params, serial_num, opcode, param_id);
+
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed");
+		return 0;
 	}
-	if (write_queue(ff, Daemon_to_Switch_Queue)) {
-		PRINT_DEBUG("");
-		sem_post(&Daemon_to_Switch_Qsem);
+
+	//TODO get the address from local copy of switch table
+	ff->dataOrCtrl = CONTROL;
+	ff->destinationID.id = dest_id;
+	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
+	ff->ctrlFrame.senderID = DAEMON_ID;
+	ff->ctrlFrame.serial_num = serial_num;
+	ff->ctrlFrame.opcode = opcode;
+	ff->ctrlFrame.param_id = param_id;
+
+	ff->ctrlFrame.data_len = 0;
+	ff->ctrlFrame.data = NULL;
+
+	PRINT_DEBUG("ff=%p, meta=%p", ff, params);
+	if (daemon_to_switch(ff)) {
 		return 1;
 	} else {
-		PRINT_DEBUG("");
-		sem_post(&Daemon_to_Switch_Qsem);
+		free(ff);
 		return 0;
 	}
 }
+
+int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *params) {
+	PRINT_DEBUG("Entered: module_id=%u, data=%p, data_len=%u, meta=%p", dest_id, data, data_len, params);
+
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed");
+		return 0;
+	}
+
+	/**TODO get the address automatically by searching the local copy of the
+	 * switch table
+	 */
+	ff->dataOrCtrl = DATA;
+	ff->destinationID.id = dest_id;
+	ff->destinationID.next = NULL;
+	ff->metaData = params;
+
+	ff->dataFrame.directionFlag = DOWN;
+	ff->dataFrame.pduLength = data_len;
+	ff->dataFrame.pdu = data;
+
+	PRINT_DEBUG("sending: ff=%p, meta=%p", ff, params);
+	if (daemon_to_switch(ff)) {
+		return 1;
+	} else {
+		PRINT_ERROR("freeing: ff=%p", ff);
+		free(ff);
+		return 0;
+	}
+}
+
+/*
+ int daemon_to_switch_old(struct finsFrame *ff) {
+ PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+ if (sem_wait(&Daemon_to_Switch_Qsem)) {
+ PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
+ exit(-1);
+ }
+ if (write_queue(ff, Daemon_to_Switch_Queue)) {
+ PRINT_DEBUG("");
+ sem_post(&Daemon_to_Switch_Qsem);
+ return 1;
+ } else {
+ PRINT_DEBUG("");
+ sem_post(&Daemon_to_Switch_Qsem);
+ return 0;
+ }
+ }
+ */
 
 void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int domain;
@@ -1238,7 +1241,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 	switch (cmd) {
 	case SIOCGIFCONF:
-		PRINT_DEBUG("SIOCGIFCONF=%d", cmd);
+		PRINT_DEBUG("SIOCGIFCONF=%d", cmd)
+		;
 		//TODO implement: http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L3919, http://lxr.linux.no/linux+v2.6.39.4/net/ipv4/devinet.c#L926
 		len = *(int *) pt;
 		pt += sizeof(int);
@@ -1249,7 +1253,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 2 * sizeof(struct ifreq);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1287,6 +1292,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (total + sizeof(struct ifreq) <= len) {
 			strcpy(ifr.ifr_name, "eth0");
+			//strcpy(ifr.ifr_name, "wlan0");
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(my_host_ip_addr);
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
@@ -1299,7 +1305,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 
 		*(int *) temp = total;
-		PRINT_DEBUG("total=%d (%d)", total, total/32);
+		PRINT_DEBUG("total=%d (%d)", total, total/32)
+		;
 
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
@@ -1309,7 +1316,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFADDR:
-		PRINT_DEBUG("SIOCGIFADDR=%d", cmd);
+		PRINT_DEBUG("SIOCGIFADDR=%d", cmd)
+		;
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1328,7 +1336,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp='%s'", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp='%s'", cmd, len, temp)
+		;
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1355,7 +1364,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1385,7 +1395,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFDSTADDR:
-		PRINT_DEBUG("SIOCGIFDSTADDR=%d", cmd);
+		PRINT_DEBUG("SIOCGIFDSTADDR=%d", cmd)
+		;
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1404,7 +1415,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp='%s'", cmd, len, temp);
+		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp='%s'", cmd, len, temp)
+		;
 
 		//TODO get correct values from IP?
 		if (strcmp((char *) temp, "eth0") == 0) {
@@ -1431,7 +1443,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			PRINT_DEBUG("temp='%s'", temp);
 		}
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
@@ -1461,7 +1474,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFBRDADDR:
-		PRINT_DEBUG("SIOCGIFBRDADDR=%d", cmd);
+		PRINT_DEBUG("SIOCGIFBRDADDR=%d", cmd)
+		;
 		len = *(int *) pt;
 		pt += sizeof(int);
 
@@ -1660,6 +1674,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		//TODO get correct values from IP?
 		if (total == 0) {
 			strcpy((char *) temp, "eth0");
+			//strcpy((char *) temp, "wlan0");
 		} else if (total == 1) {
 			strcpy((char *) temp, "lo");
 		} else if (total == 2) {
@@ -2054,6 +2069,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	sem_post(&daemon_sockets_sem);
 
 	//#########################
+#ifdef DEBUG
 	uint8_t *temp = (uint8_t *) malloc(data_len + 1);
 	memcpy(temp, data, data_len);
 	temp[data_len] = '\0';
@@ -2065,6 +2081,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	temp2[msg_controllen] = '\0';
 	PRINT_DEBUG("msg_control='%s'", temp2);
 	free(temp2);
+#endif
 	//#########################
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2711,6 +2728,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 	}
 
 	//############################### Debug
+#ifdef DEBUG
 	uint8_t *temp;
 	temp = (uint8_t *) malloc(msg_len + 1);
 	memcpy(temp, msg_pt, msg_len);
@@ -2737,6 +2755,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 	temp[3 * msg_len] = '\0';
 	PRINT_DEBUG("msg='%s'", temp);
 	free(temp);
+#endif
 	//###############################
 
 	if (hdr->call_type == socket_call) {
@@ -2796,6 +2815,7 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 			hdr, hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index, msg_len);
 
 	//############################### Debug
+#ifdef DEBUG
 	uint8_t *temp;
 	temp = (uint8_t *) malloc(msg_len + 1);
 	memcpy(temp, msg_pt, msg_len);
@@ -2803,25 +2823,28 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 	PRINT_DEBUG("msg='%s'", temp);
 	free(temp);
 
-	uint8_t *pt;
-	temp = (uint8_t *) malloc(3 * msg_len + 1);
-	pt = temp;
-	int i;
-	for (i = 0; i < msg_len; i++) {
-		if (i == 0) {
-			sprintf((char *) pt, "%02x", msg_pt[i]);
-			pt += 2;
-		} else if (i % 4 == 0) {
-			sprintf((char *) pt, ":%02x", msg_pt[i]);
-			pt += 3;
-		} else {
-			sprintf((char *) pt, " %02x", msg_pt[i]);
-			pt += 3;
+	if (0) {
+		uint8_t *pt;
+		temp = (uint8_t *) malloc(3 * msg_len + 1);
+		pt = temp;
+		int i;
+		for (i = 0; i < msg_len; i++) {
+			if (i == 0) {
+				sprintf((char *) pt, "%02x", msg_pt[i]);
+				pt += 2;
+			} else if (i % 4 == 0) {
+				sprintf((char *) pt, ":%02x", msg_pt[i]);
+				pt += 3;
+			} else {
+				sprintf((char *) pt, " %02x", msg_pt[i]);
+				pt += 3;
+			}
 		}
+		temp[3 * msg_len] = '\0';
+		PRINT_DEBUG("msg='%s'", temp);
+		free(temp);
 	}
-	temp[3 * msg_len] = '\0';
-	PRINT_DEBUG("msg='%s'", temp);
-	free(temp);
+#endif
 	//###############################
 
 	if (hdr->call_index < 0 || hdr->call_index > MAX_CALLS) {
@@ -2852,7 +2875,7 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 		ioctl_out(hdr, msg_pt, msg_len);
 		break;
 	case sendmsg_call:
-		sendmsg_out(hdr, msg_pt, msg_len); //TODO finish
+		sendmsg_out(hdr, msg_pt, msg_len);
 		break;
 	case recvmsg_call:
 		recvmsg_out(hdr, msg_pt, msg_len);
@@ -2953,8 +2976,17 @@ void *wedge_to_daemon(void *local) {
 
 	// Begin receive message section
 	// Allocate a buffer to hold contents of recvfrom call
+	int nfds = 1;
+	struct pollfd fds[nfds];
+	fds[0].fd = nl_sockfd;
+	//fds[0].events = POLLIN | POLLERR; //| POLLPRI;
+	fds[0].events = POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND ;//| POLLERR;
+	//fds[0].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+	PRINT_DEBUG("fd: sock=%d, events=%x", nl_sockfd, fds[0].events);
+	int time = 1000;
+
 	uint8_t *recv_buf;
-	recv_buf = (uint8_t *)malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
+	recv_buf = (uint8_t *) malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
 	if (recv_buf == NULL) {
 		PRINT_ERROR("buffer allocation failed");
 		exit(-1);
@@ -2982,24 +3014,58 @@ void *wedge_to_daemon(void *local) {
 	PRINT_DEBUG("Waiting for message from kernel");
 
 	int counter = 0;
-	while (daemon_running) {
+	while (daemon_proto.running_flag) {
+
 		PRINT_DEBUG("NL counter = %d", counter++);
 
-		daemon_setNonblocking(nl_sockfd);
-		do {
-			ret = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen); //TODO change to nonblocking in loop
-		} while (daemon_running && ret <= 0);
+		//TODO find alternative? convert to event driven
+		if (0) { //works but over taxes the nl socket, causing sendmsg to take 10+ ms.
+			daemon_setNonblocking(nl_sockfd);
+			do {
+				ret = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen);
+			} while (daemon_proto.running_flag && ret <= 0);
 
-		if (!daemon_running) {
-			break;
+			if (!daemon_proto.running_flag) {
+				break;
+			}
+
+			if (ret == -1) {
+				perror("recvfrom() caused an error");
+				exit(-1);
+			}
+
+			daemon_setBlocking(nl_sockfd);
+		}
+		if (0) { //works but blocks, so can't shutdown properly, have to double ^C or kill
+			ret = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen);
+
+			if (!daemon_proto.running_flag) {
+				break;
+			}
+
+			if (ret == -1) {
+				perror("recvfrom() caused an error");
+				exit(-1);
+			}
+		}
+		if (1) { //works, appears to be minor overhead, select/poll have fd cap if increase num of nl sockets
+			do {
+				ret = poll(fds, nfds, time);
+			} while (daemon_proto.running_flag && ret <= 0);
+
+			if (!daemon_proto.running_flag) {
+				break;
+			}
+
+			if (fds[0].revents & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
+				ret = recvfrom(nl_sockfd, recv_buf, RECV_BUFFER_SIZE + 16, 0, &sockaddr_sender, &sockaddr_senderlen);
+			} else {
+				PRINT_ERROR("nl poll error");
+				perror("nl poll");
+				break;
+			}
 		}
 
-		daemon_setBlocking(nl_sockfd);
-
-		if (ret == -1) {
-			perror("recvfrom() caused an error");
-			exit(-1);
-		}
 		//PRINT_DEBUG("%d", sockaddr_sender);
 
 		nlh = (struct nlmsghdr *) recv_buf;
@@ -3099,7 +3165,7 @@ void *wedge_to_daemon(void *local) {
 
 		if (okFlag != 1) {
 			doneFlag = 0;
-			PRINT_DEBUG("okFlag != 1");
+			PRINT_ERROR("okFlag != 1");
 			//send kernel a resend request
 			//with pos of part being passed can store msg_buf, then recopy new part when received
 		}
@@ -3114,7 +3180,7 @@ void *wedge_to_daemon(void *local) {
 			msg_pt = msg_buf + sizeof(struct nl_wedge_to_daemon);
 			msg_len -= sizeof(struct nl_wedge_to_daemon);
 
-			daemon_out_ff(hdr, msg_pt, msg_len); //TODO uncomment
+			daemon_out_ff(hdr, msg_pt, msg_len);
 
 			free(msg_buf);
 			doneFlag = 0;
@@ -3134,7 +3200,7 @@ void *wedge_to_daemon(void *local) {
 void *switch_to_daemon(void *local) {
 	PRINT_DEBUG("Entered");
 
-	while (daemon_running) {
+	while (daemon_proto.running_flag) {
 		daemon_get_ff();
 		PRINT_DEBUG("");
 	}
@@ -3195,12 +3261,16 @@ void daemon_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(&Switch_to_Daemon_Qsem);
-		ff = read_queue(Switch_to_Daemon_Queue);
-		sem_post(&Switch_to_Daemon_Qsem);
-	} while (daemon_running && ff == NULL && !daemon_interrupt_flag); //TODO change logic here, combine with switch_to_arp?
+		sem_wait(daemon_proto.event_sem);
+		sem_wait(daemon_proto.input_sem);
+		ff = read_queue(daemon_proto.input_queue);
+		sem_post(daemon_proto.input_sem);
+	} while (daemon_proto.running_flag && ff == NULL && !daemon_interrupt_flag); //TODO change logic here, combine with switch_to_daemon?
 
-	if (!daemon_running) {
+	if (!daemon_proto.running_flag) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
@@ -3433,8 +3503,7 @@ void daemon_exec(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_TCP_POLL_POST: //TODO move to ALERT?
-			PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id);
 
 			ret += metadata_readFromElement(params, "protocol", &protocol) == META_FALSE;
 			ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
@@ -3453,16 +3522,14 @@ void daemon_exec(struct finsFrame *ff) {
 				switch (protocol) {
 				case IPPROTO_ICMP:
 					//daemon_icmp_in_error(ff, src_ip, dst_ip);
-					PRINT_ERROR("todo")
-					;
+					PRINT_ERROR("todo");
 					break;
 				case IPPROTO_TCP:
 					daemon_tcp_in_poll(ff, ret_msg);
 					break;
 				case IPPROTO_UDP:
 					//daemon_udp_in_error(ff, src_ip, dst_ip);
-					PRINT_ERROR("todo")
-					;
+					PRINT_ERROR("todo");
 					break;
 				default:
 					//PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -3472,8 +3539,7 @@ void daemon_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -3673,6 +3739,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 	}
 
 	//##############################################
+#ifdef DEBUG
 	struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 	if (src_ip) {
 		temp->s_addr = htonl(src_ip);
@@ -3701,6 +3768,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 	buf[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pdulen=%u, pdu='%s'", ff->dataFrame.pduLength, buf);
 	free(buf);
+#endif
 	//##############################################
 
 	switch (protocol) {
@@ -3723,7 +3791,10 @@ void daemon_in_fdf(struct finsFrame *ff) {
 
 void daemon_init(void) {
 	PRINT_CRITICAL("Entered");
-	daemon_running = 1;
+	daemon_proto.running_flag = 1;
+
+	module_create_ops(&daemon_proto);
+	module_register(&daemon_proto);
 
 	//init_daemonSockets();
 	sem_init(&daemon_thread_sem, 0, 1);
@@ -3749,9 +3820,9 @@ void daemon_init(void) {
 		}
 
 		//start timer thread
-		struct daemon_to_thread_data *to_data = (struct daemon_to_thread_data *) malloc(sizeof(struct daemon_to_thread_data));
+		struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
 		if (to_data == NULL) {
-			PRINT_ERROR("daemon_to_thread_data alloc fail");
+			PRINT_ERROR("interrupt_to_thread_data alloc fail");
 			exit(-1);
 		}
 
@@ -3761,8 +3832,9 @@ void daemon_init(void) {
 		to_data->running = &daemon_calls[i].to_running;
 		to_data->flag = &daemon_calls[i].to_flag;
 		to_data->interrupt = &daemon_interrupt_flag;
-		if (pthread_create(&daemon_calls[i].to_thread, NULL, daemon_to_thread, (void *) to_data)) {
-			PRINT_ERROR("ERROR: unable to create arp_to_thread thread.");
+		to_data->sem = daemon_proto.event_sem;
+		if (pthread_create(&daemon_calls[i].to_thread, NULL, intsem_to_thread, (void *) to_data)) {
+			PRINT_ERROR("ERROR: unable to create interrupt_to_thread thread.");
 			exit(-1);
 		}
 	}
@@ -3796,7 +3868,8 @@ void daemon_run(pthread_attr_t *fins_pthread_attr) {
 
 void daemon_shutdown(void) {
 	PRINT_CRITICAL("Entered");
-	daemon_running = 0;
+	daemon_proto.running_flag = 0;
+	sem_post(daemon_proto.event_sem);
 
 	//prime the kernel to establish daemon's PID
 	int daemoncode = daemon_stop_call;
@@ -3810,13 +3883,14 @@ void daemon_shutdown(void) {
 	PRINT_CRITICAL("Joining switch_to_daemon_thread");
 	pthread_join(switch_to_daemon_thread, NULL);
 	PRINT_CRITICAL("Joining wedge_to_daemon_thread");
-	pthread_join(wedge_to_daemon_thread, NULL);
+	pthread_join(wedge_to_daemon_thread, NULL); //TODO change thread so can be stopped, atm is blocking
 }
 
 void daemon_release(void) {
 	PRINT_CRITICAL("Entered");
 
 	//unregister
+	module_unregister(daemon_proto.module_id);
 
 	//TODO free all module related mem
 
@@ -3853,6 +3927,5 @@ void daemon_release(void) {
 		daemon_calls_shutdown(i);
 	}
 
-	term_queue(Daemon_to_Switch_Queue);
-	term_queue(Switch_to_Daemon_Queue);
+	module_destroy_ops(&daemon_proto);
 }

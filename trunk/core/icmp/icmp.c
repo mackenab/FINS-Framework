@@ -10,39 +10,14 @@
 #include <string.h>
 #include "icmp.h"
 #include <ipv4.h>
+#include <finstime.h>
 
-int icmp_running;
+#include <swito.h>
+static struct fins_proto_module icmp_proto = { .module_id = ICMP_ID, .name = "icmp", .running_flag = 1, };
+
 pthread_t switch_to_icmp_thread;
 
-sem_t ICMP_to_Switch_Qsem;
-finsQueue ICMP_to_Switch_Queue;
-
-sem_t Switch_to_ICMP_Qsem;
-finsQueue Switch_to_ICMP_Queue;
-
 struct icmp_sent_list *icmp_sent_packet_list;
-
-double icmp_time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
-	double decimal = 0, diff = 0;
-
-	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
-
-	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
-
-	if (time1->tv_usec > time2->tv_usec) {
-		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec - 1.0;
-	} else {
-		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
-		diff = time2->tv_sec - time1->tv_sec;
-	}
-	diff += decimal;
-
-	diff *= 1000.0;
-
-	PRINT_DEBUG("diff=%f", diff);
-	return diff;
-}
 
 struct icmp_sent *icmp_sent_create(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
@@ -284,7 +259,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		}
 		break;
 	case TYPE_DESTUNREACH:
-		PRINT_DEBUG("Destination unreachable");
+		PRINT_DEBUG("Destination unreachable")
+		;
 		if (icmp_pkt->code == CODE_NETUNREACH) {
 			PRINT_ERROR("todo");
 			freeFinsFrame(ff);
@@ -449,7 +425,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				icmp_to_switch(ff_err);
 				break;
 			default:
-				PRINT_ERROR("todo error");
+				PRINT_ERROR("todo error")
+				;
 				break;
 			}
 			freeFinsFrame(ff);
@@ -477,7 +454,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		}
 		break;
 	case TYPE_TTLEXCEED:
-		PRINT_DEBUG("TTL Exceeded");
+		PRINT_DEBUG("TTL Exceeded")
+		;
 		if (icmp_pkt->code == CODE_TTLEXCEEDED) {
 			if (data_len < IP4_MIN_HLEN) {
 				PRINT_ERROR("data too small: data_len=%u, ipv4_req=%u", data_len, IP4_MIN_HLEN);
@@ -634,7 +612,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				icmp_to_switch(ff_err);
 				break;
 			default:
-				PRINT_ERROR("todo error");
+				PRINT_ERROR("todo error")
+				;
 				break;
 			}
 			freeFinsFrame(ff);
@@ -647,7 +626,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		}
 		break;
 	default:
-		PRINT_DEBUG("default: type=%u", icmp_pkt->type);
+		PRINT_DEBUG("default: type=%u", icmp_pkt->type)
+		;
 		//Simply pass up the stack,
 
 		//ff->dataOrCtrl = DATA;
@@ -674,7 +654,7 @@ void icmp_sent_list_gc(struct icmp_sent_list *sent_list, double timeout) {
 
 	struct icmp_sent *temp = sent_list->front;
 	while (temp) {
-		if (icmp_time_diff(&temp->stamp, &current) >= timeout) {
+		if (time_diff(&temp->stamp, &current) >= timeout) {
 			old = temp;
 			temp = temp->next;
 
@@ -760,12 +740,16 @@ void icmp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(&Switch_to_ICMP_Qsem);
-		ff = read_queue(Switch_to_ICMP_Queue);
-		sem_post(&Switch_to_ICMP_Qsem);
-	} while (icmp_running && ff == NULL);
+		sem_wait(icmp_proto.event_sem);
+		sem_wait(icmp_proto.input_sem);
+		ff = read_queue(icmp_proto.input_queue);
+		sem_post(icmp_proto.input_sem);
+	} while (icmp_proto.running_flag && ff == NULL);
 
-	if (!icmp_running) {
+	if (!icmp_proto.running_flag) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
@@ -783,21 +767,7 @@ void icmp_get_ff(void) {
 }
 
 int icmp_to_switch(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (sem_wait(&ICMP_to_Switch_Qsem)) {
-		PRINT_ERROR("ICMP_to_Switch_Qsem wait prob");
-		exit(-1);
-	}
-	if (write_queue(ff, ICMP_to_Switch_Queue)) {
-		/*#*/PRINT_DEBUG("");
-		sem_post(&ICMP_to_Switch_Qsem);
-		return 1;
-	}
-
-	PRINT_DEBUG("");
-	sem_post(&ICMP_to_Switch_Qsem);
-
-	return 0;
+	return module_to_switch(&icmp_proto, ff);
 }
 
 uint16_t icmp_checksum(uint8_t *pt, uint32_t len) {
@@ -899,39 +869,49 @@ void icmp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		//arp_read_param(ff);
 		//TODO read interface_mac?
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		//arp_set_param(ff);
 		//TODO set interface_mac?
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		//arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		break;
 	}
 }
@@ -939,7 +919,7 @@ void icmp_fcf(struct finsFrame *ff) {
 void *switch_to_icmp(void *local) {
 	PRINT_DEBUG("Entered");
 
-	while (icmp_running) {
+	while (icmp_proto.running_flag) {
 		icmp_get_ff();
 		PRINT_DEBUG("");
 		//Note that we always clean up the frame, no matter what we do with it. If the frame needs to go somewhere else also, we make a copy.
@@ -951,7 +931,10 @@ void *switch_to_icmp(void *local) {
 
 void icmp_init(void) {
 	PRINT_CRITICAL("Entered");
-	icmp_running = 1;
+	icmp_proto.running_flag = 1;
+
+	module_create_ops(&icmp_proto);
+	module_register(&icmp_proto);
 
 	icmp_sent_packet_list = icmp_sent_list_create(ICMP_SENT_LIST_MAX);
 }
@@ -964,7 +947,8 @@ void icmp_run(pthread_attr_t *fins_pthread_attr) {
 
 void icmp_shutdown(void) {
 	PRINT_CRITICAL("Entered");
-	icmp_running = 0;
+	icmp_proto.running_flag = 0;
+	sem_post(icmp_proto.event_sem);
 
 	//TODO expand this
 
@@ -974,11 +958,11 @@ void icmp_shutdown(void) {
 
 void icmp_release(void) {
 	PRINT_CRITICAL("Entered");
+	module_unregister(icmp_proto.module_id);
 
 	icmp_sent_list_free(icmp_sent_packet_list);
 
 	//TODO free all module related mem
 
-	term_queue(ICMP_to_Switch_Queue);
-	term_queue(Switch_to_ICMP_Queue);
+	module_destroy_ops(&icmp_proto);
 }

@@ -18,36 +18,6 @@ extern struct daemon_call_list *expired_call_list;
 extern int daemon_thread_count; //for TO threads
 extern sem_t daemon_thread_sem;
 
-int daemon_fdf_to_icmp(uint8_t *data, uint32_t data_len, metadata *params) {
-
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed");
-		return 0;
-	}
-
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
-	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = ICMP_ID;
-	ff->destinationID.next = NULL;
-	ff->metaData = params;
-
-	ff->dataFrame.directionFlag = DOWN;
-	ff->dataFrame.pduLength = data_len;
-	ff->dataFrame.pdu = data;
-
-	PRINT_DEBUG("sending: ff=%p, meta=%p", ff, params);
-	if (daemon_to_switch(ff)) {
-		return 1;
-	} else {
-		PRINT_ERROR("freeing: ff=%p", ff);
-		free(ff);
-		return 0;
-	}
-}
-
 /**
  * End of interfacing socketdaemon with FINS core
  * */
@@ -554,8 +524,6 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	uint32_t dst_ip = 0;
 	uint16_t dst_port = 0;
 
-	struct in_addr *temp;
-
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	PRINT_DEBUG("MSG_CONFIRM=%d (%d), MSG_DONTROUTE=%d (%d), MSG_DONTWAIT=%d (%d), MSG_EOR=%d (%d), MSG_MORE=%d (%d), MSG_NOSIGNAL=%d (%d), MSG_OOB=%d (%d)",
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
@@ -573,7 +541,8 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 		break;
 	}
 
-	if (data_len == 0) {
+	if (data_len == 0) { //TODO check this prob wrong!
+		PRINT_ERROR("todo/redo");
 		PRINT_DEBUG("data_len == 0, send ACK");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
@@ -669,12 +638,14 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	//PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", hdr->sock_index, dst_ip, dst_port, host_ip, host_port);
 
 	//########################
-	temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+#ifdef DEBUG
+	struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 	temp->s_addr = htonl(host_ip);
 	PRINT_DEBUG("index=%d, host=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), host_port, host_ip);
 	temp->s_addr = htonl(dst_ip);
 	PRINT_DEBUG("index=%d, dst=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), dst_port, dst_ip);
 	free(temp);
+#endif
 	//########################
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
@@ -693,8 +664,8 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
 	metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
 
-	if (daemon_fdf_to_icmp(data, data_len, params)) {
-		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	if (daemon_fdf_to_switch(ICMP_ID, data, data_len, params)) {
+		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("socketdaemon failed to accomplish sendto");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -898,12 +869,14 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				}
 
 				//#######
+#ifdef DEBUG
 				PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), addr.sin_addr.s_addr);
 				uint8_t *temp = (uint8_t *) malloc(ff->ctrlFrame.data_len + 1);
 				memcpy(temp, ff->ctrlFrame.data, ff->ctrlFrame.data_len);
 				temp[ff->ctrlFrame.data_len] = '\0';
 				PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->ctrlFrame.data_len, temp);
 				free(temp);
+#endif
 				//#######
 
 				int addr_len = sizeof(struct sockaddr_in);
@@ -1101,12 +1074,14 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			}
 
 			//#######
+#ifdef DEBUG
 			PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), addr.sin_addr.s_addr);
 			uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
 			memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 			temp[ff->dataFrame.pduLength] = '\0';
 			PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
 			free(temp);
+#endif
 			//#######
 
 			int addr_len = sizeof(struct sockaddr_in);
@@ -1181,7 +1156,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
 			if (flags & (MSG_DONTWAIT)) {
-				daemon_start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -1223,6 +1198,8 @@ void release_out_icmp(struct nl_wedge_to_daemon *hdr) {
 	sem_post(&daemon_sockets_sem);
 
 	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+
+	//TODO send FCF to ICMP module clearing error buffers of any msgs from this socket
 }
 
 void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
@@ -1847,7 +1824,7 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 
 void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint32_t flags) {
-	PRINT_DEBUG("Entered: call_list=%p, call=%p, params=%p, data=%p, len=%u, addr_ip=%u, flags=0x%x", call_list, call, params, data, data_len, addr_ip, flags);
+	PRINT_DEBUG("Entered: call_list=%p, call=%p, meta=%p, data=%p, len=%u, addr_ip=%u, flags=0x%x", call_list, call, params, data, data_len, addr_ip, flags);
 
 	uint32_t call_len = call->data; //buffer size
 	uint32_t msg_controllen = call->ret;
@@ -1871,12 +1848,14 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 	}
 
 	//#######
+#ifdef DEBUG
 	PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), addr.sin_addr.s_addr);
 	uint8_t *temp = (uint8_t *) malloc(data_len + 1);
 	memcpy(temp, data, data_len);
 	temp[data_len] = '\0';
 	PRINT_DEBUG("pduLen=%d, pdu='%s'", data_len, temp);
 	free(temp);
+#endif
 	//#######
 
 	uint32_t control_len = 0;

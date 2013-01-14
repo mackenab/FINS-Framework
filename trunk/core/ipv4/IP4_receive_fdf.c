@@ -7,47 +7,52 @@
 
 #include "ipv4.h"
 #include <queueModule.h>
+#include <swito.h>
+
+extern struct fins_proto_module ipv4_proto;
 
 extern IP4addr my_ip_addr;
 
-extern sem_t Switch_to_IPv4_Qsem;
-extern finsQueue Switch_to_IPv4_Queue;
-
 void IP4_receive_fdf(void) {
 
-	struct finsFrame* pff = NULL;
+	struct finsFrame* ff = NULL;
 	uint32_t protocol;
-	do {
-		sem_wait(&Switch_to_IPv4_Qsem);
-		pff = read_queue(Switch_to_IPv4_Queue);
-		sem_post(&Switch_to_IPv4_Qsem);
-	} while (ipv4_running && pff == NULL);
 
-	if (!ipv4_running) {
+	do {
+		sem_wait(ipv4_proto.event_sem);
+		sem_wait(ipv4_proto.input_sem);
+		ff = read_queue(ipv4_proto.input_queue);
+		sem_post(ipv4_proto.input_sem);
+	} while (ipv4_proto.running_flag && ff == NULL);
+
+	if (!ipv4_proto.running_flag) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
-	if (pff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->metaData);
-		ipv4_fcf(pff);
-	} else if (pff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", pff->dataOrCtrl, pff->destinationID.id, pff, pff->metaData);
-		PRINT_DEBUG("PDU Length: %d", pff->dataFrame.pduLength);
-		PRINT_DEBUG("Data direction: %d", pff->dataFrame.directionFlag);
-		PRINT_DEBUG("pdu=%p", pff->dataFrame.pdu);
+	if (ff->dataOrCtrl == CONTROL) {
+		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData);
+		ipv4_fcf(ff);
+	} else if (ff->dataOrCtrl == DATA) {
+		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData);
+		PRINT_DEBUG("PDU Length: %d", ff->dataFrame.pduLength);
+		PRINT_DEBUG("Data direction: %d", ff->dataFrame.directionFlag);
+		PRINT_DEBUG("pdu=%p", ff->dataFrame.pdu);
 
-		if (pff->dataFrame.directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == UP) {
 			PRINT_DEBUG("IP4_in");
 
-			IP4_in(pff, (struct ip4_packet*) pff->dataFrame.pdu, pff->dataFrame.pduLength);
+			IP4_in(ff, (struct ip4_packet*) ff->dataFrame.pdu, ff->dataFrame.pduLength);
 
-		} else if (pff->dataFrame.directionFlag == DOWN) {
+		} else if (ff->dataFrame.directionFlag == DOWN) {
 			PRINT_DEBUG("IP4_out");
 
-			metadata *params = pff->metaData;
+			metadata *params = ff->metaData;
 			if (params == NULL) {
 				PRINT_ERROR("todo error");
-				freeFinsFrame(pff);
+				freeFinsFrame(ff);
 				return;
 			}
 
@@ -62,30 +67,31 @@ void IP4_receive_fdf(void) {
 			PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
 			switch (protocol) {
 			case IP4_PT_ICMP:
-				IP4_out(pff, pff->dataFrame.pduLength, my_ip_addr, IP4_PT_ICMP);
+				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_ICMP);
 				break;
 			case IP4_PT_TCP:
-				IP4_out(pff, pff->dataFrame.pduLength, my_ip_addr, IP4_PT_TCP);
+				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_TCP);
 				break;
 			case IP4_PT_UDP:
-				IP4_out(pff, pff->dataFrame.pduLength, my_ip_addr, IP4_PT_UDP);
+				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_UDP);
 				break;
 			default:
-				PRINT_ERROR("invalid protocol: protocol=%u", protocol);
+				PRINT_ERROR("invalid protocol: protocol=%u", protocol)
+				;
 				/**
 				 * TODO investigate why the freeFinsFrame below create segmentation fault
 				 */
-				freeFinsFrame(pff);
+				freeFinsFrame(ff);
 				break;
 			}
 
 		} else {
 			PRINT_ERROR("Error: Wrong value of fdf.directionFlag");
-			freeFinsFrame(pff);
+			freeFinsFrame(ff);
 		}
 	} else {
-		PRINT_ERROR("Error: Wrong pff->dataOrCtrl value");
-		freeFinsFrame(pff);
+		PRINT_ERROR("Error: Wrong ff->dataOrCtrl value");
+		freeFinsFrame(ff);
 	}
 
 }
@@ -96,40 +102,50 @@ void ipv4_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		//ipv4_read_param(ff);
 		//TODO read interface_mac?
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		//ipv4_set_param(ff);
 		//TODO set interface_mac?
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		//ipv4_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		ipv4_exec_reply(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		break;
 	}
 }
@@ -172,7 +188,8 @@ void ipv4_exec_reply(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id)
+			;
 
 			if (ff->ctrlFrame.ret_val) {
 				uint64_t src_mac, dst_mac;
@@ -213,7 +230,8 @@ void ipv4_exec_reply(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;

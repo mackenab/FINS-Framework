@@ -12,8 +12,6 @@
 
 #include "daemon.h"
 
-int daemon_fdf_to_udp(uint8_t *data, uint32_t data_len, metadata *params);
-
 void socket_out_udp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol);
 void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr);
 void listen_out_udp(struct nl_wedge_to_daemon *hdr, int backlog);
@@ -41,5 +39,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 		uint16_t addr_port, uint32_t flags);
 
 void recvmsg_timeout_udp(struct daemon_call *call);
+
+#define EXEC_UDP_CLEAR_SENT 0
 
 #endif /* UDPHANDLING_H_ */

@@ -88,7 +88,7 @@ void print_frame(const u_char *payload, int len) {
 
 	/* data fits on one line */
 	if (len <= line_width) {
-		PRINT_DEBUG("calling hex_ascii_line");
+		//PRINT_DEBUG("calling hex_ascii_line");
 		print_hex_ascii_line(ch, len, offset);
 		return;
 	}
@@ -123,10 +123,10 @@ void print_frame(const u_char *payload, int len) {
 	//struct data_to_pass data;
 	u_int numBytes;
 	u_int dataLength;
-	PRINT_DEBUG("Packet number %d: has been captured \n", count);
+	PRINT_CRITICAL("Packet number %d: has been captured \n", count);
 
 	if (header->caplen != header->len) {
-		PRINT_DEBUG("Snaplen value is not enough to capture the whole packet as it is on wire \n");
+		PRINT_ERROR("Snaplen value is not enough to capture the whole packet as it is on wire \n");
 		exit(1);
 	}
 	//data.frameLength = header->caplen ;
@@ -154,7 +154,7 @@ void print_frame(const u_char *payload, int len) {
 		//return (0);
 		return;
 	}
-	PRINT_DEBUG("A frame of length %d has been captured \n", numBytes);
+	PRINT_CRITICAL("A frame of length %d has been captured \n", numBytes);
 
 	capture_count++;
 	//return (1);
@@ -210,8 +210,10 @@ void capture_init(char *interface) {
 	//	strcat(filter_exp,dev_macAddress);
 	//strcat(filter_exp, ""); //everything
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
-	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))");
-	strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))");
+
+	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //Vbox eth2
+	strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
+	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
 
 
 	/* get network number and mask associated with capture device */
@@ -330,7 +332,7 @@ void inject_init(char *interface) {
 			break;
 		}
 
-		PRINT_DEBUG("A frame of length %d will be injected-----", framelen);
+		PRINT_CRITICAL("A frame of length %d will be injected-----", framelen);
 
 		print_frame((u_char *)frame, framelen);
 		/**

@@ -31,7 +31,7 @@
 
 /* default snap length (maximum bytes per packet to capture) */
 //#define SNAP_LEN 1518
-#define SNAP_LEN 4096
+#define SNAP_LEN 8192//4096
 
 /* packet inject handle */
 extern pcap_t *inject_handle;
