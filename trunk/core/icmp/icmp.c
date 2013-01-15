@@ -12,7 +12,7 @@
 #include <ipv4.h>
 #include <finstime.h>
 
-#include <swito.h>
+#include <switch.h>
 static struct fins_proto_module icmp_proto = { .module_id = ICMP_ID, .name = "icmp", .running_flag = 1, };
 
 pthread_t switch_to_icmp_thread;

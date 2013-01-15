@@ -7,8 +7,8 @@
 
 #include "ipv4.h"
 #include <queueModule.h>
-#include <swito.h>
 
+#include <switch.h>
 extern struct fins_proto_module ipv4_proto;
 
 extern IP4addr my_ip_addr;

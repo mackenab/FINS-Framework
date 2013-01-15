@@ -1,16 +1,16 @@
 /**
- * @file swito.c
+ * @file switch.c
  *
  *  @date Mar 14, 2011
  *      @author Abdallah Abdallah
  */
 
-#include "swito.h"
 #include <finstypes.h>
 #include <metadata.h>
 #include <queueModule.h>
 #include <arpa/inet.h>
 
+#include "switch.h"
 static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name = "switch", .running_flag = 1,};
 
 pthread_t switch_thread;

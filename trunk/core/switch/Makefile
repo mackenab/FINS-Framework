@@ -9,7 +9,7 @@ CFLAGS += $(CORE_MODULES_INC)
 
 #This is the list of objects needed to build the FINS core. NOTE: object files
 #that contain a "main" function must NOT be included in this list!!!
-OBJS = swito.o 
+OBJS = switch.o 
 
 #list any added executables here so they can be cleaned
 EXECUTABLES = 

@@ -7,7 +7,7 @@
 //#include <arpa/inet.h>
 #include "tcp.h"
 
-#include <swito.h>
+#include <switch.h>
 static struct fins_proto_module tcp_proto = { .module_id = TCP_ID, .name = "tcp", .running_flag = 1, };
 
 pthread_t switch_to_tcp_thread;

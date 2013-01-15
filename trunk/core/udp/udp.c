@@ -23,7 +23,7 @@
 #define DUMMYB 456
 #define DUMMYC 789
 
-#include <swito.h>
+#include <switch.h>
 static struct fins_proto_module udp_proto = { .module_id = UDP_ID, .name = "udp", .running_flag = 1, };
 
 pthread_t switch_to_udp_thread;

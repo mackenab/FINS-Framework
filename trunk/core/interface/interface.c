@@ -17,8 +17,8 @@
 #include <finsdebug.h>
 
 #include "interface.h"
-#include <swito.h>
 
+#include <switch.h>
 static struct fins_proto_module interface_proto = { .module_id = INTERFACE_ID, .name = "interface", .running_flag = 1, };
 
 pthread_t switch_to_interface_thread;

@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include "arp.h"
 
-#include <swito.h>
+#include <switch.h>
 static struct fins_proto_module arp_proto = { .module_id = ARP_ID, .name = "arp", .running_flag = 1, };
 
 pthread_t switch_to_arp_thread;

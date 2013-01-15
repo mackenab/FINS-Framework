@@ -1,12 +1,12 @@
 /*
- * @file swito.h
+ * @file switch.h
  *
  *  @date Mar 14, 2011
  *      @author Abdallah Abdallah
  */
 
-#ifndef SWITO_H_
-#define SWITO_H_
+#ifndef SWITCH_H_
+#define SWITCH_H_
 
 #include <pthread.h>
 #include <finstypes.h>
@@ -49,4 +49,4 @@ void switch_run(pthread_attr_t *fins_pthread_attr);
 void switch_shutdown(void);
 void switch_release(void);
 
-#endif /* SWITO_H_ */
+#endif /* SWITCH_H_ */

@@ -14,7 +14,7 @@
  *       */
 
 #include "core.h"
-#include <swito.h>
+#include <switch.h>
 #include <daemon.h>
 #include <interface.h>
 #include <ipv4.h>

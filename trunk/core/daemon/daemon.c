@@ -10,8 +10,8 @@
  */
 
 #include "daemon.h"
-#include <swito.h>
 
+#include <switch.h>
 static struct fins_proto_module daemon_proto = { .module_id = DAEMON_ID, .name = "daemon", .running_flag = 1, };
 
 pthread_t wedge_to_daemon_thread;
