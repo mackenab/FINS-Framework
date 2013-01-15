@@ -9,15 +9,15 @@
 
 /** Ethernet Stub Variables  */
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
-#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
-#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
+	#define FINS_TMP_ROOT "/data/data/fins"
 #else
-#define FINS_TMP_ROOT "/tmp/fins"
+	#define FINS_TMP_ROOT "/tmp/fins"
+	#define SEMAPHORE_ROOT "/dev/shm"
+#endif
+
 #define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
 #define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
-#define SEMAPHORE_ROOT "/dev/shm"
-#endif
+
 
 /* ethernet headers are always exactly 14 bytes [1] */
 #define SIZE_ETHERNET 14

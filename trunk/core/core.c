@@ -13,6 +13,8 @@
  *       descriptor, which read considers an error and indicates by returning –1.
  *       */
 
+#include <signal.h>
+
 #include "core.h"
 #include <switch.h>
 #include <daemon.h>
@@ -23,7 +25,6 @@
 #include <tcp.h>
 #include <icmp.h>
 #include <rtm.h>
-#include <signal.h>
 
 /**
  * TODO free and close/DESTORY all the semaphores before exit !!!

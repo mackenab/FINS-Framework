@@ -39,15 +39,14 @@ extern pcap_t *inject_handle;
 /* packet capture handle */
 extern pcap_t *capture_handle;
 
-/** The structure of the data to be written to the INCOME_PIPE */
+/** The structure of the data to be written to the CAPTURE_PIPE */
 struct data_to_pass {
 	u_int frameLength;
 	unsigned char *frame;
 };
 
 /** The Buffering pipes between the Incoming Handlers and FINS Space */
-extern int income_pipe_fd;
-
+extern int capture_pipe_fd;
 extern int inject_pipe_fd;
 
 // ADDED mrd015 !!!!!
@@ -55,9 +54,10 @@ extern int inject_pipe_fd;
 	#define FINS_TMP_ROOT "/data/data/fins"
 #else
 	#define FINS_TMP_ROOT "/tmp/fins"
+	#define SEMAPHORE_ROOT "/dev/shm"
 #endif
 
-#define INCOME_PIPE FINS_TMP_ROOT "/fins_capture"
+#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
 #define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
 
 /** Functions prototypes fully defined in wifistub.c */

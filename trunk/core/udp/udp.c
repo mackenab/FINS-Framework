@@ -226,8 +226,14 @@ void udp_get_ff(void) {
 
 	struct finsFrame *ff;
 	do {
-		sem_wait(udp_proto.event_sem);
-		sem_wait(udp_proto.input_sem);
+		if (sem_wait(udp_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(udp_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(udp_proto.input_queue);
 		sem_post(udp_proto.input_sem);
 	} while (udp_proto.running_flag && ff == NULL);
@@ -262,46 +268,56 @@ void udp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		//daemon_read_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		//daemon_set_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		udp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		//daemon_exec_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		udp_error(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -321,7 +337,8 @@ void udp_exec(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_UDP_CLEAR_SENT:
-			PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id)
+			;
 
 			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
 			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
@@ -343,7 +360,8 @@ void udp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;

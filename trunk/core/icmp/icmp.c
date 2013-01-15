@@ -740,8 +740,14 @@ void icmp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(icmp_proto.event_sem);
-		sem_wait(icmp_proto.input_sem);
+		if (sem_wait(icmp_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(icmp_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(icmp_proto.input_queue);
 		sem_post(icmp_proto.input_sem);
 	} while (icmp_proto.running_flag && ff == NULL);

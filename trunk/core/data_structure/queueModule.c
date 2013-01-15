@@ -24,7 +24,7 @@ finsQueue init_queue(const char* name, int size) {
 }
 
 int TerminateFinsQueue(finsQueue Q) {
-	PRINT_DEBUG("Entered: Q=%p", Q);
+	PRINT_DEBUG("Entered: Q=%p, name='%s'", Q, Q->name);
 
 	int counter = 0;
 	int empty = 0;

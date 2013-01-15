@@ -108,7 +108,10 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 	// Send the message
 	PRINT_DEBUG("Sending message to kernel");
 
-	sem_wait(&nl_sem);
+	if (sem_wait(&nl_sem)) {
+		PRINT_ERROR("sem wait prob");
+		exit(-1);
+	}
 	ret = sendmsg(sockfd, &msg, 0);
 	sem_post(&nl_sem);
 
@@ -494,8 +497,8 @@ int daemon_sockets_insert(uint64_t sock_id, int sock_index, int type, int protoc
 
 		daemon_sockets[sock_index].host_ip = 0; //TODO change to -1? or have flags for bind/connect?
 		daemon_sockets[sock_index].host_port = 0; //The host port is initially assigned randomly and stay the same unless binding explicitly later
-		daemon_sockets[sock_index].dst_ip = 0;
-		daemon_sockets[sock_index].dst_port = 0;
+		daemon_sockets[sock_index].rem_ip = 0;
+		daemon_sockets[sock_index].rem_port = 0;
 
 		daemon_sockets[sock_index].bound = 0;
 		daemon_sockets[sock_index].listening = 0;
@@ -587,7 +590,7 @@ int daemon_sockets_match(uint16_t dst_port, uint32_t dst_ip, int protocol) {
 				/** Matching for ICMP incoming datagrams
 				 * In this case the IP passes is actually the source IP of that incoming message (Or called the host)
 				 */
-				else if ((daemon_sockets[i].protocol == protocol) && (protocol == IPPROTO_ICMP) && (daemon_sockets[i].dst_ip == dst_ip)) {
+				else if ((daemon_sockets[i].protocol == protocol) && (protocol == IPPROTO_ICMP) && (daemon_sockets[i].rem_ip == dst_ip)) {
 					return (i);
 
 				} else {
@@ -605,8 +608,8 @@ int daemon_sockets_match_connection(uint32_t host_ip, uint16_t host_port, uint32
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].host_ip == host_ip && daemon_sockets[i].host_port == host_port && daemon_sockets[i].dst_ip
-				== rem_ip && daemon_sockets[i].dst_port == rem_port && daemon_sockets[i].protocol == protocol) {
+		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].host_ip == host_ip && daemon_sockets[i].host_port == host_port && daemon_sockets[i].rem_ip
+				== rem_ip && daemon_sockets[i].rem_port == rem_port && daemon_sockets[i].protocol == protocol) {
 			PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, sock_index=%d", host_ip, host_port, rem_ip, rem_port, i);
 			return (i);
 		}
@@ -702,7 +705,7 @@ int check_daemon_dstports(uint16_t dstport, uint32_t dstip) {
 	int i = 0;
 
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if ((daemon_sockets[i].dst_port == dstport) && (daemon_sockets[i].dst_ip == dstip))
+		if ((daemon_sockets[i].rem_port == dstport) && (daemon_sockets[i].rem_ip == dstip))
 			return (-1);
 
 	}
@@ -841,25 +844,6 @@ int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, meta
 	}
 }
 
-/*
- int daemon_to_switch_old(struct finsFrame *ff) {
- PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
- if (sem_wait(&Daemon_to_Switch_Qsem)) {
- PRINT_ERROR("TCP_to_Switch_Qsem wait prob");
- exit(-1);
- }
- if (write_queue(ff, Daemon_to_Switch_Queue)) {
- PRINT_DEBUG("");
- sem_post(&Daemon_to_Switch_Qsem);
- return 1;
- } else {
- PRINT_DEBUG("");
- sem_post(&Daemon_to_Switch_Qsem);
- return 0;
- }
- }
- */
-
 void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int domain;
 	int type;
@@ -946,7 +930,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1003,7 +987,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1076,7 +1060,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1137,7 +1121,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1189,7 +1173,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1921,7 +1905,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 	} else {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("daemon_sockets_sem wait prob");
+			PRINT_ERROR("sem wait prob");
 			exit(-1);
 		}
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2043,7 +2027,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2161,7 +2145,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2244,7 +2228,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2322,7 +2306,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2372,7 +2356,7 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2422,7 +2406,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2468,7 +2452,7 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2532,7 +2516,7 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2569,7 +2553,7 @@ void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2763,7 +2747,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 	} else {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("daemon_sockets_sem wait prob");
+			PRINT_ERROR("sem wait prob");
 			exit(-1);
 		}
 
@@ -2784,7 +2768,10 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 
 		struct daemon_socket *sock = &daemon_sockets[hdr->sock_index];
 
-		sem_wait(&sock->sem);
+		if (sem_wait(&sock->sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		if (sock->running) {
 			switch (hdr->call_type) {
 			case bind_call:
@@ -2799,7 +2786,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 		} else {
 			PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 			if (sem_wait(&daemon_sockets_sem)) {
-				PRINT_ERROR("daemon_sockets_sem wait prob");
+				PRINT_ERROR("sem wait prob");
 				exit(-1);
 			}
 			daemon_sockets[hdr->sock_index].threads--;
@@ -2980,7 +2967,7 @@ void *wedge_to_daemon(void *local) {
 	struct pollfd fds[nfds];
 	fds[0].fd = nl_sockfd;
 	//fds[0].events = POLLIN | POLLERR; //| POLLPRI;
-	fds[0].events = POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND ;//| POLLERR;
+	fds[0].events = POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND;//| POLLERR;
 	//fds[0].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	PRINT_DEBUG("fd: sock=%d, events=%x", nl_sockfd, fds[0].events);
 	int time = 1000;
@@ -3241,7 +3228,7 @@ void daemon_interrupt(void) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 
@@ -3261,8 +3248,14 @@ void daemon_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(daemon_proto.event_sem);
-		sem_wait(daemon_proto.input_sem);
+		if (sem_wait(daemon_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(daemon_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(daemon_proto.input_queue);
 		sem_post(daemon_proto.input_sem);
 	} while (daemon_proto.running_flag && ff == NULL && !daemon_interrupt_flag); //TODO change logic here, combine with switch_to_daemon?
@@ -3359,7 +3352,7 @@ void daemon_fcf(struct finsFrame *ff) {
 void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
@@ -3440,7 +3433,7 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
@@ -3503,7 +3496,8 @@ void daemon_exec(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_TCP_POLL_POST: //TODO move to ALERT?
-			PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id)
+			;
 
 			ret += metadata_readFromElement(params, "protocol", &protocol) == META_FALSE;
 			ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
@@ -3522,14 +3516,16 @@ void daemon_exec(struct finsFrame *ff) {
 				switch (protocol) {
 				case IPPROTO_ICMP:
 					//daemon_icmp_in_error(ff, src_ip, dst_ip);
-					PRINT_ERROR("todo");
+					PRINT_ERROR("todo")
+					;
 					break;
 				case IPPROTO_TCP:
 					daemon_tcp_in_poll(ff, ret_msg);
 					break;
 				case IPPROTO_UDP:
 					//daemon_udp_in_error(ff, src_ip, dst_ip);
-					PRINT_ERROR("todo");
+					PRINT_ERROR("todo")
+					;
 					break;
 				default:
 					//PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -3539,7 +3535,8 @@ void daemon_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -3567,7 +3564,7 @@ void daemon_exec(struct finsFrame *ff) {
 void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	struct daemon_call *call = call_list_find_serial_num(expired_call_list, ff->ctrlFrame.serial_num);
@@ -3856,7 +3853,7 @@ void daemon_init(void) {
 		perror("sendfins() caused an error");
 		exit(-1);
 	}
-	PRINT_CRITICAL("Connected to wedge at %d", nl_sockfd);
+	PRINT_CRITICAL("Connected to wedge at fd=%d", nl_sockfd);
 }
 
 void daemon_run(pthread_attr_t *fins_pthread_attr) {
@@ -3894,7 +3891,7 @@ void daemon_release(void) {
 
 	//TODO free all module related mem
 
-	//struct daemon_call *call;
+	call_list_free(expired_call_list);
 
 	int i = 0;
 	for (i = 0; i < MAX_SOCKETS; i++) {

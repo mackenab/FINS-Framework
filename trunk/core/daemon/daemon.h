@@ -325,8 +325,8 @@ struct daemon_socket {
 
 	uint32_t host_ip; //host format
 	uint16_t host_port; //host format
-	uint32_t dst_ip; //host format
-	uint16_t dst_port; //host format
+	uint32_t rem_ip; //host format
+	uint16_t rem_port; //host format
 
 	uint8_t bound;
 	uint8_t listening;

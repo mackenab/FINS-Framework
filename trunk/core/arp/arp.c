@@ -700,8 +700,14 @@ void arp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(arp_proto.event_sem);
-		sem_wait(arp_proto.input_sem);
+		if (sem_wait(arp_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(arp_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(arp_proto.input_queue);
 		sem_post(arp_proto.input_sem);
 	} while (arp_proto.running_flag && ff == NULL && !arp_interrupt_flag); //TODO change logic here, combine with switch_to_arp?

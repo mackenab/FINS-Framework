@@ -28,7 +28,7 @@ void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int p
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &icmp_ops
@@ -74,7 +74,7 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -111,7 +111,7 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	}
 
 	PRINT_DEBUG("bind: index:%d, host:%u/%u, dst:%u/%u",
-			hdr->sock_index, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			hdr->sock_index, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
@@ -132,7 +132,7 @@ void listen_out_icmp(struct nl_wedge_to_daemon *hdr, int backlog) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -189,7 +189,7 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -202,14 +202,14 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	/**
 	 * NOTICE THAT the relation between the host and the destined address is many to one.
 	 * more than one local socket maybe connected to the same destined address
 	 */
 	if (daemon_sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-		PRINT_DEBUG("old destined address %d, %d", daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+		PRINT_DEBUG("old destined address %d, %d", daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 		PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
 
 	}
@@ -224,11 +224,11 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 	 * any modifications to the contents of the daemonSockets database
 	 */
 	daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
-	daemon_sockets[hdr->sock_index].dst_ip = dst_ip;
-	daemon_sockets[hdr->sock_index].dst_port = dst_port;
+	daemon_sockets[hdr->sock_index].rem_ip = dst_ip;
+	daemon_sockets[hdr->sock_index].rem_port = dst_port;
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
@@ -256,7 +256,7 @@ void accept_out_icmp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int s
 	//TODO: finish this
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -284,7 +284,7 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -297,7 +297,7 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	if (peer == 0) { //getsockname
 		host_ip = daemon_sockets[hdr->sock_index].host_ip;
@@ -305,8 +305,8 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	} else if (peer == 1) { //getpeername
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -314,8 +314,8 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -407,7 +407,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -572,7 +572,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -589,8 +589,8 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	}
 
 	if (addr_len == 0) {
-		dst_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		dst_port = daemon_sockets[hdr->sock_index].dst_port;
+		dst_ip = daemon_sockets[hdr->sock_index].rem_ip;
+		dst_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
 	/**
@@ -625,8 +625,8 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 
 	/*//TODO uncomment? find out if connect rem addr sent through sendmsg
 	 if (daemonSockets[hdr->sock_index].state > SS_UNCONNECTED) {
-	 dst_port = daemonSockets[hdr->sock_index].dst_port;
-	 dst_ip = daemonSockets[hdr->sock_index].dst_ip;
+	 dst_port = daemonSockets[hdr->sock_index].rem_port;
+	 dst_ip = daemonSockets[hdr->sock_index].rem_ip;
 	 }*/
 
 	uint32_t ttl = daemon_sockets[hdr->sock_index].sockopts.FIP_TTL;
@@ -694,7 +694,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -707,7 +707,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	if (flags & MSG_ERRQUEUE) {
 		if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
@@ -1180,7 +1180,7 @@ void release_out_icmp(struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1209,7 +1209,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1389,7 +1389,7 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1591,7 +1591,7 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2045,7 +2045,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 
@@ -2058,7 +2058,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].protocol == IPPROTO_ICMP && daemon_sockets[i].host_ip == dst_ip) {
 			PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].dst_ip, daemon_sockets[i].dst_port, daemon_sockets[i].protocol);
+					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].rem_ip, daemon_sockets[i].rem_port, daemon_sockets[i].protocol);
 
 			//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 
@@ -2109,7 +2109,7 @@ void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 
@@ -2124,7 +2124,7 @@ void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip
 	for (i = 0; i < MAX_SOCKETS; i++) {
 		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].protocol == IPPROTO_ICMP && daemon_sockets[i].host_ip == src_ip) {
 			PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].dst_ip, daemon_sockets[i].dst_port, daemon_sockets[i].protocol);
+					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].rem_ip, daemon_sockets[i].rem_port, daemon_sockets[i].protocol);
 
 			if (daemon_sockets[i].sockopts.FIP_RECVERR) {
 				call_list = daemon_sockets[i].call_list;

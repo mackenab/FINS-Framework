@@ -51,7 +51,7 @@ pcap_t *inject_handle;
 pcap_t *capture_handle;
 
 /** Pipes Descriptors */
-int income_pipe_fd;
+int capture_pipe_fd;
 int inject_pipe_fd;
 /**
  * Globally defined counters
@@ -99,8 +99,8 @@ int main() {
 		}
 	}
 
-	if (mkfifo(INCOME_PIPE, 0777) != 0) {
-		PRINT_DEBUG("Failed to mkfifo(INCOME_PIPE, 0777)");
+	if (mkfifo(CAPTURE_PIPE, 0777) != 0) {
+		PRINT_DEBUG("Failed to mkfifo(CAPTURE_PIPE, 0777)");
 		exit(1);
 	}
 

@@ -908,7 +908,8 @@ void main_established(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			}
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1129,7 +1130,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			}
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1987,7 +1989,10 @@ uint32_t tcp_gen_thread_id(void) {
 	//uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
-	sem_wait(&tcp_thread_id_sem);
+	if (sem_wait(&tcp_thread_id_sem)) {
+		PRINT_ERROR("sem wait prob");
+		exit(-1);
+	}
 	num = ++tcp_thread_id_num;
 	sem_post(&tcp_thread_id_sem);
 
@@ -2892,8 +2897,14 @@ void tcp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(tcp_proto.event_sem);
-		sem_wait(tcp_proto.input_sem);
+		if (sem_wait(tcp_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(tcp_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(tcp_proto.input_queue);
 		sem_post(tcp_proto.input_sem);
 	} while (tcp_proto.running_flag && ff == NULL);
@@ -2983,43 +2994,53 @@ void tcp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
 		tcp_read_param(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
 		tcp_set_param(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		tcp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		tcp_error(ff);
 		break;
 	default:
-		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
 		freeFinsFrame(ff);
 		break;
 	}

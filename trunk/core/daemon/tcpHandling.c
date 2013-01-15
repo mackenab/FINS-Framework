@@ -26,7 +26,7 @@ void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int pr
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol);
@@ -62,7 +62,7 @@ void bind_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -126,7 +126,7 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -138,7 +138,7 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 		return;
 	}
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	uint32_t state = daemon_sockets[hdr->sock_index].state;
 	daemon_sockets[hdr->sock_index].listening = 1;
@@ -225,7 +225,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -239,7 +239,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	/**
 	 * NOTICE THAT the relation between the host and the destined address is many to one.
@@ -309,8 +309,8 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	//if statements make sure socket is in SS_UNCONNECTED
 	daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
 	daemon_sockets[hdr->sock_index].listening = 0;
-	daemon_sockets[hdr->sock_index].dst_ip = rem_ip;
-	daemon_sockets[hdr->sock_index].dst_port = rem_port;
+	daemon_sockets[hdr->sock_index].rem_ip = rem_ip;
+	daemon_sockets[hdr->sock_index].rem_port = rem_port;
 	uint32_t state = daemon_sockets[hdr->sock_index].state;
 
 	/**
@@ -351,7 +351,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	 */
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
@@ -412,7 +412,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -424,7 +424,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 		return;
 	}
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	if (!daemon_sockets[hdr->sock_index].listening) {
 		PRINT_ERROR("socket not listening");
@@ -514,7 +514,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 			daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 		} else {
@@ -545,7 +545,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -558,7 +558,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	if (peer == 0) { //getsockname
 		host_ip = daemon_sockets[hdr->sock_index].host_ip;
@@ -566,8 +566,8 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	} else if (peer == 1) { //getpeername
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -575,8 +575,8 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -672,7 +672,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -808,7 +808,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -825,7 +825,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	switch (daemon_sockets[hdr->sock_index].state) {
 	case SS_UNCONNECTED:
@@ -868,8 +868,8 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 		return;
 	}
 
-	dst_port = daemon_sockets[hdr->sock_index].dst_port;
-	dst_ip = daemon_sockets[hdr->sock_index].dst_ip;
+	dst_port = daemon_sockets[hdr->sock_index].rem_port;
+	dst_ip = daemon_sockets[hdr->sock_index].rem_ip;
 
 	/**
 	 * Default current host port is supposed to be randomly selected from the range found in
@@ -951,7 +951,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -964,7 +964,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	switch (daemon_sockets[hdr->sock_index].state) {
 	case SS_UNCONNECTED:
@@ -1016,8 +1016,8 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			uint32_t state = daemon_sockets[hdr->sock_index].state;
 			uint32_t host_ip = daemon_sockets[hdr->sock_index].host_ip;
 			uint32_t host_port = daemon_sockets[hdr->sock_index].host_port;
-			uint32_t rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			uint32_t rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			uint32_t rem_port = daemon_sockets[hdr->sock_index].rem_port;
 
 			metadata *params = ff->metaData;
 
@@ -1258,7 +1258,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 	PRINT_DEBUG("hdr=%p", hdr);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1271,14 +1271,14 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	state = daemon_sockets[hdr->sock_index].state;
 	host_ip = daemon_sockets[hdr->sock_index].host_ip;
 	host_port = daemon_sockets[hdr->sock_index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		rem_port = daemon_sockets[hdr->sock_index].dst_port;
+		rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
 	//TODO process flags?
@@ -1342,7 +1342,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1373,13 +1373,13 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 			uint32_t state = daemon_sockets[hdr->sock_index].state;
 			uint32_t host_ip = daemon_sockets[hdr->sock_index].host_ip;
 			uint32_t host_port = daemon_sockets[hdr->sock_index].host_port;
-			uint32_t rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			uint32_t rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			uint32_t rem_port = daemon_sockets[hdr->sock_index].rem_port;
 
 			if (state > SS_UNCONNECTED) {
 				PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
@@ -1517,13 +1517,13 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 				if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
 					PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-							daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+							daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 					uint32_t state = daemon_sockets[hdr->sock_index].state;
 					uint32_t host_ip = daemon_sockets[hdr->sock_index].host_ip;
 					uint32_t host_port = daemon_sockets[hdr->sock_index].host_port;
-					uint32_t rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-					uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
+					uint32_t rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+					uint32_t rem_port = daemon_sockets[hdr->sock_index].rem_port;
 
 					if (state > SS_UNCONNECTED) {
 						PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
@@ -1612,13 +1612,13 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 //mask |= POLLHUP; //TODO implement
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 			uint32_t state = daemon_sockets[hdr->sock_index].state;
 			uint32_t host_ip = daemon_sockets[hdr->sock_index].host_ip;
 			uint32_t host_port = daemon_sockets[hdr->sock_index].host_port;
-			uint32_t rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			uint32_t rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			uint32_t rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			uint32_t rem_port = daemon_sockets[hdr->sock_index].rem_port;
 
 			if (state > SS_UNCONNECTED) {
 				PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
@@ -1715,7 +1715,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1728,14 +1728,14 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	state = daemon_sockets[hdr->sock_index].state;
 	host_ip = daemon_sockets[hdr->sock_index].host_ip;
 	host_port = daemon_sockets[hdr->sock_index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		rem_port = daemon_sockets[hdr->sock_index].dst_port;
+		rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
@@ -1950,7 +1950,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1963,14 +1963,14 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	state = daemon_sockets[hdr->sock_index].state;
 	host_ip = daemon_sockets[hdr->sock_index].host_ip;
 	host_port = daemon_sockets[hdr->sock_index].host_port;
 	if (state > SS_UNCONNECTED) {
-		rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		rem_port = daemon_sockets[hdr->sock_index].dst_port;
+		rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
@@ -2181,7 +2181,7 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
@@ -2198,7 +2198,7 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 		daemon_sockets[sock_index].state = SS_CONNECTED;
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -2209,7 +2209,7 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 		daemon_sockets[sock_index].error_msg = ret_msg;
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -2257,7 +2257,7 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
@@ -2275,18 +2275,18 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 			daemon_sockets[sock_index_new].state = SS_CONNECTED;
 			daemon_sockets[sock_index_new].host_ip = daemon_sockets[sock_index].host_ip;
 			daemon_sockets[sock_index_new].host_port = daemon_sockets[sock_index].host_port;
-			daemon_sockets[sock_index_new].dst_ip = rem_ip;
-			daemon_sockets[sock_index_new].dst_port = (uint16_t) rem_port;
+			daemon_sockets[sock_index_new].rem_ip = rem_ip;
+			daemon_sockets[sock_index_new].rem_port = (uint16_t) rem_port;
 
 			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[sock_index_new].sock_id, sock_index_new, daemon_sockets[sock_index_new].state, daemon_sockets[sock_index_new].host_ip, daemon_sockets[sock_index_new].host_port, daemon_sockets[sock_index_new].dst_ip, daemon_sockets[sock_index_new].dst_port);
+					daemon_sockets[sock_index_new].sock_id, sock_index_new, daemon_sockets[sock_index_new].state, daemon_sockets[sock_index_new].host_ip, daemon_sockets[sock_index_new].host_port, daemon_sockets[sock_index_new].rem_ip, daemon_sockets[sock_index_new].rem_port);
 
 			daemon_sockets[sock_index].state = SS_UNCONNECTED;
 			daemon_sockets[sock_index].sock_id_new = -1;
 			daemon_sockets[sock_index].sock_index_new = -1;
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
+					daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port);
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
@@ -2299,7 +2299,7 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 			daemon_sockets[sock_index].error_msg = 0; //TODO fill in special value?
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
+					daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -2312,7 +2312,7 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 		daemon_sockets[sock_index].error_msg = ret_msg;
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].state, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -2470,7 +2470,7 @@ void release_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 		PRINT_DEBUG("");
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("daemon_sockets_sem wait prob");
+			PRINT_ERROR("sem wait prob");
 			exit(-1);
 		}
 		if (daemon_sockets[sock_index].sock_id != sock_id) {
@@ -2522,7 +2522,7 @@ void poll_in_tcp_fcf(struct finsFrame *ff, uint32_t call_id, int call_index, int
 
 				PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 				if (sem_wait(&daemon_sockets_sem)) {
-					PRINT_ERROR("daemon_sockets_sem wait prob");
+					PRINT_ERROR("sem wait prob");
 					exit(-1);
 				}
 				if (daemon_sockets[sock_index].sock_id != sock_id) {
@@ -2771,13 +2771,13 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 		//PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, daemon_sockets[hdr->sock_index].data_buf);
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].dst_ip, daemon_sockets[call->sock_index].dst_port);
+				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].rem_ip, daemon_sockets[call->sock_index].rem_port);
 
 		uint32_t state = daemon_sockets[call->sock_index].state;
 		uint32_t host_ip = daemon_sockets[call->sock_index].host_ip;
 		uint32_t host_port = daemon_sockets[call->sock_index].host_port;
-		uint32_t rem_ip = daemon_sockets[call->sock_index].dst_ip;
-		uint32_t rem_port = daemon_sockets[call->sock_index].dst_port;
+		uint32_t rem_ip = daemon_sockets[call->sock_index].rem_ip;
+		uint32_t rem_port = daemon_sockets[call->sock_index].rem_port;
 
 		PRINT_DEBUG("recvfrom address: state=%u, host=%u/%u, rem=%u/%u,", state, host_ip, host_port, rem_ip, rem_port);
 
@@ -2838,7 +2838,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int sock_index = daemon_sockets_match_connection(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port, IPPROTO_TCP);
@@ -2853,7 +2853,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 		freeFinsFrame(ff);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);
 
 		//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 
@@ -2922,7 +2922,7 @@ void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	//src == host & dst == rem
@@ -2935,7 +2935,7 @@ void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t) src_port, dst_ip, (uint16_t)dst_port);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);
 
 		//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 
@@ -2983,7 +2983,7 @@ void daemon_tcp_in_poll(struct finsFrame *ff, uint32_t ret_msg) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int sock_index = daemon_sockets_match_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, IPPROTO_TCP);
@@ -2995,7 +2995,7 @@ void daemon_tcp_in_poll(struct finsFrame *ff, uint32_t ret_msg) {
 		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);
 
 		struct daemon_call_list *call_list = daemon_sockets[sock_index].call_list;
 
@@ -3148,7 +3148,7 @@ void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
@@ -3167,7 +3167,7 @@ void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t
 		daemon_sockets[call->sock_index].state = SS_CONNECTED;
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].dst_ip, daemon_sockets[call->sock_index].dst_port);
+				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].rem_ip, daemon_sockets[call->sock_index].rem_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -3182,7 +3182,7 @@ void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t
 		daemon_sockets[call->sock_index].host_port = 0;
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].dst_ip, daemon_sockets[call->sock_index].dst_port);
+				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].rem_ip, daemon_sockets[call->sock_index].rem_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -3237,7 +3237,7 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
@@ -3257,11 +3257,11 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 			daemon_sockets[call->sock_index_new].state = SS_CONNECTED;
 			daemon_sockets[call->sock_index_new].host_ip = daemon_sockets[call->sock_index].host_ip;
 			daemon_sockets[call->sock_index_new].host_port = daemon_sockets[call->sock_index].host_port;
-			daemon_sockets[call->sock_index_new].dst_ip = rem_ip;
-			daemon_sockets[call->sock_index_new].dst_port = (uint16_t) rem_port;
+			daemon_sockets[call->sock_index_new].rem_ip = rem_ip;
+			daemon_sockets[call->sock_index_new].rem_port = (uint16_t) rem_port;
 
 			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[call->sock_index_new].sock_id, call->sock_index_new, daemon_sockets[call->sock_index_new].state, daemon_sockets[call->sock_index_new].host_ip, daemon_sockets[call->sock_index_new].host_port, daemon_sockets[call->sock_index_new].dst_ip, daemon_sockets[call->sock_index_new].dst_port);
+					daemon_sockets[call->sock_index_new].sock_id, call->sock_index_new, daemon_sockets[call->sock_index_new].state, daemon_sockets[call->sock_index_new].host_ip, daemon_sockets[call->sock_index_new].host_port, daemon_sockets[call->sock_index_new].rem_ip, daemon_sockets[call->sock_index_new].rem_port);
 
 			daemon_sockets[call->sock_index].state = SS_UNCONNECTED;
 			if (reply) {
@@ -3273,7 +3273,7 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 			}
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].dst_ip, daemon_sockets[call->sock_index].dst_port);
+					daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].rem_ip, daemon_sockets[call->sock_index].rem_port);
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
@@ -3288,7 +3288,7 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 			daemon_sockets[call->sock_index].error_msg = 0; //TODO fill in special value?
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-					daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].dst_ip, daemon_sockets[call->sock_index].dst_port);
+					daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].rem_ip, daemon_sockets[call->sock_index].rem_port);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -3302,7 +3302,7 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 		daemon_sockets[call->sock_index].error_msg = ret_msg;
 
 		PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].dst_ip, daemon_sockets[call->sock_index].dst_port);
+				daemon_sockets[call->sock_index].sock_id, call->sock_index, daemon_sockets[call->sock_index].state, daemon_sockets[call->sock_index].host_ip, daemon_sockets[call->sock_index].host_port, daemon_sockets[call->sock_index].rem_ip, daemon_sockets[call->sock_index].rem_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 

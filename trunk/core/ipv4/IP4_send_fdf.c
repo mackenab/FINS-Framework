@@ -171,4 +171,5 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 		//free(pdu);
 	}
 	*/
+	free(pdu); //TODO comment when uncomment ARP stuff
 }

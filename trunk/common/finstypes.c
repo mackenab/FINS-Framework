@@ -17,7 +17,10 @@ uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
 	//TODO replace this with a random number generator
-	sem_wait(&control_serial_sem);
+	if (sem_wait(&control_serial_sem)) {
+		PRINT_ERROR("sem wait prob");
+		exit(-1);
+	}
 	num = ++control_serial_num;
 	sem_post(&control_serial_sem);
 
@@ -272,7 +275,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//load buffer
 
-//	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID.id + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.senderID) + itoa(ff->ctrlFrame.serial_num) + sizeof((char)ff->ctrlFrame.data)))
+	//	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID.id + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.senderID) + itoa(ff->ctrlFrame.serial_num) + sizeof((char)ff->ctrlFrame.data)))
 
 	PRINT_DEBUG("In serializeCtrlFrame!");
 
@@ -319,7 +322,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 	*buffer += temp;
 
 	//OPCODE
-//	strncat((unsigned char *)*buffer, (unsigned char *) (&(htonl(ff->ctrlFrame.opcode))), sizeof(int));
+	//	strncat((unsigned char *)*buffer, (unsigned char *) (&(htonl(ff->ctrlFrame.opcode))), sizeof(int));
 	memcpy((unsigned char *) *buffer, &(ff->ctrlFrame.opcode), sizeof(unsigned short int));
 	//PRINT_DEBUG("buffer4 = %s", *buffer);
 
@@ -402,7 +405,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	struct finsFrame * ff = malloc(sizeof(struct finsFrame));
 	memset(ff, 0, sizeof(struct finsFrame));
 
-//	PRINT_DEBUG("The value of buffer = %s", buffer,length);
+	//	PRINT_DEBUG("The value of buffer = %s", buffer,length);
 
 	//DATA OR CONTROL
 	memcpy(&(ff->dataOrCtrl), (unsigned char *) buffer, sizeof(unsigned char));

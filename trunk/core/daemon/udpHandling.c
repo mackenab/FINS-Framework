@@ -28,7 +28,7 @@ void socket_out_udp(struct nl_wedge_to_daemon *hdr, int domain, int type, int pr
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &udp_ops
@@ -73,7 +73,7 @@ void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -108,7 +108,7 @@ void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	}
 
 	PRINT_DEBUG("bind: index:%d, host:%u/%u, dst:%u/%u",
-			hdr->sock_index, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			hdr->sock_index, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
@@ -128,7 +128,7 @@ void listen_out_udp(struct nl_wedge_to_daemon *hdr, int backlog) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -182,7 +182,7 @@ void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -194,14 +194,14 @@ void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	/**
 	 * NOTICE THAT the relation between the host and the destined address is many to one.
 	 * more than one local socket maybe connected to the same destined address
 	 */
 	if (daemon_sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-		PRINT_DEBUG("old destined address %d, %d", daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
+		PRINT_DEBUG("old destined address %d, %d", daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
 	}
 
 	/**TODO check if the port is free for binding or previously allocated
@@ -214,11 +214,11 @@ void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	 * any modifications to the contents of the daemonSockets database
 	 */
 	daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
-	daemon_sockets[hdr->sock_index].dst_ip = dst_ip;
-	daemon_sockets[hdr->sock_index].dst_port = dst_port;
+	daemon_sockets[hdr->sock_index].rem_ip = dst_ip;
+	daemon_sockets[hdr->sock_index].rem_port = dst_port;
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
@@ -245,7 +245,7 @@ void accept_out_udp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 	//TODO: finish this
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -271,7 +271,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -283,7 +283,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	if (peer == 0) { //getsockname
 		host_ip = daemon_sockets[hdr->sock_index].host_ip;
@@ -315,8 +315,8 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	} else if (peer == 1) { //getpeername
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -324,8 +324,8 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
 		state = daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-			rem_port = daemon_sockets[hdr->sock_index].dst_port;
+			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -403,6 +403,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	free(msg);
+	free(addr);
 }
 
 void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, ssize_t buf_len) {
@@ -415,7 +416,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -579,7 +580,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -595,8 +596,8 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	}
 
 	if (addr_len == 0) {
-		dst_ip = daemon_sockets[hdr->sock_index].dst_ip;
-		dst_port = daemon_sockets[hdr->sock_index].dst_port;
+		dst_ip = daemon_sockets[hdr->sock_index].rem_ip;
+		dst_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
 	/**
@@ -629,8 +630,8 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	/*//TODO uncomment? find out if connect rem addr sent through sendmsg
 	 if (daemonSockets[hdr->sock_index].state > SS_UNCONNECTED) {
-	 dst_port = daemonSockets[hdr->sock_index].dst_port;
-	 dst_ip = daemonSockets[hdr->sock_index].dst_ip;
+	 dst_port = daemonSockets[hdr->sock_index].rem_port;
+	 dst_ip = daemonSockets[hdr->sock_index].rem_ip;
 	 }*/
 
 	uint32_t ttl = daemon_sockets[hdr->sock_index].sockopts.FIP_TTL;
@@ -699,7 +700,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -711,7 +712,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].dst_ip, daemon_sockets[hdr->sock_index].dst_port);
+			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
 	if (flags & MSG_ERRQUEUE) {
 		if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
@@ -1213,7 +1214,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1225,9 +1226,9 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	}
 
 	uint32_t host_ip = daemon_sockets[hdr->sock_index].host_ip;
-	uint32_t host_port = (uint32_t)daemon_sockets[hdr->sock_index].host_port;
-	uint32_t rem_ip = daemon_sockets[hdr->sock_index].dst_ip;
-	uint32_t rem_port = (uint32_t)daemon_sockets[hdr->sock_index].dst_port;
+	uint32_t host_port = (uint32_t) daemon_sockets[hdr->sock_index].host_port;
+	uint32_t rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
+	uint32_t rem_port = (uint32_t) daemon_sockets[hdr->sock_index].rem_port;
 
 	daemon_sockets_remove(hdr->sock_index);
 
@@ -1237,24 +1238,25 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	//TODO send FCF to UDP module clearing error buffers of any msgs from this socket
+	if (0) {
+		metadata *params_req = (metadata *) malloc(sizeof(metadata));
+		if (params_req == NULL) {
+			PRINT_ERROR("metadata creation failed");
+			exit(-1);
+		}
+		metadata_create(params_req);
 
-	metadata *params_req = (metadata *) malloc(sizeof(metadata));
-	if (params_req == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		exit(-1);
-	}
-	metadata_create(params_req);
+		metadata_writeToElement(params_req, "host_ip", &host_ip, META_TYPE_INT32);
+		metadata_writeToElement(params_req, "host_port", &host_port, META_TYPE_INT32);
+		metadata_writeToElement(params_req, "rem_ip", &rem_ip, META_TYPE_INT32);
+		metadata_writeToElement(params_req, "rem_port", &rem_port, META_TYPE_INT32);
 
-	metadata_writeToElement(params_req, "host_ip", &host_ip, META_TYPE_INT32);
-	metadata_writeToElement(params_req, "host_port", &host_port, META_TYPE_INT32);
-	metadata_writeToElement(params_req, "rem_ip", &rem_ip, META_TYPE_INT32);
-	metadata_writeToElement(params_req, "rem_port", &rem_port, META_TYPE_INT32);
-
-	if (daemon_fcf_to_switch(UDP_ID, params_req, gen_control_serial_num(), CTRL_EXEC, EXEC_UDP_CLEAR_SENT)) {
-		PRINT_DEBUG("Exited, normal: hdr=%p", hdr);
-	} else {
-		PRINT_ERROR("Exited, fail sending flow msgs: hdr=%p", hdr);
-		metadata_destroy(params_req);
+		if (daemon_fcf_to_switch(UDP_ID, params_req, gen_control_serial_num(), CTRL_EXEC, EXEC_UDP_CLEAR_SENT)) {
+			PRINT_DEBUG("Exited, normal: hdr=%p", hdr);
+		} else {
+			PRINT_ERROR("Exited, fail sending flow msgs: hdr=%p", hdr);
+			metadata_destroy(params_req);
+		}
 	}
 }
 
@@ -1265,7 +1267,7 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1442,7 +1444,7 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -1645,7 +1647,7 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2150,7 +2152,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int sock_index = daemon_sockets_match((uint16_t) dst_port, dst_ip, IPPROTO_UDP); //TODO change for multicast
@@ -2162,7 +2164,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 		freeFinsFrame(ff);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);
 
 		//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 
@@ -2225,7 +2227,7 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("daemon_sockets_sem wait prob");
+		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
 	int sock_index = daemon_sockets_match((uint16_t) src_port, src_ip, IPPROTO_UDP); //TODO change for multicast
@@ -2236,7 +2238,7 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 		freeFinsFrame(ff);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].dst_ip, daemon_sockets[sock_index].dst_port, daemon_sockets[sock_index].protocol);
+				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);
 
 		if (daemon_sockets[sock_index].sockopts.FIP_RECVERR) {
 			struct daemon_call_list *call_list = daemon_sockets[sock_index].call_list;

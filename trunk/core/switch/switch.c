@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 
 #include "switch.h"
-static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name = "switch", .running_flag = 1,};
+static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name = "switch", .running_flag = 1, };
 
 pthread_t switch_thread;
 
@@ -44,7 +44,7 @@ void module_create_ops(struct fins_proto_module *module) {
 	sem_init(module->output_sem, 0, 1);
 
 	module->event_sem = (sem_t *) malloc(sizeof(sem_t));
-	if (module->output_sem == NULL) {
+	if (module->event_sem == NULL) {
 		PRINT_ERROR("error alloc");
 		exit(-1);
 	}
@@ -58,8 +58,11 @@ void module_destroy_ops(struct fins_proto_module *module) {
 	term_queue(module->input_queue);
 
 	sem_destroy(module->output_sem);
+	free(module->output_sem);
 	sem_destroy(module->input_sem);
+	free(module->input_sem);
 	sem_destroy(module->event_sem);
+	free(module->event_sem);
 }
 
 int module_register(struct fins_proto_module *module) {
@@ -106,6 +109,7 @@ int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
 	}
 	if (write_queue(ff, module->output_queue)) {
 		PRINT_DEBUG("Exited: module=%p, module_id=%d, name='%s', 1", module, module->module_id, module->name);
+		sem_post(switch_proto.event_sem);
 		sem_post(module->output_sem);
 		return 1;
 	} else {
@@ -125,9 +129,17 @@ void *switch_loop(void *local) {
 	int counter = 0;
 
 	while (switch_proto.running_flag) {
+		if (sem_wait(switch_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+
 		for (i = 0; i < MAX_modules; i++) {
 			if (fins_modules[i] != NULL) {
-				sem_wait(fins_modules[i]->output_sem);
+				if (sem_wait(fins_modules[i]->output_sem)) {
+					PRINT_ERROR("sem wait prob: src module_id=%d", i);
+					exit(-1);
+				}
 				ff = read_queue(fins_modules[i]->output_queue);
 				sem_post(fins_modules[i]->output_sem);
 
@@ -136,22 +148,28 @@ void *switch_loop(void *local) {
 
 					id = ff->destinationID.id;
 					if (id < 0 || id > MAX_modules) { //TODO check/change should be MAX_ID?
-						PRINT_ERROR("dropping ff: illegal destination: ff=%p, dest id=%u", ff, id);
+						PRINT_ERROR("dropping ff: illegal destination: src module_id=%d, dst module_id=%u, ff=%p, meta=%p", i, id, ff, ff->metaData);
 						freeFinsFrame(ff);
 					} else { //if (i != id) //TODO add this?
 						if (fins_modules[id] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[id]->name, ff, ff->metaData);
-							sem_wait(fins_modules[id]->input_sem);
-							write_queue(ff, fins_modules[id]->input_queue);
-							sem_post(fins_modules[id]->event_sem);
-							sem_post(fins_modules[id]->input_sem);
+							if (sem_wait(fins_modules[id]->input_sem)) {
+								PRINT_ERROR("sem wait prob: dst module_id=%u, ff=%p, meta=%p", id, ff, ff->metaData);
+								exit(-1);
+							}
+							if (write_queue(ff, fins_modules[id]->input_queue)) {
+								sem_post(fins_modules[id]->event_sem);
+								sem_post(fins_modules[id]->input_sem);
+							} else {
+								sem_post(fins_modules[id]->input_sem);
+								PRINT_ERROR("Write queue error: dst module_id=%u, ff=%p, meta=%p", id, ff, ff->metaData);
+								freeFinsFrame(ff);
+							}
 						} else {
-							PRINT_ERROR("dropping ff: destination not registered: ff=%p, dest module_id=%u", ff, id);
+							PRINT_ERROR("dropping ff: destination not registered: dst module_id=%u, ff=%p, meta=%p", id, ff, ff->metaData);
 							freeFinsFrame(ff);
 						}
-
 					}
-
 				}
 			}
 		}
@@ -164,6 +182,13 @@ void *switch_loop(void *local) {
 void switch_init(void) {
 	PRINT_CRITICAL("Entered");
 	switch_proto.running_flag = 1;
+
+	switch_proto.event_sem = (sem_t *) malloc(sizeof(sem_t));
+	if (switch_proto.event_sem == NULL) {
+		PRINT_ERROR("error alloc");
+		exit(-1);
+	}
+	sem_init(switch_proto.event_sem, 0, 0);
 
 	//module_create_ops(&switch_proto);
 	//module_register(&switch_proto);
@@ -186,7 +211,7 @@ void switch_run(pthread_attr_t *fins_pthread_attr) {
 void switch_shutdown(void) {
 	PRINT_CRITICAL("Entered");
 	switch_proto.running_flag = 0;
-	//sem_post(switch_proto.event_sem);
+	sem_post(switch_proto.event_sem);
 
 	//TODO expand this
 
@@ -200,4 +225,6 @@ void switch_release(void) {
 
 	//module_unregister(switch_proto.module_id);
 	//module_destroy_ops(&switch_proto);
+	sem_destroy(switch_proto.event_sem);
+	free(switch_proto.event_sem);
 }

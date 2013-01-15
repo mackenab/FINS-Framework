@@ -158,7 +158,6 @@ void *capturer_to_interface(void *local) {
 	int frame_len;
 	struct sniff_ethernet *hdr;
 	int numBytes;
-	//int capture_pipe_fd;
 	struct finsFrame *ff = NULL;
 
 	metadata *params;
@@ -169,16 +168,27 @@ void *capturer_to_interface(void *local) {
 	uint32_t ether_type;
 
 	while (interface_proto.running_flag) {
-		interface_setNonblocking(capture_pipe_fd);
-		do {
-			numBytes = read(capture_pipe_fd, &frame_len, sizeof(int)); //TODO change to nonblocking in loop
-		} while (interface_proto.running_flag && numBytes <= 0);
+		if (0) { //works, allows for terminating, though creates unbound while(1) loop
+			interface_setNonblocking(capture_pipe_fd);
+			do {
+				numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
+			} while (interface_proto.running_flag && numBytes <= 0);
 
-		if (!interface_proto.running_flag) {
-			break;
+			if (!interface_proto.running_flag) {
+				break;
+			}
+
+			interface_setBlocking(capture_pipe_fd);
 		}
+		if (1) { //works but blocks, so can't shutdown properly, have to double ^C or kill
+			do {
+				numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
+			} while (interface_proto.running_flag && numBytes <= 0);
 
-		interface_setBlocking(capture_pipe_fd);
+			if (!interface_proto.running_flag) {
+				break;
+			}
+		}
 
 		if (numBytes <= 0) {
 			PRINT_ERROR("numBytes written %d", numBytes);
@@ -316,8 +326,14 @@ void interface_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		sem_wait(interface_proto.event_sem);
-		sem_wait(interface_proto.input_sem);
+		if (sem_wait(interface_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(interface_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(interface_proto.input_queue);
 		sem_post(interface_proto.input_sem);
 	} while (interface_proto.running_flag && ff == NULL);

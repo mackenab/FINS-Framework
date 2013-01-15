@@ -19,8 +19,14 @@ void IP4_receive_fdf(void) {
 	uint32_t protocol;
 
 	do {
-		sem_wait(ipv4_proto.event_sem);
-		sem_wait(ipv4_proto.input_sem);
+		if (sem_wait(ipv4_proto.event_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
+		if (sem_wait(ipv4_proto.input_sem)) {
+			PRINT_ERROR("sem wait prob");
+			exit(-1);
+		}
 		ff = read_queue(ipv4_proto.input_queue);
 		sem_post(ipv4_proto.input_sem);
 	} while (ipv4_proto.running_flag && ff == NULL);

@@ -141,14 +141,14 @@ void print_frame(const u_char *payload, int len) {
 	print_frame(packetReceived, dataLength);
 	fflush(stdout);
 
-	numBytes = write(income_pipe_fd, &dataLength, sizeof(u_int));
+	numBytes = write(capture_pipe_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
 		PRINT_DEBUG("numBytes written %d\n", numBytes);
 		//return (0);
 		return;
 	}
 
-	numBytes = write(income_pipe_fd, packetReceived, dataLength);
+	numBytes = write(capture_pipe_fd, packetReceived, dataLength);
 	if (numBytes <= 0) {
 		PRINT_DEBUG("numBytes written %d\n", numBytes);
 		//return (0);
@@ -184,7 +184,7 @@ void capture_init(char *interface) {
 	dev = (unsigned char *) device;
 
 	/*
-	 if (mkfifo(INCOME_PIPE, 0777) !=0 )
+	 if (mkfifo(CAPTURE_PIPE, 0777) !=0 )
 	 {
 	 PRINT_DEBUG("MKFIFO Failed \n");
 	 exit(EXIT_FAILURE);
@@ -193,8 +193,8 @@ void capture_init(char *interface) {
 
 	/* has to run without return check to work as blocking call */
 	/** It blocks until the other communication side opens the pipe */
-	income_pipe_fd = open(INCOME_PIPE, O_WRONLY);
-	if (income_pipe_fd == -1) {
+	capture_pipe_fd = open(CAPTURE_PIPE, O_WRONLY);
+	if (capture_pipe_fd == -1) {
 		PRINT_DEBUG("Income Pipe failure \n");
 		exit(EXIT_FAILURE);
 	}
@@ -362,9 +362,9 @@ void wifi_terminate() {
 /** -------------------------------------------------------------*/
 
 void close_pipes() {
-	unlink(INCOME_PIPE);
+	unlink(CAPTURE_PIPE);
 	unlink(INJECT_PIPE);
-	close(income_pipe_fd);
+	close(capture_pipe_fd);
 	close(inject_pipe_fd);
 
 }
