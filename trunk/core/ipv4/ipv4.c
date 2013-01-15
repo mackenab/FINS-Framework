@@ -34,14 +34,14 @@ int ipv4_to_switch(struct finsFrame *ff) {
 }
 
 void *switch_to_ipv4(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (ipv4_proto.running_flag) {
 		IP4_receive_fdf();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 

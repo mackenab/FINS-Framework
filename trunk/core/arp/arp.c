@@ -866,7 +866,7 @@ int arp_to_switch(struct finsFrame *ff) {
 }
 
 void *switch_to_arp(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (arp_proto.running_flag) {
 		arp_get_ff();
@@ -874,7 +874,7 @@ void *switch_to_arp(void *local) {
 		//	free(pff);
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 

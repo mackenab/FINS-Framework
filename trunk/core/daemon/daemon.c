@@ -2957,7 +2957,7 @@ void test_func_daemon(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t m
 }
 
 void *wedge_to_daemon(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	int ret;
 
@@ -3180,19 +3180,19 @@ void *wedge_to_daemon(void *local) {
 	free(recv_buf);
 	close(nl_sockfd);
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 
 void *switch_to_daemon(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (daemon_proto.running_flag) {
 		daemon_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 

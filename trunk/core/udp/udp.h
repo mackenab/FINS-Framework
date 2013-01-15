@@ -32,16 +32,19 @@
 
 #define UDP_MSL_TO_DEFAULT 512000
 #define UDP_SENT_LIST_MAX (2*65536) //TODO change back to 2^16?
-
 struct udp_sent { //TODO move this functionality to common, or data_structure
 	struct udp_sent *next;
 
 	struct finsFrame *ff;
+	uint32_t host_ip;
+	uint16_t host_port;
+	uint32_t rem_ip;
+	uint16_t rem_port;
 
 	struct timeval stamp;
 };
 
-struct udp_sent *udp_sent_create(struct finsFrame *ff);
+struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void udp_sent_free(struct udp_sent *sent);
 
 struct udp_sent_list {
@@ -128,10 +131,10 @@ uint16_t UDP_checksum(struct udp_packet *pcket, uint32_t src_ip, uint32_t dst_ip
 
 void udp_fcf(struct finsFrame *ff);
 void udp_exec(struct finsFrame *ff);
+void udp_exec_clear_sent(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void udp_error(struct finsFrame *ff);
 
 void udp_in_fdf(struct finsFrame *ff);
-
 void udp_out_fdf(struct finsFrame *ff);
 
 struct finsFrame *create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t *PDU, metadata *params);

@@ -152,7 +152,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
 	if (udp_to_switch(ff)) {
-		struct udp_sent *sent = udp_sent_create(ff_clone);
+		struct udp_sent *sent = udp_sent_create(ff_clone, src_ip, src_port, dst_ip, dst_port);
 
 		if (udp_sent_list_has_space(udp_sent_packet_list)) {
 			udp_sent_list_append(udp_sent_packet_list, sent);
@@ -161,17 +161,17 @@ void udp_out_fdf(struct finsFrame* ff) {
 			gettimeofday(&sent->stamp, 0);
 		} else {
 			PRINT_DEBUG("Clearing sent_packet_list");
-			udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT);
+			udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
 
-			if (udp_sent_list_has_space(udp_sent_packet_list)) {
-				udp_sent_list_append(udp_sent_packet_list, sent);
-				PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max)
-
-				gettimeofday(&sent->stamp, 0);
-			} else {
-				PRINT_ERROR("todo error");
-				udp_sent_free(sent);
+			if (!udp_sent_list_has_space(udp_sent_packet_list)) {
+				PRINT_DEBUG("Dropping head of sent_packet_list");
+				struct udp_sent *old = udp_sent_list_remove_front(udp_sent_packet_list);
+				udp_sent_free(old);
 			}
+			udp_sent_list_append(udp_sent_packet_list, sent);
+			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max)
+
+			gettimeofday(&sent->stamp, 0);
 		}
 	} else {
 		PRINT_ERROR("todo error");

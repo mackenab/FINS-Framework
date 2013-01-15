@@ -1238,7 +1238,7 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	//TODO send FCF to UDP module clearing error buffers of any msgs from this socket
-	if (0) {
+	if (host_port != 0) {
 		metadata *params_req = (metadata *) malloc(sizeof(metadata));
 		if (params_req == NULL) {
 			PRINT_ERROR("metadata creation failed");

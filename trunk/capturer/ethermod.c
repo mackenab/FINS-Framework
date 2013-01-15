@@ -41,8 +41,9 @@ void print_app_banner(void) {
 	return;
 }
 
-#define DEBUG
-#define ERROR
+//#define DEBUG
+//#define CRITICAL
+//#define ERROR
 
 /** packet inject handle */
 pcap_t *inject_handle;

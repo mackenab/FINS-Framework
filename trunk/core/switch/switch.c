@@ -120,7 +120,7 @@ int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
 }
 
 void *switch_loop(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	int i;
 	struct finsFrame *ff;
@@ -175,7 +175,7 @@ void *switch_loop(void *local) {
 		}
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 } // end of switch_init Function
 

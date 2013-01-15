@@ -32,8 +32,8 @@ struct udp_statistics udpStat;
 
 struct udp_sent_list *udp_sent_packet_list;
 
-struct udp_sent *udp_sent_create(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+	PRINT_DEBUG("Entered: ff=%p, meta=%p, host=%u/%u, rem=%u/%u", ff, ff->metaData, host_ip, host_port, rem_ip, rem_port);
 
 	struct udp_sent *sent = (struct udp_sent *) malloc(sizeof(struct udp_sent));
 	if (sent == NULL) {
@@ -44,6 +44,10 @@ struct udp_sent *udp_sent_create(struct finsFrame *ff) {
 	sent->next = NULL;
 
 	sent->ff = ff;
+	sent->host_ip = host_ip;
+	sent->host_port = host_port;
+	sent->rem_ip = rem_ip;
+	sent->rem_port = rem_port;
 
 	memset(&sent->stamp, 0, sizeof(struct timeval));
 
@@ -268,45 +272,37 @@ void udp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
 		//daemon_read_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
 		//daemon_set_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		udp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
 		//daemon_exec_reply(ff);
 		freeFinsFrame(ff);
 		break;
@@ -356,7 +352,7 @@ void udp_exec(struct finsFrame *ff) {
 
 				udp_to_switch(ff);
 			} else {
-				//udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+				udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 			}
 			break;
 		default:
@@ -384,6 +380,28 @@ void udp_exec(struct finsFrame *ff) {
 
 		udp_to_switch(ff);
 	}
+}
+
+void udp_exec_clear_sent(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+	PRINT_DEBUG("Entered: ff=%p, host=%u/%u, rem=%u/%u", ff, host_ip, host_port, rem_ip, rem_port);
+	if (!udp_sent_list_is_empty(udp_sent_packet_list)) {
+		struct udp_sent *old;
+
+		struct udp_sent *temp = udp_sent_packet_list->front;
+		while (temp) {
+			if (temp->host_ip == host_ip && temp->host_port == host_port) {
+				old = temp;
+				temp = temp->next;
+
+				udp_sent_list_remove(udp_sent_packet_list, old);
+				udp_sent_free(old);
+			} else {
+				temp = temp->next;
+			}
+		}
+	}
+
+	freeFinsFrame(ff);
 }
 
 struct udp_header_frag {
@@ -532,14 +550,14 @@ void udp_error(struct finsFrame *ff) {
 }
 
 void *switch_to_udp(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (udp_proto.running_flag) {
 		udp_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 

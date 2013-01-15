@@ -717,17 +717,17 @@ void icmp_out_fdf(struct finsFrame *ff) {
 			gettimeofday(&sent->stamp, 0);
 		} else {
 			PRINT_DEBUG("Clearing sent_packet_list");
-			icmp_sent_list_gc(icmp_sent_packet_list, ICMP_MSL_TO_DEFAULT);
+			icmp_sent_list_gc(icmp_sent_packet_list, ICMP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
 
-			if (icmp_sent_list_has_space(icmp_sent_packet_list)) {
-				icmp_sent_list_append(icmp_sent_packet_list, sent);
-				PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max)
-
-				gettimeofday(&sent->stamp, 0);
-			} else {
-				PRINT_ERROR("todo error");
-				icmp_sent_free(sent);
+			if (!icmp_sent_list_has_space(icmp_sent_packet_list)) {
+				PRINT_DEBUG("Dropping front of sent_packet_list");
+				struct icmp_sent *old = icmp_sent_list_remove_front(icmp_sent_packet_list);
+				icmp_sent_free(old);
 			}
+			icmp_sent_list_append(icmp_sent_packet_list, sent);
+			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max)
+
+			gettimeofday(&sent->stamp, 0);
 		}
 	} else {
 		PRINT_ERROR("todo error");
@@ -923,7 +923,7 @@ void icmp_fcf(struct finsFrame *ff) {
 }
 
 void *switch_to_icmp(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (icmp_proto.running_flag) {
 		icmp_get_ff();
@@ -931,7 +931,7 @@ void *switch_to_icmp(void *local) {
 		//Note that we always clean up the frame, no matter what we do with it. If the frame needs to go somewhere else also, we make a copy.
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 

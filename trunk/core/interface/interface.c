@@ -152,7 +152,7 @@ int interface_setBlocking(int fd) {
 }
 
 void *capturer_to_interface(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	uint8_t *frame;
 	int frame_len;
@@ -306,19 +306,19 @@ void *capturer_to_interface(void *local) {
 		free(frame);
 	} // end of while loop
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 
 void *switch_to_interface(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (interface_proto.running_flag) {
 		interface_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 } // end of Inject Function
 

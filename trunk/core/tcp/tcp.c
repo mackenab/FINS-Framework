@@ -2854,14 +2854,14 @@ void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_i
 }
 
 void *switch_to_tcp(void *local) {
-	PRINT_DEBUG("Entered");
+	PRINT_CRITICAL("Entered");
 
 	while (tcp_proto.running_flag) {
 		tcp_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exited");
+	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
 }
 
