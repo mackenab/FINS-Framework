@@ -80,6 +80,7 @@ void gen_requestARP(struct arp_message *request_ARP_ptr, uint64_t sender_mac, ui
 void gen_replyARP(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip);
 int check_valid_arp(struct arp_message *msg);
 
+//#################//TODO move these to common
 struct arp_interface {
 	struct arp_interface *next;
 
@@ -87,16 +88,17 @@ struct arp_interface {
 	uint32_t ip_addr;
 };
 
-struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr);
-void interface_free(struct arp_interface *interface);
+struct arp_interface *arp_interface_create(uint64_t mac_addr, uint32_t ip_addr);
+void arp_interface_free(struct arp_interface *interface);
 
 #define ARP_INTERFACE_LIST_MAX 256
 
-int interface_list_insert(struct arp_interface *interface);
-struct arp_interface *interface_list_find(uint32_t ip_addr);
-void interface_list_remove(struct arp_interface *interface);
-int interface_list_is_empty(void);
-int interface_list_has_space(void);
+//TODO augment?
+int arp_interface_list_insert(struct arp_interface *interface);
+struct arp_interface *arp_interface_list_find(uint32_t ip_addr);
+void arp_interface_list_remove(struct arp_interface *interface);
+int arp_interface_list_is_empty(void);
+int arp_interface_list_has_space(void);
 
 struct arp_request {
 	struct arp_request *next;
@@ -105,8 +107,8 @@ struct arp_request {
 	uint32_t src_ip;
 };
 
-struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip);
-void request_free(struct arp_request *request);
+struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip);
+void arp_request_free(struct arp_request *request);
 
 struct arp_request_list {
 	uint32_t max;
@@ -117,13 +119,14 @@ struct arp_request_list {
 
 #define ARP_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
 
-struct arp_request_list *request_list_create(uint32_t max);
-void request_list_append(struct arp_request_list *request_list, struct arp_request *request);
-struct arp_request *request_list_find(struct arp_request_list *request_list, uint32_t src_ip);
-struct arp_request *request_list_remove_front(struct arp_request_list *request_list);
-int request_list_is_empty(struct arp_request_list *request_list);
-int request_list_has_space(struct arp_request_list *request_list);
-void request_list_free(struct arp_request_list *request_list);
+struct arp_request_list *arp_request_list_create(uint32_t max);
+void arp_request_list_append(struct arp_request_list *request_list, struct arp_request *request);
+struct arp_request *arp_request_list_find(struct arp_request_list *request_list, uint32_t src_ip);
+struct arp_request *arp_request_list_remove_front(struct arp_request_list *request_list);
+int arp_request_list_is_empty(struct arp_request_list *request_list);
+int arp_request_list_has_space(struct arp_request_list *request_list);
+void arp_request_list_free(struct arp_request_list *request_list);
+//#################
 
 /**This struct is used to store information about neighboring nodes of the host interface*/
 struct arp_cache {
@@ -134,7 +137,6 @@ struct arp_cache {
 	uint32_t ip_addr;
 
 	struct arp_request_list *request_list;
-	uint32_t request_num;
 	uint8_t seeking;
 	struct timeval updated_stamp;
 
@@ -150,17 +152,17 @@ struct arp_cache {
 #define ARP_RETRIES 2
 #define ARP_TO_MIN 0.00001
 
-struct arp_cache *cache_create(uint32_t ip_addr);
-void cache_shutdown(struct arp_cache *cache);
-void cache_free(struct arp_cache *cache);
+struct arp_cache *arp_cache_create(uint32_t ip_addr);
+void arp_cache_shutdown(struct arp_cache *cache);
+void arp_cache_free(struct arp_cache *cache);
 
 #define ARP_CACHE_LIST_MAX 8192
-int cache_list_insert(struct arp_cache *cache);
-struct arp_cache *cache_list_find(uint32_t ip_addr);
-void cache_list_remove(struct arp_cache *cache);
-struct arp_cache *cache_list_remove_first_non_seeking(void);
-int cache_list_is_empty(void);
-int cache_list_has_space(void);
+int arp_cache_list_insert(struct arp_cache *cache);
+struct arp_cache *arp_cache_list_find(uint32_t ip_addr);
+void arp_cache_list_remove(struct arp_cache *cache);
+struct arp_cache *arp_cache_list_remove_first_non_seeking(void);
+int arp_cache_list_is_empty(void);
+int arp_cache_list_has_space(void);
 
 void print_msgARP(struct arp_message *);
 void print_neighbors(struct arp_cache *ptr_to_cache);

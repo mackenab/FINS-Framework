@@ -787,7 +787,7 @@ int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num,
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
 		PRINT_ERROR("alloc error");
-		exit(-1);
+		return 0;
 	}
 
 	//TODO get the address from local copy of switch table
@@ -819,7 +819,7 @@ int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, meta
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
 		PRINT_ERROR("alloc error");
-		exit(-1);
+		return 0;
 	}
 
 	/**TODO get the address automatically by searching the local copy of the
@@ -3874,7 +3874,7 @@ void daemon_shutdown(void) {
 		PRINT_DEBUG("send_wedge failure");
 		//perror("sendfins() caused an error");
 	}
-	PRINT_CRITICAL("Disconnecting to wedge at %d", nl_sockfd);
+	PRINT_CRITICAL("Disconnecting to wedge at fd=%d", nl_sockfd);
 
 	PRINT_CRITICAL("Joining switch_to_daemon_thread");
 	pthread_join(switch_to_daemon_thread, NULL);

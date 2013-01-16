@@ -17,9 +17,12 @@
 #include <inttypes.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include <finstypes.h>
+
 #include <finsdebug.h>
+#include <finstypes.h>
+#include <finstime.h>
 #include <queueModule.h>
+#include <metadata.h>
 
 /* Internet Protocol (IP)  Constants and Datagram Format		*/
 
@@ -283,4 +286,77 @@ void ipv4_error(struct finsFrame *ff);
 int InputQueue_Read_local(struct finsFrame *pff);
 int ipv4_to_switch(struct finsFrame *fins_frame);
 void IP4_exit(void);
+
+//############### ARP/interface stuff //TODO move to common
+struct ipv4_interface {
+	struct ipv4_interface *next;
+
+	uint64_t mac_addr;
+	uint32_t ip_addr;
+};
+
+struct ipv4_interface *ipv4_interface_create(uint64_t mac_addr, uint32_t ip_addr);
+void ipv4_interface_free(struct ipv4_interface *interface);
+
+#define IPV4_INTERFACE_LIST_MAX 256
+
+//TODO augment?
+int ipv4_interface_list_insert(struct ipv4_interface *interface);
+struct ipv4_interface *ipv4_interface_list_find(uint32_t ip_addr);
+void ipv4_interface_list_remove(struct ipv4_interface *interface);
+int ipv4_interface_list_is_empty(void);
+int ipv4_interface_list_has_space(void);
+
+struct ipv4_request {
+	struct ipv4_request *next;
+	struct finsFrame *ff;
+	uint64_t src_mac;
+	uint32_t src_ip;
+};
+
+struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip);
+void ipv4_request_free(struct ipv4_request *request);
+
+struct ipv4_request_list {
+	uint32_t max;
+	uint32_t len;
+	struct ipv4_request *front;
+	struct ipv4_request *end;
+};
+
+#define IPV4_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
+
+struct ipv4_request_list *ipv4_request_list_create(uint32_t max);
+void ipv4_request_list_append(struct ipv4_request_list *request_list, struct ipv4_request *request);
+struct ipv4_request *ipv4_request_list_find(struct ipv4_request_list *request_list, uint32_t src_ip);
+struct ipv4_request *ipv4_request_list_remove_front(struct ipv4_request_list *request_list);
+int ipv4_request_list_is_empty(struct ipv4_request_list *request_list);
+int ipv4_request_list_has_space(struct ipv4_request_list *request_list);
+void ipv4_request_list_free(struct ipv4_request_list *request_list);
+
+struct ipv4_cache {
+	struct ipv4_cache *next;
+
+	uint64_t mac_addr;
+	uint32_t ip_addr;
+
+	struct ipv4_request_list *request_list;
+	uint8_t seeking;
+	struct timeval updated_stamp;
+};
+
+#define IPV4_CACHE_TO_DEFAULT 15000
+#define IPV4_MAC_NULL 0x0
+struct ipv4_cache *ipv4_cache_create(uint32_t ip_addr);
+void ipv4_cache_free(struct ipv4_cache *cache);
+
+#define IPV4_CACHE_LIST_MAX 8192
+int ipv4_cache_list_insert(struct ipv4_cache *cache);
+struct ipv4_cache *ipv4_cache_list_find(uint32_t ip_addr);
+void ipv4_cache_list_remove(struct ipv4_cache *cache);
+struct ipv4_cache *ipv4_cache_list_remove_first_non_seeking(void);
+int ipv4_cache_list_is_empty(void);
+int ipv4_cache_list_has_space(void);
+//###############
+
 #endif /* IPV4_H_ */

@@ -24,14 +24,14 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 	metadata *params = ff->metaData;
 
-	interface = interface_list_find(src_ip);
+	interface = arp_interface_list_find(src_ip);
 	if (interface) {
 		src_mac = interface->mac_addr;
 		PRINT_DEBUG("src: interface=%p, ip=%u, mac=%llx", interface, src_ip, src_mac);
 
 		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 
-		interface = interface_list_find(dst_ip);
+		interface = arp_interface_list_find(dst_ip);
 		if (interface) {
 			dst_mac = interface->mac_addr;
 			PRINT_DEBUG("dst: interface=%p, ip=%u, mac=%llx", interface, dst_ip, dst_mac);
@@ -45,16 +45,15 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 			arp_to_switch(ff);
 		} else {
-			cache = cache_list_find(dst_ip);
+			cache = arp_cache_list_find(dst_ip);
 			if (cache) {
 				if (cache->seeking) {
 					PRINT_DEBUG("cache seeking: cache=%p", cache);
-					struct arp_request *request = request_create(ff, src_mac, src_ip);
-					if (request_list_has_space(cache->request_list)) {
-						request_list_append(cache->request_list, request);
+					if (arp_request_list_has_space(cache->request_list)) {
+						struct arp_request *request = arp_request_create(ff, src_mac, src_ip);
+						arp_request_list_append(cache->request_list, request);
 					} else {
 						PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
-						request_free(request);
 
 						ff->destinationID.id = ff->ctrlFrame.senderID;
 						ff->ctrlFrame.senderID = ARP_ID;
@@ -95,12 +94,11 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							gettimeofday(&cache->updated_stamp, 0); //TODO use this value as start of seeking
 							start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
 
-							struct arp_request *request = request_create(ff, src_mac, src_ip);
-							if (request_list_has_space(cache->request_list)) {
-								request_list_append(cache->request_list, request);
+							if (arp_request_list_has_space(cache->request_list)) {
+								struct arp_request *request = arp_request_create(ff, src_mac, src_ip);
+								arp_request_list_append(cache->request_list, request);
 							} else {
 								PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
-								request_free(request);
 
 								ff->destinationID.id = ff->ctrlFrame.senderID;
 								ff->ctrlFrame.senderID = ARP_ID;
@@ -132,17 +130,17 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 				struct finsFrame *ff_req = arp_to_fdf(&msg);
 				if (arp_to_switch(ff_req)) {
-					cache = cache_create(dst_ip);
-					if (!cache_list_has_space()) {
+					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
+					if (!arp_cache_list_has_space()) {
 						PRINT_DEBUG("Making space in cache_list");
 
-						temp_cache = cache_list_remove_first_non_seeking();
+						temp_cache = arp_cache_list_remove_first_non_seeking();
 						if (temp_cache) {
 							struct arp_request *temp_request;
 							struct finsFrame *temp_ff;
 
-							while (!request_list_is_empty(temp_cache->request_list)) {
-								temp_request = request_list_remove_front(temp_cache->request_list);
+							while (!arp_request_list_is_empty(temp_cache->request_list)) {
+								temp_request = arp_request_list_remove_front(temp_cache->request_list);
 								temp_ff = temp_request->ff;
 
 								temp_ff->destinationID.id = temp_ff->ctrlFrame.senderID;
@@ -152,11 +150,12 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 								arp_to_switch(temp_ff);
 
-								request_free(temp_request);
+								temp_request->ff = NULL;
+								arp_request_free(temp_request);
 							}
 
-							cache_shutdown(temp_cache);
-							cache_free(temp_cache);
+							arp_cache_shutdown(temp_cache);
+							arp_cache_free(temp_cache);
 						} else {
 							PRINT_ERROR("Cache full");
 
@@ -166,21 +165,20 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							ff->ctrlFrame.ret_val = 0;
 
 							arp_to_switch(ff);
-
-							cache_shutdown(cache);
-							cache_free(cache);
 							return;
 						}
 					}
-					cache_list_insert(cache);
+
+					cache = arp_cache_create(dst_ip);
+					arp_cache_list_insert(cache);
 					cache->seeking = 1;
 					cache->retries = 0;
 
 					gettimeofday(&cache->updated_stamp, 0);
 					start_timer(cache->to_fd, ARP_RETRANS_TO_DEFAULT);
 
-					struct arp_request *request = request_create(ff, src_mac, src_ip);
-					request_list_append(cache->request_list, request);
+					struct arp_request *request = arp_request_create(ff, src_mac, src_ip);
+					arp_request_list_append(cache->request_list, request);
 				} else {
 					PRINT_DEBUG("switch send failed");
 					freeFinsFrame(ff_req);
@@ -219,7 +217,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 			uint32_t dst_ip = msg->target_IP_addrs;
 
 			//TODO add sems?
-			struct arp_interface *interface = interface_list_find(dst_ip);
+			struct arp_interface *interface = arp_interface_list_find(dst_ip);
 			if (interface) {
 				uint64_t dst_mac = interface->mac_addr;
 
@@ -240,7 +238,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 				} else {
 					PRINT_DEBUG("Reply");
 
-					struct arp_cache *cache = cache_list_find(src_ip);
+					struct arp_cache *cache = arp_cache_list_find(src_ip);
 					if (cache) {
 						if (cache->seeking) {
 							PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
@@ -254,8 +252,8 @@ void arp_in_fdf(struct finsFrame *ff) {
 							struct arp_request *request;
 							struct finsFrame *ff_resp;
 
-							while (!request_list_is_empty(cache->request_list)) {
-								request = request_list_remove_front(cache->request_list);
+							while (!arp_request_list_is_empty(cache->request_list)) {
+								request = arp_request_list_remove_front(cache->request_list);
 								ff_resp = request->ff;
 
 								metadata_writeToElement(ff_resp->metaData, "dst_mac", &src_mac, META_TYPE_INT64);
@@ -269,7 +267,8 @@ void arp_in_fdf(struct finsFrame *ff) {
 									freeFinsFrame(ff_resp);
 								}
 
-								request_free(request);
+								request->ff = NULL;
+								arp_request_free(request);
 							}
 						} else {
 							PRINT_ERROR("Not seeking addr. Dropping: ff=%p, dst=0x%llx/%u, src=0x%llx/%u, cache=%p",
@@ -306,7 +305,7 @@ void arp_handle_to(struct arp_cache *cache) {
 			uint64_t dst_mac = ARP_MAC_BROADCAST;
 			uint32_t dst_ip = cache->ip_addr;
 
-			if (request_list_is_empty(cache->request_list)) {
+			if (arp_request_list_is_empty(cache->request_list)) {
 				PRINT_ERROR("todo error");
 				//TODO retrans from default interface?
 				//TODO send error FCF ?
@@ -338,8 +337,8 @@ void arp_handle_to(struct arp_cache *cache) {
 			struct arp_request *request;
 			struct finsFrame *ff;
 
-			while (!request_list_is_empty(cache->request_list)) {
-				request = request_list_remove_front(cache->request_list);
+			while (!arp_request_list_is_empty(cache->request_list)) {
+				request = arp_request_list_remove_front(cache->request_list);
 				ff = request->ff;
 
 				ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -349,12 +348,13 @@ void arp_handle_to(struct arp_cache *cache) {
 
 				arp_to_switch(ff);
 
-				request_free(request);
+				request->ff = NULL;
+				arp_request_free(request);
 			}
 
-			cache_list_remove(cache);
-			cache_shutdown(cache);
-			cache_free(cache);
+			arp_cache_list_remove(cache);
+			arp_cache_shutdown(cache);
+			arp_cache_free(cache);
 		}
 	} else {
 		PRINT_DEBUG("Dropping TO: cache=%p", cache);

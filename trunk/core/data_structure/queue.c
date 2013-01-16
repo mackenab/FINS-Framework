@@ -42,7 +42,7 @@ Queue CreateQueue(const char* name, int MaxElements) {
 
 	Q = fins_malloc(sizeof(struct QueueRecord));
 
-	Q->Array = fins_malloc(sizeof(ElementType) * MaxElements);
+	Q->Array = (ElementType *)fins_malloc(sizeof(ElementType) * MaxElements);
 	memset(Q->Array, 0, sizeof(ElementType) * MaxElements); //avoid freeFinsFrame: use of f->dataOrControl
 
 	Q->Capacity = MaxElements;

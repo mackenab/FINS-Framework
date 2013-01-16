@@ -18,11 +18,11 @@ static struct fins_proto_module arp_proto = { .module_id = ARP_ID, .name = "arp"
 
 pthread_t switch_to_arp_thread;
 
-struct arp_interface *interface_list;
-uint32_t interface_num;
+struct arp_interface *arp_interface_list;
+uint32_t arp_interface_num;
 
-struct arp_cache *cache_list; //The list of current cache we have
-uint32_t cache_num;
+struct arp_cache *arp_cache_list; //The list of current cache we have
+uint32_t arp_cache_num;
 
 uint8_t arp_interrupt_flag;
 int arp_thread_count = 0;
@@ -131,7 +131,7 @@ int check_valid_arp(struct arp_message *msg) {
 			&& (msg->sender_MAC_addrs != ARP_MAC_NULL) && (msg->sender_IP_addrs != ARP_IP_NULL) && (msg->target_IP_addrs != ARP_IP_NULL);
 }
 
-struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr) {
+struct arp_interface *arp_interface_create(uint64_t mac_addr, uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: mac=%llx, ip=%u", mac_addr, ip_addr);
 
 	struct arp_interface *interface = (struct arp_interface *) fins_malloc(sizeof(struct arp_interface));
@@ -144,26 +144,26 @@ struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr) {
 	return interface;
 }
 
-void interface_free(struct arp_interface *interface) {
+void arp_interface_free(struct arp_interface *interface) {
 	PRINT_DEBUG("Entered: interface=%p", interface);
 
 	free(interface);
 }
 
-int interface_list_insert(struct arp_interface *interface) {
+int arp_interface_list_insert(struct arp_interface *interface) {
 	PRINT_DEBUG("Entered: interface=%p", interface);
 
-	interface->next = interface_list;
-	interface_list = interface;
+	interface->next = arp_interface_list;
+	arp_interface_list = interface;
 
-	interface_num++;
+	arp_interface_num++;
 	return 1;
 }
 
-struct arp_interface *interface_list_find(uint32_t ip_addr) {
+struct arp_interface *arp_interface_list_find(uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: ip=%u", ip_addr);
 
-	struct arp_interface *interface = interface_list;
+	struct arp_interface *interface = arp_interface_list;
 
 	while (interface != NULL && interface->ip_addr != ip_addr) {
 		interface = interface->next;
@@ -173,39 +173,39 @@ struct arp_interface *interface_list_find(uint32_t ip_addr) {
 	return interface;
 }
 
-void interface_list_remove(struct arp_interface *interface) {
+void arp_interface_list_remove(struct arp_interface *interface) {
 	PRINT_DEBUG("Entered: interface=%p", interface);
 
-	if (interface_list == NULL) {
+	if (arp_interface_list == NULL) {
 		return;
 	}
 
-	if (interface_list == interface) {
-		interface_list = interface_list->next;
-		interface_num--;
+	if (arp_interface_list == interface) {
+		arp_interface_list = arp_interface_list->next;
+		arp_interface_num--;
 		return;
 	}
 
-	struct arp_interface *temp = interface_list;
+	struct arp_interface *temp = arp_interface_list;
 	while (temp->next != NULL) {
 		if (temp->next == interface) {
 			temp->next = interface->next;
-			interface_num--;
+			arp_interface_num--;
 			return;
 		}
 		temp = temp->next;
 	}
 }
 
-int interface_list_is_empty(void) {
-	return interface_num == 0;
+int arp_interface_list_is_empty(void) {
+	return arp_interface_num == 0;
 }
 
-int interface_list_has_space(void) {
-	return interface_num < ARP_INTERFACE_LIST_MAX;
+int arp_interface_list_has_space(void) {
+	return arp_interface_num < ARP_INTERFACE_LIST_MAX;
 }
 
-struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
+struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
 	PRINT_DEBUG("Entered: ff=%p, mac=%llx, ip=%u", ff, src_mac, src_ip);
 
 	struct arp_request *request = (struct arp_request *) fins_malloc(sizeof(struct arp_request));
@@ -219,13 +219,17 @@ struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint3
 	return request;
 }
 
-void request_free(struct arp_request *request) {
+void arp_request_free(struct arp_request *request) {
 	PRINT_DEBUG("Entered: request=%p", request);
+
+	if (request->ff) {
+		freeFinsFrame(request->ff);
+	}
 
 	free(request);
 }
 
-struct arp_request_list *request_list_create(uint32_t max) {
+struct arp_request_list *arp_request_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
 	struct arp_request_list *request_list = (struct arp_request_list *) fins_malloc(sizeof(struct arp_request_list));
@@ -239,11 +243,11 @@ struct arp_request_list *request_list_create(uint32_t max) {
 	return request_list;
 }
 
-void request_list_append(struct arp_request_list *request_list, struct arp_request *request) {
+void arp_request_list_append(struct arp_request_list *request_list, struct arp_request *request) {
 	PRINT_DEBUG("Entered: request_list=%p, request=%p", request_list, request);
 
 	request->next = NULL;
-	if (request_list_is_empty(request_list)) {
+	if (arp_request_list_is_empty(request_list)) {
 		//queue empty
 		request_list->front = request;
 	} else {
@@ -254,7 +258,7 @@ void request_list_append(struct arp_request_list *request_list, struct arp_reque
 	request_list->len++;
 }
 
-struct arp_request *request_list_find(struct arp_request_list *request_list, uint32_t src_ip) {
+struct arp_request *arp_request_list_find(struct arp_request_list *request_list, uint32_t src_ip) {
 	PRINT_DEBUG("Entered: request_list=%p, ip=%u", request_list, src_ip);
 
 	struct arp_request *request = request_list->front;
@@ -266,7 +270,7 @@ struct arp_request *request_list_find(struct arp_request_list *request_list, uin
 	return request;
 }
 
-struct arp_request *request_list_remove_front(struct arp_request_list *request_list) {
+struct arp_request *arp_request_list_remove_front(struct arp_request_list *request_list) {
 	PRINT_DEBUG("Entered: request_list=%p", request_list);
 
 	struct arp_request *request = request_list->front;
@@ -278,28 +282,28 @@ struct arp_request *request_list_remove_front(struct arp_request_list *request_l
 	return request;
 }
 
-int request_list_is_empty(struct arp_request_list *request_list) {
+int arp_request_list_is_empty(struct arp_request_list *request_list) {
 	//return request_list->front == NULL;
 	return request_list->len == 0;
 }
 
-int request_list_has_space(struct arp_request_list *request_list) {
+int arp_request_list_has_space(struct arp_request_list *request_list) {
 	return request_list->len < request_list->max;
 }
 
-void request_list_free(struct arp_request_list *request_list) {
+void arp_request_list_free(struct arp_request_list *request_list) {
 	PRINT_DEBUG("Entered: request_list=%p", request_list);
 
 	struct arp_request *request = request_list->front;
-	while (!request_list_is_empty(request_list)) {
-		request = request_list_remove_front(request_list);
-		request_free(request);
+	while (!arp_request_list_is_empty(request_list)) {
+		request = arp_request_list_remove_front(request_list);
+		arp_request_free(request);
 	}
 
 	free(request_list);
 }
 
-struct arp_cache *cache_create(uint32_t ip_addr) {
+struct arp_cache *arp_cache_create(uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: ip=%u", ip_addr);
 
 	struct arp_cache *cache = (struct arp_cache *) fins_malloc(sizeof(struct arp_cache));
@@ -309,8 +313,7 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	cache->mac_addr = ARP_MAC_NULL;
 	cache->ip_addr = ip_addr;
 
-	cache->request_list = request_list_create(ARP_REQUEST_LIST_MAX);
-	cache->request_num = 0;
+	cache->request_list = arp_request_list_create(ARP_REQUEST_LIST_MAX);
 
 	cache->seeking = 0;
 	memset(&cache->updated_stamp, 0, sizeof(struct timeval));
@@ -341,7 +344,7 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	return cache;
 }
 
-void cache_shutdown(struct arp_cache *cache) {
+void arp_cache_shutdown(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
 	cache->running_flag = 0;
@@ -359,22 +362,22 @@ void cache_shutdown(struct arp_cache *cache) {
 	/*#*/PRINT_DEBUG("");
 }
 
-void cache_free(struct arp_cache *cache) {
+void arp_cache_free(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
 	if (cache->request_list) {
-		request_list_free(cache->request_list);
+		arp_request_list_free(cache->request_list);
 	}
 
 	free(cache);
 }
-int cache_list_insert(struct arp_cache *cache) {
+int arp_cache_list_insert(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
-	if (cache_list == NULL) {
-		cache_list = cache;
+	if (arp_cache_list == NULL) {
+		arp_cache_list = cache;
 	} else {
-		struct arp_cache *temp = cache_list;
+		struct arp_cache *temp = arp_cache_list;
 
 		while (temp->next != NULL) {
 			temp = temp->next;
@@ -384,14 +387,14 @@ int cache_list_insert(struct arp_cache *cache) {
 		cache->next = NULL;
 	}
 
-	cache_num++;
+	arp_cache_num++;
 	return 1;
 }
 
-struct arp_cache *cache_list_find(uint32_t ip_addr) {
+struct arp_cache *arp_cache_list_find(uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: ip=%u", ip_addr);
 
-	struct arp_cache *cache = cache_list;
+	struct arp_cache *cache = arp_cache_list;
 	while (cache != NULL && cache->ip_addr != ip_addr) {
 		cache = cache->next;
 	}
@@ -400,38 +403,38 @@ struct arp_cache *cache_list_find(uint32_t ip_addr) {
 	return cache;
 }
 
-void cache_list_remove(struct arp_cache *cache) {
+void arp_cache_list_remove(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
-	if (cache_list == NULL) {
+	if (arp_cache_list == NULL) {
 		return;
 	}
 
-	if (cache_list == cache) {
-		cache_list = cache_list->next;
-		cache_num--;
+	if (arp_cache_list == cache) {
+		arp_cache_list = arp_cache_list->next;
+		arp_cache_num--;
 		return;
 	}
 
-	struct arp_cache *temp = cache_list;
+	struct arp_cache *temp = arp_cache_list;
 	while (temp->next != NULL) {
 		if (temp->next == cache) {
 			temp->next = cache->next;
-			cache_num--;
+			arp_cache_num--;
 			return;
 		}
 		temp = temp->next;
 	}
 }
 
-struct arp_cache *cache_list_remove_first_non_seeking(void) {
+struct arp_cache *arp_cache_list_remove_first_non_seeking(void) {
 	PRINT_DEBUG("Entered");
 
-	if (cache_list == NULL) {
+	if (arp_cache_list == NULL) {
 		return NULL;
 	}
 
-	struct arp_cache *cache = cache_list;
+	struct arp_cache *cache = arp_cache_list;
 	if (cache->seeking) {
 		struct arp_cache *next;
 
@@ -442,7 +445,7 @@ struct arp_cache *cache_list_remove_first_non_seeking(void) {
 				next = cache->next;
 				cache->next = next->next;
 
-				cache_num--;
+				arp_cache_num--;
 				PRINT_DEBUG("Exited: cache=%p", next);
 				return next;
 			}
@@ -451,20 +454,20 @@ struct arp_cache *cache_list_remove_first_non_seeking(void) {
 		PRINT_DEBUG("Exited: cache=%p", NULL);
 		return NULL; //TODO change to head?
 	} else {
-		cache_list = cache->next;
+		arp_cache_list = cache->next;
 	}
 
-	cache_num--;
+	arp_cache_num--;
 	PRINT_DEBUG("Exited: cache=%p", cache);
 	return cache;
 }
 
-int cache_list_is_empty(void) {
-	return cache_num == 0;
+int arp_cache_list_is_empty(void) {
+	return arp_cache_num == 0;
 }
 
-int cache_list_has_space(void) {
-	return cache_num < ARP_CACHE_LIST_MAX;
+int arp_cache_list_has_space(void) {
+	return arp_cache_num < ARP_CACHE_LIST_MAX;
 }
 
 /**
@@ -548,11 +551,11 @@ void print_cache(void) { //TODO fix/update?
 	//struct arp_cache *ptr_elementInList;
 
 	//PRINT_DEBUG("Host Interface:");
-	//ptr_elementInList = cache_list;
+	//ptr_elementInList = arp_cache_list;
 	//print_IP_addrs(ptr_elementInList->ip_addr);
 	//print_MAC_addrs(ptr_elementInList->mac_addr);
 	//ptr_elementInList = ptr_elementInList->next; //move the pointer to the stored node
-	print_neighbors(cache_list);
+	print_neighbors(arp_cache_list);
 	PRINT_DEBUG("");
 }
 
@@ -800,7 +803,7 @@ void arp_exec(struct finsFrame *ff) {
 }
 
 void arp_interrupt(void) {
-	struct arp_cache *cache = cache_list;
+	struct arp_cache *cache = arp_cache_list;
 	struct arp_cache *next;
 
 	while (cache) {
@@ -839,11 +842,11 @@ void arp_init(void) {
 	module_create_ops(&arp_proto);
 	module_register(&arp_proto);
 
-	interface_list = NULL;
-	interface_num = 0;
+	arp_interface_list = NULL;
+	arp_interface_num = 0;
 
-	cache_list = NULL;
-	cache_num = 0;
+	arp_cache_list = NULL;
+	arp_cache_num = 0;
 }
 
 void arp_run(pthread_attr_t *fins_pthread_attr) {
@@ -855,10 +858,10 @@ void arp_run(pthread_attr_t *fins_pthread_attr) {
 int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
 
-	if (interface_list_has_space()) {
-		struct arp_interface *interface = interface_create(MAC_address, IP_address);
+	if (arp_interface_list_has_space()) {
+		struct arp_interface *interface = arp_interface_create(MAC_address, IP_address);
 		if (interface) {
-			interface_list_insert(interface);
+			arp_interface_list_insert(interface);
 		} else {
 			return 0;
 		}
@@ -888,19 +891,19 @@ void arp_release(void) {
 	//TODO free all module related mem
 
 	struct arp_interface *interface;
-	while (!interface_list_is_empty()) {
-		interface = interface_list;
-		interface_list_remove(interface);
-		interface_free(interface);
+	while (!arp_interface_list_is_empty()) {
+		interface = arp_interface_list;
+		arp_interface_list_remove(interface);
+		arp_interface_free(interface);
 	}
 
 	struct arp_cache *cache;
-	while (!cache_list_is_empty()) {
-		cache = cache_list;
-		cache_list_remove(cache);
+	while (!arp_cache_list_is_empty()) {
+		cache = arp_cache_list;
+		arp_cache_list_remove(cache);
 
-		cache_shutdown(cache);
-		cache_free(cache);
+		arp_cache_shutdown(cache);
+		arp_cache_free(cache);
 	}
 
 	module_destroy_ops(&arp_proto);

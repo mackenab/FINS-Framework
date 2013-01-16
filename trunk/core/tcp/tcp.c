@@ -873,7 +873,8 @@ void main_established(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			} PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			}
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1094,7 +1095,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			} PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			}
+			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -3192,7 +3194,11 @@ int tcp_to_switch(struct finsFrame *ff) {
 }
 
 int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
-	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	if (params == NULL) {
+		PRINT_ERROR("metadata creation failed");
+		return 0;
+	}
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -3209,7 +3215,13 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 		metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 
-	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed, meta=%p", params);
+		metadata_destroy(params);
+		return 0;
+	}
+
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -3236,7 +3248,11 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, data_len);
 
-	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
+	metadata *params = (metadata *) malloc(sizeof(metadata));
+	if (params == NULL) {
+		PRINT_ERROR("metadata creation failed");
+		return 0;
+	}
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -3249,7 +3265,12 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 	uint32_t rem_port_buf = rem_port;
 	metadata_writeToElement(params, "recv_dst_port", &rem_port_buf, META_TYPE_INT32);
 
-	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	if (ff == NULL) {
+		PRINT_ERROR("ff creation failed, meta=%p", params);
+		metadata_destroy(params);
+		return 0;
+	}
 
 	PRINT_DEBUG("src=%u/%u, dst=%u/%u, ff=%p", host_ip, host_port, rem_ip, rem_port, ff);
 
