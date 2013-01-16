@@ -108,7 +108,7 @@ void udp_in_fdf(struct finsFrame* ff) {
 		PRINT_DEBUG("ignore checksum=%d", udpStat.noChecksum);
 	}
 
-	//metadata *udp_meta = (metadata *)malloc (sizeof(metadata));
+	//metadata *udp_meta = (metadata *)fins_malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
 
 	metadata_writeToElement(params, "recv_src_port", &src_port, META_TYPE_INT32);
@@ -127,17 +127,13 @@ void udp_in_fdf(struct finsFrame* ff) {
 	ff->dataFrame.pduLength = leng - U_HEADER_LEN;
 
 	uint8_t *pdu = ff->dataFrame.pdu;
-	uint8_t *data = (uint8_t *) malloc(ff->dataFrame.pduLength);
-	if (data == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *data = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 	memcpy(data, pdu + U_HEADER_LEN, ff->dataFrame.pduLength);
 	ff->dataFrame.pdu = data;
 
 	//#########################
 #ifdef DEBUG
-	uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
+	uint8_t *temp = (uint8_t *) fins_malloc(ff->dataFrame.pduLength + 1);
 	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	temp[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);

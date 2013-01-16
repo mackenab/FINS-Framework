@@ -78,7 +78,7 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 	struct nlmsghdr *nlh = (struct nlmsghdr *) malloc(nlmsg_len);
 	if (nlh == NULL) {
 		PRINT_ERROR("alloc error");
-		return -1;
+		exit(-1);
 	}
 	memset(nlh, 0, nlmsg_len);
 

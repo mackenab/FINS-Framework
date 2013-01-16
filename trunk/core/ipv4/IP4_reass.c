@@ -205,15 +205,15 @@ uint8_t IP4_add_fragment(struct ip4_reass_list *list,
 
 struct ip4_reass_list* IP4_new_packet_entry(struct ip4_header* pheader,
 		struct ip4_reass_list* previous, struct ip4_reass_list* next) {
-	struct ip4_reass_list* packet_list_entry = (struct ip4_reass_list*) malloc(
+	struct ip4_reass_list* packet_list_entry = (struct ip4_reass_list*) fins_malloc(
 			sizeof(struct ip4_reass_list*));
 	packet_list_entry->next_packet = next;
 	packet_list_entry->previous_packet = previous;
-	packet_list_entry = (struct ip4_reass_list*) malloc(
+	packet_list_entry = (struct ip4_reass_list*) fins_malloc(
 			sizeof(struct ip4_reass_list));
 	packet_list_entry->header = *pheader;
 	packet_list_entry->length = IP4_BUFFLEN;
-	packet_list_entry->buffer = (void *) malloc(IP4_BUFFLEN);
+	packet_list_entry->buffer = (void *) fins_malloc(IP4_BUFFLEN);
 	packet_list_entry->ttl = IP4_REASS_TTL;
 	packet_list_entry->first_hole_rel_pointer = 0;
 	packet_list_entry->hole_count = 1;
@@ -229,7 +229,7 @@ struct ip4_reass_list* IP4_new_packet_entry(struct ip4_header* pheader,
 
 struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader,
 		struct ip4_packet* ppacket) {
-	struct ip4_fragment* fragment = (struct ip4_fragment*) malloc(
+	struct ip4_fragment* fragment = (struct ip4_fragment*) fins_malloc(
 			sizeof(struct ip4_fragment));
 	fragment->first = (pheader->fragmentation_offset) * 8;
 	fragment->last = fragment->first + (pheader->packet_length

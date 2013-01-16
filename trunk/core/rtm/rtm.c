@@ -115,7 +115,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 	int length_serialized_FCF;
 
 	//create a finsframe to be sent tover the queue
-	struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	struct finsFrame *fins_frame = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	fins_frame->dataOrCtrl = CONTROL;
 
 	//opens the pipe from clicomm (or wherever)

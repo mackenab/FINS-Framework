@@ -1932,12 +1932,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 			sem_post(&conn_list_sem);
 
 			if (start) {
-				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-				if (thread_data == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
-
+				thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->seg = seg;
@@ -1971,12 +1966,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
-						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
-						if (thread_data == NULL) {
-							PRINT_ERROR("alloc error");
-							exit(-1);
-						}
-
+						thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
 						thread_data->id = tcp_gen_thread_id();
 						thread_data->conn_stub = conn_stub;
 						thread_data->seg = seg;

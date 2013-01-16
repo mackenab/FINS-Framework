@@ -23,18 +23,10 @@
 extern struct udp_statistics udpStat;
 
 struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t* PDU, metadata *params) {
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 
 	char *data;
-	data = (char *) malloc(PDU_length);
-	if (data == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	data = (char *) fins_malloc(PDU_length);
 	memcpy(data, PDU, PDU_length);
 
 	if (dataOrCtrl == DATA) {

@@ -194,11 +194,7 @@ void *capturer_to_interface(void *local) {
 			PRINT_ERROR("numBytes written %d", numBytes);
 			break;
 		}
-		frame = (uint8_t *) malloc(frame_len);
-		if (frame == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		frame = (uint8_t *) fins_malloc(frame_len);
 
 		numBytes = read(capture_pipe_fd, frame, frame_len);
 		if (numBytes <= 0) {
@@ -237,12 +233,7 @@ void *capturer_to_interface(void *local) {
 		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x, stamp=%u.%u",
 				dst_mac, src_mac, ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
-		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-		if (ff == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
-
+		ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 		PRINT_DEBUG("ff=%p", ff);
 
 		/** TODO
@@ -250,12 +241,9 @@ void *capturer_to_interface(void *local) {
 		 * 2. pre-process the frame in order to extract the metadata
 		 * 3. build a finsFrame and insert it into EtherStub_to_Switch_Queue
 		 */
-		params = (metadata *) malloc(sizeof(metadata));
-		if (params == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		params = (metadata *) fins_malloc(sizeof(metadata));
 		metadata_create(params);
+
 		metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
 
 		ff->dataOrCtrl = DATA;
@@ -287,11 +275,7 @@ void *capturer_to_interface(void *local) {
 
 		ff->dataFrame.directionFlag = UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
-		ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
-		if (ff->dataFrame.pdu == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
 		metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
@@ -394,12 +378,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 	framelen = ff->dataFrame.pduLength + SIZE_ETHERNET;
 	PRINT_DEBUG("framelen=%d", framelen);
 
-	frame = (char *) malloc(framelen);
-	if (frame == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	frame = (char *) fins_malloc(framelen);
 	hdr = (struct sniff_ethernet *) frame;
 
 	hdr->ether_dhost[0] = (dst_mac >> 40) & 0xff;

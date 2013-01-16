@@ -22,12 +22,7 @@ struct icmp_sent_list *icmp_sent_packet_list;
 struct icmp_sent *icmp_sent_create(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	struct icmp_sent *sent = (struct icmp_sent *) malloc(sizeof(struct icmp_sent));
-	if (sent == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct icmp_sent *sent = (struct icmp_sent *) fins_malloc(sizeof(struct icmp_sent));
 	sent->next = NULL;
 
 	sent->ff = ff;
@@ -51,12 +46,7 @@ void icmp_sent_free(struct icmp_sent *sent) {
 struct icmp_sent_list *icmp_sent_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct icmp_sent_list *sent_list = (struct icmp_sent_list *) malloc(sizeof(struct icmp_sent_list));
-	if (sent_list == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct icmp_sent_list *sent_list = (struct icmp_sent_list *) fins_malloc(sizeof(struct icmp_sent_list));
 	sent_list->max = max;
 	sent_list->len = 0;
 
@@ -311,12 +301,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 						metadata *params_err = sent->ff->metaData;
 						metadata_copy(params, params_err);
 
-						ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-						if (ff_err == NULL) {
-							PRINT_ERROR("alloc error");
-							exit(-1);
-						}
-
+						ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = CONTROL;
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
@@ -363,12 +348,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
 				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 
-				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-				if (ff_err == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
-
+				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = TCP_ID;
 				ff_err->destinationID.next = NULL;
@@ -380,11 +360,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
-				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
@@ -397,12 +373,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 					return;
 				}
 
-				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-				if (ff_err == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
-
+				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
@@ -415,11 +386,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
-				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
@@ -497,12 +464,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 						metadata *params_err = sent->ff->metaData;
 						metadata_copy(params, params_err);
 
-						ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-						if (ff_err == NULL) {
-							PRINT_ERROR("alloc error");
-							exit(-1);
-						}
-
+						ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = CONTROL;
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
@@ -550,12 +512,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 				//TODO err_src_ip/port, recv_ttl, stamp
 
-				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-				if (ff_err == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
-
+				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = TCP_ID;
 				ff_err->destinationID.next = NULL;
@@ -567,11 +524,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
-				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
@@ -584,12 +537,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 					return;
 				}
 
-				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-				if (ff_err == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
-
+				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
@@ -602,11 +550,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
-				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
@@ -695,7 +639,7 @@ void icmp_out_fdf(struct finsFrame *ff) {
 	//metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
 	//metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
 
-	//struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	//struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	//ff->dataOrCtrl = DATA;
 	ff->destinationID.id = IPV4_ID; // destination module ID
 	ff->destinationID.next = NULL;
@@ -703,7 +647,7 @@ void icmp_out_fdf(struct finsFrame *ff) {
 
 	//ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	//ff->dataFrame.pduLength = data_len; //Add in the header size for this, too
-	//ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
+	//ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
@@ -805,11 +749,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	PRINT_DEBUG("Entered: ff=%p, icmp_pkt=%p", ff, icmp_pkt);
 
 	uint32_t pdu_len_reply = data_len + ICMP_HEADER_SIZE;
-	uint8_t *pdu_reply = (uint8_t *) malloc(pdu_len_reply);
-	if (pdu_reply == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *pdu_reply = (uint8_t *) fins_malloc(pdu_len_reply);
 
 	struct icmp_packet *icmp_pkt_reply = (struct icmp_packet *) pdu_reply;
 	icmp_pkt_reply->type = TYPE_ECHOREPLY;
@@ -836,11 +776,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 		return;
 	}
 
-	metadata *params_reply = (metadata *) malloc(sizeof(metadata));
-	if (params_reply == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params_reply = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params_reply);
 
 	uint32_t protocol = ICMP_PROTOCOL;
@@ -848,12 +784,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	metadata_writeToElement(params_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
 	metadata_writeToElement(params_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
 
-	struct finsFrame *ff_reply = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff_reply == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff_reply = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff_reply->dataOrCtrl = DATA;
 	ff_reply->destinationID.id = IPV4_ID;
 	ff_reply->destinationID.next = NULL;

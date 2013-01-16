@@ -26,28 +26,16 @@ void module_create_ops(struct fins_proto_module *module) {
 	sprintf(buf, "switch_to_%s", module->name);
 	module->input_queue = init_queue(buf, MAX_Queue_size);
 
-	module->input_sem = (sem_t *) malloc(sizeof(sem_t));
-	if (module->input_sem == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	module->input_sem = (sem_t *) fins_malloc(sizeof(sem_t));
 	sem_init(module->input_sem, 0, 1);
 
 	sprintf(buf, "%s_to_switch", module->name);
 	module->output_queue = init_queue(buf, MAX_Queue_size);
 
-	module->output_sem = (sem_t *) malloc(sizeof(sem_t));
-	if (module->output_sem == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	module->output_sem = (sem_t *) fins_malloc(sizeof(sem_t));
 	sem_init(module->output_sem, 0, 1);
 
-	module->event_sem = (sem_t *) malloc(sizeof(sem_t));
-	if (module->event_sem == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	module->event_sem = (sem_t *) fins_malloc(sizeof(sem_t));
 	sem_init(module->event_sem, 0, 0);
 }
 
@@ -183,11 +171,7 @@ void switch_init(void) {
 	PRINT_CRITICAL("Entered");
 	switch_proto.running_flag = 1;
 
-	switch_proto.event_sem = (sem_t *) malloc(sizeof(sem_t));
-	if (switch_proto.event_sem == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	switch_proto.event_sem = (sem_t *) fins_malloc(sizeof(sem_t));
 	sem_init(switch_proto.event_sem, 0, 0);
 
 	//module_create_ops(&switch_proto);

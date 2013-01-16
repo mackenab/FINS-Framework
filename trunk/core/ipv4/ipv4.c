@@ -48,13 +48,9 @@ void *switch_to_ipv4(void *local) {
 struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_t *pdu) {
 	PRINT_DEBUG("Entered: serial_num=%u, ff=%p, pdu=%p", serial_num, ff, pdu);
 
-	struct ip4_store *store = (struct ip4_store *) malloc(sizeof(struct ip4_store));
-	if (store == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct ip4_store *store = (struct ip4_store *) fins_malloc(sizeof(struct ip4_store));
 	store->next = NULL;
+
 	store->serial_num = serial_num;
 	store->ff = ff;
 	store->pdu = pdu;

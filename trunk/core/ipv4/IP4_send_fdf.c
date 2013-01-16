@@ -22,7 +22,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 		return;
 	}
 
-	//struct finsFrame *fins_frame = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+	//struct finsFrame *fins_frame = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	//ff->dataOrCtrl = DATA;
 	uint32_t protocol = pheader->protocol; /* protocol number should  be 17 from metadata */
 	switch (protocol) {
@@ -44,7 +44,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 		break;
 	}
 
-	//metadata *ipv4_meta = (metadata *) malloc(sizeof(metadata));
+	//metadata *ipv4_meta = (metadata *) fins_malloc(sizeof(metadata));
 	//metadata_create(ipv4_meta);
 	metadata *params = ff->metaData;
 
@@ -72,12 +72,7 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	case IP4_PT_UDP:
 		ff->dataFrame.pduLength = pheader->packet_length - pheader->header_length;
 		uint8_t *pdu = ff->dataFrame.pdu;
-		uint8_t *data = (uint8_t *) malloc(ff->dataFrame.pduLength);
-		if (data == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
-
+		uint8_t *data = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 		memcpy(data, ppacket->ip_data, ff->dataFrame.pduLength);
 		ff->dataFrame.pdu = data;
 
@@ -107,15 +102,11 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	ff->dataFrame.pduLength = length + IP4_MIN_HLEN;
 
 	uint8_t *pdu = ff->dataFrame.pdu;
-	ff->dataFrame.pdu = (uint8_t *) malloc(length + IP4_MIN_HLEN);
-	if (ff->dataFrame.pdu == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	ff->dataFrame.pdu = (uint8_t *) fins_malloc(length + IP4_MIN_HLEN);
 	memcpy(ff->dataFrame.pdu, ppacket, IP4_MIN_HLEN);
 	memcpy(ff->dataFrame.pdu + IP4_MIN_HLEN, pdu, length);
 
-	if (0) {
+	if (1) {
 		uint64_t src_mac = 0x001d09b35512ull;
 		uint64_t dst_mac = 0xf46d0449baddull; //jreed HAF-reed
 		//uint64_t dst_mac = 0xa021b7710c87ull; //jreed home wifi
@@ -124,14 +115,12 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 		metadata_writeToElement(ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 		metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
 		ipv4_to_switch(ff);
+
+		free(pdu);
 	}
 	if (0) {
 		if (store_list_has_space()) {
-			metadata *params = (metadata *) malloc(sizeof(metadata));
-			if (params == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
+			metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 			metadata_create(params);
 
 			//uint32_t src_ip = my_ip_addr; //TODO get these from next hop info
@@ -142,12 +131,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 			metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
 			metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
 
-			struct finsFrame *ff_arp = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-			if (ff_arp == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
-
+			struct finsFrame *ff_arp = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 			ff_arp->dataOrCtrl = CONTROL;
 			ff_arp->destinationID.id = ARP_ID;
 			ff_arp->destinationID.next = NULL;
@@ -239,7 +223,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 						} else {
 							PRINT_DEBUG("cache expired: cache=%p", cache);
 
-							metadata *params_req = (metadata *) malloc(sizeof(metadata));
+							metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
 							if (params_req == NULL) {
 								PRINT_ERROR("alloc error");
 								exit(-1);
@@ -249,7 +233,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 							metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
 							metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
 
-							struct finsFrame *ff_req = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+							struct finsFrame *ff_req = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 							if (ff_req == NULL) {
 								PRINT_ERROR("alloc error");
 								exit(-1);
@@ -366,7 +350,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 					request_list_append(cache->request_list, request);
 
 					if (store_list_has_space()) {
-						metadata *params_req = (metadata *) malloc(sizeof(metadata));
+						metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
 						if (params_req == NULL) {
 							PRINT_ERROR("alloc error");
 							exit(-1);
@@ -381,7 +365,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 						metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
 						metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
 
-						struct finsFrame *ff_req = (struct finsFrame *) malloc(sizeof(struct finsFrame));
+						struct finsFrame *ff_req = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 						if (ff_req == NULL) {
 							PRINT_ERROR("alloc error");
 							exit(-1);
@@ -449,6 +433,4 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 			freeFinsFrame(ff);
 		}
 	}
-	*/
-	//free(pdu); //TODO comment when uncomment ARP stuff
 }

@@ -38,11 +38,7 @@ uint32_t gen_control_serial_num(void) {
 
 struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() or just remove
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 
 	PRINT_DEBUG("2.1");
 	int linkvalue = 80211;
@@ -50,11 +46,7 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	unsigned char fakeDatav[] = "loloa77a7";
 	unsigned char *fakeData = fakeDatav;
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 
 	//metadata *params;
 	PRINT_DEBUG("2.2");
@@ -104,7 +96,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		}
 		//######################
 #ifdef DEBUG
-		char *temp = (char *) malloc(ff->dataFrame.pduLength + 1);
+		char *temp = (char *) fins_malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 		temp[ff->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pdu=%s", temp);
@@ -156,11 +148,7 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params_clone = (metadata *) malloc(sizeof(metadata));
-	if (params_clone == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params_clone = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params_clone);
 
 	metadata *params = ff->metaData;
@@ -172,12 +160,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		PRINT_ERROR("todo error");
 	}
 
-	struct finsFrame *ff_clone = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff_clone == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff_clone = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff_clone->dataOrCtrl = ff->dataOrCtrl;
 	ff_clone->destinationID.id = ff->destinationID.id;
 	ff_clone->destinationID.next = ff->destinationID.next; //TODO this is a list copy all of them?
@@ -191,12 +174,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 
 		ff_clone->ctrlFrame.data_len = ff->ctrlFrame.data_len; //Add in the header size for this, too
 		if (ff_clone->ctrlFrame.data_len) {
-			ff_clone->ctrlFrame.data = (uint8_t *) malloc(ff_clone->ctrlFrame.data_len);
-			if (ff_clone->ctrlFrame.data == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
-
+			ff_clone->ctrlFrame.data = (uint8_t *) fins_malloc(ff_clone->ctrlFrame.data_len);
 			memcpy(ff_clone->ctrlFrame.data, ff->ctrlFrame.data, ff_clone->ctrlFrame.data_len);
 		} else {
 			PRINT_DEBUG("here");
@@ -208,12 +186,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 
 		ff_clone->dataFrame.pduLength = ff->dataFrame.pduLength; //Add in the header size for this, too
 		if (ff_clone->dataFrame.pduLength) {
-			ff_clone->dataFrame.pdu = (uint8_t *) malloc(ff_clone->dataFrame.pduLength);
-			if (ff_clone->dataFrame.pdu == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
-
+			ff_clone->dataFrame.pdu = (uint8_t *) fins_malloc(ff_clone->dataFrame.pduLength);
 			memcpy(ff_clone->dataFrame.pdu, ff->dataFrame.pdu, ff_clone->dataFrame.pduLength);
 		} else {
 			PRINT_DEBUG("here");
@@ -299,11 +272,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//PRINT_DEBUG("SIZE OF BUF_SIZE = %d", buf_size);
 
-	*buffer = (unsigned char *) malloc(buf_size);
-	if (buffer == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	*buffer = (unsigned char *) fins_malloc(buf_size);
 
 	unsigned char * temporary = *buffer;
 
@@ -417,11 +386,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	 */
 	PRINT_DEBUG("In unserializeCtrlFrame!");
 
-	struct finsFrame * ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct finsFrame * ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	memset(ff, 0, sizeof(struct finsFrame));
 
 	//	PRINT_DEBUG("The value of buffer = %s", buffer,length);
@@ -445,7 +410,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	//PRINT_DEBUG("temp = %d", temp);
 
 	//retrieve the name
-	//ff->ctrlFrame.name = malloc(temp);
+	//ff->ctrlFrame.name = fins_malloc(temp);
 	//memcpy(ff->ctrlFrame.name, (unsigned char *) buffer, temp);
 	//PRINT_DEBUG("buffer3 = %s, name = %s", buffer,ff->ctrlFrame.name);
 	buffer += temp;
@@ -496,7 +461,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 		//PRINT_DEBUG("CSP: buffer6.5 = %s", buffer);
 
 		//retrieve data itself
-		//ff->ctrlFrame.data_old = malloc(temp);
+		//ff->ctrlFrame.data_old = fins_malloc(temp);
 		//memcpy((char *) (ff->ctrlFrame.data_old), buffer, temp);
 		//PRINT_DEBUG("CSP: buffer7 = %s, temp = %d, data = %s", buffer, temp,(char *)(ff->ctrlFrame.data));
 		break;

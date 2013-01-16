@@ -40,20 +40,9 @@ Queue CreateQueue(const char* name, int MaxElements) {
 		PRINT_ERROR( "Queue size is too small");
 	}
 
-	Q = malloc(sizeof(struct QueueRecord));
-	if (Q == NULL) {
-		//FatalError( "Out of space!!!");
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	Q = fins_malloc(sizeof(struct QueueRecord));
 
-	Q->Array = malloc(sizeof(ElementType) * MaxElements);
-	if (Q->Array == NULL) {
-		//FatalError( "Out of space!!!");
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	Q->Array = fins_malloc(sizeof(ElementType) * MaxElements);
 	memset(Q->Array, 0, sizeof(ElementType) * MaxElements); //avoid freeFinsFrame: use of f->dataOrControl
 
 	Q->Capacity = MaxElements;
@@ -146,7 +135,7 @@ void Dequeue(Queue Q) {
 }
 
 ElementType FrontAndDequeue(Queue Q) {
-	ElementType X; // = (ElementType) malloc(sizeof(ElementType)); //this just gets overwritten
+	ElementType X; // = (ElementType) fins_malloc(sizeof(ElementType)); //this just gets overwritten
 
 	if (IsEmpty(Q)) {
 		//Error( "Empty queue" );

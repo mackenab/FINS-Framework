@@ -164,11 +164,7 @@ int main() {
 
 			PRINT_DEBUG("Sending ARP req");
 
-			metadata *params_req = (metadata *) malloc(sizeof(metadata));
-			if (params_req == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
+			metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
 			metadata_create(params_req);
 
 			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
@@ -179,12 +175,7 @@ int main() {
 			metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
 			metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
 
-			struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-			if (ff_req == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
-
+			struct finsFrame *ff_req = (struct finsFrame*) fins_malloc(sizeof(struct finsFrame));
 			ff_req->dataOrCtrl = CONTROL;
 			ff_req->destinationID.id = ARP_ID;
 			ff_req->destinationID.next = NULL;
@@ -216,18 +207,10 @@ int main() {
 
 			int i = 0;
 			while (i < its) {
-				uint8_t *data = (uint8_t *) malloc(len);
-				if (data == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				uint8_t *data = (uint8_t *) fins_malloc(len);
 				memset(data, 56, len);
 
-				metadata *params = (metadata *) malloc(sizeof(metadata));
-				if (params == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 				metadata_create(params);
 
 				uint32_t host_ip = IP4_ADR_P2H(192, 168, 1, 20);

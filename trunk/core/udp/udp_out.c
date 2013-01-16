@@ -62,11 +62,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 		PRINT_ERROR("todo error, data too long max 65536, len=%d", packet_length);
 	}
 
-	uint8_t *udp_dataunit = (uint8_t *) malloc(packet_length);
-	if (udp_dataunit == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *udp_dataunit = (uint8_t *) fins_malloc(packet_length);
 	packet_netw = (struct udp_packet *) udp_dataunit;
 	uint8_t *pdu = ff->dataFrame.pdu;
 
@@ -75,7 +71,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 	//#########################
 #ifdef DEBUG
 	if (1) {
-		uint8_t *temp = (uint8_t *) malloc(ff->dataFrame.pduLength + 1);
+		uint8_t *temp = (uint8_t *) fins_malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, pdu, ff->dataFrame.pduLength);
 		temp[ff->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);

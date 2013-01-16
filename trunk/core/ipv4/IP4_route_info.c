@@ -87,7 +87,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 		int rtaLen = msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct rtmsg));
 		if (rtm->rtm_type == RTN_UNICAST) // don't consider local, broadcast and unreachable routes
 				{
-			table_pointer = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
+			table_pointer = (struct ip4_routing_table*) fins_malloc(sizeof(struct ip4_routing_table));
 			memset(table_pointer, 0, sizeof(struct ip4_routing_table)); // zero the routing table entry data
 			for (; RTA_OK(rta, rtaLen); rta = RTA_NEXT(rta, rtaLen)) {
 				switch (rta->rta_type) {
@@ -195,21 +195,9 @@ struct ip4_routing_table * IP4_get_routing_table_old() {
 struct ip4_routing_table * IP4_get_routing_table() {
 	struct ip4_routing_table *routing_table;
 
-	struct ip4_routing_table *row0 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
-	if (row0 == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-	struct ip4_routing_table *row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
-	if (row1 == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-	struct ip4_routing_table *row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
-	if (row2 == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct ip4_routing_table *row0 = (struct ip4_routing_table*) fins_malloc(sizeof(struct ip4_routing_table));
+	struct ip4_routing_table *row1 = (struct ip4_routing_table*) fins_malloc(sizeof(struct ip4_routing_table));
+	struct ip4_routing_table *row2 = (struct ip4_routing_table*) fins_malloc(sizeof(struct ip4_routing_table));
 
 	if (1) { //laptop eth0
 		row0->dst = my_host_ip_addr & my_host_mask;

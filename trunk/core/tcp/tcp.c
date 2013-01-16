@@ -40,12 +40,7 @@ void uint32_decrease(uint32_t *data, uint32_t value) {
 struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end) {
 	PRINT_DEBUG("Entered: data=%p, len=%d, seq_num=%u, seq_end=%u", data, len, seq_num, seq_end);
 
-	struct tcp_node *node = (struct tcp_node *) malloc(sizeof(struct tcp_node));
-	if (node == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct tcp_node *node = (struct tcp_node *) fins_malloc(sizeof(struct tcp_node));
 	node->data = data;
 	node->len = len;
 	node->seq_num = seq_num;
@@ -158,12 +153,7 @@ void node_free(struct tcp_node *node) {
 struct tcp_queue *queue_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct tcp_queue *queue = (struct tcp_queue *) malloc(sizeof(struct tcp_queue));
-	if (queue == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct tcp_queue *queue = (struct tcp_queue *) fins_malloc(sizeof(struct tcp_queue));
 	queue->max = max;
 	queue->len = 0;
 
@@ -410,12 +400,7 @@ void queue_free(struct tcp_queue *queue) {
 struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 	PRINT_DEBUG("Entered: host=%u/%u, backlog=%u", host_ip, host_port, backlog);
 
-	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) malloc(sizeof(struct tcp_connection_stub));
-	if (conn_stub == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) fins_malloc(sizeof(struct tcp_connection_stub));
 	conn_stub->next = NULL;
 	sem_init(&conn_stub->sem, 0, 1);
 	conn_stub->threads = 0;
@@ -442,11 +427,7 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn_stub=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn_stub, param_id, ret_val, ret_msg);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -461,12 +442,7 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_
 	uint32_t host_port = conn_stub->host_port;
 	metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -661,12 +637,7 @@ void handle_requests(struct tcp_connection *conn) {
 		avail = request->len - conn->request_index;
 		PRINT_DEBUG("space=%d, index=%d, len=%u, avail=%d", space, conn->request_index, request->len, avail);
 		if (space < avail) {
-			buf = (uint8_t *) malloc(space);
-			if (buf == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
-
+			buf = (uint8_t *) fins_malloc(space);
 			memcpy(buf, request->data + conn->request_index, space);
 			conn->request_index += space;
 
@@ -676,12 +647,7 @@ void handle_requests(struct tcp_connection *conn) {
 			space = 0;
 			break;
 		} else {
-			buf = (uint8_t *) malloc(avail);
-			if (buf == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
-
+			buf = (uint8_t *) fins_malloc(avail);
 			memcpy(buf, request->data + conn->request_index, avail);
 			conn->request_index = 0;
 
@@ -907,8 +873,7 @@ void main_established(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			}
-			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			} PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1129,8 +1094,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			}
-			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			} PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1517,12 +1481,7 @@ void *main_thread(void *local) {
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 
-	struct tcp_connection *conn = (struct tcp_connection *) malloc(sizeof(struct tcp_connection));
-	if (conn == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct tcp_connection *conn = (struct tcp_connection *) fins_malloc(sizeof(struct tcp_connection));
 	conn->total = 0;
 
 	conn->next = NULL;
@@ -1630,11 +1589,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->send_start = 0;
 	conn->send_next = 0;
 	conn->send_end = 0;
-	conn->send_pkt = (struct tcp_packet *) malloc(sizeof(struct tcp_packet));
-	if (conn->send_pkt == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	conn->send_pkt = (struct tcp_packet *) fins_malloc(sizeof(struct tcp_packet));
 	conn->send_pkt->ip_hdr.src_ip = conn->host_ip;
 	conn->send_pkt->ip_hdr.dst_ip = conn->rem_ip;
 	conn->send_pkt->ip_hdr.zeros = 0;
@@ -1644,12 +1599,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	//##################################################################
 
 	//start timers
-	struct sem_to_thread_data *gbn_data = (struct sem_to_thread_data *) malloc(sizeof(struct sem_to_thread_data));
-	if (gbn_data == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct sem_to_thread_data *gbn_data = (struct sem_to_thread_data *) fins_malloc(sizeof(struct sem_to_thread_data));
 	gbn_data->id = tcp_gen_thread_id();
 	gbn_data->fd = conn->to_gbn_fd;
 	gbn_data->running = &conn->running_flag;
@@ -1662,12 +1612,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 		exit(-1);
 	}
 
-	struct sem_to_thread_data *delayed_data = (struct sem_to_thread_data *) malloc(sizeof(struct sem_to_thread_data));
-	if (delayed_data == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct sem_to_thread_data *delayed_data = (struct sem_to_thread_data *) fins_malloc(sizeof(struct sem_to_thread_data));
 	delayed_data->id = tcp_gen_thread_id();
 	delayed_data->fd = conn->to_delayed_fd;
 	delayed_data->running = &conn->running_flag;
@@ -1697,11 +1642,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -1718,12 +1659,7 @@ int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_
 	uint32_t rem_port = conn->rem_port;
 	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -1750,11 +1686,7 @@ int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_
 int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -1771,12 +1703,7 @@ int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t par
 	uint32_t rem_port = conn->rem_port;
 	metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -2012,11 +1939,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	PRINT_DEBUG( "info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=0x%x, win=%u, checksum=0x%x, F=%u, S=%u, R=%u, A=%u",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -2029,12 +1952,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	uint32_t dst_port = seg->dst_port;
 	metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32); //And the destination port
 
-	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff = (struct finsFrame*) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA; //leave unset?
 	ff->destinationID.id = IPV4_ID; // destination module ID
 	ff->destinationID.next = NULL;
@@ -2042,14 +1960,9 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 
 	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
-	ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
+	ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 	PRINT_DEBUG("seg=%p, ff=%p, meta=%p, data_len=%d, hdr=%d, pduLength=%d",
 			seg, ff, ff->metaData, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
-
-	if (ff->dataFrame.pdu == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
 
 	struct tcpv4_header *hdr = (struct tcpv4_header *) ff->dataFrame.pdu;
 	hdr->src_port = htons(seg->src_port);
@@ -2120,11 +2033,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 		return NULL;
 	}
 
-	struct tcp_segment *seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
-	if (seg == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct tcp_segment *seg = (struct tcp_segment *) fins_malloc(sizeof(struct tcp_segment));
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
@@ -2170,12 +2079,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 	//And fill in the data length and the data, also
 	seg->data_len = ff->dataFrame.pduLength - TCP_HEADER_BYTES(seg->flags);
 	if (seg->data_len > 0) {
-		seg->data = (uint8_t *) malloc(seg->data_len);
-		if (seg->data == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
-
+		seg->data = (uint8_t *) fins_malloc(seg->data_len);
 		//uint8_t *ptr = hdr->options + seg->opt_len;
 		memcpy(seg->data, hdr->options + seg->opt_len, seg->data_len);
 		//ptr += seg->data_len;
@@ -2192,12 +2096,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 struct tcp_segment *seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port, uint32_t seq_num, uint32_t seq_end) {
 	PRINT_DEBUG("Entered: src=%u/%u, dst=%u/%u, seq_num=%u, seq_end=%u", src_ip, src_port, dst_ip, dst_port, seq_num, seq_end);
-	struct tcp_segment *seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
-	if (seg == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct tcp_segment *seg = (struct tcp_segment *) fins_malloc(sizeof(struct tcp_segment));
 	seg->src_ip = src_ip;
 	seg->src_port = src_port;
 	seg->dst_ip = dst_ip;
@@ -2216,7 +2115,7 @@ struct tcp_segment *seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_
 
 	seg->opt_len = 0;
 	//seg->options = NULL;
-	//seg->options = malloc(MAX_TCP_OPTIONS_BYTES);
+	//seg->options = fins_malloc(MAX_TCP_OPTIONS_BYTES);
 
 	seg->data_len = 0;
 	seg->data = NULL;
@@ -2237,11 +2136,7 @@ uint32_t seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, uint32_t
 
 	seg->data_len = data_len;
 	seg->seq_end = seg->seq_num + seg->data_len;
-	seg->data = (uint8_t *) malloc(data_len);
-	if (seg->data == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	seg->data = (uint8_t *) fins_malloc(data_len);
 	uint8_t *ptr = seg->data;
 
 	while (data_len && !queue_is_empty(queue)) {
@@ -3297,11 +3192,7 @@ int tcp_to_switch(struct finsFrame *ff) {
 }
 
 int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -3318,12 +3209,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 		metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -3350,11 +3236,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, data_len);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -3367,11 +3249,7 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 	uint32_t rem_port_buf = rem_port;
 	metadata_writeToElement(params, "recv_dst_port", &rem_port_buf, META_TYPE_INT32);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 
 	PRINT_DEBUG("src=%u/%u, dst=%u/%u, ff=%p", host_ip, host_port, rem_ip, rem_port, ff);
 

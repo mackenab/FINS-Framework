@@ -134,12 +134,7 @@ int check_valid_arp(struct arp_message *msg) {
 struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: mac=%llx, ip=%u", mac_addr, ip_addr);
 
-	struct arp_interface *interface = (struct arp_interface *) malloc(sizeof(struct arp_interface));
-	if (interface == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct arp_interface *interface = (struct arp_interface *) fins_malloc(sizeof(struct arp_interface));
 	interface->next = NULL;
 
 	interface->mac_addr = mac_addr;
@@ -213,12 +208,7 @@ int interface_list_has_space(void) {
 struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
 	PRINT_DEBUG("Entered: ff=%p, mac=%llx, ip=%u", ff, src_mac, src_ip);
 
-	struct arp_request *request = (struct arp_request *) malloc(sizeof(struct arp_request));
-	if (request == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct arp_request *request = (struct arp_request *) fins_malloc(sizeof(struct arp_request));
 	request->next = NULL;
 
 	request->ff = ff;
@@ -238,12 +228,7 @@ void request_free(struct arp_request *request) {
 struct arp_request_list *request_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct arp_request_list *request_list = (struct arp_request_list *) malloc(sizeof(struct arp_request_list));
-	if (request_list == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct arp_request_list *request_list = (struct arp_request_list *) fins_malloc(sizeof(struct arp_request_list));
 	request_list->max = max;
 	request_list->len = 0;
 
@@ -317,12 +302,7 @@ void request_list_free(struct arp_request_list *request_list) {
 struct arp_cache *cache_create(uint32_t ip_addr) {
 	PRINT_DEBUG("Entered: ip=%u", ip_addr);
 
-	struct arp_cache *cache = (struct arp_cache *) malloc(sizeof(struct arp_cache));
-	if (cache == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct arp_cache *cache = (struct arp_cache *) fins_malloc(sizeof(struct arp_cache));
 	cache->next = NULL;
 	cache->running_flag = 1;
 
@@ -344,12 +324,7 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	cache->retries = 0;
 
 	//start timer thread
-	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
-	if (to_data == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) fins_malloc(sizeof(struct intsem_to_thread_data));
 	int id = arp_thread_count++;
 	to_data->id = id;
 	to_data->fd = cache->to_fd;
@@ -607,11 +582,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
 			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t ether_type = ARP_TYPE;
@@ -619,12 +590,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	metadata_writeToElement(params, "send_dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
 	metadata_writeToElement(params, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
 
-	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct finsFrame *ff = (struct finsFrame*) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = INTERFACE_ID;
 	ff->destinationID.next = NULL;
@@ -632,11 +598,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	ff->dataFrame.directionFlag = DOWN;
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
-	ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
-	if (ff->dataFrame.pdu == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
 	hdr->hardware_type = htons(msg->hardware_type);
@@ -664,11 +626,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 		PRINT_DEBUG("pdu len longer than ARP header: hdr_len=%u, pdu_len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
 	}
 
-	struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
-	if (msg == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct arp_message *msg = (struct arp_message *) fins_malloc(sizeof(struct arp_message));
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
 	//TODO change? such that sender_mac is uint64_t

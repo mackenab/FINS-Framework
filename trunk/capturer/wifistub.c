@@ -130,7 +130,7 @@ void print_frame(const u_char *payload, int len) {
 		exit(1);
 	}
 	//data.frameLength = header->caplen ;
-	//data.frame = (u_char *) malloc(header->caplen);
+	//data.frame = (u_char *) fins_malloc(header->caplen);
 	//memcpy(data.frame,packetReceived,data.frameLength);
 
 	/** Write the length of the received frame to the pipe, then write the frame contents
@@ -175,6 +175,7 @@ void capture_init(char *interface) {
 		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
+
 	int check_monitor_mode;
 
 	struct bpf_program fp; /* compiled filter program (expression) */
@@ -328,7 +329,7 @@ void inject_init(char *interface) {
 			break;
 		}
 
-		//frame = (char *) malloc (framelen);
+		//frame = (char *) fins_malloc (framelen);
 		numBytes = read(inject_pipe_fd, frame, framelen);
 
 		if (numBytes <= 0) {
