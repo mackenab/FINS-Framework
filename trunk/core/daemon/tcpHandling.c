@@ -29,6 +29,9 @@ void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int pr
 		PRINT_ERROR("sem wait prob");
 		exit(-1);
 	}
+	if (protocol == IPPROTO_IP) {
+		protocol = IPPROTO_TCP; //TODO remove this if we support other proto's
+	}
 	int ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol);
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -285,15 +288,18 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 		free(addr);
 		return;
 	case SS_CONNECTED:
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, EISCONN);
 		free(addr);
 		return;
 	default:
-		PRINT_ERROR("todo");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0); //TODO EADDRINUSE, check?
@@ -345,7 +351,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 
 	/** Reverse again because it was reversed by the application itself
 	 * In our example it is not reversed */
-//daemonSockets[hdr->sock_index].host_ip.s_addr = ntohl(daemonSockets[hdr->sock_index].host_ip.s_addr);
+	//daemonSockets[hdr->sock_index].host_ip.s_addr = ntohl(daemonSockets[hdr->sock_index].host_ip.s_addr);
 	/** TODO convert back to the network endian form before
 	 * sending to the fins core
 	 */
@@ -468,8 +474,10 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 		}
 		return;
 	default:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -691,10 +699,11 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 	switch (cmd) {
 	case FIONREAD:
-		PRINT_DEBUG("FIONREAD cmd=%d", cmd);
+		PRINT_DEBUG("FIONREAD cmd=%d", cmd)
+		;
 		//figure out buffered data
 
-//send msg to wedge
+		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
@@ -722,12 +731,13 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		}
 		break;
 	case SIOCGSTAMP:
-		PRINT_DEBUG("SIOCGSTAMP cmd=%d", cmd);
+		PRINT_DEBUG("SIOCGSTAMP cmd=%d", cmd)
+		;
 
 		len = sizeof(struct timeval);
 		//val = &daemon_sockets[hdr->sock_index].latest;
 
-//send msg to wedge
+		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
@@ -747,7 +757,8 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		*(uint32_t *) pt = len;
 		pt += sizeof(uint32_t);
 
-		PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[hdr->sock_index].stamp.tv_sec, (uint32_t) daemon_sockets[hdr->sock_index].stamp.tv_usec);
+		PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[hdr->sock_index].stamp.tv_sec, (uint32_t) daemon_sockets[hdr->sock_index].stamp.tv_usec)
+		;
 
 		memcpy(pt, &daemon_sockets[hdr->sock_index].stamp, len);
 		pt += len;
@@ -764,7 +775,8 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		}
 		break;
 	default:
-		PRINT_ERROR("default cmd=%d", cmd);
+		PRINT_ERROR("default cmd=%d", cmd)
+		;
 		break;
 	}
 
@@ -828,8 +840,10 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	switch (daemon_sockets[hdr->sock_index].state) {
 	case SS_UNCONNECTED:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		//TODO buffer data & send ACK
@@ -844,8 +858,10 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	case SS_CONNECTED:
 		break;
 	case SS_DISCONNECTING:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -855,8 +871,10 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 			free(addr);
 		return;
 	default:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -967,8 +985,10 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 	switch (daemon_sockets[hdr->sock_index].state) {
 	case SS_UNCONNECTED:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		//TODO buffer data & send ACK
@@ -979,15 +999,19 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 	case SS_CONNECTED:
 		break;
 	case SS_DISCONNECTING:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		return;
 	default:
-		PRINT_ERROR("todo error");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("todo error")
+		;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$")
+		;
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1036,7 +1060,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			addr.sin_port = htons((uint16_t) rem_port);
 
 			if (data_len < ff->dataFrame.pduLength) {
-//TODO finish, slice off piece of pdu
+				//TODO finish, slice off piece of pdu
 			}
 
 			//#######
@@ -1126,7 +1150,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 						control_msg, control_pt, control_pt - control_msg, control_len, control_pt - control_msg == control_len);
 			} else {
 				PRINT_ERROR("todo error");
-//TODO send some error
+				//TODO send some error
 			}
 
 			int addr_len = sizeof(struct sockaddr_in);
@@ -1178,12 +1202,12 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			} else {
-//TODO send size back to TCP handlers
-//if (state > SS_UNCONNECTED) { //shouldn't be able to get data if not connected
+				//TODO send size back to TCP handlers
+				//if (state > SS_UNCONNECTED) { //shouldn't be able to get data if not connected
 				PRINT_DEBUG("recvfrom address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
-//} else {
-//	PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
-//}
+				//} else {
+				//	PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
+				//}
 
 				metadata *params_resp = (metadata *) malloc(sizeof(metadata));
 				if (params_resp == NULL) {
@@ -1608,7 +1632,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 			//mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 
-//mask |= POLLHUP; //TODO implement
+			//mask |= POLLHUP; //TODO implement
 
 			PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
 					daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
@@ -1852,7 +1876,8 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		break;
 	default:
 		//nack?
-		PRINT_ERROR("default=%d", optname);
+		PRINT_ERROR("default=%d", optname)
+		;
 		break;
 	}
 
@@ -1996,10 +2021,12 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	switch (level) {
 	case SOL_IP:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		break;
 	case SOL_RAW:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		break;
 	case SOL_TCP:
 		switch (optname) {
@@ -2098,7 +2125,8 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			break;
 		default:
 			//nack?
-			PRINT_ERROR("default=%d", optname);
+			PRINT_ERROR("default=%d", optname)
+			;
 			break;
 		}
 		break;
@@ -2382,7 +2410,7 @@ void getsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, u
 		uint8_t *val = NULL;
 		//################
 
-//send msg to wedge
+		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
 		uint8_t *msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
@@ -3037,7 +3065,8 @@ void connect_timeout_tcp(struct daemon_call *call) {
 		ack_send(call->call_id, call->call_index, call->call_type, 0);
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 		break;
 	}
@@ -3075,7 +3104,8 @@ void accept_timeout_tcp(struct daemon_call *call) {
 		}
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 		break;
 	}
@@ -3090,18 +3120,21 @@ void recvmsg_timeout_tcp(struct daemon_call *call) {
 
 	switch (daemon_sockets[call->sock_index].state) {
 	case SS_UNCONNECTED:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 		break;
 	case SS_CONNECTING:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 		break;
 	case SS_CONNECTED:
 		nack_send(call->call_id, call->call_index, call->call_type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error")
+		;
 		nack_send(call->call_id, call->call_index, call->call_type, 0);
 		break;
 	}

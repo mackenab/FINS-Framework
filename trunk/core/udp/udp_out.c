@@ -161,7 +161,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 			gettimeofday(&sent->stamp, 0);
 		} else {
 			//PRINT_DEBUG("Clearing sent_packet_list");
-			//udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
+			//udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT);
 
 			if (!udp_sent_list_has_space(udp_sent_packet_list)) {
 				PRINT_DEBUG("Dropping head of sent_packet_list");

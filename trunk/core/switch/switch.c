@@ -177,9 +177,6 @@ void switch_init(void) {
 	//module_create_ops(&switch_proto);
 	//module_register(&switch_proto);
 
-	//Queues_init(); //TODO split & move to each module
-	//TODO not much, init queues here?
-
 	int i;
 	for (i = 0; i < MAX_modules; i++) {
 		fins_modules[i] = NULL;

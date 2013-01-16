@@ -263,27 +263,33 @@ void udp_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		//daemon_read_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		//daemon_set_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
@@ -294,16 +300,16 @@ void udp_fcf(struct finsFrame *ff) {
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
 		//daemon_exec_reply(ff);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
 		udp_error(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -582,6 +588,7 @@ void udp_release(void) {
 	PRINT_CRITICAL("Entered");
 	module_unregister(udp_proto.module_id);
 
+	PRINT_CRITICAL("udp_sent_packet_list->len=%u", udp_sent_packet_list->len);
 	udp_sent_list_free(udp_sent_packet_list);
 
 	//TODO free all module related mem

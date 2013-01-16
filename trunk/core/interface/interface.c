@@ -401,7 +401,6 @@ void interface_out_fdf(struct finsFrame *ff) {
 		hdr->ether_type = htons(ETH_TYPE_IP4);
 	} else {
 		PRINT_ERROR("todo error");
-		//TODO create error fcf?
 		freeFinsFrame(ff);
 		free(frame);
 		return;
@@ -439,7 +438,8 @@ void interface_in_fdf(struct finsFrame *ff) {
 
 void interface_fcf(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-
+	PRINT_ERROR("todo");
+	freeFinsFrame(ff);
 }
 
 void interface_exec(struct finsFrame *ff) {

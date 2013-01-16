@@ -13,28 +13,28 @@
 #include <metadata.h>
 #include "arp.h"
 
-void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
+void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	struct arp_interface *interface;
 	struct arp_cache *cache;
 	struct arp_cache *temp_cache;
 	uint64_t dst_mac;
 	uint64_t src_mac;
 
-	PRINT_DEBUG("Entered: ff=%p, dst_ip=%u, src_ip=%u", ff, dst_ip, src_ip);
+	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
 	metadata *params = ff->metaData;
 
 	interface = arp_interface_list_find(src_ip);
 	if (interface) {
 		src_mac = interface->mac_addr;
-		PRINT_DEBUG("src: interface=%p, ip=%u, mac=%llx", interface, src_ip, src_mac);
+		PRINT_DEBUG("src: interface=%p, mac=0x%llx, ip=%u", interface, src_mac, src_ip);
 
 		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 
 		interface = arp_interface_list_find(dst_ip);
-		if (interface) {
+		if (interface) { //Shouldn't occur since caught by IPv4
 			dst_mac = interface->mac_addr;
-			PRINT_DEBUG("dst: interface=%p, ip=%u, mac=%llx", interface, dst_ip, dst_mac);
+			PRINT_DEBUG("dst: interface=%p, mac=0x%llx, ip=%u", interface, dst_mac, dst_ip);
 
 			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
 
@@ -64,7 +64,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					}
 				} else {
 					dst_mac = cache->mac_addr;
-					PRINT_DEBUG("dst: cache=%p, ip=%u, mac=%llx", cache, dst_ip, dst_mac);
+					PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
 
 					struct timeval current;
 					gettimeofday(&current, 0);
@@ -121,7 +121,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					}
 				}
 			} else {
-				PRINT_DEBUG("dst: start seeking");
+				PRINT_DEBUG("create cache: start seeking");
 
 				dst_mac = ARP_MAC_BROADCAST;
 
@@ -216,7 +216,6 @@ void arp_in_fdf(struct finsFrame *ff) {
 		if (check_valid_arp(msg)) {
 			uint32_t dst_ip = msg->target_IP_addrs;
 
-			//TODO add sems?
 			struct arp_interface *interface = arp_interface_list_find(dst_ip);
 			if (interface) {
 				uint64_t dst_mac = interface->mac_addr;
@@ -271,11 +270,11 @@ void arp_in_fdf(struct finsFrame *ff) {
 								arp_request_free(request);
 							}
 						} else {
-							PRINT_ERROR("Not seeking addr. Dropping: ff=%p, dst=0x%llx/%u, src=0x%llx/%u, cache=%p",
-									ff, dst_mac, dst_ip, src_mac, src_ip, cache);
+							PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
+									ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 						}
 					} else {
-						PRINT_ERROR("No corresponding request. Dropping: ff=%p, dst=0x%llx/%u, src=0x%llx/%u", ff, dst_mac, dst_ip, src_mac, src_ip);
+						PRINT_ERROR("No corresponding request. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
 					}
 				}
 			} else {
@@ -337,6 +336,7 @@ void arp_handle_to(struct arp_cache *cache) {
 			struct arp_request *request;
 			struct finsFrame *ff;
 
+			//TODO figure out if it rejects all requests or re-seeks per request
 			while (!arp_request_list_is_empty(cache->request_list)) {
 				request = arp_request_list_remove_front(cache->request_list);
 				ff = request->ff;

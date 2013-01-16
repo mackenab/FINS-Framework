@@ -283,6 +283,10 @@ void ipv4_error(struct finsFrame *ff);
 
 #define EXEC_ARP_GET_ADDR 0
 
+//void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint64_t dst_mac);
+//void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint64_t dst_mac, uint32_t dst_ip);
+void ipv4_exec_reply_get_addr(struct finsFrame *ff);
+
 int InputQueue_Read_local(struct finsFrame *pff);
 int ipv4_to_switch(struct finsFrame *fins_frame);
 void IP4_exit(void);
@@ -357,6 +361,8 @@ void ipv4_cache_list_remove(struct ipv4_cache *cache);
 struct ipv4_cache *ipv4_cache_list_remove_first_non_seeking(void);
 int ipv4_cache_list_is_empty(void);
 int ipv4_cache_list_has_space(void);
+
+int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address);
 //###############
 
 #endif /* IPV4_H_ */

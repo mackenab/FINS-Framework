@@ -1137,7 +1137,8 @@ void *read_param_conn_thread(void *local) {
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1149,13 +1150,17 @@ void *read_param_conn_thread(void *local) {
 				metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
 			}
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = ret_val;
 
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 				//TODO send nack
@@ -1169,6 +1174,9 @@ void *read_param_conn_thread(void *local) {
 				ret_val = 1;
 			}
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = ret_val;
 
@@ -1179,6 +1187,9 @@ void *read_param_conn_thread(void *local) {
 			;
 			//TODO implement?
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = 0;
 
@@ -1188,6 +1199,9 @@ void *read_param_conn_thread(void *local) {
 	} else {
 		PRINT_ERROR("todo error");
 
+		ff->destinationID.id = ff->ctrlFrame.senderID;
+
+		ff->ctrlFrame.senderID = TCP_ID;
 		ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 		ff->ctrlFrame.ret_val = 0;
 
@@ -1234,7 +1248,8 @@ void *read_param_conn_stub_thread(void *local) {
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -1253,12 +1268,17 @@ void *read_param_conn_stub_thread(void *local) {
 				ret_val = 1;
 			}
 
-			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
+			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = ret_val;
+
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -1277,7 +1297,10 @@ void *read_param_conn_stub_thread(void *local) {
 				ret_val = 1;
 			}
 
-			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
+			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = ret_val;
 
 			tcp_to_switch(ff);
@@ -1287,7 +1310,10 @@ void *read_param_conn_stub_thread(void *local) {
 			;
 			//TODO implement?
 
-			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
+			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = 0;
 
 			tcp_to_switch(ff);
@@ -1296,7 +1322,10 @@ void *read_param_conn_stub_thread(void *local) {
 	} else {
 		PRINT_ERROR("todo error");
 
-		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		ff->destinationID.id = ff->ctrlFrame.senderID;
+
+		ff->ctrlFrame.senderID = TCP_ID;
+		ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
 		ff->ctrlFrame.ret_val = 0;
 
 		tcp_to_switch(ff);
@@ -1431,7 +1460,8 @@ void *set_param_conn_thread(void *local) {
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -1439,22 +1469,26 @@ void *set_param_conn_thread(void *local) {
 
 				ret_val = 0;
 			} else {
-				if (conn->recv_win + value < conn->recv_win || conn->recv_max_win < conn->recv_win + value) {
-					conn->recv_win = conn->recv_max_win;
-				} else {
-					conn->recv_win += value;
-				}
+				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), before",
+													conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+				uint32_increase(&conn->recv_win, value, conn->recv_max_win);
+				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), after",
+									conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 				ret_val = 1;
 			}
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = ret_val;
 
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -1464,15 +1498,14 @@ void *set_param_conn_thread(void *local) {
 			} else {
 				//fill in with switch of opts? or have them separate?
 
-				if (value > conn->recv_win) {
-					conn->recv_win -= value;
-				} else {
-					conn->recv_win = 0;
-				}
+				PRINT_ERROR("todo");
 
 				ret_val = 1;
 			}
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = ret_val;
 
@@ -1483,6 +1516,9 @@ void *set_param_conn_thread(void *local) {
 			;
 			//TODO implement?
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = 0;
 
@@ -1492,6 +1528,9 @@ void *set_param_conn_thread(void *local) {
 	} else {
 		PRINT_ERROR("todo error");
 
+		ff->destinationID.id = ff->ctrlFrame.senderID;
+
+		ff->ctrlFrame.senderID = TCP_ID;
 		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 		ff->ctrlFrame.ret_val = 0;
 
@@ -1538,7 +1577,8 @@ void *set_param_conn_stub_thread(void *local) {
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -1563,7 +1603,8 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -1672,6 +1713,9 @@ void tcp_set_param(struct finsFrame *ff) {
 
 					//TODO error
 
+					ff->destinationID.id = ff->ctrlFrame.senderID;
+
+					ff->ctrlFrame.senderID = TCP_ID;
 					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 					ff->ctrlFrame.ret_val = 0;
 
@@ -1710,6 +1754,9 @@ void tcp_set_param(struct finsFrame *ff) {
 
 					//TODO error
 
+					ff->destinationID.id = ff->ctrlFrame.senderID;
+
+					ff->ctrlFrame.senderID = TCP_ID;
 					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 					ff->ctrlFrame.ret_val = 0;
 
@@ -1720,6 +1767,9 @@ void tcp_set_param(struct finsFrame *ff) {
 			//TODO error
 			PRINT_ERROR("todo error");
 
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
 			ff->ctrlFrame.ret_val = 0;
 

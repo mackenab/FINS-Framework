@@ -35,7 +35,6 @@ uint32_t ipv4_interface_num;
 struct ipv4_cache *ipv4_cache_list; //The list of current cache we have
 uint32_t ipv4_cache_num;
 
-
 int ipv4_to_switch(struct finsFrame *ff) {
 	return module_to_switch(&ipv4_proto, ff);
 }
@@ -153,7 +152,7 @@ int store_list_has_space(void) {
 
 //################ ARP/interface stuff //TODO move to common?
 struct ipv4_interface *ipv4_interface_create(uint64_t mac_addr, uint32_t ip_addr) {
-	PRINT_DEBUG("Entered: mac=%llx, ip=%u", mac_addr, ip_addr);
+	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", mac_addr, ip_addr);
 
 	struct ipv4_interface *interface = (struct ipv4_interface *) fins_malloc(sizeof(struct ipv4_interface));
 	interface->next = NULL;
@@ -161,7 +160,7 @@ struct ipv4_interface *ipv4_interface_create(uint64_t mac_addr, uint32_t ip_addr
 	interface->mac_addr = mac_addr;
 	interface->ip_addr = ip_addr;
 
-	PRINT_DEBUG("Exited: mac=%llx, ip=%u, interface=%p", mac_addr, ip_addr, interface);
+	PRINT_DEBUG("Exited: mac=0x%llx, ip=%u, interface=%p", mac_addr, ip_addr, interface);
 	return interface;
 }
 
@@ -227,7 +226,7 @@ int ipv4_interface_list_has_space(void) {
 }
 
 struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
-	PRINT_DEBUG("Entered: ff=%p, mac=%llx, ip=%u", ff, src_mac, src_ip);
+	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
 
 	struct ipv4_request *request = (struct ipv4_request *) fins_malloc(sizeof(struct ipv4_request));
 	request->next = NULL;
@@ -236,7 +235,7 @@ struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac,
 	request->src_mac = src_mac;
 	request->src_ip = src_ip;
 
-	PRINT_DEBUG("Exited: ff=%p, mac=%llx, ip=%u, request=%p", ff, src_mac, src_ip, request);
+	PRINT_DEBUG("Exited: ff=%p, mac=0x%llx, ip=%u, request=%p", ff, src_mac, src_ip, request);
 	return request;
 }
 
@@ -449,6 +448,19 @@ int ipv4_cache_list_is_empty(void) {
 int ipv4_cache_list_has_space(void) {
 	return ipv4_cache_num < IPV4_CACHE_LIST_MAX;
 }
+
+int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address) {
+	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
+
+	if (ipv4_interface_list_has_space()) {
+		struct ipv4_interface *interface = ipv4_interface_create(MAC_address, IP_address);
+		ipv4_interface_list_insert(interface);
+
+		return 1;
+	} else {
+		return 0;
+	}
+}
 //################
 
 
@@ -461,6 +473,12 @@ void ipv4_init(void) {
 
 	store_list = NULL;
 	store_num = 0;
+
+	ipv4_interface_list = NULL;
+	ipv4_interface_num = 0;
+
+	ipv4_cache_list = NULL;
+	ipv4_cache_num = 0;
 
 	/* find a way to get the IP of the desired interface automatically from the system
 	 * or from a configuration file
@@ -512,6 +530,7 @@ void ipv4_release(void) {
 
 	//TODO free all module related mem
 
+	PRINT_CRITICAL("store_list->len=%u", store_num);
 	struct ip4_store *store;
 	while (!store_list_is_empty()) {
 		store = store_list;
@@ -519,11 +538,26 @@ void ipv4_release(void) {
 		store_free(store);
 	}
 
+	PRINT_CRITICAL("ipv4_interface_list->len=%u", ipv4_interface_num);
+	struct ipv4_interface *interface;
+	while (!ipv4_interface_list_is_empty()) {
+		interface = ipv4_interface_list;
+		ipv4_interface_list_remove(interface);
+		ipv4_interface_free(interface);
+	}
+
+	PRINT_CRITICAL("ipv4_cache_list->len=%u", ipv4_cache_num);
+	struct ipv4_cache *cache;
+	while (!ipv4_cache_list_is_empty()) {
+		cache = ipv4_cache_list;
+		ipv4_cache_list_remove(cache);
+		ipv4_cache_free(cache);
+	}
+
 	struct ip4_routing_table *table;
 	while (routing_table) {
 		table = routing_table;
 		routing_table = routing_table->next_entry;
-
 		free(table);
 	}
 

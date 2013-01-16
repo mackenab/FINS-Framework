@@ -21,11 +21,11 @@ uint32_t conn_num;
 uint32_t tcp_thread_id_num = 0;
 sem_t tcp_thread_id_sem;
 
-void uint32_increase(uint32_t *data, uint32_t value) {
-	if (*data > value) {
-		//*data += value;
+void uint32_increase(uint32_t *data, uint32_t value, uint32_t max) { //assumes *data,value < max
+	if (*data + value < *data || max < *data + value) {
+		*data = max;
 	} else {
-		//*data = 0;
+		*data += value;
 	}
 }
 
@@ -2899,10 +2899,14 @@ void tcp_fcf(struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
 		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
+		PRINT_ERROR("todo")
 		;
 		freeFinsFrame(ff);
 		break;
@@ -2914,6 +2918,8 @@ void tcp_fcf(struct finsFrame *ff) {
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
 		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -2923,6 +2929,8 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
+		PRINT_ERROR("todo")
 		;
 		freeFinsFrame(ff);
 		break;
@@ -2934,6 +2942,8 @@ void tcp_fcf(struct finsFrame *ff) {
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
 		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
@@ -2943,6 +2953,8 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
+		PRINT_ERROR("todo")
 		;
 		freeFinsFrame(ff);
 		break;
@@ -3131,6 +3143,7 @@ void tcp_exec(struct finsFrame *ff) {
 
 		ff->ctrlFrame.senderID = TCP_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		ff->ctrlFrame.ret_val = 0;
 
 		tcp_to_switch(ff);
 	}

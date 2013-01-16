@@ -188,7 +188,8 @@ int arp_to_switch(struct finsFrame *ff);
 
 void arp_fcf(struct finsFrame *ff);
 void arp_exec(struct finsFrame *ff);
-void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip);
+void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
+//void arp_exec_get_addr(struct finsFrame *ff, uint32_t addr_ip);
 
 void arp_in_fdf(struct finsFrame *ff);
 void arp_out_fdf(struct finsFrame *ff);

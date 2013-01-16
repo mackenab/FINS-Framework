@@ -58,7 +58,7 @@ struct udp_sent_list {
 struct udp_sent_list *udp_sent_list_create(uint32_t max);
 void udp_sent_list_append(struct udp_sent_list *sent_list, struct udp_sent *sent);
 struct udp_sent *udp_sent_list_find(struct udp_sent_list *sent_list, uint8_t *data, uint32_t data_len);
-struct udp_sent *udp_sent_list_remove_front(struct udp_sent_list *sent_list); //TODO remove?
+struct udp_sent *udp_sent_list_remove_front(struct udp_sent_list *sent_list);
 void udp_sent_list_remove(struct udp_sent_list *sent_list, struct udp_sent *sent);
 int udp_sent_list_is_empty(struct udp_sent_list *sent_list);
 int udp_sent_list_has_space(struct udp_sent_list *sent_list);

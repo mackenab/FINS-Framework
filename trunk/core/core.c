@@ -132,6 +132,7 @@ int main() {
 	ipv4_init();
 	ipv4_set_interface(my_host_ip_addr, my_host_mask);
 	ipv4_set_loopback(loopback_ip_addr, loopback_mask);
+	ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
 
 	icmp_init();
 	tcp_init();

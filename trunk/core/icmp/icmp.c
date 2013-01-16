@@ -506,11 +506,10 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				dst_port = ntohs(tcp_hdr->dst_port);
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
-				//TODO src/dst_ip should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
+				//src/dst_ip should already be in from IPv4 mod
+				metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32);
 				metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
 				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
-				//TODO err_src_ip/port, recv_ttl, stamp
 
 				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
@@ -805,49 +804,69 @@ void icmp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		//arp_read_param(ff);
 		//TODO read interface_mac?
+		PRINT_ERROR("todo")
+		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		//arp_set_param(ff);
 		//TODO set interface_mac?
+		PRINT_ERROR("todo")
+		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		//arp_exec(ff);
+		PRINT_ERROR("todo")
+		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo")
 		;
+		freeFinsFrame(ff);
 		break;
 	}
 }
@@ -896,6 +915,7 @@ void icmp_release(void) {
 	PRINT_CRITICAL("Entered");
 	module_unregister(icmp_proto.module_id);
 
+	PRINT_CRITICAL("icmp_sent_packet_list->len=%u", icmp_sent_packet_list->len);
 	icmp_sent_list_free(icmp_sent_packet_list);
 
 	//TODO free all module related mem

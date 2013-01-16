@@ -132,7 +132,7 @@ int check_valid_arp(struct arp_message *msg) {
 }
 
 struct arp_interface *arp_interface_create(uint64_t mac_addr, uint32_t ip_addr) {
-	PRINT_DEBUG("Entered: mac=%llx, ip=%u", mac_addr, ip_addr);
+	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", mac_addr, ip_addr);
 
 	struct arp_interface *interface = (struct arp_interface *) fins_malloc(sizeof(struct arp_interface));
 	interface->next = NULL;
@@ -140,7 +140,7 @@ struct arp_interface *arp_interface_create(uint64_t mac_addr, uint32_t ip_addr) 
 	interface->mac_addr = mac_addr;
 	interface->ip_addr = ip_addr;
 
-	PRINT_DEBUG("Exited: mac=%llx, ip=%u, interface=%p", mac_addr, ip_addr, interface);
+	PRINT_DEBUG("Exited: mac=0x%llx, ip=%u, interface=%p", mac_addr, ip_addr, interface);
 	return interface;
 }
 
@@ -206,7 +206,7 @@ int arp_interface_list_has_space(void) {
 }
 
 struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
-	PRINT_DEBUG("Entered: ff=%p, mac=%llx, ip=%u", ff, src_mac, src_ip);
+	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
 
 	struct arp_request *request = (struct arp_request *) fins_malloc(sizeof(struct arp_request));
 	request->next = NULL;
@@ -215,7 +215,7 @@ struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, u
 	request->src_mac = src_mac;
 	request->src_ip = src_ip;
 
-	PRINT_DEBUG("Exited: ff=%p, mac=%llx, ip=%u, request=%p", ff, src_mac, src_ip, request);
+	PRINT_DEBUG("Exited: ff=%p, mac=0x%llx, ip=%u, request=%p", ff, src_mac, src_ip, request);
 	return request;
 }
 
@@ -508,12 +508,7 @@ void print_msgARP(struct arp_message *msg) {
 	PRINT_DEBUG("Sender:");
 	print_IP_addrs(msg->sender_IP_addrs);
 	print_MAC_addrs(msg->sender_MAC_addrs);
-	PRINT_DEBUG("Hardware Address Length : %u", msg->hardware_addrs_length);
-	PRINT_DEBUG("Hardware Type : %d", msg->hardware_type);
-	PRINT_DEBUG("Protocol Address Length : %u", msg->protocol_addrs_length);
-	PRINT_DEBUG("Protocol Type : %d", msg->protocol_type);
-	PRINT_DEBUG("Operation Type : %d", msg->operation);
-	PRINT_DEBUG("Target:");
+	PRINT_DEBUG("Hardware Address Length : %u", msg->hardware_addrs_length);PRINT_DEBUG("Hardware Type : %d", msg->hardware_type);PRINT_DEBUG("Protocol Address Length : %u", msg->protocol_addrs_length);PRINT_DEBUG("Protocol Type : %d", msg->protocol_type);PRINT_DEBUG("Operation Type : %d", msg->operation);PRINT_DEBUG("Target:");
 	print_IP_addrs(msg->target_IP_addrs);
 	print_MAC_addrs(msg->target_MAC_addrs);
 
@@ -523,24 +518,15 @@ void print_arp_hdr(struct arp_hdr *pckt) {
 
 	int i;
 
-	PRINT_DEBUG("Printing of an external format arp message");
-	PRINT_DEBUG("Sender hardware (MAC) address = ");
+	PRINT_DEBUG("Printing of an external format arp message");PRINT_DEBUG("Sender hardware (MAC) address = ");
 	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
-		PRINT_DEBUG("0x%x:", pckt->sender_MAC_addrs[i]);
-	PRINT_DEBUG("Sender IP address = ");
+		PRINT_DEBUG("0x%x:", pckt->sender_MAC_addrs[i]);PRINT_DEBUG("Sender IP address = ");
 	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
-		PRINT_DEBUG("%d.", pckt->sender_IP_addrs[i]);
-	PRINT_DEBUG("Target hardware (MAC) address= ");
+		PRINT_DEBUG("%d.", pckt->sender_IP_addrs[i]);PRINT_DEBUG("Target hardware (MAC) address= ");
 	for (i = 0; i < ARP_HDW_ADDR_LEN; i++)
-		PRINT_DEBUG("0x%x:", pckt->target_MAC_addrs[i]);
-	PRINT_DEBUG("Target IP address = ");
+		PRINT_DEBUG("0x%x:", pckt->target_MAC_addrs[i]);PRINT_DEBUG("Target IP address = ");
 	for (i = 0; i < ARP_PROTOCOL_ADDR_LEN; i++)
-		PRINT_DEBUG("%d.", pckt->target_IP_addrs[i]);
-	PRINT_DEBUG("Hardware type: %d", pckt->hardware_type);
-	PRINT_DEBUG("Protocol type: %d", pckt->protocol_type);
-	PRINT_DEBUG("Hardware length: %d", pckt->hardware_addrs_length);
-	PRINT_DEBUG("Hardware length: %d", pckt->protocol_addrs_length);
-	PRINT_DEBUG("Operation: %d", pckt->operation);
+		PRINT_DEBUG("%d.", pckt->target_IP_addrs[i]);PRINT_DEBUG("Hardware type: %d", pckt->hardware_type);PRINT_DEBUG("Protocol type: %d", pckt->protocol_type);PRINT_DEBUG("Hardware length: %d", pckt->hardware_addrs_length);PRINT_DEBUG("Hardware length: %d", pckt->protocol_addrs_length);PRINT_DEBUG("Operation: %d", pckt->operation);
 }
 
 /**
@@ -710,30 +696,36 @@ void arp_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_ERROR("todo");
 		//arp_read_param(ff);
 		//TODO read interface_mac?
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_ERROR("todo");
 		//arp_set_param(ff);
 		//TODO set interface_mac?
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -742,14 +734,17 @@ void arp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -757,8 +752,9 @@ void arp_fcf(struct finsFrame *ff) {
 
 void arp_exec(struct finsFrame *ff) {
 	int ret = 0;
-	uint32_t dst_ip = 0;
 	uint32_t src_ip = 0;
+	uint32_t dst_ip = 0;
+	//uint32_t addr_ip = 0;
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
@@ -768,8 +764,9 @@ void arp_exec(struct finsFrame *ff) {
 		case EXEC_ARP_GET_ADDR:
 			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == META_FALSE;
 			ret += metadata_readFromElement(params, "src_ip", &src_ip) == META_FALSE;
+			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == META_FALSE;
+			//ret += metadata_readFromElement(params, "addr_ip", &addr_ip) == META_FALSE;
 
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
@@ -781,11 +778,13 @@ void arp_exec(struct finsFrame *ff) {
 
 				arp_to_switch(ff);
 			} else {
-				arp_exec_get_addr(ff, dst_ip, src_ip);
+				arp_exec_get_addr(ff, src_ip, dst_ip);
+				//arp_exec_get_addr(ff, addr_ip);
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -860,16 +859,12 @@ int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 
 	if (arp_interface_list_has_space()) {
 		struct arp_interface *interface = arp_interface_create(MAC_address, IP_address);
-		if (interface) {
-			arp_interface_list_insert(interface);
-		} else {
-			return 0;
-		}
+		arp_interface_list_insert(interface);
+
+		return 1;
 	} else {
 		return 0;
 	}
-
-	return 1;
 }
 
 void arp_shutdown(void) {
@@ -890,6 +885,7 @@ void arp_release(void) {
 
 	//TODO free all module related mem
 
+	PRINT_CRITICAL("arp_interface_list->len=%u", arp_interface_num);
 	struct arp_interface *interface;
 	while (!arp_interface_list_is_empty()) {
 		interface = arp_interface_list;
@@ -897,6 +893,7 @@ void arp_release(void) {
 		arp_interface_free(interface);
 	}
 
+	PRINT_CRITICAL("arp_cache_list->len=%u", arp_cache_num);
 	struct arp_cache *cache;
 	while (!arp_cache_list_is_empty()) {
 		cache = arp_cache_list;

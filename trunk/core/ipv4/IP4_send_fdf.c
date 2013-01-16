@@ -107,7 +107,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	memcpy(ff->dataFrame.pdu, ppacket, IP4_MIN_HLEN);
 	memcpy(ff->dataFrame.pdu + IP4_MIN_HLEN, pdu, length);
 
-	if (1) { //works, removes ARP
+	if (0) { //works, removes ARP
 		uint64_t src_mac = 0x001d09b35512ull;
 		uint64_t dst_mac = 0xf46d0449baddull; //jreed HAF-reed
 		//uint64_t dst_mac = 0xa021b7710c87ull; //jreed home wifi
@@ -159,14 +159,13 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 			//free(pdu);
 		}
 	}
-	if (0) {
+	if (1) { //works, doesn't support errors when 2 src interfaces requesting same dst MAC (only request from 1st interface)
 		struct ipv4_interface *interface;
 		struct ipv4_cache *cache;
 		struct ipv4_cache *temp_cache;
 		struct ipv4_request *request;
 		uint64_t dst_mac;
 		uint64_t src_mac;
-
 		//uint32_t src_ip = my_ip_addr; //TODO get these from next hop info
 		//uint32_t dst_ip = ntohl(ppacket->ip_dst);
 		uint32_t src_ip = next_hop.interface; //TODO get this value from interface list with hop.interface as the index
@@ -177,14 +176,14 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 		interface = ipv4_interface_list_find(src_ip);
 		if (interface) {
 			src_mac = interface->mac_addr;
-			PRINT_DEBUG("src: interface=%p, ip=%u, mac=%llx", interface, src_ip, src_mac);
+			PRINT_DEBUG("src: interface=%p, mac=0x%llx, ip=%u", interface, src_mac, src_ip);
 
 			metadata_writeToElement(params, "send_src_mac", &src_mac, META_TYPE_INT64);
 
 			interface = ipv4_interface_list_find(dst_ip);
 			if (interface) {
 				dst_mac = interface->mac_addr;
-				PRINT_DEBUG("dst: interface=%p, ip=%u, mac=%llx", interface, dst_ip, dst_mac);
+				PRINT_DEBUG("dst: interface=%p, mac=0x%llx, ip=%u", interface, dst_mac, dst_ip);
 
 				metadata_writeToElement(params, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
@@ -209,7 +208,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 						}
 					} else {
 						dst_mac = cache->mac_addr;
-						PRINT_DEBUG("dst: cache=%p, ip=%u, mac=%llx", cache, dst_ip, dst_mac);
+						PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
 
 						struct timeval current;
 						gettimeofday(&current, 0);
@@ -230,16 +229,20 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 								metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
 								metadata_create(params_req);
 
-								metadata_writeToElement(params_req, "addr_ip", &dst_ip, META_TYPE_INT32);
+								metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
+								metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+								//metadata_writeToElement(params_req, "addr_ip", &dst_ip, META_TYPE_INT32);
 
 								struct finsFrame *ff_req = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 								ff_req->dataOrCtrl = CONTROL;
 								ff_req->destinationID.id = ARP_ID;
 								ff_req->destinationID.next = NULL;
-								ff_req->metaData = params;
+								ff_req->metaData = params_req;
+
+								uint32_t serial_num = gen_control_serial_num();
 
 								ff_req->ctrlFrame.senderID = IPV4_ID;
-								ff_req->ctrlFrame.serial_num = gen_control_serial_num();
+								ff_req->ctrlFrame.serial_num = serial_num;
 								ff_req->ctrlFrame.opcode = CTRL_EXEC;
 								ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
 
@@ -261,7 +264,32 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 						}
 					}
 				} else {
-					PRINT_DEBUG("dst: start seeking");
+					PRINT_DEBUG("create cache: start seeking");
+
+					metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
+					metadata_create(params_req);
+
+					metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
+					metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+					//metadata_writeToElement(params_req, "addr_ip", &dst_ip, META_TYPE_INT32);
+
+					struct finsFrame *ff_req = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+					ff_req->dataOrCtrl = CONTROL;
+					ff_req->destinationID.id = ARP_ID;
+					ff_req->destinationID.next = NULL;
+					ff_req->metaData = params_req;
+
+					uint32_t serial_num = gen_control_serial_num();
+
+					ff_req->ctrlFrame.senderID = IPV4_ID;
+					ff_req->ctrlFrame.serial_num = serial_num;
+					ff_req->ctrlFrame.opcode = CTRL_EXEC;
+					ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
+
+					ff_req->ctrlFrame.data_len = 0;
+					ff_req->ctrlFrame.data = NULL;
+
+					ipv4_to_switch(ff_req);
 
 					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
 					if (!ipv4_cache_list_has_space()) {
@@ -283,6 +311,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 
 								ipv4_to_switch(temp_ff);
 
+								temp_request->ff = NULL;
 								ipv4_request_free(temp_request);
 							}
 

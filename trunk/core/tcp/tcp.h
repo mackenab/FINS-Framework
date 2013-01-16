@@ -75,7 +75,7 @@
 //#define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_TCP_HEADER_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
 
-void uint32_increase(uint32_t *data, uint32_t value);
+void uint32_increase(uint32_t *data, uint32_t value, uint32_t max);
 void uint32_decrease(uint32_t *data, uint32_t value);
 
 struct tcp_request {
@@ -288,7 +288,7 @@ struct tcp_connection {
 	uint32_t send_seq_end; //1+seq of last sent byte by host, == send_next
 
 	uint32_t recv_max_win; //max bytes in host recv buffer, tied with rem_seq_num/recv_queue
-	uint32_t recv_win; //avail bytes in host recv buffer
+	uint32_t recv_win; //avail bytes in host recv buffer //actually 16 bits
 	uint32_t recv_seq_num; //seq of rem sendbase, tied with recv_queue
 	uint32_t recv_seq_end; //seq of last inside rem window
 

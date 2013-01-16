@@ -48,8 +48,8 @@ void handle_RST(struct tcp_connection *conn, struct tcp_segment *seg) {
 	//if ACK, send <SEQ=SEG.ACK><CTL=RST> win=0
 	//else, <SEQ=0><ACK=seq+len><CTL=RST> win=0
 
-	if (in_window(seg->seq_num, seg->seq_end, conn->recv_seq_num, conn->recv_seq_end)
-			|| (seg->seq_num == 0 && (seg->flags & FLAG_ACK) && in_window(seg->ack_num, seg->ack_num, conn->send_seq_num, conn->send_seq_end))) {
+	if (in_window(seg->seq_num, seg->seq_end, conn->recv_seq_num, conn->recv_seq_end) || (seg->seq_num == 0 && (seg->flags & FLAG_ACK) && in_window(
+			seg->ack_num, seg->ack_num, conn->send_seq_num, conn->send_seq_end))) {
 		//else state, aborts connection, advise user, goto CLOSED
 		conn_shutdown(conn);
 	} else {
@@ -734,10 +734,12 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 		kind = pt[i++];
 		switch (kind) {
 		case TCP_OPT_EOL:
-			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len);
+			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len)
+			;
 			return 1;
 		case TCP_OPT_NOP:
-			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len);
+			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len)
+			;
 			continue;
 		case TCP_OPT_MSS:
 			len = pt[i++];
@@ -900,7 +902,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//in order seq num
 
 		if (process_seg(conn, seg, &send_flags)) {
-			conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
+			uint32_decrease(&conn->recv_win, seg->data_len);
 		} else {
 			PRINT_ERROR("todo error");
 			//TODO error
@@ -919,11 +921,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				if (conn->recv_seq_num <= conn->recv_seq_end) {
 					node = queue_remove_front(conn->recv_queue);
 					seg = (struct tcp_segment *) node->data;
-					if (conn->recv_win + (uint16_t) seg->data_len < conn->recv_win || conn->recv_max_win < conn->recv_win + (uint16_t) seg->data_len) {
-						conn->recv_win = conn->recv_max_win;
-					} else {
-						conn->recv_win += (uint16_t) seg->data_len;
-					}
+					uint32_increase(&conn->recv_win, seg->data_len, conn->recv_max_win);
 					seg_free(seg);
 					free(node);
 				} else {
@@ -932,11 +930,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 					} else {
 						node = queue_remove_front(conn->recv_queue);
 						seg = (struct tcp_segment *) node->data;
-						if (conn->recv_win + (uint16_t) seg->data_len < conn->recv_win || conn->recv_max_win < conn->recv_win + (uint16_t) seg->data_len) {
-							conn->recv_win = conn->recv_max_win;
-						} else {
-							conn->recv_win += (uint16_t) seg->data_len;
-						}
+						uint32_increase(&conn->recv_win, seg->data_len, conn->recv_max_win);
 						seg_free(seg);
 						free(node);
 					}
@@ -962,11 +956,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 					} else {
 						node = queue_remove_front(conn->recv_queue);
 						seg = (struct tcp_segment *) node->data;
-						if (conn->recv_win + (uint16_t) seg->data_len < conn->recv_win || conn->recv_max_win < conn->recv_win + (uint16_t) seg->data_len) {
-							conn->recv_win = conn->recv_max_win;
-						} else {
-							conn->recv_win += (uint16_t) seg->data_len;
-						}
+						uint32_increase(&conn->recv_win, seg->data_len, conn->recv_max_win);
 						seg_free(seg);
 						free(node);
 					}
@@ -992,7 +982,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				ret = queue_insert(conn->recv_queue, node, conn->recv_seq_num, conn->recv_seq_end);
 				PRINT_DEBUG("after");
 				if (ret) {
-					conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
+					uint32_decrease(&conn->recv_win, seg->data_len);
 				} else {
 					PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 					seg_free(seg);
@@ -1875,8 +1865,10 @@ void *recv_thread(void *local) {
 				break;
 			default:
 				PRINT_ERROR( "Incorrect state: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p",
-						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg);
-				PRINT_ERROR("todo error");
+						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg)
+				;
+				PRINT_ERROR("todo error")
+				;
 				break;
 			}
 		} else {
@@ -2320,7 +2312,7 @@ int recv_other_test(struct tcp_connection *conn, struct tcp_segment *seg) {
 			node = node_create((uint8_t *) seg, seg->data_len, seg->seq_num, seg->seq_end);
 			ret = queue_insert(conn->recv_queue, node, conn->recv_seq_num, conn->recv_seq_end); //TODO augment for overlaps, duplicate should replace older one
 			if (ret) {
-				conn->recv_win = ((uint16_t) seg->data_len < conn->recv_win) ? conn->recv_win - (uint16_t) seg->data_len : 0;
+				uint32_decrease(&conn->recv_win, seg->data_len);
 			} else {
 				PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
 				free(node);
