@@ -105,6 +105,8 @@ struct finsFrame {
 
 };
 
+void *fins_malloc(uint32_t len);
+
 uint32_t gen_control_serial_num(void);
 
 struct finsFrame * buildFinsFrame(void);

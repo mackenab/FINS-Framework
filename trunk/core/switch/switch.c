@@ -28,7 +28,7 @@ void module_create_ops(struct fins_proto_module *module) {
 
 	module->input_sem = (sem_t *) malloc(sizeof(sem_t));
 	if (module->input_sem == NULL) {
-		PRINT_ERROR("error alloc");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	sem_init(module->input_sem, 0, 1);
@@ -38,14 +38,14 @@ void module_create_ops(struct fins_proto_module *module) {
 
 	module->output_sem = (sem_t *) malloc(sizeof(sem_t));
 	if (module->output_sem == NULL) {
-		PRINT_ERROR("error alloc");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	sem_init(module->output_sem, 0, 1);
 
 	module->event_sem = (sem_t *) malloc(sizeof(sem_t));
 	if (module->event_sem == NULL) {
-		PRINT_ERROR("error alloc");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	sem_init(module->event_sem, 0, 0);
@@ -113,7 +113,7 @@ int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
 		sem_post(module->output_sem);
 		return 1;
 	} else {
-		PRINT_DEBUG("Exited: module=%p, module_id=%d, name='%s', 0", module, module->module_id, module->name);
+		PRINT_ERROR("Exited: module=%p, module_id=%d, name='%s', ff=%p, 0", module, module->module_id, module->name, ff);
 		sem_post(module->output_sem);
 		return 0;
 	}
@@ -185,7 +185,7 @@ void switch_init(void) {
 
 	switch_proto.event_sem = (sem_t *) malloc(sizeof(sem_t));
 	if (switch_proto.event_sem == NULL) {
-		PRINT_ERROR("error alloc");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	sem_init(switch_proto.event_sem, 0, 0);

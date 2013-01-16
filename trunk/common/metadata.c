@@ -301,7 +301,7 @@ metadata *metadata_clone(metadata *params) {
 
 	metadata *params_clone = (metadata *) malloc(sizeof(metadata));
 	if (params_clone == NULL) {
-		PRINT_ERROR("failed to create matadata: meta=%p", params);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	metadata_create(params_clone);

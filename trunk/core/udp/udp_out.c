@@ -63,6 +63,10 @@ void udp_out_fdf(struct finsFrame* ff) {
 	}
 
 	uint8_t *udp_dataunit = (uint8_t *) malloc(packet_length);
+	if (udp_dataunit == NULL) {
+		PRINT_ERROR("alloc error");
+		exit(-1);
+	}
 	packet_netw = (struct udp_packet *) udp_dataunit;
 	uint8_t *pdu = ff->dataFrame.pdu;
 
@@ -160,8 +164,8 @@ void udp_out_fdf(struct finsFrame* ff) {
 
 			gettimeofday(&sent->stamp, 0);
 		} else {
-			PRINT_DEBUG("Clearing sent_packet_list");
-			udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
+			//PRINT_DEBUG("Clearing sent_packet_list");
+			//udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
 
 			if (!udp_sent_list_has_space(udp_sent_packet_list)) {
 				PRINT_DEBUG("Dropping head of sent_packet_list");

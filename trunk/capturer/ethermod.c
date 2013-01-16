@@ -82,7 +82,6 @@ void termination_handler(int sig) {
  * */
 
 int main() {
-
 	(void) signal(SIGINT, termination_handler);
 	print_app_banner();
 

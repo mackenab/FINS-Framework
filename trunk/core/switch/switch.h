@@ -31,10 +31,6 @@ struct fins_proto_module {
 	sem_t *event_sem;
 };
 
-//int module_create(struct fins_proto_module *module);
-//struct fins_proto_module *module_create(int module_id, char *name);
-//int module_destroy(struct fins_proto_module *module);
-
 void module_create_ops(struct fins_proto_module *module);
 void module_destroy_ops(struct fins_proto_module *module);
 int module_register(struct fins_proto_module *module);

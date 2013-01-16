@@ -61,7 +61,7 @@ void *write_thread(void *local) {
 		} else if (conn->state == TS_ESTABLISHED || conn->state == TS_CLOSE_WAIT) {
 			struct tcp_request *request = (struct tcp_request *) malloc(sizeof(struct tcp_request));
 			if (request == NULL) {
-				PRINT_ERROR("alloc error.");
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 
@@ -83,7 +83,7 @@ void *write_thread(void *local) {
 
 				struct intsem_to_thread_data *to_write_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
 				if (to_write_data == NULL) {
-					PRINT_ERROR("alloc error.");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 
@@ -199,6 +199,11 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	if (conn) {
 		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			if (thread_data == NULL) {
+				PRINT_ERROR("alloc error");
+				exit(-1);
+			}
+
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn = conn;
 			thread_data->data_len = ff->dataFrame.pduLength;
@@ -367,6 +372,11 @@ void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, 
 
 		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			if (thread_data == NULL) {
+				PRINT_ERROR("alloc error");
+				exit(-1);
+			}
+
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn = conn;
 			thread_data->ff = ff;
@@ -441,6 +451,11 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 
 		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			if (thread_data == NULL) {
+				PRINT_ERROR("alloc error");
+				exit(-1);
+			}
+
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
 			thread_data->ff = ff;
@@ -692,6 +707,11 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 
 		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+			if (thread_data == NULL) {
+				PRINT_ERROR("alloc error");
+				exit(-1);
+			}
+
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
 			thread_data->ff = ff;
@@ -829,6 +849,11 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 
 					if (start) {
 						struct tcp_thread_data *stub_thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						if (stub_thread_data == NULL) {
+							PRINT_ERROR("alloc error");
+							exit(-1);
+						}
+
 						stub_thread_data->id = tcp_gen_thread_id();
 						stub_thread_data->conn_stub = conn_stub;
 						stub_thread_data->flags = 0;
@@ -846,6 +871,11 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 				}
 
 				struct tcp_thread_data *thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+				if (thread_data == NULL) {
+					PRINT_ERROR("alloc error");
+					exit(-1);
+				}
+
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->ff = ff;
@@ -1062,6 +1092,11 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 
 			if (start) {
 				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+				if (thread_data == NULL) {
+					PRINT_ERROR("alloc error");
+					exit(-1);
+				}
+
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->ff = ff;
@@ -1098,6 +1133,11 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 
 			if (start) {
 				thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+				if (thread_data == NULL) {
+					PRINT_ERROR("alloc error");
+					exit(-1);
+				}
+
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn_stub = conn_stub;
 				thread_data->ff = ff;
@@ -1185,7 +1225,8 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
@@ -1292,7 +1333,8 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
@@ -1357,6 +1399,11 @@ void tcp_read_param(struct finsFrame *ff) {
 
 				if (start) {
 					thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+					if (thread_data == NULL) {
+						PRINT_ERROR("alloc error");
+						exit(-1);
+					}
+
 					thread_data->id = tcp_gen_thread_id();
 					thread_data->conn = conn;
 					thread_data->ff = ff;
@@ -1389,6 +1436,11 @@ void tcp_read_param(struct finsFrame *ff) {
 
 				if (start) {
 					thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+					if (thread_data == NULL) {
+						PRINT_ERROR("alloc error");
+						exit(-1);
+					}
+
 					thread_data->id = tcp_gen_thread_id();
 					thread_data->conn_stub = conn_stub;
 					thread_data->ff = ff;
@@ -1487,7 +1539,8 @@ void *set_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
@@ -1595,7 +1648,8 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
@@ -1659,6 +1713,11 @@ void tcp_set_param(struct finsFrame *ff) {
 
 					if (start) {
 						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						if (thread_data == NULL) {
+							PRINT_ERROR("alloc error");
+							exit(-1);
+						}
+
 						thread_data->id = tcp_gen_thread_id();
 						thread_data->conn = conn;
 						thread_data->ff = ff;
@@ -1697,6 +1756,11 @@ void tcp_set_param(struct finsFrame *ff) {
 
 					if (start) {
 						thread_data = (struct tcp_thread_data *) malloc(sizeof(struct tcp_thread_data));
+						if (thread_data == NULL) {
+							PRINT_ERROR("alloc error");
+							exit(-1);
+						}
+
 						thread_data->id = tcp_gen_thread_id();
 						thread_data->conn_stub = conn_stub;
 						thread_data->ff = ff;

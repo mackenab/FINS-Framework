@@ -166,7 +166,7 @@ int main() {
 
 			metadata *params_req = (metadata *) malloc(sizeof(metadata));
 			if (params_req == NULL) {
-				PRINT_ERROR("metadata alloc fail");
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 			metadata_create(params_req);
@@ -181,8 +181,7 @@ int main() {
 
 			struct finsFrame *ff_req = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 			if (ff_req == NULL) {
-				PRINT_ERROR("todo error");
-				//metadata_destroy(params_req);
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 
@@ -191,7 +190,7 @@ int main() {
 			ff_req->destinationID.next = NULL;
 			ff_req->metaData = params_req;
 
-			ff_req->ctrlFrame.senderID = IP_ID;
+			ff_req->ctrlFrame.senderID = IPV4_ID;
 			ff_req->ctrlFrame.serial_num = gen_control_serial_num();
 			ff_req->ctrlFrame.opcode = CTRL_EXEC;
 			ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
@@ -219,14 +218,14 @@ int main() {
 			while (i < its) {
 				uint8_t *data = (uint8_t *) malloc(len);
 				if (data == NULL) {
-					PRINT_ERROR("data alloc fail");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				memset(data, 56, len);
 
 				metadata *params = (metadata *) malloc(sizeof(metadata));
 				if (params == NULL) {
-					PRINT_ERROR("metadata alloc fail");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				metadata_create(params);

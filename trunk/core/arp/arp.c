@@ -136,7 +136,7 @@ struct arp_interface *interface_create(uint64_t mac_addr, uint32_t ip_addr) {
 
 	struct arp_interface *interface = (struct arp_interface *) malloc(sizeof(struct arp_interface));
 	if (interface == NULL) {
-		PRINT_ERROR("interface alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -215,7 +215,7 @@ struct arp_request *request_create(struct finsFrame *ff, uint64_t src_mac, uint3
 
 	struct arp_request *request = (struct arp_request *) malloc(sizeof(struct arp_request));
 	if (request == NULL) {
-		PRINT_ERROR("failed to create store: ff=%p", ff);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -240,7 +240,7 @@ struct arp_request_list *request_list_create(uint32_t max) {
 
 	struct arp_request_list *request_list = (struct arp_request_list *) malloc(sizeof(struct arp_request_list));
 	if (request_list == NULL) {
-		PRINT_ERROR("Unable to create request_list: max=%u", max);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -319,7 +319,7 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 
 	struct arp_cache *cache = (struct arp_cache *) malloc(sizeof(struct arp_cache));
 	if (cache == NULL) {
-		PRINT_ERROR("Unable to create cache: ip=%u", ip_addr);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -346,7 +346,7 @@ struct arp_cache *cache_create(uint32_t ip_addr) {
 	//start timer thread
 	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
 	if (to_data == NULL) {
-		PRINT_ERROR("interrupt_to_thread_data alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -609,7 +609,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("failed to create matadata: msg=%p", msg);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	metadata_create(params);
@@ -621,8 +621,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("failed to create ff: msg=%p, meta=%p", msg, params);
-		//metadata_destroy(params);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -635,7 +634,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
 	ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 	if (ff->dataFrame.pdu == NULL) {
-		PRINT_ERROR("failed to create pdu: msg=%p, meta=%p", msg, params);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -667,7 +666,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 
 	struct arp_message *msg = (struct arp_message *) malloc(sizeof(struct arp_message));
 	if (msg == NULL) {
-		PRINT_ERROR("msg malloc error");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -749,49 +748,48 @@ void arp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		//arp_read_param(ff);
 		//TODO read interface_mac?
+		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		//arp_set_param(ff);
 		//TODO set interface_mac?
+		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		freeFinsFrame(ff);
 		break;
 	}
 }
@@ -807,8 +805,7 @@ void arp_exec(struct finsFrame *ff) {
 	if (params) {
 		switch (ff->ctrlFrame.param_id) {
 		case EXEC_ARP_GET_ADDR:
-			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
 			ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == META_FALSE;
 			ret += metadata_readFromElement(params, "src_ip", &src_ip) == META_FALSE;
@@ -816,7 +813,7 @@ void arp_exec(struct finsFrame *ff) {
 			if (ret) {
 				PRINT_ERROR("ret=%d", ret);
 
-				ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+				ff->destinationID.id = ff->ctrlFrame.senderID;
 				ff->ctrlFrame.senderID = ARP_ID;
 				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 				ff->ctrlFrame.ret_val = 0;
@@ -827,8 +824,7 @@ void arp_exec(struct finsFrame *ff) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 			freeFinsFrame(ff);
 			break;
@@ -836,7 +832,7 @@ void arp_exec(struct finsFrame *ff) {
 	} else {
 		PRINT_ERROR("Error fcf.metadata==NULL");
 
-		ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+		ff->destinationID.id = ff->ctrlFrame.senderID;
 		ff->ctrlFrame.senderID = ARP_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		ff->ctrlFrame.ret_val = 0;

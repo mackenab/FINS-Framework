@@ -38,7 +38,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
 
-			ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+			ff->destinationID.id = ff->ctrlFrame.senderID;
 			ff->ctrlFrame.senderID = ARP_ID;
 			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 			ff->ctrlFrame.ret_val = 1;
@@ -56,7 +56,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 						PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
 						request_free(request);
 
-						ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+						ff->destinationID.id = ff->ctrlFrame.senderID;
 						ff->ctrlFrame.senderID = ARP_ID;
 						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 						ff->ctrlFrame.ret_val = 0;
@@ -75,7 +75,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 
 						metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
 
-						ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+						ff->destinationID.id = ff->ctrlFrame.senderID;
 						ff->ctrlFrame.senderID = ARP_ID;
 						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 						ff->ctrlFrame.ret_val = 1;
@@ -102,7 +102,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 								PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
 								request_free(request);
 
-								ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+								ff->destinationID.id = ff->ctrlFrame.senderID;
 								ff->ctrlFrame.senderID = ARP_ID;
 								ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 								ff->ctrlFrame.ret_val = 0;
@@ -113,7 +113,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 							PRINT_ERROR("switch send failed");
 							freeFinsFrame(ff_req);
 
-							ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+							ff->destinationID.id = ff->ctrlFrame.senderID;
 							ff->ctrlFrame.senderID = ARP_ID;
 							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 							ff->ctrlFrame.ret_val = 0;
@@ -145,7 +145,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 								temp_request = request_list_remove_front(temp_cache->request_list);
 								temp_ff = temp_request->ff;
 
-								temp_ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+								temp_ff->destinationID.id = temp_ff->ctrlFrame.senderID;
 								temp_ff->ctrlFrame.senderID = ARP_ID;
 								temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 								temp_ff->ctrlFrame.ret_val = 0;
@@ -160,7 +160,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 						} else {
 							PRINT_ERROR("Cache full");
 
-							ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+							ff->destinationID.id = ff->ctrlFrame.senderID;
 							ff->ctrlFrame.senderID = ARP_ID;
 							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 							ff->ctrlFrame.ret_val = 0;
@@ -185,7 +185,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 					PRINT_DEBUG("switch send failed");
 					freeFinsFrame(ff_req);
 
-					ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+					ff->destinationID.id = ff->ctrlFrame.senderID;
 					ff->ctrlFrame.senderID = ARP_ID;
 					ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 					ff->ctrlFrame.ret_val = 0;
@@ -195,9 +195,9 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t dst_ip, uint32_t src_ip) {
 			}
 		}
 	} else {
-		PRINT_ERROR("No corresponding interface");
+		PRINT_ERROR("No corresponding interface: ff=%p, src_ip=%u", ff, src_ip);
 
-		ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+		ff->destinationID.id = ff->ctrlFrame.senderID;
 		ff->ctrlFrame.senderID = ARP_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		ff->ctrlFrame.ret_val = 0;
@@ -260,7 +260,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 
 								metadata_writeToElement(ff_resp->metaData, "dst_mac", &src_mac, META_TYPE_INT64);
 
-								ff_resp->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+								ff_resp->destinationID.id = ff_resp->ctrlFrame.senderID;
 								ff_resp->ctrlFrame.senderID = ARP_ID;
 								ff_resp->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 								ff_resp->ctrlFrame.ret_val = 1;
@@ -342,7 +342,7 @@ void arp_handle_to(struct arp_cache *cache) {
 				request = request_list_remove_front(cache->request_list);
 				ff = request->ff;
 
-				ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+				ff->destinationID.id = ff->ctrlFrame.senderID;
 				ff->ctrlFrame.senderID = ARP_ID;
 				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 				ff->ctrlFrame.ret_val = 0;

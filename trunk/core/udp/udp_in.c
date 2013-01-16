@@ -93,8 +93,7 @@ void udp_in_fdf(struct finsFrame* ff) {
 	src_port = ntohs(packet->u_src);
 	dst_port = ntohs(packet->u_dst);
 
-	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
-	PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
+	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port); PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
@@ -120,8 +119,7 @@ void udp_in_fdf(struct finsFrame* ff) {
 	//	meta->u_srcPort = packet->u_src;
 	/* construct a FDF to send to the sockets */
 
-	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength);
-	PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
+	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength); PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
 
 	//ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
 
@@ -130,6 +128,10 @@ void udp_in_fdf(struct finsFrame* ff) {
 
 	uint8_t *pdu = ff->dataFrame.pdu;
 	uint8_t *data = (uint8_t *) malloc(ff->dataFrame.pduLength);
+	if (data == NULL) {
+		PRINT_ERROR("alloc error");
+		exit(-1);
+	}
 	memcpy(data, pdu + U_HEADER_LEN, ff->dataFrame.pduLength);
 	ff->dataFrame.pdu = data;
 

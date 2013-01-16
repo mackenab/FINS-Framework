@@ -196,7 +196,7 @@ void *capturer_to_interface(void *local) {
 		}
 		frame = (uint8_t *) malloc(frame_len);
 		if (frame == NULL) {
-			PRINT_ERROR("allocation fail");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 
@@ -239,7 +239,7 @@ void *capturer_to_interface(void *local) {
 
 		ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 		if (ff == NULL) {
-			PRINT_ERROR("ff creation failed, dropping frame");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 
@@ -252,7 +252,7 @@ void *capturer_to_interface(void *local) {
 		 */
 		params = (metadata *) malloc(sizeof(metadata));
 		if (params == NULL) {
-			PRINT_ERROR("metadata creation failed");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 		metadata_create(params);
@@ -289,7 +289,7 @@ void *capturer_to_interface(void *local) {
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (uint8_t *) malloc(ff->dataFrame.pduLength);
 		if (ff->dataFrame.pdu == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
@@ -396,7 +396,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 
 	frame = (char *) malloc(framelen);
 	if (frame == NULL) {
-		PRINT_ERROR("frame creation failed");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

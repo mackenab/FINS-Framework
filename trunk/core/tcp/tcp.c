@@ -42,7 +42,7 @@ struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint
 
 	struct tcp_node *node = (struct tcp_node *) malloc(sizeof(struct tcp_node));
 	if (node == NULL) {
-		PRINT_ERROR("Error, unable to create node");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -160,7 +160,7 @@ struct tcp_queue *queue_create(uint32_t max) {
 
 	struct tcp_queue *queue = (struct tcp_queue *) malloc(sizeof(struct tcp_queue));
 	if (queue == NULL) {
-		PRINT_ERROR("Unable to create queue: max=%u", max);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -412,7 +412,7 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 
 	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) malloc(sizeof(struct tcp_connection_stub));
 	if (conn_stub == NULL) {
-		PRINT_ERROR("Unable to create conn_stub: host=%u/%u, backlog=%u", host_ip, host_port, backlog);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -444,8 +444,8 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -463,9 +463,8 @@ int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, freeing meta=%p", params);
-		metadata_destroy(params);
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	ff->dataOrCtrl = CONTROL;
@@ -664,7 +663,7 @@ void handle_requests(struct tcp_connection *conn) {
 		if (space < avail) {
 			buf = (uint8_t *) malloc(space);
 			if (buf == NULL) {
-				PRINT_ERROR("Error, unable to create node");
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 
@@ -679,7 +678,7 @@ void handle_requests(struct tcp_connection *conn) {
 		} else {
 			buf = (uint8_t *) malloc(avail);
 			if (buf == NULL) {
-				PRINT_ERROR("Error, unable to create node");
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 
@@ -1520,7 +1519,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	struct tcp_connection *conn = (struct tcp_connection *) malloc(sizeof(struct tcp_connection));
 	if (conn == NULL) {
-		PRINT_ERROR("Unable to create conn: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -1633,7 +1632,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->send_end = 0;
 	conn->send_pkt = (struct tcp_packet *) malloc(sizeof(struct tcp_packet));
 	if (conn->send_pkt == NULL) {
-		PRINT_ERROR("problem");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	conn->send_pkt->ip_hdr.src_ip = conn->host_ip;
@@ -1646,6 +1645,11 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	//start timers
 	struct sem_to_thread_data *gbn_data = (struct sem_to_thread_data *) malloc(sizeof(struct sem_to_thread_data));
+	if (gbn_data == NULL) {
+		PRINT_ERROR("alloc error");
+		exit(-1);
+	}
+
 	gbn_data->id = tcp_gen_thread_id();
 	gbn_data->fd = conn->to_gbn_fd;
 	gbn_data->running = &conn->running_flag;
@@ -1659,6 +1663,11 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	}
 
 	struct sem_to_thread_data *delayed_data = (struct sem_to_thread_data *) malloc(sizeof(struct sem_to_thread_data));
+	if (delayed_data == NULL) {
+		PRINT_ERROR("alloc error");
+		exit(-1);
+	}
+
 	delayed_data->id = tcp_gen_thread_id();
 	delayed_data->fd = conn->to_delayed_fd;
 	delayed_data->running = &conn->running_flag;
@@ -1690,8 +1699,8 @@ int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1711,9 +1720,8 @@ int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, meta=%p", params);
-		metadata_destroy(params);
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	ff->dataOrCtrl = CONTROL;
@@ -1744,8 +1752,8 @@ int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t par
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -1765,9 +1773,8 @@ int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t par
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, meta=%p", params);
-		metadata_destroy(params);
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	ff->dataOrCtrl = CONTROL;
@@ -2007,7 +2014,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("failed to create matadata: seg=%p", seg);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	metadata_create(params);
@@ -2024,8 +2031,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 
 	struct finsFrame *ff = (struct finsFrame*) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("failed to create ff: seg=%p, meta=%p", seg, params);
-		//metadata_destroy(params);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -2041,7 +2047,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 			seg, ff, ff->metaData, seg->data_len, TCP_HEADER_BYTES(seg->flags), ff->dataFrame.pduLength);
 
 	if (ff->dataFrame.pdu == NULL) {
-		PRINT_ERROR("failed to create pdu: seg=%p, meta=%p", seg, params);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -2116,7 +2122,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 	struct tcp_segment *seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
 	if (seg == NULL) {
-		PRINT_ERROR("seg malloc error");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -2166,7 +2172,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 	if (seg->data_len > 0) {
 		seg->data = (uint8_t *) malloc(seg->data_len);
 		if (seg->data == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 
@@ -2188,7 +2194,7 @@ struct tcp_segment *seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_
 	PRINT_DEBUG("Entered: src=%u/%u, dst=%u/%u, seq_num=%u, seq_end=%u", src_ip, src_port, dst_ip, dst_port, seq_num, seq_end);
 	struct tcp_segment *seg = (struct tcp_segment *) malloc(sizeof(struct tcp_segment));
 	if (seg == NULL) {
-		PRINT_ERROR("Unable to create tcp_segment: src=%u/%u, dst=%u/%u, seq_num=%u, seq_end=%u", src_ip, src_port, dst_ip, dst_port, seq_num, seq_end);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -2233,7 +2239,7 @@ uint32_t seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, uint32_t
 	seg->seq_end = seg->seq_num + seg->data_len;
 	seg->data = (uint8_t *) malloc(data_len);
 	if (seg->data == NULL) {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	uint8_t *ptr = seg->data;
@@ -3293,8 +3299,8 @@ int tcp_to_switch(struct finsFrame *ff) {
 int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -3314,9 +3320,8 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, meta=%p", params);
-		metadata_destroy(params);
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	ff->dataOrCtrl = CONTROL;
@@ -3347,8 +3352,8 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 	metadata_create(params);
 
@@ -3364,9 +3369,8 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, meta=%p", params);
-		metadata_destroy(params);
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	PRINT_DEBUG("src=%u/%u, dst=%u/%u, ff=%p", host_ip, host_port, rem_ip, rem_port, ff);

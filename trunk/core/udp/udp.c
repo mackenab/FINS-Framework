@@ -37,7 +37,7 @@ struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_
 
 	struct udp_sent *sent = (struct udp_sent *) malloc(sizeof(struct udp_sent));
 	if (sent == NULL) {
-		PRINT_ERROR("udp_sent alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -70,7 +70,7 @@ struct udp_sent_list *udp_sent_list_create(uint32_t max) {
 
 	struct udp_sent_list *sent_list = (struct udp_sent_list *) malloc(sizeof(struct udp_sent_list));
 	if (sent_list == NULL) {
-		PRINT_ERROR("sent_list alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

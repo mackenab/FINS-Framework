@@ -43,14 +43,14 @@ Queue CreateQueue(const char* name, int MaxElements) {
 	Q = malloc(sizeof(struct QueueRecord));
 	if (Q == NULL) {
 		//FatalError( "Out of space!!!");
-		PRINT_ERROR( "Out of space!!!");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
 	Q->Array = malloc(sizeof(ElementType) * MaxElements);
 	if (Q->Array == NULL) {
 		//FatalError( "Out of space!!!");
-		PRINT_ERROR( "Out of space!!!");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

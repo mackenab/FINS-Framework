@@ -24,7 +24,7 @@ struct icmp_sent *icmp_sent_create(struct finsFrame *ff) {
 
 	struct icmp_sent *sent = (struct icmp_sent *) malloc(sizeof(struct icmp_sent));
 	if (sent == NULL) {
-		PRINT_ERROR("icmp_sent alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -53,7 +53,7 @@ struct icmp_sent_list *icmp_sent_list_create(uint32_t max) {
 
 	struct icmp_sent_list *sent_list = (struct icmp_sent_list *) malloc(sizeof(struct icmp_sent_list));
 	if (sent_list == NULL) {
-		PRINT_ERROR("sent_list alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -313,7 +313,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 						ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 						if (ff_err == NULL) {
-							PRINT_ERROR("ff_err alloc error");
+							PRINT_ERROR("alloc error");
 							exit(-1);
 						}
 
@@ -365,7 +365,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
-					PRINT_ERROR("ff_err alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 
@@ -382,7 +382,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.data_len = sent_data_len;
 				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
 				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("data alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
@@ -399,7 +399,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
-					PRINT_ERROR("ff_err alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 
@@ -417,7 +417,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.data_len = sent_data_len;
 				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
 				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("data alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
@@ -499,7 +499,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 						ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 						if (ff_err == NULL) {
-							PRINT_ERROR("ff_err alloc error");
+							PRINT_ERROR("alloc error");
 							exit(-1);
 						}
 
@@ -552,7 +552,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
-					PRINT_ERROR("ff_err alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 
@@ -569,7 +569,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.data_len = sent_data_len;
 				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
 				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("data alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
@@ -586,7 +586,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 				ff_err = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 				if (ff_err == NULL) {
-					PRINT_ERROR("ff_err alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 
@@ -604,7 +604,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.data_len = sent_data_len;
 				ff_err->ctrlFrame.data = (uint8_t *) malloc(ff_err->ctrlFrame.data_len);
 				if (ff_err->ctrlFrame.data == NULL) {
-					PRINT_ERROR("data alloc error");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
@@ -716,8 +716,8 @@ void icmp_out_fdf(struct finsFrame *ff) {
 
 			gettimeofday(&sent->stamp, 0);
 		} else {
-			PRINT_DEBUG("Clearing sent_packet_list");
-			icmp_sent_list_gc(icmp_sent_packet_list, ICMP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
+			//PRINT_DEBUG("Clearing sent_packet_list");
+			//icmp_sent_list_gc(icmp_sent_packet_list, ICMP_MSL_TO_DEFAULT); //TODO shift this to separate thread on TO, when full this slows sending down
 
 			if (!icmp_sent_list_has_space(icmp_sent_packet_list)) {
 				PRINT_DEBUG("Dropping front of sent_packet_list");
@@ -807,7 +807,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	uint32_t pdu_len_reply = data_len + ICMP_HEADER_SIZE;
 	uint8_t *pdu_reply = (uint8_t *) malloc(pdu_len_reply);
 	if (pdu_reply == NULL) {
-		PRINT_ERROR("pdu alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -838,7 +838,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 
 	metadata *params_reply = (metadata *) malloc(sizeof(metadata));
 	if (params_reply == NULL) {
-		PRINT_ERROR("failed to create matadata: ff=%p", ff);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	metadata_create(params_reply);
@@ -850,8 +850,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 
 	struct finsFrame *ff_reply = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff_reply == NULL) {
-		PRINT_ERROR("ff alloc failed");
-		//metadata_destroy(params_reply);
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

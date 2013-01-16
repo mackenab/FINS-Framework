@@ -9,7 +9,7 @@
 #include <queueModule.h>
 
 #include <switch.h>
-struct fins_proto_module ipv4_proto = { .module_id = IP_ID, .name = "ipv4", .running_flag = 1, }; //TODO make static?
+struct fins_proto_module ipv4_proto = { .module_id = IPV4_ID, .name = "ipv4", .running_flag = 1, }; //TODO make static?
 
 IP4addr my_ip_addr;
 IP4addr my_mask;
@@ -50,7 +50,7 @@ struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_
 
 	struct ip4_store *store = (struct ip4_store *) malloc(sizeof(struct ip4_store));
 	if (store == NULL) {
-		PRINT_ERROR("store alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

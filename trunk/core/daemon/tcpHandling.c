@@ -159,7 +159,7 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -355,7 +355,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -485,8 +485,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -592,7 +591,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if (addr == NULL) {
-		PRINT_ERROR("addr creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -621,7 +620,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + len;
 	uint8_t *msg = (uint8_t *) malloc(msg_len);
 	if (msg == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -699,7 +698,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -732,7 +731,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -885,7 +884,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -1061,7 +1060,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				control_msg = (uint8_t *) malloc(msg_controllen);
 				if (control_msg == NULL) {
-					PRINT_ERROR("ERROR: buf alloc fail");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				uint8_t *control_pt = control_msg;
@@ -1135,7 +1134,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + ff->dataFrame.pduLength + control_len;
 			uint8_t *msg = (uint8_t *) malloc(msg_len);
 			if (msg == NULL) {
-				PRINT_ERROR("ERROR: buf alloc fail");
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 
@@ -1188,7 +1187,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				metadata *params_resp = (metadata *) malloc(sizeof(metadata));
 				if (params_resp == NULL) {
-					PRINT_ERROR("metadata creation failed");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				metadata_create(params_resp);
@@ -1291,7 +1290,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -1389,7 +1388,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 			metadata *params = (metadata *) malloc(sizeof(metadata));
 			if (params == NULL) {
-				PRINT_ERROR("metadata creation failed");
+				PRINT_ERROR("alloc error");
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 				exit(-1);
 			}
@@ -1533,7 +1532,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 					metadata *params = (metadata *) malloc(sizeof(metadata));
 					if (params == NULL) {
-						PRINT_ERROR("metadata creation failed");
+						PRINT_ERROR("alloc error");
 						nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 						exit(-1);
 					}
@@ -1628,7 +1627,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 			metadata *params = (metadata *) malloc(sizeof(metadata));
 			if (params == NULL) {
-				PRINT_ERROR("metadata creation failed");
+				PRINT_ERROR("alloc error");
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 				exit(-1);
 			}
@@ -1740,7 +1739,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -1875,7 +1874,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
 		uint8_t *msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1975,7 +1974,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -2387,7 +2386,7 @@ void getsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, u
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
 		uint8_t *msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(call_id, call_index, call_type, 0);
 			exit(-1);
 		}
@@ -2592,7 +2591,7 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 		int msg_len = sizeof(struct nl_daemon_to_wedge);
 		uint8_t *msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 
@@ -2669,7 +2668,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 
 		control_msg = (uint8_t *) malloc(msg_controllen);
 		if (control_msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 		uint8_t *control_pt = control_msg;
@@ -2720,7 +2719,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + data_len + control_len;
 	uint8_t *msg = (uint8_t *) malloc(msg_len);
 	if (msg == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -2783,7 +2782,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 
 		metadata *params_reply = (metadata *) malloc(sizeof(metadata));
 		if (params_reply == NULL) {
-			PRINT_ERROR("metadata creation failed");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 		metadata_create(params_reply);

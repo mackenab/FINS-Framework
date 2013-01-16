@@ -340,7 +340,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	if (addr == NULL) {
-		PRINT_ERROR("addr creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -368,7 +368,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + len;
 	uint8_t *msg = (uint8_t *) malloc(msg_len);
 	if (msg == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -437,7 +437,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -474,7 +474,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -655,7 +655,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	metadata *params = (metadata *) malloc(sizeof(metadata));
 	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -748,7 +748,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 					control_msg = (uint8_t *) malloc(msg_controllen);
 					if (control_msg == NULL) {
-						PRINT_ERROR("ERROR: buf alloc fail");
+						PRINT_ERROR("alloc error");
 						exit(-1);
 					}
 					uint8_t *control_pt = control_msg;
@@ -892,7 +892,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + ff->ctrlFrame.data_len + control_len;
 				uint8_t *msg = (uint8_t *) malloc(msg_len);
 				if (msg == NULL) {
-					PRINT_ERROR("ERROR: buf alloc fail");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 
@@ -997,7 +997,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				control_msg = (uint8_t *) malloc(msg_controllen);
 				if (control_msg == NULL) {
-					PRINT_ERROR("ERROR: buf alloc fail");
+					PRINT_ERROR("alloc error");
 					exit(-1);
 				}
 				uint8_t *control_pt = control_msg;
@@ -1127,7 +1127,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + ff->dataFrame.pduLength + control_len;
 			uint8_t *msg = (uint8_t *) malloc(msg_len);
 			if (msg == NULL) {
-				PRINT_ERROR("ERROR: buf alloc fail");
+				PRINT_ERROR("alloc error");
 				exit(-1);
 			}
 
@@ -1238,10 +1238,10 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	//TODO send FCF to UDP module clearing error buffers of any msgs from this socket
-	if (host_port != 0) {
+	if (host_port != 0 && 0) { //TODO remove if keep rolling sent_list queue
 		metadata *params_req = (metadata *) malloc(sizeof(metadata));
 		if (params_req == NULL) {
-			PRINT_ERROR("metadata creation failed");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 		metadata_create(params_req);
@@ -1782,7 +1782,7 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
 	uint8_t *msg = (uint8_t *) malloc(msg_len);
 	if (msg == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		exit(-1);
 	}
@@ -1852,7 +1852,7 @@ void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, u
 		int msg_len = sizeof(struct nl_daemon_to_wedge);
 		uint8_t *msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 
@@ -1955,7 +1955,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 
 		control_msg = (uint8_t *) malloc(msg_controllen);
 		if (control_msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 		uint8_t *control_pt = control_msg;
@@ -2070,7 +2070,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + data_len + control_len;
 	uint8_t *msg = (uint8_t *) malloc(msg_len);
 	if (msg == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

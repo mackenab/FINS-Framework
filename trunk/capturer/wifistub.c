@@ -171,6 +171,10 @@ void capture_init(char *interface) {
 	char *filter_exp;
 	unsigned char *dev;
 	filter_exp = (char *) malloc(200);
+	if (filter_exp == NULL) {
+		PRINT_ERROR("alloc error");
+		exit(-1);
+	}
 	int check_monitor_mode;
 
 	struct bpf_program fp; /* compiled filter program (expression) */

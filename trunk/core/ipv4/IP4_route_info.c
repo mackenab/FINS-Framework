@@ -197,17 +197,17 @@ struct ip4_routing_table * IP4_get_routing_table() {
 
 	struct ip4_routing_table *row0 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	if (row0 == NULL) {
-		PRINT_ERROR("table alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	struct ip4_routing_table *row1 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	if (row1 == NULL) {
-		PRINT_ERROR("table alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	struct ip4_routing_table *row2 = (struct ip4_routing_table*) malloc(sizeof(struct ip4_routing_table));
 	if (row2 == NULL) {
-		PRINT_ERROR("table alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 

@@ -77,7 +77,7 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 	int nlmsg_len = NLMSG_LENGTH(len);
 	struct nlmsghdr *nlh = (struct nlmsghdr *) malloc(nlmsg_len);
 	if (nlh == NULL) {
-		PRINT_ERROR("nlh malloc error, len=%d, nlmsg_len=%d", len, nlmsg_len);
+		PRINT_ERROR("alloc error");
 		return -1;
 	}
 	memset(nlh, 0, nlmsg_len);
@@ -130,7 +130,7 @@ struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, 
 
 	struct daemon_call *call = (struct daemon_call *) malloc(sizeof(struct daemon_call));
 	if (call == NULL) {
-		PRINT_ERROR("call alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -164,7 +164,7 @@ struct daemon_call *call_clone(struct daemon_call *call) {
 
 	struct daemon_call *call_clone = (struct daemon_call *) malloc(sizeof(struct daemon_call));
 	if (call_clone == NULL) {
-		PRINT_ERROR("call alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -291,7 +291,7 @@ struct daemon_call_list *call_list_create(uint32_t max) {
 
 	struct daemon_call_list *call_list = (struct daemon_call_list *) malloc(sizeof(struct daemon_call_list));
 	if (call_list == NULL) {
-		PRINT_ERROR("call_list alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -735,7 +735,7 @@ int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg
 	int buf_len = sizeof(struct nl_daemon_to_wedge);
 	uint8_t *buf = (uint8_t *) malloc(buf_len);
 	if (buf == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -760,7 +760,7 @@ int ack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg)
 	int buf_len = sizeof(struct nl_daemon_to_wedge);
 	uint8_t *buf = (uint8_t *) malloc(buf_len);
 	if (buf == NULL) {
-		PRINT_ERROR("ERROR: buf alloc fail");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -786,8 +786,8 @@ int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num,
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	//TODO get the address from local copy of switch table
@@ -818,8 +818,8 @@ int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, meta
 
 	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
 	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed");
-		return 0;
+		PRINT_ERROR("alloc error");
+		exit(-1);
 	}
 
 	/**TODO get the address automatically by searching the local copy of the
@@ -911,7 +911,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	addr = (struct sockaddr_in *) malloc(addr_len);
 	if (addr == NULL) {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 	memcpy(addr, pt, addr_len);
@@ -1039,7 +1039,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	addr = (struct sockaddr_in *) malloc(addrlen);
 	if (addr == NULL) {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -1237,13 +1237,12 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len)
-		;
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 2 * sizeof(struct ifreq);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1300,14 +1299,14 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFADDR:
-		PRINT_DEBUG("SIOCGIFADDR=%d", cmd)
-		;
+		PRINT_DEBUG("SIOCGIFADDR=%d", cmd);
+
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = malloc(len);
+		temp = (uint8_t *) malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1353,8 +1352,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
-		if (!msg) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+		if (msg == NULL) {
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1384,9 +1383,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = malloc(len);
+		temp = (uint8_t *)malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1433,7 +1432,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1463,9 +1462,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = malloc(len);
+		temp = (uint8_t *)malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1512,7 +1511,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1542,9 +1541,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = malloc(len);
+		temp = (uint8_t *)malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1591,7 +1590,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1648,9 +1647,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFNAME), index=%d", cmd, total)
 		;
 
-		temp = malloc(len);
+		temp = (uint8_t *)malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1675,7 +1674,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		msg_len = sizeof(struct nl_daemon_to_wedge) + len;
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1705,9 +1704,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = malloc(len);
+		temp = (uint8_t *)malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1744,7 +1743,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1780,9 +1779,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = malloc(len);
+		temp = (uint8_t *)malloc(len);
 		if (temp == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1819,7 +1818,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
 		msg = (uint8_t *) malloc(msg_len);
 		if (msg == NULL) {
-			PRINT_ERROR("ERROR: buf alloc fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -1964,7 +1963,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		if (addr_len >= sizeof(struct sockaddr_in)) {
 			addr = (struct sockaddr_in *) malloc(addr_len);
 			if (addr == NULL) {
-				PRINT_ERROR("allocation fail");
+				PRINT_ERROR("alloc error");
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 				exit(-1);
 			}
@@ -1990,7 +1989,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	if (msg_controllen) {
 		msg_control = malloc(msg_controllen);
 		if (msg_control == NULL) {
-			PRINT_ERROR("allocation fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -2005,7 +2004,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	if (data_len) {
 		data = (uint8_t *) malloc(data_len);
 		if (data == NULL) {
-			PRINT_ERROR("allocation fail");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -2209,7 +2208,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	if (optlen > 0) { //TODO remove?
 		optval = (uint8_t *) malloc(optlen);
 		if (optval == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -2287,7 +2286,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	if (optlen > 0) {
 		optval = (uint8_t *) malloc(optlen);
 		if (optval == NULL) {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("alloc error");
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			exit(-1);
 		}
@@ -2975,7 +2974,7 @@ void *wedge_to_daemon(void *local) {
 	uint8_t *recv_buf;
 	recv_buf = (uint8_t *) malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
 	if (recv_buf == NULL) {
-		PRINT_ERROR("buffer allocation failed");
+		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
 
@@ -3129,7 +3128,7 @@ void *wedge_to_daemon(void *local) {
 					}
 					msg_buf = (uint8_t *) malloc(msg_len);
 					if (msg_buf == NULL) {
-						PRINT_ERROR("msg buffer allocation failed");
+						PRINT_ERROR("alloc error");
 						exit(-1);
 					}
 					msg_pt = msg_buf;
@@ -3819,7 +3818,7 @@ void daemon_init(void) {
 		//start timer thread
 		struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
 		if (to_data == NULL) {
-			PRINT_ERROR("interrupt_to_thread_data alloc fail");
+			PRINT_ERROR("alloc error");
 			exit(-1);
 		}
 
