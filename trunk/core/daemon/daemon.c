@@ -2987,12 +2987,12 @@ void daemon_get_ff(void) {
 		return;
 	}
 
-	if (ff->metaData == NULL) {
-		PRINT_ERROR("Error fcf.metadata==NULL");
-		exit(-1);
-	}
-
 	if (ff) {
+		if (ff->metaData == NULL) {
+			PRINT_ERROR("Error fcf.metadata==NULL");
+			exit(-1);
+		}
+
 		if (ff->dataOrCtrl == CONTROL) {
 			daemon_fcf(ff);
 			PRINT_DEBUG("");

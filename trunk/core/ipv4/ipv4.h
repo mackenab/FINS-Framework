@@ -257,7 +257,7 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer);
 void IP4_init(void);
 struct ip4_next_hop_info IP4_next_hop(IP4addr dst);
 int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length);
-void IP4_receive_fdf(void);
+void ipv4_get_ff(void);
 
 void ipv4_fcf(struct finsFrame *ff);
 void ipv4_exec_reply(struct finsFrame *ff);

@@ -37,7 +37,7 @@ int rtm_out_fd;
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 //Code to receive a finsFrame from the Switch
-void rtm_get_ff() {
+void rtm_get_ff(void) {
 	int numBytes = 0;
 
 	struct finsFrame *ff;

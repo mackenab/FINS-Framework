@@ -26,7 +26,7 @@ void rtm_out(struct finsFrame *ff);
 
 void rtm_in(struct finsFrame *ff);
 
-void rtm_get_ff();
+void rtm_get_ff(void);
 
 void rtm_init(pthread_attr_t *fins_pthread_attr);
 

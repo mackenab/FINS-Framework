@@ -13,7 +13,7 @@ extern struct fins_proto_module ipv4_proto;
 
 extern IP4addr my_ip_addr;
 
-void IP4_receive_fdf(void) {
+void ipv4_get_ff(void) {
 
 	struct finsFrame* ff = NULL;
 	uint32_t protocol;
@@ -30,6 +30,11 @@ void IP4_receive_fdf(void) {
 			freeFinsFrame(ff);
 		}
 		return;
+	}
+
+	if (ff->metaData == NULL) {
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	if (ff->dataOrCtrl == CONTROL) {

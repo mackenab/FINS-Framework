@@ -43,7 +43,7 @@ void *switch_to_ipv4(void *local) {
 	PRINT_CRITICAL("Entered");
 
 	while (ipv4_proto.running_flag) {
-		IP4_receive_fdf();
+		ipv4_get_ff();
 		PRINT_DEBUG("");
 	}
 

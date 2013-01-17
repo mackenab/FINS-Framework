@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,7);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
