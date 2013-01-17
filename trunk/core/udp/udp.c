@@ -35,7 +35,7 @@ struct udp_sent_list *udp_sent_packet_list;
 struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p, host=%u/%u, rem=%u/%u", ff, ff->metaData, host_ip, host_port, rem_ip, rem_port);
 
-	struct udp_sent *sent = (struct udp_sent *) fins_malloc(sizeof(struct udp_sent));
+	struct udp_sent *sent = (struct udp_sent *) secure_malloc(sizeof(struct udp_sent));
 	sent->next = NULL;
 
 	sent->ff = ff;
@@ -63,7 +63,7 @@ void udp_sent_free(struct udp_sent *sent) {
 struct udp_sent_list *udp_sent_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct udp_sent_list *sent_list = (struct udp_sent_list *) fins_malloc(sizeof(struct udp_sent_list));
+	struct udp_sent_list *sent_list = (struct udp_sent_list *) secure_malloc(sizeof(struct udp_sent_list));
 	sent_list->max = max;
 	sent_list->len = 0;
 
@@ -220,8 +220,8 @@ void udp_get_ff(void) {
 
 	struct finsFrame *ff;
 	do {
-		fins_sem_wait(udp_proto.event_sem);
-		fins_sem_wait(udp_proto.input_sem);
+		secure_sem_wait(udp_proto.event_sem);
+		secure_sem_wait(udp_proto.input_sem);
 		ff = read_queue(udp_proto.input_queue);
 		sem_post(udp_proto.input_sem);
 	} while (udp_proto.running_flag && ff == NULL);
@@ -231,6 +231,11 @@ void udp_get_ff(void) {
 			freeFinsFrame(ff);
 		}
 		return;
+	}
+
+	if (ff->metaData == NULL) {
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	udpStat.totalRecieved++;
@@ -310,8 +315,6 @@ void udp_fcf(struct finsFrame *ff) {
 }
 
 void udp_exec(struct finsFrame *ff) {
-	int ret = 0;
-
 	uint32_t host_ip = 0;
 	uint32_t host_port = 0;
 	uint32_t rem_ip = 0;
@@ -320,55 +323,29 @@ void udp_exec(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	metadata *params = ff->metaData;
-	if (params) {
-		switch (ff->ctrlFrame.param_id) {
-		case EXEC_UDP_CLEAR_SENT:
-			PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id)
-			;
+	switch (ff->ctrlFrame.param_id) {
+	case EXEC_UDP_CLEAR_SENT:
+		PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id);
 
-			ret += metadata_readFromElement(params, "host_ip", &host_ip) == META_FALSE;
-			ret += metadata_readFromElement(params, "host_port", &host_port) == META_FALSE;
-			ret += metadata_readFromElement(params, "rem_ip", &rem_ip) == META_FALSE;
-			ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
+		secure_metadata_readFromElement(params, "host_ip", &host_ip);
+		secure_metadata_readFromElement(params, "host_port", &host_port);
+		secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(params, "rem_port", &rem_port);
 
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
+		udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+		break;
+	default:
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		//TODO implement?
 
-				ff->destinationID.id = ff->ctrlFrame.senderID;
-
-				ff->ctrlFrame.senderID = UDP_ID;
-				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-				ff->ctrlFrame.ret_val = 0;
-
-				udp_to_switch(ff);
-			} else {
-				udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
-			}
-			break;
-		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
-			//TODO implement?
-
-			ff->destinationID.id = ff->ctrlFrame.senderID;
-
-			ff->ctrlFrame.senderID = UDP_ID;
-			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-			ff->ctrlFrame.ret_val = 0;
-
-			udp_to_switch(ff);
-			break;
-		}
-	} else {
-		PRINT_ERROR("Error fcf.metadata==NULL: ff=%p", ff);
-
-		//TODO create/add metadata?
 		ff->destinationID.id = ff->ctrlFrame.senderID;
 
 		ff->ctrlFrame.senderID = UDP_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		ff->ctrlFrame.ret_val = 0;
 
 		udp_to_switch(ff);
+		break;
 	}
 }
 
@@ -413,129 +390,113 @@ void udp_error(struct finsFrame *ff) {
 	//uint32_t udp_len;
 	//uint32_t checksum;
 
-	int ret = 0;
+	//metadata *params = ff->metaData;
+	switch (ff->ctrlFrame.param_id) {
+	case ERROR_ICMP_TTL:
+		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
 
-	metadata *params = ff->metaData;
-	if (params) {
-		switch (ff->ctrlFrame.param_id) {
-		case ERROR_ICMP_TTL:
-			PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id)
-			;
+		/*
+		 struct udp_packet *udp_hdr = (struct udp_packet *) ff->ctrlFrame.data;
+		 struct udp_header hdr;
 
-			/*
-			 struct udp_packet *udp_hdr = (struct udp_packet *) ff->ctrlFrame.data;
-			 struct udp_header hdr;
+		 hdr.u_src = ntohs(udp_hdr->u_src);
+		 hdr.u_dst = ntohs(udp_hdr->u_dst);
+		 hdr.u_len = ntohs(udp_hdr->u_len);
+		 hdr.u_cksum = ntohs(udp_hdr->u_cksum);
+		 */
 
-			 hdr.u_src = ntohs(udp_hdr->u_src);
-			 hdr.u_dst = ntohs(udp_hdr->u_dst);
-			 hdr.u_len = ntohs(udp_hdr->u_len);
-			 hdr.u_cksum = ntohs(udp_hdr->u_cksum);
-			 */
+		//if recv_dst_ip==send_src_ip, recv_dst_port==send_src_port, recv_udp_len==, recv_checksum==,  \\should be unique!
 
-			//if recv_dst_ip==send_src_ip, recv_dst_port==send_src_port, recv_udp_len==, recv_checksum==,  \\should be unique!
-			if (ret) {
-				PRINT_ERROR("todo error");
-				freeFinsFrame(ff);
-				return;
-			}
-
-			if (udp_sent_list_is_empty(udp_sent_packet_list)) {
-				PRINT_ERROR("todo error");
-				//TODO drop
-				freeFinsFrame(ff);
-			} else {
-				uint8_t *data = ff->ctrlFrame.data;
-				if (data) {
-					struct udp_sent *sent = udp_sent_list_find(udp_sent_packet_list, data, ff->ctrlFrame.data_len);
-					if (sent) {
-						metadata_copy(sent->ff->metaData, ff->metaData);
-
-						//ff->dataOrCtrl = CONTROL;
-						ff->destinationID.id = DAEMON_ID;
-						ff->destinationID.next = NULL;
-						//ff->metaData = params_err;
-
-						ff->ctrlFrame.senderID = UDP_ID;
-						//ff->ctrlFrame.serial_num = gen_control_serial_num();
-						//ff->ctrlFrame.opcode = CTRL_ERROR;
-						//ff->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code //ERROR_UDP_TTL?
-
-						ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
-						ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
-						sent->ff->dataFrame.pdu = NULL;
-
-						udp_to_switch(ff);
-
-						udp_sent_list_remove(udp_sent_packet_list, sent);
-						udp_sent_free(sent);
-						free(data);
-					} else {
-						PRINT_ERROR("todo error");
-						freeFinsFrame(ff);
-						//TODO drop?
-					}
-				} else {
-					PRINT_ERROR("todo");
-					freeFinsFrame(ff);
-				}
-			}
-			break;
-		case ERROR_ICMP_DEST_UNREACH:
-			PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id)
-			;
-
-			if (udp_sent_list_is_empty(udp_sent_packet_list)) {
-				PRINT_ERROR("todo error");
-				//TODO drop
-				freeFinsFrame(ff);
-			} else {
-				uint8_t *data = ff->ctrlFrame.data;
-				if (data) {
-					struct udp_sent *sent = udp_sent_list_find(udp_sent_packet_list, data, ff->ctrlFrame.data_len);
-					if (sent) {
-						metadata_copy(sent->ff->metaData, ff->metaData);
-
-						//ff->dataOrCtrl = CONTROL;
-						ff->destinationID.id = DAEMON_ID;
-						ff->destinationID.next = NULL;
-						//ff->metaData = params_err;
-
-						ff->ctrlFrame.senderID = UDP_ID;
-						//ff->ctrlFrame.serial_num = gen_control_serial_num();
-						//ff->ctrlFrame.opcode = CTRL_ERROR;
-						//ff->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code //ERROR_UDP_TTL?
-
-						ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
-						ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
-						sent->ff->dataFrame.pdu = NULL;
-
-						udp_to_switch(ff);
-
-						udp_sent_list_remove(udp_sent_packet_list, sent);
-						udp_sent_free(sent);
-						free(data);
-					} else {
-						PRINT_ERROR("todo error");
-						//TODO drop?
-						freeFinsFrame(ff);
-					}
-				} else {
-					PRINT_ERROR("todo");
-					freeFinsFrame(ff);
-				}
-			}
-			break;
-		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
-			//TODO implement?
+		if (udp_sent_list_is_empty(udp_sent_packet_list)) {
+			PRINT_ERROR("todo error");
+			//TODO drop
 			freeFinsFrame(ff);
-			break;
+		} else {
+			uint8_t *data = ff->ctrlFrame.data;
+			if (data) {
+				struct udp_sent *sent = udp_sent_list_find(udp_sent_packet_list, data, ff->ctrlFrame.data_len);
+				if (sent) {
+					metadata_copy(sent->ff->metaData, ff->metaData);
+
+					//ff->dataOrCtrl = CONTROL;
+					ff->destinationID.id = DAEMON_ID;
+					ff->destinationID.next = NULL;
+					//ff->metaData = params_err;
+
+					ff->ctrlFrame.senderID = UDP_ID;
+					//ff->ctrlFrame.serial_num = gen_control_serial_num();
+					//ff->ctrlFrame.opcode = CTRL_ERROR;
+					//ff->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code //ERROR_UDP_TTL?
+
+					ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
+					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
+					sent->ff->dataFrame.pdu = NULL;
+
+					udp_to_switch(ff);
+
+					udp_sent_list_remove(udp_sent_packet_list, sent);
+					udp_sent_free(sent);
+					free(data);
+				} else {
+					PRINT_ERROR("todo error");
+					freeFinsFrame(ff);
+					//TODO drop?
+				}
+			} else {
+				PRINT_ERROR("todo");
+				freeFinsFrame(ff);
+			}
 		}
-	} else {
-		//TODO send nack
-		PRINT_ERROR("Error fcf.metadata==NULL");
+		break;
+	case ERROR_ICMP_DEST_UNREACH:
+		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+
+		if (udp_sent_list_is_empty(udp_sent_packet_list)) {
+			PRINT_ERROR("todo error");
+			//TODO drop
+			freeFinsFrame(ff);
+		} else {
+			uint8_t *data = ff->ctrlFrame.data;
+			if (data) {
+				struct udp_sent *sent = udp_sent_list_find(udp_sent_packet_list, data, ff->ctrlFrame.data_len);
+				if (sent) {
+					metadata_copy(sent->ff->metaData, ff->metaData);
+
+					//ff->dataOrCtrl = CONTROL;
+					ff->destinationID.id = DAEMON_ID;
+					ff->destinationID.next = NULL;
+					//ff->metaData = params_err;
+
+					ff->ctrlFrame.senderID = UDP_ID;
+					//ff->ctrlFrame.serial_num = gen_control_serial_num();
+					//ff->ctrlFrame.opcode = CTRL_ERROR;
+					//ff->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code //ERROR_UDP_TTL?
+
+					ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
+					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
+					sent->ff->dataFrame.pdu = NULL;
+
+					udp_to_switch(ff);
+
+					udp_sent_list_remove(udp_sent_packet_list, sent);
+					udp_sent_free(sent);
+					free(data);
+				} else {
+					PRINT_ERROR("todo error");
+					//TODO drop?
+					freeFinsFrame(ff);
+				}
+			} else {
+				PRINT_ERROR("todo");
+				freeFinsFrame(ff);
+			}
+		}
+		break;
+	default:
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		//TODO implement?
 		freeFinsFrame(ff);
+		break;
 	}
 }
 

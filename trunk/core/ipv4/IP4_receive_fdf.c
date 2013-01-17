@@ -19,8 +19,8 @@ void IP4_receive_fdf(void) {
 	uint32_t protocol;
 
 	do {
-		fins_sem_wait(ipv4_proto.event_sem);
-		fins_sem_wait(ipv4_proto.input_sem);
+		secure_sem_wait(ipv4_proto.event_sem);
+		secure_sem_wait(ipv4_proto.input_sem);
 		ff = read_queue(ipv4_proto.input_queue);
 		sem_post(ipv4_proto.input_sem);
 	} while (ipv4_proto.running_flag && ff == NULL);
@@ -50,18 +50,7 @@ void IP4_receive_fdf(void) {
 			PRINT_DEBUG("IP4_out");
 
 			metadata *params = ff->metaData;
-			if (params == NULL) {
-				PRINT_ERROR("Error fcf.metadata==NULL");
-				exit(-1);
-			}
-
-			int ret = 0;
-			ret += metadata_readFromElement(params, "send_protocol", &protocol) == META_FALSE;
-
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				exit(-1);
-			}
+			secure_metadata_readFromElement(params, "send_protocol", &protocol);
 
 			PRINT_DEBUG("%lu", my_ip_addr);
 			PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
@@ -77,8 +66,7 @@ void IP4_receive_fdf(void) {
 				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_UDP);
 				break;
 			default:
-				PRINT_ERROR("invalid protocol: protocol=%u", protocol)
-				;
+				PRINT_ERROR("invalid protocol: protocol=%u", protocol);
 				/**
 				 * TODO investigate why the freeFinsFrame below create segmentation fault
 				 */
@@ -103,75 +91,57 @@ void ipv4_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		//ipv4_read_param(ff);
 		//TODO read interface_mac?
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		//ipv4_set_param(ff);
 		//TODO set interface_mac?
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		//ipv4_exec(ff);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
 		ipv4_exec_reply(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -195,16 +165,7 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
 			uint32_t dst_ip = cache->addr_ip;
 
 			metadata *params = ff->metaData;
-			if (params == NULL) {
-				PRINT_ERROR("Error fcf.metadata==NULL");
-				exit(-1);
-			}
-			int ret = 0;
-			ret += metadata_readFromElement(params, "dst_mac", &dst_mac) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				exit(-1);
-			}
+			secure_metadata_readFromElement(params, "dst_mac", &dst_mac);
 
 			PRINT_DEBUG("Entered: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
 
@@ -223,9 +184,9 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
 					ff_resp = request_resp->ff;
 
 					uint32_t ether_type = IP4_ETH_TYPE;
-					metadata_writeToElement(ff_resp->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
-					//metadata_writeToElement(ff_resp->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
-					metadata_writeToElement(ff_resp->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+					secure_metadata_writeToElement(ff_resp->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
+					//secure_metadata_writeToElement(ff_resp->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
+					secure_metadata_writeToElement(ff_resp->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
 					PRINT_DEBUG("send frame: src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", src_mac, dst_mac, ether_type);
 
@@ -266,9 +227,9 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
  store_list_remove(store);
 
  uint32_t ether_type = IP4_ETH_TYPE;
- metadata_writeToElement(store->ff->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
- metadata_writeToElement(store->ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
- metadata_writeToElement(store->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+ secure_metadata_writeToElement(store->ff->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
+ secure_metadata_writeToElement(store->ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
+ secure_metadata_writeToElement(store->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
  PRINT_DEBUG("send frame: src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", src_mac, dst_mac, ether_type);
 
@@ -291,15 +252,12 @@ void ipv4_exec_reply(struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_ARP_GET_ADDR:
-		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 		ipv4_exec_reply_get_addr(ff);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}

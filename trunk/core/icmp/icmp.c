@@ -22,7 +22,7 @@ struct icmp_sent_list *icmp_sent_packet_list;
 struct icmp_sent *icmp_sent_create(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	struct icmp_sent *sent = (struct icmp_sent *) fins_malloc(sizeof(struct icmp_sent));
+	struct icmp_sent *sent = (struct icmp_sent *) secure_malloc(sizeof(struct icmp_sent));
 	sent->next = NULL;
 
 	sent->ff = ff;
@@ -46,7 +46,7 @@ void icmp_sent_free(struct icmp_sent *sent) {
 struct icmp_sent_list *icmp_sent_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct icmp_sent_list *sent_list = (struct icmp_sent_list *) fins_malloc(sizeof(struct icmp_sent_list));
+	struct icmp_sent_list *sent_list = (struct icmp_sent_list *) secure_malloc(sizeof(struct icmp_sent_list));
 	sent_list->max = max;
 	sent_list->len = 0;
 
@@ -191,20 +191,10 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		return;
 	}
 
-	metadata *params = ff->metaData;
-	if (params == NULL) {
-		PRINT_ERROR("Error fcf.metadata==NULL");
-		exit(-1);
-	}
-
 	uint32_t protocol;
 
-	int ret = 0;
-	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
-	if (ret) {
-		PRINT_ERROR("ret=%d", ret);
-		exit(-1);
-	}
+	metadata *params = ff->metaData;
+	secure_metadata_readFromElement(params, "recv_protocol", &protocol);
 
 	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
 		PRINT_ERROR("Protocol =/= ICMP! Discarding frame...");
@@ -246,8 +236,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		}
 		break;
 	case TYPE_DESTUNREACH:
-		PRINT_DEBUG("Destination unreachable")
-		;
+		PRINT_DEBUG("Destination unreachable");
 		if (icmp_pkt->code == CODE_NETUNREACH) {
 			PRINT_ERROR("todo");
 			freeFinsFrame(ff);
@@ -270,9 +259,9 @@ void icmp_in_fdf(struct finsFrame *ff) {
 			uint16_t sent_data_len = data_len - IP4_HLEN(ipv4_pkt_sent);
 
 			uint32_t type = icmp_pkt->type;
-			metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
+			secure_metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
 			uint32_t code = icmp_pkt->code;
-			metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
+			secure_metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
 
 			uint32_t src_port;
 			uint32_t dst_port;
@@ -298,7 +287,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 						metadata *params_err = sent->ff->metaData;
 						metadata_copy(params, params_err);
 
-						ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+						ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = CONTROL;
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
@@ -341,11 +330,11 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
 				//TODO src/dst_ip should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
-				metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
-				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
+				secure_metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
+				secure_metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 
-				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = TCP_ID;
 				ff_err->destinationID.next = NULL;
@@ -357,7 +346,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
+				ff_err->ctrlFrame.data = (uint8_t *) secure_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
@@ -370,7 +359,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 					return;
 				}
 
-				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
@@ -383,14 +372,13 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
+				ff_err->ctrlFrame.data = (uint8_t *) secure_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
 				break;
 			default:
-				PRINT_ERROR("todo error")
-				;
+				PRINT_ERROR("todo error");
 				break;
 			}
 			freeFinsFrame(ff);
@@ -418,8 +406,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		}
 		break;
 	case TYPE_TTLEXCEED:
-		PRINT_DEBUG("TTL Exceeded")
-		;
+		PRINT_DEBUG("TTL Exceeded");
 		if (icmp_pkt->code == CODE_TTLEXCEEDED) {
 			if (data_len < IP4_MIN_HLEN) {
 				PRINT_ERROR("data too small: data_len=%u, ipv4_req=%u", data_len, IP4_MIN_HLEN);
@@ -433,9 +420,9 @@ void icmp_in_fdf(struct finsFrame *ff) {
 			uint16_t sent_data_len = data_len - IP4_HLEN(ipv4_pkt_sent);
 
 			uint32_t type = icmp_pkt->type;
-			metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
+			secure_metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
 			uint32_t code = icmp_pkt->code;
-			metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
+			secure_metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
 
 			uint32_t src_port;
 			uint32_t dst_port;
@@ -461,7 +448,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 						metadata *params_err = sent->ff->metaData;
 						metadata_copy(params, params_err);
 
-						ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+						ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = CONTROL;
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
@@ -504,11 +491,11 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
 				//src/dst_ip should already be in from IPv4 mod
-				metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32);
-				metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
-				metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
+				secure_metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 
-				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = TCP_ID;
 				ff_err->destinationID.next = NULL;
@@ -520,7 +507,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
+				ff_err->ctrlFrame.data = (uint8_t *) secure_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
@@ -533,7 +520,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 					return;
 				}
 
-				ff_err = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
@@ -546,14 +533,13 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code
 
 				ff_err->ctrlFrame.data_len = sent_data_len;
-				ff_err->ctrlFrame.data = (uint8_t *) fins_malloc(ff_err->ctrlFrame.data_len);
+				ff_err->ctrlFrame.data = (uint8_t *) secure_malloc(ff_err->ctrlFrame.data_len);
 				memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 				icmp_to_switch(ff_err);
 				break;
 			default:
-				PRINT_ERROR("todo error")
-				;
+				PRINT_ERROR("todo error");
 				break;
 			}
 			freeFinsFrame(ff);
@@ -566,8 +552,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		}
 		break;
 	default:
-		PRINT_DEBUG("default: type=%u", icmp_pkt->type)
-		;
+		PRINT_DEBUG("default: type=%u", icmp_pkt->type);
 		//Simply pass up the stack,
 
 		//ff->dataOrCtrl = DATA;
@@ -620,20 +605,13 @@ void icmp_out_fdf(struct finsFrame *ff) {
 	uint32_t dst_ip;
 
 	metadata *params = ff->metaData;
-	int ret = 0;
-	ret += metadata_readFromElement(params, "send_src_ip", &src_ip) == META_FALSE;
-	ret += metadata_readFromElement(params, "send_dst_ip", &dst_ip) == META_FALSE;
-
-	if (ret) {
-		PRINT_ERROR("todo error");
-		freeFinsFrame(ff);
-		return;
-	}
+	secure_metadata_readFromElement(params, "send_src_ip", &src_ip);
+	secure_metadata_readFromElement(params, "send_dst_ip", &dst_ip);
 
 	uint32_t protocol = ICMP_PROTOCOL;
-	metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
-	//metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
-	//metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
+	//secure_metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
+	//secure_metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
 
 	//struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	//ff->dataOrCtrl = DATA;
@@ -652,7 +630,7 @@ void icmp_out_fdf(struct finsFrame *ff) {
 
 		if (icmp_sent_list_has_space(icmp_sent_packet_list)) {
 			icmp_sent_list_append(icmp_sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max)
+			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max);
 
 			gettimeofday(&sent->stamp, 0);
 		} else {
@@ -665,7 +643,7 @@ void icmp_out_fdf(struct finsFrame *ff) {
 				icmp_sent_free(old);
 			}
 			icmp_sent_list_append(icmp_sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max)
+			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", icmp_sent_packet_list, icmp_sent_packet_list->len, icmp_sent_packet_list->max);
 
 			gettimeofday(&sent->stamp, 0);
 		}
@@ -680,8 +658,8 @@ void icmp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		fins_sem_wait(icmp_proto.event_sem);
-		fins_sem_wait(icmp_proto.input_sem);
+		secure_sem_wait(icmp_proto.event_sem);
+		secure_sem_wait(icmp_proto.input_sem);
 		ff = read_queue(icmp_proto.input_queue);
 		sem_post(icmp_proto.input_sem);
 	} while (icmp_proto.running_flag && ff == NULL);
@@ -691,6 +669,11 @@ void icmp_get_ff(void) {
 			freeFinsFrame(ff);
 		}
 		return;
+	}
+
+	if (ff->metaData == NULL) {
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	if (ff->dataOrCtrl == CONTROL) { // send to the control frame handler
@@ -739,7 +722,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	PRINT_DEBUG("Entered: ff=%p, icmp_pkt=%p", ff, icmp_pkt);
 
 	uint32_t pdu_len_reply = data_len + ICMP_HEADER_SIZE;
-	uint8_t *pdu_reply = (uint8_t *) fins_malloc(pdu_len_reply);
+	uint8_t *pdu_reply = (uint8_t *) secure_malloc(pdu_len_reply);
 
 	struct icmp_packet *icmp_pkt_reply = (struct icmp_packet *) pdu_reply;
 	icmp_pkt_reply->type = TYPE_ECHOREPLY;
@@ -757,24 +740,18 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	uint32_t dst_ip;
 
 	metadata *params = ff->metaData;
-	int ret = 0;
-	ret += metadata_readFromElement(params, "recv_src_ip", &src_ip) == META_FALSE;
-	ret += metadata_readFromElement(params, "recv_dst_ip", &dst_ip) == META_FALSE;
-	if (ret) {
-		PRINT_ERROR("todo error");
-		freeFinsFrame(ff);
-		return;
-	}
+	secure_metadata_readFromElement(params, "recv_src_ip", &src_ip);
+	secure_metadata_readFromElement(params, "recv_dst_ip", &dst_ip);
 
-	metadata *params_reply = (metadata *) fins_malloc(sizeof(metadata));
+	metadata *params_reply = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(params_reply);
 
 	uint32_t protocol = ICMP_PROTOCOL;
-	metadata_writeToElement(params_reply, "send_protocol", &protocol, META_TYPE_INT32);
-	metadata_writeToElement(params_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
-	metadata_writeToElement(params_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(params_reply, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(params_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(params_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
 
-	struct finsFrame *ff_reply = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff_reply = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff_reply->dataOrCtrl = DATA;
 	ff_reply->destinationID.id = IPV4_ID;
 	ff_reply->destinationID.next = NULL;
@@ -796,67 +773,57 @@ void icmp_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		//arp_read_param(ff);
 		//TODO read interface_mac?
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		//arp_set_param(ff);
 		//TODO set interface_mac?
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		//arp_exec(ff);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}

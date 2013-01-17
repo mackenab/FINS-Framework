@@ -87,7 +87,7 @@ int main() {
 
 	// ADDED mrd015 !!!!! 
 	// trying to put code from fins_ethernet.sh here. This should allow mkfifo to be called w/o building coreutils for android?
-	
+
 	printf("\n\nAttempting to make " FINS_TMP_ROOT "\n");
 	if (system("mkdir " FINS_TMP_ROOT) != 0) {
 		printf(FINS_TMP_ROOT " already exists! Cleaning...\n");

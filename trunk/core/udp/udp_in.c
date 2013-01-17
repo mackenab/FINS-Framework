@@ -46,7 +46,6 @@ void udp_in_fdf(struct finsFrame* ff) {
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
-	metadata *params = ff->metaData;
 
 	uint32_t protocol;
 	uint32_t src_ip;
@@ -54,15 +53,10 @@ void udp_in_fdf(struct finsFrame* ff) {
 	uint32_t src_port;
 	uint32_t dst_port;
 
-	int ret = 0;
-	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
-	ret += metadata_readFromElement(params, "recv_src_ip", &src_ip) == META_FALSE;
-	ret += metadata_readFromElement(params, "recv_dst_ip", &dst_ip) == META_FALSE;
-
-	if (ret) {
-		//TODO error
-		PRINT_ERROR("todo error");
-	}
+	metadata *params = ff->metaData;
+	secure_metadata_readFromElement(params, "recv_protocol", &protocol);
+	secure_metadata_readFromElement(params, "recv_src_ip", &src_ip);
+	secure_metadata_readFromElement(params, "recv_dst_ip", &dst_ip);
 
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */
@@ -93,7 +87,8 @@ void udp_in_fdf(struct finsFrame* ff) {
 	src_port = ntohs(packet->u_src);
 	dst_port = ntohs(packet->u_dst);
 
-	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port); PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
+	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+	PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
@@ -111,15 +106,16 @@ void udp_in_fdf(struct finsFrame* ff) {
 	//metadata *udp_meta = (metadata *)fins_malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
 
-	metadata_writeToElement(params, "recv_src_port", &src_port, META_TYPE_INT32);
-	metadata_writeToElement(params, "recv_dst_port", &dst_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(params, "recv_src_port", &src_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(params, "recv_dst_port", &dst_port, META_TYPE_INT32);
 
 	/* put the header into the meta data*/
 	//	meta->u_destPort = packet->u_dst;
 	//	meta->u_srcPort = packet->u_src;
 	/* construct a FDF to send to the sockets */
 
-	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength); PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
+	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength);
+	PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
 
 	//ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
 
@@ -127,13 +123,13 @@ void udp_in_fdf(struct finsFrame* ff) {
 	ff->dataFrame.pduLength = leng - U_HEADER_LEN;
 
 	uint8_t *pdu = ff->dataFrame.pdu;
-	uint8_t *data = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
+	uint8_t *data = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 	memcpy(data, pdu + U_HEADER_LEN, ff->dataFrame.pduLength);
 	ff->dataFrame.pdu = data;
 
 	//#########################
 #ifdef DEBUG
-	uint8_t *temp = (uint8_t *) fins_malloc(ff->dataFrame.pduLength + 1);
+	uint8_t *temp = (uint8_t *) secure_malloc(ff->dataFrame.pduLength + 1);
 	memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	temp[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);

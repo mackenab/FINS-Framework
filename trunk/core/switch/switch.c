@@ -26,16 +26,16 @@ void module_create_ops(struct fins_proto_module *module) {
 	sprintf(buf, "switch_to_%s", module->name);
 	module->input_queue = init_queue(buf, MAX_Queue_size);
 
-	module->input_sem = (sem_t *) fins_malloc(sizeof(sem_t));
+	module->input_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(module->input_sem, 0, 1);
 
 	sprintf(buf, "%s_to_switch", module->name);
 	module->output_queue = init_queue(buf, MAX_Queue_size);
 
-	module->output_sem = (sem_t *) fins_malloc(sizeof(sem_t));
+	module->output_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(module->output_sem, 0, 1);
 
-	module->event_sem = (sem_t *) fins_malloc(sizeof(sem_t));
+	module->event_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(module->event_sem, 0, 0);
 }
 
@@ -119,7 +119,7 @@ void *switch_loop(void *local) {
 	int counter = 0;
 
 	while (switch_proto.running_flag) {
-		fins_sem_wait(switch_proto.event_sem);
+		secure_sem_wait(switch_proto.event_sem);
 
 		for (i = 0; i < MAX_modules; i++) {
 			if (fins_modules[i] != NULL) {
@@ -170,7 +170,7 @@ void switch_init(void) {
 	PRINT_CRITICAL("Entered");
 	switch_proto.running_flag = 1;
 
-	switch_proto.event_sem = (sem_t *) fins_malloc(sizeof(sem_t));
+	switch_proto.event_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(switch_proto.event_sem, 0, 0);
 
 	//module_create_ops(&switch_proto);

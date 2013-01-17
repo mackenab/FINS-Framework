@@ -168,7 +168,7 @@ int main() {
 
 			PRINT_DEBUG("Sending ARP req");
 
-			metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
+			metadata *params_req = (metadata *) secure_malloc(sizeof(metadata));
 			metadata_create(params_req);
 
 			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
@@ -176,10 +176,10 @@ int main() {
 			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
 			//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
 
-			metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
-			metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
 
-			struct finsFrame *ff_req = (struct finsFrame*) fins_malloc(sizeof(struct finsFrame));
+			struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 			ff_req->dataOrCtrl = CONTROL;
 			ff_req->destinationID.id = ARP_ID;
 			ff_req->destinationID.next = NULL;
@@ -211,10 +211,10 @@ int main() {
 
 			int i = 0;
 			while (i < its) {
-				uint8_t *data = (uint8_t *) fins_malloc(len);
+				uint8_t *data = (uint8_t *) secure_malloc(len);
 				memset(data, 56, len);
 
-				metadata *params = (metadata *) fins_malloc(sizeof(metadata));
+				metadata *params = (metadata *) secure_malloc(sizeof(metadata));
 				metadata_create(params);
 
 				uint32_t host_ip = IP4_ADR_P2H(192, 168, 1, 20);
@@ -224,12 +224,12 @@ int main() {
 				uint32_t ttl = 64;
 				uint32_t tos = 64;
 
-				metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
-				metadata_writeToElement(params, "send_src_port", &host_port, META_TYPE_INT32);
-				metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-				metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32);
-				metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
-				metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
+				secure_metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(params, "send_src_port", &host_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
+				secure_metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
 
 				if (daemon_fdf_to_switch(UDP_ID, data, len, params)) {
 					i++;

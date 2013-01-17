@@ -1,7 +1,6 @@
 #include "ipv4.h"
 
-struct ip4_fragment IP4_fragment_data(void *data, uint16_t length,
-		uint16_t offset, uint16_t fragment_size) {
+struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offset, uint16_t fragment_size) {
 	struct ip4_fragment fragment;
 	if ((offset + fragment_size) >= length) {
 		fragment.first = offset;
@@ -22,8 +21,7 @@ struct ip4_fragment IP4_fragment_data(void *data, uint16_t length,
 		fragment.data_length = fragment.last - fragment.first;
 
 #ifdef DEBUG
-		if (fragment.data_length % 8 != 0)
-		{
+		if (fragment.data_length % 8 != 0) {
 			PRINT_DEBUG("Problem with fragment data length. Not a multiple of 8");
 		}
 #endif
@@ -36,8 +34,7 @@ struct ip4_fragment IP4_fragment_data(void *data, uint16_t length,
 	fragment.last = offset + fragment_size;
 	fragment.data_length = fragment_size;
 #ifdef DEBUG
-	if (fragment.data_length % 8 != 0)
-	{
+	if (fragment.data_length % 8 != 0) {
 		PRINT_DEBUG("Problem with fragment data length. Not a multiple of 8");
 	}
 #endif

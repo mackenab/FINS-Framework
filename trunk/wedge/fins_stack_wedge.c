@@ -313,15 +313,15 @@ void wedge_socket_remove_all(void) {
 }
 
 int threads_incr(int sock_index, u_int call) {
-	int ret = 1;
-
-	return ret;
+	//int ret = 1;
+	//return ret;
+	return 1;
 }
 
 int threads_decr(int sock_index, u_int call) {
-	int ret = 0;
-
-	return ret;
+	//int ret = 0;
+	//return ret;
+	return 0;
 }
 
 int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltype) {

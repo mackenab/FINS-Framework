@@ -25,7 +25,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 	header.differentiated_service = ppacket->ip_dif;
 	header.packet_length = ntohs(ppacket->ip_len);
 	header.id = ntohs(ppacket->ip_id);
-	header.flags = (uint8_t)(IP4_FLG(ntohs(ppacket->ip_fragoff));
+	header.flags = (uint8_t) (IP4_FLG(ntohs(ppacket->ip_fragoff));
 	header.fragmentation_offset = ntohs(ppacket->ip_fragoff) & IP4_FRAGOFF;
 	header.ttl = ppacket->ip_ttl;
 	header.protocol = ppacket->ip_proto;

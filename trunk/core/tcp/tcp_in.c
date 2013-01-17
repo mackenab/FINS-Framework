@@ -734,12 +734,10 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 		kind = pt[i++];
 		switch (kind) {
 		case TCP_OPT_EOL:
-			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len)
-			;
+			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len);
 			return 1;
 		case TCP_OPT_NOP:
-			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len)
-			;
+			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len);
 			continue;
 		case TCP_OPT_MSS:
 			len = pt[i++];
@@ -1076,7 +1074,7 @@ void *syn_thread(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	fins_sem_wait(&conn_stub->sem);
+	secure_sem_wait(&conn_stub->sem);
 	if (conn_stub->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum, not really used
 		PRINT_DEBUG("checksum=%u, calc=%u, %u", seg->checksum, calc, seg->checksum == calc);
@@ -1103,7 +1101,7 @@ void *syn_thread(void *local) {
 	}
 
 	PRINT_DEBUG("");
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	conn_stub->threads--;
 	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
@@ -1811,7 +1809,7 @@ void *recv_thread(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		calc = seg_checksum(seg); //TODO add alt checksum
 		PRINT_DEBUG("checksum=%u, calc=%u", seg->checksum, calc);
@@ -1856,10 +1854,8 @@ void *recv_thread(void *local) {
 				break;
 			default:
 				PRINT_ERROR( "Incorrect state: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p",
-						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg)
-				;
-				PRINT_ERROR("todo error")
-				;
+						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg);
+				PRINT_ERROR("todo error");
 				break;
 			}
 		} else {
@@ -1873,7 +1869,7 @@ void *recv_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -1901,7 +1897,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	seg = fdf_to_tcp(ff);
 	if (seg) {
 		/*#*/PRINT_DEBUG("");
-		fins_sem_wait(&conn_list_sem);
+		secure_sem_wait(&conn_list_sem);
 		conn = conn_list_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 		if (conn) {
 			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
@@ -1909,7 +1905,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 			sem_post(&conn_list_sem);
 
 			if (start) {
-				thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->seg = seg;
@@ -1932,7 +1928,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 
 				//check if listening sockets
 				/*#*/PRINT_DEBUG("");
-				fins_sem_wait(&conn_stub_list_sem);
+				secure_sem_wait(&conn_stub_list_sem);
 				conn_stub = conn_stub_list_find(seg->dst_ip, seg->dst_port);
 				if (conn_stub) {
 					start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
@@ -1940,7 +1936,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
-						thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+						thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 						thread_data->id = tcp_gen_thread_id();
 						thread_data->conn_stub = conn_stub;
 						thread_data->seg = seg;
@@ -2339,7 +2335,7 @@ void *recv_thread_test(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		uint16_t calc = seg_checksum(seg); //TODO add alt checksum
 		PRINT_DEBUG("checksum=%u, calc=%u, %u", seg->checksum, calc, seg->checksum == calc);
@@ -2363,7 +2359,7 @@ void *recv_thread_test(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);

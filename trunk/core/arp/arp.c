@@ -134,7 +134,7 @@ int check_valid_arp(struct arp_message *msg) {
 struct arp_interface *arp_interface_create(uint64_t addr_mac, uint32_t addr_ip) {
 	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", addr_mac, addr_ip);
 
-	struct arp_interface *interface = (struct arp_interface *) fins_malloc(sizeof(struct arp_interface));
+	struct arp_interface *interface = (struct arp_interface *) secure_malloc(sizeof(struct arp_interface));
 	interface->next = NULL;
 
 	interface->addr_mac = addr_mac;
@@ -221,7 +221,7 @@ int arp_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
 	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
 
-	struct arp_request *request = (struct arp_request *) fins_malloc(sizeof(struct arp_request));
+	struct arp_request *request = (struct arp_request *) secure_malloc(sizeof(struct arp_request));
 	request->next = NULL;
 
 	request->ff = ff;
@@ -245,7 +245,7 @@ void arp_request_free(struct arp_request *request) {
 struct arp_request_list *arp_request_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct arp_request_list *request_list = (struct arp_request_list *) fins_malloc(sizeof(struct arp_request_list));
+	struct arp_request_list *request_list = (struct arp_request_list *) secure_malloc(sizeof(struct arp_request_list));
 	request_list->max = max;
 	request_list->len = 0;
 
@@ -319,7 +319,7 @@ void arp_request_list_free(struct arp_request_list *request_list) {
 struct arp_cache *arp_cache_create(uint32_t addr_ip) {
 	PRINT_DEBUG("Entered: ip=%u", addr_ip);
 
-	struct arp_cache *cache = (struct arp_cache *) fins_malloc(sizeof(struct arp_cache));
+	struct arp_cache *cache = (struct arp_cache *) secure_malloc(sizeof(struct arp_cache));
 	cache->next = NULL;
 	cache->running_flag = 1;
 
@@ -340,7 +340,7 @@ struct arp_cache *arp_cache_create(uint32_t addr_ip) {
 	cache->retries = 0;
 
 	//start timer thread
-	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) fins_malloc(sizeof(struct intsem_to_thread_data));
+	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
 	int id = arp_thread_count++;
 	to_data->id = id;
 	to_data->fd = cache->to_fd;
@@ -598,15 +598,15 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
 			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
-	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
+	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t ether_type = ARP_TYPE;
-	metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
-	metadata_writeToElement(params, "send_dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
-	metadata_writeToElement(params, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
+	secure_metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
+	secure_metadata_writeToElement(params, "send_dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
+	secure_metadata_writeToElement(params, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
 
-	struct finsFrame *ff = (struct finsFrame*) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = INTERFACE_ID;
 	ff->destinationID.next = NULL;
@@ -614,7 +614,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	ff->dataFrame.directionFlag = DOWN;
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
-	ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
+	ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
 	hdr->hardware_type = htons(msg->hardware_type);
@@ -642,7 +642,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 		PRINT_DEBUG("pdu len longer than ARP header: hdr_len=%u, pdu_len=%u", sizeof(struct arp_hdr), ff->dataFrame.pduLength);
 	}
 
-	struct arp_message *msg = (struct arp_message *) fins_malloc(sizeof(struct arp_message));
+	struct arp_message *msg = (struct arp_message *) secure_malloc(sizeof(struct arp_message));
 
 	struct arp_hdr *hdr = (struct arp_hdr *) ff->dataFrame.pdu;
 	//TODO change? such that sender_mac is uint64_t
@@ -673,8 +673,8 @@ void arp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		fins_sem_wait(arp_proto.event_sem);
-		fins_sem_wait(arp_proto.input_sem);
+		secure_sem_wait(arp_proto.event_sem);
+		secure_sem_wait(arp_proto.input_sem);
 		ff = read_queue(arp_proto.input_queue);
 		sem_post(arp_proto.input_sem);
 	} while (arp_proto.running_flag && ff == NULL && !arp_interrupt_flag); //TODO change logic here, combine with switch_to_arp?
@@ -721,82 +721,62 @@ void arp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_ERROR("todo");
 		//arp_read_param(ff);
 		//TODO read interface_mac?
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		PRINT_ERROR("todo");
 		//arp_set_param(ff);
 		//TODO set interface_mac?
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		arp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
 }
 
 void arp_exec(struct finsFrame *ff) {
-	int ret = 0;
 	uint32_t src_ip = 0;
 	uint32_t dst_ip = 0;
 
@@ -805,30 +785,16 @@ void arp_exec(struct finsFrame *ff) {
 	metadata *params = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_ARP_GET_ADDR:
-		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
-		ret += metadata_readFromElement(params, "src_ip", &src_ip) == META_FALSE;
-		ret += metadata_readFromElement(params, "dst_ip", &dst_ip) == META_FALSE;
-		//ret += metadata_readFromElement(params, "addr_ip", &addr_ip) == META_FALSE;
+		secure_metadata_readFromElement(params, "src_ip", &src_ip);
+		secure_metadata_readFromElement(params, "dst_ip", &dst_ip);
 
-		if (ret) {
-			PRINT_ERROR("ret=%d", ret);
-
-			ff->destinationID.id = ff->ctrlFrame.senderID;
-			ff->ctrlFrame.senderID = ARP_ID;
-			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-			ff->ctrlFrame.ret_val = 0;
-
-			arp_to_switch(ff);
-		} else {
-			arp_exec_get_addr(ff, src_ip, dst_ip);
-			//arp_exec_get_addr(ff, addr_ip);
-		}
+		arp_exec_get_addr(ff, src_ip, dst_ip);
+		//arp_exec_get_addr(ff, addr_ip);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 		freeFinsFrame(ff);
 		break;

@@ -21,7 +21,7 @@ void *write_thread(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		PRINT_DEBUG("state=%d", conn->state);
 		if (conn->state == TS_SYN_SENT || conn->state == TS_SYN_RECV) { //equiv to non blocking
@@ -56,7 +56,7 @@ void *write_thread(void *local) {
 				}
 			}
 		} else if (conn->state == TS_ESTABLISHED || conn->state == TS_CLOSE_WAIT) {
-			struct tcp_request *request = (struct tcp_request *) fins_malloc(sizeof(struct tcp_request));
+			struct tcp_request *request = (struct tcp_request *) secure_malloc(sizeof(struct tcp_request));
 			request->data = called_data;
 			request->len = called_len;
 			request->flags = flags;
@@ -73,7 +73,7 @@ void *write_thread(void *local) {
 				request->to_running = 1;
 				request->to_flag = 0;
 
-				struct intsem_to_thread_data *to_write_data = (struct intsem_to_thread_data *) fins_malloc(sizeof(struct intsem_to_thread_data));
+				struct intsem_to_thread_data *to_write_data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
 				to_write_data->id = tcp_gen_thread_id();
 				to_write_data->fd = request->to_fd;
 				to_write_data->running = &request->to_running;
@@ -106,7 +106,7 @@ void *write_thread(void *local) {
 					sem_post(&conn->main_wait_sem);
 				}
 			} else {
-				PRINT_ERROR("request_list full, len=%u", conn->request_queue->len)
+				PRINT_ERROR("request_list full, len=%u", conn->request_queue->len);
 				//send NACK to send handler
 				conn_send_fcf(conn, serial_num, EXEC_TCP_SEND, 0, 0);
 				free(called_data);
@@ -127,7 +127,7 @@ void *write_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -152,25 +152,18 @@ void tcp_out_fdf(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	metadata *params = ff->metaData;
+	secure_metadata_readFromElement(params, "flags", &flags);
+	secure_metadata_readFromElement(params, "serial_num", &serial_num);
 
-	int ret = 0;
-	ret += metadata_readFromElement(params, "flags", &flags) == META_FALSE;
-	ret += metadata_readFromElement(params, "serial_num", &serial_num) == META_FALSE;
-
-	ret += metadata_readFromElement(params, "host_ip", &src_ip) == META_FALSE; //host
-	ret += metadata_readFromElement(params, "host_port", &src_port) == META_FALSE;
-	ret += metadata_readFromElement(params, "rem_ip", &dst_ip) == META_FALSE; //remote
-	ret += metadata_readFromElement(params, "rem_port", &dst_port) == META_FALSE;
+	secure_metadata_readFromElement(params, "host_ip", &src_ip); //host
+	secure_metadata_readFromElement(params, "host_port", &src_port);
+	secure_metadata_readFromElement(params, "rem_ip", &dst_ip); //remote
+	secure_metadata_readFromElement(params, "rem_port", &dst_port);
 
 	//TODO if flags & MSG_DONTWAIT, read timeout
 
-	if (ret) {
-		//TODO error
-		PRINT_ERROR("todo error");
-	}
-
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	struct tcp_connection *conn = conn_list_find(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port); //TODO check if right
 	int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 	//if (start) {conn->write_threads++;}
@@ -179,7 +172,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 
 	if (conn) {
 		if (start) {
-			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn = conn;
 			thread_data->data_len = ff->dataFrame.pduLength;
@@ -221,7 +214,7 @@ void *close_thread(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		if (conn->state == TS_ESTABLISHED || conn->state == TS_SYN_RECV) {
 			//if CLOSE, send FIN, FIN_WAIT_1
@@ -333,7 +326,7 @@ void *close_thread(void *local) {
 void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn) {
 		int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
@@ -341,7 +334,7 @@ void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, 
 		sem_post(&conn_list_sem);
 
 		if (start) {
-			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn = conn;
 			thread_data->ff = ff;
@@ -373,7 +366,7 @@ void *close_stub_thread(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	fins_sem_wait(&conn_stub->sem);
+	secure_sem_wait(&conn_stub->sem);
 
 	if (conn_stub->running_flag) {
 		conn_stub_shutdown(conn_stub);
@@ -400,7 +393,7 @@ void *close_stub_thread(void *local) {
 void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port) {
 	PRINT_DEBUG("Entered: host=%u/%u", host_ip, host_port);
 
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub) {
 		conn_stub_list_remove(conn_stub);
@@ -409,7 +402,7 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 		sem_post(&conn_stub_list_sem);
 
 		if (start) {
-			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
 			thread_data->ff = ff;
@@ -435,7 +428,7 @@ void tcp_exec_listen(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 	struct tcp_connection_stub *conn_stub;
 
 	PRINT_DEBUG("Entered: addr=%u/%u, backlog=%u", host_ip, host_port, backlog);
-	fins_sem_wait(&conn_stub_list_sem); //TODO change from conn_stub to conn in listen
+	secure_sem_wait(&conn_stub_list_sem); //TODO change from conn_stub to conn in listen
 	conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub == NULL) {
 		if (conn_stub_list_has_space(1)) {
@@ -483,7 +476,7 @@ void *accept_thread(void *local) { //this will need to be changed
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	fins_sem_wait(&conn_stub->sem);
+	secure_sem_wait(&conn_stub->sem);
 	while (conn_stub->running_flag) {
 		if (!queue_is_empty(conn_stub->syn_queue)) {
 			node = queue_remove_front(conn_stub->syn_queue);
@@ -493,7 +486,7 @@ void *accept_thread(void *local) { //this will need to be changed
 			seg = (struct tcp_segment *) node->data;
 
 			/*#*/PRINT_DEBUG("");
-			fins_sem_wait(&conn_list_sem);
+			secure_sem_wait(&conn_list_sem);
 			conn = conn_list_find(seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
 			if (conn == NULL) {
 				if (conn_list_has_space()) {
@@ -504,7 +497,7 @@ void *accept_thread(void *local) { //this will need to be changed
 						sem_post(&conn_list_sem);
 
 						/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-						fins_sem_wait(&conn->sem);
+						secure_sem_wait(&conn->sem);
 						if (conn->running_flag) { //LISTENING state
 							//if SYN, send SYN ACK, SYN_RECV
 							PRINT_DEBUG("SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
@@ -553,7 +546,7 @@ void *accept_thread(void *local) { //this will need to be changed
 						}
 
 						/*#*/PRINT_DEBUG("");
-						fins_sem_wait(&conn_list_sem);
+						secure_sem_wait(&conn_list_sem);
 						conn->threads--;
 						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 						sem_post(&conn_list_sem);
@@ -593,13 +586,13 @@ void *accept_thread(void *local) { //this will need to be changed
 			sem_post(&conn_stub->sem);
 
 			/*#*/PRINT_DEBUG("");
-			fins_sem_wait(&conn_stub->accept_wait_sem);
+			secure_sem_wait(&conn_stub->accept_wait_sem);
 			sem_init(&conn_stub->accept_wait_sem, 0, 0);
 			PRINT_DEBUG("left conn_stub->accept_wait_sem");
 		}
 
 		/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-		fins_sem_wait(&conn_stub->sem);
+		secure_sem_wait(&conn_stub->sem);
 	}
 
 	if (!conn_stub->running_flag) {
@@ -609,7 +602,7 @@ void *accept_thread(void *local) { //this will need to be changed
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	conn_stub->threads--;
 	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
@@ -625,7 +618,7 @@ void *accept_thread(void *local) { //this will need to be changed
 void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags) {
 	PRINT_DEBUG("Entered: host=%u/%u, flags=0x%x", host_ip, host_port, flags);
 
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub) {
 		int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
@@ -633,7 +626,7 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 		sem_post(&conn_stub_list_sem);
 
 		if (start) {
-			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
 			thread_data->ff = ff;
@@ -673,7 +666,7 @@ void *connect_thread(void *local) {
 	PRINT_DEBUG("Entered: id=%u", id);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		if (conn->state == TS_CLOSED || conn->state == TS_LISTEN) {
 			//if CONNECT, send SYN, SYN_SENT
@@ -722,7 +715,7 @@ void *connect_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -737,7 +730,7 @@ void *connect_thread(void *local) {
 void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn == NULL) {
 		if (conn_list_has_space()) {
@@ -749,7 +742,7 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 
 				//if listening stub remove
 				/*#*/PRINT_DEBUG("");
-				fins_sem_wait(&conn_stub_list_sem);
+				secure_sem_wait(&conn_stub_list_sem);
 				struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 				if (conn_stub) {
 					conn_stub_list_remove(conn_stub);
@@ -758,7 +751,7 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 					sem_post(&conn_stub_list_sem);
 
 					if (start) {
-						struct tcp_thread_data *stub_thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+						struct tcp_thread_data *stub_thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 						stub_thread_data->id = tcp_gen_thread_id();
 						stub_thread_data->conn_stub = conn_stub;
 						stub_thread_data->flags = 0;
@@ -775,7 +768,7 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 					sem_post(&conn_stub_list_sem);
 				}
 
-				struct tcp_thread_data *thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+				struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->ff = ff;
@@ -830,7 +823,7 @@ void *poll_thread(void *local) {
 	uint32_t mask = 0;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		//TODO redo, for now mostly does POLLOUT
 
@@ -880,7 +873,7 @@ void *poll_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -906,7 +899,7 @@ void *poll_stub_thread(void *local) {
 	uint32_t mask = 0;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	fins_sem_wait(&conn_stub->sem);
+	secure_sem_wait(&conn_stub->sem);
 	if (conn_stub->running_flag) {
 		//TODO redo, for now mostly does POLLOUT
 
@@ -948,7 +941,7 @@ void *poll_stub_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	conn_stub->threads--;
 	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
@@ -968,7 +961,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 
 	if (state > SS_UNCONNECTED) {
 		PRINT_DEBUG("Entered: state=%u, host=%u/%u, rem=%u/%u, initial=%u, events=0x%x", state, host_ip, host_port, rem_ip, rem_port, initial, flags);
-		fins_sem_wait(&conn_list_sem);
+		secure_sem_wait(&conn_list_sem);
 		struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 		if (conn) {
 			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
@@ -976,7 +969,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 			sem_post(&conn_list_sem);
 
 			if (start) {
-				thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->ff = ff;
@@ -1001,7 +994,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 		}
 	} else {
 		PRINT_DEBUG("Entered: state=%u, host=%u/%u, initial=%u, flags=%u", state, host_ip, host_port, initial, flags);
-		fins_sem_wait(&conn_stub_list_sem);
+		secure_sem_wait(&conn_stub_list_sem);
 		struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 		if (conn_stub) {
 			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
@@ -1009,7 +1002,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 			sem_post(&conn_stub_list_sem);
 
 			if (start) {
-				thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn_stub = conn_stub;
 				thread_data->ff = ff;
@@ -1045,65 +1038,43 @@ void *read_param_conn_thread(void *local) {
 
 	PRINT_DEBUG("Entered: ff=%p, conn=%p, id=%u", ff, conn, id);
 
-	uint32_t ret_val;
 	uint32_t value;
 
-	int ret = 0;
 	metadata *params = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
-
-				ret_val = 0;
-			} else {
-				ret_val = 1;
-				value = conn->recv_win;
-				metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
-			}
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			value = conn->recv_win;
+			secure_metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
 			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			//fill in with switch of opts? or have them separate?
 
-				ret_val = 0;
-			} else {
-				//fill in with switch of opts? or have them separate?
-
-				//TODO read sock opts
-
-				ret_val = 1;
-			}
+			//TODO read sock opts
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
 			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1128,7 +1099,7 @@ void *read_param_conn_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -1150,77 +1121,54 @@ void *read_param_conn_stub_thread(void *local) {
 
 	PRINT_DEBUG("Entered: ff=%p, conn_stub=%p, id=%u", ff, conn_stub, id);
 
-	uint32_t ret_val;
 	uint32_t value;
 
-	int ret = 0;
 	metadata *params = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	fins_sem_wait(&conn_stub->sem);
+	secure_sem_wait(&conn_stub->sem);
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
-			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			secure_metadata_readFromElement(params, "value", &value);
+			//TODO do something? error?
 
-				ret_val = 0;
-			} else {
-				//TODO do something? error?
-
-				//if (value > conn_stub->host_window) {
-				//conn_stub->host_window -= value;
-				//} else {
-				//conn_stub->host_window = 0;
-				//}
-
-				ret_val = 1;
-			}
+			//if (value > conn_stub->host_window) {
+			//conn_stub->host_window -= value;
+			//} else {
+			//conn_stub->host_window = 0;
+			//}
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
 			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
-			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			secure_metadata_readFromElement(params, "value", &value);
+			//fill in with switch of opts? or have them separate?
 
-				ret_val = 0;
-			} else {
-				//fill in with switch of opts? or have them separate?
-
-				//if (value > conn_stub->host_window) {
-				//	conn_stub->host_window -= value;
-				//} else {
-				//	conn_stub->host_window = 0;
-				//}
-
-				ret_val = 1;
-			}
+			//if (value > conn_stub->host_window) {
+			//	conn_stub->host_window -= value;
+			//} else {
+			//	conn_stub->host_window = 0;
+			//}
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
 			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1245,7 +1193,7 @@ void *read_param_conn_stub_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	conn_stub->threads--;
 	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
@@ -1258,8 +1206,6 @@ void *read_param_conn_stub_thread(void *local) {
 }
 
 void tcp_read_param(struct finsFrame *ff) {
-	//int ret = 0;
-
 	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
@@ -1273,69 +1219,66 @@ void tcp_read_param(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 
 	metadata *params = ff->metaData;
-	if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
-		if (state > SS_UNCONNECTED) {
-			PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
-			fins_sem_wait(&conn_list_sem);
-			conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
-			if (conn) {
-				start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_list_sem);
+	metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port);
 
-				if (start) {
-					thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
-					thread_data->id = tcp_gen_thread_id();
-					thread_data->conn = conn;
-					thread_data->ff = ff;
+	if (state > SS_UNCONNECTED) {
+		PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+		secure_sem_wait(&conn_list_sem);
+		conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
+		if (conn) {
+			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_list_sem);
 
-					if (pthread_create(&thread, NULL, read_param_conn_thread, (void *) thread_data)) {
-						PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-						exit(-1);
-					}
-					pthread_detach(thread);
-				} else {
-					PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
+			if (start) {
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_gen_thread_id();
+				thread_data->conn = conn;
+				thread_data->ff = ff;
+
+				if (pthread_create(&thread, NULL, read_param_conn_thread, (void *) thread_data)) {
+					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
+					exit(-1);
 				}
+				pthread_detach(thread);
 			} else {
-				PRINT_ERROR("todo error");
-				sem_post(&conn_list_sem);
-
-				//TODO error
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 			}
 		} else {
-			PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
-			fins_sem_wait(&conn_stub_list_sem);
-			conn_stub = conn_stub_list_find(host_ip, host_port);
-			if (conn_stub) {
-				start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-				/*#*/PRINT_DEBUG("");
-				sem_post(&conn_stub_list_sem);
+			PRINT_ERROR("todo error");
+			sem_post(&conn_list_sem);
 
-				if (start) {
-					thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
-					thread_data->id = tcp_gen_thread_id();
-					thread_data->conn_stub = conn_stub;
-					thread_data->ff = ff;
-
-					if (pthread_create(&thread, NULL, read_param_conn_stub_thread, (void *) thread_data)) {
-						PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-						exit(-1);
-					}
-					pthread_detach(thread);
-				} else {
-					PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
-				}
-			} else {
-				PRINT_ERROR("todo error");
-				sem_post(&conn_stub_list_sem);
-
-				//TODO error
-			}
+			//TODO error
 		}
 	} else {
-		PRINT_ERROR("todo error");
-		//TODO error
+		PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
+		secure_sem_wait(&conn_stub_list_sem);
+		conn_stub = conn_stub_list_find(host_ip, host_port);
+		if (conn_stub) {
+			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_stub_list_sem);
+
+			if (start) {
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_gen_thread_id();
+				thread_data->conn_stub = conn_stub;
+				thread_data->ff = ff;
+
+				if (pthread_create(&thread, NULL, read_param_conn_stub_thread, (void *) thread_data)) {
+					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
+					exit(-1);
+				}
+				pthread_detach(thread);
+			} else {
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
+			}
+		} else {
+			PRINT_ERROR("todo error");
+			sem_post(&conn_stub_list_sem);
+
+			//TODO error
+		}
 	}
 }
 
@@ -1349,72 +1292,48 @@ void *set_param_conn_thread(void *local) {
 
 	PRINT_DEBUG("Entered: ff=%p, conn=%p, id=%u", ff, conn, id);
 
-	uint32_t ret_val;
 	uint32_t value;
 
 	metadata *params = ff->metaData;
 
-	int ret = 0;
-
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	fins_sem_wait(&conn->sem);
+	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
-			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
-
-				ret_val = 0;
-			} else {
-				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), before",
-													conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-				uint32_increase(&conn->recv_win, value, conn->recv_max_win);
-				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), after",
-									conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
-
-				ret_val = 1;
-			}
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			secure_metadata_readFromElement(params, "value", &value);
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), before",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			uint32_increase(&conn->recv_win, value, conn->recv_max_win);
+			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), after",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
 			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
-			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			secure_metadata_readFromElement(params, "value", &value);
+			//fill in with switch of opts? or have them separate?
 
-				ret_val = 0;
-			} else {
-				//fill in with switch of opts? or have them separate?
-
-				PRINT_ERROR("todo");
-
-				ret_val = 1;
-			}
+			PRINT_ERROR("todo");
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
 			ff->ctrlFrame.senderID = TCP_ID;
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1439,7 +1358,7 @@ void *set_param_conn_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_list_sem);
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -1461,71 +1380,48 @@ void *set_param_conn_stub_thread(void *local) {
 
 	PRINT_DEBUG("Entered: ff=%p, conn_stub=%p, id=%u", ff, conn_stub, id);
 
-	uint32_t ret_val;
 	uint32_t value;
 
-	int ret = 0;
 	metadata *params = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	fins_sem_wait(&conn_stub->sem);
+	secure_sem_wait(&conn_stub->sem);
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
-			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			secure_metadata_readFromElement(params, "value", &value);
+			//TODO do something? error?
 
-				ret_val = 0;
-			} else {
-				//TODO do something? error?
-
-				//if (value > conn_stub->host_window) {
-				//conn_stub->host_window -= value;
-				//} else {
-				//conn_stub->host_window = 0;
-				//}
-
-				ret_val = 1;
-			}
+			//if (value > conn_stub->host_window) {
+			//conn_stub->host_window -= value;
+			//} else {
+			//conn_stub->host_window = 0;
+			//}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
-			ret = metadata_readFromElement(params, "value", &value) == META_FALSE;
-			if (ret) {
-				PRINT_ERROR("ret=%d", ret);
-				//TODO send nack
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			secure_metadata_readFromElement(params, "value", &value);
+			//fill in with switch of opts? or have them separate?
 
-				ret_val = 0;
-			} else {
-				//fill in with switch of opts? or have them separate?
-
-				//if (value > conn_stub->host_window) {
-				//	conn_stub->host_window -= value;
-				//} else {
-				//	conn_stub->host_window = 0;
-				//}
-
-				ret_val = 1;
-			}
+			//if (value > conn_stub->host_window) {
+			//	conn_stub->host_window -= value;
+			//} else {
+			//	conn_stub->host_window = 0;
+			//}
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = ret_val;
+			ff->ctrlFrame.ret_val = 1;
 
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
@@ -1544,7 +1440,7 @@ void *set_param_conn_stub_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	fins_sem_wait(&conn_stub_list_sem);
+	secure_sem_wait(&conn_stub_list_sem);
 	conn_stub->threads--;
 	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
 	sem_post(&conn_stub_list_sem);
@@ -1557,8 +1453,6 @@ void *set_param_conn_stub_thread(void *local) {
 }
 
 void tcp_set_param(struct finsFrame *ff) {
-	//int ret = 0;
-
 	socket_state state = 0;
 	uint32_t host_ip = 0;
 	uint16_t host_port = 0;
@@ -1570,88 +1464,37 @@ void tcp_set_param(struct finsFrame *ff) {
 	struct tcp_thread_data *thread_data;
 
 	metadata *params = ff->metaData;
-	if (params) {
-		if (metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port)) {
-			if (state > SS_UNCONNECTED) {
-				PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
-				fins_sem_wait(&conn_list_sem);
-				struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
-				if (conn) {
-					start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-					/*#*/PRINT_DEBUG("");
-					sem_post(&conn_list_sem);
+	metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port);
 
-					if (start) {
-						thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
-						thread_data->id = tcp_gen_thread_id();
-						thread_data->conn = conn;
-						thread_data->ff = ff;
-						thread_data->flags = state;
+	if (state > SS_UNCONNECTED) {
+		PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+		secure_sem_wait(&conn_list_sem);
+		struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
+		if (conn) {
+			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_list_sem);
 
-						if (pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data)) {
-							PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-							exit(-1);
-						}
-						pthread_detach(thread);
-					} else {
-						PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
-					}
-				} else {
-					PRINT_ERROR("todo error");
-					sem_post(&conn_list_sem);
+			if (start) {
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_gen_thread_id();
+				thread_data->conn = conn;
+				thread_data->ff = ff;
+				thread_data->flags = state;
 
-					//TODO error
-
-					ff->destinationID.id = ff->ctrlFrame.senderID;
-
-					ff->ctrlFrame.senderID = TCP_ID;
-					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-					ff->ctrlFrame.ret_val = 0;
-
-					tcp_to_switch(ff);
+				if (pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data)) {
+					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
+					exit(-1);
 				}
+				pthread_detach(thread);
 			} else {
-				PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
-				fins_sem_wait(&conn_stub_list_sem);
-				struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
-				if (conn_stub) {
-					start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-					/*#*/PRINT_DEBUG("");
-					sem_post(&conn_stub_list_sem);
-
-					if (start) {
-						thread_data = (struct tcp_thread_data *) fins_malloc(sizeof(struct tcp_thread_data));
-						thread_data->id = tcp_gen_thread_id();
-						thread_data->conn_stub = conn_stub;
-						thread_data->ff = ff;
-						thread_data->flags = state;
-
-						if (pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data)) {
-							PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-							exit(-1);
-						}
-						pthread_detach(thread);
-					} else {
-						PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
-					}
-				} else {
-					PRINT_ERROR("todo error");
-					sem_post(&conn_stub_list_sem);
-
-					//TODO error
-
-					ff->destinationID.id = ff->ctrlFrame.senderID;
-
-					ff->ctrlFrame.senderID = TCP_ID;
-					ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-					ff->ctrlFrame.ret_val = 0;
-
-					tcp_to_switch(ff);
-				}
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 			}
 		} else {
-			//TODO error
 			PRINT_ERROR("todo error");
+			sem_post(&conn_list_sem);
+
+			//TODO error
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
@@ -1662,7 +1505,42 @@ void tcp_set_param(struct finsFrame *ff) {
 			tcp_to_switch(ff);
 		}
 	} else {
-		//TODO huge error
-		PRINT_ERROR("todo error");
+		PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
+		secure_sem_wait(&conn_stub_list_sem);
+		struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
+		if (conn_stub) {
+			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_stub_list_sem);
+
+			if (start) {
+				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
+				thread_data->id = tcp_gen_thread_id();
+				thread_data->conn_stub = conn_stub;
+				thread_data->ff = ff;
+				thread_data->flags = state;
+
+				if (pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data)) {
+					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
+					exit(-1);
+				}
+				pthread_detach(thread);
+			} else {
+				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
+			}
+		} else {
+			PRINT_ERROR("todo error");
+			sem_post(&conn_stub_list_sem);
+
+			//TODO error
+
+			ff->destinationID.id = ff->ctrlFrame.senderID;
+
+			ff->ctrlFrame.senderID = TCP_ID;
+			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+			ff->ctrlFrame.ret_val = 0;
+
+			tcp_to_switch(ff);
+		}
 	}
 }

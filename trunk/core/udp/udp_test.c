@@ -5,9 +5,6 @@
  *      Author: Abdallah
  */
 
-
-
-
 //void main(){
 //	while(1){
 //		udp_get_ff();
@@ -97,62 +94,53 @@
 /* udp_out test */
 
 /**
-int main() {
-	struct udp_metadata_parsed meta;
-	struct finsFrame* pff;
-	struct finsFrame ff;
-	unsigned short checksum = 0;
+ int main() {
+ struct udp_metadata_parsed meta;
+ struct finsFrame* pff;
+ struct finsFrame ff;
+ unsigned short checksum = 0;
 
-	char str[20] = "00000000TESTING";
+ char str[20] = "00000000TESTING";
 
-	ff.dataFrame.pdu = &str[0];
-
-
-	meta.u_IPdst = IP4_ADR_P2N(171,2,14,10);
-	meta.u_IPsrc = IP4_ADR_P2N(153,18,8,105);
-	meta.u_destPort = 13;
-	meta.u_srcPort = 1087;
+ ff.dataFrame.pdu = &str[0];
 
 
-
-	ff.dataFrame.pduLength = 7;
-	ff.dataOrCtrl = DATA;
-	ff.destinationID.id = UDPID;
-	ff.destinationID.next = NULL;
-	ff.dataFrame.directionFlag = DOWN;
+ meta.u_IPdst = IP4_ADR_P2N(171,2,14,10);
+ meta.u_IPsrc = IP4_ADR_P2N(153,18,8,105);
+ meta.u_destPort = 13;
+ meta.u_srcPort = 1087;
 
 
-	memcpy(&ff.metaData, &meta, 16);
-	pff = &ff;
 
-//	printf("The metadata's value for the length is %d\n", pseudoheader2.u_pslen);
-//	printf("The UDP packet's value for the length is %d\n", packet2.u_len);
-	udp_out(pff);
-
-	return (0);
-}
-
-*/
+ ff.dataFrame.pduLength = 7;
+ ff.dataOrCtrl = DATA;
+ ff.destinationID.id = UDPID;
+ ff.destinationID.next = NULL;
+ ff.dataFrame.directionFlag = DOWN;
 
 
+ memcpy(&ff.metaData, &meta, 16);
+ pff = &ff;
+
+ //	printf("The metadata's value for the length is %d\n", pseudoheader2.u_pslen);
+ //	printf("The UDP packet's value for the length is %d\n", packet2.u_len);
+ udp_out(pff);
+
+ return (0);
+ }
+
+ */
 
 STORE BELOEW:
 
-
-
-
-
-
-
 struct udp_packet packet2;
-	struct udp_metadata_parsed pseudoheader2;
-	unsigned short int lolo;
+struct udp_metadata_parsed pseudoheader2;
+unsigned short int lolo;
 
 packet2.u_src = 58088;
 packet2.u_dst = 5001;
 packet2.u_len = 53;
 packet2.u_cksum = 0;
-
 
 pseudoheader2.u_pslen = 53;
 pseudoheader2.u_prcl = 17;
@@ -163,24 +151,5 @@ char str[45] = "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
 str[45] = '\0';
 strcpy(packet2.u_data, str);
 lolo = UDP_checksum(&packet2, &pseudoheader2);
-	PRINT_DEBUG("The checksums value is 0x%x \n ", lolo);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+PRINT_DEBUG("The checksums value is 0x%x \n ", lolo);
 

@@ -194,7 +194,7 @@ void *capturer_to_interface(void *local) {
 			PRINT_ERROR("numBytes written %d", numBytes);
 			break;
 		}
-		frame = (uint8_t *) fins_malloc(frame_len);
+		frame = (uint8_t *) secure_malloc(frame_len);
 
 		numBytes = read(capture_pipe_fd, frame, frame_len);
 		if (numBytes <= 0) {
@@ -233,7 +233,7 @@ void *capturer_to_interface(void *local) {
 		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x, stamp=%u.%u",
 				dst_mac, src_mac, ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
-		ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 		PRINT_DEBUG("ff=%p", ff);
 
 		/** TODO
@@ -241,10 +241,10 @@ void *capturer_to_interface(void *local) {
 		 * 2. pre-process the frame in order to extract the metadata
 		 * 3. build a finsFrame and insert it into EtherStub_to_Switch_Queue
 		 */
-		params = (metadata *) fins_malloc(sizeof(metadata));
+		params = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(params);
 
-		metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
+		secure_metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
 
 		ff->dataOrCtrl = DATA;
 		ff->metaData = params;
@@ -275,15 +275,15 @@ void *capturer_to_interface(void *local) {
 
 		ff->dataFrame.directionFlag = UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
-		ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
+		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
-		metadata_writeToElement(params, "recv_src_mac", &src_mac, META_TYPE_INT64);
-		metadata_writeToElement(params, "recv_ether_type", &ether_type, META_TYPE_INT32);
+		secure_metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(params, "recv_src_mac", &src_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(params, "recv_ether_type", &ether_type, META_TYPE_INT32);
 
 		if (!interface_to_switch(ff)) {
-			PRINT_ERROR("send to switch error, ff=%p", ff)
+			PRINT_ERROR ("send to switch error, ff=%p", ff);
 			freeFinsFrame(ff);
 		}
 
@@ -310,8 +310,8 @@ void interface_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		fins_sem_wait(interface_proto.event_sem);
-		fins_sem_wait(interface_proto.input_sem);
+		secure_sem_wait(interface_proto.event_sem);
+		secure_sem_wait(interface_proto.input_sem);
 		ff = read_queue(interface_proto.input_queue);
 		sem_post(interface_proto.input_sem);
 	} while (interface_proto.running_flag && ff == NULL);
@@ -321,6 +321,11 @@ void interface_get_ff(void) {
 			freeFinsFrame(ff);
 		}
 		return;
+	}
+
+	if (ff->metaData == NULL) {
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	PRINT_DEBUG(" At least one frame has been read from the Switch to Etherstub ff=%p", ff);
@@ -354,25 +359,16 @@ void interface_out_fdf(struct finsFrame *ff) {
 	int numBytes;
 
 	metadata *params = ff->metaData;
-
-	int ret = 0;
-	ret += metadata_readFromElement(params, "send_dst_mac", &dst_mac) == META_FALSE;
-	ret += metadata_readFromElement(params, "send_src_mac", &src_mac) == META_FALSE;
-	ret += metadata_readFromElement(params, "send_ether_type", &ether_type) == META_FALSE;
-
-	if (ret) {
-		//TODO error
-		PRINT_ERROR("todo error");
-		//TODO create error fcf?
-		return;
-	}
+	secure_metadata_readFromElement(params, "send_dst_mac", &dst_mac);
+	secure_metadata_readFromElement(params, "send_src_mac", &src_mac);
+	secure_metadata_readFromElement(params, "send_ether_type", &ether_type);
 
 	PRINT_DEBUG("send frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 
 	framelen = ff->dataFrame.pduLength + SIZE_ETHERNET;
 	PRINT_DEBUG("framelen=%d", framelen);
 
-	frame = (char *) fins_malloc(framelen);
+	frame = (char *) secure_malloc(framelen);
 	hdr = (struct sniff_ethernet *) frame;
 
 	hdr->ether_dhost[0] = (dst_mac >> 40) & 0xff;

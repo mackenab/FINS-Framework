@@ -13,10 +13,9 @@
 uint32_t control_serial_num = 0;
 sem_t control_serial_sem;
 
-void *fins_malloc_full(const char *file, const char *func, int line, uint32_t len) {
+void *secure_malloc_full(const char *file, const char *func, int line, uint32_t len) {
 	void *buf = malloc(len);
 	if (buf == NULL) {
-		//PRINT_ERROR("alloc error: len=%u", len);
 #ifdef ERROR
 		printf("ERROR(%s, %s, %d):alloc error: len=%u\n", __FILE__, __FUNCTION__, __LINE__, len);
 		fflush(stdout);
@@ -26,12 +25,31 @@ void *fins_malloc_full(const char *file, const char *func, int line, uint32_t le
 	return buf;
 }
 
-void fins_sem_wait_full(const char *file, const char *func, int line, sem_t *sem) {
+void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *sem) {
 	int ret;
 	if ((ret = sem_wait(sem))) {
-		//PRINT_ERROR("sem wait prob: sem=%p, ret=%d", sem, ret);
 #ifdef ERROR
 		printf("ERROR(%s, %s, %d):sem wait prob: sem=%p, ret=%d\n", __FILE__, __FUNCTION__, __LINE__, sem, ret);
+		fflush(stdout);
+#endif
+		exit(-1);
+	}
+}
+
+void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *params, const char *target, void *value) {
+	if (metadata_readFromElement(params, target, value) == META_FALSE) {
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):metadata read: meta=%p, target='%s', value=%p\n", __FILE__, __FUNCTION__, __LINE__, params, target, value);
+		fflush(stdout);
+#endif
+		exit(-1);
+	}
+}
+
+void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *params, char *target, void *value, int type) {
+	if (metadata_writeToElement(params, target, value, type) == META_FALSE) {
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):metadata write: meta=%p, target='%s', value=%p, type=%d\n", __FILE__, __FUNCTION__, __LINE__, params, target, value, type);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -42,7 +60,7 @@ uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
 	//TODO replace this with a random number generator
-	fins_sem_wait(&control_serial_sem);
+	secure_sem_wait(&control_serial_sem);
 	num = ++control_serial_num;
 	sem_post(&control_serial_sem);
 
@@ -51,7 +69,7 @@ uint32_t gen_control_serial_num(void) {
 
 struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() or just remove
 
-	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 
 	PRINT_DEBUG("2.1");
 	int linkvalue = 80211;
@@ -59,7 +77,7 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	unsigned char fakeDatav[] = "loloa77a7";
 	unsigned char *fakeData = fakeDatav;
 
-	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
+	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
 
 	//metadata *params;
 	PRINT_DEBUG("2.2");
@@ -98,7 +116,8 @@ void print_finsFrame(struct finsFrame *ff) {
 	}
 
 	if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
+		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);
+		PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
 		//PRINT_DEBUG("Meta data (first element) 0x%x", fins_in->metaData);
 		PRINT_DEBUG("PDU size (bytes) %d", ff->dataFrame.pduLength);
 		int i = 0;
@@ -109,7 +128,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		}
 		//######################
 #ifdef DEBUG
-		char *temp = (char *) fins_malloc(ff->dataFrame.pduLength + 1);
+		char *temp = (char *) secure_malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 		temp[ff->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pdu=%s", temp);
@@ -117,9 +136,13 @@ void print_finsFrame(struct finsFrame *ff) {
 #endif
 		//######################
 	} else if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
+		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);
+		PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);
+		PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);
+		PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
 		//		PRINT_DEBUG("Reply Record (first element) 0x%x", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
+		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);
+		PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
 	}
 
 }
@@ -161,7 +184,7 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params_clone = (metadata *) fins_malloc(sizeof(metadata));
+	metadata *params_clone = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(params_clone);
 
 	metadata *params = ff->metaData;
@@ -173,7 +196,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		PRINT_ERROR("todo error");
 	}
 
-	struct finsFrame *ff_clone = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff_clone = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff_clone->dataOrCtrl = ff->dataOrCtrl;
 	ff_clone->destinationID.id = ff->destinationID.id;
 	ff_clone->destinationID.next = ff->destinationID.next; //TODO this is a list copy all of them?
@@ -187,24 +210,26 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 
 		ff_clone->ctrlFrame.data_len = ff->ctrlFrame.data_len; //Add in the header size for this, too
 		if (ff_clone->ctrlFrame.data_len) {
-			ff_clone->ctrlFrame.data = (uint8_t *) fins_malloc(ff_clone->ctrlFrame.data_len);
+			ff_clone->ctrlFrame.data = (uint8_t *) secure_malloc(ff_clone->ctrlFrame.data_len);
 			memcpy(ff_clone->ctrlFrame.data, ff->ctrlFrame.data, ff_clone->ctrlFrame.data_len);
 		} else {
 			PRINT_DEBUG("here");
 			ff_clone->ctrlFrame.data = NULL;
-		}PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
+		}
+		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
 				ff, ff->metaData, ff->ctrlFrame.data, ff_clone, ff_clone->metaData, ff_clone->ctrlFrame.data);
 	} else if (ff_clone->dataOrCtrl == DATA) {
 		ff_clone->dataFrame.directionFlag = ff->dataFrame.directionFlag;
 
 		ff_clone->dataFrame.pduLength = ff->dataFrame.pduLength; //Add in the header size for this, too
 		if (ff_clone->dataFrame.pduLength) {
-			ff_clone->dataFrame.pdu = (uint8_t *) fins_malloc(ff_clone->dataFrame.pduLength);
+			ff_clone->dataFrame.pdu = (uint8_t *) secure_malloc(ff_clone->dataFrame.pduLength);
 			memcpy(ff_clone->dataFrame.pdu, ff->dataFrame.pdu, ff_clone->dataFrame.pduLength);
 		} else {
 			PRINT_DEBUG("here");
 			ff_clone->dataFrame.pdu = NULL;
-		}PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
+		}
+		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
 				ff, ff->metaData, ff->dataFrame.pdu, ff_clone, ff_clone->metaData, ff_clone->dataFrame.pdu);
 	} else {
 		PRINT_ERROR("todo error");
@@ -285,7 +310,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//PRINT_DEBUG("SIZE OF BUF_SIZE = %d", buf_size);
 
-	*buffer = (unsigned char *) fins_malloc(buf_size);
+	*buffer = (unsigned char *) secure_malloc(buf_size);
 
 	unsigned char * temporary = *buffer;
 
@@ -399,7 +424,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	 */
 	PRINT_DEBUG("In unserializeCtrlFrame!");
 
-	struct finsFrame * ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame * ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	memset(ff, 0, sizeof(struct finsFrame));
 
 	//	PRINT_DEBUG("The value of buffer = %s", buffer,length);

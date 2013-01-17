@@ -16,7 +16,6 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t prot
 
 	//print_finsFrame(ff);
 	//char *data = (char *) ((ff->dataFrame).pdu);
-	PRINT_DEBUG("");
 
 	//uint8_t more_fragments = 1;
 	//uint16_t offset = 0;
@@ -29,28 +28,19 @@ void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t prot
 
 	//construct_packet_buffer = &construct_packet;
 	construct_packet_buffer = (struct ip4_packet *) &construct_packet;
-	PRINT_DEBUG("");
 
-	int ret = 0;
-	ret += metadata_readFromElement(ff->metaData, "send_dst_ip", &destination) == META_FALSE;
-
-	if (ret) {
-		PRINT_ERROR("todo error");
-
-		//TODO error
-	}
-
-	PRINT_DEBUG("");
+	metadata *params = ff->metaData;
+	secure_metadata_readFromElement(params, "send_dst_ip", &destination);
 
 	IP4_const_header(construct_packet_buffer, source, destination, protocol);
 
 	uint32_t send_ttl;
-	if (metadata_readFromElement(ff->metaData, "send_ttl", &send_ttl) == META_TRUE) {
+	if (metadata_readFromElement(params, "send_ttl", &send_ttl) == META_TRUE) {
 		construct_packet_buffer->ip_ttl = send_ttl;
 	}
 
 	uint32_t tos;
-	if (metadata_readFromElement(ff->metaData, "send_tos", &tos) == META_TRUE) {
+	if (metadata_readFromElement(params, "send_tos", &tos) == META_TRUE) {
 		//TODO implement
 	}
 

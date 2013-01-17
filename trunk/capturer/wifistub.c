@@ -222,7 +222,7 @@ void capture_init(char *interface) {
 
 
 	/* get network number and mask associated with capture device */
-	if (pcap_lookupnet((char *)dev, &net, &mask, errbuf) == -1) {
+	if (pcap_lookupnet((char *) dev, &net, &mask, errbuf) == -1) {
 		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
 		net = 0;
 		mask = 0;
@@ -233,12 +233,12 @@ void capture_init(char *interface) {
 	printf("Filter expression: %s\n", filter_exp);
 
 	/* open capture device */
-	capture_handle = pcap_open_live((char *)dev, SNAP_LEN, 1, 1000, errbuf);
+	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 1, 1000, errbuf);
 	if (capture_handle == NULL) {
 		fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
 		exit(EXIT_FAILURE);
 	}
-	
+
 	/* make sure we're capturing on an Ethernet device [2] */
 	data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
@@ -290,10 +290,10 @@ void inject_init(char *interface) {
 	 PRINT_DEBUG("MKFIFO of INJECT Failed \n");
 	 exit(EXIT_FAILURE);
 	 } */
-//	static int count = 1;
+	//	static int count = 1;
 	unsigned char device[20];
 	//unsigned char dev_macAddress[17];
-	strcpy((char *)device, interface);
+	strcpy((char *) device, interface);
 
 	int framelen;
 	//char *frame;
@@ -316,7 +316,7 @@ void inject_init(char *interface) {
 	}
 
 	/** Setup the Injection Interface */
-	if ((inject_handle = pcap_open_live((char *)dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
+	if ((inject_handle = pcap_open_live((char *) dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
 		PRINT_DEBUG( "\nError: %s\n", errbuf);
 		exit(1);
 	}
@@ -339,7 +339,7 @@ void inject_init(char *interface) {
 
 		PRINT_CRITICAL("A frame of length %d will be injected-----", framelen);
 
-		print_frame((u_char *)frame, framelen);
+		print_frame((u_char *) frame, framelen);
 		/**
 		 * Inject the Ethernet Frame into the Device
 		 */

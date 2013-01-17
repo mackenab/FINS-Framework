@@ -40,9 +40,9 @@ Queue CreateQueue(const char* name, int MaxElements) {
 		PRINT_ERROR( "Queue size is too small");
 	}
 
-	Q = fins_malloc(sizeof(struct QueueRecord));
+	Q = secure_malloc(sizeof(struct QueueRecord));
 
-	Q->Array = (ElementType *)fins_malloc(sizeof(ElementType) * MaxElements);
+	Q->Array = (ElementType *) secure_malloc(sizeof(ElementType) * MaxElements);
 	memset(Q->Array, 0, sizeof(ElementType) * MaxElements); //avoid freeFinsFrame: use of f->dataOrControl
 
 	Q->Capacity = MaxElements;

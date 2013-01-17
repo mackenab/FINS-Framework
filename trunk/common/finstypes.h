@@ -106,13 +106,17 @@ struct finsFrame {
 
 };
 
-#define fins_malloc(len) fins_malloc_full(__FILE__, __FUNCTION__, __LINE__, len);
+#define secure_malloc(len) secure_malloc_full(__FILE__, __FUNCTION__, __LINE__, len)
+void *secure_malloc_full(const char *file, const char *func, int line, uint32_t len);
 
-void *fins_malloc_full(const char *file, const char *func, int line, uint32_t len);
+#define secure_sem_wait(sem) secure_sem_wait_full(__FILE__, __FUNCTION__, __LINE__, sem)
+void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *sem);
 
-#define fins_sem_wait(sem) fins_sem_wait_full(__FILE__, __FUNCTION__, __LINE__, sem);
+#define secure_metadata_readFromElement(params, target, value) secure_metadata_readFromElement_full(__FILE__, __FUNCTION__, __LINE__, params, target, value)
+void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *params, const char *target, void *value);
 
-void fins_sem_wait_full(const char *file, const char *func, int line, sem_t *sem);
+#define secure_metadata_writeToElement(params, target, value, type) secure_metadata_writeToElement_full(__FILE__, __FUNCTION__, __LINE__, params, target, value, type)
+void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *params, char *target, void *value, int type);
 
 uint32_t gen_control_serial_num(void);
 

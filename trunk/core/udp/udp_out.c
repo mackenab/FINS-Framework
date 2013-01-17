@@ -62,7 +62,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 		PRINT_ERROR("todo error, data too long max 65536, len=%d", packet_length);
 	}
 
-	uint8_t *udp_dataunit = (uint8_t *) fins_malloc(packet_length);
+	uint8_t *udp_dataunit = (uint8_t *) secure_malloc(packet_length);
 	packet_netw = (struct udp_packet *) udp_dataunit;
 	uint8_t *pdu = ff->dataFrame.pdu;
 
@@ -71,7 +71,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 	//#########################
 #ifdef DEBUG
 	if (1) {
-		uint8_t *temp = (uint8_t *) fins_malloc(ff->dataFrame.pduLength + 1);
+		uint8_t *temp = (uint8_t *) secure_malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, pdu, ff->dataFrame.pduLength);
 		temp[ff->dataFrame.pduLength] = '\0';
 		PRINT_DEBUG("pduLen=%d, pdu='%s'", ff->dataFrame.pduLength, temp);
@@ -87,20 +87,13 @@ void udp_out_fdf(struct finsFrame* ff) {
 	uint32_t src_ip;
 
 	metadata *params = ff->metaData;
-
-	int ret = 0;
-	ret += metadata_readFromElement(params, "send_src_ip", &src_ip) == META_FALSE;
-	ret += metadata_readFromElement(params, "send_src_port", &src_port) == META_FALSE;
-	ret += metadata_readFromElement(params, "send_dst_ip", &dst_ip) == META_FALSE;
-	ret += metadata_readFromElement(params, "send_dst_port", &dst_port) == META_FALSE;
-
-	if (ret) {
-		//TODO error
-		PRINT_ERROR("todo error");
-	}
+	secure_metadata_readFromElement(params, "send_src_ip", &src_ip);
+	secure_metadata_readFromElement(params, "send_src_port", &src_port);
+	secure_metadata_readFromElement(params, "send_dst_ip", &dst_ip);
+	secure_metadata_readFromElement(params, "send_dst_port", &dst_port);
 
 	uint32_t protocol = UDP_PROTOCOL;
-	metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
 
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
@@ -156,7 +149,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 
 		if (udp_sent_list_has_space(udp_sent_packet_list)) {
 			udp_sent_list_append(udp_sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max)
+			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max);
 
 			gettimeofday(&sent->stamp, 0);
 		} else {
@@ -169,7 +162,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 				udp_sent_free(old);
 			}
 			udp_sent_list_append(udp_sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max)
+			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max);
 
 			gettimeofday(&sent->stamp, 0);
 		}

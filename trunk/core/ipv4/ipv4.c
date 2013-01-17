@@ -55,7 +55,7 @@ void *switch_to_ipv4(void *local) {
 struct ipv4_interface *ipv4_interface_create(uint64_t addr_mac, uint32_t addr_ip) {
 	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", addr_mac, addr_ip);
 
-	struct ipv4_interface *interface = (struct ipv4_interface *) fins_malloc(sizeof(struct ipv4_interface));
+	struct ipv4_interface *interface = (struct ipv4_interface *) secure_malloc(sizeof(struct ipv4_interface));
 	interface->next = NULL;
 
 	interface->addr_mac = addr_mac;
@@ -142,7 +142,7 @@ int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address) {
 struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint8_t *pdu) {
 	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
 
-	struct ipv4_request *request = (struct ipv4_request *) fins_malloc(sizeof(struct ipv4_request));
+	struct ipv4_request *request = (struct ipv4_request *) secure_malloc(sizeof(struct ipv4_request));
 	request->next = NULL;
 
 	request->ff = ff;
@@ -172,7 +172,7 @@ void ipv4_request_free(struct ipv4_request *request) {
 struct ipv4_request_list *ipv4_request_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct ipv4_request_list *request_list = (struct ipv4_request_list *) fins_malloc(sizeof(struct ipv4_request_list));
+	struct ipv4_request_list *request_list = (struct ipv4_request_list *) secure_malloc(sizeof(struct ipv4_request_list));
 	request_list->max = max;
 	request_list->len = 0;
 
@@ -246,7 +246,7 @@ void ipv4_request_list_free(struct ipv4_request_list *request_list) {
 struct ipv4_cache *ipv4_cache_create(uint32_t addr_ip) {
 	PRINT_DEBUG("Entered: ip=%u", addr_ip);
 
-	struct ipv4_cache *cache = (struct ipv4_cache *) fins_malloc(sizeof(struct ipv4_cache));
+	struct ipv4_cache *cache = (struct ipv4_cache *) secure_malloc(sizeof(struct ipv4_cache));
 	cache->next = NULL;
 
 	cache->addr_mac = IPV4_MAC_NULL;
@@ -372,7 +372,7 @@ int ipv4_cache_list_has_space(void) {
 struct ipv4_store *ipv4_store_create(uint32_t serial_num, struct ipv4_cache *cache, struct ipv4_request *request) { //TODO remove request? not used
 	PRINT_DEBUG("Entered: serial_num=%u, cache=%p, request=%p", serial_num, cache, request);
 
-	struct ipv4_store *store = (struct ipv4_store *) fins_malloc(sizeof(struct ipv4_store));
+	struct ipv4_store *store = (struct ipv4_store *) secure_malloc(sizeof(struct ipv4_store));
 	store->next = NULL;
 
 	store->serial_num = serial_num;

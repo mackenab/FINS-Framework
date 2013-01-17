@@ -39,17 +39,17 @@ int rtm_out_fd;
 //Code to receive a finsFrame from the Switch
 void rtm_get_ff() {
 	int numBytes = 0;
-	
+
 	struct finsFrame *ff;
 	do {
-		fins_sem_wait(&Switch_to_RTM_Qsem);
+		secure_sem_wait(&Switch_to_RTM_Qsem);
 		ff = read_queue(Switch_to_RTM_Queue);
 		sem_post(&Switch_to_RTM_Qsem);
 	} while (ff == NULL);
 
 	if (ff->dataOrCtrl == CONTROL) { //CONTROL FF
-									 // send to something to deal with FCF
-									 //format: || Data/Control | Destination_IDs_List | SenderID | Write_parameter_Confirmation_Code | Serial_Number ||
+		// send to something to deal with FCF
+		//format: || Data/Control | Destination_IDs_List | SenderID | Write_parameter_Confirmation_Code | Serial_Number ||
 
 		PRINT_DEBUG("send to CONTROL HANDLER !");
 		PRINT_DEBUG("dataOrCtrl parameter has been set to %d", (int)(ff->dataOrCtrl));
@@ -71,11 +71,11 @@ void rtm_get_ff() {
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.senderID, sizeof(unsigned char));
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.opcode, sizeof(unsigned short int));
 		numBytes += write(rtm_out_fd, &ff->ctrlFrame.serial_num, sizeof(unsigned int));
-		PRINT_DEBUG("serial_num %d", ff->ctrlFrame.serial_num)
+		PRINT_DEBUG ("serial_num %d", ff->ctrlFrame.serial_num);
 
 	} else //DATA FF
 	{
-		PRINT_DEBUG("Find out what to do with data frames")
+		PRINT_DEBUG("Find out what to do with data frames");
 	}
 
 }
@@ -115,7 +115,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 	int length_serialized_FCF;
 
 	//create a finsframe to be sent tover the queue
-	struct finsFrame *fins_frame = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
+	struct finsFrame *fins_frame = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	fins_frame->dataOrCtrl = CONTROL;
 
 	//opens the pipe from clicomm (or wherever)
@@ -127,7 +127,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 	}
 
 	fflush(stdout);
-	
+
 	while (1) {
 		temp_serial_cntr++; //used as a temporary serial_number generator
 
@@ -153,7 +153,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 		fins_frame->ctrlFrame.serial_num = temp_serial_cntr;
 
 		//SEND TO QUEUE
-		fins_sem_wait(&RTM_to_Switch_Qsem);
+		secure_sem_wait(&RTM_to_Switch_Qsem);
 		write_queue(fins_frame, RTM_to_Switch_Queue);
 		sem_post(&RTM_to_Switch_Qsem);
 		PRINT_DEBUG("sent data ");
