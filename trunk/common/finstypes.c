@@ -13,23 +13,36 @@
 uint32_t control_serial_num = 0;
 sem_t control_serial_sem;
 
-void *fins_malloc(uint32_t len) {
+void *fins_malloc_full(const char *file, const char *func, int line, uint32_t len) {
 	void *buf = malloc(len);
 	if (buf == NULL) {
-		PRINT_ERROR("alloc error: len=%u", len);
+		//PRINT_ERROR("alloc error: len=%u", len);
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):alloc error: len=%u\n", __FILE__, __FUNCTION__, __LINE__, len);
+		fflush(stdout);
+#endif
 		exit(-1);
 	}
 	return buf;
+}
+
+void fins_sem_wait_full(const char *file, const char *func, int line, sem_t *sem) {
+	int ret;
+	if ((ret = sem_wait(sem))) {
+		//PRINT_ERROR("sem wait prob: sem=%p, ret=%d", sem, ret);
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):sem wait prob: sem=%p, ret=%d\n", __FILE__, __FUNCTION__, __LINE__, sem, ret);
+		fflush(stdout);
+#endif
+		exit(-1);
+	}
 }
 
 uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
 	//TODO replace this with a random number generator
-	if (sem_wait(&control_serial_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&control_serial_sem);
 	num = ++control_serial_num;
 	sem_post(&control_serial_sem);
 

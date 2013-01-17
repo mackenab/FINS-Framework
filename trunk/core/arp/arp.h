@@ -84,21 +84,23 @@ int check_valid_arp(struct arp_message *msg);
 struct arp_interface {
 	struct arp_interface *next;
 
-	uint64_t mac_addr;
-	uint32_t ip_addr;
+	uint64_t addr_mac;
+	uint32_t addr_ip;
 };
 
-struct arp_interface *arp_interface_create(uint64_t mac_addr, uint32_t ip_addr);
+struct arp_interface *arp_interface_create(uint64_t addr_mac, uint32_t addr_ip);
 void arp_interface_free(struct arp_interface *interface);
 
 #define ARP_INTERFACE_LIST_MAX 256
 
 //TODO augment?
 int arp_interface_list_insert(struct arp_interface *interface);
-struct arp_interface *arp_interface_list_find(uint32_t ip_addr);
+struct arp_interface *arp_interface_list_find(uint32_t addr_ip);
 void arp_interface_list_remove(struct arp_interface *interface);
 int arp_interface_list_is_empty(void);
 int arp_interface_list_has_space(void);
+
+int arp_register_interface(uint64_t MAC_address, uint32_t IP_address);
 
 struct arp_request {
 	struct arp_request *next;
@@ -133,8 +135,8 @@ struct arp_cache {
 	struct arp_cache *next;
 	uint8_t running_flag;
 
-	uint64_t mac_addr;
-	uint32_t ip_addr;
+	uint64_t addr_mac;
+	uint32_t addr_ip;
 
 	struct arp_request_list *request_list;
 	uint8_t seeking;
@@ -152,13 +154,13 @@ struct arp_cache {
 #define ARP_RETRIES 2
 #define ARP_TO_MIN 0.00001
 
-struct arp_cache *arp_cache_create(uint32_t ip_addr);
+struct arp_cache *arp_cache_create(uint32_t addr_ip);
 void arp_cache_shutdown(struct arp_cache *cache);
 void arp_cache_free(struct arp_cache *cache);
 
 #define ARP_CACHE_LIST_MAX 8192
 int arp_cache_list_insert(struct arp_cache *cache);
-struct arp_cache *arp_cache_list_find(uint32_t ip_addr);
+struct arp_cache *arp_cache_list_find(uint32_t addr_ip);
 void arp_cache_list_remove(struct arp_cache *cache);
 struct arp_cache *arp_cache_list_remove_first_non_seeking(void);
 int arp_cache_list_is_empty(void);
@@ -166,8 +168,8 @@ int arp_cache_list_has_space(void);
 
 void print_msgARP(struct arp_message *);
 void print_neighbors(struct arp_cache *ptr_to_cache);
-void print_IP_addrs(uint32_t ip_addrs);
-void print_MAC_addrs(uint64_t mac_addrs);
+void print_IP_addrs(uint32_t addr_ip);
+void print_MAC_addrs(uint64_t addr_mac);
 void print_arp_hdr(struct arp_hdr *pckt);
 void print_cache();
 
@@ -178,8 +180,6 @@ void arp_init(void);
 void arp_run(pthread_attr_t *fins_pthread_attr);
 void arp_shutdown(void);
 void arp_release(void);
-
-int arp_register_interface(uint64_t MAC_address, uint32_t IP_address);
 
 void arp_get_ff(void);
 int arp_to_switch(struct finsFrame *ff);

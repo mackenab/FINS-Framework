@@ -193,10 +193,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("todo error");
-
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t protocol;
@@ -204,9 +202,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 	int ret = 0;
 	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
 	if (ret) {
-		PRINT_ERROR("todo error");
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
@@ -683,14 +680,8 @@ void icmp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		if (sem_wait(icmp_proto.event_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
-		if (sem_wait(icmp_proto.input_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(icmp_proto.event_sem);
+		fins_sem_wait(icmp_proto.input_sem);
 		ff = read_queue(icmp_proto.input_queue);
 		sem_post(icmp_proto.input_sem);
 	} while (icmp_proto.running_flag && ff == NULL);

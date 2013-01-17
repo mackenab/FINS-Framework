@@ -310,14 +310,8 @@ void interface_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		if (sem_wait(interface_proto.event_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
-		if (sem_wait(interface_proto.input_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(interface_proto.event_sem);
+		fins_sem_wait(interface_proto.input_sem);
 		ff = read_queue(interface_proto.input_queue);
 		sem_post(interface_proto.input_sem);
 	} while (interface_proto.running_flag && ff == NULL);

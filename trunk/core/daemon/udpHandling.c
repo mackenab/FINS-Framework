@@ -27,10 +27,7 @@ void socket_out_udp(struct nl_wedge_to_daemon *hdr, int domain, int type, int pr
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &udp_ops
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
@@ -72,10 +69,7 @@ void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	PRINT_DEBUG("bind address: host=%s/%d, host_IP_netformat=%d", inet_ntoa(addr->sin_addr), host_port, addr->sin_addr.s_addr);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -127,10 +121,7 @@ void listen_out_udp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	PRINT_DEBUG("Entered: hdr=%p, backlog=%d", hdr, backlog);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -181,10 +172,7 @@ void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	 * */
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -244,10 +232,7 @@ void accept_out_udp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 
 	//TODO: finish this
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -270,10 +255,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	PRINT_DEBUG("Entered: hdr=%p, peer=%d", hdr, peer);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -338,12 +320,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
-	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if (addr == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	struct sockaddr_in *addr = (struct sockaddr_in *) fins_malloc(sizeof(struct sockaddr_in));
 
 	if (peer == 0) { //getsockname
 		addr->sin_family = AF_INET;
@@ -366,12 +343,7 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	//send msg to wedge
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + len;
-	uint8_t *msg = (uint8_t *) malloc(msg_len);
-	if (msg == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 	hdr_ret->call_type = hdr->call_type;
@@ -415,10 +387,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -435,12 +404,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len);
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -472,12 +436,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len);
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -579,10 +538,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("CRASH !! socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -653,12 +609,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 #endif
 	//########################
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	//metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
@@ -699,10 +650,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -746,11 +694,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 						msg_controllen = CONTROL_LEN_DEFAULT;
 					}
 
-					control_msg = (uint8_t *) malloc(msg_controllen);
-					if (control_msg == NULL) {
-						PRINT_ERROR("alloc error");
-						exit(-1);
-					}
+					control_msg = (uint8_t *) fins_malloc(msg_controllen);
 					uint8_t *control_pt = control_msg;
 
 					uint32_t cmsg_data_len;
@@ -890,11 +834,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				int addr_len = sizeof(struct sockaddr_in);
 
 				int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + ff->ctrlFrame.data_len + control_len;
-				uint8_t *msg = (uint8_t *) malloc(msg_len);
-				if (msg == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 				struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 				hdr_ret->call_type = hdr->call_type;
@@ -995,11 +935,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 					msg_controllen = CONTROL_LEN_DEFAULT;
 				}
 
-				control_msg = (uint8_t *) malloc(msg_controllen);
-				if (control_msg == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				control_msg = (uint8_t *) fins_malloc(msg_controllen);
 				uint8_t *control_pt = control_msg;
 
 				uint32_t cmsg_data_len;
@@ -1125,11 +1061,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			int addr_len = sizeof(struct sockaddr_in);
 
 			int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + ff->dataFrame.pduLength + control_len;
-			uint8_t *msg = (uint8_t *) malloc(msg_len);
-			if (msg == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
+			uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 			struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 			hdr_ret->call_type = hdr->call_type;
@@ -1213,10 +1145,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -1239,11 +1168,7 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 
 	//TODO send FCF to UDP module clearing error buffers of any msgs from this socket
 	if (host_port != 0 && 0) { //TODO remove if keep rolling sent_list queue
-		metadata *params_req = (metadata *) malloc(sizeof(metadata));
-		if (params_req == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		metadata *params_req = (metadata *) fins_malloc(sizeof(metadata));
 		metadata_create(params_req);
 
 		metadata_writeToElement(params_req, "host_ip", &host_ip, META_TYPE_INT32);
@@ -1266,10 +1191,7 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 	uint32_t mask = 0;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -1443,10 +1365,7 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -1646,10 +1565,7 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	char *val;
 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
@@ -1780,12 +1696,7 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	//if (len) {
 	//send msg to wedge
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
-	uint8_t *msg = (uint8_t *) malloc(msg_len);
-	if (msg == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 	hdr_ret->call_type = hdr->call_type;
@@ -1850,11 +1761,7 @@ void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, u
 	if (ret_mask) {
 		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge);
-		uint8_t *msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 		struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = poll_event_call;
@@ -1953,11 +1860,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 			msg_controllen = CONTROL_LEN_DEFAULT;
 		}
 
-		control_msg = (uint8_t *) malloc(msg_controllen);
-		if (control_msg == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		control_msg = (uint8_t *) fins_malloc(msg_controllen);
 		uint8_t *control_pt = control_msg;
 
 		uint32_t cmsg_data_len;
@@ -2068,11 +1971,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 	int addr_len = sizeof(struct sockaddr_in);
 
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + data_len + control_len;
-	uint8_t *msg = (uint8_t *) malloc(msg_len);
-	if (msg == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 	hdr_ret->call_type = call->call_type;
@@ -2151,10 +2050,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	//metadata_writeToElement(params, "stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match((uint16_t) dst_port, dst_ip, IPPROTO_UDP); //TODO change for multicast
 	if (sock_index == -1) {
 		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port); //TODO change back  to PRINT_ERROR
@@ -2226,10 +2122,7 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match((uint16_t) src_port, src_ip, IPPROTO_UDP); //TODO change for multicast
 	if (sock_index == -1) {
 		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);PRINT_DEBUG("post$$$$$$$$$$$$$$$");

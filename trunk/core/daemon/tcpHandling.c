@@ -25,10 +25,7 @@ void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int pr
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (protocol == IPPROTO_IP) {
 		protocol = IPPROTO_TCP; //TODO remove this if we support other proto's
 	}
@@ -64,10 +61,7 @@ void bind_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	PRINT_DEBUG("bind address: host=%u (%s):%d, host_IP_netformat=%u", host_ip, inet_ntoa(addr->sin_addr), host_port, htonl(host_ip));
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -128,10 +122,7 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	PRINT_DEBUG("Entered: hdr=%p, backlog=%d", hdr, backlog);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -160,12 +151,7 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	 *  */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	metadata_writeToElement(params, "backlog", &backlog, META_TYPE_INT32);
@@ -227,10 +213,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	PRINT_DEBUG("address: rem=%u (%s):%u, rem_IP_netformat=%u", rem_ip, inet_ntoa(addr->sin_addr), rem_port, htonl(rem_ip));
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket removed/changed");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -359,12 +342,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
 			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
@@ -417,10 +395,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 			(MSG_CMSG_CLOEXEC & flags)>0, MSG_CMSG_CLOEXEC, (MSG_DONTWAIT & flags)>0, MSG_DONTWAIT, (MSG_ERRQUEUE & flags)>0, MSG_ERRQUEUE, (MSG_OOB & flags)>0, MSG_OOB, (MSG_PEEK & flags)>0, MSG_PEEK, (MSG_TRUNC & flags)>0, MSG_TRUNC, (MSG_WAITALL & flags)>0, MSG_WAITALL);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket removed/changed");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -491,12 +466,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 
 	//TODO process flags?
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
@@ -551,10 +521,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	PRINT_DEBUG("Entered: hdr=%p, peer=%d", hdr, peer);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -597,12 +564,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
-	struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	if (addr == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	struct sockaddr_in *addr = (struct sockaddr_in *) fins_malloc(sizeof(struct sockaddr_in));
 
 	if (peer == 0) { //getsockname
 		addr->sin_family = AF_INET;
@@ -626,12 +588,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 
 	//send msg to wedge
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + len;
-	uint8_t *msg = (uint8_t *) malloc(msg_len);
-	if (msg == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 	hdr_ret->call_type = hdr->call_type;
@@ -678,10 +635,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -705,12 +659,8 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -739,12 +689,8 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 
 		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -818,10 +764,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("CRASH !! socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -900,12 +843,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	PRINT_DEBUG("host=%u/%u, dst=%u/%u", host_ip, host_port, dst_ip, dst_port);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
@@ -967,10 +905,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			(MSG_CMSG_CLOEXEC & flags)>0, MSG_CMSG_CLOEXEC, (MSG_DONTWAIT & flags)>0, MSG_DONTWAIT, (MSG_ERRQUEUE & flags)>0, MSG_ERRQUEUE, (MSG_OOB & flags)>0, MSG_OOB, (MSG_PEEK & flags)>0, MSG_PEEK, (MSG_TRUNC & flags)>0, MSG_TRUNC, (MSG_WAITALL & flags)>0, MSG_WAITALL);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1082,11 +1017,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 					msg_controllen = CONTROL_LEN_DEFAULT;
 				}
 
-				control_msg = (uint8_t *) malloc(msg_controllen);
-				if (control_msg == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				control_msg = (uint8_t *) fins_malloc(msg_controllen);
 				uint8_t *control_pt = control_msg;
 
 				uint32_t cmsg_data_len;
@@ -1156,11 +1087,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			int addr_len = sizeof(struct sockaddr_in);
 
 			int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + ff->dataFrame.pduLength + control_len;
-			uint8_t *msg = (uint8_t *) malloc(msg_len);
-			if (msg == NULL) {
-				PRINT_ERROR("alloc error");
-				exit(-1);
-			}
+			uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 			struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 			hdr_ret->call_type = hdr->call_type;
@@ -1209,11 +1136,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				//	PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
 				//}
 
-				metadata *params_resp = (metadata *) malloc(sizeof(metadata));
-				if (params_resp == NULL) {
-					PRINT_ERROR("alloc error");
-					exit(-1);
-				}
+				metadata *params_resp = (metadata *) fins_malloc(sizeof(metadata));
 				metadata_create(params_resp);
 
 				uint32_t value = ff->dataFrame.pduLength;
@@ -1280,10 +1203,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 
 	PRINT_DEBUG("hdr=%p", hdr);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1312,12 +1232,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 		PRINT_DEBUG("release address: host=%u/%u", host_ip, host_port);
 	}
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	//metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
@@ -1364,10 +1279,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 	uint32_t mask = 0;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1410,12 +1322,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 			}
 
-			metadata *params = (metadata *) malloc(sizeof(metadata));
-			if (params == NULL) {
-				PRINT_ERROR("alloc error");
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-				exit(-1);
-			}
+			metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 			metadata_create(params);
 
 			uint32_t initial = 1;
@@ -1554,12 +1461,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 						PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 					}
 
-					metadata *params = (metadata *) malloc(sizeof(metadata));
-					if (params == NULL) {
-						PRINT_ERROR("alloc error");
-						nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-						exit(-1);
-					}
+					metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 					metadata_create(params);
 
 					uint32_t initial = 0;
@@ -1649,12 +1551,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 			}
 
-			metadata *params = (metadata *) malloc(sizeof(metadata));
-			if (params == NULL) {
-				PRINT_ERROR("alloc error");
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-				exit(-1);
-			}
+			metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 			metadata_create(params);
 
 			uint32_t initial = 0;
@@ -1737,10 +1634,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1761,12 +1655,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	int send_dst = -1;
@@ -1897,12 +1786,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
-		uint8_t *msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 		struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1973,10 +1857,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1997,12 +1878,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("alloc error");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-		exit(-1);
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	int send_dst = -1;
@@ -2188,10 +2064,8 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("Exiting, fcf errors: ff=%p, meta=%p", ff, params);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t ret_msg;
@@ -2200,17 +2074,12 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 	ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata, ret=%d", ret);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
 		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2260,10 +2129,8 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("Exiting, fcf errors: ff=%p, meta=%p", ff, params);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t ret_msg;
@@ -2276,17 +2143,12 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 	ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata, ret=%d", ret);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
 		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2362,10 +2224,8 @@ void sendmsg_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("Exiting, fcf errors: ff=%p, meta=%p", ff, params);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t ret_msg;
@@ -2374,10 +2234,8 @@ void sendmsg_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 	ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata, ret=%d", ret);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	if (ff->ctrlFrame.ret_val) {
@@ -2412,12 +2270,7 @@ void getsockopt_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, u
 
 		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
-		uint8_t *msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(call_id, call_index, call_type, 0);
-			exit(-1);
-		}
+		uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 		struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = call_type;
@@ -2496,10 +2349,7 @@ void release_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 	} else {
 		PRINT_DEBUG("");
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&daemon_sockets_sem);
 		if (daemon_sockets[sock_index].sock_id != sock_id) {
 			PRINT_ERROR("Exited: socket closed: ff=%p", ff);
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2526,10 +2376,8 @@ void poll_in_tcp_fcf(struct finsFrame *ff, uint32_t call_id, int call_index, int
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("Exiting, fcf errors: ff=%p, meta=%p", ff, params);
-		nack_send(call_id, call_index, call_type, 0);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t ret_msg = 0;
@@ -2537,6 +2385,11 @@ void poll_in_tcp_fcf(struct finsFrame *ff, uint32_t call_id, int call_index, int
 	int ret = 0;
 	ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
 	//ret += metadata_readFromElement(params, "mask", &mask) == META_FALSE;
+
+	if (ret) {
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
+	}
 
 	if (ret || (ff->ctrlFrame.param_id != EXEC_TCP_POLL) || ff->ctrlFrame.ret_val == 0) {
 		PRINT_ERROR("Exiting, NACK: ff=%p, ret=%d, param_id=%d, ret_val=%u", ff, ret, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
@@ -2548,10 +2401,7 @@ void poll_in_tcp_fcf(struct finsFrame *ff, uint32_t call_id, int call_index, int
 			if (flags) { //flags == initial
 
 				PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-				if (sem_wait(&daemon_sockets_sem)) {
-					PRINT_ERROR("sem wait prob");
-					exit(-1);
-				}
+				fins_sem_wait(&daemon_sockets_sem);
 				if (daemon_sockets[sock_index].sock_id != sock_id) {
 					PRINT_ERROR("Exited: socket closed: ff=%p", ff);
 					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2617,11 +2467,7 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 	if (ret_mask) {
 		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge);
-		uint8_t *msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 		struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = poll_event_call;
@@ -2694,11 +2540,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 			msg_controllen = CONTROL_LEN_DEFAULT;
 		}
 
-		control_msg = (uint8_t *) malloc(msg_controllen);
-		if (control_msg == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		control_msg = (uint8_t *) fins_malloc(msg_controllen);
 		uint8_t *control_pt = control_msg;
 
 		uint32_t cmsg_data_len;
@@ -2745,11 +2587,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 	int addr_len = sizeof(struct sockaddr_in);
 
 	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + data_len + control_len;
-	uint8_t *msg = (uint8_t *) malloc(msg_len);
-	if (msg == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *msg = (uint8_t *) fins_malloc(msg_len);
 
 	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
 	hdr_ret->call_type = call->call_type;
@@ -2808,11 +2646,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 
 		PRINT_DEBUG("recvfrom address: state=%u, host=%u/%u, rem=%u/%u,", state, host_ip, host_port, rem_ip, rem_port);
 
-		metadata *params_reply = (metadata *) malloc(sizeof(metadata));
-		if (params_reply == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
+		metadata *params_reply = (metadata *) fins_malloc(sizeof(metadata));
 		metadata_create(params_reply);
 
 		uint32_t value = data_len;
@@ -2864,10 +2698,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match_connection(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port, IPPROTO_TCP);
 	if (sock_index == -1) {
 		sock_index = daemon_sockets_match_connection(src_ip, (uint16_t) src_port, 0, 0, IPPROTO_TCP);
@@ -2948,10 +2779,7 @@ void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	//metadata_writeToElement(params, "stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	//src == host & dst == rem
 	int sock_index = daemon_sockets_match_connection(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port, IPPROTO_TCP);
 	if (sock_index == -1) {
@@ -3009,10 +2837,7 @@ void daemon_tcp_in_poll(struct finsFrame *ff, uint32_t ret_msg) {
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match_connection(host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, IPPROTO_TCP);
 	if (sock_index == -1) {
 		sock_index = daemon_sockets_match_connection(host_ip, (uint16_t) host_port, 0, 0, IPPROTO_TCP);
@@ -3156,12 +2981,8 @@ void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("Exiting, meta null: ff=%p, meta=%p", ff, params);
-		if (reply)
-			nack_send(call->call_id, call->call_index, call->call_type, 0);
-		call_free(call);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t ret_msg;
@@ -3170,19 +2991,12 @@ void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t
 	ret += metadata_readFromElement(params, "ret_msg", &ret_msg) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata, ret=%d", ret);
-		if (reply)
-			nack_send(call->call_id, call->call_index, call->call_type, 0);
-		call_free(call);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
 		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -3240,12 +3054,8 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("Exiting, meta null: ff=%p, meta=%p", ff, params);
-		if (reply)
-			nack_send(call->call_id, call->call_index, call->call_type, 0);
-		call_free(call);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	uint32_t ret_msg;
@@ -3259,19 +3069,12 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 	ret += metadata_readFromElement(params, "rem_port", &rem_port) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata, ret=%d", ret);
-		if (reply)
-			nack_send(call->call_id, call->call_index, call->call_type, 0);
-		call_free(call);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
 		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");

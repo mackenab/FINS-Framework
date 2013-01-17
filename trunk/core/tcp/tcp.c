@@ -475,10 +475,7 @@ void conn_stub_shutdown(struct tcp_connection_stub *conn_stub) {
 	//clear all threads using this conn_stub
 	while (1) {
 		/*#*/PRINT_DEBUG("");
-		if (sem_wait(&conn_stub_list_sem)) {
-			PRINT_ERROR("conn_stub_list_sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&conn_stub_list_sem);
 		if (conn_stub->threads <= 1) {
 			/*#*/PRINT_DEBUG("");
 			sem_post(&conn_stub_list_sem);
@@ -493,10 +490,7 @@ void conn_stub_shutdown(struct tcp_connection_stub *conn_stub) {
 		/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 		sem_post(&conn_stub->sem);
 		/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-		if (sem_wait(&conn_stub->sem)) {
-			PRINT_ERROR("conn_stub->sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&conn_stub->sem);
 	}
 
 	PRINT_DEBUG("Exited: conn_stub=%p", conn_stub);
@@ -1386,10 +1380,7 @@ void *main_thread(void *local) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-	if (sem_wait(&conn->sem)) {
-		PRINT_ERROR("conn->sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&conn->sem);
 	while (conn->running_flag) {
 		PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 				conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
@@ -1439,16 +1430,10 @@ void *main_thread(void *local) {
 			sem_post(&conn->sem);
 
 			PRINT_DEBUG("");
-			if (sem_wait(&conn->main_wait_sem)) {
-				PRINT_ERROR("conn->main_wait_sem wait prob");
-				exit(-1);
-			}
+			fins_sem_wait(&conn->main_wait_sem);
 
 			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->sem wait prob");
-				exit(-1);
-			}
+			fins_sem_wait(&conn->sem);
 			conn->main_wait_flag = 0;
 			//sem_init(&conn->main_wait_sem, 0, 0);
 		} else {
@@ -1456,18 +1441,12 @@ void *main_thread(void *local) {
 			sem_post(&conn->sem);
 
 			/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-			if (sem_wait(&conn->sem)) {
-				PRINT_ERROR("conn->sem wait prob");
-				exit(-1);
-			}
+			fins_sem_wait(&conn->sem);
 		}
 	}
 
 	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&conn_list_sem);
 	conn_list_remove(conn);
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
@@ -1796,10 +1775,7 @@ void conn_stop(struct tcp_connection *conn) {
 
 	while (1) {
 		/*#*/PRINT_DEBUG("");
-		if (sem_wait(&conn_list_sem)) {
-			PRINT_ERROR("conn_list_sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&conn_list_sem);
 		if (conn->threads <= 1) {
 			/*#*/PRINT_DEBUG("");
 			sem_post(&conn_list_sem);
@@ -1812,10 +1788,7 @@ void conn_stop(struct tcp_connection *conn) {
 		/*#*/PRINT_DEBUG("sem_post: conn=%p", conn);
 		sem_post(&conn->sem);
 		/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
-		if (sem_wait(&conn->sem)) {
-			PRINT_ERROR("conn->sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&conn->sem);
 	}
 
 	/*#*/PRINT_DEBUG("");
@@ -1925,10 +1898,7 @@ uint32_t tcp_gen_thread_id(void) {
 	//uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
-	if (sem_wait(&tcp_thread_id_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&tcp_thread_id_sem);
 	num = ++tcp_thread_id_num;
 	sem_post(&tcp_thread_id_sem);
 
@@ -2039,7 +2009,7 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("metadata NULL");
+		PRINT_ERROR("Error fcf.metadata==NULL");
 		exit(-1);
 	}
 
@@ -2047,6 +2017,11 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 	uint32_t protocol;
 	ret += metadata_readFromElement(params, "recv_protocol", &protocol) == META_FALSE;
+
+	if (ret) {
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
+	}
 
 	if (ret || protocol != IPPROTO_TCP) {
 		PRINT_ERROR("error: ret=%d, protocol=%u", ret, protocol);
@@ -2800,14 +2775,8 @@ void tcp_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		if (sem_wait(tcp_proto.event_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
-		if (sem_wait(tcp_proto.input_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(tcp_proto.event_sem);
+		fins_sem_wait(tcp_proto.input_sem);
 		ff = read_queue(tcp_proto.input_queue);
 		sem_post(tcp_proto.input_sem);
 	} while (tcp_proto.running_flag && ff == NULL);
@@ -2844,10 +2813,7 @@ void tcp_shutdown(void) {
 	//shutdown every conn/conn_stub
 
 	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&conn_list_sem);
 	struct tcp_connection *conn = conn_list;
 	struct tcp_connection *old_conn;
 	while (conn) { //change to conn_list_is_empty()
@@ -2861,10 +2827,7 @@ void tcp_shutdown(void) {
 	sem_post(&conn_list_sem);
 
 	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_stub_list_sem)) {
-		PRINT_ERROR("conn_stub_list_sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&conn_stub_list_sem);
 	struct tcp_connection_stub *conn_stub = conn_stub_list;
 	struct tcp_connection_stub *old_conn_stub;
 	while (conn_stub) { //change to conn_list_is_empty()
@@ -3207,11 +3170,7 @@ int tcp_to_switch(struct finsFrame *ff) {
 }
 
 int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -3228,13 +3187,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 		metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, meta=%p", params);
-		metadata_destroy(params);
-		return 0;
-	}
-
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -3261,11 +3214,7 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, data_len);
 
-	metadata *params = (metadata *) malloc(sizeof(metadata));
-	if (params == NULL) {
-		PRINT_ERROR("metadata creation failed");
-		return 0;
-	}
+	metadata *params = (metadata *) fins_malloc(sizeof(metadata));
 	metadata_create(params);
 
 	uint32_t protocol = IPPROTO_TCP;
@@ -3278,18 +3227,7 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 	uint32_t rem_port_buf = rem_port;
 	metadata_writeToElement(params, "recv_dst_port", &rem_port_buf, META_TYPE_INT32);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("ff creation failed, meta=%p", params);
-		metadata_destroy(params);
-		return 0;
-	}
-
-	PRINT_DEBUG("src=%u/%u, dst=%u/%u, ff=%p", host_ip, host_port, rem_ip, rem_port, ff);
-
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
@@ -3298,6 +3236,8 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 	ff->dataFrame.directionFlag = UP;
 	ff->dataFrame.pduLength = data_len;
 	ff->dataFrame.pdu = data;
+
+	PRINT_DEBUG("src=%u/%u, dst=%u/%u, ff=%p", host_ip, host_port, rem_ip, rem_port, ff);
 
 	/**TODO insert the frame into daemon_to_switch queue
 	 * check if insertion succeeded or not then

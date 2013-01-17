@@ -26,8 +26,8 @@ struct ip4_routing_table* routing_table;
 struct ip4_packet *construct_packet_buffer;
 struct ip4_stats stats;
 
-struct ip4_store *store_list;
-uint32_t store_num;
+struct ipv4_store *ipv4_store_list;
+uint32_t ipv4_store_num;
 
 struct ipv4_interface *ipv4_interface_list;
 uint32_t ipv4_interface_num;
@@ -51,116 +51,17 @@ void *switch_to_ipv4(void *local) {
 	pthread_exit(NULL);
 }
 
-struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_t *pdu) {
-	PRINT_DEBUG("Entered: serial_num=%u, ff=%p, pdu=%p", serial_num, ff, pdu);
-
-	struct ip4_store *store = (struct ip4_store *) fins_malloc(sizeof(struct ip4_store));
-	store->next = NULL;
-
-	store->serial_num = serial_num;
-	store->ff = ff;
-	store->pdu = pdu;
-
-	PRINT_DEBUG("Exited: serial_num=%u, ff=%p, pdu=%p, store=%p", serial_num, ff, pdu, store);
-	return store;
-}
-
-void store_free(struct ip4_store *store) {
-	PRINT_DEBUG("Entered: store=%p", store);
-
-	if (store->pdu) {
-		PRINT_DEBUG("Freeing pdu=%p", store->pdu);
-		free(store->pdu);
-	}
-
-	if (store->ff)
-		freeFinsFrame(store->ff);
-
-	free(store);
-}
-
-int store_list_insert(struct ip4_store *store) {
-	PRINT_DEBUG("Entered: store=%p", store);
-
-	if (store_list == NULL) {
-		store_list = store;
-	} else {
-		struct ip4_store *temp = store_list;
-
-		while (temp->next != NULL) {
-			temp = temp->next;
-		}
-
-		temp->next = store;
-		store->next = NULL;
-	}
-
-	store_num++;
-	PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
-	return 1;
-}
-
-struct ip4_store *store_list_find(uint32_t serial_num) {
-	PRINT_DEBUG("Entered: serial_num=%u", serial_num);
-
-	struct ip4_store *temp = store_list;
-
-	while (temp != NULL && temp->serial_num != serial_num) {
-		temp = temp->next;
-	}
-
-	PRINT_DEBUG("Exited: serial_num=%u, store=%p", serial_num, temp);
-	return temp;
-}
-
-void store_list_remove(struct ip4_store *store) {
-	PRINT_DEBUG("Entered: store=%p", store);
-
-	if (store_list == NULL) {
-		PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
-		return;
-	}
-
-	if (store_list == store) {
-		store_list = store_list->next;
-		store_num--;
-		PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
-		return;
-	}
-
-	struct ip4_store *temp = store_list;
-	while (temp->next != NULL) {
-		if (temp->next == store) {
-			temp->next = store->next;
-			store_num--;
-			PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
-			return;
-		}
-		temp = temp->next;
-	}
-
-	PRINT_DEBUG("Exited: store=%p, store_num=%u", store, store_num);
-}
-
-int store_list_is_empty(void) {
-	return store_num == 0;
-}
-
-int store_list_has_space(void) {
-	return store_num < IP4_STORE_LIST_MAX;
-}
-
 //################ ARP/interface stuff //TODO move to common?
-struct ipv4_interface *ipv4_interface_create(uint64_t mac_addr, uint32_t ip_addr) {
-	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", mac_addr, ip_addr);
+struct ipv4_interface *ipv4_interface_create(uint64_t addr_mac, uint32_t addr_ip) {
+	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", addr_mac, addr_ip);
 
 	struct ipv4_interface *interface = (struct ipv4_interface *) fins_malloc(sizeof(struct ipv4_interface));
 	interface->next = NULL;
 
-	interface->mac_addr = mac_addr;
-	interface->ip_addr = ip_addr;
+	interface->addr_mac = addr_mac;
+	interface->addr_ip = addr_ip;
 
-	PRINT_DEBUG("Exited: mac=0x%llx, ip=%u, interface=%p", mac_addr, ip_addr, interface);
+	PRINT_DEBUG("Exited: mac=0x%llx, ip=%u, interface=%p", addr_mac, addr_ip, interface);
 	return interface;
 }
 
@@ -180,16 +81,16 @@ int ipv4_interface_list_insert(struct ipv4_interface *interface) {
 	return 1;
 }
 
-struct ipv4_interface *ipv4_interface_list_find(uint32_t ip_addr) {
-	PRINT_DEBUG("Entered: ip=%u", ip_addr);
+struct ipv4_interface *ipv4_interface_list_find(uint32_t addr_ip) {
+	PRINT_DEBUG("Entered: ip=%u", addr_ip);
 
 	struct ipv4_interface *interface = ipv4_interface_list;
 
-	while (interface != NULL && interface->ip_addr != ip_addr) {
+	while (interface != NULL && interface->addr_ip != addr_ip) {
 		interface = interface->next;
 	}
 
-	PRINT_DEBUG("Exited: ip=%u, interface=%p", ip_addr, interface);
+	PRINT_DEBUG("Exited: ip=%u, interface=%p", addr_ip, interface);
 	return interface;
 }
 
@@ -225,7 +126,20 @@ int ipv4_interface_list_has_space(void) {
 	return ipv4_interface_num < IPV4_INTERFACE_LIST_MAX;
 }
 
-struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
+int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address) {
+	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
+
+	if (ipv4_interface_list_has_space()) {
+		struct ipv4_interface *interface = ipv4_interface_create(MAC_address, IP_address);
+		ipv4_interface_list_insert(interface);
+
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint8_t *pdu) {
 	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
 
 	struct ipv4_request *request = (struct ipv4_request *) fins_malloc(sizeof(struct ipv4_request));
@@ -234,6 +148,7 @@ struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac,
 	request->ff = ff;
 	request->src_mac = src_mac;
 	request->src_ip = src_ip;
+	request->pdu = pdu;
 
 	PRINT_DEBUG("Exited: ff=%p, mac=0x%llx, ip=%u, request=%p", ff, src_mac, src_ip, request);
 	return request;
@@ -244,6 +159,11 @@ void ipv4_request_free(struct ipv4_request *request) {
 
 	if (request->ff) {
 		freeFinsFrame(request->ff);
+	}
+
+	if (request->pdu) {
+		PRINT_DEBUG("Freeing pdu=%p", request->pdu);
+		free(request->pdu);
 	}
 
 	free(request);
@@ -323,21 +243,21 @@ void ipv4_request_list_free(struct ipv4_request_list *request_list) {
 	free(request_list);
 }
 
-struct ipv4_cache *ipv4_cache_create(uint32_t ip_addr) {
-	PRINT_DEBUG("Entered: ip=%u", ip_addr);
+struct ipv4_cache *ipv4_cache_create(uint32_t addr_ip) {
+	PRINT_DEBUG("Entered: ip=%u", addr_ip);
 
 	struct ipv4_cache *cache = (struct ipv4_cache *) fins_malloc(sizeof(struct ipv4_cache));
 	cache->next = NULL;
 
-	cache->mac_addr = IPV4_MAC_NULL;
-	cache->ip_addr = ip_addr;
+	cache->addr_mac = IPV4_MAC_NULL;
+	cache->addr_ip = addr_ip;
 
 	cache->request_list = ipv4_request_list_create(IPV4_REQUEST_LIST_MAX);
 
 	cache->seeking = 0;
 	memset(&cache->updated_stamp, 0, sizeof(struct timeval));
 
-	PRINT_DEBUG("Exited: ip=%u, cache=%p", ip_addr, cache);
+	PRINT_DEBUG("Exited: ip=%u, cache=%p", addr_ip, cache);
 	return cache;
 }
 
@@ -370,15 +290,15 @@ int ipv4_cache_list_insert(struct ipv4_cache *cache) {
 	return 1;
 }
 
-struct ipv4_cache *ipv4_cache_list_find(uint32_t ip_addr) {
-	PRINT_DEBUG("Entered: ip=%u", ip_addr);
+struct ipv4_cache *ipv4_cache_list_find(uint32_t addr_ip) {
+	PRINT_DEBUG("Entered: ip=%u", addr_ip);
 
 	struct ipv4_cache *cache = ipv4_cache_list;
-	while (cache != NULL && cache->ip_addr != ip_addr) {
+	while (cache != NULL && cache->addr_ip != addr_ip) {
 		cache = cache->next;
 	}
 
-	PRINT_DEBUG("Exited: ip=%u, cache=%p", ip_addr, cache);
+	PRINT_DEBUG("Exited: ip=%u, cache=%p", addr_ip, cache);
 	return cache;
 }
 
@@ -449,20 +369,101 @@ int ipv4_cache_list_has_space(void) {
 	return ipv4_cache_num < IPV4_CACHE_LIST_MAX;
 }
 
-int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address) {
-	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
+struct ipv4_store *ipv4_store_create(uint32_t serial_num, struct ipv4_cache *cache, struct ipv4_request *request) { //TODO remove request? not used
+	PRINT_DEBUG("Entered: serial_num=%u, cache=%p, request=%p", serial_num, cache, request);
 
-	if (ipv4_interface_list_has_space()) {
-		struct ipv4_interface *interface = ipv4_interface_create(MAC_address, IP_address);
-		ipv4_interface_list_insert(interface);
+	struct ipv4_store *store = (struct ipv4_store *) fins_malloc(sizeof(struct ipv4_store));
+	store->next = NULL;
 
-		return 1;
-	} else {
-		return 0;
+	store->serial_num = serial_num;
+	store->cache = cache;
+	store->request = request;
+
+	PRINT_DEBUG("Exited: serial_num=%u, cache=%p, request=%p, store=%p", serial_num, cache, request, store);
+	return store;
+}
+
+void ipv4_store_free(struct ipv4_store *store) {
+	PRINT_DEBUG("Entered: store=%p", store);
+
+	if (store->cache) {
+		ipv4_cache_free(store->cache);
 	}
+
+	free(store);
+}
+
+int ipv4_store_list_insert(struct ipv4_store *store) {
+	PRINT_DEBUG("Entered: store=%p", store);
+
+	if (ipv4_store_list == NULL) {
+		ipv4_store_list = store;
+	} else {
+		struct ipv4_store *temp = ipv4_store_list;
+
+		while (temp->next != NULL) {
+			temp = temp->next;
+		}
+
+		temp->next = store;
+		store->next = NULL;
+	}
+
+	ipv4_store_num++;
+	PRINT_DEBUG("Exited: store=%p, ipv4_store_num=%u", store, ipv4_store_num);
+	return 1;
+}
+
+struct ipv4_store *ipv4_store_list_find(uint32_t serial_num) {
+	PRINT_DEBUG("Entered: serial_num=%u", serial_num);
+
+	struct ipv4_store *temp = ipv4_store_list;
+
+	while (temp != NULL && temp->serial_num != serial_num) {
+		temp = temp->next;
+	}
+
+	PRINT_DEBUG("Exited: serial_num=%u, store=%p", serial_num, temp);
+	return temp;
+}
+
+void ipv4_store_list_remove(struct ipv4_store *store) {
+	PRINT_DEBUG("Entered: store=%p", store);
+
+	if (ipv4_store_list == NULL) {
+		PRINT_DEBUG("Exited: store=%p, ipv4_store_num=%u", store, ipv4_store_num);
+		return;
+	}
+
+	if (ipv4_store_list == store) {
+		ipv4_store_list = ipv4_store_list->next;
+		ipv4_store_num--;
+		PRINT_DEBUG("Exited: store=%p, ipv4_store_num=%u", store, ipv4_store_num);
+		return;
+	}
+
+	struct ipv4_store *temp = ipv4_store_list;
+	while (temp->next != NULL) {
+		if (temp->next == store) {
+			temp->next = store->next;
+			ipv4_store_num--;
+			PRINT_DEBUG("Exited: store=%p, ipv4_store_num=%u", store, ipv4_store_num);
+			return;
+		}
+		temp = temp->next;
+	}
+
+	PRINT_DEBUG("Exited: store=%p, ipv4_store_num=%u", store, ipv4_store_num);
+}
+
+int store_list_is_empty(void) {
+	return ipv4_store_num == 0;
+}
+
+int store_list_has_space(void) {
+	return ipv4_store_num < IPV4_STORE_LIST_MAX;
 }
 //################
-
 
 void ipv4_init(void) {
 	PRINT_CRITICAL("Entered");
@@ -471,8 +472,8 @@ void ipv4_init(void) {
 	module_create_ops(&ipv4_proto);
 	module_register(&ipv4_proto);
 
-	store_list = NULL;
-	store_num = 0;
+	ipv4_store_list = NULL;
+	ipv4_store_num = 0;
 
 	ipv4_interface_list = NULL;
 	ipv4_interface_num = 0;
@@ -530,15 +531,15 @@ void ipv4_release(void) {
 
 	//TODO free all module related mem
 
-	PRINT_CRITICAL("store_list->len=%u", store_num);
-	struct ip4_store *store;
+	PRINT_CRITICAL("ipv4_store_num=%u", ipv4_store_num);
+	struct ipv4_store *store;
 	while (!store_list_is_empty()) {
-		store = store_list;
-		store_list_remove(store);
-		store_free(store);
+		store = ipv4_store_list;
+		ipv4_store_list_remove(store);
+		ipv4_store_free(store);
 	}
 
-	PRINT_CRITICAL("ipv4_interface_list->len=%u", ipv4_interface_num);
+	PRINT_CRITICAL("ipv4_interface_num=%u", ipv4_interface_num);
 	struct ipv4_interface *interface;
 	while (!ipv4_interface_list_is_empty()) {
 		interface = ipv4_interface_list;
@@ -546,7 +547,7 @@ void ipv4_release(void) {
 		ipv4_interface_free(interface);
 	}
 
-	PRINT_CRITICAL("ipv4_cache_list->len=%u", ipv4_cache_num);
+	PRINT_CRITICAL("ipv4_cache_num=%u", ipv4_cache_num);
 	struct ipv4_cache *cache;
 	while (!ipv4_cache_list_is_empty()) {
 		cache = ipv4_cache_list;

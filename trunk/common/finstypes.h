@@ -20,6 +20,7 @@
 //Include MetaData header File
 #include "metadata.h"		//guicomm need this local
 #include <stdint.h>
+#include <semaphore.h>
 
 //Definition of the modules IDs
 #define SWITCH_ID 0
@@ -105,7 +106,13 @@ struct finsFrame {
 
 };
 
-void *fins_malloc(uint32_t len);
+#define fins_malloc(len) fins_malloc_full(__FILE__, __FUNCTION__, __LINE__, len);
+
+void *fins_malloc_full(const char *file, const char *func, int line, uint32_t len);
+
+#define fins_sem_wait(sem) fins_sem_wait_full(__FILE__, __FUNCTION__, __LINE__, sem);
+
+void fins_sem_wait_full(const char *file, const char *func, int line, sem_t *sem);
 
 uint32_t gen_control_serial_num(void);
 

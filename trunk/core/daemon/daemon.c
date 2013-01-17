@@ -75,11 +75,7 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 	// Begin send message section
 	// Build a message to send to the kernel
 	int nlmsg_len = NLMSG_LENGTH(len);
-	struct nlmsghdr *nlh = (struct nlmsghdr *) malloc(nlmsg_len);
-	if (nlh == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	struct nlmsghdr *nlh = (struct nlmsghdr *) fins_malloc(nlmsg_len);
 	memset(nlh, 0, nlmsg_len);
 
 	nlh->nlmsg_len = nlmsg_len;
@@ -108,10 +104,7 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 	// Send the message
 	PRINT_DEBUG("Sending message to kernel");
 
-	if (sem_wait(&nl_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&nl_sem);
 	ret = sendmsg(sockfd, &msg, 0);
 	sem_post(&nl_sem);
 
@@ -128,12 +121,7 @@ struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, 
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%d, call_pid=%d, call_type=%u, sock_id=%llu, sock_index=%d",
 			call_id, call_index, call_pid, call_type, sock_id, sock_index);
 
-	struct daemon_call *call = (struct daemon_call *) malloc(sizeof(struct daemon_call));
-	if (call == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct daemon_call *call = (struct daemon_call *) fins_malloc(sizeof(struct daemon_call));
 	call->next = NULL;
 	call->alloc = 1;
 
@@ -162,12 +150,7 @@ struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, 
 struct daemon_call *call_clone(struct daemon_call *call) {
 	PRINT_DEBUG("Entered: call=%p", call);
 
-	struct daemon_call *call_clone = (struct daemon_call *) malloc(sizeof(struct daemon_call));
-	if (call_clone == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct daemon_call *call_clone = (struct daemon_call *) fins_malloc(sizeof(struct daemon_call));
 	call_clone->next = NULL;
 	call_clone->alloc = 1;
 
@@ -289,12 +272,7 @@ void daemon_calls_shutdown(int call_index) {
 struct daemon_call_list *call_list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
-	struct daemon_call_list *call_list = (struct daemon_call_list *) malloc(sizeof(struct daemon_call_list));
-	if (call_list == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	struct daemon_call_list *call_list = (struct daemon_call_list *) fins_malloc(sizeof(struct daemon_call_list));
 	call_list->front = NULL;
 	call_list->end = NULL;
 
@@ -733,11 +711,7 @@ int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%u, call_type=%u, msg=%u, nack=%d", call_id, call_index, call_type, msg, NACK);
 
 	int buf_len = sizeof(struct nl_daemon_to_wedge);
-	uint8_t *buf = (uint8_t *) malloc(buf_len);
-	if (buf == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *buf = (uint8_t *) fins_malloc(buf_len);
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
 	hdr->call_type = call_type;
@@ -758,11 +732,7 @@ int ack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg)
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%u, call_type=%u, msg=%u, ack=%d", call_id, call_index, call_type, msg, ACK);
 
 	int buf_len = sizeof(struct nl_daemon_to_wedge);
-	uint8_t *buf = (uint8_t *) malloc(buf_len);
-	if (buf == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	uint8_t *buf = (uint8_t *) fins_malloc(buf_len);
 
 	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
 	hdr->call_type = call_type;
@@ -784,13 +754,7 @@ int daemon_to_switch(struct finsFrame *ff) {
 int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num, uint16_t opcode, uint32_t param_id) {
 	PRINT_DEBUG("Entered: module_id=%d, meta=%p, serial_num=%u, opcode=%u, param_id=%u", dest_id, params, serial_num, opcode, param_id);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		return 0;
-	}
-
-	//TODO get the address from local copy of switch table
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = dest_id;
 	ff->destinationID.next = NULL;
@@ -816,15 +780,7 @@ int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num,
 int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *params) {
 	PRINT_DEBUG("Entered: module_id=%u, data=%p, data_len=%u, meta=%p", dest_id, data, data_len, params);
 
-	struct finsFrame *ff = (struct finsFrame *) malloc(sizeof(struct finsFrame));
-	if (ff == NULL) {
-		PRINT_ERROR("alloc error");
-		return 0;
-	}
-
-	/**TODO get the address automatically by searching the local copy of the
-	 * switch table
-	 */
+	struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = dest_id;
 	ff->destinationID.next = NULL;
@@ -909,11 +865,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		PRINT_DEBUG("addr_len=%d", addr_len);
 	}
 
-	addr = (struct sockaddr_in *) malloc(addr_len);
-	if (addr == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	addr = (struct sockaddr_in *) fins_malloc(addr_len);
 	memcpy(addr, pt, addr_len);
 	pt += addr_len;
 
@@ -929,10 +881,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("addr=%u/%d, family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -986,10 +935,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("backlog=%d", backlog);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1037,12 +983,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		return;
 	}
 
-	addr = (struct sockaddr_in *) malloc(addrlen);
-	if (addr == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
-
+	addr = (struct sockaddr_in *) fins_malloc(addrlen);
 	memcpy(addr, pt, addrlen);
 	pt += addrlen;
 
@@ -1059,10 +1000,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("addr=%u/%d, family=%d, flags=0x%x", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, flags);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1120,10 +1058,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1172,10 +1107,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1237,15 +1169,12 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			return;
 		}
 
-		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
+		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len)
+		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 2 * sizeof(struct ifreq);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1299,17 +1228,14 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		}
 		break;
 	case SIOCGIFADDR:
-		PRINT_DEBUG("SIOCGIFADDR=%d", cmd);
+		PRINT_DEBUG("SIOCGIFADDR=%d", cmd)
+		;
 
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = (uint8_t *) malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1351,12 +1277,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1383,12 +1305,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = (uint8_t *)malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1430,12 +1348,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1462,12 +1376,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = (uint8_t *)malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1509,12 +1419,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1541,12 +1447,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = (uint8_t *)malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1588,12 +1490,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1647,12 +1545,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFNAME), index=%d", cmd, total)
 		;
 
-		temp = (uint8_t *)malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 
 		//TODO get correct values from IP?
 		if (total == 0) {
@@ -1672,12 +1566,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + len;
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1704,12 +1594,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = (uint8_t *)malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1741,12 +1627,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1779,12 +1661,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		len = *(int *) pt;
 		pt += sizeof(int);
 
-		temp = (uint8_t *)malloc(len);
-		if (temp == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		temp = (uint8_t *) fins_malloc(len)
+		;
 		memcpy(temp, pt, len);
 		pt += len;
 
@@ -1816,12 +1694,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		;
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
-		msg = (uint8_t *) malloc(msg_len);
-		if (msg == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		msg = (uint8_t *) fins_malloc(msg_len)
+		;
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
 		hdr_ret->call_type = hdr->call_type;
@@ -1903,10 +1777,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		free(msg);
 	} else {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&daemon_sockets_sem);
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -1961,13 +1832,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (addr_len > 0) {
 		if (addr_len >= sizeof(struct sockaddr_in)) {
-			addr = (struct sockaddr_in *) malloc(addr_len);
-			if (addr == NULL) {
-				PRINT_ERROR("alloc error");
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-				exit(-1);
-			}
-
+			addr = (struct sockaddr_in *) fins_malloc(addr_len);
 			memcpy(addr, pt, addr_len);
 			pt += addr_len;
 
@@ -1987,13 +1852,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(uint32_t);
 
 	if (msg_controllen) {
-		msg_control = malloc(msg_controllen);
-		if (msg_control == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
-
+		msg_control = fins_malloc(msg_controllen);
 		memcpy(msg_control, pt, msg_controllen);
 		pt += msg_controllen;
 	}
@@ -2002,13 +1861,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(uint32_t);
 
 	if (data_len) {
-		data = (uint8_t *) malloc(data_len);
-		if (data == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
-
+		data = (uint8_t *) fins_malloc(data_len);
 		memcpy(data, pt, data_len);
 		pt += data_len;
 	}
@@ -2025,10 +1878,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2053,13 +1903,13 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	//#########################
 #ifdef DEBUG
-	uint8_t *temp = (uint8_t *) malloc(data_len + 1);
+	uint8_t *temp = (uint8_t *) fins_malloc(data_len + 1);
 	memcpy(temp, data, data_len);
 	temp[data_len] = '\0';
 	PRINT_DEBUG("data='%s'", temp);
 	free(temp);
 	//#########################
-	uint8_t *temp2 = (uint8_t *) malloc(msg_controllen + 1);
+	uint8_t *temp2 = (uint8_t *) fins_malloc(msg_controllen + 1);
 	memcpy(temp2, msg_control, msg_controllen);
 	temp2[msg_controllen] = '\0';
 	PRINT_DEBUG("msg_control='%s'", temp2);
@@ -2143,10 +1993,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	 */
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2206,12 +2053,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(int);
 
 	if (optlen > 0) { //TODO remove?
-		optval = (uint8_t *) malloc(optlen);
-		if (optval == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		optval = (uint8_t *) fins_malloc(optlen);
 		memcpy(optval, pt, optlen);
 		pt += optlen;
 	}
@@ -2226,10 +2068,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2284,12 +2123,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	pt += sizeof(uint32_t);
 
 	if (optlen > 0) {
-		optval = (uint8_t *) malloc(optlen);
-		if (optval == NULL) {
-			PRINT_ERROR("alloc error");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			exit(-1);
-		}
+		optval = (uint8_t *) fins_malloc(optlen);
 		memcpy(optval, pt, optlen);
 		pt += optlen;
 	}
@@ -2304,10 +2138,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("");
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2354,10 +2185,7 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2404,10 +2232,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2450,10 +2275,7 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2514,10 +2336,7 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -2551,10 +2370,7 @@ void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
 		sem_post(&daemon_sockets_sem);
@@ -2713,14 +2529,14 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 	//############################### Debug
 #ifdef DEBUG
 	uint8_t *temp;
-	temp = (uint8_t *) malloc(msg_len + 1);
+	temp = (uint8_t *) fins_malloc(msg_len + 1);
 	memcpy(temp, msg_pt, msg_len);
 	temp[msg_len] = '\0';
 	PRINT_DEBUG("msg='%s'", temp);
 	free(temp);
 
 	uint8_t *pt;
-	temp = (uint8_t *) malloc(3 * msg_len + 1);
+	temp = (uint8_t *) fins_malloc(3 * msg_len + 1);
 	pt = temp;
 	int i;
 	for (i = 0; i < msg_len; i++) {
@@ -2745,10 +2561,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 		socket_out(hdr, msg_pt, msg_len);
 	} else {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-		if (sem_wait(&daemon_sockets_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&daemon_sockets_sem);
 
 		//---------------------- find
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
@@ -2767,10 +2580,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 
 		struct daemon_socket *sock = &daemon_sockets[hdr->sock_index];
 
-		if (sem_wait(&sock->sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(&sock->sem);
 		if (sock->running) {
 			switch (hdr->call_type) {
 			case bind_call:
@@ -2784,10 +2594,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 			}
 		} else {
 			PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-			if (sem_wait(&daemon_sockets_sem)) {
-				PRINT_ERROR("sem wait prob");
-				exit(-1);
-			}
+			fins_sem_wait(&daemon_sockets_sem);
 			daemon_sockets[hdr->sock_index].threads--;
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -2803,7 +2610,7 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 	//############################### Debug
 #ifdef DEBUG
 	uint8_t *temp;
-	temp = (uint8_t *) malloc(msg_len + 1);
+	temp = (uint8_t *) fins_malloc(msg_len + 1);
 	memcpy(temp, msg_pt, msg_len);
 	temp[msg_len] = '\0';
 	PRINT_DEBUG("msg='%s'", temp);
@@ -2811,7 +2618,7 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 
 	if (0) {
 		uint8_t *pt;
-		temp = (uint8_t *) malloc(3 * msg_len + 1);
+		temp = (uint8_t *) fins_malloc(3 * msg_len + 1);
 		pt = temp;
 		int i;
 		for (i = 0; i < msg_len; i++) {
@@ -2910,14 +2717,14 @@ void test_func_daemon(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t m
 
 	//############################### Debug
 	uint8_t *temp;
-	temp = (uint8_t *) malloc(msg_len + 1);
+	temp = (uint8_t *) fins_malloc(msg_len + 1);
 	memcpy(temp, msg_pt, msg_len);
 	temp[msg_len] = '\0';
 	PRINT_DEBUG("msg='%s'", temp);
 	free(temp);
 
 	uint8_t *pt;
-	temp = (uint8_t *) malloc(3 * msg_len + 1);
+	temp = (uint8_t *) fins_malloc(3 * msg_len + 1);
 	pt = temp;
 	int i;
 	for (i = 0; i < msg_len; i++) {
@@ -2972,11 +2779,7 @@ void *wedge_to_daemon(void *local) {
 	int time = 1000;
 
 	uint8_t *recv_buf;
-	recv_buf = (uint8_t *) malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
-	if (recv_buf == NULL) {
-		PRINT_ERROR("alloc error");
-		exit(-1);
-	}
+	recv_buf = (uint8_t *) fins_malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size
 
 	struct sockaddr sockaddr_sender; // Needed for recvfrom
 	socklen_t sockaddr_senderlen = sizeof(sockaddr_sender); // Needed for recvfrom
@@ -3126,11 +2929,7 @@ void *wedge_to_daemon(void *local) {
 						PRINT_ERROR("error: msg_buf != NULL at new sequence, freeing");
 						free(msg_buf);
 					}
-					msg_buf = (uint8_t *) malloc(msg_len);
-					if (msg_buf == NULL) {
-						PRINT_ERROR("alloc error");
-						exit(-1);
-					}
+					msg_buf = (uint8_t *) fins_malloc(msg_len);
 					msg_pt = msg_buf;
 				}
 
@@ -3226,10 +3025,7 @@ void daemon_interrupt(void) {
 	int i = 0;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 
 	for (i = 0; i < MAX_CALLS; i++) {
 		if (daemon_calls[i].sock_id != -1 && daemon_calls[i].to_flag) {
@@ -3247,14 +3043,8 @@ void daemon_get_ff(void) {
 	struct finsFrame *ff;
 
 	do {
-		if (sem_wait(daemon_proto.event_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
-		if (sem_wait(daemon_proto.input_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(daemon_proto.event_sem);
+		fins_sem_wait(daemon_proto.input_sem);
 		ff = read_queue(daemon_proto.input_queue);
 		sem_post(daemon_proto.input_sem);
 	} while (daemon_proto.running_flag && ff == NULL && !daemon_interrupt_flag); //TODO change logic here, combine with switch_to_daemon?
@@ -3296,48 +3086,63 @@ void daemon_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
+		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
+		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
+		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
+		;
 		daemon_read_param_reply(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
+		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
+		;
 		daemon_set_param_reply(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
+		;
 		daemon_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
+		;
 		daemon_exec_reply(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
+		;
 		daemon_error(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3345,13 +3150,11 @@ void daemon_fcf(struct finsFrame *ff) {
 
 void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 
 	if (call_index == -1) {
+		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -3426,13 +3229,11 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 
 void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 
 	if (call_index == -1) {
+		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -3557,10 +3358,7 @@ void daemon_exec(struct finsFrame *ff) {
 
 void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	if (sem_wait(&daemon_sockets_sem)) {
-		PRINT_ERROR("sem wait prob");
-		exit(-1);
-	}
+	fins_sem_wait(&daemon_sockets_sem);
 	struct daemon_call *call = call_list_find_serial_num(expired_call_list, ff->ctrlFrame.serial_num);
 	if (call) {
 		call_list_remove(expired_call_list, call);
@@ -3663,10 +3461,8 @@ void daemon_error(struct finsFrame *ff) { //TODO expand for different error type
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		//TODO send nack
 		PRINT_ERROR("Error fcf.metadata==NULL");
-		freeFinsFrame(ff);
-		return;
+		exit(-1);
 	}
 
 	uint32_t protocol;
@@ -3679,9 +3475,8 @@ void daemon_error(struct finsFrame *ff) { //TODO expand for different error type
 	ret += metadata_readFromElement(params, "send_dst_ip", &dst_ip) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata ret=%d", ret);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	//ff->ctrlFrame.data_len = sent->data_len;
@@ -3713,9 +3508,8 @@ void daemon_in_fdf(struct finsFrame *ff) {
 
 	metadata *params = ff->metaData;
 	if (params == NULL) {
-		PRINT_ERROR("todo error");
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
 	}
 
 	int ret = 0;
@@ -3724,20 +3518,19 @@ void daemon_in_fdf(struct finsFrame *ff) {
 	ret += metadata_readFromElement(params, "recv_dst_ip", &dst_ip) == META_FALSE;
 
 	if (ret) {
-		PRINT_ERROR("prob reading metadata ret=%d", ret);
-		freeFinsFrame(ff);
-		return;
+		PRINT_ERROR("ret=%d", ret);
+		exit(-1);
 	}
 
 	//##############################################
 #ifdef DEBUG
-	struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+	struct in_addr *temp = (struct in_addr *) fins_malloc(sizeof(struct in_addr));
 	if (src_ip) {
 		temp->s_addr = htonl(src_ip);
 	} else {
 		temp->s_addr = 0;
 	}
-	struct in_addr *temp2 = (struct in_addr *) malloc(sizeof(struct in_addr));
+	struct in_addr *temp2 = (struct in_addr *) fins_malloc(sizeof(struct in_addr));
 	if (dst_ip) {
 		temp2->s_addr = htonl(dst_ip);
 	} else {
@@ -3750,7 +3543,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 	free(temp);
 	free(temp2);
 
-	char *buf = (char *) malloc(ff->dataFrame.pduLength + 1);
+	char *buf = (char *) fins_malloc(ff->dataFrame.pduLength + 1);
 	if (buf == NULL) {
 		PRINT_ERROR("error allocation");
 		exit(-1);
@@ -3811,13 +3604,7 @@ void daemon_init(void) {
 		}
 
 		//start timer thread
-		struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) malloc(sizeof(struct intsem_to_thread_data));
-		if (to_data == NULL) {
-			PRINT_ERROR("alloc error");
-			exit(-1);
-		}
-
-		//int id = ;
+		struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) fins_malloc(sizeof(struct intsem_to_thread_data));
 		to_data->id = ++daemon_thread_count;
 		to_data->fd = daemon_calls[i].to_fd;
 		to_data->running = &daemon_calls[i].to_running;

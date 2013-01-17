@@ -222,24 +222,6 @@ struct ip4_next_hop_info {
 #define	IP4_CLASSD(x) (((x) & 0xf0000000) == 0xe0000000)	/* IP Class D */
 #define	IP4_CLASSE(x) (((x) & 0xf8000000) == 0xf0000000)	/* IP Class E */
 
-struct ip4_store {
-	struct ip4_store *next;
-	uint32_t serial_num;
-	struct finsFrame *ff;
-	uint8_t *pdu;
-};
-
-struct ip4_store *store_create(uint32_t serial_num, struct finsFrame *ff, uint8_t *pdu);
-void store_free(struct ip4_store *store);
-
-#define IP4_STORE_LIST_MAX (2*65536)
-
-int store_list_insert(struct ip4_store *store);
-struct ip4_store *store_list_find(uint32_t serial_num);
-void store_list_remove(struct ip4_store *store);
-int store_list_is_empty(void);
-int store_list_has_space(void);
-
 pthread_t switch_to_ipv4_thread;
 
 void ipv4_init(void);
@@ -295,30 +277,33 @@ void IP4_exit(void);
 struct ipv4_interface {
 	struct ipv4_interface *next;
 
-	uint64_t mac_addr;
-	uint32_t ip_addr;
+	uint64_t addr_mac;
+	uint32_t addr_ip;
 };
 
-struct ipv4_interface *ipv4_interface_create(uint64_t mac_addr, uint32_t ip_addr);
+struct ipv4_interface *ipv4_interface_create(uint64_t addr_mac, uint32_t addr_ip);
 void ipv4_interface_free(struct ipv4_interface *interface);
 
 #define IPV4_INTERFACE_LIST_MAX 256
 
 //TODO augment?
 int ipv4_interface_list_insert(struct ipv4_interface *interface);
-struct ipv4_interface *ipv4_interface_list_find(uint32_t ip_addr);
+struct ipv4_interface *ipv4_interface_list_find(uint32_t addr_ip);
 void ipv4_interface_list_remove(struct ipv4_interface *interface);
 int ipv4_interface_list_is_empty(void);
 int ipv4_interface_list_has_space(void);
+
+int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address);
 
 struct ipv4_request {
 	struct ipv4_request *next;
 	struct finsFrame *ff;
 	uint64_t src_mac;
 	uint32_t src_ip;
+	uint8_t *pdu;
 };
 
-struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip);
+struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint8_t *pdu);
 void ipv4_request_free(struct ipv4_request *request);
 
 struct ipv4_request_list {
@@ -341,8 +326,8 @@ void ipv4_request_list_free(struct ipv4_request_list *request_list);
 struct ipv4_cache {
 	struct ipv4_cache *next;
 
-	uint64_t mac_addr;
-	uint32_t ip_addr;
+	uint64_t addr_mac;
+	uint32_t addr_ip;
 
 	struct ipv4_request_list *request_list;
 	uint8_t seeking;
@@ -351,18 +336,35 @@ struct ipv4_cache {
 
 #define IPV4_CACHE_TO_DEFAULT 15000
 #define IPV4_MAC_NULL 0x0
-struct ipv4_cache *ipv4_cache_create(uint32_t ip_addr);
+struct ipv4_cache *ipv4_cache_create(uint32_t addr_ip);
 void ipv4_cache_free(struct ipv4_cache *cache);
 
 #define IPV4_CACHE_LIST_MAX 8192
 int ipv4_cache_list_insert(struct ipv4_cache *cache);
-struct ipv4_cache *ipv4_cache_list_find(uint32_t ip_addr);
+struct ipv4_cache *ipv4_cache_list_find(uint32_t addr_ip);
 void ipv4_cache_list_remove(struct ipv4_cache *cache);
 struct ipv4_cache *ipv4_cache_list_remove_first_non_seeking(void);
 int ipv4_cache_list_is_empty(void);
 int ipv4_cache_list_has_space(void);
 
-int ipv4_register_interface(uint64_t MAC_address, uint32_t IP_address);
+struct ipv4_store {
+	struct ipv4_store *next;
+	uint32_t serial_num;
+	struct ipv4_cache *cache;
+	struct ipv4_request *request;
+};
+
+struct ipv4_store *ipv4_store_create(uint32_t serial_num, struct ipv4_cache *cache, struct ipv4_request *request);
+void ipv4_store_free(struct ipv4_store *store);
+
+#define IPV4_STORE_LIST_MAX (2*65536)
+
+int ipv4_store_list_insert(struct ipv4_store *store);
+struct ipv4_store *ipv4_store_list_find(uint32_t serial_num);
+void ipv4_store_list_remove(struct ipv4_store *store);
+int store_list_is_empty(void);
+int store_list_has_space(void);
+
 //###############
 
 #endif /* IPV4_H_ */

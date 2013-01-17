@@ -220,14 +220,8 @@ void udp_get_ff(void) {
 
 	struct finsFrame *ff;
 	do {
-		if (sem_wait(udp_proto.event_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
-		if (sem_wait(udp_proto.input_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(udp_proto.event_sem);
+		fins_sem_wait(udp_proto.input_sem);
 		ff = read_queue(udp_proto.input_queue);
 		sem_post(udp_proto.input_sem);
 	} while (udp_proto.running_flag && ff == NULL);

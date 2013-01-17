@@ -28,9 +28,9 @@ all:$(MODULE_NAME) $(EXECUTABLES)
 $(MODULE_NAME):$(OBJS)
 	@echo $(addprefix "$(shell pwd)/", $(OBJS)) > OBJS.finsmk 
 
-test_arp:$(TEST_OBJS) test_arp.o
-	@$(LD) $(LDFLAGS) $^ -o $@
-	@echo "test_arp is compiled"
+#test_arp:$(TEST_OBJS) test_arp.o
+#	@$(LD) $(LDFLAGS) $^ -o $@
+#	@echo "test_arp is compiled"
 
 %.o:%.c $(INCLUDES)
 	@$(CC) $(CFLAGS) -c $<	

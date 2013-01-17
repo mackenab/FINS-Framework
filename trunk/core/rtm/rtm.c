@@ -42,7 +42,7 @@ void rtm_get_ff() {
 	
 	struct finsFrame *ff;
 	do {
-		sem_wait(&Switch_to_RTM_Qsem);
+		fins_sem_wait(&Switch_to_RTM_Qsem);
 		ff = read_queue(Switch_to_RTM_Queue);
 		sem_post(&Switch_to_RTM_Qsem);
 	} while (ff == NULL);
@@ -153,7 +153,7 @@ void rtm_init(pthread_attr_t *fins_pthread_attr) {
 		fins_frame->ctrlFrame.serial_num = temp_serial_cntr;
 
 		//SEND TO QUEUE
-		sem_wait(&RTM_to_Switch_Qsem);
+		fins_sem_wait(&RTM_to_Switch_Qsem);
 		write_queue(fins_frame, RTM_to_Switch_Queue);
 		sem_post(&RTM_to_Switch_Qsem);
 		PRINT_DEBUG("sent data ");

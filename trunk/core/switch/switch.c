@@ -91,8 +91,9 @@ void module_unregister(int module_id) {
 
 int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, module_id=%d, name='%s', ff=%p, meta=%p", module, module->module_id, module->name, ff, ff->metaData);
-	if (sem_wait(module->output_sem)) {
-		PRINT_ERROR("output_sem wait prob: module=%p, module_id=%d, name='%s', ff=%p, meta=%p", module, module->module_id, module->name, ff, ff->metaData);
+	int ret;
+	if ((ret = sem_wait(module->output_sem))) {
+		PRINT_ERROR("output_sem wait prob: module=%p, module_id=%d, name='%s', ff=%p, meta=%p, ret=%d", module, module->module_id, module->name, ff, ff->metaData, ret);
 		exit(-1);
 	}
 	if (write_queue(ff, module->output_queue)) {
@@ -111,21 +112,19 @@ void *switch_loop(void *local) {
 	PRINT_CRITICAL("Entered");
 
 	int i;
+	int ret;
 	struct finsFrame *ff;
 	uint8_t id;
 
 	int counter = 0;
 
 	while (switch_proto.running_flag) {
-		if (sem_wait(switch_proto.event_sem)) {
-			PRINT_ERROR("sem wait prob");
-			exit(-1);
-		}
+		fins_sem_wait(switch_proto.event_sem);
 
 		for (i = 0; i < MAX_modules; i++) {
 			if (fins_modules[i] != NULL) {
-				if (sem_wait(fins_modules[i]->output_sem)) {
-					PRINT_ERROR("sem wait prob: src module_id=%d", i);
+				if ((ret = sem_wait(fins_modules[i]->output_sem))) {
+					PRINT_ERROR("sem wait prob: src module_id=%d, ret=%d", i, ret);
 					exit(-1);
 				}
 				ff = read_queue(fins_modules[i]->output_queue);
@@ -141,8 +140,8 @@ void *switch_loop(void *local) {
 					} else { //if (i != id) //TODO add this?
 						if (fins_modules[id] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[id]->name, ff, ff->metaData);
-							if (sem_wait(fins_modules[id]->input_sem)) {
-								PRINT_ERROR("sem wait prob: dst module_id=%u, ff=%p, meta=%p", id, ff, ff->metaData);
+							if ((ret = sem_wait(fins_modules[id]->input_sem))) {
+								PRINT_ERROR("sem wait prob: dst module_id=%u, ff=%p, meta=%p, ret=%d", id, ff, ff->metaData, ret);
 								exit(-1);
 							}
 							if (write_queue(ff, fins_modules[id]->input_queue)) {

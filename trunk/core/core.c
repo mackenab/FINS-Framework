@@ -105,8 +105,11 @@ int main() {
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
 	my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
 	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
-	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20);
-	my_host_mask = IP4_ADR_P2H(255,255,255,0);
+
+	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20); //home testing
+	my_host_mask = IP4_ADR_P2H(255,255,255,0); //home testing
+	//my_host_ip_addr = IP4_ADR_P2H(172,31,49,250); //lab testing
+	//my_host_mask = IP4_ADR_P2H(255,255,248,0); //lab testing
 
 	//loopback interface
 	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);

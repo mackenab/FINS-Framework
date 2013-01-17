@@ -26,14 +26,14 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 
 	interface = arp_interface_list_find(src_ip);
 	if (interface) {
-		src_mac = interface->mac_addr;
+		src_mac = interface->addr_mac;
 		PRINT_DEBUG("src: interface=%p, mac=0x%llx, ip=%u", interface, src_mac, src_ip);
 
 		metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
 
 		interface = arp_interface_list_find(dst_ip);
 		if (interface) { //Shouldn't occur since caught by IPv4
-			dst_mac = interface->mac_addr;
+			dst_mac = interface->addr_mac;
 			PRINT_DEBUG("dst: interface=%p, mac=0x%llx, ip=%u", interface, dst_mac, dst_ip);
 
 			metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
@@ -63,7 +63,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 						arp_to_switch(ff);
 					}
 				} else {
-					dst_mac = cache->mac_addr;
+					dst_mac = cache->addr_mac;
 					PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
 
 					struct timeval current;
@@ -218,7 +218,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 
 			struct arp_interface *interface = arp_interface_list_find(dst_ip);
 			if (interface) {
-				uint64_t dst_mac = interface->mac_addr;
+				uint64_t dst_mac = interface->addr_mac;
 
 				uint32_t src_ip = msg->sender_IP_addrs;
 				uint64_t src_mac = msg->sender_MAC_addrs;
@@ -246,7 +246,7 @@ void arp_in_fdf(struct finsFrame *ff) {
 							gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
 
 							cache->seeking = 0;
-							cache->mac_addr = src_mac;
+							cache->addr_mac = src_mac;
 
 							struct arp_request *request;
 							struct finsFrame *ff_resp;
@@ -302,7 +302,7 @@ void arp_handle_to(struct arp_cache *cache) {
 	if (cache->seeking) {
 		if (cache->retries < ARP_RETRIES) {
 			uint64_t dst_mac = ARP_MAC_BROADCAST;
-			uint32_t dst_ip = cache->ip_addr;
+			uint32_t dst_ip = cache->addr_ip;
 
 			if (arp_request_list_is_empty(cache->request_list)) {
 				PRINT_ERROR("todo error");
