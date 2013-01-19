@@ -88,10 +88,10 @@ struct finsCtrlFrame {
 	uint32_t data_len;
 	uint8_t *data;
 
-	/* Special fields for control frames depending on the Opcode */
-	// if using a struct for this, define elsewhere
-	// such as ICMP data information, define in ICMP
-	//struct tableRecord *replyRecord; //TODO remove?
+/* Special fields for control frames depending on the Opcode */
+// if using a struct for this, define elsewhere
+// such as ICMP data information, define in ICMP
+//struct tableRecord *replyRecord; //TODO remove?
 };
 
 struct finsFrame {
@@ -117,6 +117,45 @@ void secure_metadata_readFromElement_full(const char *file, const char *func, in
 
 #define secure_metadata_writeToElement(params, target, value, type) secure_metadata_writeToElement_full(__FILE__, __FUNCTION__, __LINE__, params, target, value, type)
 void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *params, char *target, void *value, int type);
+
+#define secure_pthread_create(thread, attr, routine, arg) secure_pthread_create_full(__FILE__, __FUNCTION__, __LINE__, thread, attr, routine, arg)
+void secure_pthread_create_full(const char *file, const char *func, int line, pthread_t *thread, pthread_attr_t *attr, void *(*routine)(void *), void *arg);
+
+void uint32_increase(uint32_t *data, uint32_t value, uint32_t max);
+void uint32_decrease(uint32_t *data, uint32_t value);
+
+struct list_node {
+	struct list_node *next;
+	struct list_node *prev;
+	uint8_t *data;
+	uint32_t len;
+};
+
+struct list_node *node_create(uint8_t *data, uint32_t len);
+void node_free(struct list_node *node);
+
+struct linked_list {
+	uint32_t max;
+	uint32_t len;
+	struct list_node *front;
+	struct list_node *end;
+};
+
+struct linked_list *list_create(uint32_t max);
+void list_append(struct linked_list *list, struct list_node *node);
+void list_prepend(struct linked_list *list, struct list_node *node);
+void list_add(struct linked_list *list, struct list_node *node, struct list_node *prev);
+struct list_node *list_remove_front(struct linked_list *list);
+void list_remove(struct linked_list *list, struct list_node *node);
+int list_check(struct linked_list *list);
+int list_is_empty(struct linked_list *list);
+int list_is_full(struct linked_list *list);
+int list_has_space(struct linked_list *list, uint32_t len);
+void list_free(struct linked_list *list);
+
+int list_insert(struct linked_list *list, struct list_node *node, int(*comparer)(struct list_node *node1, struct list_node *node2));
+struct list_node *list_find(struct linked_list *list, int(*equal)(struct list_node *node));
+void list_for_each(struct linked_list *list, void(*apply)(struct list_node *node));
 
 uint32_t gen_control_serial_num(void);
 

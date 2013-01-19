@@ -75,9 +75,6 @@
 //#define MAX_TCP_HEADER_LEN		MAX_OPTIONS_LEN + MIN_TCP_HEADER_LEN	//Maximum TCP header size, as defined by the maximum options size
 //typedef unsigned long IP4addr; /*  internet address			*/
 
-void uint32_increase(uint32_t *data, uint32_t value, uint32_t max);
-void uint32_decrease(uint32_t *data, uint32_t value);
-
 struct tcp_request {
 	uint8_t *data;
 	uint32_t len;
@@ -100,9 +97,9 @@ struct tcp_node {
 	uint32_t seq_end;
 };
 
-struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end);
-int node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num, uint32_t win_seq_end);
-void node_free(struct tcp_node *node);
+struct tcp_node *tcp_node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end);
+int tcp_node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num, uint32_t win_seq_end);
+void tcp_node_free(struct tcp_node *node);
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
 struct tcp_queue {
@@ -113,19 +110,19 @@ struct tcp_queue {
 	struct tcp_node *end;
 };
 
-struct tcp_queue *queue_create(uint32_t max); //TODO change to struct common_list in common
-void queue_append(struct tcp_queue *queue, struct tcp_node *node);
-void queue_prepend(struct tcp_queue *queue, struct tcp_node *node);
-void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev);
-int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end); //TCP specific
-struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num); //TCP specific
-struct tcp_node *queue_remove_front(struct tcp_queue *queue);
-void queue_remove(struct tcp_queue *queue, struct tcp_node *node);
-int queue_check(struct tcp_queue *queue);
-int queue_is_empty(struct tcp_queue *queue);
-int queue_is_full(struct tcp_queue *queue);
-int queue_has_space(struct tcp_queue *queue, uint32_t len);
-void queue_free(struct tcp_queue *queue);
+struct tcp_queue *tcp_queue_create(uint32_t max); //TODO change to struct common_list in common
+void tcp_queue_append(struct tcp_queue *queue, struct tcp_node *node);
+void tcp_queue_prepend(struct tcp_queue *queue, struct tcp_node *node);
+void tcp_queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev);
+int tcp_queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end); //TCP specific
+struct tcp_node *tcp_queue_find(struct tcp_queue *queue, uint32_t seq_num); //TCP specific
+struct tcp_node *tcp_queue_remove_front(struct tcp_queue *queue);
+void tcp_queue_remove(struct tcp_queue *queue, struct tcp_node *node);
+int tcp_queue_check(struct tcp_queue *queue);
+int tcp_queue_is_empty(struct tcp_queue *queue);
+int tcp_queue_is_full(struct tcp_queue *queue);
+int tcp_queue_has_space(struct tcp_queue *queue, uint32_t len);
+void tcp_queue_free(struct tcp_queue *queue);
 
 struct tcp_connection_stub {
 	//## protected by conn_stub_list_sem

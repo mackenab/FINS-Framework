@@ -30,8 +30,8 @@ void *write_thread(void *local) {
 			int space = conn->write_queue->max - conn->write_queue->len;
 			PRINT_DEBUG("space=%d, called_len=%u", space, called_len);
 			if (space >= called_len) {
-				node = node_create(called_data, called_len, 0, called_len - 1);
-				queue_append(conn->write_queue, node);
+				node = tcp_node_create(called_data, called_len, 0, called_len - 1);
+				tcp_queue_append(conn->write_queue, node);
 
 				space -= called_len;
 
@@ -47,7 +47,7 @@ void *write_thread(void *local) {
 			}
 
 			if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-				if (queue_is_empty(conn->request_queue)) {
+				if (tcp_queue_is_empty(conn->request_queue)) {
 					PRINT_DEBUG("conn=%p, space=%d", conn, space);
 					if (space > 0) { //only possible if request_queue is empty
 						conn_send_exec(conn, EXEC_TCP_POLL_POST, 1, POLLOUT | POLLWRNORM | POLLWRBAND);
@@ -95,9 +95,9 @@ void *write_thread(void *local) {
 				request->to_flag = 0;
 			}
 
-			if (queue_has_space(conn->request_queue, 1)) {
-				node = node_create((uint8_t *) request, 1, 0, 0);
-				queue_append(conn->request_queue, node);
+			if (tcp_queue_has_space(conn->request_queue, 1)) {
+				node = tcp_node_create((uint8_t *) request, 1, 0, 0);
+				tcp_queue_append(conn->request_queue, node);
 
 				handle_requests(conn);
 
@@ -478,8 +478,8 @@ void *accept_thread(void *local) { //this will need to be changed
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	secure_sem_wait(&conn_stub->sem);
 	while (conn_stub->running_flag) {
-		if (!queue_is_empty(conn_stub->syn_queue)) {
-			node = queue_remove_front(conn_stub->syn_queue);
+		if (!tcp_queue_is_empty(conn_stub->syn_queue)) {
+			node = tcp_queue_remove_front(conn_stub->syn_queue);
 			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
@@ -838,7 +838,7 @@ void *poll_thread(void *local) {
 		}
 
 		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-			if (queue_is_empty(conn->request_queue)) {
+			if (tcp_queue_is_empty(conn->request_queue)) {
 				int space = conn->write_queue->max - conn->write_queue->len;
 				if (space > 0) {
 					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;

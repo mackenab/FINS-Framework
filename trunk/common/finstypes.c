@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 uint32_t control_serial_num = 0;
 sem_t control_serial_sem;
@@ -17,7 +18,7 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 	void *buf = malloc(len);
 	if (buf == NULL) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):alloc error: len=%u\n", __FILE__, __FUNCTION__, __LINE__, len);
+		printf("ERROR(%s, %s, %d):malloc: len=%u\n", file, func, line, len);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -29,7 +30,7 @@ void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *s
 	int ret;
 	if ((ret = sem_wait(sem))) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):sem wait prob: sem=%p, ret=%d\n", __FILE__, __FUNCTION__, __LINE__, sem, ret);
+		printf("ERROR(%s, %s, %d):sem_wait prob: sem=%p, ret=%d\n", file, func, line, sem, ret);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -39,7 +40,7 @@ void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *s
 void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *params, const char *target, void *value) {
 	if (metadata_readFromElement(params, target, value) == META_FALSE) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):metadata read: meta=%p, target='%s', value=%p\n", __FILE__, __FUNCTION__, __LINE__, params, target, value);
+		printf("ERROR(%s, %s, %d):metadata_readFromElement: meta=%p, target='%s', value=%p\n", file, func, line, params, target, value);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -49,11 +50,353 @@ void secure_metadata_readFromElement_full(const char *file, const char *func, in
 void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *params, char *target, void *value, int type) {
 	if (metadata_writeToElement(params, target, value, type) == META_FALSE) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):metadata write: meta=%p, target='%s', value=%p, type=%d\n", __FILE__, __FUNCTION__, __LINE__, params, target, value, type);
+		printf("ERROR(%s, %s, %d):metadata_writeToElement: meta=%p, target='%s', value=%p, type=%d\n", file, func, line, params, target, value, type);
 		fflush(stdout);
 #endif
 		exit(-1);
 	}
+}
+
+void secure_pthread_create_full(const char *file, const char *func, int line, pthread_t *thread, pthread_attr_t *attr, void *(*routine)(void *), void *arg) {
+	if (pthread_create(thread, attr, routine, arg)) {
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n", file, func, line, thread, attr, routine, arg);
+		fflush(stdout);
+#endif
+		exit(-1);
+	}
+}
+
+void uint32_increase(uint32_t *data, uint32_t value, uint32_t max) { //assumes *data,value < max
+	if (*data + value < *data || max < *data + value) {
+		*data = max;
+	} else {
+		*data += value;
+	}
+}
+
+void uint32_decrease(uint32_t *data, uint32_t value) {
+	if (*data > value) {
+		*data -= value;
+	} else {
+		*data = 0;
+	}
+}
+
+struct list_node *node_create(uint8_t *data, uint32_t len) {
+	PRINT_DEBUG("Entered: data=%p, len=%u", data, len);
+
+	struct list_node *node = (struct list_node *) secure_malloc(sizeof(struct list_node));
+	node->data = data;
+	node->len = len;
+	node->next = NULL;
+	node->prev = NULL;
+
+	PRINT_DEBUG("Exited: data=%p, len=%d, node=%p", data, len, node);
+	return node;
+}
+
+void node_free(struct list_node *node) {
+	PRINT_DEBUG("Entered: node=%p", node);
+
+	if (node->data) {
+		free(node->data);
+	}
+	free(node);
+}
+
+struct linked_list *list_create(uint32_t max) {
+	PRINT_DEBUG("Entered: max=%u", max);
+
+	struct linked_list *list = (struct linked_list *) secure_malloc(sizeof(struct linked_list));
+	list->max = max;
+	list->len = 0;
+
+	list->front = NULL;
+	list->end = NULL;
+
+	list_check(list);
+
+	PRINT_DEBUG("Exited: max=%u, list=%p", max, list);
+	return list;
+}
+
+void list_append(struct linked_list *list, struct list_node *node) {
+	PRINT_DEBUG("Entered: list=%p, node=%p", list, node);
+
+	node->next = NULL;
+	if (list_is_empty(list)) {
+		//list empty
+		node->prev = NULL;
+		list->front = node;
+	} else {
+		//node after end
+		node->prev = list->end;
+		list->end->next = node;
+	}
+	list->end = node;
+	list->len += node->len;
+
+	list_check(list);
+}
+
+void list_prepend(struct linked_list *list, struct list_node *node) {
+	PRINT_DEBUG("Entered: list=%p, node=%p", list, node);
+
+	node->next = list->front;
+	node->prev = NULL;
+	if (list_is_empty(list)) {
+		list->end = node;
+	} else {
+		list->front->prev = node;
+	}
+	list->front = node;
+	list->len += node->len;
+
+	list_check(list);
+}
+
+void list_add(struct linked_list *list, struct list_node *node, struct list_node *prev) {
+	PRINT_DEBUG("Entered: list=%p, node=%p", list, node);
+
+	node->next = prev->next;
+	node->prev = prev;
+	prev->next = node;
+	list->len += node->len;
+
+	list_check(list);
+}
+
+struct list_node *list_remove_front(struct linked_list *list) {
+	PRINT_DEBUG("Entered: list=%p", list);
+
+	struct list_node *node = list->front;
+	if (node) {
+		list->front = node->next;
+		list->front->prev = NULL;
+		node->next = NULL;
+
+		list->len -= node->len;
+	} else {
+		PRINT_ERROR("resetting len");
+		list->len = 0;
+	}
+
+	list_check(list);
+	PRINT_DEBUG("Exited: list=%p, len=%u, node=%p", list, list->len, node);
+	return node;
+}
+
+void list_remove(struct linked_list *list, struct list_node *node) {
+	PRINT_DEBUG("Entered: list=%p, node=%p", list, node);
+
+	if (list_is_empty(list)) {
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
+		return;
+	}
+
+	if (list->front == node) {
+		list->front = list->front->next;
+		list->front->prev = NULL;
+		node->next = NULL;
+
+		list->len -= node->len;
+
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
+		return;
+	}
+
+	struct list_node *temp = list->front;
+	while (temp->next != NULL) {
+		if (temp->next == node) {
+			if (list->end == node) {
+				list->end = temp;
+				temp->next = NULL;
+				node->prev = NULL;
+			} else {
+				node->next->prev = temp;
+				temp->next = node->next;
+				node->next = NULL;
+				node->prev = NULL;
+			}
+
+			list->len -= node->len;
+
+			list_check(list);
+			PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
+			return;
+		}
+		temp = temp->next;
+	}
+
+	list_check(list);
+	PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
+}
+
+int list_check(struct linked_list *list) { //TODO remove all references
+	PRINT_DEBUG("Entered: list=%p, len=%u", list, list->len);
+
+	int count = 0;
+
+	PRINT_DEBUG("pointers: front=%p, end=%p", list->front, list->end);
+
+	struct list_node *temp = list->front;
+	struct list_node *prev = NULL;
+	while (temp && count <= list->max) {
+		count += temp->len;
+
+		if (prev != temp->prev) {
+			PRINT_ERROR("todo error");
+			return 0;
+		}
+
+		prev = temp;
+		temp = temp->next;
+	}
+
+	if (count == list->len) {
+		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 1);
+		return 1;
+	} else {
+		PRINT_ERROR("todo error: list=%p, max=%u, len=%u, count=%u, check=%u", list, list->max, list->len, count, count == list->len);
+		temp = list->front;
+		while (temp && count <= list->max) {
+			PRINT_DEBUG("count=%d, node=%p", count, temp);
+			count += temp->len;
+			temp = temp->next;
+		}
+		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
+		return 0;
+	}
+}
+
+int list_is_empty(struct linked_list *list) {
+	return list->front == NULL; //Use so can add 0 len nodes, signals/flags?
+	//return list->len == 0;
+}
+
+int list_is_full(struct linked_list *list) {
+	return list->len == list->max;
+}
+
+int list_has_space(struct linked_list *list, uint32_t len) {
+	return list->len + len <= list->max;
+}
+
+void list_free(struct linked_list *list) {
+	PRINT_DEBUG("Entered: list=%p", list);
+
+	list_check(list);
+
+	struct list_node *next;
+
+	struct list_node *node = list->front;
+	while (node) {
+		next = node->next;
+		node_free(node);
+
+		node = next;
+	}
+	free(list);
+}
+
+//TODO comparer returns -1, 0, or 1
+//-1 = less than, goes before
+//0 = problem don't insert
+//1 = greater than, goes after, if is equal but want put in use this
+int list_insert(struct linked_list *list, struct list_node *node, int(*comparer)(struct list_node *node1, struct list_node *node2)) {
+	int ret;
+
+	PRINT_DEBUG("Entered: list=%p, len=%u, node=%p, comparer=%p", list, list->len, node, comparer);
+	list_check(list);
+
+	//empty
+	if (list_is_empty(list)) {
+		list_prepend(list, node);
+
+		list_check(list);
+		return 1;
+	}
+
+	//before front
+	ret = comparer(node, list->front);
+	if (ret == -1) {
+		list_prepend(list, node);
+
+		list_check(list);
+		return 1;
+	} else if (ret == 0) {
+
+		list_check(list);
+		return 0;
+	}
+
+	//after end
+	ret = comparer(node, list->end);
+	if (ret == 1) {
+		list_append(list, node);
+
+		list_check(list);
+		return 1;
+	} else if (ret == 0) {
+
+		list_check(list);
+		return 0;
+	}
+
+	//iterate through list
+	struct list_node *temp_node = list->front;
+	while (temp_node->next) {
+		ret = comparer(node, temp_node->next);
+		if (ret == -1) {
+			list_add(list, node, temp_node);
+
+			list_check(list);
+			return 1;
+		} else if (ret == 0) {
+
+			list_check(list);
+			return 0;
+		}
+
+		temp_node = temp_node->next;
+	}
+
+	list_check(list);
+	//unable to insert, but didn't trip any overlaps - big error/not possible?
+	PRINT_DEBUG("unreachable insert location: node=%p", node);
+	return 0;
+}
+
+//equal: 0 or 1, 1 if equal, 0 if not
+struct list_node *list_find(struct linked_list *list, int(*equal)(struct list_node *node)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
+
+	struct list_node *comp = list->front;
+	while (comp) {
+		if (equal(comp)) {
+			list_check(list);
+			return comp;
+		} else {
+			comp = comp->next;
+		}
+	}
+
+	list_check(list);
+	return NULL;
+}
+
+void list_for_each(struct linked_list *list, void(*apply)(struct list_node *node)) {
+	PRINT_DEBUG("Entered: list=%p, apply=%p", list, apply);
+
+	struct list_node *comp = list->front;
+	while (comp) {
+		apply(comp);
+		comp = comp->next;
+	}
+	list_check(list);
 }
 
 uint32_t gen_control_serial_num(void) {

@@ -21,23 +21,7 @@ uint32_t conn_num;
 uint32_t tcp_thread_id_num = 0;
 sem_t tcp_thread_id_sem;
 
-void uint32_increase(uint32_t *data, uint32_t value, uint32_t max) { //assumes *data,value < max
-	if (*data + value < *data || max < *data + value) {
-		*data = max;
-	} else {
-		*data += value;
-	}
-}
-
-void uint32_decrease(uint32_t *data, uint32_t value) {
-	if (*data > value) {
-		*data -= value;
-	} else {
-		*data = 0;
-	}
-}
-
-struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end) {
+struct tcp_node *tcp_node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint32_t seq_end) {
 	PRINT_DEBUG("Entered: data=%p, len=%d, seq_num=%u, seq_end=%u", data, len, seq_num, seq_end);
 
 	struct tcp_node *node = (struct tcp_node *) secure_malloc(sizeof(struct tcp_node));
@@ -52,7 +36,7 @@ struct tcp_node *node_create(uint8_t *data, uint32_t len, uint32_t seq_num, uint
 }
 
 // assumes nodes are in window, -1=less than, 0=problem/equal, 1=greater
-int node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num, uint32_t win_seq_end) {
+int tcp_node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num, uint32_t win_seq_end) {
 	// []=window, |=wrap around , ()=node, {}=cmp, ,=is in that region
 
 	//TODO add time stamps to comparison
@@ -141,7 +125,7 @@ int node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_n
 	}
 }
 
-void node_free(struct tcp_node *node) {
+void tcp_node_free(struct tcp_node *node) {
 	PRINT_DEBUG("Entered: node=%p", node);
 
 	if (node->data) {
@@ -150,7 +134,7 @@ void node_free(struct tcp_node *node) {
 	free(node);
 }
 
-struct tcp_queue *queue_create(uint32_t max) {
+struct tcp_queue *tcp_queue_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
 
 	struct tcp_queue *queue = (struct tcp_queue *) secure_malloc(sizeof(struct tcp_queue));
@@ -166,11 +150,11 @@ struct tcp_queue *queue_create(uint32_t max) {
 	return queue;
 }
 
-void queue_append(struct tcp_queue *queue, struct tcp_node *node) {
+void tcp_queue_append(struct tcp_queue *queue, struct tcp_node *node) {
 	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
 
 	node->next = NULL;
-	if (queue_is_empty(queue)) {
+	if (tcp_queue_is_empty(queue)) {
 		//queue empty
 		queue->front = node;
 	} else {
@@ -183,18 +167,18 @@ void queue_append(struct tcp_queue *queue, struct tcp_node *node) {
 	//queue_check(queue);
 }
 
-void queue_prepend(struct tcp_queue *queue, struct tcp_node *node) {
+void tcp_queue_prepend(struct tcp_queue *queue, struct tcp_node *node) {
 	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
 
 	node->next = queue->front;
-	if (queue_is_empty(queue)) {
+	if (tcp_queue_is_empty(queue)) {
 		queue->end = node;
 	}
 	queue->front = node;
 	queue->len += node->len;
 }
 
-void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev) {
+void tcp_queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *prev) {
 	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
 
 	node->next = prev->next;
@@ -203,24 +187,24 @@ void queue_add(struct tcp_queue *queue, struct tcp_node *node, struct tcp_node *
 }
 
 //assumes the node being inserted is in the window
-int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end) {
+int tcp_queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_seq_num, uint32_t win_seq_end) {
 	int ret;
 
 	PRINT_DEBUG("Entered: queue=%p, len=%u, node=%p, win_seq_num=%u, win_seq_end=%u", queue, queue->len, node, win_seq_num, win_seq_end);
 	//queue_check(queue);
 
 	//empty
-	if (queue_is_empty(queue)) {
-		queue_prepend(queue, node);
+	if (tcp_queue_is_empty(queue)) {
+		tcp_queue_prepend(queue, node);
 
 		//queue_check(queue);
 		return 1;
 	}
 
 	//before front
-	ret = node_compare(node, queue->front, win_seq_num, win_seq_end);
+	ret = tcp_node_compare(node, queue->front, win_seq_num, win_seq_end);
 	if (ret == -1) { // [ <> () ] |
-		queue_prepend(queue, node);
+		tcp_queue_prepend(queue, node);
 
 		//queue_check(queue);
 		return 1;
@@ -231,9 +215,9 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	}
 
 	//after end
-	ret = node_compare(node, queue->end, win_seq_num, win_seq_end);
+	ret = tcp_node_compare(node, queue->end, win_seq_num, win_seq_end);
 	if (ret == 1) { // [ {} <> ] |
-		queue_append(queue, node);
+		tcp_queue_append(queue, node);
 
 		//queue_check(queue);
 		return 1;
@@ -246,9 +230,9 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	//iterate through queue
 	struct tcp_node *temp_node = queue->front;
 	while (temp_node->next) {
-		ret = node_compare(node, temp_node->next, win_seq_num, win_seq_end);
+		ret = tcp_node_compare(node, temp_node->next, win_seq_num, win_seq_end);
 		if (ret == -1) {
-			queue_add(queue, node, temp_node);
+			tcp_queue_add(queue, node, temp_node);
 
 			//queue_check(queue);
 			return 1;
@@ -266,7 +250,7 @@ int queue_insert(struct tcp_queue *queue, struct tcp_node *node, uint32_t win_se
 	return 0;
 }
 
-struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num) {
+struct tcp_node *tcp_queue_find(struct tcp_queue *queue, uint32_t seq_num) {
 	PRINT_DEBUG("Entered: queue=%p, seq_num=%u", queue, seq_num);
 
 	struct tcp_node *comp = queue->front;
@@ -281,7 +265,7 @@ struct tcp_node *queue_find(struct tcp_queue *queue, uint32_t seq_num) {
 	return NULL;
 }
 
-struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
+struct tcp_node *tcp_queue_remove_front(struct tcp_queue *queue) {
 	PRINT_DEBUG("Entered: queue=%p", queue);
 
 	struct tcp_node *node = queue->front;
@@ -299,10 +283,10 @@ struct tcp_node *queue_remove_front(struct tcp_queue *queue) {
 	return node;
 }
 
-void queue_remove(struct tcp_queue *queue, struct tcp_node *node) {
+void tcp_queue_remove(struct tcp_queue *queue, struct tcp_node *node) {
 	PRINT_DEBUG("Entered: queue=%p, node=%p", queue, node);
 
-	if (queue_is_empty(queue)) {
+	if (tcp_queue_is_empty(queue)) {
 		//queue_check(queue);
 
 		PRINT_DEBUG("Exited: queue=%p, len=%u", queue, queue->len);
@@ -342,7 +326,7 @@ void queue_remove(struct tcp_queue *queue, struct tcp_node *node) {
 	PRINT_DEBUG("Exited: queue=%p, len=%u", queue, queue->len);
 }
 
-int queue_check(struct tcp_queue *queue) { //TODO remove all references
+int tcp_queue_check(struct tcp_queue *queue) { //TODO remove all references
 	PRINT_DEBUG("Entered: queue=%p, len=%u", queue, queue->len);
 
 	int count = 0;
@@ -370,20 +354,20 @@ int queue_check(struct tcp_queue *queue) { //TODO remove all references
 	return count == queue->len;
 }
 
-int queue_is_empty(struct tcp_queue *queue) {
+int tcp_queue_is_empty(struct tcp_queue *queue) {
 	return queue->front == NULL; //Use so can add 0 len nodes, signals/flags?
 	//return queue->len == 0;
 }
 
-int queue_is_full(struct tcp_queue *queue) {
+int tcp_queue_is_full(struct tcp_queue *queue) {
 	return queue->len == queue->max;
 }
 
-int queue_has_space(struct tcp_queue *queue, uint32_t len) {
+int tcp_queue_has_space(struct tcp_queue *queue, uint32_t len) {
 	return queue->len + len <= queue->max;
 }
 
-void queue_free(struct tcp_queue *queue) {
+void tcp_queue_free(struct tcp_queue *queue) {
 	PRINT_DEBUG("Entered: queue=%p", queue);
 
 	struct tcp_node *next;
@@ -391,7 +375,7 @@ void queue_free(struct tcp_queue *queue) {
 	struct tcp_node *node = queue->front;
 	while (node) {
 		next = node->next;
-		node_free(node);
+		tcp_node_free(node);
 		node = next;
 	}
 	free(queue);
@@ -409,7 +393,7 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 	conn_stub->host_ip = host_ip;
 	conn_stub->host_port = host_port;
 
-	conn_stub->syn_queue = queue_create(backlog);
+	conn_stub->syn_queue = tcp_queue_create(backlog);
 
 	conn_stub->poll_events = 0;
 
@@ -500,7 +484,7 @@ void conn_stub_free(struct tcp_connection_stub *conn_stub) {
 	PRINT_DEBUG("Entered: conn_stub=%p", conn_stub);
 
 	if (conn_stub->syn_queue)
-		queue_free(conn_stub->syn_queue);
+		tcp_queue_free(conn_stub->syn_queue);
 	free(conn_stub);
 }
 
@@ -576,7 +560,7 @@ int conn_stub_list_has_space(uint32_t len) {
 void handle_interrupt(struct tcp_connection *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
-	if (queue_is_empty(conn->request_queue)) {
+	if (tcp_queue_is_empty(conn->request_queue)) {
 		PRINT_ERROR("todo error - minor");
 	} else {
 		struct tcp_node *temp_node;
@@ -590,7 +574,7 @@ void handle_interrupt(struct tcp_connection *conn) {
 				temp_node = node;
 				node = node->next;
 
-				queue_remove(conn->request_queue, temp_node);
+				tcp_queue_remove(conn->request_queue, temp_node);
 
 				if (temp_node == front && conn->request_index) {
 					conn_send_fcf(conn, request->serial_num, EXEC_TCP_SEND, 1, conn->request_index);
@@ -624,7 +608,7 @@ void handle_requests(struct tcp_connection *conn) {
 	uint8_t *buf;
 
 	int space = conn->write_queue->max - conn->write_queue->len;
-	while (space && !queue_is_empty(conn->request_queue)) {
+	while (space && !tcp_queue_is_empty(conn->request_queue)) {
 		temp_node = conn->request_queue->front;
 		request = (struct tcp_request *) temp_node->data;
 
@@ -635,8 +619,8 @@ void handle_requests(struct tcp_connection *conn) {
 			memcpy(buf, request->data + conn->request_index, space);
 			conn->request_index += space;
 
-			node = node_create(buf, space, conn->request_index - space, conn->request_index - 1);
-			queue_append(conn->write_queue, node);
+			node = tcp_node_create(buf, space, conn->request_index - space, conn->request_index - 1);
+			tcp_queue_append(conn->write_queue, node);
 
 			space = 0;
 			break;
@@ -645,12 +629,12 @@ void handle_requests(struct tcp_connection *conn) {
 			memcpy(buf, request->data + conn->request_index, avail);
 			conn->request_index = 0;
 
-			node = node_create(buf, avail, request->len - avail, request->len - 1);
-			queue_append(conn->write_queue, node);
+			node = tcp_node_create(buf, avail, request->len - avail, request->len - 1);
+			tcp_queue_append(conn->write_queue, node);
 
 			space -= avail;
 
-			queue_remove_front(conn->request_queue); // == to temp_node
+			tcp_queue_remove_front(conn->request_queue); // == to temp_node
 
 			conn_send_fcf(conn, request->serial_num, EXEC_TCP_SEND, 1, request->len);
 
@@ -842,7 +826,7 @@ void main_established(struct tcp_connection *conn) {
 		conn->first_flag = 0;
 		conn->fast_flag = 0;
 
-		if (queue_is_empty(conn->send_queue)) {
+		if (tcp_queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
 		} else {
 			conn->gbn_flag = 1;
@@ -886,7 +870,7 @@ void main_established(struct tcp_connection *conn) {
 		conn->fast_flag = 0;
 		//fast retransmit
 
-		if (!queue_is_empty(conn->send_queue)) {
+		if (!tcp_queue_is_empty(conn->send_queue)) {
 			seg = (struct tcp_segment *) conn->send_queue->front->data;
 			seg_update(seg, conn, FLAG_ACK);
 			seg_send(seg);
@@ -895,7 +879,7 @@ void main_established(struct tcp_connection *conn) {
 		}
 	} else if (conn->gbn_flag) {
 		//normal GBN
-		if (queue_is_empty(conn->send_queue)) {
+		if (tcp_queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
 		} else {
 			flight_size = conn->send_seq_end - conn->send_seq_num;
@@ -931,7 +915,7 @@ void main_established(struct tcp_connection *conn) {
 		//normal
 		PRINT_DEBUG("Normal");
 
-		if (queue_is_empty(conn->request_queue) && queue_is_empty(conn->write_queue)) {
+		if (tcp_queue_is_empty(conn->request_queue) && tcp_queue_is_empty(conn->write_queue)) {
 			conn->main_wait_flag = 1;
 			PRINT_DEBUG("Normal: flagging waitFlag");
 		} else {
@@ -976,8 +960,8 @@ void main_established(struct tcp_connection *conn) {
 				seg_update(seg, conn, FLAG_ACK);
 				seg_send(seg);
 
-				temp_node = node_create((uint8_t *) seg, data_len, seg->seq_num, seg->seq_num + data_len - 1);
-				queue_append(conn->send_queue, temp_node);
+				temp_node = tcp_node_create((uint8_t *) seg, data_len, seg->seq_num, seg->seq_num + data_len - 1);
+				tcp_queue_append(conn->send_queue, temp_node);
 
 				conn->send_seq_end += (uint32_t) data_len;
 				uint32_decrease(&conn->send_win, data_len);
@@ -996,7 +980,7 @@ void main_established(struct tcp_connection *conn) {
 				}
 
 				if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //TODO remove?
-					if (queue_is_empty(conn->request_queue)) {
+					if (tcp_queue_is_empty(conn->request_queue)) {
 						int space = conn->write_queue->max - conn->write_queue->len;
 						PRINT_DEBUG("conn=%p, space=%d", conn, space);
 						if (space > 0) {
@@ -1051,7 +1035,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 		conn->first_flag = 0;
 		conn->fast_flag = 0;
 
-		if (queue_is_empty(conn->send_queue)) {
+		if (tcp_queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
 			if (conn->fin_sent && conn_is_finished(conn)) {
 				//conn->fin_sent = 1;
@@ -1107,7 +1091,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 		conn->fast_flag = 0;
 		//fast retransmit
 
-		if (!queue_is_empty(conn->send_queue)) {
+		if (!tcp_queue_is_empty(conn->send_queue)) {
 			seg = (struct tcp_segment *) conn->send_queue->front->data;
 			seg_update(seg, conn, FLAG_ACK);
 			seg_send(seg);
@@ -1116,7 +1100,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 		}
 	} else if (conn->gbn_flag) {
 		//normal GBN
-		if (queue_is_empty(conn->send_queue)) {
+		if (tcp_queue_is_empty(conn->send_queue)) {
 			conn->gbn_flag = 0;
 		} else {
 			flight_size = conn->send_seq_end - conn->send_seq_num;
@@ -1152,7 +1136,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 		//normal
 		PRINT_DEBUG("Normal");
 
-		if (queue_is_empty(conn->request_queue) && queue_is_empty(conn->write_queue)) {
+		if (tcp_queue_is_empty(conn->request_queue) && tcp_queue_is_empty(conn->write_queue)) {
 			if (conn->fin_sent) {
 				conn->main_wait_flag = 1;
 				PRINT_DEBUG("Normal: flagging waitFlag");
@@ -1202,7 +1186,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 
 				handle_requests(conn);
 
-				if (queue_is_empty(conn->request_queue) && queue_is_empty(conn->write_queue)) {
+				if (tcp_queue_is_empty(conn->request_queue) && tcp_queue_is_empty(conn->write_queue)) {
 					conn->fin_sent = 1;
 					conn->fin_sep = 0;
 					conn->fssn = seg->seq_num;
@@ -1215,8 +1199,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				}
 				seg_send(seg);
 
-				temp_node = node_create((uint8_t *) seg, data_len, seg->seq_num, seg->seq_num + data_len - 1);
-				queue_append(conn->send_queue, temp_node);
+				temp_node = tcp_node_create((uint8_t *) seg, data_len, seg->seq_num, seg->seq_num + data_len - 1);
+				tcp_queue_append(conn->send_queue, temp_node);
 
 				conn->send_seq_end += (uint32_t) data_len;
 				uint32_decrease(&conn->send_win, data_len);
@@ -1235,7 +1219,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				}
 
 				if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //TODO remove?
-					if (queue_is_empty(conn->request_queue)) {
+					if (tcp_queue_is_empty(conn->request_queue)) {
 						int space = conn->write_queue->max - conn->write_queue->len;
 						PRINT_DEBUG("conn=%p, space=%d", conn, space);
 						if (space > 0) {
@@ -1479,10 +1463,10 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->rem_ip = rem_ip;
 	conn->rem_port = rem_port;
 
-	conn->request_queue = queue_create(TCP_REQUEST_LIST_MAX);
-	conn->write_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
-	conn->send_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
-	conn->recv_queue = queue_create(TCP_MAX_QUEUE_DEFAULT);
+	conn->request_queue = tcp_queue_create(TCP_REQUEST_LIST_MAX);
+	conn->write_queue = tcp_queue_create(TCP_MAX_QUEUE_DEFAULT);
+	conn->send_queue = tcp_queue_create(TCP_MAX_QUEUE_DEFAULT);
+	conn->recv_queue = tcp_queue_create(TCP_MAX_QUEUE_DEFAULT);
 	//conn->read_queue = queue_create(TCP_MAX_QUEUE_DEFAULT); //commented, since buffer in Daemon
 
 	conn->main_wait_flag = 0;
@@ -1747,7 +1731,7 @@ int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_m
 }
 
 int conn_is_finished(struct tcp_connection *conn) {
-	return queue_is_empty(conn->request_queue) && queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end;
+	return tcp_queue_is_empty(conn->request_queue) && tcp_queue_is_empty(conn->write_queue) && conn->send_seq_num == conn->send_seq_end;
 }
 
 void conn_shutdown(struct tcp_connection *conn) {
@@ -1803,11 +1787,11 @@ void conn_free(struct tcp_connection *conn) {
 	PRINT_DEBUG("conn=%p", conn);
 
 	if (conn->write_queue)
-		queue_free(conn->write_queue);
+		tcp_queue_free(conn->write_queue);
 	if (conn->send_queue)
-		queue_free(conn->send_queue);
+		tcp_queue_free(conn->send_queue);
 	if (conn->recv_queue)
-		queue_free(conn->recv_queue);
+		tcp_queue_free(conn->recv_queue);
 	//if (conn->read_queue)
 	//	queue_free(conn->read_queue);
 	free(conn);
@@ -2099,7 +2083,7 @@ uint32_t seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, uint32_t
 	seg->data = (uint8_t *) secure_malloc(data_len);
 	uint8_t *ptr = seg->data;
 
-	while (data_len && !queue_is_empty(queue)) {
+	while (data_len && !tcp_queue_is_empty(queue)) {
 		avail = queue->front->len - index;
 		PRINT_DEBUG("data_len=%d, index=%u, len=%u, avail=%u", data_len, index, queue->front->len, avail);
 		if (data_len < avail) {
@@ -2114,8 +2098,8 @@ uint32_t seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, uint32_t
 			index = 0;
 			data_len -= avail;
 
-			temp_node = queue_remove_front(queue);
-			node_free(temp_node);
+			temp_node = tcp_queue_remove_front(queue);
+			tcp_node_free(temp_node);
 		}
 	}
 

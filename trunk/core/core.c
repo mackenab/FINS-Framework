@@ -99,7 +99,58 @@ void termination_handler(int sig) {
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
+void *test_thread(void *local) {
+	PRINT_DEBUG("Entered: local=%p", local);
+
+	int count = 0;
+	while (count < 10) {
+		PRINT_DEBUG("count=%d", count);
+		count++;
+		sleep(1);
+	}
+
+	return NULL;
+}
+
+void *test_thread_2(void *local) {
+	PRINT_DEBUG("Entered: local=%p", local);
+
+	int count = 0;
+	while (count < 10) {
+		PRINT_DEBUG("count_2=%d", count);
+		count++;
+		sleep(1);
+	}
+
+	return NULL;
+}
+
 int main() {
+
+	struct thread_pool *pool = pool_create(2, 4);
+	PRINT_DEBUG("setup");
+
+	char srecv_data[4000];
+	gets(srecv_data);
+
+	PRINT_DEBUG("executing");
+	pool_execute(pool, test_thread, NULL);
+
+//	PRINT_DEBUG("waiting");
+//	gets(srecv_data);
+
+	pool_execute(pool, test_thread_2, NULL);
+
+	PRINT_DEBUG("pool shutdown");
+	gets(srecv_data);
+
+	pool_shutdown(pool);
+
+	while (1)
+		;
+
+	return 0;
+
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
