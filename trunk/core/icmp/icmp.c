@@ -855,7 +855,7 @@ void icmp_init(void) {
 void icmp_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&switch_to_icmp_thread, fins_pthread_attr, switch_to_icmp, fins_pthread_attr);
+	secure_pthread_create(&switch_to_icmp_thread, fins_pthread_attr, switch_to_icmp, fins_pthread_attr);
 }
 
 void icmp_shutdown(void) {

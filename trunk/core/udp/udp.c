@@ -525,7 +525,7 @@ void udp_init(void) {
 void udp_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&switch_to_udp_thread, fins_pthread_attr, switch_to_udp, fins_pthread_attr);
+	secure_pthread_create(&switch_to_udp_thread, fins_pthread_attr, switch_to_udp, fins_pthread_attr);
 }
 
 void udp_shutdown(void) {

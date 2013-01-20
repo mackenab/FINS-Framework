@@ -14,12 +14,8 @@
 extern sem_t daemon_sockets_sem;
 extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
-extern sem_t daemon_calls_sem; //TODO remove?
 extern struct daemon_call daemon_calls[MAX_CALLS];
 extern struct daemon_call_list *expired_call_list;
-
-extern int daemon_thread_count;
-extern sem_t daemon_thread_sem;
 
 void socket_out_tcp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol) {
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
@@ -2593,7 +2589,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 		sock_index = daemon_sockets_match_connection(src_ip, (uint16_t) src_port, 0, 0, IPPROTO_TCP);
 	}
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -2668,7 +2664,7 @@ void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	}
 
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t) src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t) src_port, dst_ip, (uint16_t)dst_port);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);
@@ -2717,7 +2713,7 @@ void daemon_tcp_in_poll(struct finsFrame *ff, uint32_t ret_msg) {
 	}
 
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
 	} else {
 		PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
 				daemon_sockets[sock_index].sock_id, sock_index, daemon_sockets[sock_index].host_ip, daemon_sockets[sock_index].host_port, daemon_sockets[sock_index].rem_ip, daemon_sockets[sock_index].rem_port, daemon_sockets[sock_index].protocol);

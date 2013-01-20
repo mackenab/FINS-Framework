@@ -82,10 +82,7 @@ void *write_thread(void *local) {
 				to_write_data->sem = &conn->main_wait_sem;
 
 				PRINT_DEBUG("to_write: conn=%p, id=%u, to_fd=%d", conn, to_write_data->id, to_write_data->fd);
-				if (pthread_create(&request->to_thread, NULL, intsem_to_thread, (void *) to_write_data)) {
-					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&request->to_thread, NULL, intsem_to_thread, (void *) to_write_data);
 				start_timer(request->to_fd, TCP_BLOCK_DEFAULT);
 			} else {
 				PRINT_DEBUG("blocking");
@@ -184,10 +181,7 @@ void tcp_out_fdf(struct finsFrame *ff) {
 			PRINT_DEBUG("starting: id=%u, conn=%p, pdu=%p, len=%u, flags=0x%x, serial_num=%u",
 					thread_data->id, thread_data->conn, thread_data->data_raw, thread_data->data_len, thread_data->flags, thread_data->serial_num);
 			pthread_t thread;
-			if (pthread_create(&thread, NULL, write_thread, (void *) thread_data)) {
-				PRINT_ERROR("ERROR: unable to create write_thread thread.");
-				exit(-1);
-			}
+			secure_pthread_create(&thread, NULL, write_thread, (void *) thread_data);
 			pthread_detach(thread);
 		} else {
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
@@ -340,10 +334,7 @@ void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, 
 			thread_data->ff = ff;
 
 			pthread_t thread;
-			if (pthread_create(&thread, NULL, close_thread, (void *) thread_data)) {
-				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-				exit(-1);
-			}
+			secure_pthread_create(&thread, NULL, close_thread, (void *) thread_data);
 			pthread_detach(thread);
 		} else {
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
@@ -409,10 +400,7 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 			thread_data->flags = 1;
 
 			pthread_t thread;
-			if (pthread_create(&thread, NULL, close_stub_thread, (void *) thread_data)) {
-				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-				exit(-1);
-			}
+			secure_pthread_create(&thread, NULL, close_stub_thread, (void *) thread_data);
 			pthread_detach(thread);
 		} else {
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
@@ -633,10 +621,7 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 			thread_data->flags = flags;
 
 			pthread_t thread;
-			if (pthread_create(&thread, NULL, accept_thread, (void *) thread_data)) {
-				PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-				exit(-1);
-			}
+			secure_pthread_create(&thread, NULL, accept_thread, (void *) thread_data);
 			pthread_detach(thread);
 		} else {
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
@@ -757,10 +742,7 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 						stub_thread_data->flags = 0;
 
 						pthread_t stub_thread;
-						if (pthread_create(&stub_thread, NULL, close_stub_thread, (void *) stub_thread_data)) {
-							PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-							exit(-1);
-						}
+						secure_pthread_create(&stub_thread, NULL, close_stub_thread, (void *) stub_thread_data);
 						pthread_detach(stub_thread);
 					}
 				} else {
@@ -775,10 +757,7 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 				thread_data->flags = flags;
 
 				pthread_t thread;
-				if (pthread_create(&thread, NULL, connect_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, connect_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				/*#*/PRINT_DEBUG("");
@@ -976,10 +955,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				thread_data->data_len = initial;
 				thread_data->flags = flags;
 
-				if (pthread_create(&thread, NULL, poll_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create poll_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, poll_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
@@ -1009,10 +985,7 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				thread_data->data_len = initial;
 				thread_data->flags = flags;
 
-				if (pthread_create(&thread, NULL, poll_stub_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create poll_stub_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, poll_stub_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
@@ -1236,10 +1209,7 @@ void tcp_read_param(struct finsFrame *ff) {
 				thread_data->conn = conn;
 				thread_data->ff = ff;
 
-				if (pthread_create(&thread, NULL, read_param_conn_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, read_param_conn_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
@@ -1265,10 +1235,7 @@ void tcp_read_param(struct finsFrame *ff) {
 				thread_data->conn_stub = conn_stub;
 				thread_data->ff = ff;
 
-				if (pthread_create(&thread, NULL, read_param_conn_stub_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, read_param_conn_stub_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
@@ -1482,10 +1449,7 @@ void tcp_set_param(struct finsFrame *ff) {
 				thread_data->ff = ff;
 				thread_data->flags = state;
 
-				if (pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
@@ -1520,10 +1484,7 @@ void tcp_set_param(struct finsFrame *ff) {
 				thread_data->ff = ff;
 				thread_data->flags = state;
 
-				if (pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create read_param_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);

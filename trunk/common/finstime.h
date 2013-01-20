@@ -59,8 +59,14 @@ void *intsem_to_thread(void *local);
 void stop_timer(int fd);
 void start_timer(int fd, double millis);
 
+struct pool_request {
+	void *(*work)(void *local);
+	void *local;
+};
+
 struct pool_worker {
 	sem_t *inactive_sem;
+	struct linked_list *queue;
 	uint32_t *inactive_num;
 
 	pthread_t thread;
@@ -74,23 +80,40 @@ struct pool_worker {
 	void *local;
 };
 void *worker_thread(void *local);
-struct pool_worker *worker_create(sem_t *inactive_sem, uint32_t *inactive_num, uint32_t id);
+
+struct pool_worker *worker_create(sem_t *inactive_sem, uint32_t *inactive_num, struct linked_list *queue, uint32_t id);
 void worker_shutdown(struct pool_worker *worker);
 void worker_free(struct pool_worker *worker);
 
 struct thread_pool {
-	struct linked_list *list;
-	struct linked_list *queue;
+	struct linked_list *workers;
 	sem_t inactive_sem;
 	uint32_t inactive_num;
 	uint32_t worker_count;
+
+	struct linked_list *queue;
+	struct pool_controller *controller;
 };
 
-struct thread_pool *pool_create(uint32_t size, uint32_t max);
+struct thread_pool *pool_create(uint32_t initial, uint32_t max, uint32_t limit);
 void pool_start(struct thread_pool *pool, uint32_t threads);
 int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *local);
 void pool_shutdown(struct thread_pool *pool);
 void pool_free(struct thread_pool *pool);
+
+struct pool_controller {
+	struct thread_pool *pool;
+	sem_t activate_sem;
+
+	pthread_t thread;
+	uint32_t id;
+	uint8_t running;
+};
+void *controller_thread(void *local);
+
+struct pool_controller *controller_create(struct thread_pool *pool);
+void controller_shutdown(struct pool_controller *controller);
+void controller_free(struct pool_controller *controller);
 
 //void *controler_thread(void *local);
 

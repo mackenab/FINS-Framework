@@ -348,10 +348,7 @@ struct arp_cache *arp_cache_create(uint32_t addr_ip) {
 	to_data->flag = &cache->to_flag;
 	to_data->interrupt = &arp_interrupt_flag;
 	to_data->sem = arp_proto.event_sem;
-	if (pthread_create(&cache->to_thread, NULL, intsem_to_thread, (void *) to_data)) {
-		PRINT_ERROR("ERROR: unable to create interrupt_to_thread thread.");
-		exit(-1);
-	}
+	secure_pthread_create(&cache->to_thread, NULL, intsem_to_thread, (void *) to_data);
 
 	PRINT_DEBUG("Exited: ip=%u, cache=%p, id=%d, to_fd=%d", addr_ip, cache, id, cache->to_fd);
 	return cache;
@@ -851,7 +848,8 @@ void arp_init(void) {
 void arp_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&switch_to_arp_thread, fins_pthread_attr, switch_to_arp, fins_pthread_attr);
+	secure_pthread_create(&switch_to_arp_thread, fins_pthread_attr, switch_to_arp, fins_pthread_attr);
+
 }
 
 void arp_shutdown(void) {

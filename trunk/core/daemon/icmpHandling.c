@@ -11,12 +11,8 @@
 extern sem_t daemon_sockets_sem;
 extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
-extern sem_t daemon_calls_sem; //TODO remove?
 extern struct daemon_call daemon_calls[MAX_CALLS];
 extern struct daemon_call_list *expired_call_list;
-
-extern int daemon_thread_count; //for TO threads
-extern sem_t daemon_thread_sem;
 
 /**
  * End of interfacing socketdaemon with FINS core

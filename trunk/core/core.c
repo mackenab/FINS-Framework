@@ -64,6 +64,8 @@ int read_configurations() {
 	return EXIT_SUCCESS;
 }
 
+extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
+
 void termination_handler(int sig) {
 	PRINT_CRITICAL("**********Terminating *******");
 
@@ -93,11 +95,11 @@ void termination_handler(int sig) {
 	daemon_release();
 	switch_release();
 
+	sem_destroy(&control_serial_sem);
+
 	PRINT_CRITICAL("FIN");
 	exit(-1);
 }
-
-extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
 void *test_thread(void *local) {
 	PRINT_DEBUG("Entered: local=%p", local);
@@ -127,8 +129,8 @@ void *test_thread_2(void *local) {
 
 int main() {
 
-	struct thread_pool *pool = pool_create(2, 4);
-	PRINT_DEBUG("setup");
+	struct thread_pool *pool = pool_create(1, 1, 5);
+	PRINT_DEBUG("setup done");
 
 	char srecv_data[4000];
 	gets(srecv_data);
@@ -136,16 +138,17 @@ int main() {
 	PRINT_DEBUG("executing");
 	pool_execute(pool, test_thread, NULL);
 
-//	PRINT_DEBUG("waiting");
-//	gets(srecv_data);
+	//	PRINT_DEBUG("waiting");
+	//	gets(srecv_data);
 
 	pool_execute(pool, test_thread_2, NULL);
 
-	PRINT_DEBUG("pool shutdown");
 	gets(srecv_data);
 
+	PRINT_DEBUG("pool shutdown");
 	pool_shutdown(pool);
 
+	PRINT_DEBUG("FIN");
 	while (1)
 		;
 

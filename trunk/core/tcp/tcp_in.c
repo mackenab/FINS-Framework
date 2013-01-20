@@ -1910,10 +1910,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 				thread_data->conn = conn;
 				thread_data->seg = seg;
 
-				if (pthread_create(&thread, NULL, recv_thread, (void *) thread_data)) {
-					PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-					exit(-1);
-				}
+				secure_pthread_create(&thread, NULL, recv_thread, (void *) thread_data);
 				pthread_detach(thread);
 			} else {
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
@@ -1941,10 +1938,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 						thread_data->conn_stub = conn_stub;
 						thread_data->seg = seg;
 
-						if (pthread_create(&thread, NULL, syn_thread, (void *) thread_data)) {
-							PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-							exit(-1);
-						}
+						secure_pthread_create(&thread, NULL, syn_thread, (void *) thread_data);
 						pthread_detach(thread);
 					} else {
 						PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);

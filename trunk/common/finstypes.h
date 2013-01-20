@@ -128,11 +128,7 @@ struct list_node {
 	struct list_node *next;
 	struct list_node *prev;
 	uint8_t *data;
-	uint32_t len;
 };
-
-struct list_node *node_create(uint8_t *data, uint32_t len);
-void node_free(struct list_node *node);
 
 struct linked_list {
 	uint32_t max;
@@ -141,21 +137,23 @@ struct linked_list {
 	struct list_node *end;
 };
 
+//for use as library, not internal
 struct linked_list *list_create(uint32_t max);
-void list_append(struct linked_list *list, struct list_node *node);
-void list_prepend(struct linked_list *list, struct list_node *node);
-void list_add(struct linked_list *list, struct list_node *node, struct list_node *prev);
-struct list_node *list_remove_front(struct linked_list *list);
-void list_remove(struct linked_list *list, struct list_node *node);
+void list_prepend(struct linked_list *list, uint8_t *data);
+void list_append(struct linked_list *list, uint8_t *data);
+void list_insert(struct linked_list *list, uint8_t *data, uint8_t *prev);
 int list_check(struct linked_list *list);
-int list_is_empty(struct linked_list *list);
+int list_contains(struct linked_list *list, uint8_t *data);
+uint8_t *list_remove_front(struct linked_list *list);
+void list_remove(struct linked_list *list, uint8_t *data);
+int list_is_empty(struct linked_list *list); //change some to inline?
 int list_is_full(struct linked_list *list);
-int list_has_space(struct linked_list *list, uint32_t len);
+int list_has_space(struct linked_list *list);
 void list_free(struct linked_list *list);
 
-int list_insert(struct linked_list *list, struct list_node *node, int(*comparer)(struct list_node *node1, struct list_node *node2));
-struct list_node *list_find(struct linked_list *list, int(*equal)(struct list_node *node));
-void list_for_each(struct linked_list *list, void(*apply)(struct list_node *node));
+int list_add(struct linked_list *list, uint8_t *data, int(*comparer)(uint8_t *data1, uint8_t *data2));
+uint8_t *list_find(struct linked_list *list, int(*equal)(uint8_t *data));
+void list_for_each(struct linked_list *list, void(*apply)(uint8_t *data));
 
 uint32_t gen_control_serial_num(void);
 

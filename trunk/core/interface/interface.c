@@ -466,8 +466,8 @@ void interface_init(void) {
 void interface_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&switch_to_interface_thread, fins_pthread_attr, switch_to_interface, fins_pthread_attr);
-	pthread_create(&capturer_to_interface_thread, fins_pthread_attr, capturer_to_interface, fins_pthread_attr);
+	secure_pthread_create(&switch_to_interface_thread, fins_pthread_attr, switch_to_interface, fins_pthread_attr);
+	secure_pthread_create(&capturer_to_interface_thread, fins_pthread_attr, capturer_to_interface, fins_pthread_attr);
 }
 
 void interface_shutdown(void) {

@@ -11,12 +11,8 @@
 extern sem_t daemon_sockets_sem;
 extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
-extern sem_t daemon_calls_sem; //TODO remove?
 extern struct daemon_call daemon_calls[MAX_CALLS];
 extern struct daemon_call_list *expired_call_list;
-
-extern int daemon_thread_count; //for TO threads
-extern sem_t daemon_thread_sem;
 
 /**
  * End of interfacing socketdaemon with FINS core
@@ -2049,7 +2045,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	secure_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match((uint16_t) dst_port, dst_ip, IPPROTO_UDP); //TODO change for multicast
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port); //TODO change back  to PRINT_ERROR
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port); //TODO change back  to PRINT_ERROR
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
@@ -2113,7 +2109,7 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	secure_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match((uint16_t) src_port, src_ip, IPPROTO_UDP); //TODO change for multicast
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 

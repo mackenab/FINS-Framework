@@ -185,7 +185,7 @@ void switch_init(void) {
 void switch_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&switch_thread, fins_pthread_attr, switch_loop, fins_pthread_attr);
+	secure_pthread_create(&switch_thread, fins_pthread_attr, switch_loop, fins_pthread_attr);
 }
 
 void switch_shutdown(void) {

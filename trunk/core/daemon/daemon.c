@@ -20,12 +20,10 @@ pthread_t switch_to_daemon_thread;
 sem_t daemon_sockets_sem;
 struct daemon_socket daemon_sockets[MAX_SOCKETS];
 
-sem_t daemon_calls_sem; //TODO remove?
 struct daemon_call daemon_calls[MAX_CALLS];
 struct daemon_call_list *expired_call_list;
 
 int daemon_thread_count;
-sem_t daemon_thread_sem;
 
 uint8_t daemon_interrupt_flag;
 
@@ -3432,7 +3430,6 @@ void daemon_init(void) {
 	module_register(&daemon_proto);
 
 	//init_daemonSockets();
-	sem_init(&daemon_thread_sem, 0, 1);
 	daemon_thread_count = 0;
 
 	int i;
@@ -3442,7 +3439,6 @@ void daemon_init(void) {
 		daemon_sockets[i].state = SS_FREE;
 	}
 
-	sem_init(&daemon_calls_sem, 0, 1);
 	for (i = 0; i < MAX_CALLS; i++) {
 		daemon_calls[i].call_id = -1;
 
@@ -3462,10 +3458,7 @@ void daemon_init(void) {
 		to_data->flag = &daemon_calls[i].to_flag;
 		to_data->interrupt = &daemon_interrupt_flag;
 		to_data->sem = daemon_proto.event_sem;
-		if (pthread_create(&daemon_calls[i].to_thread, NULL, intsem_to_thread, (void *) to_data)) {
-			PRINT_ERROR("ERROR: unable to create interrupt_to_thread thread.");
-			exit(-1);
-		}
+		secure_pthread_create(&daemon_calls[i].to_thread, NULL, intsem_to_thread, (void *) to_data);
 	}
 
 	expired_call_list = call_list_create(MAX_CALLS);
@@ -3491,8 +3484,8 @@ void daemon_init(void) {
 void daemon_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, wedge_to_daemon, fins_pthread_attr);
-	pthread_create(&switch_to_daemon_thread, fins_pthread_attr, switch_to_daemon, fins_pthread_attr);
+	secure_pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, wedge_to_daemon, fins_pthread_attr);
+	secure_pthread_create(&switch_to_daemon_thread, fins_pthread_attr, switch_to_daemon, fins_pthread_attr);
 }
 
 void daemon_shutdown(void) {
@@ -3556,6 +3549,9 @@ void daemon_release(void) {
 	for (i = 0; i < MAX_CALLS; i++) {
 		daemon_calls_shutdown(i);
 	}
+
+	sem_destroy(&nl_sem);
+	sem_destroy(&daemon_sockets_sem);
 
 	module_destroy_ops(&daemon_proto);
 }

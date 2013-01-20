@@ -1572,10 +1572,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	gbn_data->waiting = &conn->main_wait_flag;
 	gbn_data->sem = &conn->main_wait_sem;
 	PRINT_DEBUG("to_gbn_fd: conn=%p, id=%u, to_gbn_fd=%d", conn, gbn_data->id, conn->to_gbn_fd);
-	if (pthread_create(&conn->to_gbn_thread, NULL, sem_to_thread, (void *) gbn_data)) {
-		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-		exit(-1);
-	}
+	secure_pthread_create(&conn->to_gbn_thread, NULL, sem_to_thread, (void *) gbn_data);
 
 	struct sem_to_thread_data *delayed_data = (struct sem_to_thread_data *) secure_malloc(sizeof(struct sem_to_thread_data));
 	delayed_data->id = tcp_gen_thread_id();
@@ -1585,20 +1582,14 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	delayed_data->waiting = &conn->main_wait_flag;
 	delayed_data->sem = &conn->main_wait_sem;
 	PRINT_DEBUG("to_delayed_fd: conn=%p, id=%u, to_gbn_fd=%d", conn, delayed_data->id, conn->to_delayed_fd);
-	if (pthread_create(&conn->to_delayed_thread, NULL, sem_to_thread, (void *) delayed_data)) {
-		PRINT_ERROR("ERROR: unable to create recv_thread thread.");
-		exit(-1);
-	}
+	secure_pthread_create(&conn->to_delayed_thread, NULL, sem_to_thread, (void *) delayed_data);
 
 	//TODO add keepalive timer - implement through gbn timer
 	//TODO add silly window timer
 	//TODO add nagel timer
 
 	//start main thread
-	if (pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn)) {
-		PRINT_ERROR("ERROR: unable to create main_thread thread.");
-		exit(-1);
-	}
+	secure_pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn);
 
 	PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, conn=%p", host_ip, host_port, rem_ip, rem_port, conn);
 	return conn;
@@ -2728,7 +2719,7 @@ void tcp_init(void) {
 void tcp_run(pthread_attr_t *fins_pthread_attr) {
 	PRINT_CRITICAL("Entered");
 
-	pthread_create(&switch_to_tcp_thread, fins_pthread_attr, switch_to_tcp, fins_pthread_attr);
+	secure_pthread_create(&switch_to_tcp_thread, fins_pthread_attr, switch_to_tcp, fins_pthread_attr);
 }
 
 void tcp_get_ff(void) {
