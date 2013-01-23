@@ -217,8 +217,7 @@ int list_check(struct linked_list *list) { //TODO remove all references
 			PRINT_DEBUG("count=%d, node=%p", count, temp);
 			count++;
 			temp = temp->next;
-		}
-		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
+		}PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
 		return 0;
 	}
 }
@@ -333,6 +332,10 @@ int list_has_space(struct linked_list *list) {
 	return list->len < list->max;
 }
 
+uint32_t list_space(struct linked_list *list) {
+	return list->max - list->len;
+}
+
 void list_free(struct linked_list *list) {
 	PRINT_DEBUG("Entered: list=%p", list);
 
@@ -346,8 +349,7 @@ void list_free(struct linked_list *list) {
 		if (node->data) {
 			PRINT_DEBUG("freeing: data=%p", node->data);
 			free(node->data);
-		}
-		PRINT_DEBUG("freeing: node=%p",node);
+		}PRINT_DEBUG("freeing: node=%p",node);
 		free(node);
 
 		node = next;
@@ -541,8 +543,7 @@ void print_finsFrame(struct finsFrame *ff) {
 	}
 
 	if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);
-		PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
+		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
 		//PRINT_DEBUG("Meta data (first element) 0x%x", fins_in->metaData);
 		PRINT_DEBUG("PDU size (bytes) %d", ff->dataFrame.pduLength);
 		int i = 0;
@@ -561,13 +562,9 @@ void print_finsFrame(struct finsFrame *ff) {
 #endif
 		//######################
 	} else if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);
-		PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);
-		PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);
-		PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
+		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
 		//		PRINT_DEBUG("Reply Record (first element) 0x%x", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);
-		PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
+		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
 	}
 
 }
@@ -640,8 +637,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("here");
 			ff_clone->ctrlFrame.data = NULL;
-		}
-		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
+		}PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
 				ff, ff->metaData, ff->ctrlFrame.data, ff_clone, ff_clone->metaData, ff_clone->ctrlFrame.data);
 	} else if (ff_clone->dataOrCtrl == DATA) {
 		ff_clone->dataFrame.directionFlag = ff->dataFrame.directionFlag;
@@ -653,8 +649,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("here");
 			ff_clone->dataFrame.pdu = NULL;
-		}
-		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
+		}PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
 				ff, ff->metaData, ff->dataFrame.pdu, ff_clone, ff_clone->metaData, ff_clone->dataFrame.pdu);
 	} else {
 		PRINT_ERROR("todo error");

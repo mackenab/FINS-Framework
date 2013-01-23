@@ -360,7 +360,7 @@ void arp_cache_shutdown(struct arp_cache *cache) {
 	cache->running_flag = 0;
 
 	//stop threads
-	start_timer(cache->to_fd, ARP_TO_MIN);
+	start_timer(cache->to_fd, TO_MIN);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);

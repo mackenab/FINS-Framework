@@ -124,6 +124,11 @@ void secure_pthread_create_full(const char *file, const char *func, int line, pt
 void uint32_increase(uint32_t *data, uint32_t value, uint32_t max);
 void uint32_decrease(uint32_t *data, uint32_t value);
 
+struct data_buf {
+	uint32_t len;
+	uint8_t *data;
+};
+
 struct list_node {
 	struct list_node *next;
 	struct list_node *prev;
@@ -149,6 +154,7 @@ void list_remove(struct linked_list *list, uint8_t *data);
 int list_is_empty(struct linked_list *list); //change some to inline?
 int list_is_full(struct linked_list *list);
 int list_has_space(struct linked_list *list);
+uint32_t list_space(struct linked_list *list);
 void list_free(struct linked_list *list);
 
 int list_add(struct linked_list *list, uint8_t *data, int(*comparer)(uint8_t *data1, uint8_t *data2));

@@ -17,7 +17,6 @@
 #include <unistd.h>
 
 //#include <stdlib.h>
-//#include <stdint.h>
 //#include <stdio.h>
 //#include <stdint.h>
 
@@ -26,6 +25,8 @@
 //#include "metadata.h"
 
 double time_diff(struct timeval *time1, struct timeval *time2);
+
+#define TO_MIN 0.00001
 
 struct interrupt_to_thread_data {
 	int id;
@@ -103,10 +104,11 @@ void pool_free(struct thread_pool *pool);
 
 struct pool_controller {
 	struct thread_pool *pool;
-	sem_t activate_sem;
+	double period;
 
 	pthread_t thread;
 	uint32_t id;
+	int fd;
 	uint8_t running;
 };
 void *controller_thread(void *local);

@@ -1583,10 +1583,6 @@ void shutdown_out_tcp(struct nl_wedge_to_daemon *hdr, int how) {
 	 */
 
 	//index = find_daemonSocket(uniqueSockID);
-	//if (index == -1) {
-	//	PRINT_ERROR("socket descriptor not found into daemon sockets");
-	//	exit(-1);
-	//}
 	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
 
 	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);

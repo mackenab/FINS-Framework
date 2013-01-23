@@ -103,7 +103,6 @@ void tcp_node_free(struct tcp_node *node);
 
 //Structure for the ordered queue of outgoing/incoming packets for a TCP connection
 struct tcp_queue {
-	//sem_t sem; //TODO remove, not used anymore
 	uint32_t max;
 	uint32_t len;
 	struct tcp_node *front;
@@ -136,6 +135,7 @@ struct tcp_connection_stub {
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
+	struct thread_pool *pool;
 
 	uint32_t poll_events;
 	//int syn_threads;
@@ -219,11 +219,12 @@ struct tcp_connection {
 	uint32_t write_threads;
 	//##
 
-	uint32_t total;
-
 	sem_t sem; //for next, state, write_threads
 	uint8_t running_flag; //signifies if it is running, 0 when shutting down
 	tcp_state state;
+
+	uint32_t total;
+	struct thread_pool *pool;
 
 	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
 	uint16_t host_port; //Port on this machine that this connection is taking up
@@ -355,7 +356,6 @@ struct tcp_connection {
 #define TCP_MSS_DEFAULT_SMALL 536 //also said to be, 536
 #define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO
 #define TCP_KA_TO_DEFAULT 7200000 //keep alive TO
-#define TCP_TO_MIN 0.00001
 #define TCP_SEND_MIN 4096
 #define TCP_SEND_MAX 3444736
 #define TCP_SEND_DEFAULT 16384

@@ -4,7 +4,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -12,6 +11,15 @@
 #include <linux/errqueue.h>
 #include <math.h>
 #include <time.h>
+#include <sys/time.h>
+#include <sys/timerfd.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdint.h>
+#include <libconfig.h>
 
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
@@ -159,7 +167,7 @@ int main(int argc, char *argv[]) {
 	fds[1].fd = sock;
 	fds[1].events = POLLIN | 0;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
-	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
+	printf("\n fd: sock=%d, events=%x\n", sock, fds[1].events);
 	fflush(stdout);
 	int time = 1000;
 
@@ -174,7 +182,6 @@ int main(int argc, char *argv[]) {
 		send_data[0] = 89;
 	}
 
-	int len;
 	int ret = 0;
 
 	struct msghdr recv_msg;
@@ -204,7 +211,8 @@ int main(int argc, char *argv[]) {
 	struct timeval curr;
 	struct timeval *stamp;
 
-	if (1) {
+	if (0) {
+		int len;
 		int i = 0;
 		while (1) {
 			i++;
@@ -359,10 +367,47 @@ int main(int argc, char *argv[]) {
 			//printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
 			printf("\n len=%d, time=%f, suc=%d, bytes=%d, avg=%f ms, eff=%f, thr=%f, calls=%f, act=%f", data_len, total_time, total_success, total_bytes,
 					total_time / total_success, total_success / (double) its, total_bytes / (double) its / data_len, 1000 / (total_time / total_success), 1000
-							/ (total_time / total_success) * data_len*8);
+							/ (total_time / total_success) * data_len * 8);
 			fflush(stdout);
 
 			//sleep(5);
+		}
+	}
+
+	if (1) {
+		int i = 0;
+		int its = 10000;
+		double speed = 15000000;
+		int len = 1000;
+		double time = 8 * len / speed * 1000000;
+		int use = (int) (time + .5);//ceil(time);
+
+		printf("time=%f, used=%u\n", time, use);
+		fflush(stdout);
+
+		int *data = (int *) send_data;
+		*(data + 1) = 0;
+
+		double diff;
+		struct timeval start, end;
+		gettimeofday(&start, 0);
+
+		while (1) {
+			*data = htonl(i);
+			numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+			if (numbytes != len) {
+				break;
+			}
+
+			if (1) {
+				gettimeofday(&end, 0);
+				diff = time_diff(&start, &end) / 1000;
+				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
+				fflush(stdout);
+			}
+
+			i++;
+			//usleep(use);
 		}
 	}
 

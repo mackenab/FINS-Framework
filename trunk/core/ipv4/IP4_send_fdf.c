@@ -8,11 +8,6 @@
 #include "ipv4.h"
 #include <queueModule.h>
 
-extern finsQueue IPv4_to_Switch_Queue;
-extern sem_t IPv4_to_Switch_Qsem;
-
-extern IP4addr my_ip_addr;
-
 void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	PRINT_DEBUG("Entered: ff=%p, pheader=%p, ppacket=%p", ff, pheader, ppacket);
 
@@ -200,7 +195,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 
 							gettimeofday(&cache->updated_stamp, 0);
 						} else {
-							PRINT_ERROR("Error: request_list full, request_list->len=%d, ff=%p", cache->request_list->len, ff);
+							PRINT_ERROR("Error: request_list full, request_list->len=%u, ff=%p", cache->request_list->len, ff);
 							freeFinsFrame(ff);
 							free(pdu);
 						}

@@ -83,6 +83,7 @@ void *write_thread(void *local) {
 
 				PRINT_DEBUG("to_write: conn=%p, id=%u, to_fd=%d", conn, to_write_data->id, to_write_data->fd);
 				secure_pthread_create(&request->to_thread, NULL, intsem_to_thread, (void *) to_write_data);
+				//pool_execute(conn->pool, write_thread, (void *) thread_data);
 				start_timer(request->to_fd, TCP_BLOCK_DEFAULT);
 			} else {
 				PRINT_DEBUG("blocking");
@@ -133,7 +134,8 @@ void *write_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_out_fdf(struct finsFrame *ff) {
@@ -180,9 +182,11 @@ void tcp_out_fdf(struct finsFrame *ff) {
 
 			PRINT_DEBUG("starting: id=%u, conn=%p, pdu=%p, len=%u, flags=0x%x, serial_num=%u",
 					thread_data->id, thread_data->conn, thread_data->data_raw, thread_data->data_len, thread_data->flags, thread_data->serial_num);
-			pthread_t thread;
-			secure_pthread_create(&thread, NULL, write_thread, (void *) thread_data);
-			pthread_detach(thread);
+			//pthread_t thread;
+			//secure_pthread_create(&thread, NULL, write_thread, (void *) thread_data);
+			//pthread_detach(thread);
+			//pool_execute(conn->pool, write_thread, (void *) thread_data);
+			write_thread((void *) thread_data);
 		} else {
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 		}
@@ -301,10 +305,7 @@ void *close_thread(void *local) {
 	}
 
 	/*#*/PRINT_DEBUG("");
-	if (sem_wait(&conn_list_sem)) {
-		PRINT_ERROR("conn_list_sem wait prob");
-		exit(-1);
-	}
+	secure_sem_wait(&conn_list_sem);
 	conn->threads--;
 	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
 	sem_post(&conn_list_sem);
@@ -313,8 +314,8 @@ void *close_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
@@ -323,20 +324,25 @@ void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, 
 	secure_sem_wait(&conn_list_sem);
 	struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 	if (conn) {
-		int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_list_sem);
+		if (conn->threads < TCP_THREADS_MAX) {
+			conn->threads++;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_list_sem);
 
-		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn = conn;
 			thread_data->ff = ff;
 
-			pthread_t thread;
-			secure_pthread_create(&thread, NULL, close_thread, (void *) thread_data);
-			pthread_detach(thread);
+			//pthread_t thread;
+			//secure_pthread_create(&thread, NULL, close_thread, (void *) thread_data);
+			//pthread_detach(thread);
+			//pool_execute(conn->pool, close_thread, (void *) thread_data);
+			close_thread((void *) thread_data);
 		} else {
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_list_sem);
+
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 		}
 	} else {
@@ -377,8 +383,8 @@ void *close_stub_thread(void *local) {
 	//TODO add conn_stub->threads--?
 
 	PRINT_DEBUG("Exited: id=%u", id);
-
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port) {
@@ -388,11 +394,11 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 	struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub) {
 		conn_stub_list_remove(conn_stub);
-		int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_stub_list_sem);
+		if (conn_stub->threads < TCP_THREADS_MAX) {
+			conn_stub->threads++;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_stub_list_sem);
 
-		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
@@ -400,9 +406,14 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 			thread_data->flags = 1;
 
 			pthread_t thread;
-			secure_pthread_create(&thread, NULL, close_stub_thread, (void *) thread_data);
-			pthread_detach(thread);
+			//secure_pthread_create(&thread, NULL, close_stub_thread, (void *) thread_data);
+			//pthread_detach(thread);
+			//pool_execute(conn->pool, close_stub_thread, (void *) thread_data);
+			close_stub_thread((void *) thread_data);
 		} else {
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_stub_list_sem);
+
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 		}
 	} else {
@@ -599,8 +610,8 @@ void *accept_thread(void *local) { //this will need to be changed
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags) {
@@ -609,11 +620,11 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 	secure_sem_wait(&conn_stub_list_sem);
 	struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 	if (conn_stub) {
-		int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_stub_list_sem);
+		if (conn_stub->threads < TCP_THREADS_MAX) {
+			conn_stub->threads++;
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_stub_list_sem);
 
-		if (start) {
 			struct tcp_thread_data *thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 			thread_data->id = tcp_gen_thread_id();
 			thread_data->conn_stub = conn_stub;
@@ -624,6 +635,9 @@ void tcp_exec_accept(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port,
 			secure_pthread_create(&thread, NULL, accept_thread, (void *) thread_data);
 			pthread_detach(thread);
 		} else {
+			/*#*/PRINT_DEBUG("");
+			sem_post(&conn_stub_list_sem);
+
 			PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 			//TODO send NACK
 		}
@@ -709,7 +723,8 @@ void *connect_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t flags) {
@@ -731,19 +746,26 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 				struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 				if (conn_stub) {
 					conn_stub_list_remove(conn_stub);
-					int start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-					/*#*/PRINT_DEBUG("");
-					sem_post(&conn_stub_list_sem);
+					if (conn_stub->threads < TCP_THREADS_MAX) {
+						conn_stub->threads++;
+						/*#*/PRINT_DEBUG("");
+						sem_post(&conn_stub_list_sem);
 
-					if (start) {
 						struct tcp_thread_data *stub_thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 						stub_thread_data->id = tcp_gen_thread_id();
 						stub_thread_data->conn_stub = conn_stub;
 						stub_thread_data->flags = 0;
 
-						pthread_t stub_thread;
-						secure_pthread_create(&stub_thread, NULL, close_stub_thread, (void *) stub_thread_data);
-						pthread_detach(stub_thread);
+						//pthread_t stub_thread;
+						//secure_pthread_create(&stub_thread, NULL, close_stub_thread, (void *) stub_thread_data);
+						//pthread_detach(stub_thread);
+						//pool_execute(conn->pool, close_stub_thread, (void *) stub_thread_data);
+						close_stub_thread((void *) stub_thread_data);
+					} else {
+						/*#*/PRINT_DEBUG("");
+						sem_post(&conn_stub_list_sem);
+
+						PRINT_ERROR("error");
 					}
 				} else {
 					/*#*/PRINT_DEBUG("");
@@ -756,9 +778,11 @@ void tcp_exec_connect(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port
 				thread_data->ff = ff;
 				thread_data->flags = flags;
 
-				pthread_t thread;
-				secure_pthread_create(&thread, NULL, connect_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//pthread_t thread;
+				//secure_pthread_create(&thread, NULL, connect_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn->pool, connect_thread, (void *) thread_data);
+				connect_thread((void *) thread_data);
 			} else {
 				/*#*/PRINT_DEBUG("");
 				sem_post(&conn_list_sem);
@@ -861,7 +885,8 @@ void *poll_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *poll_stub_thread(void *local) {
@@ -929,12 +954,12 @@ void *poll_stub_thread(void *local) {
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t initial,
 		uint32_t flags) {
-	int start;
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
@@ -943,11 +968,11 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 		secure_sem_wait(&conn_list_sem);
 		struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 		if (conn) {
-			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn_list_sem);
+			if (conn->threads < TCP_THREADS_MAX) {
+				conn->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
 
-			if (start) {
 				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
@@ -955,9 +980,14 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				thread_data->data_len = initial;
 				thread_data->flags = flags;
 
-				secure_pthread_create(&thread, NULL, poll_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//secure_pthread_create(&thread, NULL, poll_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn->pool, poll_thread, (void *) thread_data);
+				poll_thread((void *) thread_data);
 			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
+
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 				tcp_reply_fcf(ff, 1, POLLERR); //TODO check on value?
 			}
@@ -973,11 +1003,11 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 		secure_sem_wait(&conn_stub_list_sem);
 		struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 		if (conn_stub) {
-			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn_stub_list_sem);
+			if (conn_stub->threads < TCP_THREADS_MAX) {
+				conn_stub->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
 
-			if (start) {
 				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn_stub = conn_stub;
@@ -985,9 +1015,14 @@ void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, u
 				thread_data->data_len = initial;
 				thread_data->flags = flags;
 
-				secure_pthread_create(&thread, NULL, poll_stub_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//secure_pthread_create(&thread, NULL, poll_stub_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn_stub->pool, poll_stub_thread, (void *) thread_data);
+				poll_stub_thread((void *) thread_data);
 			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
+
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 				tcp_reply_fcf(ff, 1, POLLERR); //TODO check on value?
 			}
@@ -1020,7 +1055,8 @@ void *read_param_conn_thread(void *local) {
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			value = conn->recv_win;
 			secure_metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
 
@@ -1033,7 +1069,8 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			//fill in with switch of opts? or have them separate?
 
 			//TODO read sock opts
@@ -1047,7 +1084,8 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1081,7 +1119,8 @@ void *read_param_conn_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *read_param_conn_stub_thread(void *local) {
@@ -1103,7 +1142,8 @@ void *read_param_conn_stub_thread(void *local) {
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			secure_metadata_readFromElement(params, "value", &value);
 			//TODO do something? error?
 
@@ -1122,7 +1162,8 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
@@ -1141,7 +1182,8 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1175,7 +1217,8 @@ void *read_param_conn_stub_thread(void *local) {
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_read_param(struct finsFrame *ff) {
@@ -1187,7 +1230,6 @@ void tcp_read_param(struct finsFrame *ff) {
 
 	struct tcp_connection *conn;
 	struct tcp_connection_stub *conn_stub;
-	int start;
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
@@ -1199,19 +1241,24 @@ void tcp_read_param(struct finsFrame *ff) {
 		secure_sem_wait(&conn_list_sem);
 		conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 		if (conn) {
-			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn_list_sem);
+			if (conn->threads < TCP_THREADS_MAX) {
+				conn->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
 
-			if (start) {
 				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->ff = ff;
 
-				secure_pthread_create(&thread, NULL, read_param_conn_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//secure_pthread_create(&thread, NULL, read_param_conn_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn->pool, read_param_conn_thread, (void *) thread_data);
+				read_param_conn_thread((void *) thread_data);
 			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
+
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 			}
 		} else {
@@ -1225,19 +1272,24 @@ void tcp_read_param(struct finsFrame *ff) {
 		secure_sem_wait(&conn_stub_list_sem);
 		conn_stub = conn_stub_list_find(host_ip, host_port);
 		if (conn_stub) {
-			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn_stub_list_sem);
+			if (conn_stub->threads < TCP_THREADS_MAX) {
+				conn_stub->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
 
-			if (start) {
 				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn_stub = conn_stub;
 				thread_data->ff = ff;
 
-				secure_pthread_create(&thread, NULL, read_param_conn_stub_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//secure_pthread_create(&thread, NULL, read_param_conn_stub_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn->pool, read_param_conn_stub_thread, (void *) thread_data);
+				read_param_conn_stub_thread((void *) thread_data);
 			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
+
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 			}
 		} else {
@@ -1268,39 +1320,53 @@ void *set_param_conn_thread(void *local) {
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			secure_metadata_readFromElement(params, "value", &value);
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), before",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win)
+			;
 			uint32_increase(&conn->recv_win, value, conn->recv_max_win);
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), after",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win)
+			;
 
-			ff->destinationID.id = ff->ctrlFrame.senderID;
+			if (0) {
+				ff->destinationID.id = ff->ctrlFrame.senderID;
 
-			ff->ctrlFrame.senderID = TCP_ID;
-			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = 1;
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+				ff->ctrlFrame.ret_val = 1;
 
-			tcp_to_switch(ff);
+				tcp_to_switch(ff);
+			} else {
+				freeFinsFrame(ff);
+			}
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
-			PRINT_ERROR("todo");
+			PRINT_ERROR("todo")
+			;
 
-			ff->destinationID.id = ff->ctrlFrame.senderID;
+			if (0) {
+				ff->destinationID.id = ff->ctrlFrame.senderID;
 
-			ff->ctrlFrame.senderID = TCP_ID;
-			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-			ff->ctrlFrame.ret_val = 1;
+				ff->ctrlFrame.senderID = TCP_ID;
+				ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+				ff->ctrlFrame.ret_val = 1;
 
-			tcp_to_switch(ff);
+				tcp_to_switch(ff);
+			} else {
+				freeFinsFrame(ff);
+			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1334,7 +1400,8 @@ void *set_param_conn_thread(void *local) {
 	sem_post(&conn->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *set_param_conn_stub_thread(void *local) {
@@ -1356,7 +1423,8 @@ void *set_param_conn_stub_thread(void *local) {
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
+			;
 			secure_metadata_readFromElement(params, "value", &value);
 			//TODO do something? error?
 
@@ -1372,7 +1440,8 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
+			;
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
@@ -1388,7 +1457,8 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
@@ -1416,7 +1486,8 @@ void *set_param_conn_stub_thread(void *local) {
 	sem_post(&conn_stub->sem);
 
 	PRINT_DEBUG("Exited: id=%u", id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_set_param(struct finsFrame *ff) {
@@ -1426,7 +1497,6 @@ void tcp_set_param(struct finsFrame *ff) {
 	uint32_t rem_ip = 0;
 	uint16_t rem_port = 0;
 
-	int start;
 	pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
@@ -1438,20 +1508,25 @@ void tcp_set_param(struct finsFrame *ff) {
 		secure_sem_wait(&conn_list_sem);
 		struct tcp_connection *conn = conn_list_find(host_ip, host_port, rem_ip, rem_port);
 		if (conn) {
-			start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn_list_sem);
+			if (conn->threads < TCP_THREADS_MAX) {
+				conn->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
 
-			if (start) {
 				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn = conn;
 				thread_data->ff = ff;
 				thread_data->flags = state;
 
-				secure_pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//secure_pthread_create(&thread, NULL, set_param_conn_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn->pool, set_param_conn_thread, (void *) thread_data);
+				set_param_conn_thread((void *) thread_data);
 			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_list_sem);
+
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
 			}
 		} else {
@@ -1473,20 +1548,25 @@ void tcp_set_param(struct finsFrame *ff) {
 		secure_sem_wait(&conn_stub_list_sem);
 		struct tcp_connection_stub *conn_stub = conn_stub_list_find(host_ip, host_port);
 		if (conn_stub) {
-			start = (conn_stub->threads < TCP_THREADS_MAX) ? ++conn_stub->threads : 0;
-			/*#*/PRINT_DEBUG("");
-			sem_post(&conn_stub_list_sem);
+			if (conn_stub->threads < TCP_THREADS_MAX) {
+				conn_stub->threads++;
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
 
-			if (start) {
 				thread_data = (struct tcp_thread_data *) secure_malloc(sizeof(struct tcp_thread_data));
 				thread_data->id = tcp_gen_thread_id();
 				thread_data->conn_stub = conn_stub;
 				thread_data->ff = ff;
 				thread_data->flags = state;
 
-				secure_pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data);
-				pthread_detach(thread);
+				//secure_pthread_create(&thread, NULL, set_param_conn_stub_thread, (void *) thread_data);
+				//pthread_detach(thread);
+				//pool_execute(conn->pool, set_param_conn_stub_thread, (void *) thread_data);
+				set_param_conn_stub_thread((void *) thread_data);
 			} else {
+				/*#*/PRINT_DEBUG("");
+				sem_post(&conn_stub_list_sem);
+
 				PRINT_ERROR("Too many threads=%d. Dropping...", conn_stub->threads);
 			}
 		} else {

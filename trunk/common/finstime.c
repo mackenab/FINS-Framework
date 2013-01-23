@@ -39,7 +39,7 @@ void *interrupt_to_thread(void *local) {
 	uint64_t exp;
 
 	PRINT_DEBUG("Entered: id=%d, fd=%d", id, fd);
-	while (*running) {
+	while (1) {
 		/*#*/PRINT_DEBUG("");
 		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
 		if (!(*running)) {
@@ -57,7 +57,8 @@ void *interrupt_to_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *sem_to_thread(void *local) {
@@ -74,7 +75,7 @@ void *sem_to_thread(void *local) {
 	uint64_t exp;
 
 	PRINT_DEBUG("Entered: id=%u, fd=%d", id, fd);
-	while (*running) {
+	while (1) {
 		/*#*/PRINT_DEBUG("");
 		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
 		if (!(*running)) {
@@ -95,7 +96,8 @@ void *sem_to_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u, fd=%d", id, fd);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *intsem_to_thread(void *local) {
@@ -112,7 +114,7 @@ void *intsem_to_thread(void *local) {
 	uint64_t exp;
 
 	PRINT_DEBUG("Entered: id=%u, fd=%d", id, fd);
-	while (*running) {
+	while (1) {
 		/*#*/PRINT_DEBUG("");
 		ret = read(fd, &exp, sizeof(uint64_t)); //blocking read
 		if (!(*running)) {
@@ -133,7 +135,8 @@ void *intsem_to_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u, fd=%d", id, fd);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void stop_timer(int fd) {
@@ -184,13 +187,18 @@ void *worker_thread(void *local) {
 				break;
 			}
 		} else {
-			struct pool_request *request = (struct pool_request *) list_remove_front(worker->queue);
-			worker->work = request->work;
-			worker->local = request->local;
+			if (worker->running) {
+				struct pool_request *request = (struct pool_request *) list_remove_front(worker->queue);
+				worker->work = request->work;
+				worker->local = request->local;
 
-			PRINT_DEBUG("freeing: request=%p",request);
-			free(request);
-			sem_post(worker->inactive_sem);
+				PRINT_DEBUG("freeing: request=%p",request);
+				free(request);
+				sem_post(worker->inactive_sem);
+			} else {
+				sem_post(worker->inactive_sem);
+				break;
+			}
 		}
 
 		worker->work(worker->local);
@@ -245,7 +253,51 @@ void worker_free(struct pool_worker *worker) {
 
 void *controller_thread(void *local) {
 	struct pool_controller *controller = (struct pool_controller *) local;
-	PRINT_DEBUG("Entered: id=%u", controller->id);
+	PRINT_DEBUG("Entered: id=%u, fd=%d", controller->id, controller->fd);
+
+	int ret;
+	uint64_t exp;
+
+	//check worker num, inactive num, & queue len periodically, optimize values
+	while (1) {
+		ret = read(controller->fd, &exp, sizeof(uint64_t)); //blocking read
+		if (!controller->running) {
+			break;
+		}
+
+		secure_sem_wait(&controller->pool->inactive_sem);
+		if (list_is_empty(controller->pool->queue)) {
+			//check if should reduce workers
+			if (controller->pool->inactive_num) {
+				double threads = floor(controller->pool->inactive_num / 2.0);
+				//PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f", controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
+				if (threads > 0) {
+					//pool_start(controller->pool, (uint32_t) threads);
+				}
+			} else {
+				//do nothing
+			}
+		} else {
+			if (controller->pool->queue->len > controller->pool->inactive_num) {
+				uint32_t space = list_space(controller->pool->workers);
+				double threads = ceil((controller->pool->queue->len - controller->pool->inactive_num) / 2.0);
+				PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f", controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
+				if (space) {
+					if (threads < space) {
+						pool_start(controller->pool, (uint32_t) threads);
+					} else {
+						pool_start(controller->pool, space);
+					}
+				}
+			} else {
+				//queue smaller than inactive, should be able to handle, increase timer rate?
+				controller->period /= 2;
+			}
+		}
+
+		start_timer(controller->fd, controller->period);
+		sem_post(&controller->pool->inactive_sem);
+	}
 
 	PRINT_DEBUG("Exited: id=%u", controller->id);
 	pthread_exit(NULL);
@@ -256,24 +308,42 @@ struct pool_controller *controller_create(struct thread_pool *pool) {
 
 	struct pool_controller *controller = (struct pool_controller *) secure_malloc(sizeof(struct pool_controller));
 	controller->pool = pool;
+	controller->period = 1000.000; //observe queue add rates & change time
 
 	controller->id = 0;
 	controller->running = 1;
-	//sem_init(&worker->activate_sem, 0, 0);
 
+	controller->fd = timerfd_create(CLOCK_REALTIME, 0);
+	if (controller->fd == -1) {
+		PRINT_ERROR("ERROR: unable to create to_fd.");
+		exit(-1);
+	}
+
+	//sem_init(&worker->activate_sem, 0, 0);
 	//change back to normal? if fails don't crash
-	//secure_pthread_create(&controller->thread, NULL, controller_thread, (void *) controller);
+	secure_pthread_create(&controller->thread, NULL, controller_thread, (void *) controller);
 	//pthread_detach(&controller->thread);
+
+	start_timer(controller->fd, 0.5);
 
 	return controller;
 }
+
 void controller_shutdown(struct pool_controller *controller) {
 	PRINT_DEBUG("Entered: controller=%p", controller);
 
+	controller->running = 0;
+	start_timer(controller->fd, TO_MIN);
+
+	PRINT_DEBUG("joining controller thread: id=%u", controller->id);
+	pthread_join(controller->thread, NULL);
+
 }
+
 void controller_free(struct pool_controller *controller) {
 	PRINT_DEBUG("Entered: controller=%p", controller);
 
+	free(controller);
 }
 
 struct thread_pool *pool_create(uint32_t initial, uint32_t max, uint32_t limit) {
@@ -286,19 +356,28 @@ struct thread_pool *pool_create(uint32_t initial, uint32_t max, uint32_t limit) 
 	pool->inactive_num = 0;
 	pool->worker_count = 0;
 
-	pool->controller = controller_create(pool);
+	//pool->controller = controller_create(pool);
 
-	struct pool_worker *worker;
-	int i;
-	for (i = 0; i < initial; i++) {
-		secure_sem_wait(&pool->inactive_sem);
-		worker = worker_create(&pool->inactive_sem, &pool->inactive_num, pool->queue, ++pool->worker_count);
-		list_append(pool->workers, (uint8_t *) worker);
-		sem_post(&pool->inactive_sem);
-	}
+	secure_sem_wait(&pool->inactive_sem);
+	pool_start(pool, initial);
+	sem_post(&pool->inactive_sem);
 
 	PRINT_DEBUG("Exited: initial=%u, max=%u, pool=%p", initial, max, pool);
 	return pool;
+}
+
+void pool_start(struct thread_pool *pool, uint32_t threads) {
+	PRINT_DEBUG("Entered: pool=%p, threads=%u", pool, threads);
+
+	int i;
+	struct pool_worker *worker;
+
+	for (i = 0; i < threads; i++) {
+		worker = worker_create(&pool->inactive_sem, &pool->inactive_num, pool->queue, ++pool->worker_count);
+		list_append(pool->workers, (uint8_t *) worker);
+	}
+
+	PRINT_DEBUG("Exited: pool=%p, len=%u", pool, pool->workers->len);
 }
 
 int worker_inactive_test(struct pool_worker *worker) {
@@ -380,6 +459,8 @@ int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *loc
 
 void pool_shutdown(struct thread_pool *pool) {
 	PRINT_DEBUG("Entered: pool=%p", pool);
+
+	//controller_shutdown(pool->controller);
 
 	list_for_each(pool->workers, worker_shutdown);
 

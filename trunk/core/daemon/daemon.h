@@ -52,12 +52,9 @@
 //#include "arp.c"
 
 /** FINS Sockets database related defined constants */
-#define MAX_SOCKETS 100
-#define MAX_CALLS 100
-#define MaxChildrenNumSharingSocket 100
-#define MAX_parallel_threads 10
+#define MAX_SOCKETS 50 //TODO increase
+#define MAX_CALLS 50 //TODO increase
 #define MAX_Queue_size 100000
-#define MAX_parallel_processes 10
 #define ACK 	200
 #define NACK 	6666
 #define MIN_port 32768
@@ -66,7 +63,6 @@
 #define DAEMON_BLOCK_DEFAULT 500
 #define CONTROL_LEN_MAX 10240
 #define CONTROL_LEN_DEFAULT 1024
-#define DAEMON_TO_MIN 0.00001
 
 /** Socket related calls and their codes */
 #define socket_call 1

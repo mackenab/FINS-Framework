@@ -256,7 +256,7 @@ void daemon_calls_shutdown(int call_index) {
 	daemon_calls[call_index].to_running = 0;
 
 	//stop threads
-	start_timer(daemon_calls[call_index].to_fd, DAEMON_TO_MIN);
+	start_timer(daemon_calls[call_index].to_fd, TO_MIN);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -458,8 +458,6 @@ int daemon_sockets_insert(uint64_t sock_id, int sock_index, int type, int protoc
 	if (daemon_sockets[sock_index].sock_id == -1) {
 		daemon_sockets[sock_index].sock_id = sock_id;
 		daemon_sockets[sock_index].state = SS_UNCONNECTED;
-
-		//sem_init(&daemon_sockets[sock_index].sem, 0, 1);
 
 		/**
 		 * bind the socket by default to the default IP which is assigned
@@ -881,8 +879,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -896,8 +893,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
 	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d",
-			daemon_calls[hdr->call_index].sock_id, daemon_calls[hdr->call_index].sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			daemon_calls[hdr->call_index].sock_id, daemon_calls[hdr->call_index].sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
@@ -935,8 +931,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -946,8 +941,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1000,8 +994,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1012,8 +1005,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1054,12 +1046,10 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		return;
 	}
 
-	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1069,8 +1059,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1103,12 +1092,10 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		return;
 	}
 
-	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1118,8 +1105,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1490,11 +1476,13 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("FIONREAD=%d", cmd);
 		msg_len = 0; //handle per socket/protocol
 
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case TIOCOUTQ:
 		PRINT_DEBUG("TIOCOUTQ=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCGIFNAME:
@@ -1611,7 +1599,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		break;
 	case SIOCSIFFLAGS:
 		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCGIFMTU:
 		PRINT_DEBUG("SIOCGIFMTU=%d", cmd);
@@ -1671,15 +1660,18 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		break;
 	case SIOCADDRT:
 		PRINT_DEBUG("SIOCADDRT=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCDELRT:
 		PRINT_DEBUG("SIOCDELRT=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFADDR:
 		PRINT_DEBUG("SIOCSIFADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 		//case SIOCAIPXITFCRT:
 		//case SIOCAIPXPRISLT:
@@ -1687,22 +1679,27 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		//case SIOCIPXNCPCONN:
 	case SIOCGSTAMP:
 		PRINT_DEBUG("SIOCGSTAMP=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFDSTADDR:
 		PRINT_DEBUG("SIOCSIFDSTADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFBRDADDR:
 		PRINT_DEBUG("SIOCSIFBRDADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	case SIOCSIFNETMASK:
 		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		break;
 	default:
-		PRINT_ERROR("default: cmd=%d", cmd);
+		PRINT_ERROR("default: cmd=%d", cmd)
+		;
 		break;
 	}
 
@@ -1717,8 +1714,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		secure_sem_wait(&daemon_sockets_sem);
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -1728,8 +1724,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		int type = daemon_sockets[hdr->sock_index].type;
 		int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1814,12 +1809,10 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		return;
 	}
 
-	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 		if (msg_controllen)
@@ -1835,8 +1828,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	//#########################
@@ -1902,13 +1894,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	 pt += sizeof(uint32_t);
 
 	 if (msg_controllen) {	//TODO send msg_controllen?
-	 msg_control = (uint8_t *) malloc(msg_controllen);
-	 if (msg_control == NULL) {
-	 PRINT_ERROR("allocation error");
-	 nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-	 exit(-1);
-	 }
-
+	 msg_control = (uint8_t *) secure_malloc(msg_controllen);
 	 memcpy(msg_control, pt, msg_controllen);
 	 pt += msg_controllen;
 	 }
@@ -1933,8 +1919,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 		//if (msg_controllen) {
 		//	free(msg_control);
@@ -1949,8 +1934,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2004,12 +1988,10 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		return;
 	}
 
-	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2021,8 +2003,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2074,12 +2055,10 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		return;
 	}
 
-	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2091,8 +2070,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2125,8 +2103,7 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2137,8 +2114,7 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2172,8 +2148,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL); //TODO check value?
@@ -2184,8 +2159,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2215,8 +2189,7 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2227,8 +2200,7 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2276,8 +2248,7 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -2288,8 +2259,7 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2503,8 +2473,7 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 
 		//---------------------- find
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
-			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0); //TODO ret not valid descriptor
@@ -2643,7 +2612,8 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 		sendpage_out(hdr, msg_pt, msg_len);
 		break;
 	default:
-		PRINT_ERROR("Dropping, received unknown call_type=%d", hdr->call_type);
+		PRINT_ERROR("Dropping, received unknown call_type=%d", hdr->call_type)
+		;
 		break;
 	}
 }
@@ -2802,9 +2772,11 @@ void *wedge_to_daemon(void *local) {
 				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
 				break;
 			case NLMSG_ERROR:
-				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR");
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR")
+				;
 			case NLMSG_OVERRUN:
-				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN");
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN")
+				;
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
@@ -2942,7 +2914,8 @@ void daemon_handle_to(struct daemon_call *call) { //TODO finish transitioning to
 		break;
 		//Close or poll? sendmsg TO in TCP
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type)
+		;
 		//exit(1);
 		break;
 	}
@@ -3021,17 +2994,20 @@ void daemon_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
@@ -3040,7 +3016,8 @@ void daemon_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
@@ -3061,7 +3038,8 @@ void daemon_fcf(struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3073,8 +3051,7 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 
 	if (call_index == -1) {
-		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		freeFinsFrame(ff);
@@ -3092,8 +3069,7 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 	daemon_calls_remove(call_index);
 
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
-		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(call_id, call_index, call_type, 0);
@@ -3112,7 +3088,8 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 		getsockopt_in_tcp(ff, call_id, call_index, call_type, sock_id, sock_index, data); //CTRL_READ_PARAM_REPLY
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
+		;
 		//exit(1);
 		break;
 	}
@@ -3125,7 +3102,8 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.param_id) {
 
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+		;
 		//TODO implement?
 		freeFinsFrame(ff);
 		break;
@@ -3138,8 +3116,7 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 
 	if (call_index == -1) {
-		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		freeFinsFrame(ff);
@@ -3157,8 +3134,7 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 	daemon_calls_remove(call_index);
 
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
-		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(call_id, call_index, call_type, 0);
@@ -3177,7 +3153,8 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 		setsockopt_in_tcp(ff, call_id, call_index, call_type, sock_id, sock_index, data); //CTRL_SET_PARAM_REPLY
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+		PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
+		;
 		//exit(1);
 		break;
 	}
@@ -3200,14 +3177,16 @@ void daemon_exec(struct finsFrame *ff) {
 		switch (protocol) {
 		case IPPROTO_ICMP:
 			//daemon_icmp_in_error(ff, src_ip, dst_ip);
-			PRINT_ERROR("todo");
+			PRINT_ERROR("todo")
+			;
 			break;
 		case IPPROTO_TCP:
 			daemon_tcp_in_poll(ff, ret_msg);
 			break;
 		case IPPROTO_UDP:
 			//daemon_udp_in_error(ff, src_ip, dst_ip);
-			PRINT_ERROR("todo");
+			PRINT_ERROR("todo")
+			;
 			break;
 		default:
 			//PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -3216,7 +3195,8 @@ void daemon_exec(struct finsFrame *ff) {
 		}
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+		;
 		//TODO implement?
 
 		ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -3238,8 +3218,7 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 		call_list_remove(expired_call_list, call);
 
 		if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
-			PRINT_ERROR("Exited, socket closed: ff=%p", ff);
-			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			freeFinsFrame(ff);
@@ -3257,15 +3236,15 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 			accept_expired_tcp(ff, call, 0);
 			break;
 		default:
-			PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type);
+			PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type)
+			;
 			//exit(1);
 			break;
 		}
 	} else {
 		int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 		if (call_index == -1) {
-			PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
-			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			freeFinsFrame(ff);
@@ -3288,8 +3267,7 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 			daemon_calls_remove(call_index);
 
 			if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
-				PRINT_ERROR("Exited, socket closed: ff=%p", ff);
-				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+				PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
 				nack_send(call_id, call_index, call_type, 0);
@@ -3320,7 +3298,8 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 				poll_in_tcp_fcf(ff, call_id, call_index, call_pid, call_type, sock_id, sock_index, data, flags); //CTRL_EXEC_REPLY
 				break;
 			default:
-				PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
+				PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
+				;
 				//exit(1);
 				break;
 			}
@@ -3354,7 +3333,8 @@ void daemon_error(struct finsFrame *ff) { //TODO expand for different error type
 		daemon_udp_in_error(ff, src_ip, dst_ip);
 		break;
 	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+		PRINT_ERROR("Unknown protocol, protocol=%u", protocol)
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3394,10 +3374,6 @@ void daemon_in_fdf(struct finsFrame *ff) {
 	free(temp2);
 
 	char *buf = (char *) secure_malloc(ff->dataFrame.pduLength + 1);
-	if (buf == NULL) {
-		PRINT_ERROR("error allocation");
-		exit(-1);
-	}
 	memcpy(buf, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 	buf[ff->dataFrame.pduLength] = '\0';
 	PRINT_DEBUG("pdulen=%u, pdu='%s'", ff->dataFrame.pduLength, buf);
@@ -3416,7 +3392,8 @@ void daemon_in_fdf(struct finsFrame *ff) {
 		daemon_udp_in_fdf(ff, src_ip, dst_ip);
 		break;
 	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+		PRINT_ERROR("Unknown protocol, protocol=%u", protocol)
+		;
 		freeFinsFrame(ff);
 		break;
 	}

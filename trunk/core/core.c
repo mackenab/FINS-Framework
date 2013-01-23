@@ -103,12 +103,17 @@ void termination_handler(int sig) {
 
 void *test_thread(void *local) {
 	PRINT_DEBUG("Entered: local=%p", local);
+	int id = *((int *) local);
+	free(local);
+
+	PRINT_DEBUG("Entered: id=%d", id);
 
 	int count = 0;
 	while (count < 10) {
-		PRINT_DEBUG("count=%d", count);
+		PRINT_DEBUG("id=%d, count=%d", id, count);
 		count++;
 		sleep(1);
+		//usleep(200);
 	}
 
 	return NULL;
@@ -129,19 +134,26 @@ void *test_thread_2(void *local) {
 
 int main() {
 	if (0) { //TODO remove, testing code
-		struct thread_pool *pool = pool_create(1, 1, 5);
+		struct thread_pool *pool = pool_create(1, 10, 10);
 		PRINT_DEBUG("setup done");
 
 		char srecv_data[4000];
 		gets(srecv_data);
 
 		PRINT_DEBUG("executing");
-		pool_execute(pool, test_thread, NULL);
+		int i;
+		for (i = 0; i < 10; i++) {
+			PRINT_DEBUG("executing: id=%d", i);
+			int *buf = (int *) secure_malloc(sizeof(int));
+			*buf = i;
+			pool_execute(pool, test_thread, buf);
+			usleep(200);
+		}
 
 		//	PRINT_DEBUG("waiting");
 		//	gets(srecv_data);
 
-		pool_execute(pool, test_thread_2, NULL);
+		//pool_execute(pool, test_thread_2, NULL);
 
 		gets(srecv_data);
 
