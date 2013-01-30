@@ -213,7 +213,7 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
 			PRINT_ERROR("todo error");
 
 			//TODO remove all requests from same source //split cache into (src,dst) tuples?
-			ipv4_store_free(store);
+			//ipv4_store_free(store);
 		}
 	} else {
 		PRINT_ERROR("Exited, no corresponding store: ff=%p, serial_num=%u", ff, ff->ctrlFrame.serial_num);
