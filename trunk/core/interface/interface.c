@@ -156,7 +156,7 @@ void *capturer_to_interface(void *local) {
 
 	int numBytes;
 	int frame_len;
-	uint8_t frame[ETH_FRAME_LEN_MAX];
+	uint8_t frame[10*ETH_FRAME_LEN_MAX];
 	struct sniff_ethernet *hdr = (struct sniff_ethernet *) frame;
 
 	uint64_t dst_mac;
@@ -197,16 +197,6 @@ void *capturer_to_interface(void *local) {
 			break;
 		}
 
-		if (frame_len > ETH_FRAME_LEN_MAX) {
-			PRINT_ERROR("len too large: frame_len=%d", frame_len);
-			continue;
-		}
-
-		if (frame_len < SIZE_ETHERNET) {
-			PRINT_ERROR("frame too small: frame_len=%d, min=%d", frame_len, SIZE_ETHERNET);
-			continue;
-		}
-
 		numBytes = read(capture_pipe_fd, frame, frame_len);
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
@@ -215,6 +205,16 @@ void *capturer_to_interface(void *local) {
 
 		if (numBytes != frame_len) {
 			PRINT_ERROR("lengths not equal: frame_len=%d, numBytes=%d", frame_len, numBytes);
+			continue;
+		}
+
+		if (frame_len > ETH_FRAME_LEN_MAX) {
+			PRINT_ERROR("len too large: frame_len=%d, max=%d", frame_len, ETH_FRAME_LEN_MAX);
+			continue;
+		}
+
+		if (frame_len < SIZE_ETHERNET) {
+			PRINT_ERROR("frame too small: frame_len=%d, min=%d", frame_len, SIZE_ETHERNET);
 			continue;
 		}
 
@@ -269,9 +269,6 @@ void *capturer_to_interface(void *local) {
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
-
-		//freeFinsFrame(ff);
-		//continue;
 
 		if (!interface_to_switch(ff)) {
 			PRINT_ERROR ("send to switch error, ff=%p", ff);
