@@ -82,7 +82,7 @@ COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)
 
 ####### FINS CORE MODULES #######
 # Add/remove module directory names to this space-separated list
-CORE_MODULE_LIST = data_structure switch daemon arp interface ipv4 icmp tcp udp rtm 
+CORE_MODULE_LIST = data_structure switch daemon arp interface ipv4 icmp tcp udp rtm logger
 
 
 

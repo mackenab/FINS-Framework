@@ -61,12 +61,13 @@ int module_register(struct fins_proto_module *module) {
 		return -1;
 	}
 
-	//TODO add sem's
+	secure_sem_wait(switch_proto.input_sem);
 	if (fins_modules[module->module_id] != NULL) {
 		PRINT_CRITICAL("Replacing: module=%p, module_id=%d, name='%s'", fins_modules[module->module_id], fins_modules[module->module_id]->module_id, fins_modules[module->module_id]->name);
 	}
 	PRINT_CRITICAL("Registered: module=%p, module_id=%d, name='%s'", module, module->module_id, module->name);
 	fins_modules[module->module_id] = module;
+	sem_post(switch_proto.input_sem);
 
 	PRINT_DEBUG("Exited: module=%p, module_id=%d, name='%s'", module, module->module_id, module->name);
 	return 0;
@@ -80,13 +81,14 @@ void module_unregister(int module_id) {
 		return;
 	}
 
-	//TODO add sem's
+	secure_sem_wait(switch_proto.input_sem);
 	if (fins_modules[module_id] != NULL) {
 		PRINT_CRITICAL("Unregistering: module=%p, module_id=%d, name='%s'", fins_modules[module_id], fins_modules[module_id]->module_id, fins_modules[module_id]->name);
 		fins_modules[module_id] = NULL;
 	} else {
 		PRINT_CRITICAL("No module to unregister: module_id=%d", module_id);
 	}
+	sem_post(switch_proto.input_sem);
 }
 
 int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
@@ -120,24 +122,49 @@ void *switch_loop(void *local) {
 
 	while (switch_proto.running_flag) {
 		secure_sem_wait(switch_proto.event_sem);
-
+		secure_sem_wait(switch_proto.input_sem);
 		for (i = 0; i < MAX_modules; i++) {
 			if (fins_modules[i] != NULL) {
-				if ((ret = sem_wait(fins_modules[i]->output_sem))) {
-					PRINT_ERROR("sem wait prob: src module_id=%d, ret=%d", i, ret);
-					exit(-1);
-				}
-				ff = read_queue(fins_modules[i]->output_queue);
-				sem_post(fins_modules[i]->output_sem);
+				if (!IsEmpty(fins_modules[i]->output_queue)) { //added as optimization
+					if ((ret = sem_wait(fins_modules[i]->output_sem))) {
+						PRINT_ERROR("sem wait prob: src module_id=%d, ret=%d", i, ret);
+						exit(-1);
+					}
+					ff = read_queue(fins_modules[i]->output_queue);
+					sem_post(fins_modules[i]->output_sem);
 
-				if (ff != NULL) {
+					//if (ff != NULL) { //shouldn't occur
 					counter++;
 
 					id = ff->destinationID.id;
 					if (id < 0 || id > MAX_modules) { //TODO check/change should be MAX_ID?
 						PRINT_ERROR("dropping ff: illegal destination: src module_id=%d, dst module_id=%u, ff=%p, meta=%p", i, id, ff, ff->metaData);
+						//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 						freeFinsFrame(ff);
 					} else { //if (i != id) //TODO add this?
+						//id = LOGGER_ID;
+						/*
+						 if (0 && id == DAEMON_ID) { //TODO remove this eventually
+						 //id = LOGGER_ID;
+						 if (fins_modules[LOGGER_ID] != NULL && 0) {
+						 struct finsFrame *ff_copy = cloneFinsFrame(ff);
+
+						 PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[LOGGER_ID]->name, ff_copy, ff_copy->metaData);
+						 if ((ret = sem_wait(fins_modules[LOGGER_ID]->input_sem))) {
+						 PRINT_ERROR("sem wait prob: dst module_id=%u, ff=%p, meta=%p, ret=%d", LOGGER_ID, ff_copy, ff_copy->metaData, ret);
+						 exit(-1);
+						 }
+						 if (write_queue(ff_copy, fins_modules[LOGGER_ID]->input_queue)) {
+						 sem_post(fins_modules[LOGGER_ID]->event_sem);
+						 sem_post(fins_modules[LOGGER_ID]->input_sem);
+						 } else {
+						 sem_post(fins_modules[LOGGER_ID]->input_sem);
+						 PRINT_ERROR("Write queue error: dst module_id=%u, ff=%p, meta=%p", LOGGER_ID, ff_copy, ff_copy->metaData);
+						 freeFinsFrame(ff_copy);
+						 }
+						 }
+						 }
+						 */
 						if (fins_modules[id] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[id]->name, ff, ff->metaData);
 							if ((ret = sem_wait(fins_modules[id]->input_sem))) {
@@ -154,12 +181,15 @@ void *switch_loop(void *local) {
 							}
 						} else {
 							PRINT_ERROR("dropping ff: destination not registered: dst module_id=%u, ff=%p, meta=%p", id, ff, ff->metaData);
+							//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 							freeFinsFrame(ff);
 						}
 					}
+					//}
 				}
 			}
 		}
+		sem_post(switch_proto.input_sem);
 	}
 
 	PRINT_CRITICAL("Exited");
@@ -170,8 +200,11 @@ void switch_init(void) {
 	PRINT_CRITICAL("Entered");
 	switch_proto.running_flag = 1;
 
-	switch_proto.event_sem = (sem_t *) secure_malloc(sizeof(sem_t));
+	switch_proto.event_sem = (sem_t *) secure_malloc(sizeof(sem_t)); //triggered when activity on module output queues
 	sem_init(switch_proto.event_sem, 0, 0);
+
+	switch_proto.input_sem = (sem_t *) secure_malloc(sizeof(sem_t)); //protecting module list
+	sem_init(switch_proto.input_sem, 0, 1);
 
 	//module_create_ops(&switch_proto);
 	//module_register(&switch_proto);
@@ -205,6 +238,9 @@ void switch_release(void) {
 
 	//module_unregister(switch_proto.module_id);
 	//module_destroy_ops(&switch_proto);
+	sem_destroy(switch_proto.input_sem);
+	free(switch_proto.input_sem);
+
 	sem_destroy(switch_proto.event_sem);
 	free(switch_proto.event_sem);
 }

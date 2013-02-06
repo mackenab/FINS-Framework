@@ -29,6 +29,8 @@
 #define ETH_TYPE_ARP  0x0806
 #define ETH_TYPE_IP6  0x86dd
 
+#define ETH_FRAME_LEN_MAX 1538
+
 /* Ethernet header */
 struct sniff_ethernet {
 	uint8_t ether_dhost[ETHER_ADDR_LEN]; /* destination host address */

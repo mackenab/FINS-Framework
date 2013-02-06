@@ -118,15 +118,11 @@ void print_frame(const u_char *payload, int len) {
 
 /** ----------------------------------------------------------------------------------*/
 /*int*/void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packetReceived) { //TODO: pcap_handlers must be of void type. This method of returning data will have to be amended
-	static int count = 1; /* packet counter */
+	//static int count = 1; /* packet counter */
 	//u_char * packet; /* Packet Pointer */
 	//struct data_to_pass data;
-	u_int numBytes;
-	u_int dataLength;
-	PRINT_CRITICAL("Packet number %d: has been captured \n", count);
-
 	if (header->caplen != header->len) {
-		PRINT_ERROR("Snaplen value is not enough to capture the whole packet as it is on wire \n");
+		PRINT_ERROR("Snaplen not large enough for packet: caplen=%u, len=%u", header->caplen, header->len);
 		exit(1);
 	}
 	//data.frameLength = header->caplen ;
@@ -136,30 +132,31 @@ void print_frame(const u_char *payload, int len) {
 	/** Write the length of the received frame to the pipe, then write the frame contents
 	 * This part is an atomic critical section. Need to be handled carefully
 	 */
-	dataLength = header->caplen;
+	uint32_t dataLength = header->caplen;
 
-	print_frame(packetReceived, dataLength);
-	fflush(stdout);
+	//if (dataLength != 1512) {
+	//return;
+	//}
 
-	numBytes = write(capture_pipe_fd, &dataLength, sizeof(u_int));
+	++capture_count;
+	//PRINT_CRITICAL("Packet captured: count=%d, size=%d", ++capture_count, dataLength);
+
+	//print_frame(packetReceived, dataLength);
+	//fflush(stdout);
+
+	uint32_t numBytes = write(capture_pipe_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
-		PRINT_DEBUG("numBytes written %d\n", numBytes);
-		//return (0);
+		PRINT_ERROR("size write fail: numBytes=%u", numBytes);
 		return;
 	}
 
 	numBytes = write(capture_pipe_fd, packetReceived, dataLength);
 	if (numBytes <= 0) {
-		PRINT_DEBUG("numBytes written %d\n", numBytes);
-		//return (0);
+		PRINT_ERROR("frame write fail: numBytes=%u, frame_len=%u", numBytes, dataLength);
 		return;
 	}
-	PRINT_CRITICAL("A frame of length %d has been captured \n", numBytes);
 
-	capture_count++;
-	//return (1);
 	return;
-
 } // end of the function got_packet
 
 void capture_init(char *interface) {
@@ -191,7 +188,7 @@ void capture_init(char *interface) {
 	/*
 	 if (mkfifo(CAPTURE_PIPE, 0777) !=0 )
 	 {
-	 PRINT_DEBUG("MKFIFO Failed \n");
+	 PRINT_DEBUG("MKFIFO Failed");
 	 exit(EXIT_FAILURE);
 	 }
 	 */
@@ -200,7 +197,7 @@ void capture_init(char *interface) {
 	/** It blocks until the other communication side opens the pipe */
 	capture_pipe_fd = open(CAPTURE_PIPE, O_WRONLY);
 	if (capture_pipe_fd == -1) {
-		PRINT_DEBUG("Income Pipe failure \n");
+		PRINT_DEBUG("Income Pipe failure");
 		exit(EXIT_FAILURE);
 	}
 
@@ -214,8 +211,8 @@ void capture_init(char *interface) {
 	//	getDevice_MACAddress(dev_macAddress,dev);
 	//	strcat(filter_exp,dev_macAddress);
 	//strcat(filter_exp, ""); //everything
-	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
 
+	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
 	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //Vbox eth2
 	strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
 	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
@@ -311,7 +308,7 @@ void inject_init(char *interface) {
 	//	mkfifo(INJECT_PIPE, 0777);
 	inject_pipe_fd = open(INJECT_PIPE, O_RDONLY);
 	if (inject_pipe_fd == -1) {
-		PRINT_DEBUG("Inject Pipe failure \n");
+		PRINT_DEBUG("Inject Pipe failure");
 		exit(EXIT_FAILURE);
 	}
 
@@ -325,21 +322,21 @@ void inject_init(char *interface) {
 	while (1) {
 		numBytes = read(inject_pipe_fd, &framelen, sizeof(int));
 		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			PRINT_ERROR("size read fail: numBytes=%u", numBytes);
 			break;
 		}
 
 		//frame = (char *) fins_malloc (framelen);
 		numBytes = read(inject_pipe_fd, frame, framelen);
-
 		if (numBytes <= 0) {
-			PRINT_DEBUG("numBytes written %d\n", numBytes);
+			PRINT_ERROR("frame read fail: numBytes=%u, frame_len=%u", numBytes, framelen);
 			break;
 		}
 
-		PRINT_CRITICAL("A frame of length %d will be injected-----", framelen);
+		//PRINT_CRITICAL("A frame of length %d will be injected-----", framelen);
+		//print_frame((u_char *) frame, framelen);
+		//fflush(stdout);
 
-		print_frame((u_char *) frame, framelen);
 		/**
 		 * Inject the Ethernet Frame into the Device
 		 */
@@ -348,7 +345,7 @@ void inject_init(char *interface) {
 		if (numBytes == -1) {
 			PRINT_DEBUG("Failed to inject the packet");
 		} else {
-			PRINT_DEBUG("\n Message #%d has been injected whose size is %d  ", inject_count, numBytes);
+			PRINT_DEBUG("Message injected: count=%d, size=%d ", inject_count, numBytes);
 			inject_count++;
 		}
 	} // end of while loop

@@ -403,8 +403,8 @@ int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *loc
 			worker->work = work;
 			worker->local = local;
 			PRINT_DEBUG("activating: worker=%p, inactive_num=%u", worker, *worker->inactive_num);
-			sem_post(&pool->inactive_sem);
 			sem_post(&worker->activate_sem);
+			sem_post(&pool->inactive_sem);
 
 			return 1;
 		} else {

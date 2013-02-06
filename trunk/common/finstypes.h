@@ -26,15 +26,16 @@
 #define SWITCH_ID 0
 #define DAEMON_ID 1
 #define INTERFACE_ID 2
-#define IP_ID 3
+#define IPV4_ID 3
 #define ARP_ID 4
 #define UDP_ID 5
 #define TCP_ID 6
 #define ICMP_ID 7
 #define RTM_ID 8
-#define MAX_ID 9
+#define LOGGER_ID 9
+#define MAX_ID 10
 
-#define IPV4_ID IP_ID //TODO remove?
+#define IP_ID IPV4_ID //TODO remove?
 //control message types - finsCtrlFrame.opcode values
 #define CTRL_ALERT 	0			// "pushed" messages; not error messages
 #define CTRL_ALERT_REPLY 1

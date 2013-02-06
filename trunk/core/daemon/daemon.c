@@ -641,12 +641,12 @@ int daemon_sockets_remove(int sock_index) {
 		call = call_list_remove_front(call_list);
 		if (call) {
 			if (call->alloc) {
-				nack_send(call->call_id, call->call_index, call->call_type, 0);
+				nack_send(call->call_id, call->call_index, call->call_type, 1);
 
 				call_free(call);
 			} else {
 				if (call->call_id != -1) {
-					nack_send(call->call_id, call->call_index, call->call_type, 0);
+					nack_send(call->call_id, call->call_index, call->call_type, 1);
 
 					daemon_calls_remove(call->call_index);
 				} else {
@@ -817,26 +817,26 @@ void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("domain=%d, type=%u, protocol=%d", domain, type, protocol);
 	if (domain != AF_INET) {
 		PRINT_ERROR("Wrong domain, only AF_INET us supported");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
-		socket_out_icmp(hdr, domain, type, protocol);
+	if (type == SOCK_RAW && (protocol == IPPROTO_ICMP || protocol == IPPROTO_IP)) {
+		socket_out_icmp(hdr, domain, SOCK_RAW, IPPROTO_ICMP);
 	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
-		socket_out_tcp(hdr, domain, type, protocol);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
-		socket_out_udp(hdr, domain, type, protocol);
+		socket_out_tcp(hdr, domain, SOCK_STREAM, IPPROTO_TCP);
+	} else if (type == SOCK_DGRAM && (protocol == IPPROTO_UDP || protocol == IPPROTO_IP)) {
+		socket_out_udp(hdr, domain, SOCK_DGRAM, IPPROTO_UDP);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -855,7 +855,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (addr_len <= 0) {
 		PRINT_ERROR("READING ERROR! CRASH, addrlen=%d", addr_len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	} else {
 		PRINT_DEBUG("addr_len=%d", addr_len);
@@ -870,7 +870,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -879,10 +879,10 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 		return;
 	}
@@ -898,13 +898,13 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
 		bind_out_icmp(hdr, addr);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		bind_out_tcp(hdr, addr);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		bind_out_udp(hdr, addr);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 	}
 }
@@ -922,7 +922,7 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -931,10 +931,10 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -946,13 +946,13 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		listen_out_icmp(hdr, backlog);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		listen_out_tcp(hdr, backlog);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		listen_out_udp(hdr, backlog);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -971,7 +971,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (addrlen <= 0) {
 		PRINT_ERROR("READING ERROR! CRASH, addrlen=%d", addrlen);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -984,7 +984,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 		return;
 	}
@@ -994,10 +994,10 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 		return;
 	}
@@ -1010,13 +1010,13 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		connect_out_icmp(hdr, addr, flags);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		connect_out_tcp(hdr, addr, flags);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		connect_out_udp(hdr, addr, flags);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 	}
 }
@@ -1042,17 +1042,17 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1064,13 +1064,13 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		accept_out_icmp(hdr, sock_id_new, sock_index_new, flags);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		accept_out_tcp(hdr, sock_id_new, sock_index_new, flags); //TODO finish
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		accept_out_udp(hdr, sock_id_new, sock_index_new, flags);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -1088,17 +1088,17 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1110,13 +1110,13 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		getname_out_icmp(hdr, peer);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		getname_out_tcp(hdr, peer);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		getname_out_udp(hdr, peer);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -1148,7 +1148,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1203,7 +1203,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -1219,7 +1219,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1270,7 +1270,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -1285,7 +1285,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1336,7 +1336,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -1351,7 +1351,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1402,7 +1402,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -1417,7 +1417,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1468,7 +1468,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -1476,13 +1476,11 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("FIONREAD=%d", cmd);
 		msg_len = 0; //handle per socket/protocol
 
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case TIOCOUTQ:
 		PRINT_DEBUG("TIOCOUTQ=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCGIFNAME:
@@ -1495,7 +1493,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1537,7 +1535,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -1552,7 +1550,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1593,14 +1591,13 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
 	case SIOCSIFFLAGS:
 		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCGIFMTU:
 		PRINT_DEBUG("SIOCGIFMTU=%d", cmd);
@@ -1613,7 +1610,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1654,24 +1651,21 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 			free(msg);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
 	case SIOCADDRT:
 		PRINT_DEBUG("SIOCADDRT=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCDELRT:
 		PRINT_DEBUG("SIOCDELRT=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFADDR:
 		PRINT_DEBUG("SIOCSIFADDR=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 		//case SIOCAIPXITFCRT:
 		//case SIOCAIPXPRISLT:
@@ -1679,27 +1673,22 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		//case SIOCIPXNCPCONN:
 	case SIOCGSTAMP:
 		PRINT_DEBUG("SIOCGSTAMP=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFDSTADDR:
 		PRINT_DEBUG("SIOCSIFDSTADDR=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFBRDADDR:
 		PRINT_DEBUG("SIOCSIFBRDADDR=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFNETMASK:
 		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	default:
-		PRINT_ERROR("default: cmd=%d", cmd)
-		;
+		PRINT_ERROR("default: cmd=%d", cmd);
 		break;
 	}
 
@@ -1707,17 +1696,17 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exiting, fail send_wedge: sock_id=%llu", hdr->sock_id);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 		free(msg);
 	} else {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		secure_sem_wait(&daemon_sockets_sem);
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 
@@ -1729,13 +1718,13 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 
 		if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 			ioctl_out_icmp(hdr, cmd, buf, buf_len);
-		} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 			ioctl_out_tcp(hdr, cmd, buf, buf_len);
-		} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+		} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 			ioctl_out_udp(hdr, cmd, buf, buf_len);
 		} else {
-			PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	}
 }
@@ -1801,7 +1790,7 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (msg_controllen)
 			free(msg_control);
 		if (data_len)
@@ -1812,9 +1801,9 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (msg_controllen)
 			free(msg_control);
 		if (data_len)
@@ -1849,13 +1838,13 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		sendmsg_out_icmp(hdr, data, data_len, msg_flags, addr, addr_len);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		sendmsg_out_tcp(hdr, data, data_len, msg_flags, addr, addr_len);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		sendmsg_out_udp(hdr, data, data_len, msg_flags, addr, addr_len);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (data_len)
 			free(data);
 	}
@@ -1906,7 +1895,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		//	free(msg_control);
 		//}
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1919,13 +1908,13 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 		//if (msg_controllen) {
 		//	free(msg_control);
 		//}
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1939,13 +1928,13 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		recvmsg_out_icmp(hdr, data_len, msg_controllen, flags);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		recvmsg_out_tcp(hdr, data_len, msg_controllen, flags);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		recvmsg_out_udp(hdr, data_len, msg_controllen, flags);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 
 	//if (msg_controllen) {
@@ -1982,7 +1971,7 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0)
 			free(optval);
 		return;
@@ -1991,10 +1980,10 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0)
 			free(optval);
 		return;
@@ -2008,13 +1997,13 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		getsockopt_out_icmp(hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		getsockopt_out_tcp(hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		getsockopt_out_udp(hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0)
 			free(optval);
 	}
@@ -2049,7 +2038,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0)
 			free(optval);
 		return;
@@ -2058,10 +2047,10 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0)
 			free(optval);
 		return;
@@ -2075,13 +2064,13 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		setsockopt_out_icmp(hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		setsockopt_out_tcp(hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		setsockopt_out_udp(hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0)
 			free(optval);
 	}
@@ -2096,17 +2085,17 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 	//daemonSockets[hdr->sock_index].threads = threads;
@@ -2119,13 +2108,13 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		release_out_icmp(hdr);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		release_out_tcp(hdr);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		release_out_udp(hdr);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -2148,7 +2137,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL); //TODO check value?
@@ -2164,12 +2153,12 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		poll_out_icmp(hdr, events);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		poll_out_tcp(hdr, events);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		poll_out_udp(hdr, events);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLERR);
 	}
 }
@@ -2182,17 +2171,17 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 	//daemonSockets[hdr->sock_index].threads = threads;
@@ -2207,17 +2196,17 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 		//mmap_tcp_icmp(hdr);
 		PRINT_DEBUG("implement mmap_icmp");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		//mmap_tcp_out(hdr);
 		PRINT_DEBUG("implement mmap_tcp");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		//mmap_out_udp(hdr);
 		PRINT_DEBUG("implement mmap_udp");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -2241,17 +2230,17 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 	//daemonSockets[hdr->sock_index].threads = threads;
@@ -2264,13 +2253,13 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		shutdown_out_icmp(hdr, how);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		shutdown_out_tcp(hdr, how);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		shutdown_out_udp(hdr, how);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -2280,10 +2269,10 @@ void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len) {
 
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -2313,7 +2302,7 @@ void connect_timeout(struct daemon_call *call) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, call->sock_id=%llu",
 				call->sock_index, daemon_sockets[call->sock_index].sock_id, call->sock_id);
 
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		daemon_calls_remove(call->call_index);
 		return;
 	}
@@ -2324,14 +2313,14 @@ void connect_timeout(struct daemon_call *call) {
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		PRINT_ERROR("todo error");
 		//shouldn't occur
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		connect_timeout_tcp(call);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		PRINT_ERROR("todo error");
 		//shouldn't occur
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 	}
 }
 
@@ -2342,7 +2331,7 @@ void accept_timeout(struct daemon_call *call) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, call->sock_id=%llu",
 				call->sock_index, daemon_sockets[call->sock_index].sock_id, call->sock_id);
 
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		daemon_calls_remove(call->call_index);
 		return;
 	}
@@ -2353,14 +2342,14 @@ void accept_timeout(struct daemon_call *call) {
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		PRINT_ERROR("todo error");
 		//shouldn't occur
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		accept_timeout_tcp(call);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
 		PRINT_ERROR("todo error");
 		//shouldn't occur
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 	}
 }
 
@@ -2371,7 +2360,7 @@ void recvmsg_timeout(struct daemon_call *call) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, call->sock_id=%llu",
 				call->sock_index, daemon_sockets[call->sock_index].sock_id, call->sock_id);
 
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		daemon_calls_remove(call->call_index);
 		return;
 	}
@@ -2381,13 +2370,13 @@ void recvmsg_timeout(struct daemon_call *call) {
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
 		recvmsg_timeout_icmp(call);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
+	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
 		recvmsg_timeout_tcp(call);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_IP) {
+	} else if (type == SOCK_DGRAM && (protocol == IPPROTO_IP)) {
 		recvmsg_timeout_udp(call);
 	} else {
-		PRINT_ERROR("non supported socket type=%d, protocol=%d", type, protocol);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 	}
 }
 
@@ -2473,10 +2462,10 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t ms
 
 		//---------------------- find
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_ERROR(" CRASH !socket descriptor not found into daemon sockets! Bind failed on Daemon Side ");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0); //TODO ret not valid descriptor
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO ret not valid descriptor
 			return;
 		}
 		//----------------------
@@ -2612,8 +2601,7 @@ void daemon_out_ff(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t msg_
 		sendpage_out(hdr, msg_pt, msg_len);
 		break;
 	default:
-		PRINT_ERROR("Dropping, received unknown call_type=%d", hdr->call_type)
-		;
+		PRINT_ERROR("Dropping, received unknown call_type=%d", hdr->call_type);
 		break;
 	}
 }
@@ -2664,7 +2652,7 @@ void test_func_daemon(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t m
 
 	if (pt - msg_pt != msg_len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - msg_pt, msg_len);
-		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 }
@@ -2772,11 +2760,9 @@ void *wedge_to_daemon(void *local) {
 				PRINT_DEBUG("nlh->nlmsg_type=NLMSG_NOOP");
 				break;
 			case NLMSG_ERROR:
-				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR")
-				;
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_ERROR");
 			case NLMSG_OVERRUN:
-				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN")
-				;
+				PRINT_ERROR("nlh->nlmsg_type=NLMSG_OVERRUN");
 				okFlag = 0;
 				break;
 			case NLMSG_DONE:
@@ -2914,8 +2900,7 @@ void daemon_handle_to(struct daemon_call *call) { //TODO finish transitioning to
 		break;
 		//Close or poll? sendmsg TO in TCP
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type)
-		;
+		PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type);
 		//exit(1);
 		break;
 	}
@@ -2994,20 +2979,17 @@ void daemon_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
@@ -3016,8 +2998,7 @@ void daemon_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
@@ -3038,8 +3019,7 @@ void daemon_fcf(struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3051,7 +3031,8 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 
 	if (call_index == -1) {
-		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		freeFinsFrame(ff);
@@ -3069,10 +3050,11 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 	daemon_calls_remove(call_index);
 
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
-		PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(call_id, call_index, call_type, 0);
+		nack_send(call_id, call_index, call_type, 1);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -3088,8 +3070,7 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 		getsockopt_in_tcp(ff, call_id, call_index, call_type, sock_id, sock_index, data); //CTRL_READ_PARAM_REPLY
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
-		;
+		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
 		//exit(1);
 		break;
 	}
@@ -3102,8 +3083,7 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.param_id) {
 
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 		freeFinsFrame(ff);
 		break;
@@ -3116,7 +3096,8 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 	int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 
 	if (call_index == -1) {
-		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		freeFinsFrame(ff);
@@ -3134,10 +3115,11 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 	daemon_calls_remove(call_index);
 
 	if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
-		PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(call_id, call_index, call_type, 0);
+		nack_send(call_id, call_index, call_type, 1);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -3153,8 +3135,7 @@ void daemon_set_param_reply(struct finsFrame *ff) { //TODO update to new version
 		setsockopt_in_tcp(ff, call_id, call_index, call_type, sock_id, sock_index, data); //CTRL_SET_PARAM_REPLY
 		break;
 	default:
-		PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
-		;
+		PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
 		//exit(1);
 		break;
 	}
@@ -3177,16 +3158,14 @@ void daemon_exec(struct finsFrame *ff) {
 		switch (protocol) {
 		case IPPROTO_ICMP:
 			//daemon_icmp_in_error(ff, src_ip, dst_ip);
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 			break;
 		case IPPROTO_TCP:
 			daemon_tcp_in_poll(ff, ret_msg);
 			break;
 		case IPPROTO_UDP:
 			//daemon_udp_in_error(ff, src_ip, dst_ip);
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 			break;
 		default:
 			//PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -3195,8 +3174,7 @@ void daemon_exec(struct finsFrame *ff) {
 		}
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 
 		ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -3218,7 +3196,8 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 		call_list_remove(expired_call_list, call);
 
 		if (daemon_sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
-			PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR("Exited, socket closed: ff=%p", ff);
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			freeFinsFrame(ff);
@@ -3236,15 +3215,15 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 			accept_expired_tcp(ff, call, 0);
 			break;
 		default:
-			PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type)
-			;
+			PRINT_ERROR("Not supported dropping: call_type=%d", call->call_type);
 			//exit(1);
 			break;
 		}
 	} else {
 		int call_index = daemon_calls_find(ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 		if (call_index == -1) {
-			PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			freeFinsFrame(ff);
@@ -3267,10 +3246,11 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 			daemon_calls_remove(call_index);
 
 			if (daemon_sockets[sock_index].sock_id != sock_id) { //TODO shouldn't happen, check release
-				PRINT_ERROR("Exited, socket closed: ff=%p", ff);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+				PRINT_ERROR("Exited, socket closed: ff=%p", ff);
+				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
-				nack_send(call_id, call_index, call_type, 0);
+				nack_send(call_id, call_index, call_type, 1);
 				freeFinsFrame(ff);
 				return;
 			}
@@ -3298,8 +3278,7 @@ void daemon_exec_reply(struct finsFrame *ff) { //TODO update to new version once
 				poll_in_tcp_fcf(ff, call_id, call_index, call_pid, call_type, sock_id, sock_index, data, flags); //CTRL_EXEC_REPLY
 				break;
 			default:
-				PRINT_ERROR("Not supported dropping: call_type=%d", call_type)
-				;
+				PRINT_ERROR("Not supported dropping: call_type=%d", call_type);
 				//exit(1);
 				break;
 			}
@@ -3333,8 +3312,7 @@ void daemon_error(struct finsFrame *ff) { //TODO expand for different error type
 		daemon_udp_in_error(ff, src_ip, dst_ip);
 		break;
 	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol)
-		;
+		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3392,8 +3370,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 		daemon_udp_in_fdf(ff, src_ip, dst_ip);
 		break;
 	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol)
-		;
+		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
 		freeFinsFrame(ff);
 		break;
 	}
@@ -3512,7 +3489,7 @@ void daemon_release(void) {
 			 while (!call_list_is_empty(daemon_sockets[i].call_list)) {
 			 call = call_list_remove_front(daemon_sockets[i].call_list);
 
-			 nack_send(call->call_id, call->call_index, call->call_type, 0);
+			 nack_send(call->call_id, call->call_index, call->call_type, 1);
 
 			 daemon_calls_remove(call->call_index);
 			 }

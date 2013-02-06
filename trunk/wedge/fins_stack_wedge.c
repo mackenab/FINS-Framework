@@ -69,8 +69,6 @@ struct sock *fins_nl_sk = NULL;
 int fins_daemon_pid; // holds the pid of the FINS daemon so we know who to send back to
 struct semaphore link_sem;
 
-//extern static const struct net_proto_family __rcu *net_families[NPROTO] __read_mostly;
-
 int print_exit_debug(const char *func, int line, int rc) {
 #ifdef DEBUG
 	printk(KERN_DEBUG "FINS: DEBUG: %s, %d: Exited: %d\n", func, line, rc);
@@ -339,7 +337,8 @@ int checkConfirmation(int call_index) {
 	if (wedge_calls[call_index].ret == ACK) {
 		PRINT_DEBUG("recv ACK");
 		if (wedge_calls[call_index].len == 0) {
-			return 0;
+			//return 0;
+			return wedge_calls[call_index].msg;
 		} else {
 			PRINT_ERROR("wedge_calls[sock_index].reply_buf error, wedge_calls[%d].len=%d, wedge_calls[%d].buf=%p",
 					call_index, wedge_calls[call_index].len, call_index, wedge_calls[call_index].buf);
@@ -954,7 +953,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	up(&wedge_sockets_sem);
 
 	release_sock(sk);
-	return print_exit_debug(__FUNCTION__, __LINE__, 0);
+	return print_exit_debug(__FUNCTION__, __LINE__, rc);
 }
 
 static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {

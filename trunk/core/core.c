@@ -25,6 +25,7 @@
 #include <tcp.h>
 #include <icmp.h>
 #include <rtm.h>
+#include <logger.h>
 
 /**
  * TODO free and close/DESTORY all the semaphores before exit !!!
@@ -70,6 +71,7 @@ void termination_handler(int sig) {
 	PRINT_CRITICAL("**********Terminating *******");
 
 	//shutdown all module threads in backwards order of startup
+	//logger_shutdown();
 	//rtm_shutdown();
 
 	udp_shutdown();
@@ -83,6 +85,7 @@ void termination_handler(int sig) {
 	switch_shutdown(); //TODO finish
 
 	//have each module free data & que/sem //TODO finish each of these
+	//logger_release();
 	//rtm_release();
 
 	udp_release();
@@ -209,6 +212,7 @@ int main() {
 	udp_init();
 
 	//rtm_init(); //TODO when updated/fully implemented
+	//logger_init();
 
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
@@ -225,6 +229,7 @@ int main() {
 	udp_run(&fins_pthread_attr);
 
 	//rtm_run(&fins_pthread_attr);
+	//logger_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
 	if (0) {

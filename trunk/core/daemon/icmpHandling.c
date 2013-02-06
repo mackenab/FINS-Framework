@@ -18,13 +18,11 @@ extern struct daemon_call_list *expired_call_list;
  * End of interfacing socketdaemon with FINS core
  * */
 void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol) {
-	int ret;
-
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
-	ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &icmp_ops
+	int ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &icmp_ops
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
@@ -32,7 +30,7 @@ void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int p
 	if (ret) {
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -45,7 +43,7 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_ERROR("Wrong address family=%d", addr->sin_family);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -72,7 +70,7 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -84,7 +82,7 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 		return;
 	}
@@ -127,7 +125,7 @@ void listen_out_icmp(struct nl_wedge_to_daemon *hdr, int backlog) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -151,7 +149,7 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_ERROR("Wrong address family");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -181,7 +179,7 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -245,7 +243,7 @@ void accept_out_icmp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int s
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
@@ -270,7 +268,7 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -349,14 +347,14 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
 		PRINT_DEBUG("Exited: normal: hdr=%p", hdr);
 	}
@@ -380,7 +378,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -411,7 +409,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -448,7 +446,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -463,11 +461,11 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 		free(msg);
 	} else {
-		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0); //TODO uncomment
+		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO uncomment
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -509,7 +507,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	if (addr_len) {
 		if (addr->sin_family != AF_INET) {
 			PRINT_ERROR("Wrong address family, send NACK");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 			free(data);
 			if (addr)
@@ -532,7 +530,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 		free(data);
 		if (addr)
@@ -615,7 +613,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("socketdaemon failed to accomplish sendto");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 		metadata_destroy(params);
 		free(data);
@@ -646,7 +644,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -662,7 +660,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 					sem_post(&daemon_sockets_sem);
 
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					return;
 				}
 
@@ -841,7 +839,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 				if (pt - msg != msg_len) {
 					PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 					if (control_msg)
 						free(control_msg);
@@ -853,7 +851,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 				if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 					PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				} else {
 					//PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				}
@@ -888,7 +886,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
 
@@ -1031,7 +1029,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 			if (pt - msg != msg_len) {
 				PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 				if (control_msg)
 					free(control_msg);
@@ -1043,7 +1041,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			} else {
 				//PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 			}
@@ -1075,14 +1073,14 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
 		PRINT_ERROR("Insert fail: hdr=%p", hdr);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -1095,7 +1093,7 @@ void release_out_icmp(struct nl_wedge_to_daemon *hdr) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1178,7 +1176,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		}
 	} else { //final
@@ -1298,7 +1296,7 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1497,7 +1495,7 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1642,14 +1640,14 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
 
 	}
@@ -1885,14 +1883,14 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		free(msg);
 
 		PRINT_DEBUG("Exited: write error: call_list=%p, call=%p", call_list, call);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: send_wedge error: call_list=%p, call=%p", call_list, call);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 	} else {
 		PRINT_DEBUG("Exited: Normal: call_list=%p, call=%p", call_list, call);
 	}
@@ -2049,7 +2047,7 @@ void recvmsg_timeout_icmp(struct daemon_call *call) {
 		break;
 	default:
 		PRINT_ERROR("todo error");
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		break;
 	}
 

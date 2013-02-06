@@ -18,20 +18,18 @@ extern struct daemon_call_list *expired_call_list;
  * End of interfacing socketdaemon with FINS core
  * */
 void socket_out_udp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol) {
-	int ret;
-
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
-	ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &udp_ops
+	int ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &udp_ops
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (ret) {
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -44,7 +42,7 @@ void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_ERROR("Wrong address family=%d", addr->sin_family);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -67,10 +65,11 @@ void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -78,10 +77,11 @@ void bind_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
 	if (!daemon_sockets_check_ports(host_port, host_ip) && !daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR) {
-		PRINT_ERROR("this port is not free");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("this port is not free");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 		return;
 	}
@@ -119,10 +119,11 @@ void listen_out_udp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -144,7 +145,7 @@ void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_ERROR("Wrong address family");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -170,10 +171,11 @@ void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -230,10 +232,11 @@ void accept_out_udp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
@@ -253,10 +256,11 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -358,14 +362,14 @@ void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer) {
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
 		PRINT_DEBUG("Exited: normal: hdr=%p", hdr);
 	}
@@ -385,10 +389,11 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -419,7 +424,7 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -456,13 +461,12 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
 	default:
-		PRINT_ERROR("default cmd=%d", cmd)
-		;
+		PRINT_ERROR("default cmd=%d", cmd);
 		break;
 	}PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
@@ -471,11 +475,11 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 	if (msg_len) {
 		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 		free(msg);
 	} else {
-		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0); //TODO uncomment
+		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO uncomment
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
@@ -504,7 +508,8 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	}
 
 	if (data_len == 0) { //TODO check this prob wrong!
-		PRINT_ERROR("todo/redo");PRINT_DEBUG("data_len == 0, send ACK");
+		PRINT_ERROR("todo/redo");
+		PRINT_DEBUG("data_len == 0, send ACK");
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 		if (addr)
@@ -515,7 +520,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	if (addr_len) {
 		if (addr->sin_family != AF_INET) {
 			PRINT_ERROR("Wrong address family, send NACK");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 			free(data);
 			if (addr)
@@ -534,10 +539,11 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("CRASH !! socket descriptor not found into daemon sockets");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("CRASH !! socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 		free(data);
 		if (addr)
@@ -620,7 +626,7 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("socketdaemon failed to accomplish sendto");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 		metadata_destroy(params);
 		free(data);
@@ -646,10 +652,11 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -661,10 +668,11 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			if (daemon_sockets[hdr->sock_index].error_buf > 0) {
 				struct finsFrame *ff = read_queue(daemon_sockets[hdr->sock_index].error_queue);
 				if (ff == NULL) { //TODO shoulnd't happen
-					PRINT_ERROR("todo error");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+					PRINT_ERROR("todo error");
+					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 					sem_post(&daemon_sockets_sem);
 
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					return;
 				}
 
@@ -847,7 +855,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				if (pt - msg != msg_len) {
 					PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 					if (control_msg)
 						free(control_msg);
@@ -859,7 +867,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 				if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 					PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				} else {
 					//PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				}
@@ -890,10 +898,11 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 		if (daemon_sockets[hdr->sock_index].data_buf > 0) {
 			struct finsFrame *ff = read_queue(daemon_sockets[hdr->sock_index].data_queue);
 			if (ff == NULL) { //TODO shoulnd't happen
-				PRINT_ERROR("todo error");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+				PRINT_ERROR("todo error");
+				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
 
@@ -1062,7 +1071,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 			if (pt - msg != msg_len) {
 				PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 				if (control_msg)
 					free(control_msg);
@@ -1074,7 +1083,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			} else {
 				//PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 			}
@@ -1101,16 +1110,18 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			}PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 		} else {
-			PRINT_ERROR("call_list full");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_ERROR("call_list full");
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
-		PRINT_ERROR("Insert fail: hdr=%p", hdr);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Insert fail: hdr=%p", hdr);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
@@ -1118,10 +1129,11 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1164,7 +1176,8 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL);
@@ -1180,7 +1193,7 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 					mask |= POLLERR;
 				}
 			} else {
-				PRINT_ERROR("todo: POLLERR");
+				//PRINT_ERROR("todo: POLLERR");
 			}
 		}
 
@@ -1219,10 +1232,11 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			} else {
-				PRINT_ERROR("call_list full");PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+				PRINT_ERROR("call_list full");
+				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		}
 	} else { //final
@@ -1256,7 +1270,7 @@ void poll_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 							mask |= POLLERR;
 						}
 					} else {
-						PRINT_ERROR("todo: POLLERR");
+						//PRINT_ERROR("todo: POLLERR");
 					}
 				}
 
@@ -1338,10 +1352,11 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1381,8 +1396,7 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			break;
 		case IP_MTU_DISCOVER:
 			//TODO
-			PRINT_ERROR("todo: IP_MTU_DISCOVER")
-			;
+			PRINT_ERROR("todo: IP_MTU_DISCOVER");
 			break;
 		case IP_RECVTTL:
 			if (optlen >= sizeof(int)) {
@@ -1509,12 +1523,10 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_RXQ_OVFL:
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 			break;
 		default:
-			PRINT_ERROR("default=%d", optname)
-			;
+			PRINT_ERROR("default=%d", optname);
 			break;
 		}
 		break;
@@ -1538,10 +1550,11 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1558,8 +1571,7 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			break;
 		case IP_MTU_DISCOVER:
 			//TODO
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 			break;
 		case IP_RECVTTL:
 			len = sizeof(int);
@@ -1650,12 +1662,10 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_RXQ_OVFL:
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 			break;
 		default:
-			PRINT_ERROR("default=%d", optname)
-			;
+			PRINT_ERROR("default=%d", optname);
 			break;
 		}
 		break;
@@ -1688,20 +1698,20 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
 
 	}
 	free(msg);
 	//} else {
-	//	nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	//	nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	//}
 }
 
@@ -1964,14 +1974,14 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 		free(msg);
 
 		PRINT_DEBUG("Exited: write error: call_list=%p, call=%p", call_list, call);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: send_wedge error: call_list=%p, call=%p", call_list, call);
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 	} else {
 		PRINT_DEBUG("Exited: Normal: call_list=%p, call=%p", call_list, call);
 	}
@@ -2067,7 +2077,8 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	secure_sem_wait(&daemon_sockets_sem);
 	int sock_index = daemon_sockets_match((uint16_t) src_port, src_ip, IPPROTO_UDP); //TODO change for multicast
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		freeFinsFrame(ff);
@@ -2131,9 +2142,8 @@ void recvmsg_timeout_udp(struct daemon_call *call) {
 		nack_send(call->call_id, call->call_index, call->call_type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	default:
-		PRINT_ERROR("todo error")
-		;
-		nack_send(call->call_id, call->call_index, call->call_type, 0);
+		PRINT_ERROR("todo error");
+		nack_send(call->call_id, call->call_index, call->call_type, 1);
 		break;
 	}
 

@@ -132,7 +132,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 
 			uint32_t serial_num = gen_control_serial_num();
 
-			ff_arp->ctrlFrame.senderID = IP_ID;
+			ff_arp->ctrlFrame.senderID = IPV4_ID;
 			ff_arp->ctrlFrame.serial_num = serial_num;
 			ff_arp->ctrlFrame.opcode = CTRL_EXEC;
 			ff_arp->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
@@ -304,7 +304,7 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 									temp_request = ipv4_request_list_remove_front(temp_cache->request_list);
 									temp_ff = temp_request->ff;
 
-									temp_ff->destinationID.id = IP_ID; //ff->ctrlFrame.senderID
+									temp_ff->destinationID.id = IPV4_ID; //ff->ctrlFrame.senderID
 									temp_ff->ctrlFrame.senderID = ARP_ID;
 									temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 									temp_ff->ctrlFrame.ret_val = 0;

@@ -154,98 +154,92 @@ int interface_setBlocking(int fd) {
 void *capturer_to_interface(void *local) {
 	PRINT_CRITICAL("Entered");
 
-	uint8_t *frame;
-	int frame_len;
-	struct sniff_ethernet *hdr;
 	int numBytes;
-	struct finsFrame *ff = NULL;
+	int frame_len;
+	uint8_t frame[ETH_FRAME_LEN_MAX];
+	struct sniff_ethernet *hdr = (struct sniff_ethernet *) frame;
 
-	metadata *params;
-
-	//struct sniff_ethernet *ethernet_header;
 	uint64_t dst_mac;
 	uint64_t src_mac;
 	uint32_t ether_type;
+	struct timeval current;
+
+	metadata *params;
+	struct finsFrame *ff;
 
 	while (interface_proto.running_flag) {
-		if (0) { //works, allows for terminating, though creates unbound while(1) loop
-			interface_setNonblocking(capture_pipe_fd);
-			do {
-				numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
-			} while (interface_proto.running_flag && numBytes <= 0);
+		/*
+		 if (0) { //works, allows for terminating, though creates unbound while(1) loop
+		 interface_setNonblocking(capture_pipe_fd);
+		 do {
+		 numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
+		 } while (interface_proto.running_flag && numBytes <= 0);
 
-			if (!interface_proto.running_flag) {
-				break;
-			}
+		 if (!interface_proto.running_flag) {
+		 break;
+		 }
 
-			interface_setBlocking(capture_pipe_fd);
-		}
-		if (1) { //works but blocks, so can't shutdown properly, have to double ^C or kill
-			do {
-				numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
-			} while (interface_proto.running_flag && numBytes <= 0);
+		 interface_setBlocking(capture_pipe_fd);
+		 }
+		 */
+		//if (1) { //works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
+		do {
+			numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
+		} while (interface_proto.running_flag && numBytes <= 0);
 
-			if (!interface_proto.running_flag) {
-				break;
-			}
-		}
-
-		if (numBytes <= 0) {
-			PRINT_ERROR("numBytes written %d", numBytes);
+		if (!interface_proto.running_flag) {
 			break;
 		}
-		frame = (uint8_t *) secure_malloc(frame_len);
+		//}
+
+		if (numBytes <= 0) {
+			PRINT_ERROR("error reading size: numBytes=%d", numBytes);
+			break;
+		}
+
+		if (frame_len > ETH_FRAME_LEN_MAX) {
+			PRINT_ERROR("len too large: frame_len=%d", frame_len);
+			continue;
+		}
+
+		if (frame_len < SIZE_ETHERNET) {
+			PRINT_ERROR("frame too small: frame_len=%d, min=%d", frame_len, SIZE_ETHERNET);
+			continue;
+		}
 
 		numBytes = read(capture_pipe_fd, frame, frame_len);
 		if (numBytes <= 0) {
-			PRINT_ERROR("numBytes written %d", numBytes);
-			free(frame);
+			PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
 			break;
 		}
 
 		if (numBytes != frame_len) {
-			PRINT_ERROR("bytes read not equal to datalen,  numBytes=%d", numBytes);
-			free(frame);
+			PRINT_ERROR("lengths not equal: frame_len=%d, numBytes=%d", frame_len, numBytes);
 			continue;
 		}
 
-		if (numBytes < sizeof(struct sniff_ethernet)) {
-			PRINT_ERROR("todo error");
-		}
-
-		PRINT_DEBUG("A frame of length %d has been written-----", frame_len);
-
+		PRINT_DEBUG("frame read: frame_len=%d", frame_len);
 		//print_frame(data,datalen);
-		hdr = (struct sniff_ethernet *) frame;
-		ether_type = ntohs(hdr->ether_type);
-
-		struct timeval current;
-		gettimeofday(&current, 0);
-
-		PRINT_DEBUG("recv frame: dst=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, src=%2.2x-%2.2x-%2.2x-%2.2x-%2.2x-%2.2x, type=0x%x, stamp=%u.%u",
-				(uint8_t) hdr->ether_dhost[0], (uint8_t) hdr->ether_dhost[1], (uint8_t) hdr->ether_dhost[2], (uint8_t) hdr->ether_dhost[3], (uint8_t) hdr->ether_dhost[4], (uint8_t) hdr->ether_dhost[5], (uint8_t) hdr->ether_shost[0], (uint8_t) hdr->ether_shost[1], (uint8_t) hdr->ether_shost[2], (uint8_t) hdr->ether_shost[3], (uint8_t) hdr->ether_shost[4], (uint8_t) hdr->ether_shost[5], ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
 				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];
 		src_mac = ((uint64_t) hdr->ether_shost[0] << 40) + ((uint64_t) hdr->ether_shost[1] << 32) + ((uint64_t) hdr->ether_shost[2] << 24)
 				+ ((uint64_t) hdr->ether_shost[3] << 16) + ((uint64_t) hdr->ether_shost[4] << 8) + (uint64_t) hdr->ether_shost[5];
+		ether_type = ntohs(hdr->ether_type);
+		gettimeofday(&current, 0);
 
 		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x, stamp=%u.%u",
 				dst_mac, src_mac, ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
-		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-		PRINT_DEBUG("ff=%p", ff);
-
-		/** TODO
-		 * 1. extract the Ethernet Frame
-		 * 2. pre-process the frame in order to extract the metadata
-		 * 3. build a finsFrame and insert it into EtherStub_to_Switch_Queue
-		 */
 		params = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(params);
 
+		secure_metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(params, "recv_src_mac", &src_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(params, "recv_ether_type", &ether_type, META_TYPE_INT32);
 		secure_metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
 
+		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 		ff->dataOrCtrl = DATA;
 		ff->metaData = params;
 
@@ -259,17 +253,15 @@ void *capturer_to_interface(void *local) {
 			ff->destinationID.next = NULL;
 		} else if (ether_type == ETH_TYPE_IP6) { //0x86dd == 34525, IPv6
 			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
-			//drop, don't handle & don't catch sys calls
+			//drop, don't handle & don't catch sys calls, change after do catch
 			ff->dataFrame.pdu = NULL;
 			freeFinsFrame(ff);
-			free(frame);
 			continue;
 		} else {
 			PRINT_ERROR("default: proto=0x%x (%u)", ether_type, ether_type);
 			//drop
 			ff->dataFrame.pdu = NULL;
 			freeFinsFrame(ff);
-			free(frame);
 			continue;
 		}
 
@@ -278,17 +270,14 @@ void *capturer_to_interface(void *local) {
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		secure_metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
-		secure_metadata_writeToElement(params, "recv_src_mac", &src_mac, META_TYPE_INT64);
-		secure_metadata_writeToElement(params, "recv_ether_type", &ether_type, META_TYPE_INT32);
+		//freeFinsFrame(ff);
+		//continue;
 
 		if (!interface_to_switch(ff)) {
 			PRINT_ERROR ("send to switch error, ff=%p", ff);
 			freeFinsFrame(ff);
 		}
-
-		free(frame);
-	} // end of while loop
+	}
 
 	PRINT_CRITICAL("Exited");
 	pthread_exit(NULL);
