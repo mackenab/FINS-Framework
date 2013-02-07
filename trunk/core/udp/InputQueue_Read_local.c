@@ -19,9 +19,10 @@ int UDP_InputQueue_Read_local(struct finsFrame *pff_local) {
 	// one of these 2 will be the call to receive the FF
 	//InputQueue_Read(pff);
 	//queue_receive(pff);
-	if (pff == NULL)
-		printf("Failure, InputQueue_Read() didn't give anything useful");
-	return (0);
+	if (pff == NULL) {
+		PRINT_ERROR("Failure, InputQueue_Read() didn't give anything useful");
+		return (0);
+	}
 	*pff_local = *pff;
 	if (pff->dataOrCtrl == DATA) {
 		if (pff->dataFrame.directionFlag == DOWN) {

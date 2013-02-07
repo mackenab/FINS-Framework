@@ -28,9 +28,11 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 
 void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *sem) {
 	int ret;
-	if ((ret = sem_wait(sem))) {
+	while ((ret = sem_wait(sem)) && errno == EINTR);
+	if (ret) {
+	//if (sem_wait(sem)) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):sem_wait prob: sem=%p, ret=%d\n", file, func, line, sem, ret);
+		printf("ERROR(%s, %s, %d):sem_wait prob: sem=%p\n", file, func, line, sem);
 		fflush(stdout);
 #endif
 		exit(-1);

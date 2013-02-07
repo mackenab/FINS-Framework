@@ -133,8 +133,7 @@ int metadata_writeToElement(metadata *params, char *target, void *value, int typ
 		status = config_setting_set_string(handle, (char *) value);
 		break;
 	default:
-		PRINT_ERROR(" wrong type to be written");
-		printf("wrong type to be written to meta data!! ");
+		PRINT_ERROR("wrong type to be written");
 		status = META_FALSE;
 		break;
 	}
@@ -161,8 +160,7 @@ int metadata_setElement(metadata_element *element, void *value) {
 		status = config_setting_set_string(element, (char *) value);
 		break;
 	default:
-		PRINT_ERROR(" wrong type to be written");
-		printf("wrong type to be written to meta data!! ");
+		PRINT_ERROR("wrong type to be written");
 		status = META_FALSE;
 		break;
 

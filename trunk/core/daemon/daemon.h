@@ -215,6 +215,7 @@ struct tcp_Parameters {
 };
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
+char my_host_if_name[IFNAMSIZ];
 uint64_t my_host_mac_addr;
 uint32_t my_host_ip_addr;
 uint32_t my_host_mask;
@@ -270,6 +271,7 @@ struct daemon_call {
 	uint64_t sock_id_new;
 	int sock_index_new;
 
+	struct intsem_to_timer_data *to_data;
 	pthread_t to_thread;
 	int to_fd;
 	uint8_t to_running;
@@ -370,6 +372,9 @@ int randoming(int min, int max);
 #define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
 
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//8192 //Pick an appropriate value here
+
+void print_hex(uint32_t msg_len, uint8_t *msg_pt);
+
 int init_fins_nl(void);
 int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags);
 int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
@@ -438,7 +443,6 @@ void daemon_interrupt(void);
 //#define EXEC_TCP_OPT 7
 //#define EXEC_TCP_POLL 8
 #define EXEC_TCP_POLL_POST 9 //only one that's used in daemon.c
-
 //TODO not used? what are these for in this module file?
 //#define ERROR_ICMP_TTL 0
 //#define ERROR_ICMP_DEST_UNREACH 1

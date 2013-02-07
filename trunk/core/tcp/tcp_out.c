@@ -1055,8 +1055,7 @@ void *read_param_conn_thread(void *local) {
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			value = conn->recv_win;
 			secure_metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
 
@@ -1069,8 +1068,7 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			//fill in with switch of opts? or have them separate?
 
 			//TODO read sock opts
@@ -1084,8 +1082,7 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1142,8 +1139,7 @@ void *read_param_conn_stub_thread(void *local) {
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			secure_metadata_readFromElement(params, "value", &value);
 			//TODO do something? error?
 
@@ -1162,8 +1158,7 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
@@ -1182,8 +1177,7 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1320,16 +1314,13 @@ void *set_param_conn_thread(void *local) {
 	if (conn->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			secure_metadata_readFromElement(params, "value", &value);
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), before",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win)
-			;
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 			uint32_increase(&conn->recv_win, value, conn->recv_max_win);
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), after",
-					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win)
-			;
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
 			if (0) {
 				ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1344,13 +1335,11 @@ void *set_param_conn_thread(void *local) {
 			}
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 
 			if (0) {
 				ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1365,8 +1354,7 @@ void *set_param_conn_thread(void *local) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1423,8 +1411,7 @@ void *set_param_conn_stub_thread(void *local) {
 	if (conn_stub->running_flag) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			secure_metadata_readFromElement(params, "value", &value);
 			//TODO do something? error?
 
@@ -1440,8 +1427,7 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
-			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id)
-			;
+			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
@@ -1457,8 +1443,7 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;

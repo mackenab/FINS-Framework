@@ -56,7 +56,7 @@ int read_configurations() {
 
 	/* Read the file. If there is an error, report it and exit. */
 	if (!config_read_file(&cfg, "fins.cfg")) {
-		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+		PRINT_ERROR("%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
 		config_destroy(&cfg);
 		return EXIT_FAILURE;
 	}
@@ -135,7 +135,57 @@ void *test_thread_2(void *local) {
 	return NULL;
 }
 
-int main() {
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <signal.h>
+#include <time.h>
+
+#define SIG SIGRTMIN
+
+#define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
+                               } while (0)
+
+static void print_siginfo(siginfo_t *si) {
+	timer_t *tidp;
+	int or;
+
+	tidp = si->si_value.sival_ptr;
+
+	//PRINT_CRITICAL("    sival_ptr = %p; ", tidp);
+	PRINT_CRITICAL("    sival_ptr = %ld; ", (long)tidp);
+	//PRINT_CRITICAL("    *sival_ptr = 0x%lx", (long) *tidp);
+
+	if (0) {
+		or = timer_getoverrun(*tidp);
+		if (or == -1) {
+			errExit("timer_getoverrun");
+		} else {
+			PRINT_CRITICAL("    overrun count = %d", or);
+		}
+	}
+}
+
+void handler(int sig, siginfo_t *si, void *uc) {
+	/* Note: calling printf() from a signal handler is not
+	 strictly correct, since printf() is not async-signal-safe;
+	 see signal(7) */
+
+	PRINT_CRITICAL("Caught signal=%d", sig);
+	print_siginfo(si);
+	//signal(sig, SIG_IGN); //ignore the signal from re-occuring
+
+	char srecv_data[4000];
+	gets(srecv_data);
+
+	PRINT_CRITICAL("read");
+	//while(1);
+}
+
+extern struct timeval core_start;
+extern struct timeval core_end;
+
+int main(int argc, char *argv[]) {
 	if (0) { //TODO remove, testing code
 		struct thread_pool *pool = pool_create(1, 10, 10);
 		PRINT_DEBUG("setup done");
@@ -165,13 +215,110 @@ int main() {
 
 		PRINT_DEBUG("FIN");
 		while (1)
-			;
+			sleep(1);
 
 		return 0;
 	}
 
+	PRINT_CRITICAL("Establishing handler: signal=%d, to_handler=%p", SIGRTMAX, to_handler);
+	struct sigaction sa;
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = to_handler;
+	sigemptyset(&sa.sa_mask);
+
+	if (sigaction(SIGRTMAX, &sa, NULL)) {
+		PRINT_ERROR("sigaction fault");
+		exit(-1);
+	}
+
+	if (0) {
+		sem_t sem;
+		sem_init(&sem, 0, 0);
+
+		uint8_t running = 1;
+		uint8_t flag = 0;
+		uint8_t interrupt = 0;
+
+		int count = 0;
+		for (count = 0; count <= 0; count++) {
+			if (1) {
+				struct intsem_to_timer_data *data = secure_malloc(sizeof(struct intsem_to_timer_data));
+				data->handler = intsem_to_handler;
+				data->flag = &flag;
+				data->interrupt = &interrupt;
+				data->sem = &sem;
+
+				timer_create_to((struct to_timer_data *) data);
+				PRINT_CRITICAL("timer: ID=0x%lx", (long) data->tid);
+				timer_repeat_start(data->tid, 5000);
+			}
+
+			if (0) {
+				int fd = timerfd_create(CLOCK_REALTIME, 0);
+				if (fd == -1) {
+					PRINT_ERROR("ERROR: unable to create to_fd.");
+					exit(-1);
+				}
+				struct intsem_to_thread_data *data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
+				data->id = 1;
+				data->fd = fd;
+				data->running = &running;
+				data->flag = &flag;
+				data->interrupt = &interrupt;
+				data->sem = &sem;
+				pthread_t thread;
+				secure_pthread_create(&thread, NULL, intsem_to_thread, (void *) data);
+
+				start_timer(fd, 500);
+			}
+		}
+
+		while (1) {
+			PRINT_CRITICAL("waiting");
+			secure_sem_wait(&sem);
+			gettimeofday(&core_end, 0);
+
+			double diff = time_diff(&core_start, &core_end);
+			PRINT_CRITICAL("diff=%f", diff);
+			sleep(1);
+		}
+		PRINT_CRITICAL("after");
+
+		sigset_t mask;
+		if (0) {
+			/* Block timer signal temporarily */
+			PRINT_CRITICAL("Blocking signal %d", SIG);
+			sigemptyset(&mask);
+			sigaddset(&mask, SIG);
+			if (sigprocmask(SIG_SETMASK, &mask, NULL) == -1) {
+				errExit("sigprocmask");
+			}
+		}
+		if (0) {
+			/* Unlock the timer signal, so that timer notification
+			 can be delivered */
+			PRINT_CRITICAL("Unblocking signal %d", SIG);
+			if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1)
+				errExit("sigprocmask");
+		}
+
+		while (1) {
+			PRINT_CRITICAL("Sleeping");
+			sleep(1);
+		}
+		//exit(EXIT_SUCCESS);
+		return 1;
+	}
+
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
+
+	//strcpy(my_host_if_name, "lo");
+	strcpy(my_host_if_name, "eth0");
+	//strcpy(my_host_if_name, "eth1");
+	//strcpy(my_host_if_name, "eth2");
+	//strcpy(my_host_if_name, "wlan0");
+
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
 	my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
 	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
@@ -324,7 +471,7 @@ int main() {
 
 
 	while (1)
-		;
+		sleep(1);
 
 	return (1);
 }

@@ -1015,25 +1015,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			free(temp);
 
 			if (0) { //TODO change to func, print_hex
-				uint8_t *print_buf = (uint8_t *) secure_malloc(3 * (ff->dataFrame.pduLength) + 1);
-				uint8_t *print_pt = print_buf;
-				uint8_t *pt = ff->dataFrame.pdu;
-				int i;
-				for (i = 0; i < ff->dataFrame.pduLength; i++) {
-					if (i == 0) {
-						sprintf((char *) print_pt, "%02x", *(pt + i));
-						print_pt += 2;
-					} else if (i % 4 == 0) {
-						sprintf((char *) print_pt, ":%02x", *(pt + i));
-						print_pt += 3;
-					} else {
-						sprintf((char *) print_pt, " %02x", *(pt + i));
-						print_pt += 3;
-					}
-				}
-				*print_pt = '\0';
-				PRINT_DEBUG("buf='%s'", (char *)print_buf);
-				free(print_buf);
+				print_hex(ff->dataFrame.pduLength, ff->dataFrame.pdu);
 			}
 #endif
 			//#######
@@ -1106,8 +1088,10 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
 			if (flags & (MSG_DONTWAIT)) {
-				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
-			}PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
+			}
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 		} else {
 			PRINT_ERROR("call_list full");
@@ -1801,25 +1785,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 	free(temp);
 
 	if (0) { //TODO change to func, print_hex
-		uint8_t *print_buf = (uint8_t *) secure_malloc(3 * data_len + 1);
-		uint8_t *print_pt = print_buf;
-		uint8_t *pt = data;
-		int i;
-		for (i = 0; i < data_len; i++) {
-			if (i == 0) {
-				sprintf((char *) print_pt, "%02x", *(pt + i));
-				print_pt += 2;
-			} else if (i % 4 == 0) {
-				sprintf((char *) print_pt, ":%02x", *(pt + i));
-				print_pt += 3;
-			} else {
-				sprintf((char *) print_pt, " %02x", *(pt + i));
-				print_pt += 3;
-			}
-		}
-		*print_pt = '\0';
-		PRINT_DEBUG("buf='%s'", (char *)print_buf);
-		free(print_buf);
+		print_hex(data_len, data);
 	}
 #endif
 	//#######

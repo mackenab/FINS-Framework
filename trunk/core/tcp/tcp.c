@@ -403,9 +403,6 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 
 	conn_stub->running_flag = 1;
 
-
-
-
 	PRINT_DEBUG("Exited: host=%u/%u, backlog=%u, conn_stub=%p", host_ip, host_port, backlog, conn_stub);
 	return conn_stub;
 }
@@ -855,8 +852,7 @@ void main_established(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			}
-			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -892,8 +888,8 @@ void main_established(struct tcp_connection *conn) {
 
 			//if (conn->send_win && cong_space > 0) { //TODO check if right
 			//if (recv_space >= (double) conn->MSS && cong_space >= (double) conn->MSS) {
-			//if (recv_space > 1 && cong_space > 1) {
-			if (recv_space > 1) { //TODO remove, ignores cc
+			if (recv_space > 1 && cong_space > 1) {
+				//if (recv_space > 1) { //TODO remove, ignores cc
 				if (conn->first_flag) {
 					conn->gbn_node = conn->send_queue->front;
 				} else {
@@ -936,8 +932,8 @@ void main_established(struct tcp_connection *conn) {
 			//if (conn->send_win && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
-			//if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
-			if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
+			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
+				//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -949,7 +945,7 @@ void main_established(struct tcp_connection *conn) {
 					data_len = conn->send_win;
 				}
 				if ((double) data_len > cong_space) { //TODO unneeded if (cong_space >= MSS) kept, keep if change to (cong_space > 0)
-					//data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
+					data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
 				}
 
 				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
@@ -1076,8 +1072,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 				conn->threshhold = (double) conn->send_max_win; //TODO fix?
 				conn->cong_window = (double) conn->MSS;
 				break;
-			}
-			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+			}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f", conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 
 			//resend first seg
 			conn->gbn_node = conn->send_queue->front;
@@ -1112,8 +1107,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 
 			//if (conn->send_win && cong_space > 0) { //TODO check if right
 			//if (recv_space >= (double) conn->MSS && cong_space >= (double) conn->MSS) {
-			//if (recv_space > 1 && cong_space > 1) {
-			if (recv_space > 1) { //TODO remove, ignores cc
+			if (recv_space > 1 && cong_space > 1) {
+				//if (recv_space > 1) { //TODO remove, ignores cc
 				if (conn->first_flag) {
 					conn->gbn_node = conn->send_queue->front;
 				} else {
@@ -1164,8 +1159,8 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 			//if (conn->send_win && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
-			//if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
-			if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
+			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
+				//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -1177,7 +1172,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 					data_len = (uint32_t) conn->send_win;
 				}
 				if ((double) data_len > cong_space) { //TODO unneeded if (cong_space >= MSS) kept, keep if change to (cong_space > 0)
-					//data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
+					data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
 				}
 
 				seg = seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
@@ -1714,8 +1709,7 @@ int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_m
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		break;
 	default:
-		PRINT_ERROR ("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode)
-		;
+		PRINT_ERROR ("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode);
 		return 0;
 	}
 
@@ -2118,8 +2112,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 	//add options //TODO implement options system
 	switch (conn->state) {
 	case TS_SYN_SENT:
-		PRINT_DEBUG("")
-		;
+		PRINT_DEBUG("");
 		//add MSS to seg
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_attempt + TCP_TS_BYTES * conn->tsopt_attempt + TCP_WS_BYTES * conn->wsopt_attempt;
 		//if (seg->opt_len % 4) {
@@ -2177,8 +2170,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 		}
 		break;
 	case TS_SYN_RECV:
-		PRINT_DEBUG("")
-		;
+		PRINT_DEBUG("");
 		//seg->opt_len = TCP_MSS_BYTES + TCP_SACK_PERM_BYTES * conn->sack_enabled + TCP_TS_BYTES * conn->tsopt_enabled + TCP_WS_BYTES * conn->wsopt_enabled;
 		//if (seg->opt_len % 4) {
 		//	seg->opt_len += 4 - (seg->opt_len % 4); //round options up?
@@ -2311,8 +2303,7 @@ void seg_add_options(struct tcp_segment *seg, struct tcp_connection *conn) {
 
 		break;
 	default:
-		PRINT_DEBUG("")
-		;
+		PRINT_DEBUG("");
 		seg->opt_len = 0;
 		//seg->options = NULL;
 		break;
@@ -2826,65 +2817,49 @@ void tcp_fcf(struct finsFrame *ff) {
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
-		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
-		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		tcp_read_param(ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM)
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
 		tcp_set_param(ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
-		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
-		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC)
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		tcp_exec(ff);
 		break;
 	case CTRL_EXEC_REPLY:
-		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
-		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR)
-		;
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
 		tcp_error(ff);
 		break;
 	default:
-		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -2904,8 +2879,7 @@ void tcp_exec(struct finsFrame *ff) {
 	metadata *params = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_TCP_LISTEN:
-		PRINT_DEBUG("param_id=EXEC_TCP_LISTEN (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_TCP_LISTEN (%d)", ff->ctrlFrame.param_id);
 
 		uint32_t backlog = 0;
 		secure_metadata_readFromElement(params, "backlog", &backlog);
@@ -2915,8 +2889,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_listen(ff, host_ip, (uint16_t) host_port, backlog);
 		break;
 	case EXEC_TCP_ACCEPT:
-		PRINT_DEBUG("param_id=EXEC_TCP_ACCEPT (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_TCP_ACCEPT (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(params, "host_ip", &host_ip);
 		secure_metadata_readFromElement(params, "host_port", &host_port);
@@ -2925,8 +2898,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_accept(ff, host_ip, (uint16_t) host_port, flags);
 		break;
 	case EXEC_TCP_CONNECT:
-		PRINT_DEBUG("param_id=EXEC_TCP_CONNECT (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_TCP_CONNECT (%d)", ff->ctrlFrame.param_id);
 		secure_metadata_readFromElement(params, "flags", &flags);
 
 		secure_metadata_readFromElement(params, "host_ip", &host_ip);
@@ -2937,8 +2909,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_connect(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, flags);
 		break;
 	case EXEC_TCP_CLOSE:
-		PRINT_DEBUG("param_id=EXEC_TCP_CLOSE (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_TCP_CLOSE (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(params, "host_ip", &host_ip);
 		secure_metadata_readFromElement(params, "host_port", &host_port);
@@ -2948,8 +2919,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_close(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 		break;
 	case EXEC_TCP_CLOSE_STUB:
-		PRINT_DEBUG("param_id=EXEC_TCP_CLOSE_STUB (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_TCP_CLOSE_STUB (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(params, "host_ip", &host_ip);
 		secure_metadata_readFromElement(params, "host_port", &host_port);
@@ -2957,8 +2927,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_close_stub(ff, host_ip, (uint16_t) host_port);
 		break;
 	case EXEC_TCP_POLL:
-		PRINT_DEBUG("param_id=EXEC_TCP_POLL (%d)", ff->ctrlFrame.param_id)
-		;
+		PRINT_DEBUG("param_id=EXEC_TCP_POLL (%d)", ff->ctrlFrame.param_id);
 
 		uint32_t initial;
 		secure_metadata_readFromElement(params, "initial", &initial);
@@ -2975,8 +2944,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_poll(ff, (socket_state) state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, initial, flags);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 
 		ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -2996,29 +2964,22 @@ void tcp_error(struct finsFrame *ff) {
 	//metadata *params = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
-		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id)
-		;
-
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
 
 		//TODO finish for
 		//if (ff->ctrlFrame.para)
 		freeFinsFrame(ff);
 		break;
 	case ERROR_ICMP_DEST_UNREACH:
-		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id)
-		;
-
-		PRINT_ERROR("todo")
-		;
+		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
 
 		//TODO finish
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id: ff=%p, param_id=%d", ff, ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id: ff=%p, param_id=%d", ff, ff->ctrlFrame.param_id);
 		//TODO implement?
 		freeFinsFrame(ff);
 		break;
@@ -3134,8 +3095,7 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		break;
 	default:
-		PRINT_ERROR ("Unhandled msg case: ff=%p, opcode=%u", ff, ff->ctrlFrame.opcode)
-		;
+		PRINT_ERROR ("Unhandled msg case: ff=%p, opcode=%u", ff, ff->ctrlFrame.opcode);
 		return 0;
 	}
 

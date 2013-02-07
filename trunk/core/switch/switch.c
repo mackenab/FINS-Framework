@@ -94,7 +94,9 @@ void module_unregister(int module_id) {
 int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, module_id=%d, name='%s', ff=%p, meta=%p", module, module->module_id, module->name, ff, ff->metaData);
 	int ret;
-	if ((ret = sem_wait(module->output_sem))) {
+
+	while ((ret = sem_wait(module->output_sem)) && errno == EINTR);
+	if (ret) {
 		PRINT_ERROR("output_sem wait prob: module=%p, module_id=%d, name='%s', ff=%p, meta=%p, ret=%d", module, module->module_id, module->name, ff, ff->metaData, ret);
 		exit(-1);
 	}
@@ -126,7 +128,8 @@ void *switch_loop(void *local) {
 		for (i = 0; i < MAX_modules; i++) {
 			if (fins_modules[i] != NULL) {
 				if (!IsEmpty(fins_modules[i]->output_queue)) { //added as optimization
-					if ((ret = sem_wait(fins_modules[i]->output_sem))) {
+					while ((ret = sem_wait(fins_modules[i]->output_sem)) && errno == EINTR);
+					if (ret) {
 						PRINT_ERROR("sem wait prob: src module_id=%d, ret=%d", i, ret);
 						exit(-1);
 					}
@@ -143,31 +146,10 @@ void *switch_loop(void *local) {
 						freeFinsFrame(ff);
 					} else { //if (i != id) //TODO add this?
 						//id = LOGGER_ID;
-						/*
-						 if (0 && id == DAEMON_ID) { //TODO remove this eventually
-						 //id = LOGGER_ID;
-						 if (fins_modules[LOGGER_ID] != NULL && 0) {
-						 struct finsFrame *ff_copy = cloneFinsFrame(ff);
-
-						 PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[LOGGER_ID]->name, ff_copy, ff_copy->metaData);
-						 if ((ret = sem_wait(fins_modules[LOGGER_ID]->input_sem))) {
-						 PRINT_ERROR("sem wait prob: dst module_id=%u, ff=%p, meta=%p, ret=%d", LOGGER_ID, ff_copy, ff_copy->metaData, ret);
-						 exit(-1);
-						 }
-						 if (write_queue(ff_copy, fins_modules[LOGGER_ID]->input_queue)) {
-						 sem_post(fins_modules[LOGGER_ID]->event_sem);
-						 sem_post(fins_modules[LOGGER_ID]->input_sem);
-						 } else {
-						 sem_post(fins_modules[LOGGER_ID]->input_sem);
-						 PRINT_ERROR("Write queue error: dst module_id=%u, ff=%p, meta=%p", LOGGER_ID, ff_copy, ff_copy->metaData);
-						 freeFinsFrame(ff_copy);
-						 }
-						 }
-						 }
-						 */
 						if (fins_modules[id] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[id]->name, ff, ff->metaData);
-							if ((ret = sem_wait(fins_modules[id]->input_sem))) {
+							while ((ret = sem_wait(fins_modules[id]->input_sem)) && errno == EINTR);
+							if (ret) {
 								PRINT_ERROR("sem wait prob: dst module_id=%u, ff=%p, meta=%p, ret=%d", id, ff, ff->metaData, ret);
 								exit(-1);
 							}

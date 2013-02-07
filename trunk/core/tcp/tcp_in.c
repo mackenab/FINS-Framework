@@ -13,8 +13,7 @@ void calcRTT(struct tcp_connection *conn) {
 
 	gettimeofday(&current, 0);
 
-	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
-	PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
 	PRINT_DEBUG("old: sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 
@@ -64,8 +63,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 	struct tcp_node *temp_node;
 	struct tcp_segment *temp_seg;
 
-	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
-	PRINT_DEBUG("ack=%u, send=(%u, %u), sent=%u, sep=%u, fssn=%u, fsse=%u",
+	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);PRINT_DEBUG("ack=%u, send=(%u, %u), sent=%u, sep=%u, fssn=%u, fsse=%u",
 			seg->ack_num-conn->issn, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->fin_sent, conn->fin_sep, conn->fssn, conn->fsse);
 
 	//check if valid ACK
@@ -120,8 +118,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 					conn->fast_flag = 1; //TODO send FR every 3 repeated, check if should do only first then ff=0
 					//conn->cong_window += (double) conn->MSS; //in RFC but FR is sent right afterward in same code
 					break;
-				}
-				PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
+				}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
 						conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 			} else {
 				//duplicate ACK, no FR though
@@ -184,8 +181,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->cong_state = RENO_AVOIDANCE;
 				conn->cong_window = conn->threshhold;
 				break;
-			}
-			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
+			}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
 					conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 		} else {
 			node = tcp_queue_find(conn->send_queue, seg->ack_num);
@@ -247,8 +243,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 					conn->cong_state = RENO_AVOIDANCE;
 					conn->cong_window = conn->threshhold;
 					break;
-				}
-				PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
+				}PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
 						conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
 			} else {
 				PRINT_ERROR(
@@ -734,12 +729,10 @@ int process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 		kind = pt[i++];
 		switch (kind) {
 		case TCP_OPT_EOL:
-			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len)
-			;
+			PRINT_DEBUG("EOL: (%u/%u)", i-1, seg->opt_len);
 			return 1;
 		case TCP_OPT_NOP:
-			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len)
-			;
+			PRINT_DEBUG("NOP: (%u/%u)", i-1, seg->opt_len);
 			continue;
 		case TCP_OPT_MSS:
 			len = pt[i++];
@@ -1858,10 +1851,8 @@ void *recv_thread(void *local) {
 				break;
 			default:
 				PRINT_ERROR( "Incorrect state: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p",
-						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg)
-				;
-				PRINT_ERROR("todo error")
-				;
+						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg);
+				PRINT_ERROR("todo error");
 				break;
 			}
 		} else {

@@ -133,7 +133,6 @@ void arp_request_list_free(struct arp_request_list *request_list);
 /**This struct is used to store information about neighboring nodes of the host interface*/
 struct arp_cache {
 	struct arp_cache *next;
-	uint8_t running_flag;
 
 	uint64_t addr_mac;
 	uint32_t addr_ip;
@@ -142,8 +141,7 @@ struct arp_cache {
 	uint8_t seeking;
 	struct timeval updated_stamp;
 
-	pthread_t to_thread;
-	int to_fd;
+	struct intsem_to_timer_data *to_data;
 	uint8_t to_flag;
 	int retries;
 };

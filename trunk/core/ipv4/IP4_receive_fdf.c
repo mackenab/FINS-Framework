@@ -41,10 +41,7 @@ void ipv4_get_ff(void) {
 		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData);
 		ipv4_fcf(ff);
 	} else if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData);
-		PRINT_DEBUG("PDU Length: %d", ff->dataFrame.pduLength);
-		PRINT_DEBUG("Data direction: %d", ff->dataFrame.directionFlag);
-		PRINT_DEBUG("pdu=%p", ff->dataFrame.pdu);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData); PRINT_DEBUG("PDU Length: %d", ff->dataFrame.pduLength); PRINT_DEBUG("Data direction: %d", ff->dataFrame.directionFlag); PRINT_DEBUG("pdu=%p", ff->dataFrame.pdu);
 
 		if (ff->dataFrame.directionFlag == UP) {
 			PRINT_DEBUG("IP4_in");
@@ -57,8 +54,7 @@ void ipv4_get_ff(void) {
 			metadata *params = ff->metaData;
 			secure_metadata_readFromElement(params, "send_protocol", &protocol);
 
-			PRINT_DEBUG("%lu", my_ip_addr);
-			PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
+			PRINT_DEBUG("%lu", my_ip_addr); PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
 			//TODO change my_ip_addr to src_ip from metadata
 			switch (protocol) {
 			case IP4_PT_ICMP:

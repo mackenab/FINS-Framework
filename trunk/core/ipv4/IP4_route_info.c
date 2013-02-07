@@ -62,8 +62,7 @@ struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * tab
 			previous = current;
 			current = current->next_entry;
 		}
-	}
-	PRINT_DEBUG("IP4_sort_routing_table end");
+	} PRINT_DEBUG("IP4_sort_routing_table end");
 	return (first);
 
 }

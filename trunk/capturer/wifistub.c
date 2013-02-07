@@ -220,40 +220,40 @@ void capture_init(char *interface) {
 
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet((char *) dev, &net, &mask, errbuf) == -1) {
-		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
+		PRINT_ERROR("Couldn't get netmask for device %s: %s", dev, errbuf);
 		net = 0;
 		mask = 0;
 	}
 	/* print capture info */
-	printf("Device: %s\n", dev);
-	printf("Number of packets: %d\n", num_packets);
-	printf("Filter expression: %s\n", filter_exp);
+	PRINT_CRITICAL("Device: %s", dev);
+	PRINT_CRITICAL("Number of packets: %d", num_packets);
+	PRINT_CRITICAL("Filter expression: %s", filter_exp);
 
 	/* open capture device */
 	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 1, 1000, errbuf);
 	if (capture_handle == NULL) {
-		fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
+		PRINT_ERROR("Couldn't open device %s: %s", dev, errbuf);
 		exit(EXIT_FAILURE);
 	}
 
 	/* make sure we're capturing on an Ethernet device [2] */
 	data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
-		fprintf(stderr, "%s is not an Ethernet\n", dev);
+		PRINT_ERROR("%s is not an Ethernet", dev);
 		exit(EXIT_FAILURE);
 	}
-	printf("Datalink layer Description: %s (%d) \n", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
+	PRINT_CRITICAL("Datalink layer Description: %s (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
 
 	/* compile the filter expression */
 
 	if (pcap_compile(capture_handle, &fp, filter_exp, 0, net) == -1) {
-		fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(capture_handle));
+		PRINT_ERROR("Couldn't parse filter %s: %s", filter_exp, pcap_geterr(capture_handle));
 		exit(EXIT_FAILURE);
 	}
 
 	/* apply the compiled filter */
 	if (pcap_setfilter(capture_handle, &fp) == -1) {
-		fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(capture_handle));
+		PRINT_ERROR("Couldn't install filter %s: %s", filter_exp, pcap_geterr(capture_handle));
 		exit(EXIT_FAILURE);
 	}
 
@@ -261,11 +261,11 @@ void capture_init(char *interface) {
 #ifndef BUILD_FOR_ANDROID
 	check_monitor_mode = pcap_can_set_rfmon(capture_handle);
 	if (check_monitor_mode) {
-		PRINT_DEBUG("\n Monitor mode can be set\n");
+		PRINT_DEBUG(" Monitor mode can be set");
 	} else if (check_monitor_mode == 0) {
-		PRINT_DEBUG("\n Monitor mode could not be set\n");
+		PRINT_DEBUG(" Monitor mode could not be set");
 	} else
-		PRINT_DEBUG("\n check_monior_mode value is %d \n", check_monitor_mode);
+		PRINT_DEBUG(" check_monior_mode value is %d ", check_monitor_mode);
 #endif
 	//CHANGE END !!!!!	
 
@@ -284,7 +284,7 @@ void inject_init(char *interface) {
 	/*
 	 if (mkfifo(INJECT_PIPE, 0777) !=0 )
 	 {
-	 PRINT_DEBUG("MKFIFO of INJECT Failed \n");
+	 PRINT_DEBUG("MKFIFO of INJECT Failed ");
 	 exit(EXIT_FAILURE);
 	 } */
 	//	static int count = 1;
@@ -314,7 +314,7 @@ void inject_init(char *interface) {
 
 	/** Setup the Injection Interface */
 	if ((inject_handle = pcap_open_live((char *) dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
-		PRINT_DEBUG( "\nError: %s\n", errbuf);
+		PRINT_DEBUG( "Error: %s", errbuf);
 		exit(1);
 	}
 

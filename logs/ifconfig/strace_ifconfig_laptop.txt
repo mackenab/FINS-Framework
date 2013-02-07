@@ -1,0 +1,220 @@
+1958  1360143788.029406 execve("/sbin/ifconfig", ["ifconfig"], ["SHELL=/bin/bash", "TERM=xterm", "XDG_SESSION_COOKIE=469fa7163a21b"..., "USER=root", "LS_COLORS=rs=0:di=01;34:ln=01;36"..., "SUDO_USER=alex", "SUDO_UID=1000", "USERNAME=root", "MAIL=/var/mail/root", "PATH=/usr/local/sbin:/usr/local/"..., "PWD=/home/alex/jreed/FINS-Framew"..., "LANG=en_US.UTF-8", "SHLVL=1", "SUDO_COMMAND=/bin/su", "HOME=/root", "LOGNAME=root", "LESSOPEN=| /usr/bin/lesspipe %s", "SUDO_GID=1000", "DISPLAY=:0.0", "LESSCLOSE=/usr/bin/lesspipe %s %"..., "COLORTERM=gnome-terminal", "XAUTHORITY=/var/run/gdm/auth-for"..., "_=/usr/bin/strace"]) = 0
+1958  1360143788.030890 brk(0)          = 0x98f3000
+1958  1360143788.031131 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.031359 mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb785a000
+1958  1360143788.031536 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.031716 open("/etc/ld.so.cache", O_RDONLY) = 3
+1958  1360143788.031871 fstat64(3, {st_dev=makedev(8, 1), st_ino=2380293, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=152, st_size=76852, st_atime=2013/02/05-20:09:01, st_mtime=2013/01/17-08:16:52, st_ctime=2013/01/17-08:16:52}) = 0
+1958  1360143788.032290 mmap2(NULL, 76852, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7847000
+1958  1360143788.032417 close(3)        = 0
+1958  1360143788.032545 access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.032710 open("/lib/tls/i686/cmov/libc.so.6", O_RDONLY) = 3
+1958  1360143788.032876 read(3, "\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x03\x00\x01\x00\x00\x00\x30\x6d\x01\x00\x34\x00\x00\x00"..., 512) = 512
+1958  1360143788.033068 fstat64(3, {st_dev=makedev(8, 1), st_ino=142603, st_mode=S_IFREG|0755, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2800, st_size=1430084, st_atime=2013/02/05-20:09:01, st_mtime=2012/11/15-17:22:49, st_ctime=2012/12/10-12:00:25}) = 0
+1958  1360143788.033350 mmap2(NULL, 1436072, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x2c8000
+1958  1360143788.033485 mmap2(0x421000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x159) = 0x421000
+1958  1360143788.033642 mmap2(0x424000, 10664, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x424000
+1958  1360143788.033785 close(3)        = 0
+1958  1360143788.033938 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7846000
+1958  1360143788.034107 set_thread_area({entry_number:-1 -> 6, base_addr:0xb78468d0, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+1958  1360143788.034407 mprotect(0x421000, 8192, PROT_READ) = 0
+1958  1360143788.034539 mprotect(0x8057000, 4096, PROT_READ) = 0
+1958  1360143788.034669 mprotect(0x4cc000, 4096, PROT_READ) = 0
+1958  1360143788.034792 munmap(0xb7847000, 76852) = 0
+1958  1360143788.035196 brk(0)          = 0x98f3000
+1958  1360143788.035312 brk(0x9914000)  = 0x9914000
+1958  1360143788.035462 open("/usr/lib/locale/locale-archive", O_RDONLY|O_LARGEFILE) = -1 ENOENT (No such file or directory)
+1958  1360143788.035769 open("/usr/share/locale/locale.alias", O_RDONLY) = 3
+1958  1360143788.035960 fstat64(3, {st_dev=makedev(8, 1), st_ino=2359467, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=2570, st_atime=2013/02/05-07:56:27, st_mtime=2010/03/04-07:28:50, st_ctime=2010/05/24-10:17:41}) = 0
+1958  1360143788.036225 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7859000
+1958  1360143788.036353 read(3, "# Locale name alias data base.\n#"..., 4096) = 2570
+1958  1360143788.036597 read(3, "", 4096) = 0
+1958  1360143788.036721 close(3)        = 0
+1958  1360143788.036841 munmap(0xb7859000, 4096) = 0
+1958  1360143788.037164 open("/usr/lib/locale/en_US.UTF-8/LC_IDENTIFICATION", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.037361 open("/usr/lib/locale/en_US.utf8/LC_IDENTIFICATION", O_RDONLY) = 3
+1958  1360143788.037559 fstat64(3, {st_dev=makedev(8, 1), st_ino=3680536, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=373, st_atime=2013/02/05-07:56:27, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.037818 mmap2(NULL, 373, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7859000
+1958  1360143788.037960 close(3)        = 0
+1958  1360143788.038102 open("/usr/lib/gconv/gconv-modules.cache", O_RDONLY) = 3
+1958  1360143788.038281 fstat64(3, {st_dev=makedev(8, 1), st_ino=3683624, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=56, st_size=26048, st_atime=2013/02/05-21:02:37, st_mtime=2012/11/15-17:14:44, st_ctime=2012/12/10-12:00:20}) = 0
+1958  1360143788.038542 mmap2(NULL, 26048, PROT_READ, MAP_SHARED, 3, 0) = 0xb7852000
+1958  1360143788.038667 close(3)        = 0
+1958  1360143788.038950 open("/usr/lib/locale/en_US.UTF-8/LC_MEASUREMENT", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.039128 open("/usr/lib/locale/en_US.utf8/LC_MEASUREMENT", O_RDONLY) = 3
+1958  1360143788.042182 fstat64(3, {st_dev=makedev(8, 1), st_ino=3678163, st_mode=S_IFREG|0644, st_nlink=2, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=23, st_atime=2013/02/05-07:56:27, st_mtime=2010/04/29-08:30:57, st_ctime=2010/06/01-09:44:35}) = 0
+1958  1360143788.042435 mmap2(NULL, 23, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7851000
+1958  1360143788.042534 close(3)        = 0
+1958  1360143788.042802 open("/usr/lib/locale/en_US.UTF-8/LC_TELEPHONE", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.042957 open("/usr/lib/locale/en_US.utf8/LC_TELEPHONE", O_RDONLY) = 3
+1958  1360143788.043098 fstat64(3, {st_dev=makedev(8, 1), st_ino=3680535, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=59, st_atime=2013/02/05-07:56:27, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.043328 mmap2(NULL, 59, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7850000
+1958  1360143788.043422 close(3)        = 0
+1958  1360143788.043660 open("/usr/lib/locale/en_US.UTF-8/LC_ADDRESS", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.043809 open("/usr/lib/locale/en_US.utf8/LC_ADDRESS", O_RDONLY) = 3
+1958  1360143788.043950 fstat64(3, {st_dev=makedev(8, 1), st_ino=3680534, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=155, st_atime=2013/02/05-07:56:27, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.044181 mmap2(NULL, 155, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb784f000
+1958  1360143788.044275 close(3)        = 0
+1958  1360143788.044508 open("/usr/lib/locale/en_US.UTF-8/LC_NAME", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.044651 open("/usr/lib/locale/en_US.utf8/LC_NAME", O_RDONLY) = 3
+1958  1360143788.044786 fstat64(3, {st_dev=makedev(8, 1), st_ino=3677775, st_mode=S_IFREG|0644, st_nlink=3, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=77, st_atime=2013/02/05-07:56:27, st_mtime=2010/04/29-08:30:57, st_ctime=2010/06/01-09:44:40}) = 0
+1958  1360143788.045015 mmap2(NULL, 77, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb784e000
+1958  1360143788.045109 close(3)        = 0
+1958  1360143788.045349 open("/usr/lib/locale/en_US.UTF-8/LC_PAPER", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.045494 open("/usr/lib/locale/en_US.utf8/LC_PAPER", O_RDONLY) = 3
+1958  1360143788.045632 fstat64(3, {st_dev=makedev(8, 1), st_ino=3678024, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=34, st_atime=2013/02/05-07:56:27, st_mtime=2010/04/29-08:30:57, st_ctime=2010/05/24-10:27:51}) = 0
+1958  1360143788.045863 mmap2(NULL, 34, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb784d000
+1958  1360143788.045958 close(3)        = 0
+1958  1360143788.046220 open("/usr/lib/locale/en_US.UTF-8/LC_MESSAGES", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.046372 open("/usr/lib/locale/en_US.utf8/LC_MESSAGES", O_RDONLY) = 3
+1958  1360143788.046535 fstat64(3, {st_dev=makedev(8, 1), st_ino=3677937, st_mode=S_IFDIR|0755, st_nlink=2, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=4096, st_atime=2011/10/12-09:29:32, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.046759 close(3)        = 0
+1958  1360143788.046851 open("/usr/lib/locale/en_US.utf8/LC_MESSAGES/SYS_LC_MESSAGES", O_RDONLY) = 3
+1958  1360143788.047004 fstat64(3, {st_dev=makedev(8, 1), st_ino=3680533, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=57, st_atime=2013/02/05-07:56:27, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.047226 mmap2(NULL, 57, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb784c000
+1958  1360143788.047316 close(3)        = 0
+1958  1360143788.047557 open("/usr/lib/locale/en_US.UTF-8/LC_MONETARY", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.047699 open("/usr/lib/locale/en_US.utf8/LC_MONETARY", O_RDONLY) = 3
+1958  1360143788.047959 fstat64(3, {st_dev=makedev(8, 1), st_ino=3680532, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=286, st_atime=2013/02/05-07:56:27, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.048191 mmap2(NULL, 286, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb784b000
+1958  1360143788.048283 close(3)        = 0
+1958  1360143788.048519 open("/usr/lib/locale/en_US.UTF-8/LC_COLLATE", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.048661 open("/usr/lib/locale/en_US.utf8/LC_COLLATE", O_RDONLY) = 3
+1958  1360143788.048794 fstat64(3, {st_dev=makedev(8, 1), st_ino=3677926, st_mode=S_IFREG|0644, st_nlink=12, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=2288, st_size=1170770, st_atime=2013/02/05-07:56:27, st_mtime=2010/04/29-08:30:57, st_ctime=2010/06/01-09:44:48}) = 0
+1958  1360143788.049020 mmap2(NULL, 1170770, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7728000
+1958  1360143788.049109 close(3)        = 0
+1958  1360143788.049362 open("/usr/lib/locale/en_US.UTF-8/LC_TIME", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.049500 open("/usr/lib/locale/en_US.utf8/LC_TIME", O_RDONLY) = 3
+1958  1360143788.049631 fstat64(3, {st_dev=makedev(8, 1), st_ino=3680531, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=2454, st_atime=2013/02/05-07:56:27, st_mtime=2010/05/24-10:25:56, st_ctime=2010/05/24-10:25:56}) = 0
+1958  1360143788.049858 mmap2(NULL, 2454, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb784a000
+1958  1360143788.049949 close(3)        = 0
+1958  1360143788.050205 open("/usr/lib/locale/en_US.UTF-8/LC_NUMERIC", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.050352 open("/usr/lib/locale/en_US.utf8/LC_NUMERIC", O_RDONLY) = 3
+1958  1360143788.050485 fstat64(3, {st_dev=makedev(8, 1), st_ino=3677958, st_mode=S_IFREG|0644, st_nlink=11, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=8, st_size=54, st_atime=2013/02/05-07:56:27, st_mtime=2010/04/29-08:30:57, st_ctime=2010/06/01-09:44:51}) = 0
+1958  1360143788.050712 mmap2(NULL, 54, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb7849000
+1958  1360143788.050800 close(3)        = 0
+1958  1360143788.051026 open("/usr/lib/locale/en_US.UTF-8/LC_CTYPE", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.051167 open("/usr/lib/locale/en_US.utf8/LC_CTYPE", O_RDONLY) = 3
+1958  1360143788.051296 fstat64(3, {st_dev=makedev(8, 1), st_ino=3678083, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=504, st_size=256324, st_atime=2013/02/05-07:56:27, st_mtime=2010/04/29-08:30:57, st_ctime=2010/05/24-10:27:51}) = 0
+1958  1360143788.051519 mmap2(NULL, 256324, PROT_READ, MAP_PRIVATE, 3, 0) = 0xb76e9000
+1958  1360143788.051608 close(3)        = 0
+1958  1360143788.051756 uname({sysname="Linux", nodename="alex-laptop", release="2.6.38-16-generic", version="#67~lucid1-Ubuntu SMP Fri Sep 7 18:21:00 UTC 2012", machine="i686"}) = 0
+1958  1360143788.052272 access("/proc/net", R_OK) = 0
+1958  1360143788.052430 access("/proc/net/unix", R_OK) = 0
+1958  1360143788.052612 socket(PF_FILE, SOCK_DGRAM, 0) = 3
+1958  1360143788.052730 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 4
+1958  1360143788.052823 access("/proc/net/if_inet6", R_OK) = 0
+1958  1360143788.052973 socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP) = 5
+1958  1360143788.053065 access("/proc/net/ax25", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.053201 access("/proc/net/nr", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.053326 access("/proc/net/rose", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.053454 access("/proc/net/ipx", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.053578 access("/proc/net/appletalk", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.053710 access("/proc/sys/net/econet", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.053919 access("/proc/sys/net/ash", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.054045 access("/proc/net/x25", R_OK) = -1 ENOENT (No such file or directory)
+1958  1360143788.054251 open("/proc/net/dev", O_RDONLY) = 6
+1958  1360143788.054398 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026531957, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2013/02/06-04:43:08, st_mtime=2013/02/06-04:43:08, st_ctime=2013/02/06-04:43:08}) = 0
+1958  1360143788.054491 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76e8000
+1958  1360143788.054529 read(6, "Inter-|   Receive               "..., 1024) = 569
+1958  1360143788.054639 read(6, "", 1024) = 0
+1958  1360143788.054679 close(6)        = 0
+1958  1360143788.054716 munmap(0xb76e8000, 4096) = 0
+1958  1360143788.054847 open("/usr/share/locale/en_US.UTF-8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.054913 open("/usr/share/locale/en_US.utf8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.054974 open("/usr/share/locale/en_US/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055034 open("/usr/share/locale/en.UTF-8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055093 open("/usr/share/locale/en.utf8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055152 open("/usr/share/locale/en/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055211 open("/usr/share/locale-langpack/en_US.UTF-8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055275 open("/usr/share/locale-langpack/en_US.utf8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055339 open("/usr/share/locale-langpack/en_US/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055402 open("/usr/share/locale-langpack/en.UTF-8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055466 open("/usr/share/locale-langpack/en.utf8/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055529 open("/usr/share/locale-langpack/en/LC_MESSAGES/net-tools.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+1958  1360143788.055610 ioctl(4, SIOCGIFCONF, {64, {{"lo", {AF_INET, inet_addr("127.0.0.1")}}, {"wlan0", {AF_INET, inet_addr("192.168.1.4")}}}}) = 0
+1958  1360143788.055718 ioctl(5, SIOCGIFFLAGS, {ifr_name="eth0", ifr_flags=IFF_UP|IFF_BROADCAST|IFF_MULTICAST}) = 0
+1958  1360143788.055773 ioctl(5, SIOCGIFHWADDR, {ifr_name="eth0", ifr_hwaddr=00:1d:09:b3:55:12}) = 0
+1958  1360143788.055823 ioctl(5, SIOCGIFMETRIC, {ifr_name="eth0", ifr_metric=0}) = 0
+1958  1360143788.055871 ioctl(5, SIOCGIFMTU, {ifr_name="eth0", ifr_mtu=1500}) = 0
+1958  1360143788.055919 ioctl(5, SIOCGIFMAP, {ifr_name="eth0", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=17, dma=0, port=0}}) = 0
+1958  1360143788.055969 ioctl(5, SIOCGIFMAP, {ifr_name="eth0", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=17, dma=0, port=0}}) = 0
+1958  1360143788.056027 ioctl(5, SIOCGIFTXQLEN, {ifr_name="eth0", ifr_qlen=1000}) = 0
+1958  1360143788.056075 ioctl(4, SIOCGIFADDR, {ifr_name="eth0", ???}) = -1 EADDRNOTAVAIL (Cannot assign requested address)
+1958  1360143788.056171 fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2013/02/06-04:43:08, st_mtime=2013/02/06-04:43:08, st_ctime=2013/02/06-04:37:28}) = 0
+1958  1360143788.056265 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76e8000
+1958  1360143788.056322 write(1, "eth0      Link encap:Ethernet  H"..., 58) = 58
+1958  1360143788.056381 open("/proc/net/if_inet6", O_RDONLY) = 6
+1958  1360143788.056446 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026532137, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2013/02/06-04:43:08, st_mtime=2013/02/06-04:43:08, st_ctime=2013/02/06-04:43:08}) = 0
+1958  1360143788.056538 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76e7000
+1958  1360143788.056576 read(6, "fe80000000000000021cbffffe86d2da"..., 1024) = 162
+1958  1360143788.056722 write(1, "          inet6 addr: fe80::21d:"..., 60) = 60
+1958  1360143788.056780 read(6, "", 1024) = 0
+1958  1360143788.056816 read(6, "", 1024) = 0
+1958  1360143788.056849 close(6)        = 0
+1958  1360143788.056886 munmap(0xb76e7000, 4096) = 0
+1958  1360143788.056936 write(1, "          UP BROADCAST MULTICAST"..., 53) = 53
+1958  1360143788.056993 write(1, "          RX packets:6 errors:0 "..., 61) = 61
+1958  1360143788.057049 write(1, "          TX packets:6 errors:0 "..., 63) = 63
+1958  1360143788.057105 write(1, "          collisions:0 txqueuele"..., 40) = 40
+1958  1360143788.057162 write(1, "          RX bytes:894 (894.0 B)"..., 57) = 57
+1958  1360143788.057216 write(1, "          Interrupt:17 \n", 24) = 24
+1958  1360143788.057264 write(1, "\n", 1) = 1
+1958  1360143788.057303 ioctl(5, SIOCGIFFLAGS, {ifr_name="lo", ifr_flags=IFF_UP|IFF_LOOPBACK|IFF_RUNNING}) = 0
+1958  1360143788.057354 ioctl(5, SIOCGIFHWADDR, {ifr_name="lo", ifr_hwaddr=00:00:00:00:00:00}) = 0
+1958  1360143788.057404 ioctl(5, SIOCGIFMETRIC, {ifr_name="lo", ifr_metric=0}) = 0
+1958  1360143788.057452 ioctl(5, SIOCGIFMTU, {ifr_name="lo", ifr_mtu=16436}) = 0
+1958  1360143788.057499 ioctl(5, SIOCGIFMAP, {ifr_name="lo", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0
+1958  1360143788.057549 ioctl(5, SIOCGIFMAP, {ifr_name="lo", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0
+1958  1360143788.057598 ioctl(5, SIOCGIFTXQLEN, {ifr_name="lo", ifr_qlen=0}) = 0
+1958  1360143788.057646 ioctl(4, SIOCGIFADDR, {ifr_name="lo", ifr_addr={AF_INET, inet_addr("127.0.0.1")}}) = 0
+1958  1360143788.057697 ioctl(4, SIOCGIFDSTADDR, {ifr_name="lo", ifr_dstaddr={AF_INET, inet_addr("127.0.0.1")}}) = 0
+1958  1360143788.057747 ioctl(4, SIOCGIFBRDADDR, {ifr_name="lo", ifr_broadaddr={AF_INET, inet_addr("0.0.0.0")}}) = 0
+1958  1360143788.057797 ioctl(4, SIOCGIFNETMASK, {ifr_name="lo", ifr_netmask={AF_INET, inet_addr("255.0.0.0")}}) = 0
+1958  1360143788.057852 write(1, "lo        Link encap:Local Loopb"..., 38) = 38
+1958  1360143788.057918 write(1, "          inet addr:127.0.0.1  M"..., 46) = 46
+1958  1360143788.057971 open("/proc/net/if_inet6", O_RDONLY) = 6
+1958  1360143788.058035 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026532137, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2013/02/06-04:43:08, st_mtime=2013/02/06-04:43:08, st_ctime=2013/02/06-04:43:08}) = 0
+1958  1360143788.058156 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76e7000
+1958  1360143788.058195 read(6, "fe80000000000000021cbffffe86d2da"..., 1024) = 162
+1958  1360143788.058259 read(6, "", 1024) = 0
+1958  1360143788.058306 write(1, "          inet6 addr: ::1/128 Sc"..., 41) = 41
+1958  1360143788.058371 read(6, "", 1024) = 0
+1958  1360143788.058405 close(6)        = 0
+1958  1360143788.058440 munmap(0xb76e7000, 4096) = 0
+1958  1360143788.058494 write(1, "          UP LOOPBACK RUNNING  M"..., 51) = 51
+1958  1360143788.058551 write(1, "          RX packets:42 errors:0"..., 62) = 62
+1958  1360143788.058606 write(1, "          TX packets:42 errors:0"..., 64) = 64
+1958  1360143788.058662 write(1, "          collisions:0 txqueuele"..., 37) = 37
+1958  1360143788.058718 write(1, "          RX bytes:4300 (4.3 KB)"..., 57) = 57
+1958  1360143788.058769 write(1, "\n", 1) = 1
+1958  1360143788.058808 ioctl(5, SIOCGIFFLAGS, {ifr_name="wlan0", ifr_flags=IFF_UP|IFF_BROADCAST|IFF_RUNNING|IFF_MULTICAST}) = 0
+1958  1360143788.058859 ioctl(5, SIOCGIFHWADDR, {ifr_name="wlan0", ifr_hwaddr=00:1c:bf:86:d2:da}) = 0
+1958  1360143788.058908 ioctl(5, SIOCGIFMETRIC, {ifr_name="wlan0", ifr_metric=0}) = 0
+1958  1360143788.058956 ioctl(5, SIOCGIFMTU, {ifr_name="wlan0", ifr_mtu=1500}) = 0
+1958  1360143788.059004 ioctl(5, SIOCGIFMAP, {ifr_name="wlan0", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0
+1958  1360143788.059053 ioctl(5, SIOCGIFMAP, {ifr_name="wlan0", ifr_map={mem_start=0, mem_end=0, base_addr=0, irq=0, dma=0, port=0}}) = 0
+1958  1360143788.059101 ioctl(5, SIOCGIFTXQLEN, {ifr_name="wlan0", ifr_qlen=1000}) = 0
+1958  1360143788.059149 ioctl(4, SIOCGIFADDR, {ifr_name="wlan0", ifr_addr={AF_INET, inet_addr("192.168.1.4")}}) = 0
+1958  1360143788.059200 ioctl(4, SIOCGIFDSTADDR, {ifr_name="wlan0", ifr_dstaddr={AF_INET, inet_addr("192.168.1.4")}}) = 0
+1958  1360143788.059250 ioctl(4, SIOCGIFBRDADDR, {ifr_name="wlan0", ifr_broadaddr={AF_INET, inet_addr("192.168.1.255")}}) = 0
+1958  1360143788.059300 ioctl(4, SIOCGIFNETMASK, {ifr_name="wlan0", ifr_netmask={AF_INET, inet_addr("255.255.255.0")}}) = 0
+1958  1360143788.059358 write(1, "wlan0     Link encap:Ethernet  H"..., 58) = 58
+1958  1360143788.059420 write(1, "          inet addr:192.168.1.4 "..., 73) = 73
+1958  1360143788.059473 open("/proc/net/if_inet6", O_RDONLY) = 6
+1958  1360143788.059533 fstat64(6, {st_dev=makedev(0, 3), st_ino=4026532137, st_mode=S_IFREG|0444, st_nlink=1, st_uid=0, st_gid=0, st_blksize=1024, st_blocks=0, st_size=0, st_atime=2013/02/06-04:43:08, st_mtime=2013/02/06-04:43:08, st_ctime=2013/02/06-04:43:08}) = 0
+1958  1360143788.059625 mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76e7000
+1958  1360143788.059663 read(6, "fe80000000000000021cbffffe86d2da"..., 1024) = 162
+1958  1360143788.059737 write(1, "          inet6 addr: fe80::21c:"..., 61) = 61
+1958  1360143788.059793 read(6, "", 1024) = 0
+1958  1360143788.059829 read(6, "", 1024) = 0
+1958  1360143788.059862 close(6)        = 0
+1958  1360143788.059898 munmap(0xb76e7000, 4096) = 0
+1958  1360143788.059946 write(1, "          UP BROADCAST RUNNING M"..., 61) = 61
+1958  1360143788.060003 write(1, "          RX packets:138 errors:"..., 63) = 63
+1958  1360143788.060059 write(1, "          TX packets:56 errors:0"..., 64) = 64
+1958  1360143788.060115 write(1, "          collisions:0 txqueuele"..., 40) = 40
+1958  1360143788.060171 write(1, "          RX bytes:39288 (39.2 K"..., 59) = 59
+1958  1360143788.060224 write(1, "\n", 1) = 1
+1958  1360143788.060382 close(5)        = 0
+1958  1360143788.060438 exit_group(0)   = ?

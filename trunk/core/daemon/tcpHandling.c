@@ -244,7 +244,8 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 			if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 				daemon_calls[hdr->call_index].flags = flags;
 
-				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 			} else {
@@ -350,7 +351,8 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 			daemon_calls[hdr->call_index].flags = flags;
 
 			if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
-				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -420,7 +422,8 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 				daemon_calls[hdr->call_index].sock_id_new = sock_id_new; //TODO redo so not in call? or in struct inside call as void *pt;
 				daemon_calls[hdr->call_index].sock_index_new = sock_index_new;
 
-				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 			} else {
@@ -473,7 +476,8 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 			daemon_calls[hdr->call_index].sock_index_new = sock_index_new;
 
 			if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
-				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 
 			daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
@@ -839,7 +843,8 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 			daemon_calls[hdr->call_index].data = data_len;
 
 			if (flags & (MSG_DONTWAIT)) {
-				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				////start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -1138,7 +1143,8 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
 			if (flags & (MSG_DONTWAIT)) {
-				start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);

@@ -19,8 +19,9 @@
 
 //Include MetaData header File
 #include "metadata.h"		//guicomm need this local
-#include <stdint.h>
+#include <errno.h>
 #include <semaphore.h>
+#include <stdint.h>
 
 //Definition of the modules IDs
 #define SWITCH_ID 0

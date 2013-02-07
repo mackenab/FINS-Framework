@@ -65,7 +65,8 @@ int capture_count = 0;
  * */
 
 void termination_handler(int sig) {
-	printf("\n**Number of captured frames = %d \n ****Number of Injected frames = %d\n", capture_count, inject_count);
+	PRINT_CRITICAL("**Number of captured frames = %d", capture_count);
+	PRINT_CRITICAL("****Number of Injected frames = %d", inject_count);
 	exit(2);
 }
 
@@ -88,14 +89,14 @@ int main() {
 	// ADDED mrd015 !!!!! 
 	// trying to put code from fins_ethernet.sh here. This should allow mkfifo to be called w/o building coreutils for android?
 
-	printf("\n\nAttempting to make " FINS_TMP_ROOT "\n");
+	PRINT_CRITICAL("Attempting to make " FINS_TMP_ROOT "");
 	if (system("mkdir " FINS_TMP_ROOT) != 0) {
-		printf(FINS_TMP_ROOT " already exists! Cleaning...\n");
+		PRINT_CRITICAL(FINS_TMP_ROOT " already exists! Cleaning...");
 		// if cannot create directory, assume it contains files and try to delete them
 		if (system("cd " FINS_TMP_ROOT ";rm *") != 0) {
-			printf("Cannot remove files in " FINS_TMP_ROOT "!\n");
+			PRINT_CRITICAL("Cannot remove files in " FINS_TMP_ROOT "!");
 		} else {
-			printf(FINS_TMP_ROOT " was cleaned successfully.\n\n");
+			PRINT_CRITICAL(FINS_TMP_ROOT " was cleaned successfully.");
 		}
 	}
 
@@ -127,12 +128,12 @@ int main() {
 
 	if (pID == 0) { // child -- Capture process
 		// Code only executed by child process
-		PRINT_DEBUG("child started to capture \n");
+		PRINT_DEBUG("child started to capture ");
 		//sleep(2);
 
 		capture_init(device);
 	} else if (pID < 0) { // failed to fork
-		PRINT_DEBUG("Failed to Fork \n");
+		PRINT_DEBUG("Failed to Fork ");
 		exit(1);
 	} else { // parent
 		// Code only executed by parent process
@@ -142,7 +143,7 @@ int main() {
 		 * we fix this by sleeping the capturing process for a while. To give the injection
 		 * process a lead
 		 */
-		PRINT_DEBUG("parent started to Inject \n");
+		PRINT_DEBUG("parent started to Inject ");
 		inject_init(device);
 	}
 

@@ -7,6 +7,9 @@
 
 #include "finstime.h"
 
+struct timeval core_start;
+struct timeval core_end;
+
 double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
 
@@ -126,6 +129,8 @@ void *intsem_to_thread(void *local) {
 			continue;
 		}
 
+		gettimeofday(&core_start, 0);
+
 		PRINT_DEBUG("throwing flag: id=%u, fd=%d", id, fd);
 		*interrupt = 1;
 		*flag = 1;
@@ -148,7 +153,7 @@ void stop_timer(int fd) {
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
 
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+	if (timerfd_settime(fd, 0, &its, NULL)) {
 		PRINT_ERROR("Error setting timer.");
 		exit(-1);
 	}
@@ -163,324 +168,104 @@ void start_timer(int fd, double millis) {
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
 
-	if (timerfd_settime(fd, 0, &its, NULL) == -1) {
+	if (timerfd_settime(fd, 0, &its, NULL)) {
 		PRINT_ERROR("Error setting timer.");
 		exit(-1);
 	}
 }
 
-void *worker_thread(void *local) {
-	struct pool_worker *worker = (struct pool_worker *) local;
-	PRINT_DEBUG("Entered: id=%u", worker->id);
+void to_handler(int sig, siginfo_t *si, void *uc) {
+	PRINT_DEBUG("Entered: sig=%d, si=%p, uc=%p", sig, si, uc);
 
-	while (1) {
-		secure_sem_wait(worker->inactive_sem);
-		PRINT_DEBUG("queue=%p", worker->queue);
-		if (list_is_empty(worker->queue)) {
-			*worker->inactive_num += 1;
-			worker->inactive = 1;
-			PRINT_DEBUG("inactive: worker=%p, inactive_num=%u", worker, *worker->inactive_num);
-			sem_post(worker->inactive_sem);
+	gettimeofday(&core_start, 0);
 
-			secure_sem_wait(&worker->activate_sem);
-			if (!worker->running) {
-				break;
-			}
-		} else {
-			if (worker->running) {
-				struct pool_request *request = (struct pool_request *) list_remove_front(worker->queue);
-				worker->work = request->work;
-				worker->local = request->local;
+	struct to_timer_data *data = (struct to_timer_data *) si->si_value.sival_ptr;
+	data->handler(data);
+}
 
-				PRINT_DEBUG("freeing: request=%p",request);
-				free(request);
-				sem_post(worker->inactive_sem);
-			} else {
-				sem_post(worker->inactive_sem);
-				break;
-			}
-		}
+void interrupt_to_handler(void *local) {
+	struct interrupt_to_timer_data *data = (struct interrupt_to_timer_data *) local;
 
-		worker->work(worker->local);
+	PRINT_DEBUG("Throwing TO flag: data=%p, tid=%ld", data, (long)data->tid);
+	*data->interrupt = 1;
+	*data->flag = 1;
+}
+
+void sem_to_handler(void *local) {
+	struct sem_to_timer_data *data = (struct sem_to_timer_data *) local;
+
+	PRINT_DEBUG("Throwing TO flag: data=%p, tid=%ld", data, (long)data->tid);
+	*data->flag = 1;
+	if (*data->waiting) {
+		PRINT_DEBUG("posting to wait_sem");
+		sem_post(data->sem);
 	}
-
-	PRINT_DEBUG("Exited: id=%u", worker->id);
-	pthread_exit(NULL);
 }
 
-struct pool_worker *worker_create(sem_t *inactive_sem, uint32_t *inactive_num, struct linked_list *queue, uint32_t id) {
-	PRINT_DEBUG("Entered: inactive_sem=%p, inactive_num=%p, queue=%p, id=%u", inactive_sem, inactive_num, queue, id);
+void intsem_to_handler(void *local) {
+	struct intsem_to_timer_data *data = (struct intsem_to_timer_data *) local;
 
-	struct pool_worker *worker = (struct pool_worker *) secure_malloc(sizeof(struct pool_worker));
-	worker->inactive_sem = inactive_sem;
-	worker->inactive_num = inactive_num;
-	worker->queue = queue;
+	PRINT_DEBUG("Throwing TO flag: data=%p, tid=%ld", data, (long)data->tid);
+	*data->interrupt = 1;
+	*data->flag = 1;
 
-	worker->id = id;
-	worker->running = 1;
-	sem_init(&worker->activate_sem, 0, 0);
-	worker->inactive = 0;
-	worker->work = NULL;
-	worker->local = NULL;
-
-	//change back to normal? if fails don't crash
-	secure_pthread_create(&worker->thread, NULL, worker_thread, (void *) worker);
-	//pthread_detach(&worker->thread);
-
-	PRINT_DEBUG("Exited: inactive_sem=%p, inactive_num=%p, queue=%p, id=%u, worker=%p", inactive_sem, inactive_num, queue, id, worker);
-	return worker;
+	PRINT_DEBUG("posting to wait_sem");
+	sem_post(data->sem);
 }
 
-void worker_shutdown(struct pool_worker *worker) {
-	PRINT_DEBUG("Entered: worker=%p", worker);
+void timer_create_to(struct to_timer_data *data) {
+	struct sigevent sev;
+	sev.sigev_notify = SIGEV_SIGNAL;
+	sev.sigev_signo = SIGRTMAX;
+	sev.sigev_value.sival_ptr = data;
 
-	worker->running = 0;
-	sem_post(&worker->activate_sem);
-
-	PRINT_DEBUG("joining worker thread: id=%u", worker->id);
-	pthread_join(worker->thread, NULL);
-}
-
-void worker_free(struct pool_worker *worker) {
-	PRINT_DEBUG("Entered: worker=%p", worker);
-
-	//TODO finish
-
-	sem_destroy(&worker->activate_sem);
-
-	free(worker);
-}
-
-void *controller_thread(void *local) {
-	struct pool_controller *controller = (struct pool_controller *) local;
-	PRINT_DEBUG("Entered: id=%u, fd=%d", controller->id, controller->fd);
-
-	int ret;
-	uint64_t exp;
-
-	//check worker num, inactive num, & queue len periodically, optimize values
-	while (1) {
-		ret = read(controller->fd, &exp, sizeof(uint64_t)); //blocking read
-		if (!controller->running) {
-			break;
-		}
-
-		secure_sem_wait(&controller->pool->inactive_sem);
-		if (list_is_empty(controller->pool->queue)) {
-			//check if should reduce workers
-			if (controller->pool->inactive_num) {
-				double threads = floor(controller->pool->inactive_num / 2.0);
-				//PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f", controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
-				if (threads > 0) {
-					//pool_start(controller->pool, (uint32_t) threads);
-				}
-			} else {
-				//do nothing
-			}
-		} else {
-			if (controller->pool->queue->len > controller->pool->inactive_num) {
-				uint32_t space = list_space(controller->pool->workers);
-				double threads = ceil((controller->pool->queue->len - controller->pool->inactive_num) / 2.0);
-				PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f", controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
-				if (space) {
-					if (threads < space) {
-						pool_start(controller->pool, (uint32_t) threads);
-					} else {
-						pool_start(controller->pool, space);
-					}
-				}
-			} else {
-				//queue smaller than inactive, should be able to handle, increase timer rate?
-				controller->period /= 2;
-			}
-		}
-
-		start_timer(controller->fd, controller->period);
-		sem_post(&controller->pool->inactive_sem);
-	}
-
-	PRINT_DEBUG("Exited: id=%u", controller->id);
-	pthread_exit(NULL);
-}
-
-struct pool_controller *controller_create(struct thread_pool *pool) {
-	PRINT_DEBUG("Entered: pool=%p", pool);
-
-	struct pool_controller *controller = (struct pool_controller *) secure_malloc(sizeof(struct pool_controller));
-	controller->pool = pool;
-	controller->period = 1000.000; //observe queue add rates & change time
-
-	controller->id = 0;
-	controller->running = 1;
-
-	controller->fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (controller->fd == -1) {
-		PRINT_ERROR("ERROR: unable to create to_fd.");
+	if (timer_create(CLOCK_REALTIME, &sev, &data->tid)) {
+		PRINT_ERROR("timer_create fault");
 		exit(-1);
 	}
-
-	//sem_init(&worker->activate_sem, 0, 0);
-	//change back to normal? if fails don't crash
-	secure_pthread_create(&controller->thread, NULL, controller_thread, (void *) controller);
-	//pthread_detach(&controller->thread);
-
-	start_timer(controller->fd, 0.5);
-
-	return controller;
 }
 
-void controller_shutdown(struct pool_controller *controller) {
-	PRINT_DEBUG("Entered: controller=%p", controller);
+void timer_stop(timer_t timerid) {
+	PRINT_DEBUG("Entered: timerid=%p", timerid);
 
-	controller->running = 0;
-	start_timer(controller->fd, TO_MIN);
+	struct itimerspec its;
+	its.it_value.tv_sec = 0;
+	its.it_value.tv_nsec = 0;
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
 
-	PRINT_DEBUG("joining controller thread: id=%u", controller->id);
-	pthread_join(controller->thread, NULL);
-
-}
-
-void controller_free(struct pool_controller *controller) {
-	PRINT_DEBUG("Entered: controller=%p", controller);
-
-	free(controller);
-}
-
-struct thread_pool *pool_create(uint32_t initial, uint32_t max, uint32_t limit) {
-	PRINT_DEBUG("Entered: initial=%u, max=%u, limit=%u", initial, max, limit);
-
-	struct thread_pool *pool = (struct thread_pool *) secure_malloc(sizeof(struct thread_pool));
-	pool->workers = list_create(max);
-	pool->queue = list_create(limit);
-	sem_init(&pool->inactive_sem, 0, 1);
-	pool->inactive_num = 0;
-	pool->worker_count = 0;
-
-	//pool->controller = controller_create(pool);
-
-	secure_sem_wait(&pool->inactive_sem);
-	pool_start(pool, initial);
-	sem_post(&pool->inactive_sem);
-
-	PRINT_DEBUG("Exited: initial=%u, max=%u, pool=%p", initial, max, pool);
-	return pool;
-}
-
-void pool_start(struct thread_pool *pool, uint32_t threads) {
-	PRINT_DEBUG("Entered: pool=%p, threads=%u", pool, threads);
-
-	int i;
-	struct pool_worker *worker;
-
-	for (i = 0; i < threads; i++) {
-		worker = worker_create(&pool->inactive_sem, &pool->inactive_num, pool->queue, ++pool->worker_count);
-		list_append(pool->workers, (uint8_t *) worker);
-	}
-
-	PRINT_DEBUG("Exited: pool=%p, len=%u", pool, pool->workers->len);
-}
-
-int worker_inactive_test(struct pool_worker *worker) {
-	return worker->running && worker->inactive;
-}
-
-int worker_inactive_test_2(uint8_t *data) {
-	return ((struct pool_worker *) data)->running && ((struct pool_worker *) data)->inactive;
-}
-
-int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *local) {
-	PRINT_DEBUG("Entered: pool=%p, work=%p, local=%p", pool, work, local);
-
-	secure_sem_wait(&pool->inactive_sem);
-	PRINT_DEBUG("inactive_num=%u", pool->inactive_num);
-	if (pool->inactive_num) {
-		struct pool_worker *worker = (struct pool_worker *) list_find(pool->workers, worker_inactive_test);
-		PRINT_DEBUG("found worker=%p", worker);
-		if (worker) {
-			pool->inactive_num--;
-
-			worker->inactive = 0;
-			worker->work = work;
-			worker->local = local;
-			PRINT_DEBUG("activating: worker=%p, inactive_num=%u", worker, *worker->inactive_num);
-			sem_post(&worker->activate_sem);
-			sem_post(&pool->inactive_sem);
-
-			return 1;
-		} else {
-			PRINT_ERROR("todo error");
-			sem_post(&pool->inactive_sem);
-			//TODO shouldn't be possible
-
-			return 0;
-		}
-	} else {
-		//TODO change to simply queue it, have controller optimize pool size
-		//TODO have execute change queue size?
-		if (list_has_space(pool->queue)) {
-			struct pool_request *request = (struct pool_request *) secure_malloc(sizeof(struct pool_request));
-			request->work = work;
-			request->local = local;
-
-			list_append(pool->queue, (uint8_t *) request);
-			sem_post(&pool->inactive_sem);
-
-			return 1;
-		} else {
-			sem_post(&pool->inactive_sem);
-
-			return 0;
-		}
-
-		if (0) {
-			if (list_has_space(pool->workers)) {
-				PRINT_DEBUG("Starting new worker");
-				struct pool_worker *worker = worker_create(&pool->inactive_sem, &pool->inactive_num, pool->queue, pool->worker_count++);
-				list_append(pool->workers, (uint8_t *) worker);
-
-				worker->work = work;
-				worker->local = local;
-				PRINT_DEBUG("activating: worker=%p, inactive_num=%u", worker, *worker->inactive_num);
-				sem_post(&worker->activate_sem);
-				sem_post(&pool->inactive_sem);
-
-				//TODO wait? or do the find function again? etc preload it.
-
-				return 1;
-			} else {
-				sem_post(&pool->inactive_sem);
-
-				//TODO queue it? have finishing threads check queue?
-				return 0;
-			}
-		}
+	if (timer_settime(timerid, 0, &its, NULL)) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
 	}
 }
 
-void pool_shutdown(struct thread_pool *pool) {
-	PRINT_DEBUG("Entered: pool=%p", pool);
+void timer_once_start(timer_t timerid, double millis) {
+	PRINT_DEBUG("Entered: timerid=%p, m=%f", timerid, millis);
 
-	//controller_shutdown(pool->controller);
+	struct itimerspec its;
+	its.it_value.tv_sec = (long int) (millis / 1000);
+	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
 
-	list_for_each(pool->workers, worker_shutdown);
-
-	//TODO reject queued jobs?
+	if (timer_settime(timerid, 0, &its, NULL)) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
+	}
 }
 
-void pool_free(struct thread_pool *pool) {
-	PRINT_DEBUG("Entered: pool=%p", pool);
+void timer_repeat_start(timer_t timerid, double millis) {
+	PRINT_DEBUG("Entered: timerid=%p, m=%f", timerid, millis);
 
-	sem_destroy(&pool->inactive_sem);
-	//TODO finish
+	struct itimerspec its;
+	its.it_value.tv_sec = (long int) (millis / 1000);
+	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
+	its.it_interval.tv_sec = its.it_value.tv_sec;
+	its.it_interval.tv_nsec = its.it_value.tv_nsec;
 
-	struct pool_worker *worker;
-	while (!list_is_empty(pool->workers)) {
-		worker = (struct pool_worker *) list_remove_front(pool->workers);
-		worker_free(worker);
+	if (timer_settime(timerid, 0, &its, NULL)) {
+		PRINT_ERROR("Error setting timer.");
+		exit(-1);
 	}
-	free(pool->workers);
-
-	list_free(pool->queue);
-
-	free(pool);
 }
