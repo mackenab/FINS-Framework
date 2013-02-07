@@ -586,11 +586,9 @@ void handle_interrupt(struct tcp_connection *conn) {
 					conn_send_fcf(conn, request->serial_num, EXEC_TCP_SEND, 0, EAGAIN);
 				}
 
-				if (request->to_running) {
-					request->to_running = 0; //TODO encapsulate this to request_free()
-					start_timer(request->to_fd, TO_MIN); //smallest is 0.000001
-					pthread_join(request->to_thread, NULL);
-				}
+				timer_delete(request->to_data->tid);
+				free(request->to_data);
+
 				free(request->data);
 				free(request);
 				free(temp_node);
@@ -641,11 +639,9 @@ void handle_requests(struct tcp_connection *conn) {
 
 			conn_send_fcf(conn, request->serial_num, EXEC_TCP_SEND, 1, request->len);
 
-			if (request->to_running) {
-				request->to_running = 0; //TODO encapsulate this to request_free()
-				start_timer(request->to_fd, TO_MIN); //smallest is 0.000001
-				pthread_join(request->to_thread, NULL);
-			}
+			timer_delete(request->to_data->tid);
+			free(request->to_data);
+
 			free(request->data);
 			free(request);
 			free(temp_node);
@@ -740,7 +736,7 @@ void main_syn_sent(struct tcp_connection *conn) {
 		if (conn->timeout > TCP_GBN_TO_MAX) {
 			conn->timeout = TCP_GBN_TO_MAX;
 		}
-		start_timer(conn->to_gbn_fd, conn->timeout);
+		timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 
 	} else {
 		conn->main_wait_flag = 1;
@@ -788,7 +784,7 @@ void main_syn_recv(struct tcp_connection *conn) {
 			if (conn->timeout > TCP_GBN_TO_MAX) {
 				conn->timeout = TCP_GBN_TO_MAX;
 			}
-			start_timer(conn->to_gbn_fd, conn->timeout);
+			timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 
 		} else {
 			conn_shutdown(conn);
@@ -863,7 +859,7 @@ void main_established(struct tcp_connection *conn) {
 
 			uint32_decrease(&conn->send_win, seg->data_len);
 			//conn->timeout *= 2; //TODO uncomment, should have?
-			start_timer(conn->to_gbn_fd, conn->timeout);
+			timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 			conn->main_wait_flag = 0;
 		}
 	} else if (conn->fast_flag) {
@@ -974,7 +970,7 @@ void main_established(struct tcp_connection *conn) {
 
 				if (conn->first_flag) {
 					conn->first_flag = 0;
-					start_timer(conn->to_gbn_fd, conn->timeout);
+					timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 					conn->to_gbn_flag = 0;
 				}
 
@@ -1082,7 +1078,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 
 			uint32_decrease(&conn->send_win, seg->data_len);
 			//conn->timeout *= 2; //TODO uncomment, should have?
-			start_timer(conn->to_gbn_fd, conn->timeout);
+			timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 			conn->main_wait_flag = 0;
 		}
 	} else if (conn->fast_flag) {
@@ -1211,7 +1207,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 
 				if (conn->first_flag) {
 					conn->first_flag = 0;
-					start_timer(conn->to_gbn_fd, conn->timeout);
+					timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 					conn->to_gbn_flag = 0;
 				}
 
@@ -1301,7 +1297,7 @@ void main_time_wait(struct tcp_connection *conn) {
 
 		if (conn->delayed_flag) {
 			//send remaining ACK
-			stop_timer(conn->to_delayed_fd);
+			timer_stop(conn->to_delayed_data->tid);
 			conn->delayed_flag = 0;
 			conn->to_delayed_flag = 0;
 
@@ -1481,41 +1477,24 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->to_gbn_flag = 0;
 	conn->gbn_flag = 0;
 	conn->gbn_node = NULL;
-	conn->to_gbn_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (conn->to_gbn_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create to_fd.");
-		exit(-1);
-	}
 
-	//start timers
-	struct sem_to_thread_data *gbn_data = (struct sem_to_thread_data *) secure_malloc(sizeof(struct sem_to_thread_data));
-	gbn_data->id = tcp_gen_thread_id();
-	gbn_data->fd = conn->to_gbn_fd;
-	gbn_data->running = &conn->running_flag;
-	gbn_data->flag = &conn->to_gbn_flag;
-	gbn_data->waiting = &conn->main_wait_flag;
-	gbn_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_gbn_fd: conn=%p, id=%u, to_gbn_fd=%d", conn, gbn_data->id, conn->to_gbn_fd);
-	secure_pthread_create(&conn->to_gbn_thread, NULL, sem_to_thread, (void *) gbn_data);
+	conn->to_gbn_data = secure_malloc(sizeof(struct sem_to_timer_data));
+	conn->to_gbn_data->handler = sem_to_handler;
+	conn->to_gbn_data->flag = &conn->to_gbn_flag;
+	conn->to_gbn_data->waiting = &conn->main_wait_flag;
+	conn->to_gbn_data->sem = &conn->main_wait_sem;
+	timer_create_to((struct to_timer_data *) conn->to_gbn_data);
 
 	conn->delayed_flag = 0;
 	conn->delayed_ack_flags = 0;
 	conn->to_delayed_flag = 0;
-	conn->to_delayed_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (conn->to_delayed_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create delayed_fd.");
-		exit(-1);
-	}
 
-	struct sem_to_thread_data *delayed_data = (struct sem_to_thread_data *) secure_malloc(sizeof(struct sem_to_thread_data));
-	delayed_data->id = tcp_gen_thread_id();
-	delayed_data->fd = conn->to_delayed_fd;
-	delayed_data->running = &conn->running_flag;
-	delayed_data->flag = &conn->to_delayed_flag;
-	delayed_data->waiting = &conn->main_wait_flag;
-	delayed_data->sem = &conn->main_wait_sem;
-	PRINT_DEBUG("to_delayed_fd: conn=%p, id=%u, to_gbn_fd=%d", conn, delayed_data->id, conn->to_delayed_fd);
-	secure_pthread_create(&conn->to_delayed_thread, NULL, sem_to_thread, (void *) delayed_data);
+	conn->to_delayed_data = secure_malloc(sizeof(struct sem_to_timer_data));
+	conn->to_delayed_data->handler = sem_to_handler;
+	conn->to_delayed_data->flag = &conn->to_delayed_flag;
+	conn->to_delayed_data->waiting = &conn->main_wait_flag;
+	conn->to_delayed_data->sem = &conn->main_wait_sem;
+	timer_create_to((struct to_timer_data *) conn->to_delayed_data);
 
 	conn->fin_sent = 0;
 	conn->fin_sep = 0;
@@ -1709,7 +1688,8 @@ int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_m
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		break;
 	default:
-		PRINT_ERROR ("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode);
+		PRINT_ERROR ("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode)
+		;
 		return 0;
 	}
 
@@ -1735,8 +1715,9 @@ void conn_stop(struct tcp_connection *conn) {
 	conn->running_flag = 0;
 
 	//stop threads
-	start_timer(conn->to_gbn_fd, TO_MIN);
-	start_timer(conn->to_delayed_fd, TO_MIN);
+	timer_stop(conn->to_gbn_data->tid);
+	timer_stop(conn->to_delayed_data->tid);
+
 	//TODO stop keepalive timer
 	//TODO stop silly window timer
 	//TODO stop nagel timer
@@ -1765,8 +1746,8 @@ void conn_stop(struct tcp_connection *conn) {
 
 	/*#*/PRINT_DEBUG("");
 	//post to read/write/connect/etc threads
-	pthread_join(conn->to_gbn_thread, NULL);
-	pthread_join(conn->to_delayed_thread, NULL);
+	//pthread_join(conn->to_gbn_thread, NULL);
+	//pthread_join(conn->to_delayed_thread, NULL);
 	/*#*/PRINT_DEBUG("");
 	pthread_join(conn->main_thread, NULL);
 }
@@ -1785,6 +1766,12 @@ void conn_free(struct tcp_connection *conn) {
 
 	sem_destroy(&conn->sem);
 	sem_destroy(&conn->main_wait_sem);
+
+	timer_delete(conn->to_gbn_data->tid);
+	free(conn->to_gbn_data);
+
+	timer_delete(conn->to_delayed_data->tid);
+	free(conn->to_delayed_data);
 
 	free(conn);
 }
@@ -2531,7 +2518,7 @@ void seg_free(struct tcp_segment *seg) {
 
 void seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn) {
 	if (conn->delayed_flag) {
-		stop_timer(conn->to_delayed_fd);
+		timer_stop(conn->to_delayed_data->tid);
 		conn->delayed_flag = 0;
 		conn->to_delayed_flag = 0;
 
@@ -2818,12 +2805,14 @@ void tcp_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
@@ -2832,7 +2821,8 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -2841,7 +2831,8 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -2850,7 +2841,8 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
@@ -2858,8 +2850,10 @@ void tcp_fcf(struct finsFrame *ff) {
 		tcp_error(ff);
 		break;
 	default:
-		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode)
+		;
+		PRINT_ERROR("todo")
+		;
 		freeFinsFrame(ff);
 		break;
 	}
@@ -2944,7 +2938,8 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_poll(ff, (socket_state) state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, initial, flags);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+		;
 		//TODO implement?
 
 		ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -2965,7 +2960,8 @@ void tcp_error(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
 		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 
 		//TODO finish for
 		//if (ff->ctrlFrame.para)
@@ -2973,13 +2969,15 @@ void tcp_error(struct finsFrame *ff) {
 		break;
 	case ERROR_ICMP_DEST_UNREACH:
 		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("todo")
+		;
 
 		//TODO finish
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id: ff=%p, param_id=%d", ff, ff->ctrlFrame.param_id);
+		PRINT_ERROR("Error unknown param_id: ff=%p, param_id=%d", ff, ff->ctrlFrame.param_id)
+		;
 		//TODO implement?
 		freeFinsFrame(ff);
 		break;
@@ -3095,7 +3093,8 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		break;
 	default:
-		PRINT_ERROR ("Unhandled msg case: ff=%p, opcode=%u", ff, ff->ctrlFrame.opcode);
+		PRINT_ERROR ("Unhandled msg case: ff=%p, opcode=%u", ff, ff->ctrlFrame.opcode)
+		;
 		return 0;
 	}
 

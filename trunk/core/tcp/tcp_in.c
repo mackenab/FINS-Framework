@@ -92,7 +92,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 				//RTT
 				conn->rtt_flag = 0;
-				start_timer(conn->to_gbn_fd, conn->timeout);
+				timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 				conn->to_gbn_flag = 0;
 
 				//Cong
@@ -162,7 +162,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 			if (conn->rtt_flag && seg->ack_num == conn->rtt_seq_end) {
 				calcRTT(conn);
 			}
-			stop_timer(conn->to_gbn_fd);
+			timer_stop(conn->to_gbn_data->tid);
 
 			//Cong
 			PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
@@ -222,7 +222,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 					calcRTT(conn);
 				}
 				if (!conn->gbn_flag) {
-					start_timer(conn->to_gbn_fd, conn->timeout);
+					timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 					conn->to_gbn_flag = 0;
 				}
 
@@ -336,7 +336,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t
 					PRINT_DEBUG("FIN_WAIT_1: FIN ACK, send ACK, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 					conn->state = TS_TIME_WAIT;
 
-					start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+					timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 					conn->to_gbn_flag = 0;
 				} else {
 					//if FIN ACK, send FIN ACK, CLOSING (w FIN_SENT)
@@ -404,7 +404,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t
 			PRINT_DEBUG("FIN_WAIT_2: FIN, send ACK, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 			conn->state = TS_TIME_WAIT;
 
-			start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+			timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 			conn->to_gbn_flag = 0;
 			*send_flags |= FLAG_ACK;
 			return 1;
@@ -427,7 +427,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t
 				PRINT_DEBUG("CLOSING: ACK, send -, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 				conn->state = TS_TIME_WAIT;
 
-				start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+				timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 				conn->to_gbn_flag = 0;
 				return 0;
 			} else {
@@ -539,7 +539,7 @@ int process_flags_old(struct tcp_connection *conn, struct tcp_segment *seg, uint
 					PRINT_DEBUG("FIN_WAIT_1: FIN ACK, send ACK, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 					conn->state = TS_TIME_WAIT;
 
-					start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+					timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 					conn->to_gbn_flag = 0;
 					if (seg->data_len) {
 						*send_flags |= FLAG_ACK;
@@ -606,7 +606,7 @@ int process_flags_old(struct tcp_connection *conn, struct tcp_segment *seg, uint
 			PRINT_DEBUG("FIN_WAIT_2: FIN, send ACK, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 			conn->state = TS_TIME_WAIT;
 
-			start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+			timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 			conn->to_gbn_flag = 0;
 			if (seg->data_len) {
 				*send_flags |= FLAG_ACK;
@@ -631,7 +631,7 @@ int process_flags_old(struct tcp_connection *conn, struct tcp_segment *seg, uint
 				PRINT_DEBUG("CLOSING: ACK, send -, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 				conn->state = TS_TIME_WAIT;
 
-				start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+				timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 				conn->to_gbn_flag = 0;
 			} else {
 				//if ACK, send FIN, CLOSING w/fin_sent
@@ -1035,7 +1035,7 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 
 	if (flags & FLAG_ACK) {
 		if (conn->delayed_flag || (flags & FLAG_FIN)) {
-			stop_timer(conn->to_delayed_fd);
+			timer_stop(conn->to_delayed_data->tid);
 			conn->delayed_flag = 0;
 			conn->to_delayed_flag = 0;
 
@@ -1046,7 +1046,7 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 		} else {
 			conn->delayed_flag = 1;
 			conn->delayed_ack_flags = flags;
-			start_timer(conn->to_delayed_fd, TCP_DELAYED_TO_DEFAULT);
+			timer_once_start(conn->to_delayed_data->tid, TCP_DELAYED_TO_DEFAULT);
 			conn->to_delayed_flag = 0;
 		}
 	} else {
@@ -1201,7 +1201,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->gbn_flag = 0;
 
 				//RTT
-				stop_timer(conn->to_gbn_fd);
+				timer_stop(conn->to_gbn_data->tid);
 				conn->timeout = TCP_GBN_TO_DEFAULT;
 
 				//Cong
@@ -1267,7 +1267,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 			seg_send(temp_seg);
 			seg_free(temp_seg);
 
-			start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT); //TODO figure out to's
+			timer_once_start(conn->to_gbn_data->tid, TCP_MSL_TO_DEFAULT); //TODO figure out to's
 			conn->to_gbn_flag = 0;
 		}
 	} else {
@@ -1332,7 +1332,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->gbn_flag = 0;
 
 				//RTT
-				stop_timer(conn->to_gbn_fd);
+				timer_stop(conn->to_gbn_data->tid);
 				conn->timeout = TCP_GBN_TO_DEFAULT;
 
 				//Cong
@@ -1388,7 +1388,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 			seg_send(temp_seg);
 			seg_free(temp_seg);
 
-			start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
+			timer_once_start(conn->to_gbn_data->tid, TCP_MSL_TO_DEFAULT);
 			conn->to_gbn_flag = 0;
 		}
 	} else {
@@ -1419,7 +1419,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->gbn_flag = 0;
 
 				//RTT
-				stop_timer(conn->to_gbn_fd);
+				timer_stop(conn->to_gbn_data->tid);
 				conn->timeout = TCP_GBN_TO_DEFAULT;
 
 				//Cong
@@ -1652,7 +1652,7 @@ void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 
-			start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+			timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 			conn->to_gbn_flag = 0;
 		} else {
 			//TODO RST
@@ -1665,7 +1665,7 @@ void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 			PRINT_DEBUG("ACK, send -, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 			conn->state = TS_TIME_WAIT;
 
-			start_timer(conn->to_gbn_fd, 2 * TCP_MSL_TO_DEFAULT);
+			timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 			conn->to_gbn_flag = 0;
 		}
 	}
@@ -1883,7 +1883,7 @@ void tcp_in_fdf(struct finsFrame *ff) {
 	struct tcp_segment *seg;
 	struct tcp_connection *conn;
 	struct tcp_thread_data *thread_data;
-	pthread_t thread;
+	//pthread_t thread;
 	struct tcp_connection_stub *conn_stub;
 	struct tcp_segment *temp_seg;
 

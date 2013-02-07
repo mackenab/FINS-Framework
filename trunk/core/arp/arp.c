@@ -337,7 +337,6 @@ struct arp_cache *arp_cache_create(uint32_t addr_ip) {
 	cache->to_data->flag = &cache->to_flag;
 	cache->to_data->interrupt = &arp_interrupt_flag;
 	cache->to_data->sem = arp_proto.event_sem;
-
 	timer_create_to((struct to_timer_data *) cache->to_data);
 
 	PRINT_DEBUG("Exited: ip=%u, cache=%p, tid=%ld", addr_ip, cache, (long) cache->to_data->tid);
@@ -348,8 +347,7 @@ void arp_cache_shutdown(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
 	//stop threads
-	timer_delete(cache->to_data->tid);
-	free(cache->to_data);
+	timer_stop(cache->to_data->tid);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -366,6 +364,9 @@ void arp_cache_free(struct arp_cache *cache) {
 	if (cache->request_list) {
 		arp_request_list_free(cache->request_list);
 	}
+
+	timer_delete(cache->to_data->tid);
+	free(cache->to_data);
 
 	free(cache);
 }

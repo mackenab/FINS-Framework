@@ -216,7 +216,7 @@ void intsem_to_handler(void *local) {
 void timer_create_to(struct to_timer_data *data) {
 	struct sigevent sev;
 	sev.sigev_notify = SIGEV_SIGNAL;
-	sev.sigev_signo = SIGRTMAX;
+	sev.sigev_signo = TO_SIGNAL;
 	sev.sigev_value.sival_ptr = data;
 
 	if (timer_create(CLOCK_REALTIME, &sev, &data->tid)) {

@@ -1088,7 +1088,6 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			call_list_append(call_list, &daemon_calls[hdr->call_index]);
 
 			if (flags & (MSG_DONTWAIT)) {
-				//start_timer(daemon_calls[hdr->call_index].to_fd, DAEMON_BLOCK_DEFAULT);
 				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");

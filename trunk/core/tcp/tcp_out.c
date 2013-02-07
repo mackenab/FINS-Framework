@@ -65,31 +65,20 @@ void *write_thread(void *local) {
 			if (flags & (MSG_DONTWAIT)) {
 				PRINT_DEBUG("non-blocking");
 
-				request->to_fd = timerfd_create(CLOCK_REALTIME, 0);
-				if (request->to_fd == -1) {
-					PRINT_ERROR("ERROR: unable to create to_fd.");
-					exit(-1);
-				}
-				request->to_running = 1;
 				request->to_flag = 0;
 
-				struct intsem_to_thread_data *to_write_data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
-				to_write_data->id = tcp_gen_thread_id();
-				to_write_data->fd = request->to_fd;
-				to_write_data->running = &request->to_running;
-				to_write_data->flag = &request->to_flag;
-				to_write_data->interrupt = &conn->request_interrupt;
-				to_write_data->sem = &conn->main_wait_sem;
+				request->to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
+				request->to_data->handler = intsem_to_handler;
+				request->to_data->flag = &request->to_flag;
+				request->to_data->interrupt = &conn->request_interrupt;
+				request->to_data->sem = &conn->main_wait_sem;
+				timer_create_to((struct to_timer_data *) request->to_data);
 
-				PRINT_DEBUG("to_write: conn=%p, id=%u, to_fd=%d", conn, to_write_data->id, to_write_data->fd);
-				secure_pthread_create(&request->to_thread, NULL, intsem_to_thread, (void *) to_write_data);
 				//pool_execute(conn->pool, write_thread, (void *) thread_data);
-				start_timer(request->to_fd, TCP_BLOCK_DEFAULT);
+				timer_once_start(request->to_data->tid, TCP_BLOCK_DEFAULT);
 			} else {
 				PRINT_DEBUG("blocking");
 
-				request->to_fd = -1;
-				request->to_running = 0;
 				request->to_flag = 0;
 			}
 
@@ -405,7 +394,7 @@ void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_p
 			thread_data->ff = ff;
 			thread_data->flags = 1;
 
-			pthread_t thread;
+			//pthread_t thread;
 			//secure_pthread_create(&thread, NULL, close_stub_thread, (void *) thread_data);
 			//pthread_detach(thread);
 			//pool_execute(conn->pool, close_stub_thread, (void *) thread_data);
@@ -537,7 +526,7 @@ void *accept_thread(void *local) { //this will need to be changed
 							seg_send(temp_seg);
 							seg_free(temp_seg);
 
-							start_timer(conn->to_gbn_fd, TCP_MSL_TO_DEFAULT);
+							timer_once_start(conn->to_gbn_data->tid, TCP_MSL_TO_DEFAULT);
 							conn->to_gbn_flag = 0;
 						} else {
 							PRINT_ERROR("todo error");
@@ -960,7 +949,7 @@ void *poll_stub_thread(void *local) {
 
 void tcp_exec_poll(struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t initial,
 		uint32_t flags) {
-	pthread_t thread;
+	//pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
 	if (state > SS_UNCONNECTED) {
@@ -1082,7 +1071,8 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1177,7 +1167,8 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1224,7 +1215,7 @@ void tcp_read_param(struct finsFrame *ff) {
 
 	struct tcp_connection *conn;
 	struct tcp_connection_stub *conn_stub;
-	pthread_t thread;
+	//pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
 	metadata *params = ff->metaData;
@@ -1339,7 +1330,8 @@ void *set_param_conn_thread(void *local) {
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
-			PRINT_ERROR("todo");
+			PRINT_ERROR("todo")
+			;
 
 			if (0) {
 				ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1354,7 +1346,8 @@ void *set_param_conn_thread(void *local) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1443,7 +1436,8 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
+			;
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
@@ -1482,7 +1476,7 @@ void tcp_set_param(struct finsFrame *ff) {
 	uint32_t rem_ip = 0;
 	uint16_t rem_port = 0;
 
-	pthread_t thread;
+	//pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
 	metadata *params = ff->metaData;

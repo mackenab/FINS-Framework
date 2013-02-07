@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
-#include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -83,9 +82,7 @@ struct tcp_request {
 	uint32_t serial_num;
 	//TO?
 
-	pthread_t to_thread; //TODO encapsulate into TO obj
-	int to_fd;
-	uint8_t to_running;
+	struct intsem_to_timer_data *to_data;
 	uint8_t to_flag;
 };
 
@@ -256,14 +253,12 @@ struct tcp_connection {
 	uint8_t to_msl_flag; //MSL timeout occurred
 	//uint8_t msl_flag; //MSL performing GBN
 
-	pthread_t to_gbn_thread;
-	int to_gbn_fd; //GBN timeout occurred
+	struct sem_to_timer_data *to_gbn_data;
 	uint8_t to_gbn_flag; //1 GBN timeout occurred
 	uint8_t gbn_flag; //1 performing GBN
 	struct tcp_node *gbn_node;
 
-	pthread_t to_delayed_thread;
-	int to_delayed_fd; //delayed ACK TO occurred
+	struct sem_to_timer_data *to_delayed_data;
 	uint8_t to_delayed_flag; //1 delayed ack timeout occured
 	uint8_t delayed_flag; //0 no delayed ack, 1 delayed ack
 	uint16_t delayed_ack_flags;

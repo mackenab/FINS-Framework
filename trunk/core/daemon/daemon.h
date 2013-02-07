@@ -36,7 +36,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
-#include <sys/timerfd.h>
 #include <unistd.h>
 
 /** additional header for queues */
@@ -272,11 +271,8 @@ struct daemon_call {
 	int sock_index_new;
 
 	struct intsem_to_timer_data *to_data;
-	pthread_t to_thread;
-	int to_fd;
-	uint8_t to_running;
 	uint8_t to_flag;
-//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
+	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 };
 
 struct daemon_call *call_create(uint32_t call_id, int call_index, int call_pid, uint32_t call_type, uint64_t sock_id, int sock_index);

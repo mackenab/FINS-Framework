@@ -37,10 +37,8 @@ struct timeval logger_start;
 double logger_saved_curr;
 struct timeval logger_end;
 
-int logger_to_fd;
-uint8_t logger_running;
+struct intsem_to_timer_data *logger_to_data;
 uint8_t logger_flag;
-pthread_t logger_to_thread;
 
 int logger_to_switch(struct finsFrame *ff) {
 	return module_to_switch(&logger_proto, ff);
@@ -87,7 +85,7 @@ void logger_get_ff(void) {
 				logger_saved_bytes = 0;
 				logger_saved_curr = 0;
 
-				start_timer(logger_to_fd, logger_interval);
+				timer_once_start(logger_to_data->tid, logger_interval);
 				PRINT_CRITICAL("Logger starting");
 			}
 			freeFinsFrame(ff);
@@ -198,7 +196,7 @@ void logger_interrupt(void) {
 			double through = 8.0 * logger_bytes / test;
 			PRINT_CRITICAL("Logger stopping: total=%f, packets=%d, bytes=%d, through=%f", test, logger_packets, logger_bytes, through);
 		} else {
-			start_timer(logger_to_fd, logger_interval);
+			timer_once_start(logger_to_data->tid, logger_interval);
 		}
 	} else {
 		PRINT_ERROR("run over?");
@@ -228,22 +226,12 @@ void logger_init(void) {
 	logger_interval = 1000;
 	logger_repeats = 10;
 
-	logger_to_fd = timerfd_create(CLOCK_REALTIME, 0);
-	if (logger_to_fd == -1) {
-		PRINT_ERROR("ERROR: unable to create to_fd.");
-		exit(-1);
-	}
-	logger_running = 1;
-
-	//start timer thread
-	struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
-	to_data->id = 0;
-	to_data->fd = logger_to_fd;
-	to_data->running = &logger_running;
-	to_data->flag = &logger_flag;
-	to_data->interrupt = &logger_interrupt_flag;
-	to_data->sem = logger_proto.event_sem;
-	secure_pthread_create(&logger_to_thread, NULL, intsem_to_thread, (void *) to_data);
+	logger_to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
+	logger_to_data->handler = intsem_to_handler;
+	logger_to_data->flag = &logger_flag;
+	logger_to_data->interrupt = &logger_interrupt_flag;
+	logger_to_data->sem = logger_proto.event_sem;
+	timer_create_to((struct to_timer_data *) logger_to_data);
 }
 
 void logger_run(pthread_attr_t *fins_pthread_attr) {
@@ -257,6 +245,8 @@ void logger_shutdown(void) {
 	logger_proto.running_flag = 0;
 	sem_post(logger_proto.event_sem);
 
+	timer_stop(logger_to_data->tid);
+
 	//TODO expand this
 
 	PRINT_CRITICAL("Joining switch_to_logger_thread");
@@ -269,14 +259,12 @@ void logger_release(void) {
 
 	//TODO free all module related mem
 
-	logger_running = 0;
-
 	//stop threads
-	start_timer(logger_to_fd, TO_MIN);
+	timer_delete(logger_to_data->tid);
+	free(logger_to_data);
 
 	PRINT_DEBUG("");
 	//post to read/write/connect/etc threads
-	pthread_join(logger_to_thread, NULL);
 
 	module_destroy_ops(&logger_proto);
 }

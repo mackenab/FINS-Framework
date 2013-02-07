@@ -220,13 +220,13 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	PRINT_CRITICAL("Establishing handler: signal=%d, to_handler=%p", SIGRTMAX, to_handler);
+	PRINT_CRITICAL("Establishing handler: signal=%d, to_handler=%p", TO_SIGNAL, to_handler);
 	struct sigaction sa;
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = to_handler;
 	sigemptyset(&sa.sa_mask);
 
-	if (sigaction(SIGRTMAX, &sa, NULL)) {
+	if (sigaction(TO_SIGNAL, &sa, NULL)) {
 		PRINT_ERROR("sigaction fault");
 		exit(-1);
 	}

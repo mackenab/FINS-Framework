@@ -238,12 +238,6 @@ int daemon_calls_insert(uint32_t call_id, int call_index, int call_pid, uint32_t
 	daemon_calls[call_index].sock_id_new = 0;
 	daemon_calls[call_index].sock_index_new = 0;
 
-	if (daemon_calls[call_index].to_running) {
-		daemon_calls[call_index].to_flag = 0;
-		//stop_timer(daemon_calls[call_index].to_fd);
-		timer_stop(daemon_calls[call_index].to_data->tid);
-	}
-
 	return 1;
 }
 
@@ -268,7 +262,6 @@ void daemon_calls_remove(int call_index) {
 
 	daemon_calls[call_index].call_id = -1;
 
-	//stop_timer(daemon_calls[call_index].to_fd);
 	timer_stop(daemon_calls[call_index].to_data->tid);
 	daemon_calls[call_index].to_flag = 0;
 }
@@ -276,11 +269,9 @@ void daemon_calls_remove(int call_index) {
 void daemon_calls_shutdown(int call_index) {
 	PRINT_DEBUG("Entered: call_index=%d", call_index);
 
-	daemon_calls[call_index].to_running = 0;
-
 	//stop threads
-	//start_timer(daemon_calls[call_index].to_fd, TO_MIN);
-	timer_stop(daemon_calls[call_index].to_data->tid);
+	timer_delete(daemon_calls[call_index].to_data->tid);
+	free(daemon_calls[call_index].to_data);
 
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
@@ -3331,32 +3322,11 @@ void daemon_init(void) {
 	for (i = 0; i < MAX_CALLS; i++) {
 		daemon_calls[i].call_id = -1;
 
-		if (0) {
-			daemon_calls[i].to_running = 1;
-			daemon_calls[i].to_flag = 0;
-			daemon_calls[i].to_fd = timerfd_create(CLOCK_REALTIME, 0);
-			if (daemon_calls[i].to_fd == -1) {
-				PRINT_ERROR("ERROR: unable to create to_fd.");
-				exit(-1);
-			}
-
-			//start timer thread
-			struct intsem_to_thread_data *to_data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
-			to_data->id = ++daemon_thread_count;
-			to_data->fd = daemon_calls[i].to_fd;
-			to_data->running = &daemon_calls[i].to_running;
-			to_data->flag = &daemon_calls[i].to_flag;
-			to_data->interrupt = &daemon_interrupt_flag;
-			to_data->sem = daemon_proto.event_sem;
-			secure_pthread_create(&daemon_calls[i].to_thread, NULL, intsem_to_thread, (void *) to_data);
-		}
-
 		daemon_calls[i].to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
 		daemon_calls[i].to_data->handler = intsem_to_handler;
 		daemon_calls[i].to_data->flag = &daemon_calls[i].to_flag;
 		daemon_calls[i].to_data->interrupt = &daemon_interrupt_flag;
 		daemon_calls[i].to_data->sem = daemon_proto.event_sem;
-
 		timer_create_to((struct to_timer_data *) daemon_calls[i].to_data);
 	}
 
