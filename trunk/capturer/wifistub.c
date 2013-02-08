@@ -350,6 +350,8 @@ void inject_init(char *interface) {
 		}
 	} // end of while loop
 
+	PRINT_CRITICAL("**Number of captured frames = %d", capture_count);
+	PRINT_CRITICAL("****Number of Injected frames = %d", inject_count);
 } // inject_init()
 
 /** ------------------------------------------------------------------*/
