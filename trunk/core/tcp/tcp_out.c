@@ -74,12 +74,12 @@ void *write_thread(void *local) {
 				request->to_data->sem = &conn->main_wait_sem;
 				timer_create_to((struct to_timer_data *) request->to_data);
 
-				//pool_execute(conn->pool, write_thread, (void *) thread_data);
 				timer_once_start(request->to_data->tid, TCP_BLOCK_DEFAULT);
 			} else {
 				PRINT_DEBUG("blocking");
 
 				request->to_flag = 0;
+				request->to_data = NULL;
 			}
 
 			if (tcp_queue_has_space(conn->request_queue, 1)) {
@@ -1071,8 +1071,7 @@ void *read_param_conn_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1167,8 +1166,7 @@ void *read_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1330,8 +1328,7 @@ void *set_param_conn_thread(void *local) {
 			secure_metadata_readFromElement(params, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
-			PRINT_ERROR("todo")
-			;
+			PRINT_ERROR("todo");
 
 			if (0) {
 				ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1346,8 +1343,7 @@ void *set_param_conn_thread(void *local) {
 			}
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -1436,8 +1432,7 @@ void *set_param_conn_stub_thread(void *local) {
 			tcp_to_switch(ff);
 			break;
 		default:
-			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-			;
+			PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 			//TODO implement?
 
 			ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;

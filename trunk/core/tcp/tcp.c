@@ -586,8 +586,10 @@ void handle_interrupt(struct tcp_connection *conn) {
 					conn_send_fcf(conn, request->serial_num, EXEC_TCP_SEND, 0, EAGAIN);
 				}
 
-				timer_delete(request->to_data->tid);
-				free(request->to_data);
+				if (request->to_data) {
+					timer_delete(request->to_data->tid);
+					free(request->to_data);
+				}
 
 				free(request->data);
 				free(request);
@@ -639,8 +641,10 @@ void handle_requests(struct tcp_connection *conn) {
 
 			conn_send_fcf(conn, request->serial_num, EXEC_TCP_SEND, 1, request->len);
 
-			timer_delete(request->to_data->tid);
-			free(request->to_data);
+			if (request->to_data) {
+				timer_delete(request->to_data->tid);
+				free(request->to_data);
+			}
 
 			free(request->data);
 			free(request);
@@ -785,7 +789,6 @@ void main_syn_recv(struct tcp_connection *conn) {
 				conn->timeout = TCP_GBN_TO_MAX;
 			}
 			timer_once_start(conn->to_gbn_data->tid, conn->timeout);
-
 		} else {
 			conn_shutdown(conn);
 		}
@@ -1446,8 +1449,8 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->state = TS_CLOSED;
 	PRINT_DEBUG("state=%d, conn=%p", conn->state, conn);
 
-	conn->total = 0;
-	conn->pool = pool_create(TCP_THREADS_MAX, TCP_THREADS_MAX, TCP_THREADS_MAX);
+	//conn->total = 0;
+	//conn->pool = pool_create(TCP_THREADS_MAX, TCP_THREADS_MAX, TCP_THREADS_MAX);
 
 	conn->poll_events = 0;
 
@@ -1558,6 +1561,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 	conn->send_pkt->ip_hdr.protocol = IPPROTO_TCP;
 	conn->send_pkt->tcp_hdr.src_port = conn->host_port;
 	conn->send_pkt->tcp_hdr.dst_port = conn->rem_port;
+	free(conn->send_pkt); //TODO remove if do re-implementation
 	//##################################################################
 
 	//TODO add keepalive timer - implement through gbn timer
@@ -1566,6 +1570,7 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 
 	//start main thread
 	secure_pthread_create(&conn->main_thread, NULL, main_thread, (void *) conn);
+	pthread_detach(conn->main_thread);
 
 	PRINT_DEBUG("Exited: host=%u/%u, rem=%u/%u, conn=%p", host_ip, host_port, rem_ip, rem_port, conn);
 	return conn;
@@ -1688,8 +1693,7 @@ int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_m
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		break;
 	default:
-		PRINT_ERROR ("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode)
-		;
+		PRINT_ERROR ("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode);
 		return 0;
 	}
 
@@ -1755,6 +1759,8 @@ void conn_stop(struct tcp_connection *conn) {
 void conn_free(struct tcp_connection *conn) {
 	PRINT_DEBUG("conn=%p", conn);
 
+	if (conn->request_queue)
+		tcp_queue_free(conn->request_queue);
 	if (conn->write_queue)
 		tcp_queue_free(conn->write_queue);
 	if (conn->send_queue)
@@ -2765,7 +2771,7 @@ void tcp_shutdown(void) {
 		conn = conn->next;
 
 		//TODO add conn->sem's
-		//conn_shutdown(old_conn);
+		conn_shutdown(old_conn);
 	}
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_list_sem);
@@ -2805,14 +2811,12 @@ void tcp_fcf(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
@@ -2821,8 +2825,7 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -2831,8 +2834,7 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -2841,8 +2843,7 @@ void tcp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
@@ -2850,10 +2851,8 @@ void tcp_fcf(struct finsFrame *ff) {
 		tcp_error(ff);
 		break;
 	default:
-		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode)
-		;
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -2938,8 +2937,7 @@ void tcp_exec(struct finsFrame *ff) {
 		tcp_exec_poll(ff, (socket_state) state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, initial, flags);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 
 		ff->destinationID.id = ff->ctrlFrame.senderID;
@@ -2960,8 +2958,7 @@ void tcp_error(struct finsFrame *ff) {
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
 		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 
 		//TODO finish for
 		//if (ff->ctrlFrame.para)
@@ -2969,15 +2966,13 @@ void tcp_error(struct finsFrame *ff) {
 		break;
 	case ERROR_ICMP_DEST_UNREACH:
 		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 
 		//TODO finish
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id: ff=%p, param_id=%d", ff, ff->ctrlFrame.param_id)
-		;
+		PRINT_ERROR("Error unknown param_id: ff=%p, param_id=%d", ff, ff->ctrlFrame.param_id);
 		//TODO implement?
 		freeFinsFrame(ff);
 		break;
@@ -3093,8 +3088,7 @@ int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		break;
 	default:
-		PRINT_ERROR ("Unhandled msg case: ff=%p, opcode=%u", ff, ff->ctrlFrame.opcode)
-		;
+		PRINT_ERROR ("Unhandled msg case: ff=%p, opcode=%u", ff, ff->ctrlFrame.opcode);
 		return 0;
 	}
 

@@ -182,9 +182,6 @@ void handler(int sig, siginfo_t *si, void *uc) {
 	//while(1);
 }
 
-extern struct timeval core_start;
-extern struct timeval core_end;
-
 int main(int argc, char *argv[]) {
 	if (0) { //TODO remove, testing code
 		struct thread_pool *pool = pool_create(1, 10, 10);
@@ -220,95 +217,6 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	PRINT_CRITICAL("Establishing handler: signal=%d, to_handler=%p", TO_SIGNAL, to_handler);
-	struct sigaction sa;
-	sa.sa_flags = SA_SIGINFO;
-	sa.sa_sigaction = to_handler;
-	sigemptyset(&sa.sa_mask);
-
-	if (sigaction(TO_SIGNAL, &sa, NULL)) {
-		PRINT_ERROR("sigaction fault");
-		exit(-1);
-	}
-
-	if (0) {
-		sem_t sem;
-		sem_init(&sem, 0, 0);
-
-		uint8_t running = 1;
-		uint8_t flag = 0;
-		uint8_t interrupt = 0;
-
-		int count = 0;
-		for (count = 0; count <= 0; count++) {
-			if (1) {
-				struct intsem_to_timer_data *data = secure_malloc(sizeof(struct intsem_to_timer_data));
-				data->handler = intsem_to_handler;
-				data->flag = &flag;
-				data->interrupt = &interrupt;
-				data->sem = &sem;
-
-				timer_create_to((struct to_timer_data *) data);
-				PRINT_CRITICAL("timer: ID=0x%lx", (long) data->tid);
-				timer_repeat_start(data->tid, 5000);
-			}
-
-			if (0) {
-				int fd = timerfd_create(CLOCK_REALTIME, 0);
-				if (fd == -1) {
-					PRINT_ERROR("ERROR: unable to create to_fd.");
-					exit(-1);
-				}
-				struct intsem_to_thread_data *data = (struct intsem_to_thread_data *) secure_malloc(sizeof(struct intsem_to_thread_data));
-				data->id = 1;
-				data->fd = fd;
-				data->running = &running;
-				data->flag = &flag;
-				data->interrupt = &interrupt;
-				data->sem = &sem;
-				pthread_t thread;
-				secure_pthread_create(&thread, NULL, intsem_to_thread, (void *) data);
-
-				start_timer(fd, 500);
-			}
-		}
-
-		while (1) {
-			PRINT_CRITICAL("waiting");
-			secure_sem_wait(&sem);
-			gettimeofday(&core_end, 0);
-
-			double diff = time_diff(&core_start, &core_end);
-			PRINT_CRITICAL("diff=%f", diff);
-			sleep(1);
-		}
-		PRINT_CRITICAL("after");
-
-		sigset_t mask;
-		if (0) {
-			/* Block timer signal temporarily */
-			PRINT_CRITICAL("Blocking signal %d", SIG);
-			sigemptyset(&mask);
-			sigaddset(&mask, SIG);
-			if (sigprocmask(SIG_SETMASK, &mask, NULL) == -1) {
-				errExit("sigprocmask");
-			}
-		}
-		if (0) {
-			/* Unlock the timer signal, so that timer notification
-			 can be delivered */
-			PRINT_CRITICAL("Unblocking signal %d", SIG);
-			if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1)
-				errExit("sigprocmask");
-		}
-
-		while (1) {
-			PRINT_CRITICAL("Sleeping");
-			sleep(1);
-		}
-		//exit(EXIT_SUCCESS);
-		return 1;
-	}
 
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
@@ -335,6 +243,8 @@ int main(int argc, char *argv[]) {
 	//any
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 	//######################################################################
+
+	register_to_signal(SIGRTMIN);
 
 	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
 

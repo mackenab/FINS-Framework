@@ -7,8 +7,7 @@
 
 #include "finstime.h"
 
-struct timeval core_start;
-struct timeval core_end;
+uint32_t to_signal;
 
 double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
@@ -129,8 +128,6 @@ void *intsem_to_thread(void *local) {
 			continue;
 		}
 
-		gettimeofday(&core_start, 0);
-
 		PRINT_DEBUG("throwing flag: id=%u, fd=%d", id, fd);
 		*interrupt = 1;
 		*flag = 1;
@@ -177,8 +174,6 @@ void start_timer(int fd, double millis) {
 void to_handler(int sig, siginfo_t *si, void *uc) {
 	PRINT_DEBUG("Entered: sig=%d, si=%p, uc=%p", sig, si, uc);
 
-	gettimeofday(&core_start, 0);
-
 	struct to_timer_data *data = (struct to_timer_data *) si->si_value.sival_ptr;
 	data->handler(data);
 }
@@ -213,10 +208,54 @@ void intsem_to_handler(void *local) {
 	sem_post(data->sem);
 }
 
+void register_to_signal(uint32_t signal) {
+	PRINT_CRITICAL("Registering: to_signal=%u", signal);
+
+	struct sigaction sa;
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = to_handler;
+	sigemptyset(&sa.sa_mask);
+
+	to_signal = signal;
+
+	if (sigaction(to_signal, &sa, NULL)) {
+		PRINT_ERROR("sigaction fault");
+		exit(-1);
+	}
+}
+
+void block_to_signal(void) {
+	PRINT_CRITICAL("Blocking: to_signal=%u", to_signal);
+
+	//Block timer signal temporarily
+
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, to_signal);
+	if (sigprocmask(SIG_SETMASK, &mask, NULL)) {
+		PRINT_ERROR("sigprocmask SIG_SETMASK");
+		exit(-1);
+	}
+}
+
+void unblock_to_signal(void) {
+	PRINT_CRITICAL("Unblocking: to_signal=%u", to_signal);
+
+	//Unlock the timer signal, so that timer notification can be delivered
+
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, to_signal);
+	if (sigprocmask(SIG_UNBLOCK, &mask, NULL)) {
+		PRINT_ERROR("sigprocmask SIG_UNBLOCK");
+		exit(-1);
+	}
+}
+
 void timer_create_to(struct to_timer_data *data) {
 	struct sigevent sev;
 	sev.sigev_notify = SIGEV_SIGNAL;
-	sev.sigev_signo = TO_SIGNAL;
+	sev.sigev_signo = to_signal;
 	sev.sigev_value.sival_ptr = data;
 
 	if (timer_create(CLOCK_REALTIME, &sev, &data->tid)) {

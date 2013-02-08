@@ -64,8 +64,6 @@ void *intsem_to_thread(void *local);
 void stop_timer(int fd);
 void start_timer(int fd, double millis);
 
-#define TO_SIGNAL SIGRTMIN
-
 struct to_timer_data {
 	void (*handler)(void *local);
 	timer_t tid;
@@ -97,6 +95,10 @@ struct intsem_to_timer_data {
 	sem_t *sem;
 };
 void intsem_to_handler(void *local);
+
+void register_to_signal(uint32_t signal);
+void block_to_signal(void);
+void unblock_to_signal(void);
 
 void timer_create_to(struct to_timer_data *data);
 void timer_stop(timer_t timerid);
