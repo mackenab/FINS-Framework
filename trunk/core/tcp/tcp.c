@@ -1753,7 +1753,7 @@ void conn_stop(struct tcp_connection *conn) {
 	//pthread_join(conn->to_gbn_thread, NULL);
 	//pthread_join(conn->to_delayed_thread, NULL);
 	/*#*/PRINT_DEBUG("");
-	pthread_join(conn->main_thread, NULL);
+	//pthread_join(conn->main_thread, NULL);
 }
 
 void conn_free(struct tcp_connection *conn) {

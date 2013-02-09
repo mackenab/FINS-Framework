@@ -467,8 +467,10 @@ void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		break;
 	default:
 		PRINT_ERROR("default cmd=%d", cmd);
+		msg_len = 0;
 		break;
-	}PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	}
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
