@@ -51,10 +51,9 @@ extern int inject_pipe_fd;
 
 // ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-	#define FINS_TMP_ROOT "/data/data/fins"
+	#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 	#define FINS_TMP_ROOT "/tmp/fins"
-	#define SEMAPHORE_ROOT "/dev/shm"
 #endif
 
 #define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"

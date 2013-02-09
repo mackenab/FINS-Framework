@@ -18,8 +18,13 @@
  * @author: Abdallah Abdallah
  */
 
+#include "ethermod.h"
+
 #include "wifistub.h"
 #include <signal.h>
+#ifdef BUILD_FOR_ANDROID
+#include <sys/prctl.h>
+#endif
 
 #define APP_NAME		"sniffex"
 #define APP_DESC		"Sniffer example using libpcap"
@@ -63,8 +68,7 @@ int capture_count = 0;
 
 /** handling termination ctrl+c signal
  * */
-
-void termination_handler(int sig) {
+void capturer_termination_handler(int sig) {
 	PRINT_CRITICAL("**Number of captured frames = %d", capture_count);
 	PRINT_CRITICAL("****Number of Injected frames = %d", inject_count);
 	exit(2);
@@ -82,8 +86,9 @@ void termination_handler(int sig) {
  * Continue Forever
  * */
 
-int main() {
-	(void) signal(SIGINT, termination_handler);
+void capturer_main() {
+	(void) signal(SIGINT, capturer_termination_handler);
+
 	print_app_banner();
 
 	// ADDED mrd015 !!!!! 
@@ -126,7 +131,13 @@ int main() {
 	 */
 	pID = fork();
 
-	if (pID == 0) { // child -- Capture process
+	if (pID == 0) // child -- Capture process
+
+			{
+#ifdef BUILD_FOR_ANDROID //atm011
+		prctl(PR_SET_PDEATHSIG, SIGHUP);
+#endif
+
 		// Code only executed by child process
 		PRINT_DEBUG("child started to capture ");
 		//sleep(2);
@@ -154,8 +165,13 @@ int main() {
 	 if (capture_handle != NULL);
 	 pcap_close(capture_handle);
 	 */
+}
 
+#ifndef BUILD_FOR_ANDROID
+int  main() {
+	capturer_main();
 	return 0;
 }
+#endif
 
 // end of main function

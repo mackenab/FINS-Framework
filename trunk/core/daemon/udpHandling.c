@@ -1448,8 +1448,10 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			}
 			break;
 		case SO_TYPE:
-		case SO_PROTOCOL:
-		case SO_DOMAIN:
+#ifndef BUILD_FOR_ANDROID
+	case SO_PROTOCOL:
+	case SO_DOMAIN:
+#endif
 		case SO_ERROR:
 		case SO_DONTROUTE:
 		case SO_BROADCAST:
@@ -1488,8 +1490,10 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 				PRINT_ERROR("todo error");
 			}
 			break;
-		case SO_TIMESTAMPNS:
-		case SO_TIMESTAMPING:
+#ifndef BUILD_FOR_ANDROID
+	case SO_TIMESTAMPNS:
+	case SO_TIMESTAMPING:
+#endif
 		case SO_RCVTIMEO:
 			//TODO less - gets 8 byte value, timestamp??
 		case SO_SNDTIMEO:
@@ -1502,8 +1506,10 @@ void setsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_ACCEPTCONN:
 		case SO_PASSSEC:
 		case SO_PEERSEC:
-		case SO_MARK:
-		case SO_RXQ_OVFL:
+#ifndef BUILD_FOR_ANDROID
+	case SO_MARK:
+	case SO_RXQ_OVFL:
+#endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
 			PRINT_ERROR("todo");
@@ -1599,8 +1605,10 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
 			break;
 		case SO_TYPE:
-		case SO_PROTOCOL:
-		case SO_DOMAIN:
+#ifndef BUILD_FOR_ANDROID
+	case SO_PROTOCOL:
+	case SO_DOMAIN:
+#endif
 		case SO_ERROR:
 		case SO_DONTROUTE:
 		case SO_BROADCAST:
@@ -1627,8 +1635,10 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			len = sizeof(int);
 			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
 			break;
-		case SO_TIMESTAMPNS:
-		case SO_TIMESTAMPING:
+#ifndef BUILD_FOR_ANDROID
+	case SO_TIMESTAMPNS:
+	case SO_TIMESTAMPING:
+#endif
 		case SO_RCVTIMEO:
 			//TODO less - gets 8 byte value, timestamp??
 		case SO_SNDTIMEO:
@@ -1641,8 +1651,10 @@ void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_ACCEPTCONN:
 		case SO_PASSSEC:
 		case SO_PEERSEC:
-		case SO_MARK:
-		case SO_RXQ_OVFL:
+#ifndef BUILD_FOR_ANDROID
+	case SO_MARK:
+	case SO_RXQ_OVFL:
+#endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
 			PRINT_ERROR("todo");

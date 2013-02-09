@@ -1648,8 +1648,10 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		}
 		break;
 	case SO_TYPE:
+#ifndef BUILD_FOR_ANDROID
 	case SO_PROTOCOL:
 	case SO_DOMAIN:
+#endif
 	case SO_ERROR:
 	case SO_DONTROUTE:
 	case SO_BROADCAST:
@@ -1698,8 +1700,10 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	case SO_LINGER:
 	case SO_BSDCOMPAT:
 	case SO_TIMESTAMP:
+#ifndef BUILD_FOR_ANDROID
 	case SO_TIMESTAMPNS:
 	case SO_TIMESTAMPING:
+#endif
 	case SO_RCVTIMEO:
 	case SO_SNDTIMEO:
 	case SO_RCVLOWAT:
@@ -1718,8 +1722,10 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 	case SO_ACCEPTCONN:
 	case SO_PASSSEC:
 	case SO_PEERSEC:
+#ifndef BUILD_FOR_ANDROID
 	case SO_MARK:
 	case SO_RXQ_OVFL:
+#endif
 	case SO_ATTACH_FILTER:
 	case SO_DETACH_FILTER:
 		break;
@@ -1887,8 +1893,10 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			}
 			break;
 		case SO_TYPE:
-		case SO_PROTOCOL:
-		case SO_DOMAIN:
+#ifndef BUILD_FOR_ANDROID
+	case SO_PROTOCOL:
+	case SO_DOMAIN:
+#endif
 		case SO_ERROR:
 		case SO_DONTROUTE:
 		case SO_BROADCAST:
@@ -1937,8 +1945,10 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_LINGER:
 		case SO_BSDCOMPAT:
 		case SO_TIMESTAMP:
-		case SO_TIMESTAMPNS:
-		case SO_TIMESTAMPING:
+#ifndef BUILD_FOR_ANDROID
+	case SO_TIMESTAMPNS:
+	case SO_TIMESTAMPING:
+#endif
 		case SO_RCVTIMEO:
 		case SO_SNDTIMEO:
 		case SO_RCVLOWAT:
@@ -1951,8 +1961,10 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_ACCEPTCONN:
 		case SO_PASSSEC:
 		case SO_PEERSEC:
-		case SO_MARK:
-		case SO_RXQ_OVFL:
+#ifndef BUILD_FOR_ANDROID
+	case SO_MARK:
+	case SO_RXQ_OVFL:
+#endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
 			break;

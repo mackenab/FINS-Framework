@@ -356,17 +356,6 @@ int daemon_sockets_remove(int sock_index);
 
 int randoming(int min, int max);
 
-//ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
-#ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
-#else
-#define FINS_TMP_ROOT "/tmp/fins"
-#endif
-
-//#define MAIN_SOCKET_CHANNEL FINS_TMP_ROOT "/mainsocket_channel"
-#define RTM_PIPE_IN FINS_TMP_ROOT "/rtm_in"
-#define RTM_PIPE_OUT FINS_TMP_ROOT "/rtm_out"
-
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//8192 //Pick an appropriate value here
 
 void print_hex(uint32_t msg_len, uint8_t *msg_pt);
