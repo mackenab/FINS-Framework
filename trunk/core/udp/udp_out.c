@@ -156,11 +156,11 @@ void udp_out_fdf(struct finsFrame* ff) {
 			//PRINT_DEBUG("Clearing sent_packet_list");
 			//udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT);
 
-			if (!udp_sent_list_has_space(udp_sent_packet_list)) {
-				PRINT_DEBUG("Dropping head of sent_packet_list");
-				struct udp_sent *old = udp_sent_list_remove_front(udp_sent_packet_list);
-				udp_sent_free(old);
-			}
+			//if (!udp_sent_list_has_space(udp_sent_packet_list)) {
+			PRINT_DEBUG("Dropping head of sent_packet_list");
+			struct udp_sent *old = udp_sent_list_remove_front(udp_sent_packet_list);
+			udp_sent_free(old);
+			//}
 			udp_sent_list_append(udp_sent_packet_list, sent);
 			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max);
 

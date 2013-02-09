@@ -705,6 +705,7 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		break;
 	default:
 		PRINT_ERROR("default cmd=%d", cmd);
+		msg_len = 0;
 		break;
 	}
 
@@ -718,7 +719,8 @@ void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, s
 		}
 		free(msg);
 	} else {
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO uncomment
+		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
 

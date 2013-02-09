@@ -452,6 +452,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		break;
 	default:
 		PRINT_ERROR("default cmd=%d", cmd);
+		msg_len = 0;
 		break;
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
