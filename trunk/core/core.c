@@ -28,20 +28,6 @@
 #include <logger.h>
 
 /**
- * TODO free and close/DESTORY all the semaphores before exit !!!
- * POSIX does not clean the garbage of semaphores at exiting
- * It must be cleaned manually incase the program crashes
- *
- *
- */
-
-/*
- * Semaphore for recvfrom_udp/tcp/icmp threads created b/c of blocking
- * in UDPreadFrom_fins. Only lock/unlock when changing daemonSockets,
- * since recvfrom_udp just reads data.
- */
-
-/**
  * @brief read the core parameters from the configuraions file called fins.cfg
  * @param
  * @return nothing
@@ -67,7 +53,7 @@ int read_configurations() {
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
-void termination_handler(int sig) {
+void core_termination_handler(int sig) {
 	PRINT_CRITICAL("**********Terminating *******");
 
 	//shutdown all module threads in backwards order of startup
@@ -135,54 +121,7 @@ void *test_thread_2(void *local) {
 	return NULL;
 }
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <signal.h>
-#include <time.h>
-
-#define SIG SIGRTMIN
-
-#define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
-                               } while (0)
-
-static void print_siginfo(siginfo_t *si) {
-	timer_t *tidp;
-	int or;
-
-	tidp = si->si_value.sival_ptr;
-
-	//PRINT_CRITICAL("    sival_ptr = %p; ", tidp);
-	PRINT_CRITICAL("    sival_ptr = %ld; ", (long)tidp);
-	//PRINT_CRITICAL("    *sival_ptr = 0x%lx", (long) *tidp);
-
-	if (0) {
-		or = timer_getoverrun(*tidp);
-		if (or == -1) {
-			errExit("timer_getoverrun");
-		} else {
-			PRINT_CRITICAL("    overrun count = %d", or);
-		}
-	}
-}
-
-void handler(int sig, siginfo_t *si, void *uc) {
-	/* Note: calling printf() from a signal handler is not
-	 strictly correct, since printf() is not async-signal-safe;
-	 see signal(7) */
-
-	PRINT_CRITICAL("Caught signal=%d", sig);
-	print_siginfo(si);
-	//signal(sig, SIG_IGN); //ignore the signal from re-occuring
-
-	char srecv_data[4000];
-	gets(srecv_data);
-
-	PRINT_CRITICAL("read");
-	//while(1);
-}
-
-int main(int argc, char *argv[]) {
+void core_main() {
 	if (0) { //TODO remove, testing code
 		struct thread_pool *pool = pool_create(1, 10, 10);
 		PRINT_DEBUG("setup done");
@@ -214,7 +153,7 @@ int main(int argc, char *argv[]) {
 		while (1)
 			sleep(1);
 
-		return 0;
+		return;
 	}
 
 	//###################################################################### //TODO get this from config file eventually
@@ -249,7 +188,7 @@ int main(int argc, char *argv[]) {
 
 	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
 
-	signal(SIGINT, termination_handler); //register termination handler
+	signal(SIGINT, core_termination_handler); //register termination handler
 
 	// Start the driving thread of each module
 	PRINT_CRITICAL("Initialize Modules");
@@ -383,7 +322,11 @@ int main(int argc, char *argv[]) {
 
 	while (1)
 		sleep(1);
-
-	return (1);
 }
 
+#ifndef BUILD_FOR_ANDROID
+int  main() {
+	core_main();
+	return 0;
+}
+#endif

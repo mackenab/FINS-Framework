@@ -26,9 +26,11 @@ finsQueue Switch_to_RTM_Queue;
 int rtm_in_fd;
 int rtm_out_fd;
 
-//defines named pipe localtions for rtm //ADDED mrd015 !!!!!
+
+//ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/fins"
+//#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
