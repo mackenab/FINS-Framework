@@ -214,8 +214,9 @@ void capture_init(char *interface) {
 
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
 	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //Vbox eth2
-	strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
+	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
 	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
+	strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
 
 
 	/* get network number and mask associated with capture device */

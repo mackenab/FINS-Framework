@@ -217,21 +217,22 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
 
 	//strcpy(my_host_if_name, "lo");
-	strcpy(my_host_if_name, "eth0");
+	//strcpy(my_host_if_name, "eth0");
 	//strcpy(my_host_if_name, "eth1");
 	//strcpy(my_host_if_name, "eth2");
 	//strcpy(my_host_if_name, "wlan0");
+	strcpy(my_host_if_name, "wlan4");
 
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
-	my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
+	//my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
 	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
+	my_host_mac_addr = 0x00184d8f2a32ull; //laptop wlan4 card
 
-	my_host_ip_addr = IP4_ADR_P2H(192,168,1,20); //home testing
+	my_host_ip_addr = IP4_ADR_P2H(192,168,1,3); //home testing
 	my_host_mask = IP4_ADR_P2H(255,255,255,0); //home testing
 	//my_host_ip_addr = IP4_ADR_P2H(172,31,49,250); //lab testing
 	//my_host_mask = IP4_ADR_P2H(255,255,248,0); //lab testing

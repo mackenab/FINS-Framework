@@ -115,10 +115,11 @@ int main() {
 	pid_t pID = 0;
 	char device[20];
 	//strcpy(device, "lo");
-	strcpy(device, "eth0");
+	//strcpy(device, "eth0");
 	//strcpy(device, "eth1");
 	//strcpy(device, "eth2");
 	//strcpy(device, "wlan0");
+	strcpy(device, "wlan4");
 
 	/** Time to split into two processes
 	 *  1. the child Process is for capturing (incoming)

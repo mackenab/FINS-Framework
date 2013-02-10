@@ -198,7 +198,7 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	struct ip4_routing_table *row1 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 	struct ip4_routing_table *row2 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 
-	if (1) { //laptop eth0
+	if (0) { //laptop eth0
 		row0->dst = my_host_ip_addr & my_host_mask;
 		row0->gw = any_ip_addr;
 		row0->mask = 24;
@@ -219,6 +219,24 @@ struct ip4_routing_table * IP4_get_routing_table() {
 		row2->metric = 0;
 		row2->interface = my_host_ip_addr;
 		row2->next_entry = NULL;
+	}
+
+	if (1) { //laptop wlan4
+		row0->dst = any_ip_addr;
+		row0->gw = (my_host_ip_addr & my_host_mask) | 1;
+		row0->mask = 24;
+		row0->metric = 10;
+		row0->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
+		row0->next_entry = row1;
+
+		row1->dst = loopback_ip_addr;
+		row1->gw = IP4_ADR_P2H(10,0,2,2);
+		row1->mask = 0;
+		row1->metric = 0;
+		row1->interface = my_host_ip_addr;
+		row1->next_entry = NULL;
+
+		free(row2);
 	}
 
 	if (0) { //standard linux table

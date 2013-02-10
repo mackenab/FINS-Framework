@@ -1450,13 +1450,11 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		PRINT_DEBUG("FIONREAD=%d", cmd);
 		msg_len = 0; //handle per socket/protocol
 
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case TIOCOUTQ:
 		PRINT_DEBUG("TIOCOUTQ=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCGIFNAME:
@@ -1484,6 +1482,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 			strcpy((char *) temp, "eth0");
 		} else if (total == 3) {
 			strcpy((char *) temp, "wlan0");
+		} else if (total == 4) {
+			strcpy((char *) temp, "wlan4");
 		} else {
 			PRINT_ERROR("index=%d", total);
 		}
@@ -1567,8 +1567,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		break;
 	case SIOCSIFFLAGS:
 		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCGIFMTU:
 		PRINT_DEBUG("SIOCGIFMTU=%d", cmd);
@@ -1624,18 +1623,15 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		break;
 	case SIOCADDRT:
 		PRINT_DEBUG("SIOCADDRT=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCDELRT:
 		PRINT_DEBUG("SIOCDELRT=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFADDR:
 		PRINT_DEBUG("SIOCSIFADDR=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 		//case SIOCAIPXITFCRT:
 		//case SIOCAIPXPRISLT:
@@ -1643,27 +1639,22 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t buf_len) {
 		//case SIOCIPXNCPCONN:
 	case SIOCGSTAMP:
 		PRINT_DEBUG("SIOCGSTAMP=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFDSTADDR:
 		PRINT_DEBUG("SIOCSIFDSTADDR=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFBRDADDR:
 		PRINT_DEBUG("SIOCSIFBRDADDR=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	case SIOCSIFNETMASK:
 		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd);
-		PRINT_ERROR("todo")
-		;
+		PRINT_ERROR("todo");
 		break;
 	default:
-		PRINT_ERROR("default: cmd=%d", cmd)
-		;
+		PRINT_ERROR("default: cmd=%d", cmd);
 		break;
 	}
 

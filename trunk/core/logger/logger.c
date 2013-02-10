@@ -75,11 +75,13 @@ void logger_get_ff(void) {
 				gettimeofday(&logger_end, 0);
 				logger_packets++;
 				logger_bytes += ff->dataFrame.pduLength;
+				//logger_bytes += ff->dataFrame.pduLength-28; //for end-end throughput of exp 2, to remove IP/UDP hdrs
 			} else {
 				logger_started = 1;
 				gettimeofday(&logger_start, 0);
 				logger_packets = 1;
 				logger_bytes = ff->dataFrame.pduLength;
+				//logger_bytes = ff->dataFrame.pduLength-28; //for end-end throughput of exp 2, to remove IP/UDP hdrs
 
 				logger_saved_packets = 0;
 				logger_saved_bytes = 0;
@@ -184,7 +186,7 @@ void logger_interrupt(void) {
 			double test = time_diff(&logger_start, &logger_end) / 1000.0;
 			//double through = 8.0 * (logger_bytes - 10 * 1470) / test;
 			double through = 8.0 * logger_bytes / test;
-			PRINT_CRITICAL("Logger stopping: total=%f, packets=%d, bytes=%d, through=%f", test, logger_packets, logger_bytes, through);
+			PRINT_CRITICAL("Logger stopping: total=%f,\t packets=%d,\t bytes=%d,\t through=%f", test, logger_packets, logger_bytes, through);
 		} else {
 			timer_once_start(logger_to_data->tid, logger_interval);
 		}
