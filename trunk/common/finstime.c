@@ -141,6 +141,7 @@ void *intsem_to_thread(void *local) {
 	return NULL;
 }
 
+#ifndef BUILD_FOR_ANDROID
 void stop_timer(int fd) {
 	PRINT_DEBUG("Entered: fd=%d", fd);
 
@@ -170,6 +171,7 @@ void start_timer(int fd, double millis) {
 		exit(-1);
 	}
 }
+#endif
 
 void to_handler(int sig, siginfo_t *si, void *uc) {
 	PRINT_DEBUG("Entered: sig=%d, si=%p, uc=%p", sig, si, uc);

@@ -151,11 +151,13 @@ struct pool_controller *controller_create(struct thread_pool *pool) {
 	controller->id = 0;
 	controller->running = 1;
 
+#ifndef BUILD_FOR_ANDROID
 	controller->fd = timerfd_create(CLOCK_REALTIME, 0);
 	if (controller->fd == -1) {
 		PRINT_ERROR("ERROR: unable to create to_fd.");
 		exit(-1);
 	}
+#endif
 
 	//sem_init(&worker->activate_sem, 0, 0);
 	//change back to normal? if fails don't crash

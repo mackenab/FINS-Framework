@@ -13,9 +13,16 @@
 #include <semaphore.h>
 #include <signal.h>
 #include <sys/time.h>
-#include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifdef BUILD_FOR_ANDROID
+#include <linux/time.h>
+#include <sys/endian.h>
+//#include <sys/linux-unistd.h>
+#else
+#include <sys/timerfd.h>
+#endif
 
 //#include <stdlib.h>
 //#include <stdio.h>

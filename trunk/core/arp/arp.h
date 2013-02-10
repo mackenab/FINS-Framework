@@ -11,7 +11,6 @@
 #include <metadata.h>
 #include <stdint.h>
 #include <sys/time.h>
-#include <sys/timerfd.h>
 #include <math.h>
 #include <unistd.h>
 #include <pthread.h>

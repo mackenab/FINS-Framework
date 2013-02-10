@@ -26,9 +26,7 @@
 #include <unistd.h>
 
 #ifdef BUILD_FOR_ANDROID
-#warning "Omitting timerfd, building for android"
 #include <linux/time.h>
-#include <pthread.h>
 #include <sys/endian.h>
 //#include <sys/linux-unistd.h>
 #endif
