@@ -4,6 +4,9 @@
  * the original code. But we claim the ownership of the modifications.
  */
 
+#ifndef QUEUE_H_
+#define QUEUE_H_
+
 #include <finstypes.h>
 #include <finsdebug.h>
 /** Define the ElementType into the caller file */
@@ -11,8 +14,6 @@
 typedef struct finsFrame* ElementType;
 
 /* START: fig3_57.txt */
-#ifndef _Queue_h
-#define _Queue_h
 
 //struct QueueRecord;
 struct QueueRecord {
@@ -40,5 +41,5 @@ void Dequeue(Queue Q);
 ElementType FrontAndDequeue(Queue Q);
 int TerminateQueue(Queue Q);
 
-#endif  /* _Queue_h */
+#endif  /* QUEUE_H_ */
 /* END */

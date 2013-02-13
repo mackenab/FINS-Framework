@@ -2564,7 +2564,7 @@ void test_func_daemon(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, ssize_t m
 }
 
 void *wedge_to_daemon(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	int ret;
 
@@ -2774,19 +2774,19 @@ void *wedge_to_daemon(void *local) {
 	free(recv_buf);
 	close(nl_sockfd);
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void *switch_to_daemon(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (daemon_proto.running_flag) {
 		daemon_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
@@ -3294,7 +3294,7 @@ void daemon_in_fdf(struct finsFrame *ff) {
 }
 
 void daemon_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	daemon_proto.running_flag = 1;
 
 	module_create_ops(&daemon_proto);
@@ -3338,18 +3338,18 @@ void daemon_init(void) {
 		perror("sendfins() caused an error");
 		exit(-1);
 	}
-	PRINT_CRITICAL("Connected to wedge at fd=%d", nl_sockfd);
+	PRINT_IMPORTANT("Connected to wedge at fd=%d", nl_sockfd);
 }
 
 void daemon_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&wedge_to_daemon_thread, fins_pthread_attr, wedge_to_daemon, fins_pthread_attr);
 	secure_pthread_create(&switch_to_daemon_thread, fins_pthread_attr, switch_to_daemon, fins_pthread_attr);
 }
 
 void daemon_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	daemon_proto.running_flag = 0;
 	sem_post(daemon_proto.event_sem);
 
@@ -3360,23 +3360,23 @@ void daemon_shutdown(void) {
 		PRINT_DEBUG("send_wedge failure");
 		//perror("sendfins() caused an error");
 	}
-	PRINT_CRITICAL("Disconnecting to wedge at fd=%d", nl_sockfd);
+	PRINT_IMPORTANT("Disconnecting to wedge at fd=%d", nl_sockfd);
 
-	PRINT_CRITICAL("Joining switch_to_daemon_thread");
+	PRINT_IMPORTANT("Joining switch_to_daemon_thread");
 	pthread_join(switch_to_daemon_thread, NULL);
-	PRINT_CRITICAL("Joining wedge_to_daemon_thread");
+	PRINT_IMPORTANT("Joining wedge_to_daemon_thread");
 	pthread_join(wedge_to_daemon_thread, NULL); //TODO change thread so can be stopped, atm is blocking
 }
 
 void daemon_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	//unregister
 	module_unregister(daemon_proto.module_id);
 
 	//TODO free all module related mem
 
-	PRINT_CRITICAL("expired_call_list->len=%u", expired_call_list->len);
+	PRINT_IMPORTANT("expired_call_list->len=%u", expired_call_list->len);
 	call_list_free(expired_call_list);
 
 	int i = 0;

@@ -67,7 +67,7 @@ int interface_setBlocking(int fd) {
 }
 
 void *capturer_to_interface(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	int numBytes;
 	int frame_len;
@@ -191,19 +191,19 @@ void *capturer_to_interface(void *local) {
 		}
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void *switch_to_interface(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (interface_proto.running_flag) {
 		interface_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 } // end of Inject Function
 
@@ -343,7 +343,7 @@ int interface_to_switch(struct finsFrame *ff) {
 }
 
 void interface_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	interface_proto.running_flag = 1;
 
 	module_create_ops(&interface_proto);
@@ -361,31 +361,31 @@ void interface_init(void) {
 		exit(-1); //exit(EXIT_FAILURE);
 	}
 
-	PRINT_CRITICAL("PCAP processes connected");
+	PRINT_IMPORTANT("PCAP processes connected");
 }
 
 void interface_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_interface_thread, fins_pthread_attr, switch_to_interface, fins_pthread_attr);
 	secure_pthread_create(&capturer_to_interface_thread, fins_pthread_attr, capturer_to_interface, fins_pthread_attr);
 }
 
 void interface_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	interface_proto.running_flag = 0;
 	sem_post(interface_proto.event_sem);
 
 	//TODO expand this
 
-	PRINT_CRITICAL("Joining switch_to_interface_thread");
+	PRINT_IMPORTANT("Joining switch_to_interface_thread");
 	pthread_join(switch_to_interface_thread, NULL);
-	PRINT_CRITICAL("Joining capturer_to_interface_thread");
+	PRINT_IMPORTANT("Joining capturer_to_interface_thread");
 	pthread_join(capturer_to_interface_thread, NULL);
 }
 
 void interface_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	//TODO free all module related mem
 
 	module_unregister(interface_proto.module_id);

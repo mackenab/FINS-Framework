@@ -211,7 +211,7 @@ void intsem_to_handler(void *local) {
 }
 
 void register_to_signal(uint32_t signal) {
-	PRINT_CRITICAL("Registering: to_signal=%u", signal);
+	PRINT_IMPORTANT("Registering: to_signal=%u", signal);
 
 	struct sigaction sa;
 	sa.sa_flags = SA_SIGINFO;
@@ -227,7 +227,7 @@ void register_to_signal(uint32_t signal) {
 }
 
 void block_to_signal(void) {
-	PRINT_CRITICAL("Blocking: to_signal=%u", to_signal);
+	PRINT_IMPORTANT("Blocking: to_signal=%u", to_signal);
 
 	//Block timer signal temporarily
 
@@ -241,7 +241,7 @@ void block_to_signal(void) {
 }
 
 void unblock_to_signal(void) {
-	PRINT_CRITICAL("Unblocking: to_signal=%u", to_signal);
+	PRINT_IMPORTANT("Unblocking: to_signal=%u", to_signal);
 
 	//Unlock the timer signal, so that timer notification can be delivered
 

@@ -54,39 +54,39 @@ int read_configurations() {
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
 void core_termination_handler(int sig) {
-	PRINT_CRITICAL("**********Terminating *******");
+	PRINT_IMPORTANT("**********Terminating *******");
 
 	//shutdown all module threads in backwards order of startup
 	//logger_shutdown();
 	//rtm_shutdown();
 
-	udp_shutdown();
-	tcp_shutdown();
-	icmp_shutdown();
-	ipv4_shutdown();
-	arp_shutdown();
+	//udp_shutdown();
+	//tcp_shutdown();
+	//icmp_shutdown();
+	//ipv4_shutdown();
+	//arp_shutdown();
 
-	interface_shutdown(); //TODO finish
-	daemon_shutdown(); //TODO finish
+	//interface_shutdown(); //TODO finish
+	//daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
 
 	//have each module free data & que/sem //TODO finish each of these
 	//logger_release();
 	//rtm_release();
 
-	udp_release();
-	tcp_release();
-	icmp_release();
-	ipv4_release();
-	arp_release();
+	//udp_release();
+	//tcp_release();
+	//icmp_release();
+	//ipv4_release();
+	//arp_release();
 
-	interface_release();
-	daemon_release();
+	//interface_release();
+	//daemon_release();
 	switch_release();
 
 	sem_destroy(&control_serial_sem);
 
-	PRINT_CRITICAL("FIN");
+	PRINT_IMPORTANT("FIN");
 	exit(-1);
 }
 
@@ -191,22 +191,22 @@ void core_main() {
 	signal(SIGINT, core_termination_handler); //register termination handler
 
 	// Start the driving thread of each module
-	PRINT_CRITICAL("Initialize Modules");
+	PRINT_IMPORTANT("Initialize Modules");
 	switch_init(); //should always be first
-	daemon_init(); //TODO improve how sets mac/ip
-	interface_init();
+	//daemon_init(); //TODO improve how sets mac/ip
+	//interface_init();
 
-	arp_init();
-	arp_register_interface(my_host_mac_addr, my_host_ip_addr);
+	//arp_init();
+	//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	ipv4_init();
-	ipv4_set_interface(my_host_ip_addr, my_host_mask);
-	ipv4_set_loopback(loopback_ip_addr, loopback_mask);
-	ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
+	//ipv4_init();
+	//ipv4_set_interface(my_host_ip_addr, my_host_mask);
+	//ipv4_set_loopback(loopback_ip_addr, loopback_mask);
+	//ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	icmp_init();
-	tcp_init();
-	udp_init();
+	//icmp_init();
+	//tcp_init();
+	//udp_init();
 
 	//rtm_init(); //TODO when updated/fully implemented
 	//logger_init();
@@ -214,16 +214,16 @@ void core_main() {
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 
-	PRINT_CRITICAL("Run/start Modules");
+	PRINT_IMPORTANT("Run/start Modules");
 	switch_run(&fins_pthread_attr);
-	daemon_run(&fins_pthread_attr);
-	interface_run(&fins_pthread_attr);
+	//daemon_run(&fins_pthread_attr);
+	//interface_run(&fins_pthread_attr);
 
-	arp_run(&fins_pthread_attr);
-	ipv4_run(&fins_pthread_attr);
-	icmp_run(&fins_pthread_attr);
-	tcp_run(&fins_pthread_attr);
-	udp_run(&fins_pthread_attr);
+	//arp_run(&fins_pthread_attr);
+	//ipv4_run(&fins_pthread_attr);
+	//icmp_run(&fins_pthread_attr);
+	//tcp_run(&fins_pthread_attr);
+	//udp_run(&fins_pthread_attr);
 
 	//rtm_run(&fins_pthread_attr);
 	//logger_run(&fins_pthread_attr);
@@ -270,7 +270,7 @@ void core_main() {
 		while (1) {
 			gets(recv_data);
 
-			PRINT_CRITICAL("start timing");
+			PRINT_IMPORTANT("start timing");
 
 			struct timeval start, end;
 			gettimeofday(&start, 0);
@@ -314,7 +314,7 @@ void core_main() {
 			//gettimeofday(&start, 0);
 			gettimeofday(&end, 0);
 			double diff = time_diff(&start, &end);
-			PRINT_CRITICAL("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
+			PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
 		}
 	}
 	//#############################

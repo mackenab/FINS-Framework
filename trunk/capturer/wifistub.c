@@ -52,7 +52,7 @@ extern int capture_count;
 	//}
 
 	++capture_count;
-	//PRINT_CRITICAL("Packet captured: count=%d, size=%d", ++capture_count, dataLength);
+	//PRINT_IMPORTANT("Packet captured: count=%d, size=%d", ++capture_count, dataLength);
 
 	//print_hex_block(packetReceived, dataLength);
 	//fflush(stdout);
@@ -139,9 +139,9 @@ void capture_init(char *interface) {
 		mask = 0;
 	}
 	/* print capture info */
-	PRINT_CRITICAL("Device: %s", dev);
-	PRINT_CRITICAL("Number of packets: %d", num_packets);
-	PRINT_CRITICAL("Filter expression: %s", filter_exp);
+	PRINT_IMPORTANT("Device: %s", dev);
+	PRINT_IMPORTANT("Number of packets: %d", num_packets);
+	PRINT_IMPORTANT("Filter expression: %s", filter_exp);
 
 	/* open capture device */
 	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 1, 1000, errbuf);
@@ -156,7 +156,7 @@ void capture_init(char *interface) {
 		PRINT_ERROR("%s is not an Ethernet", dev);
 		exit(EXIT_FAILURE);
 	}
-	PRINT_CRITICAL("Datalink layer Description: %s (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
+	PRINT_IMPORTANT("Datalink layer Description: %s (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
 
 	/* compile the filter expression */
 
@@ -247,7 +247,7 @@ void inject_init(char *interface) {
 			break;
 		}
 
-		//PRINT_CRITICAL("A frame of length %d will be injected-----", framelen);
+		//PRINT_IMPORTANT("A frame of length %d will be injected-----", framelen);
 		//print_hex_block((u_char *) frame, framelen);
 		//fflush(stdout);
 
@@ -264,8 +264,8 @@ void inject_init(char *interface) {
 		}
 	} // end of while loop
 
-	PRINT_CRITICAL("**Number of captured frames = %d", capture_count);
-	PRINT_CRITICAL("****Number of Injected frames = %d", inject_count);
+	PRINT_IMPORTANT("**Number of captured frames = %d", capture_count);
+	PRINT_IMPORTANT("****Number of Injected frames = %d", inject_count);
 } // inject_init()
 
 /** ------------------------------------------------------------------*/

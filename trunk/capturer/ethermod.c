@@ -47,7 +47,7 @@ void print_app_banner(void) {
 }
 
 //#define DEBUG
-//#define CRITICAL
+//#define IMPORTANT
 //#define ERROR
 
 /** packet inject handle */
@@ -69,8 +69,8 @@ int capture_count = 0;
 /** handling termination ctrl+c signal
  * */
 void capturer_termination_handler(int sig) {
-	PRINT_CRITICAL("**Number of captured frames = %d", capture_count);
-	PRINT_CRITICAL("****Number of Injected frames = %d", inject_count);
+	PRINT_IMPORTANT("**Number of captured frames = %d", capture_count);
+	PRINT_IMPORTANT("****Number of Injected frames = %d", inject_count);
 	exit(2);
 }
 
@@ -94,14 +94,14 @@ void capturer_main() {
 	// ADDED mrd015 !!!!! 
 	// trying to put code from fins_ethernet.sh here. This should allow mkfifo to be called w/o building coreutils for android?
 
-	PRINT_CRITICAL("Attempting to make " FINS_TMP_ROOT "");
+	PRINT_IMPORTANT("Attempting to make " FINS_TMP_ROOT "");
 	if (system("mkdir " FINS_TMP_ROOT) != 0) {
-		PRINT_CRITICAL(FINS_TMP_ROOT " already exists! Cleaning...");
+		PRINT_IMPORTANT(FINS_TMP_ROOT " already exists! Cleaning...");
 		// if cannot create directory, assume it contains files and try to delete them
 		if (system("cd " FINS_TMP_ROOT ";rm *") != 0) {
-			PRINT_CRITICAL("Cannot remove files in " FINS_TMP_ROOT "!");
+			PRINT_IMPORTANT("Cannot remove files in " FINS_TMP_ROOT "!");
 		} else {
-			PRINT_CRITICAL(FINS_TMP_ROOT " was cleaned successfully.");
+			PRINT_IMPORTANT(FINS_TMP_ROOT " was cleaned successfully.");
 		}
 	}
 

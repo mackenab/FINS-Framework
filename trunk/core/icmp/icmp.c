@@ -830,7 +830,7 @@ void icmp_fcf(struct finsFrame *ff) {
 }
 
 void *switch_to_icmp(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (icmp_proto.running_flag) {
 		icmp_get_ff();
@@ -838,12 +838,12 @@ void *switch_to_icmp(void *local) {
 		//Note that we always clean up the frame, no matter what we do with it. If the frame needs to go somewhere else also, we make a copy.
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void icmp_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	icmp_proto.running_flag = 1;
 
 	module_create_ops(&icmp_proto);
@@ -853,27 +853,27 @@ void icmp_init(void) {
 }
 
 void icmp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_icmp_thread, fins_pthread_attr, switch_to_icmp, fins_pthread_attr);
 }
 
 void icmp_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	icmp_proto.running_flag = 0;
 	sem_post(icmp_proto.event_sem);
 
 	//TODO expand this
 
-	PRINT_CRITICAL("Joining switch_to_icmp_thread");
+	PRINT_IMPORTANT("Joining switch_to_icmp_thread");
 	pthread_join(switch_to_icmp_thread, NULL);
 }
 
 void icmp_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	module_unregister(icmp_proto.module_id);
 
-	PRINT_CRITICAL("icmp_sent_packet_list->len=%u", icmp_sent_packet_list->len);
+	PRINT_IMPORTANT("icmp_sent_packet_list->len=%u", icmp_sent_packet_list->len);
 	icmp_sent_list_free(icmp_sent_packet_list);
 
 	//TODO free all module related mem

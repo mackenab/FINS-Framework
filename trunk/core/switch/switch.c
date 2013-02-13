@@ -58,9 +58,9 @@ int module_register(struct fins_proto_module *module) {
 
 	secure_sem_wait(switch_proto.input_sem);
 	if (fins_modules[module->module_id] != NULL) {
-		PRINT_CRITICAL("Replacing: module=%p, module_id=%d, name='%s'", fins_modules[module->module_id], fins_modules[module->module_id]->module_id, fins_modules[module->module_id]->name);
+		PRINT_IMPORTANT("Replacing: module=%p, module_id=%d, name='%s'", fins_modules[module->module_id], fins_modules[module->module_id]->module_id, fins_modules[module->module_id]->name);
 	}
-	PRINT_CRITICAL("Registered: module=%p, module_id=%d, name='%s'", module, module->module_id, module->name);
+	PRINT_IMPORTANT("Registered: module=%p, module_id=%d, name='%s'", module, module->module_id, module->name);
 	fins_modules[module->module_id] = module;
 	sem_post(switch_proto.input_sem);
 
@@ -78,10 +78,10 @@ void module_unregister(int module_id) {
 
 	secure_sem_wait(switch_proto.input_sem);
 	if (fins_modules[module_id] != NULL) {
-		PRINT_CRITICAL("Unregistering: module=%p, module_id=%d, name='%s'", fins_modules[module_id], fins_modules[module_id]->module_id, fins_modules[module_id]->name);
+		PRINT_IMPORTANT("Unregistering: module=%p, module_id=%d, name='%s'", fins_modules[module_id], fins_modules[module_id]->module_id, fins_modules[module_id]->name);
 		fins_modules[module_id] = NULL;
 	} else {
-		PRINT_CRITICAL("No module to unregister: module_id=%d", module_id);
+		PRINT_IMPORTANT("No module to unregister: module_id=%d", module_id);
 	}
 	sem_post(switch_proto.input_sem);
 }
@@ -108,7 +108,7 @@ int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff) {
 }
 
 void *switch_loop(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	int i;
 	int ret;
@@ -169,12 +169,12 @@ void *switch_loop(void *local) {
 		sem_post(switch_proto.input_sem);
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 } // end of switch_init Function
 
 void switch_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	switch_proto.running_flag = 1;
 
 	switch_proto.event_sem = (sem_t *) secure_malloc(sizeof(sem_t)); //triggered when activity on module output queues
@@ -193,24 +193,24 @@ void switch_init(void) {
 }
 
 void switch_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_thread, fins_pthread_attr, switch_loop, fins_pthread_attr);
 }
 
 void switch_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	switch_proto.running_flag = 0;
 	sem_post(switch_proto.event_sem);
 
 	//TODO expand this
 
-	PRINT_CRITICAL("Joining switch_thread");
+	PRINT_IMPORTANT("Joining switch_thread");
 	pthread_join(switch_thread, NULL);
 }
 
 void switch_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	//TODO free all module related mem
 
 	//module_unregister(switch_proto.module_id);

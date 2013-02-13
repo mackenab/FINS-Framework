@@ -40,14 +40,14 @@ int ipv4_to_switch(struct finsFrame *ff) {
 }
 
 void *switch_to_ipv4(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (ipv4_proto.running_flag) {
 		ipv4_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
@@ -466,7 +466,7 @@ int store_list_has_space(void) {
 //################
 
 void ipv4_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	ipv4_proto.running_flag = 1;
 
 	module_create_ops(&ipv4_proto);
@@ -509,29 +509,29 @@ void ipv4_set_loopback(uint32_t IP_address, uint32_t mask) {
 }
 
 void ipv4_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_ipv4_thread, fins_pthread_attr, switch_to_ipv4, fins_pthread_attr);
 }
 
 void ipv4_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	ipv4_proto.running_flag = 0;
 	sem_post(ipv4_proto.event_sem);
 
 	//TODO expand this
 
-	PRINT_CRITICAL("Joining switch_to_ipv4_thread");
+	PRINT_IMPORTANT("Joining switch_to_ipv4_thread");
 	pthread_join(switch_to_ipv4_thread, NULL);
 }
 
 void ipv4_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	module_unregister(ipv4_proto.module_id);
 
 	//TODO free all module related mem
 
-	PRINT_CRITICAL("ipv4_store_num=%u", ipv4_store_num);
+	PRINT_IMPORTANT("ipv4_store_num=%u", ipv4_store_num);
 	struct ipv4_store *store;
 	while (!store_list_is_empty()) {
 		store = ipv4_store_list;
@@ -539,7 +539,7 @@ void ipv4_release(void) {
 		ipv4_store_free(store);
 	}
 
-	PRINT_CRITICAL("ipv4_interface_num=%u", ipv4_interface_num);
+	PRINT_IMPORTANT("ipv4_interface_num=%u", ipv4_interface_num);
 	struct ipv4_interface *interface;
 	while (!ipv4_interface_list_is_empty()) {
 		interface = ipv4_interface_list;
@@ -547,7 +547,7 @@ void ipv4_release(void) {
 		ipv4_interface_free(interface);
 	}
 
-	PRINT_CRITICAL("ipv4_cache_num=%u", ipv4_cache_num);
+	PRINT_IMPORTANT("ipv4_cache_num=%u", ipv4_cache_num);
 	struct ipv4_cache *cache;
 	while (!ipv4_cache_list_is_empty()) {
 		cache = ipv4_cache_list;

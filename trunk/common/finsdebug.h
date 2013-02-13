@@ -8,7 +8,7 @@
 #define FINSDEBUG_H_
 
 //#define DEBUG
-#define CRITICAL
+#define IMPORTANT
 #define ERROR
 
 #ifndef BUILD_FOR_ANDROID
@@ -20,10 +20,10 @@
 #define PRINT_DEBUG(format, args...)
 #endif
 
-#ifdef CRITICAL
-#define PRINT_CRITICAL(format, args...) printf("CRITICAL(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#ifdef IMPORTANT
+#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
 #else
-#define PRINT_CRITICAL(format, args...)
+#define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR
@@ -49,11 +49,11 @@
 #define PRINT_DEBUG(format, args...)
 #endif
 
-#ifdef CRITICAL
-//#define PRINT_CRITICAL(format, args...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", format);
-#define PRINT_CRITICAL(format, args...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", "CRITICAL(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);
+#ifdef IMPORTANT
+//#define PRINT_IMPORTANT(format, args...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", format);
+#define PRINT_IMPORTANT(format, args...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", "IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);
 #else
-#define PRINT_CRITICAL(format, args...)
+#define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR

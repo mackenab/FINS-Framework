@@ -5,6 +5,9 @@
  *      Author: Mark Hutcheson
  */
 
+#ifndef ICMP_TYPES_H_
+#define ICMP_TYPES_H_
+
 #include <stdint.h>
 
 //Structure for sending finsFrames that are ICMP error frames. More fields can be safely added as we add
@@ -18,3 +21,4 @@ struct icmperrormsg
 	uint8_t *	data;
 };
 
+#endif

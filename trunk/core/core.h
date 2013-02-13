@@ -5,8 +5,8 @@
  *      @author Abdallah Abdallah
  */
 
-#ifndef SOCKETGENI_H_
-#define SOCKETGENI_H_
+#ifndef CORE_H_
+#define CORE_H_
 
 int read_configurations();
 //void commChannel_init();
@@ -20,5 +20,5 @@ int read_configurations();
 
 void core_main();
 
-#endif /* SOCKETGENI_H_ */
+#endif /* CORE_H_ */
 

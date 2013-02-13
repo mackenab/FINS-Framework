@@ -6,10 +6,12 @@
  * @author Abdallah Abdallah
  */
 
-#include <queue.h>
-#include <fatal.h>
 #include <stdlib.h>
+
 #include <finsdebug.h>
+
+#include "fatal.h"
+#include "queue.h"
 
 #define MinQueueSize ( 5 )
 

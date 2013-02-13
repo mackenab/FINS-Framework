@@ -11,9 +11,10 @@
 #ifndef QUEUEMODULE_H_
 #define QUEUEMODULE_H_
 
-#include <finstypes.h>
 #include <semaphore.h>
-#include <queue.h>
+
+#include "queue.h"
+#include <finstypes.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID

@@ -501,19 +501,19 @@ void udp_error(struct finsFrame *ff) {
 }
 
 void *switch_to_udp(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (udp_proto.running_flag) {
 		udp_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void udp_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	udp_proto.running_flag = 1;
 
 	module_create_ops(&udp_proto);
@@ -523,27 +523,27 @@ void udp_init(void) {
 }
 
 void udp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_udp_thread, fins_pthread_attr, switch_to_udp, fins_pthread_attr);
 }
 
 void udp_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	udp_proto.running_flag = 0;
 	sem_post(udp_proto.event_sem);
 
 	//TODO expand this
 
-	PRINT_CRITICAL("Joining switch_to_udp_thread");
+	PRINT_IMPORTANT("Joining switch_to_udp_thread");
 	pthread_join(switch_to_udp_thread, NULL);
 }
 
 void udp_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	module_unregister(udp_proto.module_id);
 
-	PRINT_CRITICAL("udp_sent_packet_list->len=%u", udp_sent_packet_list->len);
+	PRINT_IMPORTANT("udp_sent_packet_list->len=%u", udp_sent_packet_list->len);
 	udp_sent_list_free(udp_sent_packet_list);
 
 	//TODO free all module related mem

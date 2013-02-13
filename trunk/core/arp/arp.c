@@ -804,7 +804,7 @@ int arp_to_switch(struct finsFrame *ff) {
 }
 
 void *switch_to_arp(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (arp_proto.running_flag) {
 		arp_get_ff();
@@ -812,12 +812,12 @@ void *switch_to_arp(void *local) {
 		//	free(pff);
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void arp_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	arp_proto.running_flag = 1;
 
 	module_create_ops(&arp_proto);
@@ -831,31 +831,31 @@ void arp_init(void) {
 }
 
 void arp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_arp_thread, fins_pthread_attr, switch_to_arp, fins_pthread_attr);
 
 }
 
 void arp_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	arp_proto.running_flag = 0;
 	sem_post(arp_proto.event_sem);
 
 	//TODO fill this out
 
-	PRINT_CRITICAL("Joining switch_to_arp_thread");
+	PRINT_IMPORTANT("Joining switch_to_arp_thread");
 	pthread_join(switch_to_arp_thread, NULL);
 }
 
 void arp_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	module_unregister(arp_proto.module_id);
 
 	//TODO free all module related mem
 
-	PRINT_CRITICAL("arp_interface_num=%u", arp_interface_num);
+	PRINT_IMPORTANT("arp_interface_num=%u", arp_interface_num);
 	struct arp_interface *interface;
 	while (!arp_interface_list_is_empty()) {
 		interface = arp_interface_list;
@@ -863,7 +863,7 @@ void arp_release(void) {
 		arp_interface_free(interface);
 	}
 
-	PRINT_CRITICAL("arp_cache_num=%u", arp_cache_num);
+	PRINT_IMPORTANT("arp_cache_num=%u", arp_cache_num);
 	struct arp_cache *cache;
 	while (!arp_cache_list_is_empty()) {
 		cache = arp_cache_list;

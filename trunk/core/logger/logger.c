@@ -88,7 +88,7 @@ void logger_get_ff(void) {
 				logger_saved_curr = 0;
 
 				timer_once_start(logger_to_data->tid, logger_interval);
-				PRINT_CRITICAL("Logger starting");
+				PRINT_IMPORTANT("Logger starting");
 			}
 			freeFinsFrame(ff);
 		} else {
@@ -173,7 +173,7 @@ void logger_interrupt(void) {
 		int diff_packets = logger_packets - logger_saved_packets;
 		int diff_bytes = logger_bytes - logger_saved_bytes;
 		double diff_through = 8.0 * diff_bytes / diff_period;
-		PRINT_CRITICAL("period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f", logger_saved_curr, diff_curr, diff_packets, diff_bytes, diff_through);
+		PRINT_IMPORTANT("period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f", logger_saved_curr, diff_curr, diff_packets, diff_bytes, diff_through);
 
 		logger_saved_packets = logger_packets;
 		logger_saved_bytes = logger_bytes;
@@ -186,7 +186,7 @@ void logger_interrupt(void) {
 			double test = time_diff(&logger_start, &logger_end) / 1000.0;
 			//double through = 8.0 * (logger_bytes - 10 * 1470) / test;
 			double through = 8.0 * logger_bytes / test;
-			PRINT_CRITICAL("Logger stopping: total=%f,\t packets=%d,\t bytes=%d,\t through=%f", test, logger_packets, logger_bytes, through);
+			PRINT_IMPORTANT("Logger stopping: total=%f,\t packets=%d,\t bytes=%d,\t through=%f", test, logger_packets, logger_bytes, through);
 		} else {
 			timer_once_start(logger_to_data->tid, logger_interval);
 		}
@@ -196,19 +196,19 @@ void logger_interrupt(void) {
 }
 
 void *switch_to_logger(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (logger_proto.running_flag) {
 		logger_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void logger_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	logger_proto.running_flag = 1;
 
 	module_create_ops(&logger_proto);
@@ -227,13 +227,13 @@ void logger_init(void) {
 }
 
 void logger_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_logger_thread, fins_pthread_attr, switch_to_logger, fins_pthread_attr);
 }
 
 void logger_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	logger_proto.running_flag = 0;
 	sem_post(logger_proto.event_sem);
 
@@ -241,12 +241,12 @@ void logger_shutdown(void) {
 
 	//TODO expand this
 
-	PRINT_CRITICAL("Joining switch_to_logger_thread");
+	PRINT_IMPORTANT("Joining switch_to_logger_thread");
 	pthread_join(switch_to_logger_thread, NULL);
 }
 
 void logger_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	module_unregister(logger_proto.module_id);
 
 	//TODO free all module related mem

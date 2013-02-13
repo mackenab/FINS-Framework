@@ -925,7 +925,7 @@ void main_established(struct tcp_connection *conn) {
 			cong_space = conn->cong_window - (double) flight_size;
 
 			//((struct tcp_request *) conn->request_queue->front->data)->len - conn->request_index;
-			//PRINT_CRITICAL("write=%u, flight=%u, recv=%f, cong=%f", write_space, flight_size, recv_space, cong_space);
+			//PRINT_IMPORTANT("write=%u, flight=%u, recv=%f, cong=%f", write_space, flight_size, recv_space, cong_space);
 
 
 			//if (conn->send_win && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
@@ -2678,19 +2678,19 @@ void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_i
 }
 
 void *switch_to_tcp(void *local) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	while (tcp_proto.running_flag) {
 		tcp_get_ff();
 		PRINT_DEBUG("");
 	}
 
-	PRINT_CRITICAL("Exited");
+	PRINT_IMPORTANT("Exited");
 	pthread_exit(NULL);
 }
 
 void tcp_init(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	tcp_proto.running_flag = 1;
 
 	module_create_ops(&tcp_proto);
@@ -2711,7 +2711,7 @@ void tcp_init(void) {
 }
 
 void tcp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 
 	secure_pthread_create(&switch_to_tcp_thread, fins_pthread_attr, switch_to_tcp, fins_pthread_attr);
 }
@@ -2755,7 +2755,7 @@ void tcp_get_ff(void) {
 }
 
 void tcp_shutdown(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	tcp_proto.running_flag = 0;
 	sem_post(tcp_proto.event_sem);
 
@@ -2791,12 +2791,12 @@ void tcp_shutdown(void) {
 	/*#*/PRINT_DEBUG("");
 	sem_post(&conn_stub_list_sem);
 
-	PRINT_CRITICAL("Joining switch_to_tcp_thread");
+	PRINT_IMPORTANT("Joining switch_to_tcp_thread");
 	pthread_join(switch_to_tcp_thread, NULL);
 }
 
 void tcp_release(void) {
-	PRINT_CRITICAL("Entered");
+	PRINT_IMPORTANT("Entered");
 	module_unregister(tcp_proto.module_id);
 
 	//TODO free all module related mem

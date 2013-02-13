@@ -34,7 +34,7 @@
 
 //commenting stops debug printout
 //#define DEBUG
-#define CRITICAL
+#define IMPORTANT
 #define ERROR
 
 #ifdef DEBUG
@@ -43,10 +43,10 @@
 #define PRINT_DEBUG(format, args...)
 #endif
 
-#ifdef CRITICAL
-#define PRINT_CRITICAL(format, args...) printk("FINS: CRITICAL: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
+#ifdef IMPORTANT
+#define PRINT_IMPORTANT(format, args...) printk("FINS: IMPORTANT: %s, %d: "format"\n", __FUNCTION__, __LINE__, ##args);
 #else
-#define PRINT_CRITICAL(format, args...)
+#define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR
@@ -76,8 +76,8 @@ int print_exit_debug(const char *func, int line, int rc) {
 	return rc;
 }
 
-int print_exit_critical(const char *func, int line, int rc) {
-	printk(KERN_DEBUG "FINS: CRITICAL: %s, %d: Exited: %d\n", func, line, rc);
+int print_exit_important(const char *func, int line, int rc) {
+	printk(KERN_DEBUG "FINS: IMPORTANT: %s, %d: Exited: %d\n", func, line, rc);
 	return rc;
 }
 
@@ -701,11 +701,11 @@ void nl_data_ready(struct sk_buff *skb) {
 			reply_call = *(u_int *) buf;
 			if (reply_call == daemon_start_call) {
 				if (fins_daemon_pid != -1) {
-					PRINT_CRITICAL("### Daemon pID changed, old pid=%d", fins_daemon_pid);
+					PRINT_IMPORTANT("### Daemon pID changed, old pid=%d", fins_daemon_pid);
 				}
 				//fins_stack_passthrough_enabled = 1;
 				fins_daemon_pid = pid;
-				PRINT_CRITICAL("### Daemon connected, pid=%d", fins_daemon_pid);
+				PRINT_IMPORTANT("### Daemon connected, pid=%d", fins_daemon_pid);
 
 				if (down_interruptible(&wedge_sockets_sem)) {
 					PRINT_ERROR("sockets_sem acquire fail");
@@ -721,7 +721,7 @@ void nl_data_ready(struct sk_buff *skb) {
 				wedge_calls_remove_all();
 				up(&wedge_calls_sem);
 			} else if (reply_call == daemon_stop_call) {
-				PRINT_CRITICAL("### Daemon disconnected");
+				PRINT_IMPORTANT("### Daemon disconnected");
 				//fins_stack_passthrough_enabled = 0;
 				fins_daemon_pid = -1; //TODO expand this functionality
 
@@ -813,7 +813,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -972,7 +972,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -1111,7 +1111,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -1244,7 +1244,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -1383,7 +1383,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -1591,7 +1591,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -1766,7 +1766,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -1973,7 +1973,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -2251,7 +2251,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -2927,7 +2927,7 @@ static int fins_release(struct socket *sock) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -3065,7 +3065,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -3246,7 +3246,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -3370,7 +3370,7 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	char *buf; // used for test
 	ssize_t buffer_length; // used for test
 
-	PRINT_CRITICAL("Called");
+	PRINT_IMPORTANT("Called");
 	return -1;
 
 	sk1 = sock1->sk;
@@ -3419,7 +3419,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -3549,7 +3549,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -3688,7 +3688,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -3887,7 +3887,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	struct task_struct *curr = get_current();
 	pid_t call_pid = curr->pid;
-	PRINT_CRITICAL("Entered: call_pid=%d", call_pid);
+	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
 		PRINT_ERROR("daemon not connected");
@@ -4107,25 +4107,25 @@ static void teardown_fins_netlink(void) {
  * Note: the init and exit functions must be defined (or declared/declared in header file) before the macros are called
  */
 static int __init fins_stack_wedge_init(void) {
-	PRINT_CRITICAL("############################################");
-	PRINT_CRITICAL("Unregistering AF_INET");
+	PRINT_IMPORTANT("############################################");
+	PRINT_IMPORTANT("Unregistering AF_INET");
 	sock_unregister(AF_INET);
-	PRINT_CRITICAL("Loading the fins_stack_wedge module");
+	PRINT_IMPORTANT("Loading the fins_stack_wedge module");
 	setup_fins_protocol();
 	setup_fins_netlink();
 	wedge_calls_init();
 	wedge_sockets_init();
 	fins_daemon_pid = -1;
-	PRINT_CRITICAL("Made it through the fins_stack_wedge initialization");
+	PRINT_IMPORTANT("Made it through the fins_stack_wedge initialization");
 
 	return 0;
 }
 
 static void __exit fins_stack_wedge_exit(void) {
-	PRINT_CRITICAL("Unloading the fins_stack_wedge module");
+	PRINT_IMPORTANT("Unloading the fins_stack_wedge module");
 	teardown_fins_netlink();
 	teardown_fins_protocol();
-	PRINT_CRITICAL("Made it through the fins_stack_wedge removal");
+	PRINT_IMPORTANT("Made it through the fins_stack_wedge removal");
 	//the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
