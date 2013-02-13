@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/0.755950517/PATH/delimiter=\:
+environment/project/0.755950517/PATH/operation=append
+environment/project/0.755950517/PATH/value=/usr/lib/lightdm/lightdm\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/usr/games\:/home/atm011/android/android-sdk-linux/tools\:/home/atm011/android/android-sdk-linux/platform-tools\:/home/atm011/android/workspace/FINS/android-ndk-r8b
+environment/project/0.755950517/append=true
+environment/project/0.755950517/appendContributed=true

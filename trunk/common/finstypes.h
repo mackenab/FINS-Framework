@@ -18,10 +18,16 @@
 #define FINSTYPES_H_
 
 //Include MetaData header File
-#include "metadata.h"		//guicomm need this local
+#include <ctype.h>
 #include <errno.h>
+#include <pthread.h>
 #include <semaphore.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
+
+#include "finsdebug.h"
+#include "metadata.h"
 
 //Definition of the modules IDs
 #define SWITCH_ID 0
@@ -197,12 +203,7 @@ struct finsFrame * unserializeCtrlFrame(unsigned char *, int);
 #define IP4_ADR_P2H(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 #endif /* IP4_ADR_P2N */
 
-#ifndef ntohll
-#define ntohll(x)
-#endif
-
-#ifndef htonll
-#define htonll(x)
-#endif
+void print_hex_ascii_line(const u_char *payload, int len, int offset);
+void print_hex_block(const u_char *payload, int len);
 
 #endif /* FINSTYPES_H_ */

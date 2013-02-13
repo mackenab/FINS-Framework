@@ -9,10 +9,11 @@
 #ifndef METADATA_H_
 #define METADATA_H_
 
+#include <libconfig.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libconfig.h>
+
 #include "finsdebug.h"
 
 /* over riding the original types of the Config library */

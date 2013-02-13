@@ -12,12 +12,12 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include <finstypes.h>
-#include <queueModule.h>
 #include <pthread.h>
 #include <sys/time.h>
-#include <finstime.h>
 #include "udp.h"
+
+#include <finstime.h>
+
 
 #define DUMMYA 123
 #define DUMMYB 456

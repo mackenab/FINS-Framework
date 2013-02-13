@@ -14,6 +14,7 @@
 //#include <finstypes.h>
 //#include <queueModule.h>
 #include <sys/time.h>
+
 #include <finsdebug.h>
 
 #include "interface.h"
@@ -28,93 +29,7 @@ int capture_pipe_fd; /** capture file descriptor to read from capturer */
 int inject_pipe_fd; /** inject file descriptor to read from capturer */
 
 /** special functions to print the data within a frame for testing*/
-void print_hex_ascii_line(const u_char *payload, int len, int offset) {
 
-	int i;
-	int gap;
-	const u_char *ch;
-
-	/* offset */
-	printf("%05d   ", offset);
-
-	/* hex */
-	ch = payload;
-	for (i = 0; i < len; i++) {
-		printf("%02x ", *ch);
-		ch++;
-		/* print extra space after 8th byte for visual aid */
-		if (i == 7)
-			printf(" ");
-	}
-	/* print space to handle line less than 8 bytes */
-	if (len < 8)
-		printf(" ");
-
-	/* fill hex gap with spaces if not full line */
-	if (len < 16) {
-		gap = 16 - len;
-		for (i = 0; i < gap; i++) {
-			printf("   ");
-		}
-	}
-	printf("   ");
-#ifndef BUILD_FOR_ANDROID
-	/* ascii (if printable)*/
-	ch = payload;
-	for (i = 0; i < len; i++) {
-		if (isprint(*ch))
-			printf("%c", *ch);
-		else
-			printf(".");
-		ch++;
-	}
-	printf("\n");
-#endif
-	return;
-
-} //end of print_hex_ascii_line()
-
-void print_frame(const u_char *payload, int len) {
-
-	PRINT_DEBUG("passed len = %d", len);
-	int len_rem = len;
-	int line_width = 16; /* number of bytes per line */
-	int line_len;
-	int offset = 0; /* zero-based offset counter */
-	const u_char *ch = payload;
-
-	if (len <= 0)
-		return;
-
-	/* data fits on one line */
-	if (len <= line_width) {
-		PRINT_DEBUG("calling hex_ascii_line");
-		print_hex_ascii_line(ch, len, offset);
-		return;
-	}
-
-	/* data spans multiple lines */
-	for (;;) {
-		/* compute current line length */
-		line_len = line_width % len_rem;
-		/* print line */
-		print_hex_ascii_line(ch, line_len, offset);
-		/* compute total remaining */
-		len_rem = len_rem - line_len;
-		/* shift pointer to remaining bytes to print */
-		ch = ch + line_len;
-		/* add offset */
-		offset = offset + line_width;
-		/* check if we have line width chars or less */
-		if (len_rem <= line_width) {
-			/* print last line and get out */
-			print_hex_ascii_line(ch, len_rem, offset);
-			break;
-		}
-	}
-
-	return;
-} // end of print_frame
 /** ---------------------------------------------------------*/
 
 int interface_setNonblocking(int fd) { //TODO move to common file?
@@ -219,7 +134,7 @@ void *capturer_to_interface(void *local) {
 		}
 
 		PRINT_DEBUG("frame read: frame_len=%d", frame_len);
-		//print_frame(data,datalen);
+		//print_hex_block(data,datalen);
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
 				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];

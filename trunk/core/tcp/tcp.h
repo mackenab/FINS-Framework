@@ -10,11 +10,9 @@
 #include <errno.h>
 #include <linux/net.h>
 #include <math.h>
-#include <metadata.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
-#include <queueModule.h>
 #include <semaphore.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -34,7 +32,9 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <finstime.h>
-#include "finsthreads.h"
+#include <finsthreads.h>
+#include <metadata.h>
+#include <queueModule.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.

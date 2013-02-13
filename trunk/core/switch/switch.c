@@ -5,11 +5,6 @@
  *      @author Abdallah Abdallah
  */
 
-#include <finstypes.h>
-#include <metadata.h>
-#include <queueModule.h>
-#include <arpa/inet.h>
-
 #include "switch.h"
 static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name = "switch", .running_flag = 1, };
 

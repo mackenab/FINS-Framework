@@ -9,11 +9,15 @@
 #define SWITCH_H_
 
 #include <pthread.h>
-#include <finstypes.h>
+#include <semaphore.h>
 //#include <metadata.h>
-#include <queueModule.h>
 //#include <arpa/inet.h>
 #include <unistd.h>
+
+#include <finsdebug.h>
+#include <finstypes.h>
+#include <metadata.h>
+#include <queueModule.h>
 
 #define MAX_Queue_size 100000
 

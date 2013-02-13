@@ -8,17 +8,17 @@
 #define ARP_H_
 
 #include <inttypes.h>
-#include <metadata.h>
 #include <stdint.h>
 #include <sys/time.h>
 #include <math.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <queueModule.h>
 
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <finstime.h>
+#include <metadata.h>
+#include <queueModule.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID

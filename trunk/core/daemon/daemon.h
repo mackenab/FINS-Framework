@@ -38,14 +38,14 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-/** additional header for queues */
-#include <queueModule.h>
 /**additional headers for testing */
 #include <finsdebug.h>
 /** Additional header for meta-data manipulation */
 #include <metadata.h>
-#include <finstime.h>
 #include <finstypes.h>
+#include <finstime.h>
+/** additional header for queues */
+#include <queueModule.h>
 //#include <switch.h>
 
 //#include "arp.c"
@@ -457,6 +457,11 @@ struct errhdr {
 #ifndef SO_RXQ_OVFL
 #define SO_RXQ_OVFL 40
 #endif
+
+#ifndef SOCK_NONBLOCK
+#define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
 //---------------------------------------------------
 
 #include "udpHandling.h"

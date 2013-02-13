@@ -1,11 +1,13 @@
 #ifndef INTERFACE_H_
 #define INTERFACE_H_
 
+#include <sys/types.h>
+#include <stdint.h>
+
+#include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
 #include <queueModule.h>
-#include <sys/types.h>
-#include <stdint.h>
 
 /** Ethernet Stub Variables  */
 #ifdef BUILD_FOR_ANDROID
@@ -53,9 +55,5 @@ void interface_out_fdf(struct finsFrame *ff);
 void interface_in_fdf(struct finsFrame *ff);
 void interface_fcf(struct finsFrame *ff);
 void interface_exec(struct finsFrame *ff);
-
-/*--------------------------------------------------------------------*/
-void print_frame(const u_char *payload, int len);
-void print_hex_ascii_line(const u_char *payload, int len, int offset);
 
 #endif
