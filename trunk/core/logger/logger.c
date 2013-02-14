@@ -4,18 +4,20 @@
  *  Created on: Feb 3, 2013
  *      Author: alex
  */
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include <finstypes.h>
-#include <queueModule.h>
 #include <pthread.h>
 #include <sys/time.h>
+
+#include <finstypes.h>
 #include <finstime.h>
-#include "logger.h"
+#include <metadata.h>
+#include <queueModule.h>
 
 #include <switch.h>
 static struct fins_proto_module logger_proto = { .module_id = LOGGER_ID, .name = "logger", .running_flag = 1, };
@@ -204,7 +206,8 @@ void *switch_to_logger(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void logger_init(void) {

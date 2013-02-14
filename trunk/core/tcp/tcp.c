@@ -1435,7 +1435,8 @@ void *main_thread(void *local) {
 	conn_free(conn);
 
 	PRINT_DEBUG("Exited: conn=%p", conn);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
@@ -2686,7 +2687,8 @@ void *switch_to_tcp(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void tcp_init(void) {

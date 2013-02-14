@@ -67,7 +67,7 @@ CCOPTS = -g -O0 -Wall #flags for valgrind
 INCLS =
 LDOPTS = -g -O0 -Wall #flags for valgrind
 LIBPATHS =
-LIBS = -lpthread -lconfig -lpcap -lc -ldl -lm -lrt
+LIBS = -lpthread -lconfig -lpcap -lc -lm -lrt
 endif
 
 

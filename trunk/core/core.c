@@ -12,20 +12,23 @@
  *       and act appropriately. Notice that this isn’t the same as reading an invalid file
  *       descriptor, which read considers an error and indicates by returning –1.
  *       */
+#include "core.h"
 
 #include <signal.h>
 
-#include "core.h"
+#include <finsdebug.h>
+#include <finstypes.h>
+#include <finstime.h>
 #include <switch.h>
-#include <daemon.h>
-#include <interface.h>
-#include <ipv4.h>
-#include <arp.h>
-#include <udp.h>
-#include <tcp.h>
-#include <icmp.h>
+//#include <daemon.h>
+//#include <interface.h>
+//#include <ipv4.h>
+//#include <arp.h>
+//#include <udp.h>
+//#include <tcp.h>
+//#include <icmp.h>
 //#include <rtm.h>
-#include <logger.h>
+//#include <logger.h>
 
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
@@ -122,6 +125,7 @@ void *test_thread_2(void *local) {
 }
 
 void core_main() {
+	/*
 	if (0) { //TODO remove, testing code
 		struct thread_pool *pool = pool_create(1, 10, 10);
 		PRINT_DEBUG("setup done");
@@ -155,6 +159,7 @@ void core_main() {
 
 		return;
 	}
+	*/
 
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
@@ -229,6 +234,7 @@ void core_main() {
 	//logger_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
+	/*
 	if (0) {
 		char recv_data[4000];
 
@@ -317,6 +323,7 @@ void core_main() {
 			PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
 		}
 	}
+	*/
 	//#############################
 
 

@@ -18,6 +18,17 @@ int read_configurations();
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
+#include <net/if.h>
+#include <stdint.h>
+
+char my_host_if_name[IFNAMSIZ];
+uint64_t my_host_mac_addr;
+uint32_t my_host_ip_addr;
+uint32_t my_host_mask;
+uint32_t loopback_ip_addr;
+uint32_t loopback_mask;
+uint32_t any_ip_addr;
+
 void core_main();
 
 #endif /* CORE_H_ */

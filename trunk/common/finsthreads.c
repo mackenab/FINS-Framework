@@ -43,7 +43,8 @@ void *worker_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u", worker->id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 struct pool_worker *worker_create(sem_t *inactive_sem, uint32_t *inactive_num, struct linked_list *queue, uint32_t id) {
@@ -138,7 +139,8 @@ void *controller_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u", controller->id);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 struct pool_controller *controller_create(struct thread_pool *pool) {

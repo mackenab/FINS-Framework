@@ -48,7 +48,8 @@ void *switch_to_ipv4(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 //################ ARP/interface stuff //TODO move to common?

@@ -1,3 +1,5 @@
+#include "interface.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -16,8 +18,6 @@
 #include <sys/time.h>
 
 #include <finsdebug.h>
-
-#include "interface.h"
 
 #include <switch.h>
 static struct fins_proto_module interface_proto = { .module_id = INTERFACE_ID, .name = "interface", .running_flag = 1, };
@@ -192,7 +192,8 @@ void *capturer_to_interface(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *switch_to_interface(void *local) {
@@ -204,7 +205,8 @@ void *switch_to_interface(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 } // end of Inject Function
 
 void interface_get_ff(void) {

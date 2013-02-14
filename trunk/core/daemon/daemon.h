@@ -48,8 +48,6 @@
 #include <queueModule.h>
 //#include <switch.h>
 
-//#include "arp.c"
-
 /** FINS Sockets database related defined constants */
 #define MAX_SOCKETS 50 //TODO increase
 #define MAX_CALLS 50 //TODO increase
@@ -214,13 +212,13 @@ struct tcp_Parameters {
 };
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
-char my_host_if_name[IFNAMSIZ];
-uint64_t my_host_mac_addr;
-uint32_t my_host_ip_addr;
-uint32_t my_host_mask;
-uint32_t loopback_ip_addr;
-uint32_t loopback_mask;
-uint32_t any_ip_addr;
+extern char my_host_if_name[IFNAMSIZ];
+extern uint64_t my_host_mac_addr;
+extern uint32_t my_host_ip_addr;
+extern uint32_t my_host_mask;
+extern uint32_t loopback_ip_addr;
+extern uint32_t loopback_mask;
+extern uint32_t any_ip_addr;
 
 struct nl_wedge_to_daemon {
 	uint64_t sock_id;

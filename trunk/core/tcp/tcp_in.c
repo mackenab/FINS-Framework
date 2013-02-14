@@ -2369,6 +2369,7 @@ void *recv_thread_test(void *local) {
 	PRINT_DEBUG("Exited: id=%u", id);
 
 	free(thread_data);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 

@@ -4,8 +4,13 @@
  *  @date Mar 14, 2011
  *      @author Abdallah Abdallah
  */
-
 #include "switch.h"
+
+#include <finsdebug.h>
+#include <finstypes.h>
+#include <metadata.h>
+#include <queueModule.h>
+
 static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name = "switch", .running_flag = 1, };
 
 pthread_t switch_thread;
@@ -170,7 +175,8 @@ void *switch_loop(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 } // end of switch_init Function
 
 void switch_init(void) {

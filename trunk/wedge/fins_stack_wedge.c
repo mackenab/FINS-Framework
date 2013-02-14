@@ -8,23 +8,6 @@
 #define M_DESCRIPTION	"Unregisters AF_INET and registers the FINS protocol in its place"
 #define M_AUTHOR	"Jonathan Reed <jonathanreed07@gmail.com>"
 
-//#include <linux/module.h>	/* Needed by all modules */
-//#include <linux/kernel.h>	/* Needed for KERN_INFO */
-//#include <linux/init.h>		/* Needed for the macros */
-#include <net/sock.h>		/* Needed for proto and sock struct defs, etc. */
-//#include <linux/socket.h>	/* Needed for the sockaddr struct def */
-//#include <linux/errno.h>	/* Needed for error number defines */
-//#include <linux/aio.h>		/* Needed for fins_sendmsg */
-//#include <linux/skbuff.h>	/* Needed for sk_buff struct def, etc. */
-//#include <linux/net.h>		/* Needed for socket struct def, etc. */
-//#include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
-//#include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
-//#include <asm/uaccess.h>	/** Copy from user */
-#include <asm/ioctls.h>		/* Needed for fins_ioctl */
-//#include <linux/sockios.h>
-//#include <linux/delay.h>	/* For sleep */
-#include <linux/if.h>		/* Needed for fins_ioctl */
-
 #include "fins_stack_wedge.h"	/* Defs for this module */
 
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//16384//8192	// Same as userspace, Pick an appropriate value here //NLMSG_GOODSIZE
@@ -4060,7 +4043,7 @@ static void setup_fins_protocol(void) {
 
 	// Changing this value to 0 disables the FINS passthrough by default
 	// Changing this value to 1 enables the FINS passthrough by default
-	fins_stack_passthrough_enabled = 1; //0; // Initialize kernel wide FINS data passthrough
+	//fins_stack_passthrough_enabled = 1; //0; // Initialize kernel wide FINS data passthrough
 
 	/* Call proto_register and report debugging info */
 	rc = proto_register(&fins_proto, 1);

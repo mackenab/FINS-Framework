@@ -4,14 +4,15 @@
  *  Created on: September 5, 2012
  *      Author: Jonathan Reed
  */
+#include "arp.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <finstypes.h>
+
 #include <finsdebug.h>
+#include <finstypes.h>
 #include <metadata.h>
-#include "arp.h"
 
 void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	struct arp_interface *interface;

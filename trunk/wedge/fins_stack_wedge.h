@@ -1,6 +1,23 @@
 #ifndef FINS_STACK_WEDGE_H_
 #define FINS_STACK_WEDGE_H_
 
+//#include <linux/module.h>	/* Needed by all modules */
+//#include <linux/kernel.h>	/* Needed for KERN_INFO */
+//#include <linux/init.h>		/* Needed for the macros */
+#include <net/sock.h>		/* Needed for proto and sock struct defs, etc. */
+//#include <linux/socket.h>	/* Needed for the sockaddr struct def */
+//#include <linux/errno.h>	/* Needed for error number defines */
+//#include <linux/aio.h>		/* Needed for fins_sendmsg */
+//#include <linux/skbuff.h>	/* Needed for sk_buff struct def, etc. */
+//#include <linux/net.h>		/* Needed for socket struct def, etc. */
+//#include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
+//#include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
+//#include <asm/uaccess.h>	/** Copy from user */
+#include <asm/ioctls.h>		/* Needed for fins_ioctl */
+//#include <linux/sockios.h>
+//#include <linux/delay.h>	/* For sleep */
+#include <linux/if.h>		/* Needed for fins_ioctl */
+
 /*
  * NETLINK_FINS must match a corresponding constant in the userspace daemon program that is to talk to this module.  
  * NETLINK_ constants are normally defined in <linux/netlink.h> although adding a constant here would necessitate a 
@@ -167,7 +184,7 @@ int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltyp
 int checkConfirmation(int sock_index);
 
 /* This is a flag to enable or disable the FINS stack passthrough */
-int fins_stack_passthrough_enabled;
-EXPORT_SYMBOL (fins_stack_passthrough_enabled);
+//int fins_stack_passthrough_enabled;
+//EXPORT_SYMBOL (fins_stack_passthrough_enabled);
 
 #endif /* FINS_STACK_WEDGE_H_ */

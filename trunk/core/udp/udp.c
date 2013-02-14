@@ -7,6 +7,8 @@
 
 //Kevin added some debugging code in this file to print out the received control frames and send back a response
 //The control frames were never updated to the new types
+#include "udp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -14,10 +16,8 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/time.h>
-#include "udp.h"
 
 #include <finstime.h>
-
 
 #define DUMMYA 123
 #define DUMMYB 456
@@ -509,7 +509,8 @@ void *switch_to_udp(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void udp_init(void) {

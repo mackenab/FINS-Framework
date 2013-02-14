@@ -4,12 +4,13 @@
  *  Created on: Mar 15, 2011 - June 22, 2011
  *      Author: Abdallah Abdallah & Mark Hutcheson
  */
+#include "icmp.h"
 
 #include <sys/time.h>
 #include <math.h>
 #include <string.h>
-#include "icmp.h"
 #include <ipv4.h>
+
 #include <finstime.h>
 
 #include <switch.h>
@@ -839,7 +840,8 @@ void *switch_to_icmp(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void icmp_init(void) {

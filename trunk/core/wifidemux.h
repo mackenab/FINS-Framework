@@ -25,12 +25,12 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 #include <linux/if_ether.h>
 #include <pthread.h>
-#include "getMAC_Address.h"
-#include <finstypes.h>
+
 #include <finsdebug.h>
+#include <finstypes.h>
+#include <getMAC_Address.h>
 
 /* ethernet headers are always exactly 14 bytes [1] */
 #define SIZE_ETHERNET 14

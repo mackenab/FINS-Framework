@@ -2775,7 +2775,8 @@ void *wedge_to_daemon(void *local) {
 	close(nl_sockfd);
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void *switch_to_daemon(void *local) {
@@ -2787,7 +2788,8 @@ void *switch_to_daemon(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void daemon_handle_to(struct daemon_call *call) { //TODO finish transitioning to this TO system

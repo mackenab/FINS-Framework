@@ -4,12 +4,14 @@
  *  Created on: Jul 5, 2010
  *      Author: Abdallah Abdallah
  */
+#include "udp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
 #include <finstypes.h>
-#include "udp.h"
 
 /**@brief generates and returns a new Fins Frame using the paramters provided
  * @param dataOrCtrl tells whether or not to make an FCF or FDF

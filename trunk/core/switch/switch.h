@@ -8,10 +8,9 @@
 #ifndef SWITCH_H_
 #define SWITCH_H_
 
+//#include <arpa/inet.h>
 #include <pthread.h>
 #include <semaphore.h>
-//#include <metadata.h>
-//#include <arpa/inet.h>
 #include <unistd.h>
 
 #include <finsdebug.h>

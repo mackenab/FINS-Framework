@@ -12,12 +12,14 @@
  * the Fins Frame's destination within the UDP module.
  *
  */
+#include "udp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
 #include <finstypes.h>
-#include "udp.h"
 #include <queueModule.h>
 
 extern struct udp_statistics udpStat;

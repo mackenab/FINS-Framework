@@ -9,7 +9,7 @@
  *
  */
 
-#include <queueModule.h>
+#include "queueModule.h"
 
 /**@brief initializes a queue buffer between the switch and the module
  * @return pointer to the queue whose default name is Q
@@ -190,4 +190,3 @@ struct finsFrame * read_queue(finsQueue q) {
 int checkEmpty(finsQueue Q) {
 	return (IsEmpty(Q));
 }
-

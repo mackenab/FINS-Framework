@@ -11,7 +11,7 @@ $(info Note: UDP test code currently being excluded from build)
 LOCAL_SRC_FILES := $(filter-out udp_test.c, $(LOCAL_SRC_FILES))
 
 LOCAL_STATIC_LIBRARIES := fins_common fins_data_structure fins_switch
-LOCAL_LDLIBS := -landroid -llog -lc -ldl -lm
+#LOCAL_LDLIBS := -landroid -llog -lc -ldl -lm
 LOCAL_CFLAGS := -DBUILD_FOR_ANDROID
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
 include $(BUILD_STATIC_LIBRARY)

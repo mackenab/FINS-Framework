@@ -10,9 +10,10 @@
 
 #include <stdint.h>
 #include <pthread.h>
+
+#include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
-#include <finsdebug.h>
 #include <queueModule.h>
 #include "icmp_types.h"
 

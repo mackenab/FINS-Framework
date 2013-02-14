@@ -4,11 +4,12 @@
  *  Created on: Jun 29, 2010
  *      Author: Abdallah Abdallah
  */
+#include "udp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "udp.h"
 
 /**
  * @brief removes the UDP header information from an incoming datagram passing it on to the socket.

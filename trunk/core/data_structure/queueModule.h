@@ -13,8 +13,8 @@
 
 #include <semaphore.h>
 
-#include "queue.h"
 #include <finstypes.h>
+#include "queue.h"
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
@@ -34,9 +34,8 @@ int DisposeFinsQueue(finsQueue Q);
 int term_queue(finsQueue q);
 
 int write_queue(struct finsFrame *ff, finsQueue q);
-
 int write_queue_front(struct finsFrame *ff, finsQueue q);
 
-struct finsFrame * read_queue(finsQueue q);
+struct finsFrame *read_queue(finsQueue q);
 
 #endif /* QUEUEMODULE_H_ */

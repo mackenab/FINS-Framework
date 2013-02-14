@@ -4,6 +4,7 @@
  *@author Jonathan Reed
  *@date  September 5, 2012
  */
+#include "arp.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +12,6 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <pthread.h>
-#include "arp.h"
 
 #include <switch.h>
 static struct fins_proto_module arp_proto = { .module_id = ARP_ID, .name = "arp", .running_flag = 1, };
@@ -813,7 +813,8 @@ void *switch_to_arp(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
+	return NULL;
 }
 
 void arp_init(void) {
