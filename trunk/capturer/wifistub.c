@@ -86,8 +86,6 @@ void capture_init(char *interface) {
 		exit(-1);
 	}
 
-	int check_monitor_mode;
-
 	struct bpf_program fp; /* compiled filter program (expression) */
 	bpf_u_int32 mask; /* subnet mask */
 	bpf_u_int32 net; /* ip */
@@ -173,7 +171,7 @@ void capture_init(char *interface) {
 
 	//CHANGED mrd015 !!!!! start pcap_can_set_rfmon(...) not in Bionic!
 #ifndef BUILD_FOR_ANDROID
-	check_monitor_mode = pcap_can_set_rfmon(capture_handle);
+	int check_monitor_mode = pcap_can_set_rfmon(capture_handle);
 	if (check_monitor_mode) {
 		PRINT_DEBUG(" Monitor mode can be set");
 	} else if (check_monitor_mode == 0) {

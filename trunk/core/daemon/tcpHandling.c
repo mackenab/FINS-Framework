@@ -613,7 +613,7 @@ void getname_out_tcp(struct nl_wedge_to_daemon *hdr, int peer) {
 	free(addr);
 }
 
-void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, ssize_t buf_len) {
+void ioctl_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
 	uint32_t len;
 	int msg_len;
 	uint8_t *msg = NULL;

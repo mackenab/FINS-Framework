@@ -34,7 +34,7 @@
 #include <finstime.h>
 #include <finsthreads.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 //Macros for the TCP header
 
 //These can be ANDed (bitwise, of course) with the 'flags' field of the tcp_segment structure to get the appropriate flags.

@@ -15,7 +15,7 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID

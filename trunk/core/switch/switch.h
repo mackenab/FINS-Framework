@@ -16,7 +16,7 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 
 #define MAX_Queue_size 100000
 

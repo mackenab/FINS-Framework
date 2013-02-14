@@ -101,12 +101,18 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags);
 
 /* FINS netlink functions*/
-int nl_send(int pid, void *buf, ssize_t len, int flags);
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags);
+int nl_send(int pid, void *buf, int len, int flags);
+int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int flags);
 void nl_data_ready(struct sk_buff *skb);
 
 // This function extracts a unique ID from the kernel-space perspective for each socket
 inline unsigned long long get_unique_sock_id(struct sock *sk);
+
+struct nl_wedge_to_daemon_hdr {
+	int msg_len;
+	int part_len;
+	int pos;
+};
 
 struct nl_wedge_to_daemon {
 	unsigned long long sock_id;

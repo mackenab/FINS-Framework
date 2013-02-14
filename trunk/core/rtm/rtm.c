@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <finstypes.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 #include "rtm.h"
 
 //declares external semaphores to manage/protect the RTM_to_Switch Queue multithreading

@@ -362,7 +362,7 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	free(msg);
 }
 
-void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, ssize_t buf_len) {
+void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
 	uint32_t len;
 	//uint8_t *val;
 	int msg_len;

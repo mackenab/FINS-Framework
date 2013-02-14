@@ -6,7 +6,7 @@
  */
 
 #include "ipv4.h"
-#include <queueModule.h>
+#include <finsqueue.h>
 
 extern struct ip4_stats stats;
 

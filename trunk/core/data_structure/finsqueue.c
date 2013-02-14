@@ -9,7 +9,7 @@
  *
  */
 
-#include "queueModule.h"
+#include "finsqueue.h"
 
 /**@brief initializes a queue buffer between the switch and the module
  * @return pointer to the queue whose default name is Q

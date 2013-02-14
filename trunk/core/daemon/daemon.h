@@ -45,7 +45,7 @@
 #include <finstypes.h>
 #include <finstime.h>
 /** additional header for queues */
-#include <queueModule.h>
+#include <finsqueue.h>
 //#include <switch.h>
 
 /** FINS Sockets database related defined constants */
@@ -220,6 +220,12 @@ extern uint32_t loopback_ip_addr;
 extern uint32_t loopback_mask;
 extern uint32_t any_ip_addr;
 
+struct nl_wedge_to_daemon_hdr {
+	int msg_len;
+	int part_len;
+	int pos;
+};
+
 struct nl_wedge_to_daemon {
 	uint64_t sock_id;
 	int sock_index;
@@ -367,24 +373,24 @@ int get_fdf(int sock_index, uint64_t sock_id, struct finsFrame **ff, int non_blo
 int get_fcf(int sock_index, uint64_t sock_id, struct finsFrame **ff, int non_blocking_flag); //blocking doesn't matter
 
 /** calls handling functions */
-void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void socketpair_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
-void sendpage_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, ssize_t len);
+void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void socketpair_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void sendpage_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
 
 void connect_timeout(struct daemon_call *call);
 void accept_timeout(struct daemon_call *call);

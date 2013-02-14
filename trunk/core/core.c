@@ -17,18 +17,25 @@
 #include <signal.h>
 
 #include <finsdebug.h>
-#include <finstypes.h>
-#include <finstime.h>
+//#include <finstypes.h>
+//#include <finstime.h>
+//#include <metadata.h>
+//#include <finsqueue.h>
+
 #include <switch.h>
-//#include <daemon.h>
-//#include <interface.h>
-//#include <ipv4.h>
-//#include <arp.h>
-//#include <udp.h>
-//#include <tcp.h>
-//#include <icmp.h>
+#include <daemon.h>
+#include <interface.h>
+#include <ipv4.h>
+#include <arp.h>
+#include <udp.h>
+#include <tcp.h>
+#include <icmp.h>
 //#include <rtm.h>
-//#include <logger.h>
+#include <logger.h>
+
+extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
+
+#define MAX_Queue_size 100000
 
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
@@ -54,37 +61,35 @@ int read_configurations() {
 	return EXIT_SUCCESS;
 }
 
-extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
-
 void core_termination_handler(int sig) {
 	PRINT_IMPORTANT("**********Terminating *******");
 
 	//shutdown all module threads in backwards order of startup
-	//logger_shutdown();
+	logger_shutdown();
 	//rtm_shutdown();
 
-	//udp_shutdown();
-	//tcp_shutdown();
-	//icmp_shutdown();
-	//ipv4_shutdown();
-	//arp_shutdown();
+	udp_shutdown();
+	tcp_shutdown();
+	icmp_shutdown();
+	ipv4_shutdown();
+	arp_shutdown();
 
-	//interface_shutdown(); //TODO finish
-	//daemon_shutdown(); //TODO finish
+	interface_shutdown(); //TODO finish
+	daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
 
 	//have each module free data & que/sem //TODO finish each of these
-	//logger_release();
+	logger_release();
 	//rtm_release();
 
-	//udp_release();
-	//tcp_release();
-	//icmp_release();
-	//ipv4_release();
-	//arp_release();
+	udp_release();
+	tcp_release();
+	icmp_release();
+	ipv4_release();
+	arp_release();
 
-	//interface_release();
-	//daemon_release();
+	interface_release();
+	daemon_release();
 	switch_release();
 
 	sem_destroy(&control_serial_sem);
@@ -189,6 +194,8 @@ void core_main() {
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 	//######################################################################
 
+	//finsQueue input_queue = init_queue("TEST", MAX_Queue_size);
+
 	register_to_signal(SIGRTMIN);
 
 	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
@@ -198,40 +205,40 @@ void core_main() {
 	// Start the driving thread of each module
 	PRINT_IMPORTANT("Initialize Modules");
 	switch_init(); //should always be first
-	//daemon_init(); //TODO improve how sets mac/ip
-	//interface_init();
+	daemon_init(); //TODO improve how sets mac/ip
+	interface_init();
 
-	//arp_init();
-	//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
+	arp_init();
+	arp_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	//ipv4_init();
-	//ipv4_set_interface(my_host_ip_addr, my_host_mask);
-	//ipv4_set_loopback(loopback_ip_addr, loopback_mask);
-	//ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
+	ipv4_init();
+	ipv4_set_interface(my_host_ip_addr, my_host_mask);
+	ipv4_set_loopback(loopback_ip_addr, loopback_mask);
+	ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	//icmp_init();
-	//tcp_init();
-	//udp_init();
+	icmp_init();
+	tcp_init();
+	udp_init();
 
 	//rtm_init(); //TODO when updated/fully implemented
-	//logger_init();
+	logger_init();
 
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 
 	PRINT_IMPORTANT("Run/start Modules");
 	switch_run(&fins_pthread_attr);
-	//daemon_run(&fins_pthread_attr);
-	//interface_run(&fins_pthread_attr);
+	daemon_run(&fins_pthread_attr);
+	interface_run(&fins_pthread_attr);
 
-	//arp_run(&fins_pthread_attr);
-	//ipv4_run(&fins_pthread_attr);
-	//icmp_run(&fins_pthread_attr);
-	//tcp_run(&fins_pthread_attr);
-	//udp_run(&fins_pthread_attr);
+	arp_run(&fins_pthread_attr);
+	ipv4_run(&fins_pthread_attr);
+	icmp_run(&fins_pthread_attr);
+	tcp_run(&fins_pthread_attr);
+	udp_run(&fins_pthread_attr);
 
 	//rtm_run(&fins_pthread_attr);
-	//logger_run(&fins_pthread_attr);
+	logger_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
 	/*
@@ -332,7 +339,7 @@ void core_main() {
 }
 
 #ifndef BUILD_FOR_ANDROID
-int  main() {
+int main() {
 	core_main();
 	return 0;
 }

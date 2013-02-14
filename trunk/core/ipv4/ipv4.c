@@ -6,7 +6,7 @@
  */
 
 #include "ipv4.h"
-#include <queueModule.h>
+#include <finsqueue.h>
 
 #include <switch.h>
 struct fins_proto_module ipv4_proto = { .module_id = IPV4_ID, .name = "ipv4", .running_flag = 1, }; //TODO make static?

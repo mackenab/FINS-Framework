@@ -346,7 +346,7 @@ int checkConfirmation(int call_index) {
 //assumes msg_buf is just the msg, does not have a prepended msg_len
 //break msg_buf into parts of size RECV_BUFFER_SIZE with a prepended header (header part of RECV...)
 //prepend msg header: total msg length, part length, part starting position
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int flags) {
+int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int flags) {
 	struct nlmsghdr *nlh;
 	struct sk_buff *skb;
 	int ret_val;
@@ -421,18 +421,19 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, ssize_t len, int
 	return 0;
 }
 
-int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
+int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 	int ret;
 	void *part_buf;
 	u_char *msg_pt;
 	int pos;
 	u_int seq;
-	u_char *hdr_msg_len;
-	u_char *hdr_part_len;
-	u_char *hdr_pos;
+	struct nl_wedge_to_daemon_hdr *part_hdr;
+	//u_char *hdr_msg_len;
+	//u_char *hdr_part_len;
+	//u_char *hdr_pos;
 	u_char *msg_start;
-	ssize_t header_size;
-	ssize_t part_len;
+	int header_size;
+	int part_len;
 
 	//#################### Debug
 #ifdef DEBUG
@@ -489,21 +490,27 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	pos = 0;
 	seq = 0;
 
-	hdr_msg_len = part_buf;
-	hdr_part_len = hdr_msg_len + sizeof(ssize_t);
-	hdr_pos = hdr_part_len + sizeof(ssize_t);
-	msg_start = hdr_pos + sizeof(int);
+	part_hdr = (struct nl_wedge_to_daemon_hdr *)part_buf;
+	//hdr_msg_len = part_buf;
+	//hdr_part_len = hdr_msg_len + sizeof(int);
+	//hdr_pos = hdr_part_len + sizeof(int);
+	//msg_start = hdr_pos + sizeof(int);
+	msg_start = part_buf + sizeof(struct nl_wedge_to_daemon_hdr);
 
-	header_size = msg_start - hdr_msg_len;
+	//header_size = msg_start - hdr_msg_len;
+	header_size = sizeof(struct nl_wedge_to_daemon_hdr);
 	part_len = RECV_BUFFER_SIZE - header_size;
 
-	*(ssize_t *) hdr_msg_len = msg_len;
-	*(ssize_t *) hdr_part_len = part_len;
+	//*(int *) hdr_msg_len = msg_len;
+	//*(int *) hdr_part_len = part_len;
+	part_hdr->msg_len = msg_len;
+	part_hdr->part_len = part_len;
 
 	while (msg_len - pos > part_len) {
 		PRINT_DEBUG("pos=%d, seq=%d", pos, seq);
 
-		*(int *) hdr_pos = pos;
+		//*(int *) hdr_pos = pos;
+		part_hdr->pos = pos;
 
 		memcpy(msg_start, msg_pt, part_len);
 
@@ -524,8 +531,10 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 	PRINT_DEBUG("pos=%d, seq=%d", pos, seq);
 
 	part_len = msg_len - pos;
-	*(ssize_t *) hdr_part_len = part_len;
-	*(int *) hdr_pos = pos;
+	//*(int *) hdr_part_len = part_len;
+	//*(int *) hdr_pos = pos;
+	part_hdr->part_len = part_len;
+	part_hdr->pos = pos;
 
 	memcpy(msg_start, msg_pt, part_len);
 
@@ -550,7 +559,7 @@ int nl_send(int pid, void *msg_buf, ssize_t msg_len, int flags) {
 void nl_data_ready(struct sk_buff *skb) {
 	struct nlmsghdr *nlh;
 	u_char *buf; // Pointer to data in payload
-	ssize_t len; // Payload length
+	int len; // Payload length
 	int pid; // pid of sending process
 	struct nl_daemon_to_wedge *hdr;
 
@@ -788,7 +797,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	u_int call_type = socket_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -947,7 +956,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	u_int call_type = bind_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -1086,7 +1095,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	u_int call_type = listen_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -1219,7 +1228,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	u_int call_type = connect_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -1358,7 +1367,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	u_int call_type = accept_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -1565,7 +1574,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	u_int call_type = getname_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -1741,7 +1750,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	u_int data_len = 0;
 	char *temp;
 
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -1947,7 +1956,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	u_int call_id;
 	int call_index;
 	struct sockaddr_in *addr_in;
-	ssize_t buf_len;
+	int buf_len;
 	u_char * buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char * pt;
@@ -2210,7 +2219,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	u_int call_type = ioctl_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -2902,7 +2911,7 @@ static int fins_release(struct socket *sock) {
 	u_int call_type = release_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -3040,7 +3049,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	u_int call_id;
 	int call_index;
 	int events;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -3221,7 +3230,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	u_int call_type = shutdown_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -3351,7 +3360,7 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	unsigned long long uniqueSockID1, uniqueSockID2;
 	int ret;
 	char *buf; // used for test
-	ssize_t buffer_length; // used for test
+	int buffer_length; // used for test
 
 	PRINT_IMPORTANT("Called");
 	return -1;
@@ -3394,7 +3403,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	u_int call_type = mmap_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -3524,7 +3533,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	u_int call_type = sendpage_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -3655,7 +3664,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	u_int call_type = getsockopt_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char *pt;
@@ -3862,7 +3871,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	u_int call_type = setsockopt_call;
 	u_int call_id;
 	int call_index;
-	ssize_t buf_len;
+	int buf_len;
 	u_char * buf;
 	struct nl_wedge_to_daemon *hdr;
 	u_char * pt;

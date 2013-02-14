@@ -14,7 +14,7 @@
 //#include <linux/if_ether.h>
 #include <pthread.h>
 //#include <finstypes.h>
-//#include <queueModule.h>
+//#include <finsqueue.h>
 #include <sys/time.h>
 
 #include <finsdebug.h>

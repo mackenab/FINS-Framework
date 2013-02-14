@@ -6,7 +6,7 @@
  */
 
 #include "ipv4.h"
-#include <queueModule.h>
+#include <finsqueue.h>
 
 #include <switch.h>
 extern struct fins_proto_module ipv4_proto;

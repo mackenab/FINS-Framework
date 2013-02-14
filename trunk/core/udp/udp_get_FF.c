@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include <finstypes.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 
 extern struct udp_statistics udpStat;
 

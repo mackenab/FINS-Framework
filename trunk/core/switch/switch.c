@@ -9,7 +9,7 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 
 static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name = "switch", .running_flag = 1, };
 

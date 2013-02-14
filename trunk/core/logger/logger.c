@@ -17,7 +17,7 @@
 #include <finstypes.h>
 #include <finstime.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 
 #include <switch.h>
 static struct fins_proto_module logger_proto = { .module_id = LOGGER_ID, .name = "logger", .running_flag = 1, };

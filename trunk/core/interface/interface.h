@@ -7,7 +7,7 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 
 /** Ethernet Stub Variables  */
 #ifdef BUILD_FOR_ANDROID

@@ -14,7 +14,7 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <metadata.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 #include "icmp_types.h"
 
 //typedef unsigned long IP4addr; /*  internet address			*/

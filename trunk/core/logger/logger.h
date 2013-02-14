@@ -8,13 +8,14 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
-#include <finstypes.h>
-#include <metadata.h>
-#include <finsdebug.h>
-#include <queueModule.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <sys/time.h>
+
+#include <finsdebug.h>
+#include <finstypes.h>
+#include <metadata.h>
+#include <finsqueue.h>
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID

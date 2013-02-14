@@ -18,7 +18,7 @@ void listen_out_udp(struct nl_wedge_to_daemon *hdr, int backlog);
 void connect_out_udp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, int flags);
 void accept_out_udp(struct nl_wedge_to_daemon *hdr, uint64_t uniqueSockID_new, int index_new, int flags);
 void getname_out_udp(struct nl_wedge_to_daemon *hdr, int peer);
-void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, ssize_t buf_len);
+void ioctl_out_udp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
 void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags, struct sockaddr_in *dest_addr, int addr_len);
 void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_controllen, int flags);
 void getsockopt_out_udp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval);

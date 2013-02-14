@@ -6,7 +6,7 @@
  */
 
 #include "ipv4.h"
-#include <queueModule.h>
+#include <finsqueue.h>
 
 void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip4_packet* ppacket) {
 	PRINT_DEBUG("Entered: ff=%p, pheader=%p, ppacket=%p", ff, pheader, ppacket);

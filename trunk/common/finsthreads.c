@@ -104,6 +104,12 @@ void *controller_thread(void *local) {
 			break;
 		}
 
+		if (ret != sizeof(uint64_t)) {
+			//read error
+			PRINT_ERROR("Read error: id=%d, fd=%d", controller->id, controller->fd);
+			continue;
+		}
+
 		secure_sem_wait(&controller->pool->inactive_sem);
 		if (list_is_empty(controller->pool->queue)) {
 			//check if should reduce workers

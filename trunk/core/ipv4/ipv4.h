@@ -21,7 +21,7 @@
 #include <finsdebug.h>
 #include <finstypes.h>
 #include <finstime.h>
-#include <queueModule.h>
+#include <finsqueue.h>
 #include <metadata.h>
 
 /* Internet Protocol (IP)  Constants and Datagram Format		*/

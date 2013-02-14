@@ -8,8 +8,8 @@
  * @date Nov 2, 2010
  *
  */
-#ifndef QUEUEMODULE_H_
-#define QUEUEMODULE_H_
+#ifndef FINSQUEUE_H_
+#define FINSQUEUE_H_
 
 #include <semaphore.h>
 
@@ -38,4 +38,4 @@ int write_queue_front(struct finsFrame *ff, finsQueue q);
 
 struct finsFrame *read_queue(finsQueue q);
 
-#endif /* QUEUEMODULE_H_ */
+#endif /* FINSQUEUE_H_ */
