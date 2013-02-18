@@ -9,7 +9,6 @@
 #include <finsqueue.h>
 
 extern struct ip4_stats stats;
-extern uint32_t my_ip_addr;
 
 //extern struct ip4_packet *construct_packet_buffer;
 void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t protocol) {
@@ -51,8 +50,11 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 	PRINT_DEBUG("next_hop: address=%u, interface=%u", next_hop.address, next_hop.interface);
 	if (next_hop.interface) {
 		//stats.outfragments++;
-		if (next_hop.address == my_ip_addr || next_hop.address == my_ip_addr) {
+		if (next_hop.address == my_host_ip_addr || next_hop.address == my_host_ip_addr) {
 			PRINT_DEBUG("internal, routing back to netw layer");
+			struct timeval current;
+			gettimeofday(&current, 0);
+			secure_metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
 
 			secure_metadata_writeToElement(params, "recv_protocol", &protocol, META_TYPE_INT32);
 			secure_metadata_writeToElement(params, "recv_src_ip", &source, META_TYPE_INT32);

@@ -8,7 +8,7 @@
 extern uint32_t my_host_ip_addr;
 extern uint32_t my_host_mask;
 extern uint32_t loopback_ip_addr;
-//extern uint32_t loopback_mask;
+extern uint32_t loopback_mask;
 extern uint32_t any_ip_addr;
 
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
@@ -20,7 +20,8 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 		printf("%u.%u.%u.%u \t", current_pointer->dst >> 24, (current_pointer->dst >> 16) & 0xFF, (current_pointer->dst >> 8) & 0xFF,
 				current_pointer->dst & 0xFF);
 		printf("%u.%u.%u.%u \t", current_pointer->gw >> 24, (current_pointer->gw >> 16) & 0xFF, (current_pointer->gw >> 8) & 0xFF, current_pointer->gw & 0xFF);
-		printf("%u \t", current_pointer->mask);
+		//printf("%u \t", current_pointer->mask);
+		printf("%u.%u.%u.%u \t", current_pointer->mask >> 24, (current_pointer->mask >> 16) & 0xFF, (current_pointer->mask >> 8) & 0xFF, current_pointer->mask & 0xFF);
 		printf("%u \t", current_pointer->metric);
 		printf("%u", current_pointer->interface);
 		printf("\n");
@@ -199,39 +200,39 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	struct ip4_routing_table *row2 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 
 	if (0) { //laptop eth0, wired interface
-		row0->dst = loopback_ip_addr;
+		row0->dst = loopback_ip_addr; //local loopback
 		row0->gw = any_ip_addr;
-		row0->mask = 8;
+		row0->mask = loopback_mask;
 		row0->metric = 0;
 		row0->interface = 0;
 		row0->next_entry = row1;
 
-		row1->dst = my_host_ip_addr & my_host_mask;
+		row1->dst = my_host_ip_addr; //within subnet
 		row1->gw = any_ip_addr;
-		row1->mask = 24;
+		row1->mask = my_host_mask;
 		row1->metric = 1;
-		row1->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
+		row1->interface = my_host_ip_addr;
 		row1->next_entry = row2;
 
-		row2->dst = any_ip_addr;
+		row2->dst = any_ip_addr; //default gateway
 		row2->gw = (my_host_ip_addr & my_host_mask) | 1;
-		row2->mask = 24;
+		row2->mask = my_host_mask;
 		row2->metric = 2;
-		row2->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
+		row2->interface = my_host_ip_addr;
 		row2->next_entry = NULL;
 	}
 
 	if (1) { //laptop wlan4, wireless interface
-		row0->dst = loopback_ip_addr;
+		row0->dst = loopback_ip_addr; //local loopback
 		row0->gw = any_ip_addr;
-		row0->mask = 8;
+		row0->mask = loopback_mask;
 		row0->metric = 0;
 		row0->interface = 0;
 		row0->next_entry = row1;
 
-		row1->dst = any_ip_addr;
+		row1->dst = any_ip_addr; //default gateway
 		row1->gw = (my_host_ip_addr & my_host_mask) | 1;
-		row1->mask = 24;
+		row1->mask = my_host_mask;
 		row1->metric = 1;
 		row1->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
 		row1->next_entry = NULL;

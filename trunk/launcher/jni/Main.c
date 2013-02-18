@@ -66,36 +66,36 @@ void android_main(struct android_app *state) {
 		__android_log_print(ANDROID_LOG_ERROR, "FINS", "SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
 	}
 
-	int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
-	int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
-	__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
-    int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
-    int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
-    int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
-    int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
-    int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
-    int fd8 = socket(PF_INET, SOCK_STREAM, 0);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
-    int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
-    int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
-    __android_log_print(ANDROID_LOG_ERROR, "FINS", "fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
-	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	//if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
-    //if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
-    //if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-
-
+	if (0) {
+		int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
+		int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
+		int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
+		int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
+		int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
+		int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
+		int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
+		int fd8 = socket(PF_INET, SOCK_STREAM, 0);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
+		int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
+		int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
+		//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
+		//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+		//if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
+		//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
+		//if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+	}
 
 	//####################################
-	if (1) {
+	if (0) {
 		sleep(10);
 		char *filter_exp = (char *) malloc(200);
 		if (filter_exp == NULL) {
@@ -112,7 +112,7 @@ void android_main(struct android_app *state) {
 			exit(-1);
 		}
 		memset(dev, 0, 200);
-		strcpy((char *)dev, "wlan0");
+		strcpy((char *) dev, "wlan0");
 
 		bpf_u_int32 net; /* ip */
 		bpf_u_int32 mask; /* subnet mask */
@@ -176,8 +176,7 @@ void android_main(struct android_app *state) {
 	}
 	//####################################
 
-	while (1)
-		;
+	//while (1);
 
 	pid = fork();
 	if (pid < 0) {
@@ -187,16 +186,14 @@ void android_main(struct android_app *state) {
 		sleep(5);
 		__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: core_main()");
 		core_dummy();
-		//core_main();
-		while (1)
-			; //sleep(1);
+		core_main();
+		while (1); //sleep(1);
 		__android_log_print(ANDROID_LOG_INFO, "FINS", "Exiting FINS: core_main()");
 	} else { /* parent */
 		__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: capturer_main()");
 		capturer_dummy();
 		//capturer_main();
-		while (1)
-			; //sleep(1);
+		while (1); //sleep(1);
 		//sleep(5);
 		__android_log_print(ANDROID_LOG_INFO, "FINS", "Exiting FINS: capturer_main()");
 	}

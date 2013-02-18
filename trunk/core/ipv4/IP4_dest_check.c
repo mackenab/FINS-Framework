@@ -11,22 +11,19 @@
 
 #include "ipv4.h"
 
-extern uint32_t my_ip_addr;
-extern uint32_t my_mask;
-
 int IP4_dest_check(uint32_t destination) {
-	uint32_t subnet_broadcast = my_ip_addr | (~my_mask);
+	uint32_t subnet_broadcast = my_host_ip_addr | (~my_host_mask);
 	uint32_t network_broadcast;
 
-	if (IP4_CLASSA(my_ip_addr)) {
-		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 0, 0, 0));
-	} else if (IP4_CLASSB(my_ip_addr)) {
-		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 255, 0, 0));
-	} else if (IP4_CLASSC(my_ip_addr)) {
-		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 255, 255, 0));
+	if (IP4_CLASSA(my_host_ip_addr)) {
+		network_broadcast = my_host_ip_addr | (~IP4_ADR_P2H(255, 0, 0, 0));
+	} else if (IP4_CLASSB(my_host_ip_addr)) {
+		network_broadcast = my_host_ip_addr | (~IP4_ADR_P2H(255, 255, 0, 0));
+	} else if (IP4_CLASSC(my_host_ip_addr)) {
+		network_broadcast = my_host_ip_addr | (~IP4_ADR_P2H(255, 255, 255, 0));
 	}
 
-	if (destination == my_ip_addr || destination == IP4_ADR_P2H(127,0,0,1)
+	if (destination == my_host_ip_addr || destination == IP4_ADR_P2H(127,0,0,1)
 			|| destination == subnet_broadcast || destination
 			== network_broadcast || destination == IP4_ADR_P2H(255,255,255,255)
 			|| destination == IP4_ADR_P2H(0,0,0,0)) {

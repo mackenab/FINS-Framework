@@ -12,6 +12,10 @@ PROJECT_NAME = wedge
 
 obj-m += fins_stack_wedge.o			# build type hardcoded to module
 
+#COMPILER ?=
+#ARCH ?=
+#KERNELDIR ?= /lib/modules/$(shell uname -r)/build
+
 COMPILER ?=/home/alex/jreed/lkm_test/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 ARCH ?=arm
 KERNELDIR ?= /home/alex/jreed/lkm_test/omap
@@ -21,28 +25,14 @@ all:$(PROJECT_NAME)
 	@echo "$(PROJECT_NAME) is compiled\n"
 $(PROJECT_NAME):
 	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
-	#@make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
+#@make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
 .PHONY:clean
 clean:
 	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
-	#@make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) clean
+#@make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) clean
 install:
 	adb push fins_stack_wedge.ko /data/local/tmp
 
 #### TARGETS #####
 #%.o:%.c $(INCLUDES) 
 #	@$(CC) $(CFLAGS) -c $<
-
-
-#COMPILER ?=/home/alex/jreed/lkm_test/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
-#ARCH ?=arm
-#KERNELDIR ?= /home/alex/jreed/lkm_test/omap
-
-#all:
-#	make -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
-#clean:
-#	make -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) clean
-#install:
-#	adb push android_module.ko /data/local
-
-

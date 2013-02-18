@@ -11,17 +11,6 @@
 #include <switch.h>
 struct fins_proto_module ipv4_proto = { .module_id = IPV4_ID, .name = "ipv4", .running_flag = 1, }; //TODO make static?
 
-uint32_t my_ip_addr;
-uint32_t my_mask;
-uint32_t loopback;
-uint32_t loopback_mask;
-
-/*
- uint32_t my_ip_addr;
- uint32_t loopback_ip_addr;
- uint32_t any_ip_addr;
- */
-
 struct ip4_routing_table* routing_table;
 struct ip4_packet *construct_packet_buffer;
 struct ip4_stats stats;
@@ -491,16 +480,6 @@ void ipv4_init(void) {
 	 */
 	//ADDED mrd015 !!!!!
 	IP4_init();
-}
-
-void ipv4_set_interface(uint32_t IP_address, uint32_t mask) {
-	my_ip_addr = IP_address;
-	my_mask = mask;
-}
-
-void ipv4_set_loopback(uint32_t IP_address, uint32_t mask) {
-	loopback = IP_address;
-	loopback_mask = mask;
 }
 
 void ipv4_run(pthread_attr_t *fins_pthread_attr) {

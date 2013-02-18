@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <net/if.h>
 
 #include <finsdebug.h>
 #include <finstypes.h>
@@ -141,10 +142,10 @@ struct ip4_route_request {
 struct ip4_routing_table {
 	uint32_t dst;
 	uint32_t gw;
-	uint32_t mask;
+	uint32_t mask; //TODO change back to number?
 	uint32_t metric;
 	//unsigned int interface;
-	uint32_t interface; //TODO change back
+	uint32_t interface; //TODO change back to number? so looks up in interface list
 
 	struct ip4_routing_table * next_entry;
 };
@@ -230,9 +231,6 @@ void ipv4_init(void);
 void ipv4_run(pthread_attr_t *fins_pthread_attr);
 void ipv4_shutdown(void);
 void ipv4_release(void);
-
-void ipv4_set_interface(uint32_t IP_address, uint32_t mask);
-void ipv4_set_loopback(uint32_t IP_address, uint32_t mask);
 
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);
 uint16_t IP4_checksum(struct ip4_packet* ptr, int length);
@@ -368,5 +366,14 @@ int store_list_is_empty(void);
 int store_list_has_space(void);
 
 //###############
+
+extern char my_host_if_name[IFNAMSIZ];
+extern uint8_t my_host_if_num;
+extern uint64_t my_host_mac_addr;
+extern uint32_t my_host_ip_addr;
+extern uint32_t my_host_mask;
+extern uint32_t loopback_ip_addr;
+extern uint32_t loopback_mask;
+extern uint32_t any_ip_addr;
 
 #endif /* IPV4_H_ */

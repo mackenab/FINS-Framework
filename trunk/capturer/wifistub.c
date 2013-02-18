@@ -131,6 +131,7 @@ void capture_init(char *device) {
 	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
 	strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
 	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
+	//strcat(filter_exp, "(ether dst a00bbae94bb0) or (ether broadcast and (not ether src a00bbae94bb0))"); //phone wlan0
 
 	uint8_t *dev = (uint8_t *) device;
 	bpf_u_int32 net; /* ip */

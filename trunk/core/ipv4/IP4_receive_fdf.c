@@ -11,8 +11,6 @@
 #include <switch.h>
 extern struct fins_proto_module ipv4_proto;
 
-extern uint32_t my_ip_addr;
-
 void ipv4_get_ff(void) {
 
 	struct finsFrame* ff = NULL;
@@ -57,18 +55,18 @@ void ipv4_get_ff(void) {
 			metadata *params = ff->metaData;
 			secure_metadata_readFromElement(params, "send_protocol", &protocol);
 
-			PRINT_DEBUG("%u", my_ip_addr);
+			PRINT_DEBUG("%u", my_host_ip_addr);
 			PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
-			//TODO change my_ip_addr to src_ip from metadata
+			//TODO change my_host_ip_addr to src_ip from metadata
 			switch (protocol) {
 			case IP4_PT_ICMP:
-				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_ICMP);
+				IP4_out(ff, ff->dataFrame.pduLength, my_host_ip_addr, IP4_PT_ICMP);
 				break;
 			case IP4_PT_TCP:
-				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_TCP);
+				IP4_out(ff, ff->dataFrame.pduLength, my_host_ip_addr, IP4_PT_TCP);
 				break;
 			case IP4_PT_UDP:
-				IP4_out(ff, ff->dataFrame.pduLength, my_ip_addr, IP4_PT_UDP);
+				IP4_out(ff, ff->dataFrame.pduLength, my_host_ip_addr, IP4_PT_UDP);
 				break;
 			default:
 				PRINT_ERROR("invalid protocol: protocol=%u", protocol);
