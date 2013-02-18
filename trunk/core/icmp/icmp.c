@@ -226,7 +226,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 			ff->destinationID.next = NULL;
 			//ff->metaData = params;
 
-			//ff->dataFrame.directionFlag = UP;
+			//ff->dataFrame.directionFlag = DIR_UP;
 			//ff->dataFrame.pduLength = len;
 			//ff->dataFrame.pdu = dataLocal;
 
@@ -561,7 +561,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		ff->destinationID.next = NULL;
 		//ff->metaData = params;
 
-		//ff->dataFrame.directionFlag = UP;
+		//ff->dataFrame.directionFlag = DIR_UP;
 		//ff->dataFrame.pduLength = len;
 		//ff->dataFrame.pdu = dataLocal;
 
@@ -620,7 +620,7 @@ void icmp_out_fdf(struct finsFrame *ff) {
 	ff->destinationID.next = NULL;
 	//ff->metaData = params;
 
-	//ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
+	//ff->dataFrame.directionFlag = DIR_DOWN; // ingress or egress network data; see above
 	//ff->dataFrame.pduLength = data_len; //Add in the header size for this, too
 	//ff->dataFrame.pdu = (uint8_t *) fins_malloc(ff->dataFrame.pduLength);
 
@@ -680,9 +680,9 @@ void icmp_get_ff(void) {
 	if (ff->dataOrCtrl == CONTROL) { // send to the control frame handler
 		icmp_fcf(ff);
 	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->dataFrame.directionFlag == UP) { //Incoming ICMP packet (coming in from teh internets)
+		if (ff->dataFrame.directionFlag == DIR_UP) { //Incoming ICMP packet (coming in from teh internets)
 			icmp_in_fdf(ff);
-		} else if (ff->dataFrame.directionFlag == DOWN) { //Outgoing ICMP packet (going out from us to teh internets)
+		} else if (ff->dataFrame.directionFlag == DIR_DOWN) { //Outgoing ICMP packet (going out from us to teh internets)
 			icmp_out_fdf(ff);
 		}
 	} else {
@@ -758,7 +758,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	ff_reply->destinationID.next = NULL;
 	ff_reply->metaData = params_reply;
 
-	ff_reply->dataFrame.directionFlag = DOWN;
+	ff_reply->dataFrame.directionFlag = DIR_DOWN;
 	ff_reply->dataFrame.pduLength = pdu_len_reply;
 	ff_reply->dataFrame.pdu = pdu_reply;
 
@@ -842,6 +842,10 @@ void *switch_to_icmp(void *local) {
 	PRINT_IMPORTANT("Exited");
 	//pthread_exit(NULL);
 	return NULL;
+}
+
+void icmp_dummy(void) {
+
 }
 
 void icmp_init(void) {

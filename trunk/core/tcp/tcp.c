@@ -1900,7 +1900,7 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	ff->destinationID.next = NULL;
 	ff->metaData = params;
 
-	ff->dataFrame.directionFlag = DOWN; // ingress or egress network data; see above
+	ff->dataFrame.directionFlag = DIR_DOWN; // ingress or egress network data; see above
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
 	ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 	PRINT_DEBUG("seg=%p, ff=%p, meta=%p, data_len=%d, hdr=%d, pduLength=%d",
@@ -2691,6 +2691,10 @@ void *switch_to_tcp(void *local) {
 	return NULL;
 }
 
+void tcp_dummy(void) {
+
+}
+
 void tcp_init(void) {
 	PRINT_IMPORTANT("Entered");
 	tcp_proto.running_flag = 1;
@@ -2744,10 +2748,10 @@ void tcp_get_ff(void) {
 		tcp_fcf(ff);
 		PRINT_DEBUG("");
 	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->dataFrame.directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == DIR_UP) {
 			tcp_in_fdf(ff);
 			PRINT_DEBUG("");
-		} else { //directionFlag==DOWN
+		} else { //directionFlag==DIR_DOWN
 			tcp_out_fdf(ff);
 			PRINT_DEBUG("");
 		}
@@ -3049,7 +3053,7 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 	ff->destinationID.next = NULL;
 	ff->metaData = params;
 
-	ff->dataFrame.directionFlag = UP;
+	ff->dataFrame.directionFlag = DIR_UP;
 	ff->dataFrame.pduLength = data_len;
 	ff->dataFrame.pdu = data;
 

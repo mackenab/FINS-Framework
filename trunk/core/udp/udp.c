@@ -243,10 +243,10 @@ void udp_get_ff(void) {
 	if (ff->dataOrCtrl == CONTROL) {
 		udp_fcf(ff);
 	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->dataFrame.directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == DIR_UP) {
 			udp_in_fdf(ff);
 			PRINT_DEBUG("");
-		} else if (ff->dataFrame.directionFlag == DOWN) {
+		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			udp_out_fdf(ff);
 			PRINT_DEBUG("");
 		}
@@ -511,6 +511,10 @@ void *switch_to_udp(void *local) {
 	PRINT_IMPORTANT("Exited");
 	//pthread_exit(NULL);
 	return NULL;
+}
+
+void udp_dummy(void) {
+
 }
 
 void udp_init(void) {

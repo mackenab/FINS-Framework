@@ -98,88 +98,28 @@ void core_termination_handler(int sig) {
 	exit(-1);
 }
 
-void *test_thread(void *local) {
-	PRINT_DEBUG("Entered: local=%p", local);
-	int id = *((int *) local);
-	free(local);
-
-	PRINT_DEBUG("Entered: id=%d", id);
-
-	int count = 0;
-	while (count < 10) {
-		PRINT_DEBUG("id=%d, count=%d", id, count);
-		count++;
-		sleep(1);
-		//usleep(200);
-	}
-
-	return NULL;
-}
-
-void *test_thread_2(void *local) {
-	PRINT_DEBUG("Entered: local=%p", local);
-
-	int count = 0;
-	while (count < 10) {
-		PRINT_DEBUG("count_2=%d", count);
-		count++;
-		sleep(1);
-	}
-
-	return NULL;
-}
-
 void core_main() {
-	/*
-	if (0) { //TODO remove, testing code
-		struct thread_pool *pool = pool_create(1, 10, 10);
-		PRINT_DEBUG("setup done");
-
-		char srecv_data[4000];
-		gets(srecv_data);
-
-		PRINT_DEBUG("executing");
-		int i;
-		for (i = 0; i < 10; i++) {
-			PRINT_DEBUG("executing: id=%d", i);
-			int *buf = (int *) secure_malloc(sizeof(int));
-			*buf = i;
-			pool_execute(pool, test_thread, buf);
-			usleep(200);
-		}
-
-		//	PRINT_DEBUG("waiting");
-		//	gets(srecv_data);
-
-		//pool_execute(pool, test_thread_2, NULL);
-
-		gets(srecv_data);
-
-		PRINT_DEBUG("pool shutdown");
-		pool_shutdown(pool);
-
-		PRINT_DEBUG("FIN");
-		while (1)
-			sleep(1);
-
-		return;
-	}
-	*/
+	PRINT_IMPORTANT("Entered");
 
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
-
 	//strcpy(my_host_if_name, "lo");
 	//strcpy(my_host_if_name, "eth0");
 	//strcpy(my_host_if_name, "eth1");
 	//strcpy(my_host_if_name, "eth2");
-	//strcpy(my_host_if_name, "wlan0");
-	strcpy(my_host_if_name, "wlan4");
+	strcpy(my_host_if_name, "wlan0");
+	//strcpy(my_host_if_name, "wlan4");
+
+	//my_host_if_num = 1; //lo
+	//my_host_if_num = 2; //eth0
+	my_host_if_num = 3; //wlan0
+	//my_host_if_num = 4; //wlan4
 
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
 	//my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
-	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
-	my_host_mac_addr = 0x00184d8f2a32ull; //laptop wlan4 card
+	my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
+	//my_host_mac_addr = 0x00184d8f2a32ull; //laptop wlan4 card
+	//my_host_mac_addr = 0xa00bbae94bb0ull; //phone wlan0
 
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,3); //home testing
 	my_host_mask = IP4_ADR_P2H(255,255,255,0); //home testing
@@ -194,13 +134,24 @@ void core_main() {
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 	//######################################################################
 
-	//finsQueue input_queue = init_queue("TEST", MAX_Queue_size);
-
 	register_to_signal(SIGRTMIN);
 
 	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
 
 	signal(SIGINT, core_termination_handler); //register termination handler
+
+	switch_dummy();
+	daemon_dummy();
+	interface_dummy();
+
+	arp_dummy();
+	ipv4_dummy();
+	icmp_dummy();
+	tcp_dummy();
+	udp_dummy();
+
+	//rtm_dummy();
+	logger_dummy();
 
 	// Start the driving thread of each module
 	PRINT_IMPORTANT("Initialize Modules");
@@ -241,7 +192,7 @@ void core_main() {
 	logger_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
-	/*
+	///*
 	if (0) {
 		char recv_data[4000];
 
@@ -281,27 +232,28 @@ void core_main() {
 	if (0) {
 		char recv_data[4000];
 		while (1) {
-			gets(recv_data);
+			//gets(recv_data);
+			sleep(15);
 
 			PRINT_IMPORTANT("start timing");
 
 			struct timeval start, end;
 			gettimeofday(&start, 0);
 
-			int its = 30000;
-			int len = 1000;
+			int its = 1; //30000;
+			int len = 10; //1000;
 
 			int i = 0;
 			while (i < its) {
 				uint8_t *data = (uint8_t *) secure_malloc(len);
-				memset(data, 56, len);
+				memset(data, 74, len);
 
 				metadata *params = (metadata *) secure_malloc(sizeof(metadata));
 				metadata_create(params);
 
-				uint32_t host_ip = IP4_ADR_P2H(192, 168, 1, 20);
+				uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
 				uint32_t host_port = 55454;
-				uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 6);
+				uint32_t dst_ip = IP4_ADR_P2H(192,168,1,7);
 				uint32_t dst_port = 44444;
 				uint32_t ttl = 64;
 				uint32_t tos = 64;
@@ -313,13 +265,34 @@ void core_main() {
 				secure_metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
 				secure_metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
 
-				if (daemon_fdf_to_switch(UDP_ID, data, len, params)) {
+				struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+				ff->dataOrCtrl = DATA;
+				ff->destinationID.id = UDP_ID;
+				ff->destinationID.next = NULL;
+				ff->metaData = params;
+
+				ff->dataFrame.directionFlag = DIR_DOWN;
+				ff->dataFrame.pduLength = len;
+				ff->dataFrame.pdu = data;
+
+				PRINT_DEBUG("sending: ff=%p, meta=%p", ff, params);
+				if (arp_to_switch(ff)) {
 					i++;
 				} else {
-					PRINT_ERROR("error sending");
-					metadata_destroy(params);
-					free(data);
-					break;
+					PRINT_ERROR("freeing: ff=%p", ff);
+					freeFinsFrame(ff);
+					return;
+				}
+
+				if (0) {
+					if (daemon_fdf_to_switch(UDP_ID, data, len, params)) {
+						i++;
+					} else {
+						PRINT_ERROR("error sending");
+						metadata_destroy(params);
+						free(data);
+						break;
+					}
 				}
 			}
 
@@ -328,14 +301,16 @@ void core_main() {
 			gettimeofday(&end, 0);
 			double diff = time_diff(&start, &end);
 			PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
+			break;
 		}
 	}
-	*/
+	//*/
 	//#############################
 
-
-	while (1)
-		sleep(1);
+	PRINT_IMPORTANT("Just waiting");
+	while (1) {
+		//sleep(1);
+	}
 }
 
 #ifndef BUILD_FOR_ANDROID

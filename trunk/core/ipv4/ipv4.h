@@ -26,7 +26,8 @@
 
 /* Internet Protocol (IP)  Constants and Datagram Format		*/
 
-typedef unsigned long IP4addr; /*  internet address			*/
+//typedef unsigned long IP4addr; /*  internet address			*/
+//typedef uint32_t IP4addr; /*  internet address			*/
 
 struct ip4_packet {
 	uint8_t ip_verlen; /* IP version & header length (in longs)*/
@@ -37,8 +38,8 @@ struct ip4_packet {
 	uint8_t ip_ttl; /* time to live, in gateway hops	*/
 	uint8_t ip_proto; /* IP protocol */
 	uint16_t ip_cksum; /* header checksum 			*/
-	IP4addr ip_src; /* IP address of source			*/
-	IP4addr ip_dst; /* IP address of destination		*/
+	uint32_t ip_src; /* IP address of source			*/
+	uint32_t ip_dst; /* IP address of destination		*/
 	uint8_t ip_data[1]; /* variable length data			*/
 };
 
@@ -51,14 +52,14 @@ struct ip4_packet_header {
 	uint8_t ip_ttl; /* time to live, in gateway hops	*/
 	uint8_t ip_proto; /* IP protocol */
 	uint16_t ip_cksum; /* header checksum 			*/
-	IP4addr ip_src; /* IP address of source			*/
-	IP4addr ip_dst; /* IP address of destination		*/
+	uint32_t ip_src; /* IP address of source			*/
+	uint32_t ip_dst; /* IP address of destination		*/
 
 };
 
 struct ip4_header {
-	IP4addr source;
-	IP4addr destination;
+	uint32_t source;
+	uint32_t destination;
 	uint8_t version;
 	uint8_t header_length;
 	uint8_t differentiated_service;
@@ -72,9 +73,9 @@ struct ip4_header {
 };
 
 struct ip4_settings {
-	IP4addr ip;
-	IP4addr mask;
-	IP4addr gateway;
+	uint32_t ip;
+	uint32_t mask;
+	uint32_t gateway;
 };
 
 struct ip4_stats {
@@ -138,10 +139,10 @@ struct ip4_route_request {
 };
 
 struct ip4_routing_table {
-	IP4addr dst;
-	IP4addr gw;
-	IP4addr mask;
-	unsigned int metric;
+	uint32_t dst;
+	uint32_t gw;
+	uint32_t mask;
+	uint32_t metric;
 	//unsigned int interface;
 	uint32_t interface; //TODO change back
 
@@ -149,7 +150,7 @@ struct ip4_routing_table {
 };
 
 struct ip4_next_hop_info {
-	IP4addr address;
+	uint32_t address;
 	//int interface;
 	uint32_t interface;
 };
@@ -224,6 +225,7 @@ struct ip4_next_hop_info {
 
 pthread_t switch_to_ipv4_thread;
 
+void ipv4_dummy(void);
 void ipv4_init(void);
 void ipv4_run(pthread_attr_t *fins_pthread_attr);
 void ipv4_shutdown(void);
@@ -234,7 +236,7 @@ void ipv4_set_loopback(uint32_t IP_address, uint32_t mask);
 
 void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len);
 uint16_t IP4_checksum(struct ip4_packet* ptr, int length);
-int IP4_dest_check(IP4addr destination);
+int IP4_dest_check(uint32_t destination);
 //void IP4_reass(void);
 void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header*, struct ip4_packet*);
 void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length);
@@ -246,17 +248,17 @@ struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader, struct i
 struct ip4_reass_hole* IP4_previous_hole(struct ip4_reass_hole* current_hole);
 struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole);
 void IP4_remove_hole(struct ip4_reass_hole* current_hole, struct ip4_reass_list *list);
-void IP4_const_header(struct ip4_packet *packet, IP4addr source, IP4addr destination, uint8_t protocol);
+void IP4_const_header(struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
 struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offest, uint16_t fragment_size);
 
-void IP4_out(struct finsFrame *ff, uint16_t length, IP4addr source, uint8_t protocol);
+void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t protocol);
 
 struct ip4_routing_table * IP4_get_routing_table();
 struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * table_pointer);
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer);
 void IP4_init(void);
-struct ip4_next_hop_info IP4_next_hop(IP4addr dst);
-int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length);
+struct ip4_next_hop_info IP4_next_hop(uint32_t dst);
+int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length);
 void ipv4_get_ff(void);
 
 void ipv4_fcf(struct finsFrame *ff);

@@ -60,13 +60,13 @@ uint32_t gen_IP_addrs(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
  * @param *char_addrs points to the character array which will store the converted address
  *  */
 /**register shifting is used to extract individual bytes in the code below*/
-void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs) {
-	char_addrs[5] = (unsigned char) ((int_addrs & (0x00000000000000FFull))); //least sig.
-	char_addrs[4] = (unsigned char) ((int_addrs & (0x000000000000FF00ull)) >> 8);
-	char_addrs[3] = (unsigned char) ((int_addrs & (0x0000000000FF0000ull)) >> 16);
-	char_addrs[2] = (unsigned char) ((int_addrs & (0x00000000FF000000ull)) >> 24);
-	char_addrs[1] = (unsigned char) ((int_addrs & (0x000000FF00000000ull)) >> 32);
-	char_addrs[0] = (unsigned char) ((int_addrs & (0x0000FF0000000000ull)) >> 40); //most sig.
+void MAC_addrs_conversion(uint64_t int_addrs, uint8_t *char_addrs) {
+	char_addrs[5] = (uint8_t) ((int_addrs & (0x00000000000000FFull))); //least sig.
+	char_addrs[4] = (uint8_t) ((int_addrs & (0x000000000000FF00ull)) >> 8);
+	char_addrs[3] = (uint8_t) ((int_addrs & (0x0000000000FF0000ull)) >> 16);
+	char_addrs[2] = (uint8_t) ((int_addrs & (0x00000000FF000000ull)) >> 24);
+	char_addrs[1] = (uint8_t) ((int_addrs & (0x000000FF00000000ull)) >> 32);
+	char_addrs[0] = (uint8_t) ((int_addrs & (0x0000FF0000000000ull)) >> 40); //most sig.
 }
 
 /**
@@ -75,12 +75,12 @@ void MAC_addrs_conversion(uint64_t int_addrs, unsigned char *char_addrs) {
  * @param int_addrs is the address in unsigned int 32
  * @param *char_addrs points to the character array which will store the converted address
  *  */
-void IP_addrs_conversion(uint32_t int_addrs, unsigned char *char_addrs) {
+void IP_addrs_conversion(uint32_t int_addrs, uint8_t *char_addrs) {
 	/**register shifting is used to extract individual bytes in the code below*/
-	char_addrs[3] = (unsigned char) ((int_addrs & (0x000000FF))); //least significant
-	char_addrs[2] = (unsigned char) ((int_addrs & (0x0000FF00)) >> 8);
-	char_addrs[1] = (unsigned char) ((int_addrs & (0x00FF0000)) >> 16);
-	char_addrs[0] = (unsigned char) ((int_addrs & (0xFF000000)) >> 24); //most significant
+	char_addrs[3] = (uint8_t) ((int_addrs & (0x000000FF))); //least significant
+	char_addrs[2] = (uint8_t) ((int_addrs & (0x0000FF00)) >> 8);
+	char_addrs[1] = (uint8_t) ((int_addrs & (0x00FF0000)) >> 16);
+	char_addrs[0] = (uint8_t) ((int_addrs & (0xFF000000)) >> 24); //most significant
 }
 
 /**
@@ -584,7 +584,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	ff->destinationID.next = NULL;
 	ff->metaData = params;
 
-	ff->dataFrame.directionFlag = DOWN;
+	ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
 	ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 
@@ -668,10 +668,10 @@ void arp_get_ff(void) {
 			arp_fcf(ff);
 			PRINT_DEBUG("");
 		} else if (ff->dataOrCtrl == DATA) {
-			if (ff->dataFrame.directionFlag == UP) {
+			if (ff->dataFrame.directionFlag == DIR_UP) {
 				arp_in_fdf(ff);
 				PRINT_DEBUG("");
-			} else { //directionFlag==DOWN
+			} else { //directionFlag==DIR_DOWN
 				//arp_out_fdf(ff); //TODO remove?
 				PRINT_ERROR("todo error");
 			}
@@ -815,6 +815,10 @@ void *switch_to_arp(void *local) {
 	PRINT_IMPORTANT("Exited");
 	//pthread_exit(NULL);
 	return NULL;
+}
+
+void arp_dummy(void) {
+
 }
 
 void arp_init(void) {

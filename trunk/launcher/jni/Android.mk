@@ -6,11 +6,10 @@ LOCAL_MODULE := fins_launcher
 LS_C=$(subst $(1)/,,$(wildcard $(1)/*.c))
 LOCAL_SRC_FILES := $(call LS_C,$(LOCAL_PATH))
 LOCAL_STATIC_LIBRARIES :=  android_native_app_glue fins_capturer fins_core
-LOCAL_LDLIBS := -landroid -llog #-lc -ldl -lm #-lpthread -lconfig -lpcap -lrt
+LOCAL_LDLIBS := -landroid -llog
 LOCAL_CFLAGS := -DBUILD_FOR_ANDROID -g -O0 -Wall
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
 LOCAL_EXPORT_LDLIBS := -landroid -llog
-#top makefile level must build a shared library, only 1 shared library per app
 include $(BUILD_SHARED_LIBRARY)
 
 #include $(LOCAL_PATH)/FINS-Framework/libs/libpcap/Android.mk

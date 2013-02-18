@@ -11,15 +11,15 @@
 #include <switch.h>
 struct fins_proto_module ipv4_proto = { .module_id = IPV4_ID, .name = "ipv4", .running_flag = 1, }; //TODO make static?
 
-IP4addr my_ip_addr;
-IP4addr my_mask;
-IP4addr loopback;
-IP4addr loopback_mask;
+uint32_t my_ip_addr;
+uint32_t my_mask;
+uint32_t loopback;
+uint32_t loopback_mask;
 
 /*
- IP4addr my_ip_addr;
- IP4addr loopback_ip_addr;
- IP4addr any_ip_addr;
+ uint32_t my_ip_addr;
+ uint32_t loopback_ip_addr;
+ uint32_t any_ip_addr;
  */
 
 struct ip4_routing_table* routing_table;
@@ -466,6 +466,10 @@ int store_list_has_space(void) {
 }
 //################
 
+void ipv4_dummy(void) {
+
+}
+
 void ipv4_init(void) {
 	PRINT_IMPORTANT("Entered");
 	ipv4_proto.running_flag = 1;
@@ -485,18 +489,8 @@ void ipv4_init(void) {
 	/* find a way to get the IP of the desired interface automatically from the system
 	 * or from a configuration file
 	 */
-
-	//my_ip_addr = IP4_ADR_P2H(192, 168, 1, 20);
-	//my_ip_addr = IP4_ADR_P2H(172,31,50,160);
-	//my_ip_addr = IP4_ADR_P2H(127, 0, 0, 1);
-	//my_ip_addr = IP4_ADR_P2H(172, 31, 63, 231);
-	//my_ip_addr = IP4_ADR_P2H(172, 31, 53, 114);
-	//PRINT_DEBUG("%lu", my_ip_addr);
-	//my_mask = IP4_ADR_P2H(255, 255, 255, 0); //TODO move to core/central place
 	//ADDED mrd015 !!!!!
-#ifndef BUILD_FOR_ANDROID
 	IP4_init();
-#endif
 }
 
 void ipv4_set_interface(uint32_t IP_address, uint32_t mask) {

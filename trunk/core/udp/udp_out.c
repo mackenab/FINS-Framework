@@ -42,7 +42,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 		PRINT_ERROR("shouldn't reach here");
 		return;
 	}
-	if (ff->dataFrame.directionFlag != DOWN) {
+	if (ff->dataFrame.directionFlag != DIR_DOWN) {
 		// release FDF here
 		PRINT_ERROR("shouldn't reach here");
 		return;
@@ -126,13 +126,13 @@ void udp_out_fdf(struct finsFrame* ff) {
 	PRINT_DEBUG("%p", udp_dataunit);
 	//(int)ff->dataFrame.pdu);
 
-	//newFF = create_ff(DATA, DOWN, IPV4_ID, packet_length, udp_dataunit, meta);
+	//newFF = create_ff(DATA, DIR_DOWN, IPV4_ID, packet_length, udp_dataunit, meta);
 
 	//ff->dataOrCtrl = DATA;
 	ff->destinationID.id = IPV4_ID;
 	ff->destinationID.next = NULL;
 
-	//ff->dataFrame.directionFlag = DOWN;
+	//ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = packet_length;
 	ff->dataFrame.pdu = udp_dataunit;
 	//ff->metaData = params;

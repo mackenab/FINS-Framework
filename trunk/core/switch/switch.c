@@ -179,6 +179,10 @@ void *switch_loop(void *local) {
 	return NULL;
 } // end of switch_init Function
 
+void switch_dummy(void) {
+
+}
+
 void switch_init(void) {
 	PRINT_IMPORTANT("Entered");
 	switch_proto.running_flag = 1;

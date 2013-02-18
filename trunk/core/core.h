@@ -22,6 +22,7 @@ int read_configurations();
 #include <stdint.h>
 
 char my_host_if_name[IFNAMSIZ];
+uint8_t my_host_if_num;
 uint64_t my_host_mac_addr;
 uint32_t my_host_ip_addr;
 uint32_t my_host_mask;
@@ -29,7 +30,8 @@ uint32_t loopback_ip_addr;
 uint32_t loopback_mask;
 uint32_t any_ip_addr;
 
-void core_main();
+void core_dummy(void);
+void core_main(void);
 
 #endif /* CORE_H_ */
 

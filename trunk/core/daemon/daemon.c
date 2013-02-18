@@ -797,7 +797,7 @@ int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, meta
 	ff->destinationID.next = NULL;
 	ff->metaData = params;
 
-	ff->dataFrame.directionFlag = DOWN;
+	ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = data_len;
 	ff->dataFrame.pdu = data;
 
@@ -894,7 +894,9 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -908,7 +910,8 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
 	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d",
-			daemon_calls[hdr->call_index].sock_id, daemon_calls[hdr->call_index].sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			daemon_calls[hdr->call_index].sock_id, daemon_calls[hdr->call_index].sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
@@ -946,7 +949,9 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -956,7 +961,8 @@ void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1009,7 +1015,9 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1020,7 +1028,8 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1061,10 +1070,13 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 		return;
 	}
 
-	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1074,7 +1086,8 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1107,10 +1120,13 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 		return;
 	}
 
-	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1120,7 +1136,8 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1476,14 +1493,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		temp = (uint8_t *) secure_malloc(len);
 
 		//TODO get correct values from IP?
-		if (total == 1) {
-			strcpy((char *) temp, "lo");
-		} else if (total == 2) {
-			strcpy((char *) temp, "eth0");
-		} else if (total == 3) {
-			strcpy((char *) temp, "wlan0");
-		} else if (total == 4) {
-			strcpy((char *) temp, "wlan4");
+		if (total == my_host_if_num) {
+			strcpy((char *) temp, my_host_if_name);
 		} else {
 			PRINT_ERROR("index=%d", total);
 		}
@@ -1669,7 +1680,9 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		secure_sem_wait(&daemon_sockets_sem);
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1679,7 +1692,8 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		int type = daemon_sockets[hdr->sock_index].type;
 		int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1711,8 +1725,8 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	pt = buf;
 
-	sk_flags = *(unsigned long *) pt;
-	pt += sizeof(unsigned long);
+	sk_flags = *(uint32_t *) pt;
+	pt += sizeof(uint32_t);
 	timestamp = sk_flags & ((1 << SOCK_TIMESTAMP) | (1 << SOCK_RCVTSTAMP));
 
 	addr_len = *(int *) pt;
@@ -1764,10 +1778,13 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 		return;
 	}
 
-	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (msg_controllen)
@@ -1783,7 +1800,8 @@ void sendmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	//#########################
@@ -1831,8 +1849,8 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	pt = buf;
 
-	sk_flags = *(unsigned long *) pt;
-	pt += sizeof(unsigned long);
+	sk_flags = *(uint32_t *) pt;
+	pt += sizeof(uint32_t);
 	timestamp = sk_flags & ((1 << SOCK_TIMESTAMP) | (1 << SOCK_RCVTSTAMP)); //TODO remove rcvtstamp? or figure out/expand
 
 	data_len = *(int *) pt; //check on not in original socket_interceptor: recvmsg
@@ -1874,7 +1892,9 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 		//if (msg_controllen) {
 		//	free(msg_control);
@@ -1889,7 +1909,8 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -1943,10 +1964,13 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 		return;
 	}
 
-	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1958,7 +1982,8 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2010,10 +2035,13 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 		return;
 	}
 
-	PRINT_DEBUG("");PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("");
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -2025,7 +2053,8 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2058,7 +2087,9 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -2069,7 +2100,8 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2103,7 +2135,9 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL); //TODO check value?
@@ -2114,7 +2148,8 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2144,7 +2179,9 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -2155,7 +2192,8 @@ void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2203,7 +2241,9 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -2214,7 +2254,8 @@ void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int type = daemon_sockets[hdr->sock_index].type;
 	int protocol = daemon_sockets[hdr->sock_index].protocol;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&daemon_sockets_sem);
 
 	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
@@ -2235,7 +2276,8 @@ void close_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	secure_sem_wait(&daemon_sockets_sem);
 	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -2403,7 +2445,9 @@ void handle_call_new(struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, int msg_le
 
 		//---------------------- find
 		if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d", hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO ret not valid descriptor
@@ -2592,7 +2636,7 @@ void *wedge_to_daemon(void *local) {
 	struct nlmsghdr *nlh;
 	void *nl_buf; // Pointer to your actual data payload
 	struct nl_wedge_to_daemon_hdr *msg_hdr;
-	int nl_len;//, part_len; // Size of your actual data payload
+	int nl_len; //, part_len; // Size of your actual data payload
 	uint8_t *part_pt;
 
 	uint8_t *msg_buf = NULL;
@@ -2874,10 +2918,10 @@ void daemon_get_ff(void) {
 			daemon_fcf(ff);
 			PRINT_DEBUG("");
 		} else if (ff->dataOrCtrl == DATA) {
-			if (ff->dataFrame.directionFlag == UP) {
+			if (ff->dataFrame.directionFlag == DIR_UP) {
 				daemon_in_fdf(ff);
 				PRINT_DEBUG("");
-			} else { //directionFlag==DOWN
+			} else { //directionFlag==DIR_DOWN
 				PRINT_ERROR("todo error");
 				//drop
 			}
@@ -3295,6 +3339,10 @@ void daemon_in_fdf(struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		break;
 	}
+}
+
+void daemon_dummy(void) {
+
 }
 
 void daemon_init(void) {

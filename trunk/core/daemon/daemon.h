@@ -213,6 +213,7 @@ struct tcp_Parameters {
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
 extern char my_host_if_name[IFNAMSIZ];
+extern uint8_t my_host_if_num;
 extern uint64_t my_host_mac_addr;
 extern uint32_t my_host_ip_addr;
 extern uint32_t my_host_mask;
@@ -398,6 +399,7 @@ void accept_timeout(struct daemon_call *call);
 void recvmsg_timeout(struct daemon_call *call);
 //void poll_timeout(struct daemon_call *call); //poll is special
 
+void daemon_dummy(void);
 void daemon_init(void);
 void daemon_run(pthread_attr_t *fins_pthread_attr);
 void daemon_shutdown(void);
@@ -464,6 +466,14 @@ struct errhdr {
 
 #ifndef SOCK_NONBLOCK
 #define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0x80000
+#endif
+
+#ifndef MSG_CMSG_CLOEXEC
+#define MSG_CMSG_CLOEXEC 0x40000000
 #endif
 
 //---------------------------------------------------

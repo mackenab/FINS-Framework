@@ -135,7 +135,7 @@ struct tcp_connection_stub {
 
 	sem_t sem;
 
-	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
+	uint32_t host_ip; //IP address of this machine
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
@@ -230,7 +230,7 @@ struct tcp_connection {
 	uint32_t total;
 	struct thread_pool *pool;
 
-	uint32_t host_ip; //IP address of this machine  //should it be unsigned long?
+	uint32_t host_ip; //IP address of this machine
 	uint16_t host_port; //Port on this machine that this connection is taking up
 	uint32_t rem_ip; //IP address of remote machine
 	uint16_t rem_port; //Port on remote machine
@@ -462,6 +462,7 @@ struct tcp_thread_data {
 };
 
 //General functions for dealing with the incoming and outgoing frames
+void tcp_dummy(void);
 void tcp_init(void);
 void tcp_run(pthread_attr_t *fins_pthread_attr);
 void tcp_shutdown(void);

@@ -9,12 +9,13 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <ctype.h>
+#include <stdint.h>
 
-unsigned char htoi(char s[]) {
-	/** val modified from unsigned int to unsgined char
+uint8_t htoi(char s[]) {
+	/** val modified from uint32_t to uint8_t
 	 * at August 4,2010
 	 */
-	unsigned char val = 0;
+	uint8_t val = 0;
 	int x = 0;
 
 	if (s[x] == '0' && (s[x + 1] == 'x' || s[x + 1] == 'X'))

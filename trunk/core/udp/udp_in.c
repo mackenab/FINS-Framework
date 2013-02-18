@@ -32,7 +32,7 @@ void udp_in_fdf(struct finsFrame* ff) {
 		freeFinsFrame(ff);
 		return;
 	}
-	if (ff->dataFrame.directionFlag != UP) {
+	if (ff->dataFrame.directionFlag != DIR_UP) {
 		// release FDF here
 		freeFinsFrame(ff);
 		return;
@@ -141,8 +141,8 @@ void udp_in_fdf(struct finsFrame* ff) {
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
 
-	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
-	//newFF = create_ff(DATA, UP, SOCKETSTUBID, ff->dataFrame.pduLength - U_HEADER_LEN, ff->dataFrame.pdu, meta);
+	//newFF = create_ff(DATA, DIR_UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
+	//newFF = create_ff(DATA, DIR_UP, SOCKETSTUBID, ff->dataFrame.pduLength - U_HEADER_LEN, ff->dataFrame.pdu, meta);
 
 	//PRINT_DEBUG("newff=%p, PDU Len=%d", newFF, (newFF->dataFrame).pduLength);
 	//print_finsFrame(newFF);

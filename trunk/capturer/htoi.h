@@ -7,7 +7,8 @@
  
 #ifndef HTOI_H_
 #define HTOI_H_
-unsigned int htoi(char s[]);
+
+uint8_t htoi(char *s);
 
 #endif /* HTOI_H_ */
 

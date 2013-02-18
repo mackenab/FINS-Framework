@@ -11,7 +11,7 @@
 #include <switch.h>
 extern struct fins_proto_module ipv4_proto;
 
-extern IP4addr my_ip_addr;
+extern uint32_t my_ip_addr;
 
 void ipv4_get_ff(void) {
 
@@ -41,20 +41,24 @@ void ipv4_get_ff(void) {
 		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData);
 		ipv4_fcf(ff);
 	} else if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData); PRINT_DEBUG("PDU Length: %d", ff->dataFrame.pduLength); PRINT_DEBUG("Data direction: %d", ff->dataFrame.directionFlag); PRINT_DEBUG("pdu=%p", ff->dataFrame.pdu);
+		PRINT_DEBUG("Received frame: D/C: %d, DestID=%d, ff=%p, meta=%p", ff->dataOrCtrl, ff->destinationID.id, ff, ff->metaData);
+		PRINT_DEBUG("PDU Length: %d", ff->dataFrame.pduLength);
+		PRINT_DEBUG("Data direction: %d", ff->dataFrame.directionFlag);
+		PRINT_DEBUG("pdu=%p", ff->dataFrame.pdu);
 
-		if (ff->dataFrame.directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == DIR_UP) {
 			PRINT_DEBUG("IP4_in");
 
 			IP4_in(ff, (struct ip4_packet*) ff->dataFrame.pdu, ff->dataFrame.pduLength);
 
-		} else if (ff->dataFrame.directionFlag == DOWN) {
+		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			PRINT_DEBUG("IP4_out");
 
 			metadata *params = ff->metaData;
 			secure_metadata_readFromElement(params, "send_protocol", &protocol);
 
-			PRINT_DEBUG("%lu", my_ip_addr); PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
+			PRINT_DEBUG("%u", my_ip_addr);
+			PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
 			//TODO change my_ip_addr to src_ip from metadata
 			switch (protocol) {
 			case IP4_PT_ICMP:
@@ -198,8 +202,7 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
 					ipv4_request_free(request_resp);
 				}
 			} else {
-				PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
-						ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+				PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p", ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 			}
 
 			store->cache = NULL;

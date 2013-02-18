@@ -25,8 +25,8 @@ static struct fins_proto_module interface_proto = { .module_id = INTERFACE_ID, .
 pthread_t switch_to_interface_thread;
 pthread_t capturer_to_interface_thread;
 
-int capture_pipe_fd; /** capture file descriptor to read from capturer */
-int inject_pipe_fd; /** inject file descriptor to read from capturer */
+int client_capture_fd; /** capture file descriptor to read from capturer */
+int client_inject_fd; /** inject file descriptor to read from capturer */
 
 /** special functions to print the data within a frame for testing*/
 
@@ -69,9 +69,10 @@ int interface_setBlocking(int fd) {
 void *capturer_to_interface(void *local) {
 	PRINT_IMPORTANT("Entered");
 
+	int size_len = sizeof(int);
 	int numBytes;
 	int frame_len;
-	uint8_t frame[10*ETH_FRAME_LEN_MAX];
+	uint8_t frame[10 * ETH_FRAME_LEN_MAX];
 	struct sniff_ethernet *hdr = (struct sniff_ethernet *) frame;
 
 	uint64_t dst_mac;
@@ -99,7 +100,7 @@ void *capturer_to_interface(void *local) {
 		 */
 		//if (1) { //works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		do {
-			numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
+			numBytes = read(client_capture_fd, &frame_len, size_len);
 		} while (interface_proto.running_flag && numBytes <= 0);
 
 		if (!interface_proto.running_flag) {
@@ -112,7 +113,7 @@ void *capturer_to_interface(void *local) {
 			break;
 		}
 
-		numBytes = read(capture_pipe_fd, frame, frame_len);
+		numBytes = read(client_capture_fd, frame, frame_len);
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
 			break;
@@ -180,13 +181,13 @@ void *capturer_to_interface(void *local) {
 			continue;
 		}
 
-		ff->dataFrame.directionFlag = UP;
+		ff->dataFrame.directionFlag = DIR_UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
 		if (!interface_to_switch(ff)) {
-			PRINT_ERROR ("send to switch error, ff=%p", ff);
+			PRINT_ERROR("send to switch error, ff=%p", ff);
 			freeFinsFrame(ff);
 		}
 	}
@@ -237,11 +238,10 @@ void interface_get_ff(void) {
 		interface_fcf(ff);
 		PRINT_DEBUG("");
 	} else if (ff->dataOrCtrl == DATA) {
-		//ff->dataFrame is an IPv4 packet
-		if (ff->dataFrame.directionFlag == UP) {
+		if (ff->dataFrame.directionFlag == DIR_UP) {
 			//interface_in_fdf(ff); //TODO remove?
 			PRINT_ERROR("todo error");
-		} else { //directionFlag==DOWN
+		} else { //directionFlag==DIR_DOWN
 			interface_out_fdf(ff);
 			PRINT_DEBUG("");
 		}
@@ -304,7 +304,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 	//	print_finsFrame(ff);
 	PRINT_DEBUG("daemon inject to ethernet stub ");
 
-	numBytes = write(inject_pipe_fd, &framelen, sizeof(int));
+	numBytes = write(client_inject_fd, &framelen, sizeof(int));
 	if (numBytes <= 0) {
 		PRINT_ERROR("numBytes written %d", numBytes);
 		freeFinsFrame(ff);
@@ -312,7 +312,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 		return;
 	}
 
-	numBytes = write(inject_pipe_fd, frame, framelen);
+	numBytes = write(client_inject_fd, frame, framelen);
 	if (numBytes <= 0) {
 		PRINT_ERROR("numBytes written %d", numBytes);
 		freeFinsFrame(ff);
@@ -344,6 +344,17 @@ int interface_to_switch(struct finsFrame *ff) {
 	return module_to_switch(&interface_proto, ff);
 }
 
+void interface_dummy(void) {
+
+}
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <stddef.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
 void interface_init(void) {
 	PRINT_IMPORTANT("Entered");
 	interface_proto.running_flag = 1;
@@ -351,17 +362,41 @@ void interface_init(void) {
 	module_create_ops(&interface_proto);
 	module_register(&interface_proto);
 
-	inject_pipe_fd = open(INJECT_PIPE, O_WRONLY);
-	if (inject_pipe_fd == -1) {
-		PRINT_ERROR("opening inject_pipe did not work");
-		exit(-1);
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	int32_t size = sizeof(addr);
+
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
+
+	client_capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (client_capture_fd < 0) {
+		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", client_capture_fd, errno, strerror(errno));
+		return;
 	}
 
-	capture_pipe_fd = open(CAPTURE_PIPE, O_RDONLY); //responsible for socket/ioctl call
-	if (capture_pipe_fd == -1) {
-		PRINT_ERROR("opening capture_pipe did not work");
-		exit(-1); //exit(EXIT_FAILURE);
+	PRINT_DEBUG("connecting to: addr='%s'", CAPTURE_PATH);
+	if (connect(client_capture_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", client_capture_fd, errno, strerror(errno));
+		return;
 	}
+	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", client_capture_fd, addr.sun_path);
+
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
+
+	client_inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (client_inject_fd < 0) {
+		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", client_inject_fd, errno, strerror(errno));
+		return;
+	}
+
+	PRINT_DEBUG("connecting to: addr='%s'", INJECT_PATH);
+	if (connect(client_inject_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", client_inject_fd, errno, strerror(errno));
+		return;
+	}
+	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", client_inject_fd, addr.sun_path);
 
 	PRINT_IMPORTANT("PCAP processes connected");
 }

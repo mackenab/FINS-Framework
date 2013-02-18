@@ -499,8 +499,8 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	PRINT_DEBUG("2.1");
 	int linkvalue = 80211;
 	char linkname[] = "linklayer";
-	unsigned char fakeDatav[] = "loloa77a7";
-	unsigned char *fakeData = fakeDatav;
+	uint8_t fakeDatav[] = "loloa77a7";
+	uint8_t *fakeData = fakeDatav;
 
 	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
 
@@ -513,10 +513,10 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	metadata_writeToElement(params, linkname, &linkvalue, META_TYPE_INT32);
 	PRINT_DEBUG("2.5");
 	ff->dataOrCtrl = DATA;
-	ff->destinationID.id = (unsigned char) 200;
+	ff->destinationID.id = (uint8_t) 200;
 	ff->destinationID.next = NULL;
 
-	ff->dataFrame.directionFlag = UP;
+	ff->dataFrame.directionFlag = DIR_UP;
 	ff->metaData = params;
 	ff->dataFrame.pdu = fakeData;
 	ff->dataFrame.pduLength = 10;
@@ -687,7 +687,7 @@ int freeFinsFrame(struct finsFrame *ff) {
 	return (1);
 }
 
-int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
+int serializeCtrlFrame(struct finsFrame * ff, uint8_t **buffer)
 /* serializes a fins control frame for transmission to an external process
  * - pass it the frame (finsFrame) and it will fill in the pointer to the frame, uchar*
  * -- and return the length of the array (return int);
@@ -723,62 +723,62 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 
 	//initialize buffer
 
-	int buf_size = /*strlen((char *) ff->ctrlFrame.data_old) + strlen((char *) ff->ctrlFrame.name) + */3 * sizeof(unsigned char) + 2 * sizeof(int)
+	int buf_size = /*strlen((char *) ff->ctrlFrame.data_old) + strlen((char *) ff->ctrlFrame.name) + */3 * sizeof(uint8_t) + 2 * sizeof(int)
 			+ sizeof(unsigned short int) + sizeof(unsigned int);
 
 	//PRINT_DEBUG("SIZE OF BUF_SIZE = %d", buf_size);
 
-	*buffer = (unsigned char *) secure_malloc(buf_size);
+	*buffer = (uint8_t *) secure_malloc(buf_size);
 
-	unsigned char * temporary = *buffer;
+	uint8_t * temporary = *buffer;
 
 	//DATA OR CONTROL
-	memcpy((unsigned char *) *buffer, &(ff->dataOrCtrl), sizeof(unsigned char));
+	memcpy((uint8_t *) *buffer, &(ff->dataOrCtrl), sizeof(uint8_t));
 	//PRINT_DEBUG("buffer1:%s", *buffer);
 
 	//increment pointer
-	*buffer += sizeof(unsigned char);
+	*buffer += sizeof(uint8_t);
 
 	//DESTINATION ID
-	memcpy((unsigned char *) *buffer, &(ff->destinationID.id), sizeof(unsigned char));
+	memcpy((uint8_t *) *buffer, &(ff->destinationID.id), sizeof(uint8_t));
 	//PRINT_DEBUG("buffer2:%s",*buffer);
 
 	//increment pointer
-	*buffer += sizeof(unsigned char);
+	*buffer += sizeof(uint8_t);
 
 	//send size of name first
 	int temp = 0; //strlen((char *) ff->ctrlFrame.name);
-	memcpy((unsigned char *) *buffer, &temp, sizeof(int));
+	memcpy((uint8_t *) *buffer, &temp, sizeof(int));
 
 	//increment pointer
 	*buffer += sizeof(int);
 
 	//NAME
-	//strcat((unsigned char *)*buffer, ff->ctrlFrame.name);
-	//memcpy((unsigned char *) *buffer, ff->ctrlFrame.name, temp);
+	//strcat((uint8_t *)*buffer, ff->ctrlFrame.name);
+	//memcpy((uint8_t *) *buffer, ff->ctrlFrame.name, temp);
 	//PRINT_DEBUG("buffer3:%s", *buffer);
 
 	//increment pointer
 	*buffer += temp;
 
 	//OPCODE
-	//	strncat((unsigned char *)*buffer, (unsigned char *) (&(htonl(ff->ctrlFrame.opcode))), sizeof(int));
-	memcpy((unsigned char *) *buffer, &(ff->ctrlFrame.opcode), sizeof(unsigned short int));
+	//	strncat((uint8_t *)*buffer, (uint8_t *) (&(htonl(ff->ctrlFrame.opcode))), sizeof(int));
+	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.opcode), sizeof(unsigned short int));
 	//PRINT_DEBUG("buffer4 = %s", *buffer);
 
 	//increment pointer
 	*buffer += sizeof(unsigned short int);
 
 	//SENDERID
-	//strncat((unsigned char *)*buffer, &(ff->ctrlFrame.senderID),sizeof(unsigned char *));
-	memcpy((unsigned char *) *buffer, &(ff->ctrlFrame.senderID), sizeof(unsigned char));
+	//strncat((uint8_t *)*buffer, &(ff->ctrlFrame.senderID),sizeof(uint8_t *));
+	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.senderID), sizeof(uint8_t));
 	//PRINT_DEBUG("buffer5:%s", *buffer);
 
 	//increment pointer
-	*buffer += sizeof(unsigned char);
+	*buffer += sizeof(uint8_t);
 
 	//SERIALNUM
-	memcpy((unsigned char *) *buffer, &(ff->ctrlFrame.serial_num), sizeof(unsigned int));
+	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.serial_num), sizeof(unsigned int));
 	//PRINT_DEBUG("buffer6: %s", *buffer);
 
 	*buffer += sizeof(unsigned int);
@@ -802,7 +802,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 	case CTRL_SET_PARAM:
 		//send size of data first
 		//temp = strlen((char *) (ff->ctrlFrame.data_old));
-		//memcpy((unsigned char *) *buffer, &temp, sizeof(int));
+		//memcpy((uint8_t *) *buffer, &temp, sizeof(int));
 
 		//increment buffer
 		*buffer += sizeof(int);
@@ -829,7 +829,7 @@ int serializeCtrlFrame(struct finsFrame * ff, unsigned char **buffer)
 	return strlen((char *) (*buffer));
 }
 
-struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
+struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 /* does the opposite of serializeCtrlFrame; used to reconstruct a controlFrame
  * - pass it the byte array and the length and it will give you a pointer to the
  * -- struct.
@@ -848,41 +848,41 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	//	PRINT_DEBUG("The value of buffer = %s", buffer,length);
 
 	//DATA OR CONTROL
-	memcpy(&(ff->dataOrCtrl), (unsigned char *) buffer, sizeof(unsigned char));
+	memcpy(&(ff->dataOrCtrl), (uint8_t *) buffer, sizeof(uint8_t));
 	//PRINT_DEBUG("buffer1 = %s, dataOrCtrl = %d", buffer,ff->dataOrCtrl);
-	buffer += sizeof(unsigned char);
+	buffer += sizeof(uint8_t);
 
 	//DESTINATION ID
-	memcpy(&(ff->destinationID), (unsigned char *) buffer, sizeof(unsigned char));
+	memcpy(&(ff->destinationID), (uint8_t *) buffer, sizeof(uint8_t));
 	//PRINT_DEBUG("buffer2 = %s, destination = %d", buffer,ff->destinationID.id);
-	buffer += sizeof(unsigned char);
+	buffer += sizeof(uint8_t);
 
 	//NAME
 	//retrieve size of name first
 	int temp = 0;
-	memcpy(&temp, (unsigned char *) buffer, sizeof(int));
+	memcpy(&temp, (uint8_t *) buffer, sizeof(int));
 	buffer += sizeof(int);
 
 	//PRINT_DEBUG("temp = %d", temp);
 
 	//retrieve the name
 	//ff->ctrlFrame.name = fins_malloc(temp);
-	//memcpy(ff->ctrlFrame.name, (unsigned char *) buffer, temp);
+	//memcpy(ff->ctrlFrame.name, (uint8_t *) buffer, temp);
 	//PRINT_DEBUG("buffer3 = %s, name = %s", buffer,ff->ctrlFrame.name);
 	buffer += temp;
 
 	//OPCODE
-	memcpy(&(ff->ctrlFrame.opcode), (unsigned char *) buffer, sizeof(unsigned short int));
+	memcpy(&(ff->ctrlFrame.opcode), (uint8_t *) buffer, sizeof(unsigned short int));
 	//PRINT_DEBUG("buffer4 = %s, opcode = %d", buffer,ff->ctrlFrame.opcode);
 	buffer += sizeof(unsigned short int);
 
 	//SENDERID
-	memcpy(&(ff->ctrlFrame.senderID), (unsigned char *) buffer, sizeof(unsigned char));
+	memcpy(&(ff->ctrlFrame.senderID), (uint8_t *) buffer, sizeof(uint8_t));
 	//PRINT_DEBUG("buffer5 = %s, senderID = %d", buffer,ff->ctrlFrame.senderID);
-	buffer += sizeof(unsigned char);
+	buffer += sizeof(uint8_t);
 
 	//SERIALNUM
-	memcpy(&(ff->ctrlFrame.serial_num), (unsigned char *) buffer, sizeof(unsigned int));
+	memcpy(&(ff->ctrlFrame.serial_num), (uint8_t *) buffer, sizeof(unsigned int));
 	//PRINT_DEBUG("buffer6 = %s, serial_num = %d", buffer,ff->ctrlFrame.serial_num);
 	buffer += sizeof(unsigned int);
 
@@ -908,7 +908,7 @@ struct finsFrame* unserializeCtrlFrame(unsigned char * buffer, int length)
 	case CTRL_SET_PARAM:
 		//retrieve size of data first
 		temp = 0;
-		memcpy(&temp, (unsigned char *) buffer, sizeof(int));
+		memcpy(&temp, (uint8_t *) buffer, sizeof(int));
 
 		//PRINT_DEBUG("CSP: buffer6.25 = %s", buffer);
 

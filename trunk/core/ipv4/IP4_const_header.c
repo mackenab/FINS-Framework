@@ -7,8 +7,8 @@
 
 #include "ipv4.h"
 
-void IP4_const_header(struct ip4_packet *packet, IP4addr source,
-		IP4addr destination, uint8_t protocol) {
+void IP4_const_header(struct ip4_packet *packet, uint32_t source,
+		uint32_t destination, uint8_t protocol) {
 	static uint16_t unique_id;
 
 	packet->ip_verlen = IP4_VERSION << 4;

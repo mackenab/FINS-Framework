@@ -11,12 +11,12 @@
 
 #include "ipv4.h"
 
-extern IP4addr my_ip_addr;
-extern IP4addr my_mask;
+extern uint32_t my_ip_addr;
+extern uint32_t my_mask;
 
-int IP4_dest_check(IP4addr destination) {
-	IP4addr subnet_broadcast = my_ip_addr | (~my_mask);
-	IP4addr network_broadcast;
+int IP4_dest_check(uint32_t destination) {
+	uint32_t subnet_broadcast = my_ip_addr | (~my_mask);
+	uint32_t network_broadcast;
 
 	if (IP4_CLASSA(my_ip_addr)) {
 		network_broadcast = my_ip_addr | (~IP4_ADR_P2H(255, 0, 0, 0));

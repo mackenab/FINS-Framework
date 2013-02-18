@@ -10,6 +10,11 @@
 #include <finsqueue.h>
 
 /** Ethernet Stub Variables  */
+
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX 108
+#endif
+
 #ifdef BUILD_FOR_ANDROID
 	//#define FINS_TMP_ROOT "/data/data/fins"
 	#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
@@ -17,9 +22,8 @@
 	#define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
-#define CAPTURE_PIPE FINS_TMP_ROOT "/fins_capture"
-#define INJECT_PIPE FINS_TMP_ROOT "/fins_inject"
-
+#define CAPTURE_PATH FINS_TMP_ROOT "/fins_capture"
+#define INJECT_PATH FINS_TMP_ROOT "/fins_inject"
 
 /* ethernet headers are always exactly 14 bytes [1] */
 #define SIZE_ETHERNET 14
@@ -41,6 +45,7 @@ struct sniff_ethernet {
 	uint8_t data[1];
 };
 
+void interface_dummy(void);
 void interface_init(void);
 void interface_run(pthread_attr_t *fins_pthread_attr);
 void interface_shutdown(void);

@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,7);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -332,12 +332,13 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (0) {
+	if (1) {
 		struct timeval start, end;
-		int its = 10000;
+		int its = 10;//10000;
 
 		int data_len = 1000;
 		while (data_len < 4000) {
+			gets(send_data);
 			//data_len += 100;
 			//data_len = 1000;
 
@@ -374,7 +375,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (1) {
+	if (0) {
 		int i = 0;
 		int its = 10000;
 		double speed = 15000000;

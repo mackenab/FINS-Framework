@@ -8,7 +8,7 @@
 
 extern struct ip4_stats stats;
 
-int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, IP4addr dest, uint16_t length) {
+int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length) {
 	PRINT_DEBUG("");
 
 	struct ip4_next_hop_info next_hop = IP4_next_hop(dest);

@@ -26,7 +26,7 @@ int UDP_InputQueue_Read_local(struct finsFrame *pff_local) {
 	}
 	*pff_local = *pff;
 	if (pff->dataOrCtrl == DATA) {
-		if (pff->dataFrame.directionFlag == DOWN) {
+		if (pff->dataFrame.directionFlag == DIR_DOWN) {
 			pff_local->dataFrame.pdu = secure_malloc((pff->dataFrame.pduLength) + U_HEADER_LEN);
 			memcpy((pff_local->dataFrame.pdu) + U_HEADER_LEN, pff->dataFrame.pdu, pff->dataFrame.pduLength);
 			free(pff->dataFrame.pdu);

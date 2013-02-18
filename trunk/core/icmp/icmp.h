@@ -136,6 +136,7 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 
 void icmp_fcf(struct finsFrame *ff);
 
+void icmp_dummy(void);
 void icmp_init(void);
 void icmp_run(pthread_attr_t *fins_pthread_attr);
 void icmp_shutdown(void);

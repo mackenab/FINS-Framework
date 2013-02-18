@@ -22,6 +22,7 @@
 #include <sys/endian.h>
 #endif
 
+void logger_dummy(void);
 void logger_init(void);
 void logger_run(pthread_attr_t *fins_pthread_attr);
 void logger_shutdown(void);

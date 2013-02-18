@@ -166,10 +166,10 @@ int size_tcp;
 
 /** Functions prototypes, full definition found in wifidemux.c */
 
-void arp_handler(unsigned char* arp_packet, u_int length);
-void rarp_handler(unsigned char* rarp_packet, u_int length);
+void arp_handler(uint8_t *arp_packet, u_int length);
+void rarp_handler(uint8_t *rarp_packet, u_int length);
 
-void ip4_handler(unsigned char* arp_packet, u_int length);
+void ip4_handler(uint8_t *arp_packet, u_int length);
 
 void parse_frame(int framelength, u_char *packet);
 

@@ -58,8 +58,8 @@
 #define CONTROL 1
 
 //frame direction - finsDataFrame.directionFlag values
-#define UP 0	// ingress network data (interface -> app)
-#define DOWN 1	// egress network data (app -> interface)
+#define DIR_UP 0	// ingress network data (interface -> app)
+#define DIR_DOWN 1	// egress network data (app -> interface)
 //this should be removed -MST
 struct destinationList {
 	uint8_t id;
@@ -68,10 +68,10 @@ struct destinationList {
 
 /* this needs a comment */
 struct tableRecord {
-	unsigned char sourceID;
-	unsigned char directionFlag;
-	unsigned char vci;
-	unsigned char destinationID;
+	uint8_t sourceID;
+	uint8_t directionFlag;
+	uint8_t vci;
+	uint8_t destinationID;
 	struct tableRecord *next;
 };
 
@@ -182,7 +182,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff);
 int freeFinsFrame(struct finsFrame *f);
 
 /* needed function defs */
-int serializeCtrlFrame(struct finsFrame *, unsigned char **);
+int serializeCtrlFrame(struct finsFrame *, uint8_t **);
 /* serializes a fins control frame for transmission to an external process
  * - pass it the frame (finsFrame) and it will fill in the pointer to the frame, uchar*
  * -- and return the length of the array (return int);
@@ -191,7 +191,7 @@ int serializeCtrlFrame(struct finsFrame *, unsigned char **);
  * - called by the sender
  */
 
-struct finsFrame * unserializeCtrlFrame(unsigned char *, int);
+struct finsFrame * unserializeCtrlFrame(uint8_t *, int);
 /* does the opposite of serializeCtrlFrame; used to reconstruct a controlFrame
  * - pass it the byte array and the length and it will give you a pointer to the
  * -- struct.

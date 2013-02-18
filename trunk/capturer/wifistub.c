@@ -16,8 +16,8 @@
 /** Globally defined counters
  *
  */
-extern int inject_count;
-extern int capture_count;
+extern int server_inject_count;
+extern int server_capture_count;
 
 /**
  * print data in rows of 16 bytes: offset   hex   ascii
@@ -38,9 +38,6 @@ extern int capture_count;
 		PRINT_ERROR("Snaplen not large enough for packet: caplen=%u, len=%u", header->caplen, header->len);
 		exit(1);
 	}
-	//data.frameLength = header->caplen ;
-	//data.frame = (u_char *) fins_malloc(header->caplen);
-	//memcpy(data.frame,packetReceived,data.frameLength);
 
 	/** Write the length of the received frame to the pipe, then write the frame contents
 	 * This part is an atomic critical section. Need to be handled carefully
@@ -51,19 +48,19 @@ extern int capture_count;
 	//return;
 	//}
 
-	++capture_count;
-	//PRINT_IMPORTANT("Packet captured: count=%d, size=%d", ++capture_count, dataLength);
+	++server_capture_count;
+	//PRINT_IMPORTANT("Packet captured: count=%d, size=%d", ++server_capture_count, dataLength);
 
 	//print_hex_block(packetReceived, dataLength);
 	//fflush(stdout);
 
-	uint32_t numBytes = write(capture_pipe_fd, &dataLength, sizeof(u_int));
+	uint32_t numBytes = write(server_capture_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
 		PRINT_ERROR("size write fail: numBytes=%u", numBytes);
 		return;
 	}
 
-	numBytes = write(capture_pipe_fd, packetReceived, dataLength);
+	numBytes = write(server_capture_fd, packetReceived, dataLength);
 	if (numBytes <= 0) {
 		PRINT_ERROR("frame write fail: numBytes=%u, frame_len=%u", numBytes, dataLength);
 		return;
@@ -72,63 +69,73 @@ extern int capture_count;
 	return;
 } // end of the function got_packet
 
-void capture_init(char *interface) {
-	char device[20];
+void capture_init(char *device) {
+	PRINT_IMPORTANT("Entered: device='%s'", device);
 
-	strcpy(device, interface);
-	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
-	//unsigned char dev_macAddress[17];
-	char *filter_exp;
-	unsigned char *dev;
-	filter_exp = (char *) malloc(200);
+	int ret;
+	/*
+	 PRINT_IMPORTANT("Gaining su status");
+	 if ((ret = system("su"))) {
+	 PRINT_ERROR("SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	 }
+	 */
+
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	int32_t size = sizeof(addr);
+
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
+	unlink(addr.sun_path);
+
+	int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (server_fd < 0) {
+		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		return;
+	}
+
+	PRINT_DEBUG("binding to: addr='%s'", CAPTURE_PATH);
+	if (bind(server_fd, (struct sockaddr *) &addr, size) < 0) {
+		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		return;
+	}
+	if (listen(server_fd, 1) < 0) {
+		PRINT_ERROR("listen error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		return;
+	}
+
+	if (1) {
+		server_capture_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
+		close(server_fd);
+		if (server_capture_fd < 0) {
+			PRINT_ERROR("accept error: capture_fd=%d, errno=%u, str='%s'", server_capture_fd, errno, strerror(errno));
+			return;
+		}
+		PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", server_capture_fd, addr.sun_path);
+	}
+
+	//TODO recv MAC/ip address from Core?
+	char *filter_exp = (char *) malloc(200);
 	if (filter_exp == NULL) {
 		PRINT_ERROR("alloc error");
 		exit(-1);
 	}
+	memset(filter_exp, 0, 200);
 
-	struct bpf_program fp; /* compiled filter program (expression) */
-	bpf_u_int32 mask; /* subnet mask */
-	bpf_u_int32 net; /* ip */
-	//	int num_packets = 1000;			/* number of packets to capture */
-	int num_packets = 0; /* INFINITY */
-	int data_linkValue;
-	//print_app_banner();
-
-	dev = (unsigned char *) device;
-
-	/*
-	 if (mkfifo(CAPTURE_PIPE, 0777) !=0 )
-	 {
-	 PRINT_DEBUG("MKFIFO Failed");
-	 exit(EXIT_FAILURE);
-	 }
-	 */
-
-	/* has to run without return check to work as blocking call */
-	/** It blocks until the other communication side opens the pipe */
-	capture_pipe_fd = open(CAPTURE_PIPE, O_WRONLY);
-	if (capture_pipe_fd == -1) {
-		PRINT_DEBUG("Income Pipe failure");
-		exit(EXIT_FAILURE);
-	}
-
-	//TODO recv MAC/ip address from Core?
-
-	/* Build the filter expression based on the mac address of the passed
-	 * device name
-	 */
-	//	strcat(filter_exp,"ether dst ");
-	//char filter_exp[] = "ether src 00:1e:2a:52:ec:9c";		/* filter expression [3] */
+	//unsigned char dev_macAddress[17];
 	//	getDevice_MACAddress(dev_macAddress,dev);
 	//	strcat(filter_exp,dev_macAddress);
-	//strcat(filter_exp, ""); //everything
 
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
 	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //Vbox eth2
 	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
-	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
-	strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
+	strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
+	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
 
+	uint8_t *dev = (uint8_t *) device;
+	bpf_u_int32 net; /* ip */
+	bpf_u_int32 mask; /* subnet mask */
+	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
 
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet((char *) dev, &net, &mask, errbuf) == -1) {
@@ -137,19 +144,18 @@ void capture_init(char *interface) {
 		mask = 0;
 	}
 	/* print capture info */
-	PRINT_IMPORTANT("Device: %s", dev);
-	PRINT_IMPORTANT("Number of packets: %d", num_packets);
-	PRINT_IMPORTANT("Filter expression: %s", filter_exp);
+	PRINT_IMPORTANT("Device='%s'", dev);
+	PRINT_IMPORTANT("Filter expression='%s'", filter_exp);
 
 	/* open capture device */
 	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 1, 1000, errbuf);
 	if (capture_handle == NULL) {
-		PRINT_ERROR("Couldn't open device %s: %s", dev, errbuf);
+		PRINT_ERROR("Couldn't open device: dev='%s', err='%s', errno=%u, str='%s'", dev, errbuf, errno, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	/* make sure we're capturing on an Ethernet device [2] */
-	data_linkValue = pcap_datalink(capture_handle);
+	int data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
 		PRINT_ERROR("%s is not an Ethernet", dev);
 		exit(EXIT_FAILURE);
@@ -158,6 +164,7 @@ void capture_init(char *interface) {
 
 	/* compile the filter expression */
 
+	struct bpf_program fp; /* compiled filter program (expression) */
 	if (pcap_compile(capture_handle, &fp, filter_exp, 0, net) == -1) {
 		PRINT_ERROR("Couldn't parse filter %s: %s", filter_exp, pcap_geterr(capture_handle));
 		exit(EXIT_FAILURE);
@@ -169,18 +176,19 @@ void capture_init(char *interface) {
 		exit(EXIT_FAILURE);
 	}
 
-	//CHANGED mrd015 !!!!! start pcap_can_set_rfmon(...) not in Bionic!
 #ifndef BUILD_FOR_ANDROID
-	int check_monitor_mode = pcap_can_set_rfmon(capture_handle);
+	int check_monitor_mode = pcap_can_set_rfmon(capture_handle); //Not supported in Bionic
 	if (check_monitor_mode) {
 		PRINT_DEBUG(" Monitor mode can be set");
 	} else if (check_monitor_mode == 0) {
 		PRINT_DEBUG(" Monitor mode could not be set");
-	} else
-		PRINT_DEBUG(" check_monior_mode value is %d ", check_monitor_mode);
+	}
 #endif
-	//CHANGE END !!!!!	
 
+	//while(1);
+
+	//	int num_packets = 1000;			/* number of packets to capture */
+	int num_packets = 0; /* INFINITY */
 	/* now we can set our callback function */
 	pcap_loop(capture_handle, num_packets, got_packet, (u_char *) NULL);
 	/* cleanup */
@@ -191,38 +199,45 @@ void capture_init(char *interface) {
 
 /** -----------------------------------------------------------------*/
 
-void inject_init(char *interface) {
+void inject_init(char *device) {
+	PRINT_IMPORTANT("Entered: device='%s'", device);
 
-	/*
-	 if (mkfifo(INJECT_PIPE, 0777) !=0 )
-	 {
-	 PRINT_DEBUG("MKFIFO of INJECT Failed ");
-	 exit(EXIT_FAILURE);
-	 } */
-	//	static int count = 1;
-	unsigned char device[20];
-	//unsigned char dev_macAddress[17];
-	strcpy((char *) device, interface);
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	int32_t size = sizeof(addr);
 
-	int framelen;
-	//char *frame;
-	int numBytes;
-	unsigned char *dev;
-	dev = (unsigned char *) device;
-	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
-	char frame[SNAP_LEN];
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
+	unlink(addr.sun_path);
+
+	int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (server_fd < 0) {
+		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		return;
+	}
+
+	PRINT_DEBUG("binding to: addr='%s'", INJECT_PATH);
+	if (bind(server_fd, (struct sockaddr *) &addr, size) < 0) {
+		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		return;
+	}
+	if (listen(server_fd, 1) < 0) {
+		PRINT_ERROR("listen error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		return;
+	}
+
+	server_inject_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
+	close(server_fd);
+	if (server_inject_fd < 0) {
+		PRINT_ERROR("accept error: inject_fd=%d, errno=%u, str='%s'", server_inject_fd, errno, strerror(errno));
+		return;
+	}
+	PRINT_DEBUG("accepted at: inject_fd=%d, addr='%s'", server_inject_fd, addr.sun_path);
 
 	//getDevice_MACAddress(dev_macAddress,dev);
 
-	/** has to run without return check to work as blocking call
-	 * It blocks until the other communication side opens the pipe
-	 * */
-	//	mkfifo(INJECT_PIPE, 0777);
-	inject_pipe_fd = open(INJECT_PIPE, O_RDONLY);
-	if (inject_pipe_fd == -1) {
-		PRINT_DEBUG("Inject Pipe failure");
-		exit(EXIT_FAILURE);
-	}
+	uint8_t *dev = (uint8_t *) device;
+	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
 
 	/** Setup the Injection Interface */
 	if ((inject_handle = pcap_open_live((char *) dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
@@ -230,16 +245,23 @@ void inject_init(char *interface) {
 		exit(1);
 	}
 
+	//	static int count = 1;
+	//uint8_t dev_macAddress[17];
+
+	int framelen;
+	//char *frame;
+	int numBytes;
+	char frame[SNAP_LEN];
+
 	/** --------------------------------------------------------------------------*/
 	while (1) {
-		numBytes = read(inject_pipe_fd, &framelen, sizeof(int));
+		numBytes = read(server_inject_fd, &framelen, sizeof(int));
 		if (numBytes <= 0) {
 			PRINT_ERROR("size read fail: numBytes=%u", numBytes);
 			break;
 		}
 
-		//frame = (char *) fins_malloc (framelen);
-		numBytes = read(inject_pipe_fd, frame, framelen);
+		numBytes = read(server_inject_fd, frame, framelen);
 		if (numBytes <= 0) {
 			PRINT_ERROR("frame read fail: numBytes=%u, frame_len=%u", numBytes, framelen);
 			break;
@@ -249,21 +271,17 @@ void inject_init(char *interface) {
 		//print_hex_block((u_char *) frame, framelen);
 		//fflush(stdout);
 
-		/**
-		 * Inject the Ethernet Frame into the Device
-		 */
-
 		numBytes = pcap_inject(inject_handle, frame, framelen);
 		if (numBytes == -1) {
 			PRINT_DEBUG("Failed to inject the packet");
 		} else {
-			PRINT_DEBUG("Message injected: count=%d, size=%d ", inject_count, numBytes);
-			inject_count++;
+			PRINT_DEBUG("Message injected: count=%d, size=%d ", server_inject_count, numBytes);
+			server_inject_count++;
 		}
 	} // end of while loop
 
-	PRINT_IMPORTANT("**Number of captured frames = %d", capture_count);
-	PRINT_IMPORTANT("****Number of Injected frames = %d", inject_count);
+	PRINT_IMPORTANT("**Number of captured frames = %d", server_capture_count);
+	PRINT_IMPORTANT("****Number of Injected frames = %d", server_inject_count);
 } // inject_init()
 
 /** ------------------------------------------------------------------*/
@@ -278,9 +296,8 @@ void wifi_terminate() {
 /** -------------------------------------------------------------*/
 
 void close_pipes() {
-	unlink(CAPTURE_PIPE);
-	unlink(INJECT_PIPE);
-	close(capture_pipe_fd);
-	close(inject_pipe_fd);
-
+	unlink(CAPTURE_PATH);
+	unlink(INJECT_PATH);
+	close(server_capture_fd);
+	close(server_inject_fd);
 }

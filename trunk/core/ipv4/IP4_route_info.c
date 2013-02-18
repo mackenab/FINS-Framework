@@ -8,7 +8,7 @@
 extern uint32_t my_host_ip_addr;
 extern uint32_t my_host_mask;
 extern uint32_t loopback_ip_addr;
-//uint32_t loopback_mask;
+//extern uint32_t loopback_mask;
 extern uint32_t any_ip_addr;
 
 void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
@@ -17,11 +17,10 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 	printf("Routing table:\n");
 	printf("Destination\tGateway\t\tMask\tMetric\tInterface\n");
 	while (current_pointer != NULL) {
-		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->dst >> 24, (unsigned int) (current_pointer->dst >> 16) & 0xFF,
-				(unsigned int) (current_pointer->dst >> 8) & 0xFF, (unsigned int) current_pointer->dst & 0xFF);
-		printf("%u.%u.%u.%u \t", (unsigned int) current_pointer->gw >> 24, (unsigned int) (current_pointer->gw >> 16) & 0xFF,
-				(unsigned int) (current_pointer->gw >> 8) & 0xFF, (unsigned int) current_pointer->gw & 0xFF);
-		printf("%u \t", (unsigned int) current_pointer->mask);
+		printf("%u.%u.%u.%u \t", current_pointer->dst >> 24, (current_pointer->dst >> 16) & 0xFF, (current_pointer->dst >> 8) & 0xFF,
+				current_pointer->dst & 0xFF);
+		printf("%u.%u.%u.%u \t", current_pointer->gw >> 24, (current_pointer->gw >> 16) & 0xFF, (current_pointer->gw >> 8) & 0xFF, current_pointer->gw & 0xFF);
+		printf("%u \t", current_pointer->mask);
 		printf("%u \t", current_pointer->metric);
 		printf("%u", current_pointer->interface);
 		printf("\n");
@@ -62,7 +61,8 @@ struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * tab
 			previous = current;
 			current = current->next_entry;
 		}
-	} PRINT_DEBUG("IP4_sort_routing_table end");
+	}
+	PRINT_DEBUG("IP4_sort_routing_table end");
 	return (first);
 
 }
@@ -70,8 +70,8 @@ struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * tab
 struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	char dst_temp[IP4_ALEN];
 	char gw_temp[IP4_ALEN];
-	unsigned int priority;
-	unsigned int interface;
+	uint32_t priority;
+	uint32_t interface;
 	struct ip4_routing_table *table_pointer = NULL;
 
 	switch (msg->nlmsg_type) {
@@ -85,7 +85,7 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 		struct rtattr* rta = RTM_RTA(rtm);
 		int rtaLen = msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct rtmsg));
 		if (rtm->rtm_type == RTN_UNICAST) // don't consider local, broadcast and unreachable routes
-		{
+				{
 			table_pointer = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 			memset(table_pointer, 0, sizeof(struct ip4_routing_table)); // zero the routing table entry data
 			for (; RTA_OK(rta, rtaLen); rta = RTA_NEXT(rta, rtaLen)) {
@@ -126,13 +126,13 @@ struct ip4_routing_table * IP4_get_routing_table_old() {
 	struct nlmsghdr* msg;
 	char receive_buffer[IP4_NETLINK_BUFF_SIZE];
 	char * receive_ptr;
-	unsigned int sock;
+	int sock;
 	struct ip4_route_request route_req;
 	struct ip4_routing_table * routing_table;
 	struct ip4_routing_table * current_table_entry;
 
-	unsigned int pid = (uint32_t) getpid();
-	unsigned int seq = (uint32_t) getppid();
+	uint32_t pid = (uint32_t) getpid();
+	uint32_t seq = (uint32_t) getppid();
 	if ((sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {
 		PRINT_DEBUG("couldn't open NETLINK_ROUTE socket");
 		return NULL;
@@ -198,68 +198,45 @@ struct ip4_routing_table * IP4_get_routing_table() {
 	struct ip4_routing_table *row1 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 	struct ip4_routing_table *row2 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 
-	if (0) { //laptop eth0
-		row0->dst = my_host_ip_addr & my_host_mask;
+	if (0) { //laptop eth0, wired interface
+		row0->dst = loopback_ip_addr;
 		row0->gw = any_ip_addr;
-		row0->mask = 24;
-		row0->metric = 10;
-		row0->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
+		row0->mask = 8;
+		row0->metric = 0;
+		row0->interface = 0;
+		row0->next_entry = row1;
+
+		row1->dst = my_host_ip_addr & my_host_mask;
+		row1->gw = any_ip_addr;
+		row1->mask = 24;
+		row1->metric = 1;
+		row1->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
+		row1->next_entry = row2;
+
+		row2->dst = any_ip_addr;
+		row2->gw = (my_host_ip_addr & my_host_mask) | 1;
+		row2->mask = 24;
+		row2->metric = 2;
+		row2->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
+		row2->next_entry = NULL;
+	}
+
+	if (1) { //laptop wlan4, wireless interface
+		row0->dst = loopback_ip_addr;
+		row0->gw = any_ip_addr;
+		row0->mask = 8;
+		row0->metric = 0;
+		row0->interface = 0;
 		row0->next_entry = row1;
 
 		row1->dst = any_ip_addr;
 		row1->gw = (my_host_ip_addr & my_host_mask) | 1;
 		row1->mask = 24;
-		row1->metric = 10;
+		row1->metric = 1;
 		row1->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
-		row1->next_entry = row2;
-
-		row2->dst = loopback_ip_addr;
-		row2->gw = IP4_ADR_P2H(10,0,2,2);
-		row2->mask = 0;
-		row2->metric = 0;
-		row2->interface = my_host_ip_addr;
-		row2->next_entry = NULL;
-	}
-
-	if (1) { //laptop wlan4
-		row0->dst = any_ip_addr;
-		row0->gw = (my_host_ip_addr & my_host_mask) | 1;
-		row0->mask = 24;
-		row0->metric = 10;
-		row0->interface = my_host_ip_addr; //TODO change back to number? so looks up in interface list
-		row0->next_entry = row1;
-
-		row1->dst = loopback_ip_addr;
-		row1->gw = IP4_ADR_P2H(10,0,2,2);
-		row1->mask = 0;
-		row1->metric = 0;
-		row1->interface = my_host_ip_addr;
 		row1->next_entry = NULL;
 
 		free(row2);
-	}
-
-	if (0) { //standard linux table
-		row0->dst = IP4_ADR_P2H(10,0,2,0);
-		row0->gw = IP4_ADR_P2H(0,0,0,0);
-		row0->mask = 24;
-		row0->metric = 1;
-		row0->interface = 3; //number assiociated with interface & thus IP?
-		row0->next_entry = row1;
-
-		row1->dst = IP4_ADR_P2H(169,254,0,0);
-		row1->gw = IP4_ADR_P2H(0,0,0,0);
-		row1->mask = 16;
-		row1->metric = 1000;
-		row1->interface = 3;
-		row1->next_entry = row2;
-
-		row2->dst = IP4_ADR_P2H(0,0,0,0);
-		row2->gw = IP4_ADR_P2H(10,0,2,2);
-		row2->mask = 0;
-		row2->metric = 0;
-		row2->interface = 3;
-		row2->next_entry = NULL;
 	}
 
 	routing_table = row0;

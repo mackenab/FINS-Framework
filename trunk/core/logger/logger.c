@@ -210,6 +210,10 @@ void *switch_to_logger(void *local) {
 	return NULL;
 }
 
+void logger_dummy(void) {
+
+}
+
 void logger_init(void) {
 	PRINT_IMPORTANT("Entered");
 	logger_proto.running_flag = 1;

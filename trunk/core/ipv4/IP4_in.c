@@ -93,7 +93,7 @@ void IP4_in(struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
 		return;
 	}
 
-	PRINT_DEBUG("src=%lu, dst=%lu (hostf)", header.source, header.destination);
+	PRINT_DEBUG("src=%u, dst=%u (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
 	if (IP4_dest_check(header.destination) == 0) { //TODO update away from class system
 		PRINT_DEBUG("");

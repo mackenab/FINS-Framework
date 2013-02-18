@@ -43,6 +43,7 @@ int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff);
 
 void Queues_init(void);
 
+void switch_dummy(void);
 void switch_init(void);
 void switch_run(pthread_attr_t *fins_pthread_attr);
 void switch_shutdown(void);

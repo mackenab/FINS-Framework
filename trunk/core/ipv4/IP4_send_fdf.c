@@ -41,8 +41,8 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	//metadata *ipv4_meta = (metadata *) fins_malloc(sizeof(metadata));
 	//metadata_create(ipv4_meta);
 
-	IP4addr src_ip = pheader->source; //ppacket->ip_src;
-	IP4addr dst_ip = pheader->destination; //ppacket->ip_dst;
+	uint32_t src_ip = pheader->source; //ppacket->ip_src;
+	uint32_t dst_ip = pheader->destination; //ppacket->ip_dst;
 
 	metadata *params = ff->metaData;
 	secure_metadata_writeToElement(params, "recv_protocol", &protocol, META_TYPE_INT32);
@@ -53,9 +53,9 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	secure_metadata_writeToElement(params, "recv_ttl", &recv_ttl, META_TYPE_INT32);
 
 	//ff->metaData = ipv4_meta;
-	PRINT_DEBUG("protocol=%u, src_ip=%lu, dst_ip=%lu, recv_ttl=%u", protocol, src_ip, dst_ip, recv_ttl);
+	PRINT_DEBUG("protocol=%u, src_ip=%u, dst_ip=%u, recv_ttl=%u", protocol, src_ip, dst_ip, recv_ttl);
 
-	//ff->dataFrame.directionFlag = UP;
+	//ff->dataFrame.directionFlag = DIR_UP;
 	//ff->dataFrame.pduLength = pheader->packet_length - 20;
 
 	switch (protocol) {
@@ -84,14 +84,14 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	PRINT_DEBUG("address=%u, interface=%u", (uint32_t)next_hop.address, next_hop.interface);
+	PRINT_DEBUG("next_hop: address=%u, interface=%u", next_hop.address, next_hop.interface);
 
 	//ff->dataOrCtrl = DATA;
 	ff->destinationID.id = INTERFACE_ID;
 	ff->destinationID.next = NULL;
 	//ff->metaData = ff->metaData;
 
-	//ff->dataFrame.directionFlag = DOWN;
+	//ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = length + IP4_MIN_HLEN;
 
 	uint8_t *pdu = ff->dataFrame.pdu;
