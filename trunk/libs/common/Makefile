@@ -8,11 +8,13 @@ endif
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
 
-#Name of the module
-LOCAL_NAME = libglue
-LOCAL_LIBS = 
+#This is the Module name. This MUST be that same as the current directory!!!
+LOCAL_NAME = common
+LOCAL_LIBS = $(COMMON_LIBS)
 
-LOCAL_OBJS = glue.o
+#This is the list of objects needed to build the FINS core. NOTE: object files
+#that contain a "main" function must NOT be included in this list!!!
+LOCAL_OBJS = getMAC_Address.o metadata.o finstypes.o finstime.o finsthreads.o
 FULL_OBJS = $(call add_path,$(LOCAL_DIR),$(LOCAL_OBJS))
 
 FULL_OBJS += $(call lib_objs, $(LOCAL_LIBS))

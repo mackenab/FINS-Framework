@@ -26,32 +26,23 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #### TARGETS ####
 .PHONY:all
 all:
-	@$(foreach project,$(PROJECT_LIST), cd $(project); $(MAKE) all; cd $(LOCAL_DIR);)
+	@$(foreach exec,$(EXECS_LIST), cd execs/$(exec); $(MAKE) all; cd $(LOCAL_DIR);)
 
-.PHONY:capturer
-capturer:
-	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
-
-.PHONY:common
-common:
-	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
-
-.PHONY:core
-core:
-	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
-
-.PHONY:launcher
-launcher:
+.PHONY:execs
+execs:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
 .PHONY:libs
 libs:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
-.PHONY:wedge
-wedge:
+.PHONY:modules
+modules:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
+
+%:
+	@cd execs; $(MAKE) $@; cd $(LOCAL_DIR);
 
 .PHONY:clean
 clean:
-	@$(foreach project,$(PROJECT_LIST), cd $(project); $(MAKE) clean; cd $(LOCAL_DIR);)
+	@$(foreach exec,$(EXECS_LIST), cd execs/$(exec); $(MAKE) clean; cd $(LOCAL_DIR);)

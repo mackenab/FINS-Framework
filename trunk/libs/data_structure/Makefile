@@ -9,10 +9,10 @@ endif
 include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
-LOCAL_NAME = libglue
-LOCAL_LIBS = 
+LOCAL_NAME = data_structure
+LOCAL_LIBS = common
 
-LOCAL_OBJS = glue.o
+LOCAL_OBJS = queue.o finsqueue.o
 FULL_OBJS = $(call add_path,$(LOCAL_DIR),$(LOCAL_OBJS))
 
 FULL_OBJS += $(call lib_objs, $(LOCAL_LIBS))
@@ -40,10 +40,12 @@ $(LOCAL_NAME):$(OBJS)
 
 .PHONY:%
 %:
+ifneq ($(wildcard $(LIBS_DIR)/$@),)
 	@cd $(LIBS_DIR)/$@; $(MAKE) all; cd $(LOCAL_DIR);
+endif
 
 .PHONY:clean
 clean:
 	@$(foreach LIB, $(strip $(LOCAL_LIBS)), cd $(LIBS_DIR)/$(LIB); $(MAKE) clean; cd $(LOCAL_DIR);)
 	@rm -f *.o *.a
-	@rm -f OBJS.finsmk
+	@rm -f OBJS.finsmk	@echo "CFLAGS='$(CFLAGS)'"

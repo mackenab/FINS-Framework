@@ -3,20 +3,16 @@
 #  ONLY ONE MAY BE UNCOMMENTED AT ONCE!
 #
 
-BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
+#BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
 #BUILD_FOR_ANDROID_X86 = "If uncommented, the FINS source will build for android arch-x86"
-#BUILD_FOR_LINUX = "If uncommented, the FINS source will build for linux"
+BUILD_FOR_LINUX = "If uncommented, the FINS source will build for linux"
 
 
 
 
 ###### build for android (arch arm) ######
 ifdef BUILD_FOR_ANDROID_ARM
-
 TARGET_PLATFORM = "Android arch-ARM"
-FOLDER_LIST = trunk #examples tests #prototypes
-PROJECT_LIST = capturer launcher wedge
-LIBRARY_LIST = libglue libpcap
 
 #CC =/home/bucknell/android-ndk/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc --sysroot=/home/bucknell/android-ndk/platforms/android-8/arch-arm
 #INCLS = -I/home/bucknell/android/external/libpcap -I/home/bucknell/android/external/libconfig-1.4.7/lib -I/home/bucknell/android/external/libpcap/pcap -I/home/bucknell/android/bionic/libc/include -I/home/bucknell/android/bionic/libc/arch-arm/include -I/home/bucknell/android/bionic/libc/ -I/home/bucknell/android/bionic/libc/kernel/common -I/home/bucknell/android/bionic/libc/kernel/arch-arm
@@ -40,7 +36,15 @@ LIBS = -lc -llog -lm #-lrt
 
 GDB_CLIENT = $(BIN)/arm-eabi-gdb
 
+FOLDER_LIST = trunk #examples tests
+EXECS_LIST = capturer launcher wedge
 
+COMMON_LIBS = libconfig
+CAPTURER_LIBS = libglue libpcap #common
+LAUNCHER_LIBS = 
+WEDGE_LIBS =
+
+CORE_MODULES = switch daemon arp interface ipv4 icmp tcp udp rtm logger
 endif
 
 
@@ -49,9 +53,8 @@ endif
 ifdef BUILD_FOR_ANDROID_X86
 
 TARGET_PLATFORM = "Android arch-x86"
-FOLDER_LIST = trunk examples tests #prototypes
-PROJECT_LIST = common libs capturer core
-LIBRARY_LIST = 
+FOLDER_LIST = trunk examples tests
+EXECS_LIST = common libs capturer core 
 
 CC = /home/bucknell/android-ndk-r6/toolchains/x86-4.4.3/prebuilt/linux-x86/bin/i686-android-linux-gcc --sysroot=/home/bucknell/android-ndk-r6/platforms/android-9/arch-x86
 CCOPTS = -DBUILD_FOR_ANDROID #-nostdinc
@@ -68,10 +71,7 @@ endif
 
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
-
 TARGET_PLATFORM = "Linux x86"
-FOLDER_LIST = trunk examples tests #prototypes
-PROJECT_LIST = common capturer core wedge
 
 CC = gcc
 CCOPTS = -g -O0 -Wall #flags for valgrind
@@ -83,19 +83,50 @@ LIBPATHS =
 LIBS = -lpthread -lconfig -lpcap -lc -lm -lrt
 
 GDB_CLIENT = gdb
-endif
 
+FOLDER_LIST = trunk examples tests
+EXECS_LIST = capturer core wedge
+
+COMMON_LIBS = 
+CAPTURER_LIBS = common
+CORE_LIBS = common
+WEDGE_LIBS = 
+
+#remove this and dynamically generate
+CORE_MODULES = switch daemon 
+#arp interface ipv4 icmp tcp udp rtm logger
+endif
 
 CFLAGS = $(CCOPTS) $(INCLS)
 LDFLAGS = $(LDOPTS) $(LIBPATHS) $(LIBS)
 
+TRUNK_DIR = $(FINS_ROOT_DIR)/trunk
+OBJ_DIR = $(FINS_ROOT_DIR)/obj
+EXECS_DIR = $(TRUNK_DIR)/execs
+LIBS_DIR = $(TRUNK_DIR)/libs
+MODULES_DIR = $(TRUNK_DIR)/modules
+
+MAX_DEPTH = 5
+
 #Include the 'common' objects 
-COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)
+#COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)
+
+filter_headers = $(shell ls $(1) | grep \\.h)
+
+cat_objs = $(shell cat $(1)/OBJS.finsmk)
+cat_incs = $(shell cat $(1)/INCS.finsmk)
+lib_objs = $(foreach LIB, $(strip $(1)), $(call cat_objs,$(LIBS_DIR)/$(LIB)))
+module_objs = $(foreach MODUDLE, $(strip $(1)), $(call cat_objs,$(MODULES_DIR)/$(MODUDLE)))
+lib_incs = $(foreach LIB, $(strip $(1)), $(call cat_incs,$(LIBS_DIR)/$(LIB)))
+module_incs = $(foreach MODUDLE, $(strip $(1)), $(call cat_incs,$(MODULES_DIR)/$(MODUDLE)))
+
+#lib_incs = $(foreach LIB, $(strip $(1)), $(LIBS_DIR)/$(LIB))
+#module_incs = $(foreach MODULE, $(strip $(1)), -I$(MODULES_DIR)/$(MODULE))
 
 
 ####### FINS CORE MODULES #######
 # Add/remove module directory names to this space-separated list
-CORE_MODULE_LIST = data_structure switch daemon arp interface ipv4 icmp tcp udp rtm logger
+CORE_MODULE_LIST = switch daemon arp interface ipv4 icmp tcp udp rtm logger
 
 
 

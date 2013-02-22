@@ -35,9 +35,9 @@ all:$(PROJECT_NAME)
 
 $(PROJECT_NAME):
 ifdef BUILD_FOR_ANDROID_ARM
-	make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
+	@make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
 else
-	make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 endif
 
 .PHONY:clean
