@@ -976,7 +976,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			//#######
 
 			uint32_t control_len = 0;
-			uint8_t *control_msg;
+			uint8_t *control_msg = NULL;
 
 			if (msg_controllen < CONTROL_LEN_MAX) {
 				if (msg_controllen == 0) {
@@ -2433,7 +2433,7 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 	//#######
 
 	uint32_t control_len = 0;
-	uint8_t *control_msg;
+	uint8_t *control_msg = NULL;
 
 	if (msg_controllen < CONTROL_LEN_MAX) {
 		if (msg_controllen == 0) {

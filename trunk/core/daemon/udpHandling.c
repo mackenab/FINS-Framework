@@ -684,7 +684,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 				uint32_t control_len = 0;
-				uint8_t *control_msg;
+				uint8_t *control_msg = NULL;
 
 				if (msg_controllen < CONTROL_LEN_MAX) {
 					if (msg_controllen == 0) {
@@ -915,7 +915,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 			uint32_t control_len = 0;
-			uint8_t *control_msg;
+			uint8_t *control_msg = NULL;
 
 			if (msg_controllen < CONTROL_LEN_MAX) {
 				if (msg_controllen == 0) {
@@ -1804,7 +1804,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 	//#######
 
 	uint32_t control_len = 0;
-	uint8_t *control_msg;
+	uint8_t *control_msg = NULL;
 
 	if (msg_controllen < CONTROL_LEN_MAX) {
 		if (msg_controllen == 0) {

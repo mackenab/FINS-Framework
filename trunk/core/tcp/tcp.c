@@ -2785,9 +2785,9 @@ void tcp_shutdown(void) {
 	/*#*/PRINT_DEBUG("");
 	secure_sem_wait(&conn_stub_list_sem);
 	struct tcp_connection_stub *conn_stub = conn_stub_list;
-	struct tcp_connection_stub *old_conn_stub;
+	//struct tcp_connection_stub *old_conn_stub;
 	while (conn_stub) { //change to conn_list_is_empty()
-		old_conn_stub = conn_stub;
+		//old_conn_stub = conn_stub;
 		conn_stub = conn_stub->next;
 
 		//TODO add conn_stub->sem's

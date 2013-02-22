@@ -11,7 +11,7 @@ extern uint32_t loopback_ip_addr;
 extern uint32_t loopback_mask;
 extern uint32_t any_ip_addr;
 
-void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
+void IP4_print_routing_table(struct ip4_routing_table *table_pointer) {
 	struct ip4_routing_table *current_pointer;
 	current_pointer = table_pointer;
 	printf("Routing table:\n");
@@ -29,7 +29,7 @@ void IP4_print_routing_table(struct ip4_routing_table * table_pointer) {
 	}
 }
 
-struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * table_pointer) {
+struct ip4_routing_table *IP4_sort_routing_table(struct ip4_routing_table *table_pointer) {
 	if (table_pointer == NULL) {
 		return NULL;
 	}
@@ -68,7 +68,7 @@ struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * tab
 
 }
 
-struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
+struct ip4_routing_table *parse_nlmsg(struct nlmsghdr *msg) {
 	char dst_temp[IP4_ALEN];
 	char gw_temp[IP4_ALEN];
 	uint32_t priority;
@@ -122,15 +122,15 @@ struct ip4_routing_table * parse_nlmsg(struct nlmsghdr* msg) {
 	return (NULL);
 }
 
-struct ip4_routing_table * IP4_get_routing_table_old() {
+struct ip4_routing_table *IP4_get_routing_table_old() {
 	int nlmsg_len;
 	struct nlmsghdr* msg;
 	char receive_buffer[IP4_NETLINK_BUFF_SIZE];
-	char * receive_ptr;
+	char *receive_ptr;
 	int sock;
 	struct ip4_route_request route_req;
-	struct ip4_routing_table * routing_table;
-	struct ip4_routing_table * current_table_entry;
+	struct ip4_routing_table *routing_table = NULL;
+	struct ip4_routing_table *current_table_entry = NULL;
 
 	uint32_t pid = (uint32_t) getpid();
 	uint32_t seq = (uint32_t) getppid();
@@ -192,7 +192,7 @@ struct ip4_routing_table * IP4_get_routing_table_old() {
 	return routing_table;
 }
 
-struct ip4_routing_table * IP4_get_routing_table() {
+struct ip4_routing_table *IP4_get_routing_table() {
 	struct ip4_routing_table *routing_table;
 
 	struct ip4_routing_table *row0 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));

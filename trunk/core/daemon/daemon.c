@@ -815,7 +815,7 @@ void socket_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int domain;
 	int type;
 	int protocol;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -929,7 +929,7 @@ void bind_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 void listen_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int backlog;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -981,7 +981,7 @@ void connect_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	socklen_t addrlen;
 	struct sockaddr_in *addr;
 	int flags;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -1049,7 +1049,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	uint64_t sock_id_new;
 	int sock_index_new;
 	int flags;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -1105,7 +1105,7 @@ void accept_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	int peer;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -1154,7 +1154,7 @@ void getname_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 	uint32_t cmd;
-	uint8_t * pt;
+	uint8_t *pt;
 	uint8_t *temp;
 	int len;
 	int msg_len = 0;
@@ -1162,7 +1162,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 	struct nl_daemon_to_wedge *hdr_ret;
 	struct sockaddr_in addr;
 	struct ifreq ifr;
-	int total;
+	int total = 0;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, buf_len);
 
@@ -1843,7 +1843,7 @@ void recvmsg_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int data_len;
 	uint32_t msg_controllen;
 	int flags;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -1934,8 +1934,8 @@ void getsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int level;
 	int optname;
 	int optlen;
-	uint8_t *optval;
-	uint8_t * pt;
+	uint8_t *optval = NULL;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -2005,8 +2005,8 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	int level;
 	int optname;
 	int optlen;
-	uint8_t *optval;
-	uint8_t * pt;
+	uint8_t *optval = NULL;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -2072,7 +2072,7 @@ void setsockopt_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 }
 
 void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
@@ -2117,7 +2117,7 @@ void release_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 }
 
 void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
-	uint8_t * pt;
+	uint8_t *pt;
 	int events;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
@@ -2165,7 +2165,7 @@ void poll_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 }
 
 void mmap_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
-	uint8_t * pt;
+	uint8_t *pt;
 	pt = buf;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
@@ -2223,7 +2223,7 @@ void socketpair_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 void shutdown_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 
 	int how;
-	uint8_t * pt;
+	uint8_t *pt;
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 

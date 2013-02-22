@@ -1957,9 +1957,9 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	int call_index;
 	struct sockaddr_in *addr_in;
 	int buf_len;
-	u_char * buf;
+	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char * pt;
+	u_char *pt;
 	int ret;
 	int i;
 
@@ -3882,9 +3882,9 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	u_int call_id;
 	int call_index;
 	int buf_len;
-	u_char * buf;
+	u_char *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char * pt;
+	u_char *pt;
 	int ret;
 
 	struct task_struct *curr = get_current();

@@ -32,7 +32,7 @@ extern int server_capture_count;
 /** ----------------------------------------------------------------------------------*/
 /*int*/void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packetReceived) { //TODO: pcap_handlers must be of void type. This method of returning data will have to be amended
 	//static int count = 1; /* packet counter */
-	//u_char * packet; /* Packet Pointer */
+	//u_char *packet; /* Packet Pointer */
 	//struct data_to_pass data;
 	if (header->caplen != header->len) {
 		PRINT_ERROR("Snaplen not large enough for packet: caplen=%u, len=%u", header->caplen, header->len);
@@ -49,10 +49,11 @@ extern int server_capture_count;
 	//}
 
 	++server_capture_count;
-	//PRINT_IMPORTANT("Packet captured: count=%d, size=%d", ++server_capture_count, dataLength);
+	PRINT_IMPORTANT("Packet captured: count=%d, size=%d", server_capture_count, dataLength);
 
 	//print_hex_block(packetReceived, dataLength);
 	//fflush(stdout);
+	return;
 
 	uint32_t numBytes = write(server_capture_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
@@ -72,12 +73,12 @@ extern int server_capture_count;
 void capture_init(char *device) {
 	PRINT_IMPORTANT("Entered: device='%s'", device);
 
-	int ret;
 	/*
-	 PRINT_IMPORTANT("Gaining su status");
-	 if ((ret = system("su"))) {
-	 PRINT_ERROR("SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
-	 }
+	int ret;
+	PRINT_IMPORTANT("Gaining su status");
+	if ((ret = system("su"))) {
+	PRINT_ERROR("SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	}
 	 */
 
 	struct sockaddr_un addr;
@@ -104,7 +105,7 @@ void capture_init(char *device) {
 		return;
 	}
 
-	if (1) {
+	if (0) {
 		server_capture_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
 		close(server_fd);
 		if (server_capture_fd < 0) {
@@ -129,9 +130,9 @@ void capture_init(char *device) {
 	//strcat(filter_exp, "dst host 127.0.0.1"); //local loopback - for internal testing, can't use external net
 	//strcat(filter_exp, "(ether dst 080027445566) or (ether broadcast and (not ether src 080027445566))"); //Vbox eth2
 	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
-	strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
+	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
 	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
-	//strcat(filter_exp, "(ether dst a00bbae94bb0) or (ether broadcast and (not ether src a00bbae94bb0))"); //phone wlan0
+	strcat(filter_exp, "(ether dst a00bbae94bb0) or (ether broadcast and (not ether src a00bbae94bb0))"); //phone wlan0
 
 	uint8_t *dev = (uint8_t *) device;
 	bpf_u_int32 net; /* ip */
@@ -152,13 +153,16 @@ void capture_init(char *device) {
 	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 1, 1000, errbuf);
 	if (capture_handle == NULL) {
 		PRINT_ERROR("Couldn't open device: dev='%s', err='%s', errno=%u, str='%s'", dev, errbuf, errno, strerror(errno));
+		while(1);
 		exit(EXIT_FAILURE);
 	}
+	PRINT_IMPORTANT("capture_handle=%p", capture_handle);
 
 	/* make sure we're capturing on an Ethernet device [2] */
 	int data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
 		PRINT_ERROR("%s is not an Ethernet", dev);
+				while(1);
 		exit(EXIT_FAILURE);
 	}
 	PRINT_IMPORTANT("Datalink layer Description: %s (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
@@ -168,12 +172,14 @@ void capture_init(char *device) {
 	struct bpf_program fp; /* compiled filter program (expression) */
 	if (pcap_compile(capture_handle, &fp, filter_exp, 0, net) == -1) {
 		PRINT_ERROR("Couldn't parse filter %s: %s", filter_exp, pcap_geterr(capture_handle));
+				while(1);
 		exit(EXIT_FAILURE);
 	}
 
 	/* apply the compiled filter */
 	if (pcap_setfilter(capture_handle, &fp) == -1) {
 		PRINT_ERROR("Couldn't install filter %s: %s", filter_exp, pcap_geterr(capture_handle));
+				while(1);
 		exit(EXIT_FAILURE);
 	}
 

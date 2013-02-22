@@ -1,3 +1,10 @@
+LOCAL_DIR := $(PWD)
+
+ifndef FINS_ROOT_DIR
+FINS_ROOT_DIR := $(LOCAL_DIR)/../..
+export FINS_ROOT_DIR
+endif
+
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
 
@@ -26,20 +33,10 @@ $(PROJECT_NAME):$(OBJS)
 	@echo $(addprefix "$(shell pwd)/", $(OBJS)) > OBJS.finsmk 
 
 %.o:%.c $(INCLUDES)
-	@$(CC) $(CFLAGS) -c $<	
+	@$(CC) $(CFLAGS) -c $< -o $@	
 
 .PHONY:clean
 clean:
 	@rm -f *.o 
 	@rm -f $(EXECUTABLES) 
 	@rm -f OBJS.finsmk
-
-
-#not so phony in my book...
-.PHONY:stu
-stu:
-	@cat .optional_targets/.stu
-
-.PHONY:ferocious_feline
-ferocious_feline:
-	@cat .optional_targets/.cat

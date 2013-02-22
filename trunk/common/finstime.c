@@ -267,7 +267,7 @@ void timer_create_to(struct to_timer_data *data) {
 }
 
 void timer_stop(timer_t timerid) {
-	PRINT_DEBUG("Entered: timerid=%p", timerid);
+	PRINT_DEBUG("Entered: timerid=%d", (int)timerid);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = 0;
@@ -282,7 +282,7 @@ void timer_stop(timer_t timerid) {
 }
 
 void timer_once_start(timer_t timerid, double millis) {
-	PRINT_DEBUG("Entered: timerid=%p, m=%f", timerid, millis);
+	PRINT_DEBUG("Entered: timerid=%d, m=%f", (int)timerid, millis);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);
@@ -297,7 +297,7 @@ void timer_once_start(timer_t timerid, double millis) {
 }
 
 void timer_repeat_start(timer_t timerid, double millis) {
-	PRINT_DEBUG("Entered: timerid=%p, m=%f", timerid, millis);
+	PRINT_DEBUG("Entered: timerid=%d, m=%f", (int)timerid, millis);
 
 	struct itimerspec its;
 	its.it_value.tv_sec = (long int) (millis / 1000);

@@ -3,9 +3,9 @@
 #  ONLY ONE MAY BE UNCOMMENTED AT ONCE!
 #
 
-#BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
+BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
 #BUILD_FOR_ANDROID_X86 = "If uncommented, the FINS source will build for android arch-x86"
-BUILD_FOR_LINUX = "If uncommented, the FINS source will build for linux"
+#BUILD_FOR_LINUX = "If uncommented, the FINS source will build for linux"
 
 
 
@@ -13,19 +13,34 @@ BUILD_FOR_LINUX = "If uncommented, the FINS source will build for linux"
 ###### build for android (arch arm) ######
 ifdef BUILD_FOR_ANDROID_ARM
 
-FOLDER_LIST = trunk examples tests #prototypes #?
-
-PROJECT_LIST = common capturer core
-
 TARGET_PLATFORM = "Android arch-ARM"
+FOLDER_LIST = trunk #examples tests #prototypes
+PROJECT_LIST = capturer launcher wedge
+LIBRARY_LIST = libglue libpcap
 
-CC =/home/bucknell/android-ndk/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc --sysroot=/home/bucknell/android-ndk/platforms/android-8/arch-arm
-LD = $(CC)
-CCOPTS = -DBUILD_FOR_ANDROID  #-nostdinc
-INCLS = -I/home/bucknell/android/external/libpcap -I/home/bucknell/android/external/libconfig-1.4.7/lib -I/home/bucknell/android/external/libpcap/pcap -I/home/bucknell/android/bionic/libc/include -I/home/bucknell/android/bionic/libc/arch-arm/include -I/home/bucknell/android/bionic/libc/ -I/home/bucknell/android/bionic/libc/kernel/common -I/home/bucknell/android/bionic/libc/kernel/arch-arm
-LIBS = -lconfig -lpcap -lm -ldl -lc
-LIBPATHS = -L/home/bucknell/android/out/target/product/crespo/system/lib
-LDOPTS = #-nostdlib 
+#CC =/home/bucknell/android-ndk/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc --sysroot=/home/bucknell/android-ndk/platforms/android-8/arch-arm
+#INCLS = -I/home/bucknell/android/external/libpcap -I/home/bucknell/android/external/libconfig-1.4.7/lib -I/home/bucknell/android/external/libpcap/pcap -I/home/bucknell/android/bionic/libc/include -I/home/bucknell/android/bionic/libc/arch-arm/include -I/home/bucknell/android/bionic/libc/ -I/home/bucknell/android/bionic/libc/kernel/common -I/home/bucknell/android/bionic/libc/kernel/arch-arm
+#LIBPATHS = -L/home/bucknell/android/out/target/product/crespo/system/lib
+
+NDK_PLATFORM_VER = 14
+ANDROID_NDK_ROOT = /opt/android/android-ndk-r8d
+USR = $(ANDROID_NDK_ROOT)/platforms/android-$(NDK_PLATFORM_VER)/arch-arm/usr
+BIN = /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin
+
+CC = $(BIN)/arm-eabi-gcc
+CCOPTS = -DBUILD_FOR_ANDROID
+CCOPTS += -g -O2 -Wall #flags for valgrind
+INCLS = -I$(USR)/include
+
+LD = $(BIN)/arm-eabi-gcc
+LDOPTS = -g -O2 -Wall #flags for valgrind
+LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
+LIBPATHS = -L$(USR)/lib
+LIBS = -lc -llog -lm #-lrt
+
+GDB_CLIENT = $(BIN)/arm-eabi-gdb
+
+
 endif
 
 
@@ -33,19 +48,19 @@ endif
 ###### build for android x86 ######
 ifdef BUILD_FOR_ANDROID_X86
 
-FOLDER_LIST = trunk examples tests #prototypes #?
-
-PROJECT_LIST = common capturer core
-
 TARGET_PLATFORM = "Android arch-x86"
+FOLDER_LIST = trunk examples tests #prototypes
+PROJECT_LIST = common libs capturer core
+LIBRARY_LIST = 
 
 CC = /home/bucknell/android-ndk-r6/toolchains/x86-4.4.3/prebuilt/linux-x86/bin/i686-android-linux-gcc --sysroot=/home/bucknell/android-ndk-r6/platforms/android-9/arch-x86
-LD = $(CC)
 CCOPTS = -DBUILD_FOR_ANDROID #-nostdinc
 INCLS = -I/home/bucknell/android-x86/external/libpcap -I/home/bucknell/android-x86/external/libconfig-1.4.7/lib -I/home/bucknell/android-x86/external/libpcap/pcap -I/home/bucknell/android-x86/bionic/libc/include -I/home/bucknell/android-x86/bionic/libc/arch-x86/include -I/home/bucknell/android-x86/bionic/libc/kernel/common -I/home/bucknell/android-x86/bionic/libc/kernel/arch-x86
-LIBS = -lconfig -lpcap -lm -ldl -lc
-LIBPATHS = -L/home/bucknell/android-x86/out/target/product/generic_x86/system/lib #-L/home/bucknell/android-ndk-r6/platforms/android-9/arch-x86/usr/lib
+
+LD = $(CC)
 LDOPTS = #-nostdlib
+LIBPATHS = -L/home/bucknell/android-x86/out/target/product/generic_x86/system/lib #-L/home/bucknell/android-ndk-r6/platforms/android-9/arch-x86/usr/lib
+LIBS = -lconfig -lpcap -lm -ldl -lc
 endif
 
 
@@ -54,27 +69,25 @@ endif
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
 
-FOLDER_LIST = trunk examples tests #prototypes #?
-
-PROJECT_LIST = common capturer core wedge
-#interceptor #is deprecated
-
 TARGET_PLATFORM = "Linux x86"
+FOLDER_LIST = trunk examples tests #prototypes
+PROJECT_LIST = common capturer core wedge
 
 CC = gcc
-LD = gcc
 CCOPTS = -g -O0 -Wall #flags for valgrind
 INCLS =
+
+LD = gcc
 LDOPTS = -g -O0 -Wall #flags for valgrind
 LIBPATHS =
 LIBS = -lpthread -lconfig -lpcap -lc -lm -lrt
+
+GDB_CLIENT = gdb
 endif
 
 
 CFLAGS = $(CCOPTS) $(INCLS)
 LDFLAGS = $(LDOPTS) $(LIBPATHS) $(LIBS)
-
-
 
 #Include the 'common' objects 
 COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)

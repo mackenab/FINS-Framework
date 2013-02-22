@@ -171,7 +171,7 @@ void list_for_each(struct linked_list *list, void(*apply)(uint8_t *data));
 
 uint32_t gen_control_serial_num(void);
 
-struct finsFrame * buildFinsFrame(void);
+struct finsFrame *buildFinsFrame(void);
 
 void print_finsFrame(struct finsFrame *fins_in);
 
@@ -191,7 +191,7 @@ int serializeCtrlFrame(struct finsFrame *, uint8_t **);
  * - called by the sender
  */
 
-struct finsFrame * unserializeCtrlFrame(uint8_t *, int);
+struct finsFrame *unserializeCtrlFrame(uint8_t *, int);
 /* does the opposite of serializeCtrlFrame; used to reconstruct a controlFrame
  * - pass it the byte array and the length and it will give you a pointer to the
  * -- struct.

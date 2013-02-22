@@ -147,7 +147,7 @@ struct ip4_routing_table {
 	//unsigned int interface;
 	uint32_t interface; //TODO change back to number? so looks up in interface list
 
-	struct ip4_routing_table * next_entry;
+	struct ip4_routing_table *next_entry;
 };
 
 struct ip4_next_hop_info {
@@ -251,9 +251,9 @@ struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offe
 
 void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t protocol);
 
-struct ip4_routing_table * IP4_get_routing_table();
-struct ip4_routing_table * IP4_sort_routing_table(struct ip4_routing_table * table_pointer);
-void IP4_print_routing_table(struct ip4_routing_table * table_pointer);
+struct ip4_routing_table *IP4_get_routing_table();
+struct ip4_routing_table *IP4_sort_routing_table(struct ip4_routing_table *table_pointer);
+void IP4_print_routing_table(struct ip4_routing_table *table_pointer);
 void IP4_init(void);
 struct ip4_next_hop_info IP4_next_hop(uint32_t dst);
 int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length);

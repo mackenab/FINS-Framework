@@ -181,7 +181,7 @@ int write_queue_front(struct finsFrame *ff, finsQueue q) {
  * @return 1 on success , 0 on failure
  * */
 
-struct finsFrame * read_queue(finsQueue q) {
+struct finsFrame *read_queue(finsQueue q) {
 
 	return (FrontAndDequeue(q));
 

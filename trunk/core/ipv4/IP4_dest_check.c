@@ -21,6 +21,8 @@ int IP4_dest_check(uint32_t destination) {
 		network_broadcast = my_host_ip_addr | (~IP4_ADR_P2H(255, 255, 0, 0));
 	} else if (IP4_CLASSC(my_host_ip_addr)) {
 		network_broadcast = my_host_ip_addr | (~IP4_ADR_P2H(255, 255, 255, 0));
+	} else {
+		network_broadcast = 0;
 	}
 
 	if (destination == my_host_ip_addr || destination == IP4_ADR_P2H(127,0,0,1)

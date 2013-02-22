@@ -687,7 +687,7 @@ int freeFinsFrame(struct finsFrame *ff) {
 	return (1);
 }
 
-int serializeCtrlFrame(struct finsFrame * ff, uint8_t **buffer)
+int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 /* serializes a fins control frame for transmission to an external process
  * - pass it the frame (finsFrame) and it will fill in the pointer to the frame, uchar*
  * -- and return the length of the array (return int);
@@ -730,7 +730,7 @@ int serializeCtrlFrame(struct finsFrame * ff, uint8_t **buffer)
 
 	*buffer = (uint8_t *) secure_malloc(buf_size);
 
-	uint8_t * temporary = *buffer;
+	uint8_t *temporary = *buffer;
 
 	//DATA OR CONTROL
 	memcpy((uint8_t *) *buffer, &(ff->dataOrCtrl), sizeof(uint8_t));
@@ -842,7 +842,7 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 	 */
 	PRINT_DEBUG("In unserializeCtrlFrame!");
 
-	struct finsFrame * ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	memset(ff, 0, sizeof(struct finsFrame));
 
 	//	PRINT_DEBUG("The value of buffer = %s", buffer,length);

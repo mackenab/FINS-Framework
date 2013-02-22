@@ -15,7 +15,6 @@
 #include <limits.h>
 #include <linux/if_ether.h>
 #include <pcap.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,7 +26,7 @@
 #include <unistd.h>
 
 #include <finsdebug.h>
-#include <getMAC_Address.h>
+//#include <getMAC_Address.h>
 
 /* default snap length (maximum bytes per packet to capture) */
 //#define SNAP_LEN 1518

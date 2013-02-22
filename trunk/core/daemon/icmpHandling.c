@@ -671,7 +671,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 				uint32_t control_len = 0;
-				uint8_t *control_msg;
+				uint8_t *control_msg = NULL;
 
 				if (msg_controllen < CONTROL_LEN_MAX) {
 					if (msg_controllen == 0) {
@@ -898,7 +898,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 			uint32_t control_len = 0;
-			uint8_t *control_msg;
+			uint8_t *control_msg = NULL;
 
 			if (msg_controllen < CONTROL_LEN_MAX) {
 				if (msg_controllen == 0) {
@@ -1742,7 +1742,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 	//#######
 
 	uint32_t control_len = 0;
-	uint8_t *control_msg;
+	uint8_t *control_msg = NULL;
 
 	if (msg_controllen < CONTROL_LEN_MAX) {
 		if (msg_controllen == 0) {

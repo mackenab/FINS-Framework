@@ -1,3 +1,10 @@
+LOCAL_DIR := $(PWD)
+
+ifndef FINS_ROOT_DIR
+FINS_ROOT_DIR := $(LOCAL_DIR)/../../..
+export FINS_ROOT_DIR
+endif
+
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
 
@@ -33,7 +40,7 @@ $(MODULE_NAME):$(OBJS)
 #	@echo "test_arp is compiled"
 
 %.o:%.c $(INCLUDES)
-	@$(CC) $(CFLAGS) -c $<	
+	@$(CC) $(CFLAGS) -c $< -o $@	
 
 .PHONY:clean
 clean:
