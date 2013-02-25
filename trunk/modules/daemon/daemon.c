@@ -711,7 +711,7 @@ int check_daemon_dstports(uint16_t dstport, uint32_t dstip) {
 
 int randoming(int min, int max) {
 
-	srand((unsigned) time(NULL));
+	srand((unsigned int) time(NULL));
 	return (min + (int) (max - min + 1) * (rand() / (RAND_MAX + 1.0)));
 
 }

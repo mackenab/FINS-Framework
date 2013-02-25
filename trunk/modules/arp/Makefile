@@ -1,115 +1,132 @@
 LOCAL_DIR := $(PWD)
 
 ifndef FINS_ROOT_DIR
-FINS_ROOT_DIR := $(LOCAL_DIR)/../../..
-export FINS_ROOT_DIR
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/../../..)
 endif
 
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
 
-#Name of the module
-LOCAL_NAME = arp
-LOCAL_LIBS = common
-LOCAL_MODULES = switch
-LOCAL_OBJS = arp.o arp_in_out.o
-LOCAL_INCS = .
+#Name of the module, must be equal to folder
+LOCAL_NAME := arp
+LOCAL_LIBS := common
+LOCAL_MODS := switch
+LOCAL_OBJS := arp.o arp_in_out.o
+LOCAL_INCS := .
+LOCAL_TYPE := reference #exec
 
-FULL_LOCAL_INCS = $(addprefix $(LOCAL_DIR)/,$(LOCAL_INC))
-LOCAL_HEADERS = $(call filter_headers, $(FULL_LOCAL_INCS))
-LOCAL_INCLUDES = $(add_prefix -I,$(LOCAL_HEADERS))
+STRIP_NAME := $(strip $(LOCAL_NAME))
+STRIP_LIBS := $(strip $(LOCAL_LIBS))
+STRIP_MODS := $(strip $(LOCAL_MODS))
+STRIP_OBJS := $(strip $(LOCAL_OBJS))
+STRIP_INCS := $(strip $(LOCAL_INCS))
+STRIP_TYPE := $(strip $(LOCAL_TYPE))
 
-FULL_OBJS = $(addprefix $(LOCAL_DIR)/,$(LOCAL_OBJS))
-FULL_OBJS += $(call lib_objs, $(LOCAL_LIBS))
-FULL_OBJS += $(call module_objs, $(LOCAL_MODULES))
-OBJS = $(sort $(FULL_OBJS))
+LOCAL_MAKE_FILE := $(LOCAL_DIR)/Makefile
+LOCAL_INCS_FILE := $(LOCAL_DIR)/INCS.finsmk
+LOCAL_OBJS_FILE := $(LOCAL_DIR)/OBJS.finsmk
 
-FULL_INCS = $(addprefix $(LOCAL_DIR)/,$(LOCAL_INC))
-FULL_INCS += $(call lib_incs,$(LOCAL_LIBS))
-FULL_INCS += $(call module_incs,$(LOCAL_MODULES))
-INCS = $(sort $(FULL_INCS)) 
+LIB_DIRS := $(addprefix $(LIBS_DIR)/,$(STRIP_LIBS))
+MOD_DIRS := $(addprefix $(MODULES_DIR)/,$(STRIP_MODS))
+INCS_DIRS := $(strip $(LIB_DIRS) $(MOD_DIRS))
+INCS_FILES := $(addsuffix /INCS.finsmk,$(INCS_DIRS))
 
-INCLUDES = $(call filter_headers, $(INCS))
-CFLAGS += $(add_prefix -I,$(INCS))
-TEST = switch
+FULL_INCS_FILES := $(LOCAL_INCS_FILE) $(INCS_FILES)
+LOCAL_INCS_DIRS := $(abspath $(addprefix $(LOCAL_DIR)/,$(STRIP_INCS)))
 
+FULL_INCS = $(sort $(LOCAL_INCS_DIRS) $(shell cat $(FULL_INCS_FILES) 2> /dev/null))
+CURR_INCS = $(shell cat $(LOCAL_INCS_FILE) 2> /dev/null)
+OTHER_INCS = $(filter-out $(LOCAL_DIR),$(CURR_INCS))
 
+INCLUDES = $(call filter_headers,$(CURR_INCS))
+CFLAGS += $(addprefix -I,$(CURR_INCS))
+#TCFLAGS = $(CFLAGS) $(addprefix -I,$(CURR_INCS))
+
+LOCAL_OBJS_PATHS := $(addprefix $(LOCAL_DIR)/,$(STRIP_OBJS))
+CURR_OBJS_FILES = $(addsuffix /OBJS.finsmk,$(CURR_INCS))
+#OTHER_OBJS_FILES = $(addsuffix /OBJS.finsmk,$(OTHER_INCS))
+CURR_OBJS = $(sort $(shell cat $(LOCAL_OBJS_FILE) $(CURR_OBJS_FILES) 2> /dev/null))
+
+#	@ar rvs lib$(STRIP_NAME).a $(OBJS)
+#TEST = $(shell cat TEST2 2> out.txt)
 
 ##### TARGETS #####
-#	@ar rvs lib$(LOCAL_NAME).a $(OBJS)
-.PHONY:all
-#all:$(LOCAL_LIBS) $(LOCAL_MODULES) $(LOCAL_NAME) reference
-all:create_incs collect_incs create_objs collect_incs reference
-	echo "$(LOCAL_NAME) is compiled\n"
+#.PHONY:all
+all:setup build
+	@echo "compiled[$(MAKELEVEL)]:'$(STRIP_NAME)'\n"	
 
-create_incs:
-	echo $(LOCAL_INCLUDES) > LOCAL_INCS.finsmk
+.PHONY:setup
+setup:$(LOCAL_INCS_FILE)
+	@echo "setup[$(MAKELEVEL)]:'$(STRIP_NAME)'\n"
+
+$(LOCAL_INCS_FILE):$(LOCAL_MAKE_FILE) $(INCS_FILES)
+	@echo $(FULL_INCS) > $(LOCAL_INCS_FILE)
+
+$(LIBS_DIR)/%/INCS.finsmk:$(LIBS_DIR)/%/Makefile
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
-	$(foreach LIB, $(strip $(LOCAL_LIBS)), cd $(LIBS_DIR)/$(LIB); $(MAKE) create_incs; cd $(LOCAL_DIR);)
-	$(foreach MODULE, $(strip $(LOCAL_MODULES)), cd $(MODULES_DIR)/$(MODULE); $(MAKE) create_incs; cd $(LOCAL_DIR);)
-else
-
-collect_incs:
-ifneq ($(MAX_DEPTH),$(MAKELEVEL))
-	@$(foreach LIB, $(strip $(LOCAL_LIBS)), cd $(LIBS_DIR)/$(LIB); $(MAKE) create_incs collect_incs; cd $(LOCAL_DIR);)
-	@$(foreach MODULE, $(strip $(LOCAL_MODULES)), cd $(MODULES_DIR)/$(MODULE); $(MAKE) create_incs collect_incs; cd $(LOCAL_DIR);)
-else
-
+	@cd $(dir $@); $(MAKE) $@; cd $(LOCAL_DIR);
 endif
 
-create_objs:
+$(MODULES_DIR)/%/INCS.finsmk:$(MODULES_DIR)/%/Makefile
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+	@cd $(dir $@); $(MAKE) $@; cd $(LOCAL_DIR);
+endif
 
-collect_incs:
+.PHONY:build
+build:setup build_local build_others $(STRIP_TYPE)
+	@echo "built[$(MAKELEVEL)]:'$(STRIP_NAME)'\n"
 
-.PHONY:$(LOCAL_NAME)
-$(LOCAL_NAME):$(LOCAL_OBJS)
-	echo "local compiled"
+.PHONY:build_local
+build_local:$(STRIP_OBJS) $(LOCAL_OBJS_FILE)
+	@echo "local built[$(MAKELEVEL)]:'$(STRIP_NAME)'\n"
 
-.PHONY:reference
+#%.o:%.c $(INCLUDES)
+#	@echo "test1=$(LOCAL_DIR)"
+#	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(LOCAL_DIR)/%.o:%.c $(INCLUDES)
+#	@echo "test2=$(LOCAL_DIR)"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(LOCAL_OBJS_FILE):$(LOCAL_MAKE_FILE)
+	@echo $(LOCAL_OBJS_PATHS) > $(LOCAL_OBJS_FILE)
+
+.PHONY:build_others
+build_others:
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+	@$(foreach DIR,$(OTHER_INCS),cd $(DIR); $(MAKE) build_local; cd $(LOCAL_DIR);)
+endif
+
+#.PHONY:reference
 reference:
-	echo $(OBJS) > OBJS.finsmk
-	echo $(INCLUDES) > INCLUDES.finsmk 
+	@echo "reference"
+	@echo "CURR_OBJS='$(CURR_OBJS)'"
 
-.PHONY:link
-link:$(OBJS)
-	@$(LD) $(LDFLAGS) $(OBJS) -o $(OBJ_DIR)/$(LOCAL_NAME)/$(LOCAL_NAME) 
+#.PHONY:exec
+exec:$(CURR_OBJS)
+#	@echo "CURR_OBJS='$(CURR_OBJS)'"
+	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
-clean:
+clean:clean_local
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
-	@$(foreach LIB, $(strip $(LOCAL_LIBS)), cd $(LIBS_DIR)/$(LIB); $(MAKE) clean; cd $(LOCAL_DIR);)
-	@$(foreach MODULE, $(strip $(LOCAL_MODULES)), cd $(MODULES_DIR)/$(MODULE); $(MAKE) clean; cd $(LOCAL_DIR);) 
+	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
 endif
+
+clean_local:
 	@rm -f *.o *.a
-	@rm -f OBJS.finsmk
+	@rm -f INCS.finsmk OBJS.finsmk
+	@echo "cleaned[$(MAKELEVEL)]:$(STRIP_NAME)\n";
 
+.PHONY:temp
+temp:
+	@echo "CFLAGS='$(CFLAGS)'"
+	@echo "INCLUDES='$(INCLUDES)'"
+	@echo "STRIP_OBJS='$(STRIP_OBJS)'"
+	@echo "LOCAL_OBJS_PATHS='$(LOCAL_OBJS_PATHS)'\n"
+#	@echo "CURR_INCS='$(CURR_INCS)'"
+#	echo $(sort $(shell cat INCS.finsmk)) > $(LOCAL_DIR)/INCS.finsmk
+
+.PHONY:test
 test:
-	echo "val=$(TEST)"
-	echo "comp='$(strip $(wildcard $(LIBS_DIR)/$(TEST)))' vs '$(LIBS_DIR)/$(TEST)'"
-ifeq ($(LIBS_DIR)/$(TEST),$(strip $(wildcard $(LIBS_DIR)/$(TEST))))
-	echo "libs=$(strip $(wildcard $(LIBS_DIR)/$(TEST)))"
-#cd $(LIBS_DIR)/$@; $(MAKE) all; cd $(LOCAL_DIR);
-else
-	echo "mods=$(strip $(wildcard $(LIBS_DIR)/$(TEST)))"
-#cd $(MODULES_DIR)/$@; $(MAKE) all; cd $(LOCAL_DIR);
-endif
-
-.PHONY:%.o
-%.o:%.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $< -o $@	
-
-.PHONY:%
-%:
-ifneq ($(MAX_DEPTH),$(MAKELEVEL))
-	echo "val=$@"
-	echo "comp='$(strip $(wildcard $(LIBS_DIR)/$@))' vs '$(LIBS_DIR)/$@'"
-ifeq ($(LIBS_DIR)/$@,$(strip $(wildcard $(LIBS_DIR)/$@)))
-	echo "libs=$(strip $(wildcard $(LIBS_DIR)/$@))"
-	cd $(LIBS_DIR)/$@; $(MAKE) all; cd $(LOCAL_DIR);
-else
-	echo "mods=$(strip $(wildcard $(LIBS_DIR)/$@))"
-	cd $(MODULES_DIR)/$@; $(MAKE) all; cd $(LOCAL_DIR);
-endif
-else
-	echo "Reached max depth"
-endif
+	@echo "TEST='$(TEST)'"

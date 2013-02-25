@@ -1,7 +1,6 @@
 LOCAL_DIR := $(PWD)
 
-FINS_ROOT_DIR := $(LOCAL_DIR)
-export FINS_ROOT_DIR
+export FINS_ROOT_DIR := $(LOCAL_DIR)
 
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
@@ -33,11 +32,10 @@ examples:
 tests:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
+.PHONY:%
 %:
 	@cd trunk; $(MAKE) $@; cd $(LOCAL_DIR);
 
 .PHONY:clean
 clean:
 	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) clean; cd ../;)
-	
-	

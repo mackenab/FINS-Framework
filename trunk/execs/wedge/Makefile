@@ -9,7 +9,7 @@ endif
 #include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
-PROJECT_NAME = wedge
+LOCAL_NAME = wedge
 
 obj-m += fins_stack_wedge.o
 
@@ -30,10 +30,10 @@ endif
 
 
 .PHONY:all
-all:$(PROJECT_NAME)
-	@echo "$(PROJECT_NAME) is compiled\n"
+all:$(LOCAL_NAME)
+	@echo "$(LOCAL_NAME) is compiled\n"
 
-$(PROJECT_NAME):
+$(LOCAL_NAME):
 ifdef BUILD_FOR_ANDROID_ARM
 	@make -I . -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
 else

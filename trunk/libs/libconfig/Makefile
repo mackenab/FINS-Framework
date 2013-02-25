@@ -1,17 +1,17 @@
 LOCAL_DIR := $(PWD)
 
 ifndef FINS_ROOT_DIR
-export FINS_ROOT_DIR := $(LOCAL_DIR)/../../..
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/../../..)
 endif
 
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
-LOCAL_NAME := libglue
+LOCAL_NAME := libconfig
 LOCAL_LIBS := 
 LOCAL_MODS := 
-LOCAL_OBJS := glue.o
+LOCAL_OBJS := 
 LOCAL_INCS := .
 LOCAL_TYPE := reference #exec
 

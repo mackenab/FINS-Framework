@@ -1,8 +1,7 @@
 LOCAL_DIR := $(PWD)
 
 ifndef FINS_ROOT_DIR
-FINS_ROOT_DIR := $(LOCAL_DIR)/..
-export FINS_ROOT_DIR
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/..)
 endif
 
 # fins.mk contains the compiler and linker options for each target platform
@@ -26,10 +25,10 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #### TARGETS ####
 .PHONY:all
 all:
-	@$(foreach exec,$(EXECS_LIST), cd execs/$(exec); $(MAKE) all; cd $(LOCAL_DIR);)
+	@$(foreach exec,$(strip $(EXECS_LIST)), cd execs/$(exec); $(MAKE) all; cd $(LOCAL_DIR);)
 
 .PHONY:execs
-execs:
+execs:	
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
 .PHONY:libs
