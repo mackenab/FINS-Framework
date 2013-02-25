@@ -65,31 +65,31 @@ void core_termination_handler(int sig) {
 	PRINT_IMPORTANT("**********Terminating *******");
 
 	//shutdown all module threads in backwards order of startup
-	//logger_shutdown();
+	logger_shutdown();
 	//rtm_shutdown();
 
-	//udp_shutdown();
-	//tcp_shutdown();
-	//icmp_shutdown();
-	//ipv4_shutdown();
-	//arp_shutdown();
+	udp_shutdown();
+	tcp_shutdown();
+	icmp_shutdown();
+	ipv4_shutdown();
+	arp_shutdown();
 
 	interface_shutdown(); //TODO finish
-	//daemon_shutdown(); //TODO finish
+	daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
 
 	//have each module free data & que/sem //TODO finish each of these
-	//logger_release();
+	logger_release();
 	//rtm_release();
 
-	//udp_release();
-	//tcp_release();
-	//icmp_release();
-	//ipv4_release();
-	//arp_release();
+	udp_release();
+	tcp_release();
+	icmp_release();
+	ipv4_release();
+	arp_release();
 
 	interface_release();
-	//daemon_release();
+	daemon_release();
 	switch_release();
 
 	sem_destroy(&control_serial_sem);
@@ -116,14 +116,15 @@ void core_main() {
 
 	//my_host_if_num = 1; //laptop lo //phone wlan0
 	//my_host_if_num = 2; //laptop eth0
-	my_host_if_num = 3; //laptop wlan0
+	//my_host_if_num = 3; //laptop wlan0
 	//my_host_if_num = 4; //laptop wlan4
+	my_host_if_num = 10; //phone wlan0
 
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
 	//my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
-	my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
+	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
 	//my_host_mac_addr = 0x00184d8f2a32ull; //laptop wlan4 card
-	//my_host_mac_addr = 0xa00bbae94bb0ull; //phone wlan0
+	my_host_mac_addr = 0xa00bbae94bb0ull; //phone wlan0
 
 	my_host_ip_addr = IP4_ADR_P2H(192,168,1,3); //home testing
 	my_host_mask = IP4_ADR_P2H(255,255,255,0); //home testing
@@ -145,53 +146,53 @@ void core_main() {
 	signal(SIGINT, core_termination_handler); //register termination handler
 
 	switch_dummy();
-	//daemon_dummy();
+	daemon_dummy();
 	interface_dummy();
 
-	//arp_dummy();
-	//ipv4_dummy();
-	//icmp_dummy();
-	//tcp_dummy();
-	//udp_dummy();
+	arp_dummy();
+	ipv4_dummy();
+	icmp_dummy();
+	tcp_dummy();
+	udp_dummy();
 
 	//rtm_dummy();
-	//logger_dummy();
+	logger_dummy();
 
 	// Start the driving thread of each module
 	PRINT_IMPORTANT("Initialize Modules");
 	switch_init(); //should always be first
-	//daemon_init(); //TODO improve how sets mac/ip
+	daemon_init(); //TODO improve how sets mac/ip
 	interface_init();
 
-	//arp_init();
-	//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
+	arp_init();
+	arp_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	//ipv4_init();
-	//ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
+	ipv4_init();
+	ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	//icmp_init();
-	//tcp_init();
-	//udp_init();
+	icmp_init();
+	tcp_init();
+	udp_init();
 
 	//rtm_init(); //TODO when updated/fully implemented
-	//logger_init();
+	logger_init();
 
 	pthread_attr_t fins_pthread_attr;
 	pthread_attr_init(&fins_pthread_attr);
 
 	PRINT_IMPORTANT("Run/start Modules");
 	switch_run(&fins_pthread_attr);
-	//daemon_run(&fins_pthread_attr);
+	daemon_run(&fins_pthread_attr);
 	interface_run(&fins_pthread_attr);
 
-	//arp_run(&fins_pthread_attr);
-	//ipv4_run(&fins_pthread_attr);
-	//icmp_run(&fins_pthread_attr);
-	//tcp_run(&fins_pthread_attr);
-	//udp_run(&fins_pthread_attr);
+	arp_run(&fins_pthread_attr);
+	ipv4_run(&fins_pthread_attr);
+	icmp_run(&fins_pthread_attr);
+	tcp_run(&fins_pthread_attr);
+	udp_run(&fins_pthread_attr);
 
 	//rtm_run(&fins_pthread_attr);
-	//logger_run(&fins_pthread_attr);
+	logger_run(&fins_pthread_attr);
 
 	//############################# //TODO custom test, remove later
 	///*

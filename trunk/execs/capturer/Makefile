@@ -50,8 +50,8 @@ CFLAGS += $(addprefix -I,$(CURR_INCS))
 
 ifdef BUILD_FOR_ANDROID_ARM
 #This is a tweak for ease of use, fix later by compiling libconfig
-INCLUDES += $(call filter_headers,$(LIBS_DIR)/common)
-CFLAGS += -I$(LIBS_DIR)/common
+#INCLUDES += $(call filter_headers,$(LIBS_DIR)/common)
+#CFLAGS += -I$(LIBS_DIR)/common
 endif
 
 LOCAL_OBJS_PATHS := $(addprefix $(LOCAL_DIR)/,$(STRIP_OBJS))
@@ -120,7 +120,7 @@ exec:$(CURR_OBJS)
 	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
-clean:clean_local
+clean:clean_local clean_$(STRIP_TYPE)
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
 endif
@@ -129,6 +129,12 @@ clean_local:
 	@rm -f *.o *.a
 	@rm -f INCS.finsmk OBJS.finsmk
 	@echo "cleaned[$(MAKELEVEL)]:$(STRIP_NAME)\n";
+
+clean_reference:
+#	@echo "clean"
+
+clean_exec:
+	@rm -f $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME)
 
 .PHONY:temp
 temp:
@@ -142,10 +148,10 @@ temp:
 .PHONY:test
 test:
 	@echo "TEST='$(TEST)'"
-	
+
 .PHONY:install
-install: $(LOCAL_NAME)
-	@adb push $(LOCAL_NAME) $(INSTALL_DIR)/$(LOCAL_NAME)
+install: #$(LOCAL_NAME)
+	@adb push $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) $(INSTALL_DIR)/$(LOCAL_NAME)
 	@adb shell chmod 777 $(INSTALL_DIR)/$(LOCAL_NAME)
 
 .PHONY:debug

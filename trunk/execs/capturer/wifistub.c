@@ -53,7 +53,7 @@ extern int server_capture_count;
 
 	//print_hex_block(packetReceived, dataLength);
 	//fflush(stdout);
-	return;
+	//return;
 
 	uint32_t numBytes = write(server_capture_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
@@ -105,7 +105,7 @@ void capture_init(char *device) {
 		return;
 	}
 
-	if (0) {
+	if (1) {
 		server_capture_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
 		close(server_fd);
 		if (server_capture_fd < 0) {
@@ -132,7 +132,7 @@ void capture_init(char *device) {
 	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
 	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
 	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
-	strcat(filter_exp, "(ether dst a00bbae94bb0) or (ether broadcast and (not ether src a00bbae94bb0))"); //phone wlan0
+	strcat(filter_exp, "(ether dst a0:0b:ba:e9:4b:b0) or (ether broadcast and (not ether src a0:0b:ba:e9:4b:b0))"); //phone wlan0 //must have ':'s
 
 	uint8_t *dev = (uint8_t *) device;
 	bpf_u_int32 net; /* ip */
@@ -150,7 +150,7 @@ void capture_init(char *device) {
 	PRINT_IMPORTANT("Filter expression='%s'", filter_exp);
 
 	/* open capture device */
-	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 1, 1000, errbuf);
+	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 0, 1000, errbuf);
 	if (capture_handle == NULL) {
 		PRINT_ERROR("Couldn't open device: dev='%s', err='%s', errno=%u, str='%s'", dev, errbuf, errno, strerror(errno));
 		while(1);

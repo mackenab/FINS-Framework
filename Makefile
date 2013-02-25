@@ -32,6 +32,10 @@ examples:
 tests:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
+.PHONY:install
+install:
+	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) install; cd $(LOCAL_DIR)/;)
+
 .PHONY:%
 %:
 	@cd trunk; $(MAKE) $@; cd $(LOCAL_DIR);

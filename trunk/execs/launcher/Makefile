@@ -15,12 +15,12 @@ LOCAL_OBJS :=
 LOCAL_INCS := 
 LOCAL_TYPE := reference #exec
 
-
+INSTALL_DIR = /data/local/tmp
 
 #### TARGETS #####
 .PHONY:all
 all:$(LOCAL_NAME)
-	@echo "$(LOCAL_NAME) is compiled\n"
+	@echo "compiled[$(MAKELEVEL)]:'$(LOCAL_NAME)'\n"
 
 .PHONY:update
 update:

@@ -74,3 +74,7 @@ int __aeabi_idiv(int numerator, int denominator){
     }
   }
 }
+
+int atexit (void (*func)(void)) {
+  return 0;
+}

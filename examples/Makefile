@@ -22,7 +22,7 @@ INCLUDES = $(foreach DIR_NAME, $(subst -I,, $(strip $(EXAMPLES_INC))), $(addpref
 ##### TARGETS #####
 .PHONY:all
 all: $(EXECUTABLES)
-	@echo "$(PROJECT_NAME) is compiled\n"
+	@echo "compiled[$(MAKELEVEL)]:'$(PROJECT_NAME)'\n"
 
 client_udp:client_udp.c
 	@$(CC) -c $< 

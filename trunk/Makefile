@@ -39,6 +39,10 @@ libs:
 modules:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
+.PHONY:install
+install:
+	@$(foreach exec,$(strip $(EXECS_LIST)), cd execs/$(exec); $(MAKE) install; cd $(LOCAL_DIR);)
+
 %:
 	@cd execs; $(MAKE) $@; cd $(LOCAL_DIR);
 

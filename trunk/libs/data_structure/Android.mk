@@ -10,4 +10,4 @@ LOCAL_CFLAGS := -DBUILD_FOR_ANDROID -g -O2 -Wall
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
 include $(BUILD_STATIC_LIBRARY)
 
-$(call import-module,common)
+$(call import-module,trunk/libs/common)

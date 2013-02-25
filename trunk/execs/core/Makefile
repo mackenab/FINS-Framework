@@ -10,7 +10,8 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module
 LOCAL_NAME := core
 LOCAL_LIBS := $(CORE_LIBS)
-LOCAL_MODS := $(CORE_MODULES)
+#LOCAL_MODS := $(CORE_MODULES)
+LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
 LOCAL_OBJS := core.o
 LOCAL_INCS := .
 LOCAL_TYPE := exec #reference
@@ -103,12 +104,12 @@ reference:
 	@echo "CURR_OBJS='$(CURR_OBJS)'"
 
 #.PHONY:exec
-exec:$(CURR_OBJS) | 
+exec:$(CURR_OBJS)
 #	@echo "CURR_OBJS='$(CURR_OBJS)'"
 	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
-clean:clean_local
+clean:clean_local clean_$(STRIP_TYPE)
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
 endif
@@ -117,6 +118,12 @@ clean_local:
 	@rm -f *.o *.a
 	@rm -f INCS.finsmk OBJS.finsmk
 	@echo "cleaned[$(MAKELEVEL)]:$(STRIP_NAME)\n";
+
+clean_reference:
+#	@echo "clean"
+
+clean_exec:
+	@rm -f $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME)
 
 .PHONY:temp
 temp:

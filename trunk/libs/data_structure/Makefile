@@ -108,7 +108,7 @@ exec:$(CURR_OBJS)
 	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
-clean:clean_local
+clean:clean_local clean_$(STRIP_TYPE)
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
 endif
@@ -117,6 +117,12 @@ clean_local:
 	@rm -f *.o *.a
 	@rm -f INCS.finsmk OBJS.finsmk
 	@echo "cleaned[$(MAKELEVEL)]:$(STRIP_NAME)\n";
+
+clean_reference:
+#	@echo "clean"
+
+clean_exec:
+	@rm -f $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME)
 
 .PHONY:temp
 temp:

@@ -99,8 +99,12 @@ void *capturer_to_interface(void *local) {
 		 }
 		 */
 		//if (1) { //works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
+		PRINT_IMPORTANT("Reading");
 		do {
 			numBytes = read(client_capture_fd, &frame_len, size_len);
+			if (numBytes <= 0) {
+				PRINT_ERROR("numBytes=%d", numBytes);
+			}
 		} while (interface_proto.running_flag && numBytes <= 0);
 
 		if (!interface_proto.running_flag) {
@@ -136,6 +140,7 @@ void *capturer_to_interface(void *local) {
 
 		PRINT_DEBUG("frame read: frame_len=%d", frame_len);
 		//print_hex_block(data,datalen);
+		//continue;
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
 				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];

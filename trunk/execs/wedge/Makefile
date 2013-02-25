@@ -1,8 +1,7 @@
 LOCAL_DIR := $(PWD)
 
 ifndef FINS_ROOT_DIR
-FINS_ROOT_DIR := $(LOCAL_DIR)/../..
-export FINS_ROOT_DIR
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/../../..)
 endif
 
 # fins.mk contains the compiler and linker options for each target platform
@@ -11,12 +10,35 @@ endif
 #Name of the module
 LOCAL_NAME = wedge
 
+INSTALL_DIR = /data/local/tmp
+
 obj-m += fins_stack_wedge.o
 
-#BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
+BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
 ifdef BUILD_FOR_ANDROID_ARM
-CFLAGS :=
+##important ones options:
+#stated to be these values, but doesn't work with them
+#tried combos of = & :=, and just empty 
+#CC=cc
+#LD=ld
+#clears needed
+CFLAGS := 
 LDFLAGS :=
+
+
+##apparently non-affective
+#NDK_PLATFORM_VER := 
+#ANDROID_NDK_ROOT := 
+#USR := 
+#BIN := 
+#CCOPTS := 
+#INCLS :=
+#CFLAGS := 
+#LDOPTS := 
+#LIBPATHS := 
+#LIBS := 
+#LDFLAGS := 
+
 #undefine LDFLAGS
 COMPILER = /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 ARCH =arm
@@ -30,8 +52,8 @@ endif
 
 
 .PHONY:all
-all:$(LOCAL_NAME)
-	@echo "$(LOCAL_NAME) is compiled\n"
+all:old $(LOCAL_NAME)
+	@echo "compiled[$(MAKELEVEL)]:'$(LOCAL_NAME)'\n"
 
 $(LOCAL_NAME):
 ifdef BUILD_FOR_ANDROID_ARM
@@ -51,7 +73,12 @@ endif
 .PHONY:install
 install:
 ifdef BUILD_FOR_ANDROID_ARM
-	@adb push fins_stack_wedge.ko /data/local/tmp
+	@adb push fins_stack_wedge.ko $(INSTALL_DIR)
 else
 endif
-		
+
+old:
+	@echo "CC='$(CC)'"
+	@echo "CFLAGS='$(CFLAGS)'"
+	@echo "LD='$(LD)'"
+	@echo "LDFLAGS='$(LDFLAGS)'"

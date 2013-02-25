@@ -22,7 +22,7 @@ INCLUDES = $(foreach DIR_NAME, $(subst -I,, $(strip $(TESTS_INC))), $(addprefix 
 ##### TARGETS #####
 .PHONY:all
 all:$(EXECUTABLES) userspace_tests
-	@echo "$(PROJECT_NAME) is compiled\n"
+	@echo "compiled[$(MAKELEVEL)]:'$(PROJECT_NAME)'\n"
 
 client_icmp:client_icmp.c
 	@$(CC) -c $< 
