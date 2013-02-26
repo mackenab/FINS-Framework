@@ -83,6 +83,7 @@ void capturer_main(void) {
 
 	print_app_banner();
 
+	/*
 	//char recv_data[4000];
 	while (0) {
 		//gets(recv_data);
@@ -115,6 +116,7 @@ void capturer_main(void) {
 		int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
 		PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
 	}
+	*/
 
 	//while(1);
 
