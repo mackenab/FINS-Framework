@@ -33,11 +33,9 @@ LDFLAGS :=
 #BIN := 
 #CCOPTS := 
 #INCLS :=
-#CFLAGS := 
 #LDOPTS := 
 #LIBPATHS := 
 #LIBS := 
-#LDFLAGS := 
 
 #undefine LDFLAGS
 COMPILER = /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-

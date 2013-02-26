@@ -1,7 +1,7 @@
 LOCAL_DIR := $(PWD)
 
 ifndef FINS_ROOT_DIR
-export FINS_ROOT_DIR := $(LOCAL_DIR)/../../..
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/../../..)
 endif
 
 # fins.mk contains the compiler and linker options for each target platform
@@ -52,7 +52,7 @@ CURR_OBJS = $(sort $(shell cat $(LOCAL_OBJS_FILE) $(CURR_OBJS_FILES) 2> /dev/nul
 
 ##### TARGETS #####
 #.PHONY:all
-all:setup build
+all:build
 	@echo "compiled[$(MAKELEVEL)]:'$(STRIP_NAME)'\n"	
 
 .PHONY:setup

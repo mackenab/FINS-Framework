@@ -1,7 +1,7 @@
 LOCAL_DIR := $(PWD)
 
 ifndef FINS_ROOT_DIR
-FINS_ROOT_DIR := $(LOCAL_DIR)/../..
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/../../../..)
 export FINS_ROOT_DIR
 endif
 

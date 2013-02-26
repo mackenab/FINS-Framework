@@ -52,7 +52,7 @@ CURR_OBJS = $(sort $(shell cat $(LOCAL_OBJS_FILE) $(CURR_OBJS_FILES) 2> /dev/nul
 
 ##### TARGETS #####
 #.PHONY:all
-all:setup build
+all:build
 	@echo "compiled[$(MAKELEVEL)]:'$(STRIP_NAME)'\n"	
 
 .PHONY:setup

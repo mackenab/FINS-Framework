@@ -3,9 +3,9 @@
 #  ONLY ONE MAY BE UNCOMMENTED AT ONCE!
 #
 
-#BUILD_FOR_ANDROID_ARM := "If uncommented, the FINS source will build for android arch-ARM."
+BUILD_FOR_ANDROID_ARM := "If uncommented, the FINS source will build for android arch-ARM."
 #BUILD_FOR_ANDROID_X86 := "If uncommented, the FINS source will build for android arch-x86"
-BUILD_FOR_LINUX := "If uncommented, the FINS source will build for linux"
+#BUILD_FOR_LINUX := "If uncommented, the FINS source will build for linux"
 
 
 
@@ -31,7 +31,8 @@ INCLS := -I$(USR)/include
 LD := $(BIN)/arm-eabi-gcc
 LDOPTS := -g -O2 -Wall #flags for valgrind
 LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
-LIBPATHS := -L$(USR)/lib
+#LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcc.a
+LIBPATHS := -L$(USR)/lib 
 LIBS := -lc -llog -lm #-lrt
 
 GDB_CLIENT := $(BIN)/arm-eabi-gdb
