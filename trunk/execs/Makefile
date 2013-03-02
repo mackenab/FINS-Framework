@@ -32,6 +32,10 @@ scraper:
 wedge:
 	@cd $@; $(MAKE) all; cd $(LOCAL_DIR);
 
+.PHONY:install
+install:
+	@$(foreach exec,$(strip $(EXECS_LIST)), cd $(exec); $(MAKE) install; cd $(LOCAL_DIR);)
+
 %:
 	@cd core; $(MAKE) $@; cd $(LOCAL_DIR);
 

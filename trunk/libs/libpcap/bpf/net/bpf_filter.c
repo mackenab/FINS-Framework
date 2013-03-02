@@ -38,10 +38,6 @@
  *	@(#)bpf.c	7.5 (Berkeley) 7/15/91
  */
 
-#ifdef BUILD_FOR_ANDROID
-#include <glue.h>
-#endif
-
 #if !(defined(lint) || defined(KERNEL) || defined(_KERNEL))
 static const char rcsid[] _U_ =
     "@(#) $Header: /tcpdump/master/libpcap/bpf/net/bpf_filter.c,v 1.44 2003/11/15 23:24:07 guy Exp $ (LBL)";

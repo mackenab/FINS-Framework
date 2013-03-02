@@ -292,10 +292,6 @@ pcap_stats_pf(pcap_t *p, struct pcap_stat *ps)
 #define DLT_DOCSIS	143
 #endif
 
-#include <jni.h>
-#include <android/log.h>
-//__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, linux");
-
 pcap_t *
 pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
     char *ebuf)
@@ -305,8 +301,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	int backlog = -1;	/* request the most */
 	struct enfilter Filter;
 	struct endevp devparams;
-
-	__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, pf");
 
 	p = (pcap_t *)malloc(sizeof(*p));
 	if (p == NULL) {

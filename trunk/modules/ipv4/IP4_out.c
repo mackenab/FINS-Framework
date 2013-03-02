@@ -29,20 +29,20 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 	//construct_packet_buffer = &construct_packet;
 	construct_packet_buffer = (struct ip4_packet *) &construct_packet;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "send_dst_ip", &destination);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_dst_ip", &destination);
 
 	PRINT_DEBUG("src_ip=%u, dst_ip=%u", source, destination);
 
 	IP4_const_header(construct_packet_buffer, source, destination, protocol);
 
 	uint32_t send_ttl = 0;
-	if (metadata_readFromElement(params, "send_ttl", &send_ttl) == META_TRUE) {
+	if (metadata_readFromElement(meta, "send_ttl", &send_ttl) == META_TRUE) {
 		construct_packet_buffer->ip_ttl = send_ttl;
 	}
 
 	uint32_t send_tos = 0;
-	if (metadata_readFromElement(params, "send_tos", &send_tos) == META_TRUE) {
+	if (metadata_readFromElement(meta, "send_tos", &send_tos) == META_TRUE) {
 		//TODO implement
 	}
 
@@ -54,17 +54,17 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 			PRINT_DEBUG("internal, routing back to netw layer");
 			struct timeval current;
 			gettimeofday(&current, 0);
-			secure_metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
+			secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
 
-			secure_metadata_writeToElement(params, "recv_protocol", &protocol, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "recv_src_ip", &source, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "recv_dst_ip", &destination, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_src_ip", &source, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_dst_ip", &destination, META_TYPE_INT32);
 
 			if (send_ttl) {
-				secure_metadata_writeToElement(params, "recv_ttl", &send_ttl, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "recv_ttl", &send_ttl, META_TYPE_INT32);
 			}
 			if (send_tos) {
-				secure_metadata_writeToElement(params, "recv_tos", &send_tos, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "recv_tos", &send_tos, META_TYPE_INT32);
 			}
 
 			//ff->dataOrCtrl = DATA;
@@ -86,7 +86,7 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 				freeFinsFrame(ff);
 				return;
 			}
-			//ff->metaData = params;
+			//ff->metaData = meta;
 
 			ff->dataFrame.directionFlag = DIR_UP;
 

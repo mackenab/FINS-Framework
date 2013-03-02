@@ -322,15 +322,15 @@ void udp_exec(struct finsFrame *ff) {
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_UDP_CLEAR_SENT:
 		PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
-		secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-		secure_metadata_readFromElement(params, "rem_port", &rem_port);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 
 		udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 		break;
@@ -390,7 +390,7 @@ void udp_error(struct finsFrame *ff) {
 	//uint32_t udp_len;
 	//uint32_t checksum;
 
-	//metadata *params = ff->metaData;
+	//metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
 		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
@@ -421,7 +421,7 @@ void udp_error(struct finsFrame *ff) {
 					//ff->dataOrCtrl = CONTROL;
 					ff->destinationID.id = DAEMON_ID;
 					ff->destinationID.next = NULL;
-					//ff->metaData = params_err;
+					//ff->metaData = meta_err;
 
 					ff->ctrlFrame.senderID = UDP_ID;
 					//ff->ctrlFrame.serial_num = gen_control_serial_num();
@@ -465,7 +465,7 @@ void udp_error(struct finsFrame *ff) {
 					//ff->dataOrCtrl = CONTROL;
 					ff->destinationID.id = DAEMON_ID;
 					ff->destinationID.next = NULL;
-					//ff->metaData = params_err;
+					//ff->metaData = meta_err;
 
 					ff->ctrlFrame.senderID = UDP_ID;
 					//ff->ctrlFrame.serial_num = gen_control_serial_num();

@@ -44,13 +44,13 @@ void IP4_send_fdf_in(struct finsFrame *ff, struct ip4_header* pheader, struct ip
 	uint32_t src_ip = pheader->source; //ppacket->ip_src;
 	uint32_t dst_ip = pheader->destination; //ppacket->ip_dst;
 
-	metadata *params = ff->metaData;
-	secure_metadata_writeToElement(params, "recv_protocol", &protocol, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "recv_src_ip", &src_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "recv_dst_ip", &dst_ip, META_TYPE_INT32);
+	metadata *meta = ff->metaData;
+	secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_src_ip", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_dst_ip", &dst_ip, META_TYPE_INT32);
 
 	uint32_t recv_ttl = pheader->ttl;
-	secure_metadata_writeToElement(params, "recv_ttl", &recv_ttl, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_ttl", &recv_ttl, META_TYPE_INT32);
 
 	//ff->metaData = ipv4_meta;
 	PRINT_DEBUG("protocol=%u, src_ip=%u, dst_ip=%u, recv_ttl=%u", protocol, src_ip, dst_ip, recv_ttl);
@@ -113,22 +113,22 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 	}
 	if (0) { //works, sends to arp every time
 		if (store_list_has_space()) {
-			metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-			metadata_create(params);
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
 
 			//uint32_t src_ip = my_ip_addr; //TODO get these from next hop info
 			//uint32_t dst_ip = ntohl(ppacket->ip_dst);
 			uint32_t src_ip = next_hop.interface; //TODO get this value from interface list with hop.interface as the index
 			uint32_t dst_ip = next_hop.address;
 
-			secure_metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
 
 			struct finsFrame *ff_arp = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 			ff_arp->dataOrCtrl = CONTROL;
 			ff_arp->destinationID.id = ARP_ID;
 			ff_arp->destinationID.next = NULL;
-			ff_arp->metaData = params;
+			ff_arp->metaData = meta;
 
 			uint32_t serial_num = gen_control_serial_num();
 
@@ -159,24 +159,24 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 		uint32_t src_ip = next_hop.interface; //TODO get this value from interface list with hop.interface as the index
 		uint32_t dst_ip = next_hop.address;
 
-		metadata *params = ff->metaData;
+		metadata *meta = ff->metaData;
 
 		struct ipv4_interface *interface = ipv4_interface_list_find(src_ip);
 		if (interface) {
 			src_mac = interface->addr_mac;
 			PRINT_DEBUG("src: interface=%p, mac=0x%llx, ip=%u", interface, src_mac, src_ip);
 
-			secure_metadata_writeToElement(params, "send_src_mac", &src_mac, META_TYPE_INT64);
+			secure_metadata_writeToElement(meta, "send_src_mac", &src_mac, META_TYPE_INT64);
 
 			interface = ipv4_interface_list_find(dst_ip);
 			if (interface) {
 				dst_mac = interface->addr_mac;
 				PRINT_DEBUG("dst: interface=%p, mac=0x%llx, ip=%u", interface, dst_mac, dst_ip);
 
-				secure_metadata_writeToElement(params, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+				secure_metadata_writeToElement(meta, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
 				uint32_t ether_type = IP4_ETH_TYPE;
-				secure_metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_ether_type", &ether_type, META_TYPE_INT32);
 
 				ipv4_to_switch(ff); //TODO decide of go to wire or route back to IPv4
 				free(pdu);
@@ -209,10 +209,10 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 						if (time_diff(&cache->updated_stamp, &current) <= IPV4_CACHE_TO_DEFAULT) {
 							PRINT_DEBUG("up to date cache: cache=%p", cache);
 
-							secure_metadata_writeToElement(params, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+							secure_metadata_writeToElement(meta, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
 							uint32_t ether_type = IP4_ETH_TYPE;
-							secure_metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
+							secure_metadata_writeToElement(meta, "send_ether_type", &ether_type, META_TYPE_INT32);
 
 							ipv4_to_switch(ff);
 							free(pdu);
@@ -220,17 +220,17 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 							PRINT_DEBUG("cache expired: cache=%p", cache);
 
 							if (ipv4_request_list_has_space(cache->request_list) && store_list_has_space()) {
-								metadata *params_req = (metadata *) secure_malloc(sizeof(metadata));
-								metadata_create(params_req);
+								metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+								metadata_create(meta_req);
 
-								secure_metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
-								secure_metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+								secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
+								secure_metadata_writeToElement(meta_req, "dst_ip", &dst_ip, META_TYPE_INT32);
 
 								struct finsFrame *ff_req = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 								ff_req->dataOrCtrl = CONTROL;
 								ff_req->destinationID.id = ARP_ID;
 								ff_req->destinationID.next = NULL;
-								ff_req->metaData = params_req;
+								ff_req->metaData = meta_req;
 
 								uint32_t serial_num = gen_control_serial_num();
 
@@ -267,17 +267,17 @@ void IP4_send_fdf_out(struct finsFrame *ff, struct ip4_packet* ppacket, struct i
 					PRINT_DEBUG("create cache: start seeking");
 
 					if (store_list_has_space()) {
-						metadata *params_req = (metadata *) secure_malloc(sizeof(metadata));
-						metadata_create(params_req);
+						metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+						metadata_create(meta_req);
 
-						secure_metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
-						secure_metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+						secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
+						secure_metadata_writeToElement(meta_req, "dst_ip", &dst_ip, META_TYPE_INT32);
 
 						struct finsFrame *ff_req = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 						ff_req->dataOrCtrl = CONTROL;
 						ff_req->destinationID.id = ARP_ID;
 						ff_req->destinationID.next = NULL;
-						ff_req->metaData = params_req;
+						ff_req->metaData = meta_req;
 
 						uint32_t serial_num = gen_control_serial_num();
 

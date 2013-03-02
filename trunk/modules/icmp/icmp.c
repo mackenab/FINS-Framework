@@ -194,8 +194,8 @@ void icmp_in_fdf(struct finsFrame *ff) {
 
 	uint32_t protocol;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_protocol", &protocol);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
 
 	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
 		PRINT_ERROR("Protocol =/= ICMP! Discarding frame...");
@@ -224,7 +224,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 			//ff->dataOrCtrl = DATA;
 			ff->destinationID.id = DAEMON_ID;
 			ff->destinationID.next = NULL;
-			//ff->metaData = params;
+			//ff->metaData = meta;
 
 			//ff->dataFrame.directionFlag = DIR_UP;
 			//ff->dataFrame.pduLength = len;
@@ -260,13 +260,13 @@ void icmp_in_fdf(struct finsFrame *ff) {
 			uint16_t sent_data_len = data_len - IP4_HLEN(ipv4_pkt_sent);
 
 			uint32_t type = icmp_pkt->type;
-			secure_metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_icmp_type", &type, META_TYPE_INT32);
 			uint32_t code = icmp_pkt->code;
-			secure_metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_icmp_code", &code, META_TYPE_INT32);
 
 			uint32_t src_port;
 			uint32_t dst_port;
-			metadata *params_err;
+			metadata *meta_err;
 			struct finsFrame *ff_err;
 
 			PRINT_DEBUG("sent: proto=%u, data_len=%u", ipv4_pkt_sent->ip_proto, sent_data_len);
@@ -285,14 +285,14 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				} else {
 					struct icmp_sent *sent = icmp_sent_list_find(icmp_sent_packet_list, ipv4_pkt_sent->ip_data, sent_data_len);
 					if (sent) {
-						metadata *params_err = sent->ff->metaData;
-						metadata_copy(params, params_err);
+						metadata *meta_err = sent->ff->metaData;
+						metadata_copy(meta, meta_err);
 
 						ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = CONTROL;
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
-						ff_err->metaData = params_err;
+						ff_err->metaData = meta_err;
 						sent->ff->metaData = NULL;
 
 						ff_err->ctrlFrame.senderID = ICMP_ID;
@@ -322,7 +322,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 					return;
 				}
 
-				params_err = params;
+				meta_err = meta;
 				ff->metaData = NULL;
 
 				struct tcp_header_frag *tcp_hdr = (struct tcp_header_frag *) ipv4_pkt_sent->ip_data;
@@ -331,15 +331,15 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
 				//TODO src/dst_ip should already be in from IPv4 mod
-				secure_metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
-				secure_metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_err, "recv_src_port", &src_port, META_TYPE_INT32); //TODO figure out if recv_, send_, or what
+				secure_metadata_writeToElement(meta_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 
 				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = TCP_ID;
 				ff_err->destinationID.next = NULL;
-				ff_err->metaData = params_err;
+				ff_err->metaData = meta_err;
 
 				ff_err->ctrlFrame.senderID = ICMP_ID;
 				ff_err->ctrlFrame.serial_num = gen_control_serial_num();
@@ -364,7 +364,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
-				ff_err->metaData = params;
+				ff_err->metaData = meta;
 				ff->metaData = NULL;
 
 				ff_err->ctrlFrame.senderID = ICMP_ID;
@@ -421,13 +421,13 @@ void icmp_in_fdf(struct finsFrame *ff) {
 			uint16_t sent_data_len = data_len - IP4_HLEN(ipv4_pkt_sent);
 
 			uint32_t type = icmp_pkt->type;
-			secure_metadata_writeToElement(params, "recv_icmp_type", &type, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_icmp_type", &type, META_TYPE_INT32);
 			uint32_t code = icmp_pkt->code;
-			secure_metadata_writeToElement(params, "recv_icmp_code", &code, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_icmp_code", &code, META_TYPE_INT32);
 
 			uint32_t src_port;
 			uint32_t dst_port;
-			metadata *params_err;
+			metadata *meta_err;
 			struct finsFrame *ff_err;
 
 			PRINT_DEBUG("sent: proto=%u, data_len=%u", ipv4_pkt_sent->ip_proto, sent_data_len);
@@ -446,14 +446,14 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				} else {
 					struct icmp_sent *sent = icmp_sent_list_find(icmp_sent_packet_list, ipv4_pkt_sent->ip_data, sent_data_len);
 					if (sent) {
-						metadata *params_err = sent->ff->metaData;
-						metadata_copy(params, params_err);
+						metadata *meta_err = sent->ff->metaData;
+						metadata_copy(meta, meta_err);
 
 						ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = CONTROL;
 						ff_err->destinationID.id = DAEMON_ID;
 						ff_err->destinationID.next = NULL;
-						ff_err->metaData = params_err;
+						ff_err->metaData = meta_err;
 						sent->ff->metaData = NULL;
 
 						ff_err->ctrlFrame.senderID = ICMP_ID;
@@ -483,7 +483,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 					return;
 				}
 
-				params_err = params;
+				meta_err = meta;
 				ff->metaData = NULL;
 
 				struct tcp_header_frag *tcp_hdr = (struct tcp_header_frag *) ipv4_pkt_sent->ip_data;
@@ -492,15 +492,15 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				uint32_t seq_num = ntohl(tcp_hdr->seq_num);
 
 				//src/dst_ip should already be in from IPv4 mod
-				secure_metadata_writeToElement(params_err, "recv_src_port", &src_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_err, "recv_src_port", &src_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_err, "recv_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_err, "recv_seq_num", &seq_num, META_TYPE_INT32);
 
 				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = TCP_ID;
 				ff_err->destinationID.next = NULL;
-				ff_err->metaData = params_err;
+				ff_err->metaData = meta_err;
 
 				ff_err->ctrlFrame.senderID = ICMP_ID;
 				ff_err->ctrlFrame.serial_num = gen_control_serial_num();
@@ -525,7 +525,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 				ff_err->dataOrCtrl = CONTROL;
 				ff_err->destinationID.id = UDP_ID;
 				ff_err->destinationID.next = NULL;
-				ff_err->metaData = params;
+				ff_err->metaData = meta;
 				ff->metaData = NULL;
 
 				ff_err->ctrlFrame.senderID = ICMP_ID;
@@ -559,7 +559,7 @@ void icmp_in_fdf(struct finsFrame *ff) {
 		//ff->dataOrCtrl = DATA;
 		ff->destinationID.id = DAEMON_ID;
 		ff->destinationID.next = NULL;
-		//ff->metaData = params;
+		//ff->metaData = meta;
 
 		//ff->dataFrame.directionFlag = DIR_UP;
 		//ff->dataFrame.pduLength = len;
@@ -605,20 +605,20 @@ void icmp_out_fdf(struct finsFrame *ff) {
 	uint32_t src_ip;
 	uint32_t dst_ip;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "send_src_ip", &src_ip);
-	secure_metadata_readFromElement(params, "send_dst_ip", &dst_ip);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "send_dst_ip", &dst_ip);
 
 	uint32_t protocol = ICMP_PROTOCOL;
-	secure_metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
-	//secure_metadata_writeToElement(params, "src_ip", &src_ip, META_TYPE_INT32);
-	//secure_metadata_writeToElement(params, "dst_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_protocol", &protocol, META_TYPE_INT32);
+	//secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
+	//secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
 
 	//struct finsFrame *ff = (struct finsFrame *) fins_malloc(sizeof(struct finsFrame));
 	//ff->dataOrCtrl = DATA;
 	ff->destinationID.id = IPV4_ID; // destination module ID
 	ff->destinationID.next = NULL;
-	//ff->metaData = params;
+	//ff->metaData = meta;
 
 	//ff->dataFrame.directionFlag = DIR_DOWN; // ingress or egress network data; see above
 	//ff->dataFrame.pduLength = data_len; //Add in the header size for this, too
@@ -740,23 +740,23 @@ void icmp_ping_reply(struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_
 	uint32_t src_ip;
 	uint32_t dst_ip;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_src_ip", &src_ip);
-	secure_metadata_readFromElement(params, "recv_dst_ip", &dst_ip);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "recv_dst_ip", &dst_ip);
 
-	metadata *params_reply = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params_reply);
+	metadata *meta_reply = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta_reply);
 
 	uint32_t protocol = ICMP_PROTOCOL;
-	secure_metadata_writeToElement(params_reply, "send_protocol", &protocol, META_TYPE_INT32);
-	secure_metadata_writeToElement(params_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta_reply, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
 
 	struct finsFrame *ff_reply = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff_reply->dataOrCtrl = DATA;
 	ff_reply->destinationID.id = IPV4_ID;
 	ff_reply->destinationID.next = NULL;
-	ff_reply->metaData = params_reply;
+	ff_reply->metaData = meta_reply;
 
 	ff_reply->dataFrame.directionFlag = DIR_DOWN;
 	ff_reply->dataFrame.pduLength = pdu_len_reply;

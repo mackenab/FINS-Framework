@@ -80,7 +80,7 @@ void *capturer_to_interface(void *local) {
 	uint32_t ether_type;
 	struct timeval current;
 
-	metadata *params;
+	metadata *meta;
 	struct finsFrame *ff;
 
 	while (interface_proto.running_flag) {
@@ -99,11 +99,12 @@ void *capturer_to_interface(void *local) {
 		 }
 		 */
 		//if (1) { //works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
-		PRINT_IMPORTANT("Reading");
+		//PRINT_IMPORTANT("Reading");
 		do {
 			numBytes = read(client_capture_fd, &frame_len, size_len);
 			if (numBytes <= 0) {
 				PRINT_ERROR("numBytes=%d", numBytes);
+				break;
 			}
 		} while (interface_proto.running_flag && numBytes <= 0);
 
@@ -152,17 +153,17 @@ void *capturer_to_interface(void *local) {
 		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x, stamp=%u.%u",
 				dst_mac, src_mac, ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
-		params = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(params);
+		meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
 
-		secure_metadata_writeToElement(params, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
-		secure_metadata_writeToElement(params, "recv_src_mac", &src_mac, META_TYPE_INT64);
-		secure_metadata_writeToElement(params, "recv_ether_type", &ether_type, META_TYPE_INT32);
-		secure_metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "recv_src_mac", &src_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "recv_ether_type", &ether_type, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
 
 		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 		ff->dataOrCtrl = DATA;
-		ff->metaData = params;
+		ff->metaData = meta;
 
 		if (ether_type == ETH_TYPE_IP4) { //0x0800 == 2048, IPv4
 			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
@@ -266,10 +267,10 @@ void interface_out_fdf(struct finsFrame *ff) {
 	int framelen;
 	int numBytes;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "send_dst_mac", &dst_mac);
-	secure_metadata_readFromElement(params, "send_src_mac", &src_mac);
-	secure_metadata_readFromElement(params, "send_ether_type", &ether_type);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_dst_mac", &dst_mac);
+	secure_metadata_readFromElement(meta, "send_src_mac", &src_mac);
+	secure_metadata_readFromElement(meta, "send_ether_type", &ether_type);
 
 	PRINT_DEBUG("send frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 

@@ -25,32 +25,32 @@ all:$(EXECUTABLES) userspace_tests
 	@echo "compiled[$(MAKELEVEL)]:'$(PROJECT_NAME)'\n"
 
 client_icmp:client_icmp.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 
 client_tcp:client_tcp.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 	
 client_udp:client_udp.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 
 server_icmp:server_icmp.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 
 server_tcp:server_tcp.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 
 server_udp:server_udp.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 
 server_forks:server_forks.c
-	@$(CC) -c $< 
-	@$(LD) $@.o -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $(LDFLAGS) $@.o -o $@
 
 userspace_tests:
 	@cd Userspace_tests; make all

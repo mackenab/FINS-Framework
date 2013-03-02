@@ -10,7 +10,7 @@ endif
 #Name of the module
 LOCAL_NAME = wedge
 
-INSTALL_DIR = /data/local/tmp
+INSTALL_DIR = /data/local/fins
 
 obj-m += fins_stack_wedge.o
 
@@ -40,7 +40,9 @@ LDFLAGS :=
 #undefine LDFLAGS
 COMPILER = /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 ARCH =arm
-KERNELDIR = /home/alex/jreed/android_source/omap
+#KERNELDIR = /home/alex/jreed/android_source/omap #phone0
+#KERNELDIR = /home/alex/jreed/android_source/msm #phone1
+KERNELDIR = /home/alex/jreed/android_source/tegra #tablet1
 else
 CC := gcc
 LD := ld

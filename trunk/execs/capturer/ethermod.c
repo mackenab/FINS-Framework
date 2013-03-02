@@ -84,60 +84,64 @@ void capturer_main(void) {
 	print_app_banner();
 
 	/*
-	//char recv_data[4000];
-	while (0) {
-		//gets(recv_data);
-		//sleep(15);
-		errno = 0;
-		int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-		PRINT_IMPORTANT("fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
-		int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
-		PRINT_IMPORTANT("fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
-		int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
-		PRINT_IMPORTANT("fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
-		int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
-		PRINT_IMPORTANT("fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
-		int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
-		PRINT_IMPORTANT("fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
-		int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-		PRINT_IMPORTANT("fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
-		int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
-		PRINT_IMPORTANT("fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
-		int fd8 = socket(PF_INET, SOCK_STREAM, 0);
-		PRINT_IMPORTANT("fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
-		int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-		PRINT_IMPORTANT("fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
-		int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
-		PRINT_IMPORTANT("fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
-		int fd11 = socket(PF_INET, SOCK_RAW, 0);
-		PRINT_IMPORTANT("fd11=%d, errno=%u, str='%s'", fd11, errno, strerror(errno));
-		int fd12 = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
-		PRINT_IMPORTANT("fd12=%d, errno=%u, str='%s'", fd12, errno, strerror(errno));
-		int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
-		PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
-	}
-	*/
+	 //char recv_data[4000];
+	 while (0) {
+	 //gets(recv_data);
+	 //sleep(15);
+	 errno = 0;
+	 int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	 PRINT_IMPORTANT("fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
+	 int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
+	 PRINT_IMPORTANT("fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
+	 int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
+	 PRINT_IMPORTANT("fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
+	 int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
+	 PRINT_IMPORTANT("fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
+	 int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
+	 PRINT_IMPORTANT("fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
+	 int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	 PRINT_IMPORTANT("fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
+	 int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
+	 PRINT_IMPORTANT("fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
+	 int fd8 = socket(PF_INET, SOCK_STREAM, 0);
+	 PRINT_IMPORTANT("fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
+	 int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	 PRINT_IMPORTANT("fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
+	 int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
+	 PRINT_IMPORTANT("fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
+	 int fd11 = socket(PF_INET, SOCK_RAW, 0);
+	 PRINT_IMPORTANT("fd11=%d, errno=%u, str='%s'", fd11, errno, strerror(errno));
+	 int fd12 = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+	 PRINT_IMPORTANT("fd12=%d, errno=%u, str='%s'", fd12, errno, strerror(errno));
+	 int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
+	 PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
+	 }
+	 */
+	int ret = 1;
 
-	//while(1);
-
-	(void) signal(SIGINT, capturer_termination_handler);
-
-	int ret;
+	uint32_t test1 = 5;
+	uint32_t test2 = 2;
+	PRINT_IMPORTANT("test=%d", test1/test2);
 
 	if (0) {
-		int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
 		struct ifreq ifr;
-		int num = 3;
-		//ifr.ifr_name
-		//ifr.ifr_name="eth0"
-		for (num = 0; num < 30; num++) {
+		int num;
+		for (num = 0; num < 20; num++) {
 			ifr.ifr_ifindex = num;
-			ret = ioctl(fd6, SIOCGIFNAME, &ifr);
+			ret = ioctl(fd, SIOCGIFNAME, &ifr);
 			PRINT_IMPORTANT("ifr_ifindex=%d, ifr_name='%s'", ifr.ifr_ifindex, ifr.ifr_name);
+			//printf("ifr_ifindex=%d, ifr_name='%s'\n", ifr.ifr_ifindex, ifr.ifr_name);
 		}
-		close(fd6);
+
+		close(fd);
+		printf("FIN, waiting\n");
+		while(1);
 		return;
 	}
+
+	(void) signal(SIGINT, capturer_termination_handler);
 
 	/*
 	 PRINT_IMPORTANT("Gaining su status");
@@ -151,12 +155,12 @@ void capturer_main(void) {
 		PRINT_IMPORTANT(FINS_TMP_ROOT " already exists! Cleaning...");
 		// if cannot create directory, assume it contains files and try to delete them
 		/*
-		if ((ret = system("cd " FINS_TMP_ROOT ";rm *"))) {
-			PRINT_ERROR("File removal fail: ret=%d, errno=%u, str='%s', path='%s'", ret, errno, strerror(errno), FINS_TMP_ROOT);
-		} else {
-			PRINT_IMPORTANT(FINS_TMP_ROOT " was cleaned successfully.");
-		}
-		*/
+		 if ((ret = system("cd " FINS_TMP_ROOT ";rm *"))) {
+		 PRINT_ERROR("File removal fail: ret=%d, errno=%u, str='%s', path='%s'", ret, errno, strerror(errno), FINS_TMP_ROOT);
+		 } else {
+		 PRINT_IMPORTANT(FINS_TMP_ROOT " was cleaned successfully.");
+		 }
+		 */
 	}
 	fflush(stdout);
 
@@ -181,15 +185,12 @@ void capturer_main(void) {
 		char device_capture[20];
 		strcpy(device_capture, device);
 		capture_init(device_capture);
-		while (1)
-			;
+		while (1);
 	} else { // parent
 		PRINT_DEBUG("inject: pID=%d", (int)pID);
 		char device_inject[20];
 		strcpy(device_inject, device);
 		inject_init(device_inject);
-		while (1)
-			;
 	}
 
 	if (inject_handle != NULL) {
@@ -201,6 +202,7 @@ void capturer_main(void) {
 		pcap_close(capture_handle);
 		capture_handle = NULL;
 	}
+	exit(0);
 }
 
 #ifdef BUILD_FOR_ANDROID

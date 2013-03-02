@@ -120,11 +120,11 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 #define secure_sem_wait(sem) secure_sem_wait_full(__FILE__, __FUNCTION__, __LINE__, sem)
 void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *sem);
 
-#define secure_metadata_readFromElement(params, target, value) secure_metadata_readFromElement_full(__FILE__, __FUNCTION__, __LINE__, params, target, value)
-void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *params, const char *target, void *value);
+#define secure_metadata_readFromElement(meta, target, value) secure_metadata_readFromElement_full(__FILE__, __FUNCTION__, __LINE__, meta, target, value)
+void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *meta, const char *target, void *value);
 
-#define secure_metadata_writeToElement(params, target, value, type) secure_metadata_writeToElement_full(__FILE__, __FUNCTION__, __LINE__, params, target, value, type)
-void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *params, char *target, void *value, int type);
+#define secure_metadata_writeToElement(meta, target, value, type) secure_metadata_writeToElement_full(__FILE__, __FUNCTION__, __LINE__, meta, target, value, type)
+void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *meta, char *target, void *value, int type);
 
 #define secure_pthread_create(thread, attr, routine, arg) secure_pthread_create_full(__FILE__, __FUNCTION__, __LINE__, thread, attr, routine, arg)
 void secure_pthread_create_full(const char *file, const char *func, int line, pthread_t *thread, pthread_attr_t *attr, void *(*routine)(void *), void *arg);

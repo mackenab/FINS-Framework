@@ -126,7 +126,7 @@ void udp_run(pthread_attr_t *fins_pthread_attr);
 void udp_shutdown(void);
 void udp_release(void);
 
-//unsigned short UDP_checksum(struct udp_packet *pcket, struct udp_metadata_parsed *params);
+//unsigned short UDP_checksum(struct udp_packet *pcket, struct udp_metadata_parsed *meta);
 uint16_t UDP_checksum(struct udp_packet *pcket, uint32_t src_ip, uint32_t dst_ip);
 
 #define EXEC_UDP_CLEAR_SENT 0
@@ -139,7 +139,7 @@ void udp_error(struct finsFrame *ff);
 void udp_in_fdf(struct finsFrame *ff);
 void udp_out_fdf(struct finsFrame *ff);
 
-struct finsFrame *create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t *PDU, metadata *params);
+struct finsFrame *create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t *PDU, metadata *meta);
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 void udp_get_ff(void);
 int udp_to_switch(struct finsFrame *ff);

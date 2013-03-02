@@ -15,7 +15,7 @@
 
 /**
  * @brief Creates a new FDF to be sent to the dataswitch for all outgoing data, data headed to another computer
- * @params ff - Is the "raw" fins frame from the socket.
+ * @meta ff - Is the "raw" fins frame from the socket.
  *
  *The new FDF is created from the raw FF. This raw FF was received from the socket stub. The other important peice
  *is the the metadata. It must contain the IP source and destination as well as the Source port and Destination port.
@@ -87,14 +87,14 @@ void udp_out_fdf(struct finsFrame* ff) {
 	uint32_t dst_ip;
 	uint32_t src_ip;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "send_src_ip", &src_ip);
-	secure_metadata_readFromElement(params, "send_src_port", &src_port);
-	secure_metadata_readFromElement(params, "send_dst_ip", &dst_ip);
-	secure_metadata_readFromElement(params, "send_dst_port", &dst_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "send_src_port", &src_port);
+	secure_metadata_readFromElement(meta, "send_dst_ip", &dst_ip);
+	secure_metadata_readFromElement(meta, "send_dst_port", &dst_port);
 
 	uint32_t protocol = UDP_PROTOCOL;
-	secure_metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_protocol", &protocol, META_TYPE_INT32);
 
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE
@@ -135,7 +135,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 	//ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = packet_length;
 	ff->dataFrame.pdu = udp_dataunit;
-	//ff->metaData = params;
+	//ff->metaData = meta;
 
 	//PRINT_DEBUG("newff=0x%x, pdu=0x%x", (int)newFF, (int)newFF->dataFrame.pdu);
 

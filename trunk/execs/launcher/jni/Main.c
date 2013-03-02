@@ -55,39 +55,32 @@ void android_main(struct android_app *state) {
 	//TODO-Have this update a variable, and use that to establish the pipes, sockets for improved compatibility with future android versions
 	char *writeLocation = (char *) state->activity->internalDataPath;
 	char *bootmsg = FINSBOOT_MSG;
-	pid_t pid = 0;
 
 	__android_log_print(ANDROID_LOG_INFO, "FINS", bootmsg);
 	__android_log_print(ANDROID_LOG_INFO, "FINS", writeLocation);
 	__android_log_print(ANDROID_LOG_INFO, "FINS", "Forking into capturermain() and main()");
 
 	/*
-	int ret;
-	__android_log_print(ANDROID_LOG_INFO, "FINS", "Gaining su status");
-	if ((ret = system("su"))) {
-		__android_log_print(ANDROID_LOG_ERROR, "FINS", "SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	 int ret;
+	 __android_log_print(ANDROID_LOG_INFO, "FINS", "Gaining su status");
+	 if ((ret = system("su"))) {
+	 __android_log_print(ANDROID_LOG_ERROR, "FINS", "SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	 }
+	 */
+	if (0) {
+		int i = 0;
+		while (i < 1000) {
+			__android_log_print(ANDROID_LOG_INFO, "FINS", "i=%d", i++);
+			sleep(2);
+		}
+		return;
 	}
-	*/
 
-	//pid = fork();
-	if (pid < 0) {
-		__android_log_print(ANDROID_LOG_ERROR, "FINS", "FORKING ERROR");
-	} else if (pid == 0) { //child
-		//prctl(PR_SET_PDEATHSIG, SIGHUP); //kill the child when the parent is stopped
-		//sleep(5);
-		__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: core_main()");
-		core_dummy();
-		core_main();
-		while (1);
-		//sleep(1);
-		__android_log_print(ANDROID_LOG_INFO, "FINS", "Exiting FINS: core_main()");
-	} else { //parent
-		__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: capturer_main()");
-		//capturer_dummy();
-		//capturer_main();
-		while (1);
-		//sleep(1);
-		//sleep(5);
-		__android_log_print(ANDROID_LOG_INFO, "FINS", "Exiting FINS: capturer_main()");
-	}
+	__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: core_main()");
+	core_dummy();
+	core_main();
+	while (1)
+		;
+	//sleep(1);
+	__android_log_print(ANDROID_LOG_INFO, "FINS", "Exiting FINS: core_main()");
 }

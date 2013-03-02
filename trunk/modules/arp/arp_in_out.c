@@ -23,21 +23,21 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 
 	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	interface = arp_interface_list_find(src_ip);
 	if (interface) {
 		src_mac = interface->addr_mac;
 		PRINT_DEBUG("src: interface=%p, mac=0x%llx, ip=%u", interface, src_mac, src_ip);
 
-		secure_metadata_writeToElement(params, "src_mac", &src_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
 
 		interface = arp_interface_list_find(dst_ip);
 		if (interface) { //Shouldn't occur since caught by IPv4
 			dst_mac = interface->addr_mac;
 			PRINT_DEBUG("dst: interface=%p, mac=0x%llx, ip=%u", interface, dst_mac, dst_ip);
 
-			secure_metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+			secure_metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 			ff->ctrlFrame.senderID = ARP_ID;
@@ -73,7 +73,7 @@ void arp_exec_get_addr(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 					if (time_diff(&cache->updated_stamp, &current) <= ARP_CACHE_TO_DEFAULT) {
 						PRINT_DEBUG("up to date cache: cache=%p", cache);
 
-						secure_metadata_writeToElement(params, "dst_mac", &dst_mac, META_TYPE_INT64);
+						secure_metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
 
 						ff->destinationID.id = ff->ctrlFrame.senderID;
 						ff->ctrlFrame.senderID = ARP_ID;

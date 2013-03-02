@@ -27,19 +27,19 @@
 typedef config_t metadata;
 typedef config_setting_t metadata_element;
 
-void addSettings(metadata *params);
-void metadata_create(metadata *params);
+void addSettings(metadata *meta);
+void metadata_create(metadata *meta);
 
-void metadata_destroy(metadata *params);
+void metadata_destroy(metadata *meta);
 
-int metadata_readFromElement(metadata *params, const char *target, void *value);
+int metadata_readFromElement(metadata *meta, const char *target, void *value);
 
-int metadata_writeToElement(metadata *params, char *target, void *value, int type);
+int metadata_writeToElement(metadata *meta, char *target, void *value, int type);
 int metadata_setElement(metadata_element *element, void *value);
-metadata_element *metadata_addElement(metadata *params, char *elementName, int type);
-int metadata_print(metadata *params);
+metadata_element *metadata_addElement(metadata *meta, char *elementName, int type);
+int metadata_print(metadata *meta);
 
-int metadata_copy(metadata *params, metadata *params_copy);
-metadata *metadata_clone(metadata *params);
+int metadata_copy(metadata *meta, metadata *meta_copy);
+metadata *metadata_clone(metadata *meta);
 
 #endif /* METADATA_H_ */

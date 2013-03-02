@@ -501,8 +501,8 @@ void tcp_fcf(struct finsFrame *ff);
 void tcp_exec(struct finsFrame *ff);
 void tcp_error(struct finsFrame *ff);
 
-void metadata_read_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
-void metadata_write_conn(metadata *params, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
+void metadata_read_conn(metadata *meta, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
+void metadata_write_conn(metadata *meta, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 
 void tcp_exec_close(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_close_stub(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port);

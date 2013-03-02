@@ -407,8 +407,8 @@ void daemon_shutdown(void);
 void daemon_release(void);
 
 int daemon_to_switch(struct finsFrame *ff);
-int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
-int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *params);
+int daemon_fcf_to_switch(uint8_t dest_id, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
+int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *meta);
 
 void daemon_get_ff(void);
 

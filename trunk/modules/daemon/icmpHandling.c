@@ -599,24 +599,24 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 #endif
 	//########################
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	//secure_metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
+	//secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
-	if (daemon_fdf_to_switch(ICMP_ID, data, data_len, params)) {
+	if (daemon_fdf_to_switch(ICMP_ID, data, data_len, meta)) {
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("socketdaemon failed to accomplish sendto");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 		free(data);
 	}
 
@@ -667,8 +667,8 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 				daemon_sockets[hdr->sock_index].error_buf--;
 
-				metadata *params = ff->metaData;
-				secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+				metadata *meta = ff->metaData;
+				secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 				uint32_t control_len = 0;
 				uint8_t *control_msg = NULL;
@@ -710,7 +710,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
 						int32_t recv_ttl = 255;
-						if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+						if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 							cmsg_data_len = sizeof(int32_t);
 							cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -731,13 +731,13 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 								PRINT_ERROR("todo error");
 							}
 						} else {
-							PRINT_ERROR("no recv_ttl, meta=%p", params);
+							PRINT_ERROR("no recv_ttl, meta=%p", meta);
 						}
 					}
 
 					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
 						uint32_t err_src_ip;
-						secure_metadata_readFromElement(params, "recv_src_ip", &err_src_ip);
+						secure_metadata_readFromElement(meta, "recv_src_ip", &err_src_ip);
 
 						cmsg_data_len = sizeof(struct errhdr);
 						cmsg_space = CMSG_SPACE(cmsg_data_len);
@@ -784,7 +784,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				addr.sin_family = AF_INET;
 
 				uint32_t dst_ip;
-				if (metadata_readFromElement(params, "send_dst_ip", &dst_ip) == META_FALSE) {
+				if (metadata_readFromElement(meta, "send_dst_ip", &dst_ip) == META_FALSE) {
 					addr.sin_addr.s_addr = 0;
 				} else {
 					addr.sin_addr.s_addr = htonl(dst_ip);
@@ -894,8 +894,8 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			daemon_sockets[hdr->sock_index].data_buf -= ff->dataFrame.pduLength;
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, daemon_sockets[hdr->sock_index].data_buf);
 
-			metadata *params = ff->metaData;
-			secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+			metadata *meta = ff->metaData;
+			secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 			uint32_t control_len = 0;
 			uint8_t *control_msg = NULL;
@@ -936,7 +936,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 				if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
 					int32_t recv_ttl = 255;
-					if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+					if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 						cmsg_data_len = sizeof(int32_t);
 						cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -957,7 +957,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 							PRINT_ERROR("todo error");
 						}
 					} else {
-						PRINT_ERROR("no recv_ttl, meta=%p", params);
+						PRINT_ERROR("no recv_ttl, meta=%p", meta);
 					}
 				}
 
@@ -974,7 +974,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			addr.sin_family = AF_INET;
 
 			uint32_t src_ip;
-			if (metadata_readFromElement(params, "recv_src_ip", &src_ip) == META_FALSE) {
+			if (metadata_readFromElement(meta, "recv_src_ip", &src_ip) == META_FALSE) {
 				addr.sin_addr.s_addr = 0;
 			} else {
 				addr.sin_addr.s_addr = htonl(src_ip);
@@ -1710,14 +1710,14 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 	}
 }
 
-void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
+void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint32_t flags) {
-	PRINT_DEBUG("Entered: call_list=%p, call=%p, meta=%p, data=%p, len=%u, addr_ip=%u, flags=0x%x", call_list, call, params, data, data_len, addr_ip, flags);
+	PRINT_DEBUG("Entered: call_list=%p, call=%p, meta=%p, data=%p, len=%u, addr_ip=%u, flags=0x%x", call_list, call, meta, data, data_len, addr_ip, flags);
 
 	uint32_t call_len = call->data; //buffer size
 	uint32_t msg_controllen = call->ret;
 
-	secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
+	secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
 
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[call->sock_index].stamp.tv_sec, (uint32_t)daemon_sockets[call->sock_index].stamp.tv_usec);
 
@@ -1780,7 +1780,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 
 		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVTTL) {
 			int32_t recv_ttl = 255;
-			if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+			if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 				cmsg_data_len = sizeof(int32_t);
 				cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -1800,13 +1800,13 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 					PRINT_ERROR("todo error");
 				}
 			} else {
-				PRINT_ERROR("no recv_ttl, meta=%p", params);
+				PRINT_ERROR("no recv_ttl, meta=%p", meta);
 			}
 		}
 
 		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVERR && (flags & MSG_ERRQUEUE)) { //TODO remove?
 			uint32_t err_src_ip;
-			secure_metadata_readFromElement(params, "recv_src_ip", &err_src_ip);
+			secure_metadata_readFromElement(meta, "recv_src_ip", &err_src_ip);
 
 			cmsg_data_len = sizeof(struct errhdr);
 			cmsg_space = CMSG_SPACE(cmsg_data_len);
@@ -1906,13 +1906,13 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	struct timeval current;
 	gettimeofday(&current, 0);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 	//TODO move to interface?
-	//secure_metadata_writeToElement(params, "stamp", &current, META_TYPE_INT64);
+	//secure_metadata_writeToElement(meta, "stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -1944,7 +1944,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 			call = call_list->front;
 			while (call) {
 				if (call->call_type == recvmsg_call && !(call->flags & (MSG_ERRQUEUE))) { //signal first recvmsg for data
-					recvmsg_in_icmp(call_list, call, params, ff->dataFrame.pdu, ff->dataFrame.pduLength, src_ip, 0);
+					recvmsg_in_icmp(call_list, call, meta, ff->dataFrame.pdu, ff->dataFrame.pduLength, src_ip, 0);
 					unsent = 0;
 					break;
 				}
@@ -1973,7 +1973,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2006,7 +2006,7 @@ void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip
 				call = call_list->front;
 				while (call) {
 					if (call->call_type == recvmsg_call && (call->ret & (MSG_ERRQUEUE))) { //signal first recvmsg for data
-						recvmsg_in_icmp(call_list, call, params, ff->ctrlFrame.data, ff->ctrlFrame.data_len, dst_ip, MSG_ERRQUEUE);
+						recvmsg_in_icmp(call_list, call, meta, ff->ctrlFrame.data, ff->ctrlFrame.data_len, dst_ip, MSG_ERRQUEUE);
 						unsent = 0;
 						break;
 					}

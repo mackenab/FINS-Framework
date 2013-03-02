@@ -716,7 +716,7 @@ int randoming(int min, int max) {
 
 }
 
-int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra params
+int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra meta
 	int ret;
 
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%u, call_type=%u, msg=%u, nack=%d", call_id, call_index, call_type, msg, NACK);
@@ -737,7 +737,7 @@ int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg
 	return ret == 1; //TODO change to ret_val ?
 }
 
-int ack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra params
+int ack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra meta
 	int ret;
 
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%u, call_type=%u, msg=%u, ack=%d", call_id, call_index, call_type, msg, ACK);
@@ -762,14 +762,14 @@ int daemon_to_switch(struct finsFrame *ff) {
 	return module_to_switch(&daemon_proto, ff);
 }
 
-int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num, uint16_t opcode, uint32_t param_id) {
-	PRINT_DEBUG("Entered: module_id=%d, meta=%p, serial_num=%u, opcode=%u, param_id=%u", dest_id, params, serial_num, opcode, param_id);
+int daemon_fcf_to_switch(uint8_t dest_id, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id) {
+	PRINT_DEBUG("Entered: module_id=%d, meta=%p, serial_num=%u, opcode=%u, param_id=%u", dest_id, meta, serial_num, opcode, param_id);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = dest_id;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->ctrlFrame.senderID = DAEMON_ID;
 	ff->ctrlFrame.serial_num = serial_num;
@@ -779,7 +779,7 @@ int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num,
 	ff->ctrlFrame.data_len = 0;
 	ff->ctrlFrame.data = NULL;
 
-	PRINT_DEBUG("ff=%p, meta=%p", ff, params);
+	PRINT_DEBUG("ff=%p, meta=%p", ff, meta);
 	if (daemon_to_switch(ff)) {
 		return 1;
 	} else {
@@ -788,20 +788,20 @@ int daemon_fcf_to_switch(uint8_t dest_id, metadata *params, uint32_t serial_num,
 	}
 }
 
-int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *params) {
-	PRINT_DEBUG("Entered: module_id=%u, data=%p, data_len=%u, meta=%p", dest_id, data, data_len, params);
+int daemon_fdf_to_switch(uint8_t dest_id, uint8_t *data, uint32_t data_len, metadata *meta) {
+	PRINT_DEBUG("Entered: module_id=%u, data=%p, data_len=%u, meta=%p", dest_id, data, data_len, meta);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = dest_id;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = data_len;
 	ff->dataFrame.pdu = data;
 
-	PRINT_DEBUG("sending: ff=%p, meta=%p", ff, params);
+	PRINT_DEBUG("sending: ff=%p, meta=%p", ff, meta);
 	if (daemon_to_switch(ff)) {
 		return 1;
 	} else {
@@ -3044,7 +3044,7 @@ void daemon_read_param_reply(struct finsFrame *ff) { //TODO update to new versio
 void daemon_exec_reply_new(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	//metadata *params = ff->metaData;
+	//metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 
 	default:
@@ -3112,13 +3112,13 @@ void daemon_exec(struct finsFrame *ff) {
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_TCP_POLL_POST: //TODO move to ALERT?
 		PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(params, "protocol", &protocol);
-		secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
+		secure_metadata_readFromElement(meta, "protocol", &protocol);
+		secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
 
 		switch (protocol) {
 		case IPPROTO_ICMP:
@@ -3258,10 +3258,10 @@ void daemon_error(struct finsFrame *ff) { //TODO expand for different error type
 	uint32_t src_ip;
 	uint32_t dst_ip;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "send_protocol", &protocol);
-	secure_metadata_readFromElement(params, "send_src_ip", &src_ip);
-	secure_metadata_readFromElement(params, "send_dst_ip", &dst_ip);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_protocol", &protocol);
+	secure_metadata_readFromElement(meta, "send_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "send_dst_ip", &dst_ip);
 
 	//ff->ctrlFrame.data_len = sent->data_len;
 	//ff->ctrlFrame.data = sent->data;
@@ -3290,10 +3290,10 @@ void daemon_in_fdf(struct finsFrame *ff) {
 	uint32_t dst_ip = 0;
 	uint32_t src_ip = 0;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_protocol", &protocol);
-	secure_metadata_readFromElement(params, "recv_src_ip", &src_ip);
-	secure_metadata_readFromElement(params, "recv_dst_ip", &dst_ip);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
+	secure_metadata_readFromElement(meta, "recv_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "recv_dst_ip", &dst_ip);
 
 	//##############################################
 #ifdef DEBUG

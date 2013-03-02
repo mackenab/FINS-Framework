@@ -54,10 +54,10 @@ void udp_in_fdf(struct finsFrame* ff) {
 	uint32_t src_port;
 	uint32_t dst_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_protocol", &protocol);
-	secure_metadata_readFromElement(params, "recv_src_ip", &src_ip);
-	secure_metadata_readFromElement(params, "recv_dst_ip", &dst_ip);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
+	secure_metadata_readFromElement(meta, "recv_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "recv_dst_ip", &dst_ip);
 
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */
@@ -107,8 +107,8 @@ void udp_in_fdf(struct finsFrame* ff) {
 	//metadata *udp_meta = (metadata *)fins_malloc (sizeof(metadata));
 	//metadata_create(udp_meta);
 
-	secure_metadata_writeToElement(params, "recv_src_port", &src_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "recv_dst_port", &dst_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_src_port", &src_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_dst_port", &dst_port, META_TYPE_INT32);
 
 	/* put the header into the meta data*/
 	//	meta->u_destPort = packet->u_dst;

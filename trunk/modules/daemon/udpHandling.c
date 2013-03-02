@@ -611,26 +611,26 @@ void sendmsg_out_udp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 #endif
 	//########################
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	//secure_metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
+	//secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_src_port", &host_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
-	if (daemon_fdf_to_switch(UDP_ID, data, data_len, params)) {
+	if (daemon_fdf_to_switch(UDP_ID, data, data_len, meta)) {
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("socketdaemon failed to accomplish sendto");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 		free(data);
 	}
 
@@ -680,8 +680,8 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				daemon_sockets[hdr->sock_index].error_buf--;
 
-				metadata *params = ff->metaData;
-				secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+				metadata *meta = ff->metaData;
+				secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 				uint32_t control_len = 0;
 				uint8_t *control_msg = NULL;
@@ -723,7 +723,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
 						int32_t recv_ttl = 255;
-						if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+						if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 							cmsg_data_len = sizeof(int32_t);
 							cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -744,13 +744,13 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 								PRINT_ERROR("todo error");
 							}
 						} else {
-							PRINT_ERROR("no recv_ttl, meta=%p", params);
+							PRINT_ERROR("no recv_ttl, meta=%p", meta);
 						}
 					}
 
 					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
 						uint32_t err_src_ip;
-						secure_metadata_readFromElement(params, "recv_src_ip", &err_src_ip);
+						secure_metadata_readFromElement(meta, "recv_src_ip", &err_src_ip);
 
 						cmsg_data_len = sizeof(struct errhdr);
 						cmsg_space = CMSG_SPACE(cmsg_data_len);
@@ -796,14 +796,14 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				addr.sin_family = AF_INET;
 
 				uint32_t dst_ip;
-				if (metadata_readFromElement(params, "send_dst_ip", &dst_ip) == META_FALSE) {
+				if (metadata_readFromElement(meta, "send_dst_ip", &dst_ip) == META_FALSE) {
 					addr.sin_addr.s_addr = 0;
 				} else {
 					addr.sin_addr.s_addr = htonl(dst_ip);
 				}
 
 				uint32_t dst_port;
-				if (metadata_readFromElement(params, "send_dst_port", &dst_port) == META_FALSE) {
+				if (metadata_readFromElement(meta, "send_dst_port", &dst_port) == META_FALSE) {
 					addr.sin_port = 0;
 				} else {
 					addr.sin_port = htons((uint16_t) dst_port);
@@ -911,8 +911,8 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			daemon_sockets[hdr->sock_index].data_buf -= ff->dataFrame.pduLength;
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, daemon_sockets[hdr->sock_index].data_buf);
 
-			metadata *params = ff->metaData;
-			secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+			metadata *meta = ff->metaData;
+			secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 			uint32_t control_len = 0;
 			uint8_t *control_msg = NULL;
@@ -953,7 +953,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
 					int32_t recv_ttl = 255;
-					if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+					if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 						cmsg_data_len = sizeof(int32_t);
 						cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -974,7 +974,7 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 							PRINT_ERROR("todo error");
 						}
 					} else {
-						PRINT_ERROR("no recv_ttl, meta=%p", params);
+						PRINT_ERROR("no recv_ttl, meta=%p", meta);
 					}
 				}
 
@@ -990,14 +990,14 @@ void recvmsg_out_udp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			addr.sin_family = AF_INET;
 
 			uint32_t src_ip;
-			if (metadata_readFromElement(params, "recv_src_ip", &src_ip) == META_FALSE) {
+			if (metadata_readFromElement(meta, "recv_src_ip", &src_ip) == META_FALSE) {
 				addr.sin_addr.s_addr = 0;
 			} else {
 				addr.sin_addr.s_addr = htonl(src_ip);
 			}
 
 			uint32_t src_port;
-			if (metadata_readFromElement(params, "recv_src_port", &src_port) == META_FALSE) {
+			if (metadata_readFromElement(meta, "recv_src_port", &src_port) == META_FALSE) {
 				addr.sin_port = 0;
 			} else {
 				addr.sin_port = htons((uint16_t) src_port);
@@ -1136,19 +1136,19 @@ void release_out_udp(struct nl_wedge_to_daemon *hdr) {
 
 	//TODO send FCF to UDP module clearing error buffers of any msgs from this socket
 	if (host_port != 0 && 0) { //TODO remove if keep rolling sent_list queue
-		metadata *params_req = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(params_req);
+		metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta_req);
 
-		secure_metadata_writeToElement(params_req, "host_ip", &host_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_req, "host_port", &host_port, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_req, "rem_ip", &rem_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_req, "rem_port", &rem_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "host_ip", &host_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "host_port", &host_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "rem_ip", &rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "rem_port", &rem_port, META_TYPE_INT32);
 
-		if (daemon_fcf_to_switch(UDP_ID, params_req, gen_control_serial_num(), CTRL_EXEC, EXEC_UDP_CLEAR_SENT)) {
+		if (daemon_fcf_to_switch(UDP_ID, meta_req, gen_control_serial_num(), CTRL_EXEC, EXEC_UDP_CLEAR_SENT)) {
 			PRINT_DEBUG("Exited, normal: hdr=%p", hdr);
 		} else {
 			PRINT_ERROR("Exited, fail sending flow msgs: hdr=%p", hdr);
-			metadata_destroy(params_req);
+			metadata_destroy(meta_req);
 		}
 	}
 }
@@ -1767,15 +1767,15 @@ void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, u
 	}
 }
 
-void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
+void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint16_t addr_port, uint32_t flags) {
 	PRINT_DEBUG("Entered: call_list=%p, call=%p, meta=%p, data=%p, len=%u, addr=%u/%u, flags=%u",
-			call_list, call, params, data, data_len, addr_ip, addr_port, flags);
+			call_list, call, meta, data, data_len, addr_ip, addr_port, flags);
 
 	uint32_t call_len = call->data; //buffer size
 	uint32_t msg_controllen = call->ret;
 
-	secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
+	secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
 
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[call->sock_index].stamp.tv_sec, (uint32_t)daemon_sockets[call->sock_index].stamp.tv_usec);
 
@@ -1842,7 +1842,7 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 
 		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVTTL) {
 			int32_t recv_ttl = 255;
-			if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+			if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 				cmsg_data_len = sizeof(int32_t);
 				cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -1862,15 +1862,15 @@ void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call
 					PRINT_ERROR("todo error");
 				}
 			} else {
-				PRINT_ERROR("no recv_ttl, meta=%p", params);
+				PRINT_ERROR("no recv_ttl, meta=%p", meta);
 			}
 		}
 
 		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVERR && (flags & MSG_ERRQUEUE)) { //TODO remove?
 			uint32_t err_src_ip;
 			uint32_t icmp_type;
-			secure_metadata_readFromElement(params, "recv_src_ip", &err_src_ip); //add port?
-			secure_metadata_readFromElement(params, "recv_icmp_type", &icmp_type);
+			secure_metadata_readFromElement(meta, "recv_src_ip", &err_src_ip); //add port?
+			secure_metadata_readFromElement(meta, "recv_icmp_type", &icmp_type);
 
 			cmsg_data_len = sizeof(struct errhdr);
 			cmsg_space = CMSG_SPACE(cmsg_data_len);
@@ -1978,15 +1978,15 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	uint32_t src_port;
 	uint32_t dst_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_src_port", &src_port);
-	secure_metadata_readFromElement(params, "recv_dst_port", &dst_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_src_port", &src_port);
+	secure_metadata_readFromElement(meta, "recv_dst_port", &dst_port);
 
 	struct timeval current;
 	gettimeofday(&current, 0);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 	//TODO move to interface?
-	//secure_metadata_writeToElement(params, "stamp", &current, META_TYPE_INT64);
+	//secure_metadata_writeToElement(meta, "stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2016,7 +2016,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 		call = call_list->front;
 		while (call) {
 			if (call->call_type == recvmsg_call && !(call->flags & (MSG_ERRQUEUE))) { //signal first recvmsg for data
-				recvmsg_in_udp(call_list, call, params, ff->dataFrame.pdu, ff->dataFrame.pduLength, src_ip, (uint16_t) src_port, 0);
+				recvmsg_in_udp(call_list, call, meta, ff->dataFrame.pdu, ff->dataFrame.pduLength, src_ip, (uint16_t) src_port, 0);
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 				return;
@@ -2031,7 +2031,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, params, data_buf);
+			PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, meta, data_buf);
 		} else {
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -2048,9 +2048,9 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	uint32_t src_port;
 	uint32_t dst_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "send_src_port", &src_port);
-	secure_metadata_readFromElement(params, "send_dst_port", &dst_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_src_port", &src_port);
+	secure_metadata_readFromElement(meta, "send_dst_port", &dst_port);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2079,7 +2079,7 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 			call = call_list->front;
 			while (call) {
 				if (call->call_type == recvmsg_call && (call->flags & (MSG_ERRQUEUE))) { //signal first recvmsg for data
-					recvmsg_in_udp(call_list, call, params, ff->ctrlFrame.data, ff->ctrlFrame.data_len, src_ip, (uint16_t) src_port, MSG_ERRQUEUE);
+					recvmsg_in_udp(call_list, call, meta, ff->ctrlFrame.data, ff->ctrlFrame.data_len, src_ip, (uint16_t) src_port, MSG_ERRQUEUE);
 					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 					sem_post(&daemon_sockets_sem);
 					return;
@@ -2094,7 +2094,7 @@ void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 
-				PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, error_buf=%d", sock_index, ff, params, error_buf);
+				PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, error_buf=%d", sock_index, ff, meta, error_buf);
 			} else {
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);

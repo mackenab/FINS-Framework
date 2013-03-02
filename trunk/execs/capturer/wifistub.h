@@ -29,6 +29,10 @@
 #ifdef BUILD_FOR_ANDROID
 #include <stdio.h>
 
+//#define DEBUG
+#define IMPORTANT
+#define ERROR
+
 #ifdef DEBUG
 #define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
 #else
@@ -47,7 +51,7 @@
 #define PRINT_ERROR(format, args...)
 #endif
 
-#else /* BUILD_FOR_ANDROID */
+#else /* if not BUILD_FOR_ANDROID */
 
 #include <finsdebug.h>
 #endif

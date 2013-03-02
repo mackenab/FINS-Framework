@@ -261,11 +261,6 @@ nit_setflags(int fd, int promisc, int to_ms, char *ebuf)
 	return (0);
 }
 
-#include <jni.h>
-#include <android/log.h>
-//__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, linux");
-
-
 pcap_t *
 pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
     char *ebuf)
@@ -276,8 +271,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	int fd;
 	static char dev[] = "/dev/nit";
 	register pcap_t *p;
-
-	__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, snit");
 
 	p = (pcap_t *)malloc(sizeof(*p));
 	if (p == NULL) {

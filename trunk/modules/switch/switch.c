@@ -145,7 +145,7 @@ void *switch_loop(void *local) {
 						//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 						freeFinsFrame(ff);
 					} else { //if (i != id) //TODO add this?
-						//id = LOGGER_ID;
+						//id = LOGGER_ID; //TODO comment
 						if (fins_modules[id] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p", counter, fins_modules[i]->name, fins_modules[id]->name, ff, ff->metaData);
 							while ((ret = sem_wait(fins_modules[id]->input_sem)) && errno == EINTR);
@@ -162,7 +162,8 @@ void *switch_loop(void *local) {
 								freeFinsFrame(ff);
 							}
 						} else {
-							PRINT_ERROR("dropping ff: destination not registered: dst module_id=%u, ff=%p, meta=%p", id, ff, ff->metaData);
+							PRINT_ERROR("dropping ff: destination not registered: src module_id=%u, dst module_id=%u, ff=%p, meta=%p", i, id, ff, ff->metaData);
+							print_finsFrame(ff);
 							//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 							freeFinsFrame(ff);
 						}

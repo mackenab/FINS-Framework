@@ -72,12 +72,6 @@ static const char rcsid[] _U_ =
  *     shorter, on the wire, than the IP header said it should have been.
  */
 
-//added for testing
-#include <jni.h>
-#include <android/log.h>
-#ifdef BUILD_FOR_ANDROID
-#include <glue.h>
-#endif
 
 #include <stdlib.h>
 #ifdef HAVE_CONFIG_H
@@ -239,7 +233,6 @@ static struct sock_fprog	total_fcode
  *
  *  See also pcap(3).
  */
-
 pcap_t *
 pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
     char *ebuf)
@@ -250,35 +243,22 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	int		live_open_ok = 0;
 	struct utsname	utsname;
 
-	printf("Entered, linux, 1\n");fflush(stdout);
-
-	//int ret;
-	//if ((ret = system("su"))) {
-	//	printf("SU failure: ret=%d, errno=%u, str='%s'\n", ret, errno, strerror(errno));
-	//}
-
-
 #ifdef HAVE_DAG_API
-	printf("Entered, linux, 2\n");fflush(stdout);
 	if (strstr(device, "dag")) {
-		printf("Entered, linux, 3\n");fflush(stdout);
 		return dag_open_live(device, snaplen, promisc, to_ms, ebuf);
 	}
 #endif /* HAVE_DAG_API */
 
 #ifdef HAVE_SEPTEL_API
-	printf("Entered, linux, 4\n");fflush(stdout);
 	if (strstr(device, "septel")) {
-		printf("Entered, linux, 5\n");fflush(stdout);
 		return septel_open_live(device, snaplen, promisc, to_ms, ebuf);
 	}
 #endif /* HAVE_SEPTEL_API */
 
 	/* Allocate a handle for this session. */
-	printf("Entered, linux, 6\n");fflush(stdout);
+
 	handle = malloc(sizeof(*handle));
 	if (handle == NULL) {
-		printf("Entered, linux, 7\n");fflush(stdout);
 		snprintf(ebuf, PCAP_ERRBUF_SIZE, "malloc: %s",
 			 pcap_strerror(errno));
 		return NULL;
@@ -295,7 +275,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	 * monitor all devices.
 	 */
 	if (!device || strcmp(device, "any") == 0) {
-		printf("Entered, linux, 8\n");fflush(stdout);
 		device			= NULL;
 		handle->md.device	= strdup("any");
 		if (promisc) {
@@ -308,9 +287,7 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	} else
 		handle->md.device	= strdup(device);
 
-	printf("Entered, linux, 9\n");fflush(stdout);
 	if (handle->md.device == NULL) {
-		printf("Entered, linux, 10\n");fflush(stdout);
 		snprintf(ebuf, PCAP_ERRBUF_SIZE, "strdup: %s",
 			 pcap_strerror(errno) );
 		free(handle);
@@ -326,21 +303,15 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	 * to be compatible with older kernels for a while so we are
 	 * trying both methods with the newer method preferred.
 	 */
-	printf("Entered, linux, 11\n");fflush(stdout);
+
 	if ((err = live_open_new(handle, device, promisc, to_ms, ebuf)) == 1)
 		live_open_ok = 1;
 	else if (err == 0) {
-		printf("Entered, linux, 11a\n");fflush(stdout);
 		/* Non-fatal error; try old way */
-		if (live_open_old(handle, device, promisc, to_ms, ebuf)) {
+		if (live_open_old(handle, device, promisc, to_ms, ebuf))
 			live_open_ok = 1;
-		} else {
-			printf("Entered, linux, 11b\n");fflush(stdout);
-		}
 	}
-	printf("Entered, linux, 12\n");fflush(stdout);
 	if (!live_open_ok) {
-		printf("Entered, linux, 13\n");fflush(stdout);
 		/*
 		 * Both methods to open the packet socket failed. Tidy
 		 * up and report our failure (ebuf is expected to be
@@ -359,10 +330,8 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	 * If we're using SOCK_PACKET, this might be a 2.0[.x] kernel,
 	 * and might require special handling - check.
 	 */
-	printf("Entered, linux, 14\n");fflush(stdout);
 	if (handle->md.sock_packet && (uname(&utsname) < 0 ||
 	    strncmp(utsname.release, "2.0", 3) == 0)) {
-		printf("Entered, linux, 15\n");fflush(stdout);
 		/*
 		 * We're using a SOCK_PACKET structure, and either
 		 * we couldn't find out what kernel release this is,
@@ -408,7 +377,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 		 */
 		mtu = iface_get_mtu(handle->fd, device, ebuf);
 		if (mtu == -1) {
-			printf("Entered, linux, 16\n");fflush(stdout);
 			pcap_close_linux(handle);
 			free(handle);
 			return NULL;
@@ -417,7 +385,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 		if (handle->bufsize < handle->snapshot)
 			handle->bufsize = handle->snapshot;
 	} else {
-		printf("Entered, linux, 17\n");fflush(stdout);
 		/*
 		 * This is a 2.2[.x] or later kernel (we know that
 		 * either because we're not using a SOCK_PACKET
@@ -434,7 +401,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 		 * count of 0 to "recvfrom()").
 		 */
 		if (handle->md.cooked) {
-			printf("Entered, linux, 18\n");fflush(stdout);
 			if (handle->snapshot < SLL_HDR_LEN + 1)
 				handle->snapshot = SLL_HDR_LEN + 1;
 		}
@@ -442,10 +408,9 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	}
 
 	/* Allocate the buffer */
-	printf("Entered, linux, 19\n");fflush(stdout);
+
 	handle->buffer	 = malloc(handle->bufsize + handle->offset);
 	if (!handle->buffer) {
-		printf("Entered, linux, 20\n");fflush(stdout);
 	        snprintf(ebuf, PCAP_ERRBUF_SIZE,
 			 "malloc: %s", pcap_strerror(errno));
 		pcap_close_linux(handle);
@@ -458,7 +423,7 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	 * should work on it.
 	 */
 	handle->selectable_fd = handle->fd;
-	printf("Entered, linux, 21\n");fflush(stdout);
+
 	handle->read_op = pcap_read_linux;
 	handle->inject_op = pcap_inject_linux;
 	handle->setfilter_op = pcap_setfilter_linux;
@@ -1132,7 +1097,6 @@ pcap_setdirection_linux(pcap_t *handle, pcap_direction_t d)
  */
 static void map_arphrd_to_dlt(pcap_t *handle, int arptype, int cooked_ok)
 {
-	printf("Entered, linux, 38\n");fflush(stdout);
 	switch (arptype) {
 
 	case ARPHRD_ETHER:
@@ -1432,8 +1396,6 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 
 	/* One shot loop used for error handling - bail out with break */
 
-	printf("Entered, linux, 31\n");fflush(stdout);
-
 	do {
 		/*
 		 * Open a socket with protocol family packet. If a device is
@@ -1445,7 +1407,6 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 		      : socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
 
 		if (sock_fd == -1) {
-			printf("Entered, linux, 32\n");fflush(stdout);
 			snprintf(ebuf, PCAP_ERRBUF_SIZE, "socket: %s",
 				 pcap_strerror(errno) );
 			break;
@@ -1465,7 +1426,6 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 		 * indices for them, and check all of them in
 		 * "pcap_read_packet()".
 		 */
-		printf("Entered, linux, 33\n");fflush(stdout);
 		handle->md.lo_ifindex = iface_get_id(sock_fd, "lo", ebuf);
 
 		/*
@@ -1480,13 +1440,11 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 		 */
 
 		if (device) {
-			printf("Entered, linux, 35\n");fflush(stdout);
 			/* Assume for now we don't need cooked mode. */
 			handle->md.cooked = 0;
 
 			arptype	= iface_get_arptype(sock_fd, device, ebuf);
 			if (arptype == -1) {
-				printf("Entered, linux, 37\n");fflush(stdout);
 				fatal_err = 1;
 				break;
 			}
@@ -1507,9 +1465,7 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 				 * APIs that may be different on different
 				 * kernels) - reopen in cooked mode.
 				 */
-				printf("Entered, linux, 39\n");fflush(stdout);
 				if (close(sock_fd) == -1) {
-					printf("Entered, linux, 40\n");fflush(stdout);
 					snprintf(ebuf, PCAP_ERRBUF_SIZE,
 						 "close: %s", pcap_strerror(errno));
 					break;
@@ -1517,7 +1473,6 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 				sock_fd = socket(PF_PACKET, SOCK_DGRAM,
 						 htons(ETH_P_ALL));
 				if (sock_fd == -1) {
-					printf("Entered, linux, 41\n");fflush(stdout);
 					snprintf(ebuf, PCAP_ERRBUF_SIZE,
 						 "socket: %s", pcap_strerror(errno));
 					break;
@@ -1530,14 +1485,12 @@ live_open_new(pcap_t *handle, const char *device, int promisc,
 				 * capture.
 				 */
 				if (handle->dlt_list != NULL) {
-					printf("Entered, linux, 42\n");fflush(stdout);
 					free(handle->dlt_list);
 					handle->dlt_list = NULL;
 					handle->dlt_count = 0;
 				}
 
 				if (handle->linktype == -1) {
-					printf("Entered, linux, 43\n");fflush(stdout);
 					/*
 					 * Warn that we're falling back on
 					 * cooked mode; we may want to
@@ -1656,7 +1609,7 @@ static int
 iface_get_id(int fd, const char *device, char *ebuf)
 {
 	struct ifreq	ifr;
-	printf("Entered, linux, 34\n");fflush(stdout);
+
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
 
@@ -1827,13 +1780,12 @@ live_open_old(pcap_t *handle, const char *device, int promisc,
 {
 	int		arptype;
 	struct ifreq	ifr;
-	printf("Entered, linux, 61\n");fflush(stdout);
+
 	do {
 		/* Open the socket */
 
 		handle->fd = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
 		if (handle->fd == -1) {
-			printf("Entered, linux, 62\n");fflush(stdout);
 			snprintf(ebuf, PCAP_ERRBUF_SIZE,
 				 "socket: %s", pcap_strerror(errno));
 			break;
@@ -1848,24 +1800,19 @@ live_open_old(pcap_t *handle, const char *device, int promisc,
 		/* Bind to the given device */
 
 		if (!device) {
-			printf("Entered, linux, 63\n");fflush(stdout);
 		        strncpy(ebuf, "pcap_open_live: The \"any\" device isn't supported on 2.0[.x]-kernel systems",
 				PCAP_ERRBUF_SIZE);
 			break;
 		}
-		if (iface_bind_old(handle->fd, device, ebuf) == -1) {
-			printf("Entered, linux, 64\n");fflush(stdout);
+		if (iface_bind_old(handle->fd, device, ebuf) == -1)
 			break;
-		}
 
 		/*
 		 * Try to get the link-layer type.
 		 */
 		arptype = iface_get_arptype(handle->fd, device, ebuf);
-		if (arptype == -1) {
-			printf("Entered, linux, 65\n");fflush(stdout);
+		if (arptype == -1)
 			break;
-		}
 
 		/*
 		 * Try to find the DLT_ type corresponding to that
@@ -2017,7 +1964,7 @@ static int
 iface_get_arptype(int fd, const char *device, char *ebuf)
 {
 	struct ifreq	ifr;
-	printf("Entered, linux, 36\n");fflush(stdout);
+
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
 

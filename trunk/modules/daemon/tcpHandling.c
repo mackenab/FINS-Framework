@@ -144,21 +144,21 @@ void listen_out_tcp(struct nl_wedge_to_daemon *hdr, int backlog) {
 	 *  */
 	/** addresses are in host format given that there are by default already filled
 	 * host IP and host port. Otherwise, a port and IP has to be assigned explicitly below */
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	secure_metadata_writeToElement(params, "backlog", &backlog, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "backlog", &backlog, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 
-	if (daemon_fcf_to_switch(TCP_ID, params, gen_control_serial_num(), CTRL_EXEC, EXEC_TCP_LISTEN)) {
+	if (daemon_fcf_to_switch(TCP_ID, meta, gen_control_serial_num(), CTRL_EXEC, EXEC_TCP_LISTEN)) {
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
 		PRINT_ERROR("Exited: failed to send ff");
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		metadata_destroy(params);
+		metadata_destroy(meta);
 	}
 }
 
@@ -332,19 +332,19 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
 			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	secure_metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_EXEC, EXEC_TCP_CONNECT)) {
+	if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_EXEC, EXEC_TCP_CONNECT)) {
 		if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 			daemon_calls[hdr->call_index].serial_num = serial_num;
 			daemon_calls[hdr->call_index].flags = flags;
@@ -367,7 +367,7 @@ void connect_out_tcp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, i
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		metadata_destroy(params);
+		metadata_destroy(meta);
 	}
 
 	free(addr);
@@ -454,17 +454,17 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 
 	//TODO process flags?
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	secure_metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_EXEC, EXEC_TCP_ACCEPT)) {
+	if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_EXEC, EXEC_TCP_ACCEPT)) {
 		if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 			daemon_calls[hdr->call_index].serial_num = serial_num;
 			daemon_calls[hdr->call_index].flags = flags;
@@ -495,7 +495,7 @@ void accept_out_tcp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int so
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		metadata_destroy(params);
+		metadata_destroy(meta);
 	}
 }
 
@@ -821,20 +821,20 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 	PRINT_DEBUG("host=%u/%u, dst=%u/%u", host_ip, host_port, dst_ip, dst_port);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	secure_metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_ip", &dst_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_port", &dst_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_port", &dst_port, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	secure_metadata_writeToElement(params, "serial_num", &serial_num, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "serial_num", &serial_num, META_TYPE_INT32);
 
-	if (daemon_fdf_to_switch(TCP_ID, data, data_len, params)) {
+	if (daemon_fdf_to_switch(TCP_ID, data, data_len, meta)) {
 		if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 			daemon_calls[hdr->call_index].serial_num = serial_num;
 			daemon_calls[hdr->call_index].flags = flags;
@@ -859,7 +859,7 @@ void sendmsg_out_tcp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t dat
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 		free(data);
 	}
 
@@ -949,8 +949,8 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 			uint32_t rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
 			uint32_t rem_port = daemon_sockets[hdr->sock_index].rem_port;
 
-			metadata *params = ff->metaData;
-			secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+			metadata *meta = ff->metaData;
+			secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -1014,7 +1014,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 
 				if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL && 0) { //TODO find out how tcp does this
 					int32_t recv_ttl = 255;
-					if (metadata_readFromElement(params, "recv_ttl", &recv_ttl) == META_TRUE) {
+					if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 						cmsg_data_len = sizeof(int32_t);
 						cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -1035,7 +1035,7 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 							PRINT_ERROR("todo error");
 						}
 					} else {
-						PRINT_ERROR("no recv_ttl, meta=%p", params);
+						PRINT_ERROR("no recv_ttl, meta=%p", meta);
 					}
 				}
 
@@ -1102,25 +1102,25 @@ void recvmsg_out_tcp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_
 				//	PRINT_DEBUG("recvfrom address: host=%u/%d", host_ip, host_port);
 				//}
 
-				metadata *params_resp = (metadata *) secure_malloc(sizeof(metadata));
-				metadata_create(params_resp);
+				metadata *meta_resp = (metadata *) secure_malloc(sizeof(metadata));
+				metadata_create(meta_resp);
 
 				uint32_t value = ff->dataFrame.pduLength;
-				secure_metadata_writeToElement(params_resp, "value", &value, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_resp, "value", &value, META_TYPE_INT32);
 
-				secure_metadata_writeToElement(params_resp, "state", &state, META_TYPE_INT32);
-				secure_metadata_writeToElement(params_resp, "host_ip", &host_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params_resp, "host_port", &host_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_resp, "state", &state, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_resp, "host_ip", &host_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_resp, "host_port", &host_port, META_TYPE_INT32);
 				//if (state > SS_UNCONNECTED) {
-				secure_metadata_writeToElement(params_resp, "rem_ip", &rem_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params_resp, "rem_port", &rem_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_resp, "rem_ip", &rem_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta_resp, "rem_port", &rem_port, META_TYPE_INT32);
 				//}
 
-				if (daemon_fcf_to_switch(TCP_ID, params_resp, gen_control_serial_num(), CTRL_SET_PARAM, SET_PARAM_TCP_HOST_WINDOW)) {
+				if (daemon_fcf_to_switch(TCP_ID, meta_resp, gen_control_serial_num(), CTRL_SET_PARAM, SET_PARAM_TCP_HOST_WINDOW)) {
 					PRINT_DEBUG("Exited, normal: hdr=%p", hdr);
 				} else {
 					PRINT_ERROR("Exited, fail sending flow msgs: hdr=%p", hdr);
-					metadata_destroy(params_resp);
+					metadata_destroy(meta_resp);
 				}
 			}
 
@@ -1198,24 +1198,24 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 		PRINT_DEBUG("release address: host=%u/%u", host_ip, host_port);
 	}
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
-	//secure_metadata_writeToElement(params, "flags", &flags, META_TYPE_INT32);
+	//secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 	if (state > SS_UNCONNECTED) {
-		secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 	}
 
 	uint32_t serial_num = gen_control_serial_num();
 	uint32_t exec_call = (state > SS_UNCONNECTED) ? EXEC_TCP_CLOSE : EXEC_TCP_CLOSE_STUB;
 	PRINT_DEBUG("serial_num=%u, state=%u, exec_call=%u", serial_num, state, exec_call);
 
-	if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_EXEC, exec_call)) {
+	if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_EXEC, exec_call)) {
 		if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 			daemon_calls[hdr->call_index].serial_num = serial_num;
 
@@ -1235,7 +1235,7 @@ void release_out_tcp(struct nl_wedge_to_daemon *hdr) { //TODO finish
 		sem_post(&daemon_sockets_sem);
 
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		metadata_destroy(params);
+		metadata_destroy(meta);
 	}
 }
 
@@ -1288,23 +1288,23 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 			}
 
-			metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-			metadata_create(params);
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
 
 			uint32_t initial = 1;
-			secure_metadata_writeToElement(params, "initial", &initial, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "flags", &events, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "initial", &initial, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "flags", &events, META_TYPE_INT32);
 
-			secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 			if (state > SS_UNCONNECTED) {
-				secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 			}
 
 			uint32_t serial_num = gen_control_serial_num();
-			if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_EXEC, EXEC_TCP_POLL)) {
+			if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_EXEC, EXEC_TCP_POLL)) {
 				if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 					daemon_calls[hdr->call_index].serial_num = serial_num;
 					daemon_calls[hdr->call_index].data = events;
@@ -1338,7 +1338,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				sem_post(&daemon_sockets_sem);
 
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-				metadata_destroy(params);
+				metadata_destroy(meta);
 			}
 			return;
 		}
@@ -1427,23 +1427,23 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 						PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 					}
 
-					metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-					metadata_create(params);
+					metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+					metadata_create(meta);
 
 					uint32_t initial = 0;
-					secure_metadata_writeToElement(params, "initial", &initial, META_TYPE_INT32);
-					secure_metadata_writeToElement(params, "flags", &events, META_TYPE_INT32);
+					secure_metadata_writeToElement(meta, "initial", &initial, META_TYPE_INT32);
+					secure_metadata_writeToElement(meta, "flags", &events, META_TYPE_INT32);
 
-					secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-					secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-					secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+					secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+					secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+					secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 					if (state > SS_UNCONNECTED) {
-						secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-						secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+						secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+						secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 					}
 
 					uint32_t serial_num = gen_control_serial_num();
-					if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_EXEC, EXEC_TCP_POLL)) {
+					if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_EXEC, EXEC_TCP_POLL)) {
 						if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 							daemon_calls[hdr->call_index].serial_num = serial_num;
 							daemon_calls[hdr->call_index].data = events;
@@ -1477,7 +1477,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 						sem_post(&daemon_sockets_sem);
 
 						nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-						metadata_destroy(params);
+						metadata_destroy(meta);
 					}
 					return;
 				}
@@ -1517,23 +1517,23 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
 			}
 
-			metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-			metadata_create(params);
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
 
 			uint32_t initial = 0;
-			secure_metadata_writeToElement(params, "initial", &initial, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "flags", &events, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "initial", &initial, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "flags", &events, META_TYPE_INT32);
 
-			secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 			if (state > SS_UNCONNECTED) {
-				secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 			}
 
 			uint32_t serial_num = gen_control_serial_num();
-			if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_EXEC, EXEC_TCP_POLL)) {
+			if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_EXEC, EXEC_TCP_POLL)) {
 				if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 					daemon_calls[hdr->call_index].serial_num = serial_num;
 					daemon_calls[hdr->call_index].data = events;
@@ -1567,7 +1567,7 @@ void poll_out_tcp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				sem_post(&daemon_sockets_sem);
 
 				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-				metadata_destroy(params);
+				metadata_destroy(meta);
 			}
 		}
 	}
@@ -1617,8 +1617,8 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	int send_dst = -1;
 	int len = 0;
@@ -1626,12 +1626,12 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	uint32_t param_id = optname;
 
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 	if (state > SS_UNCONNECTED) {
-		secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 	}
 
 	switch (optname) {
@@ -1743,13 +1743,13 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 		PRINT_ERROR("send_dst == -1");
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 
 		//send msg to wedge
 		int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
@@ -1789,7 +1789,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		free(msg);
 	} else {
 		uint32_t serial_num = gen_control_serial_num();
-		if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_READ_PARAM, param_id)) {
+		if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_READ_PARAM, param_id)) {
 			if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 				daemon_calls[hdr->call_index].serial_num = serial_num;
 				daemon_calls[hdr->call_index].data = optname;
@@ -1810,7 +1810,7 @@ void getsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			sem_post(&daemon_sockets_sem);
 
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			metadata_destroy(params);
+			metadata_destroy(meta);
 		}
 	}
 }
@@ -1845,8 +1845,8 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		rem_port = daemon_sockets[hdr->sock_index].rem_port;
 	}
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	int send_dst = -1;
 	//int len = 0;
@@ -1854,12 +1854,12 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 	uint32_t param_id = optname;
 
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 	if (state > SS_UNCONNECTED) {
-		secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 	}
 
 	switch (level) {
@@ -1883,14 +1883,14 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG = *(int *) optval;
 
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
 		case SO_REUSEADDR:
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR = *(int *) optval;
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
@@ -1906,7 +1906,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_SNDBUF:
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF = *(int *) optval;
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
@@ -1915,7 +1915,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_RCVBUF:
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF = *(int *) optval;
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
@@ -1924,14 +1924,14 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_KEEPALIVE:
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE = *(int *) optval;
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
 		case SO_OOBINLINE:
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_OOBINLINE = *(int *) optval;
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_OOBINLINE, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_OOBINLINE, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
@@ -1940,7 +1940,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 		case SO_PRIORITY:
 			if (optlen >= sizeof(int)) {
 				daemon_sockets[hdr->sock_index].sockopts.FSO_PRIORITY = *(int *) optval;
-				secure_metadata_writeToElement(params, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_PRIORITY, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "value", &daemon_sockets[hdr->sock_index].sockopts.FSO_PRIORITY, META_TYPE_INT32);
 				send_dst = 1;
 			}
 			break;
@@ -1986,17 +1986,17 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 
 		PRINT_ERROR("Error");
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else if (send_dst == 0) {
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&daemon_sockets_sem);
 
-		metadata_destroy(params);
+		metadata_destroy(meta);
 		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
 		uint32_t serial_num = gen_control_serial_num();
-		if (daemon_fcf_to_switch(TCP_ID, params, serial_num, CTRL_SET_PARAM, param_id)) {
+		if (daemon_fcf_to_switch(TCP_ID, meta, serial_num, CTRL_SET_PARAM, param_id)) {
 			if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 				daemon_calls[hdr->call_index].serial_num = serial_num;
 
@@ -2016,7 +2016,7 @@ void setsockopt_out_tcp(struct nl_wedge_to_daemon *hdr, int level, int optname, 
 			sem_post(&daemon_sockets_sem);
 
 			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			metadata_destroy(params);
+			metadata_destroy(meta);
 		}
 	}
 }
@@ -2034,8 +2034,8 @@ void connect_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 	uint32_t ret_msg;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2090,10 +2090,10 @@ void accept_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint3
 	uint32_t rem_ip;
 	uint32_t rem_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
-	secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-	secure_metadata_readFromElement(params, "rem_port", &rem_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
+	secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+	secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2172,8 +2172,8 @@ void sendmsg_in_tcp(struct finsFrame *ff, uint32_t call_id, int call_index, uint
 
 	uint32_t ret_msg;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
 
 	if (ff->ctrlFrame.ret_val) {
 		ack_send(call_id, call_index, call_type, ret_msg);
@@ -2292,9 +2292,9 @@ void poll_in_tcp_fcf(struct finsFrame *ff, uint32_t call_id, int call_index, int
 
 	uint32_t ret_msg = 0;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
-	//secure_metadata_readFromElement(params, "mask", &mask);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
+	//secure_metadata_readFromElement(meta, "mask", &mask);
 
 	if ((ff->ctrlFrame.param_id != EXEC_TCP_POLL) || ff->ctrlFrame.ret_val == 0) {
 		PRINT_ERROR("Exiting, NACK: ff=%p, param_id=%d, ret_val=%u", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
@@ -2400,15 +2400,15 @@ void poll_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *cal
 	}
 }
 
-void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
+void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint16_t addr_port, uint32_t flags) {
 	PRINT_DEBUG("Entered: call_list=%p, call=%p, meta=%p, data=%p, len=%u, addr=%u/%u, flags=%u",
-			call_list, call, params, data, data_len, addr_ip, addr_port, flags);
+			call_list, call, meta, data, data_len, addr_ip, addr_port, flags);
 
 	uint32_t call_len = call->data; //buffer size
 	uint32_t msg_controllen = call->ret;
 
-	secure_metadata_readFromElement(params, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
+	secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
 
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[call->sock_index].stamp.tv_sec, (uint32_t)daemon_sockets[call->sock_index].stamp.tv_usec);
 
@@ -2546,23 +2546,23 @@ void recvmsg_in_tcp_fdf(struct daemon_call_list *call_list, struct daemon_call *
 
 		PRINT_DEBUG("recvfrom address: state=%u, host=%u/%u, rem=%u/%u,", state, host_ip, host_port, rem_ip, rem_port);
 
-		metadata *params_reply = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(params_reply);
+		metadata *meta_reply = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta_reply);
 
 		uint32_t value = data_len;
-		secure_metadata_writeToElement(params_reply, "value", &value, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_reply, "value", &value, META_TYPE_INT32);
 
-		secure_metadata_writeToElement(params_reply, "state", &state, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_reply, "host_ip", &host_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_reply, "host_port", &host_port, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_reply, "rem_ip", &rem_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(params_reply, "rem_port", &rem_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_reply, "state", &state, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_reply, "host_ip", &host_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_reply, "host_port", &host_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_reply, "rem_ip", &rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_reply, "rem_port", &rem_port, META_TYPE_INT32);
 
-		if (daemon_fcf_to_switch(TCP_ID, params_reply, gen_control_serial_num(), CTRL_SET_PARAM, SET_PARAM_TCP_HOST_WINDOW)) {
+		if (daemon_fcf_to_switch(TCP_ID, meta_reply, gen_control_serial_num(), CTRL_SET_PARAM, SET_PARAM_TCP_HOST_WINDOW)) {
 			PRINT_DEBUG("Exited, normal: call=%p", call);
 		} else {
 			PRINT_ERROR("Exited, fail sending flow msgs: call=%p", call);
-			metadata_destroy(params);
+			metadata_destroy(meta);
 		}
 	}
 	if (control_msg)
@@ -2579,15 +2579,15 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	uint32_t src_port;
 	uint32_t dst_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_src_port", &src_port);
-	secure_metadata_readFromElement(params, "recv_dst_port", &dst_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_src_port", &src_port);
+	secure_metadata_readFromElement(meta, "recv_dst_port", &dst_port);
 
 	struct timeval current;
 	gettimeofday(&current, 0);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 	//TODO move to interface?
-	secure_metadata_writeToElement(params, "recv_stamp", &current, META_TYPE_INT64);
+	secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2620,7 +2620,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 		call = call_list->front;
 		while (call) {
 			if (call->call_type == recvmsg_call && !(call->flags & (MSG_ERRQUEUE))) { //signal first recvmsg for data
-				recvmsg_in_tcp_fdf(call_list, call, params, ff->dataFrame.pdu, ff->dataFrame.pduLength, dst_ip, (uint16_t) dst_port, 0);
+				recvmsg_in_tcp_fdf(call_list, call, meta, ff->dataFrame.pdu, ff->dataFrame.pduLength, dst_ip, (uint16_t) dst_port, 0);
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 				sem_post(&daemon_sockets_sem);
 				return;
@@ -2635,7 +2635,7 @@ void daemon_tcp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
 
-			PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, params, data_buf);
+			PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, meta, data_buf);
 		} else {
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&daemon_sockets_sem);
@@ -2652,15 +2652,15 @@ void daemon_tcp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip)
 	uint32_t src_port;
 	uint32_t dst_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "src_port", &src_port);
-	secure_metadata_readFromElement(params, "dst_port", &dst_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "src_port", &src_port);
+	secure_metadata_readFromElement(meta, "dst_port", &dst_port);
 
 	struct timeval current;
 	gettimeofday(&current, 0);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 	//TODO move to interface?
-	//secure_metadata_writeToElement(params, "stamp", &current, META_TYPE_INT64);
+	//secure_metadata_writeToElement(meta, "stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2703,13 +2703,13 @@ void daemon_tcp_in_poll(struct finsFrame *ff, uint32_t ret_msg) {
 	uint32_t rem_ip = 0;
 	uint32_t rem_port = 0;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "state", &state);
-	secure_metadata_readFromElement(params, "host_ip", &host_ip);
-	secure_metadata_readFromElement(params, "host_port", &host_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "state", &state);
+	secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+	secure_metadata_readFromElement(meta, "host_port", &host_port);
 	if (state > SS_UNCONNECTED) {
-		secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-		secure_metadata_readFromElement(params, "rem_port", &rem_port);
+		secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
@@ -2852,8 +2852,8 @@ void connect_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t
 
 	uint32_t ret_msg;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);
@@ -2916,10 +2916,10 @@ void accept_expired_tcp(struct finsFrame *ff, struct daemon_call *call, uint8_t 
 	uint32_t rem_ip;
 	uint32_t rem_port;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "ret_msg", &ret_msg);
-	secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-	secure_metadata_readFromElement(params, "rem_port", &rem_port);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
+	secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+	secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&daemon_sockets_sem);

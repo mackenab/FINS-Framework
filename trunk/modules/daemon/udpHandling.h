@@ -35,7 +35,7 @@ void daemon_udp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 void daemon_udp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 
 void poll_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, uint32_t flags);
-void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
+void recvmsg_in_udp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint16_t addr_port, uint32_t flags);
 
 void recvmsg_timeout_udp(struct daemon_call *call);

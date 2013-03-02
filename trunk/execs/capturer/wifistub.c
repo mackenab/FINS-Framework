@@ -115,6 +115,8 @@ void capture_init(char *device) {
 		PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", server_capture_fd, addr.sun_path);
 	}
 
+	sleep(2);
+
 	//TODO recv MAC/ip address from Core?
 	char *filter_exp = (char *) malloc(200);
 	if (filter_exp == NULL) {
@@ -132,7 +134,8 @@ void capture_init(char *device) {
 	//strcat(filter_exp, "(ether dst 001d09b35512) or (ether broadcast and (not ether src 001d09b35512))"); //laptop eth0
 	//strcat(filter_exp, "(ether dst 001cbf86d2da) or (ether broadcast and (not ether src 001cbf86d2da))"); //laptop wlan0
 	//strcat(filter_exp, "(ether dst 00184d8f2a32) or (ether broadcast and (not ether src 00184d8f2a32))"); //laptop wlan4 card
-	strcat(filter_exp, "(ether dst a0:0b:ba:e9:4b:b0) or (ether broadcast and (not ether src a0:0b:ba:e9:4b:b0))"); //phone wlan0 //must have ':'s
+	//strcat(filter_exp, "(ether dst a0:0b:ba:e9:4b:b0) or (ether broadcast and (not ether src a0:0b:ba:e9:4b:b0))"); //phone0 wlan0 //must have ':'s
+	strcat(filter_exp, "(ether dst 50:46:5d:14:e0:7f) or (ether broadcast and (not ether src 50:46:5d:14:e0:7f))"); //tablet1 wlan0
 
 	uint8_t *dev = (uint8_t *) device;
 	bpf_u_int32 net; /* ip */
@@ -240,6 +243,8 @@ void inject_init(char *device) {
 		return;
 	}
 	PRINT_DEBUG("accepted at: inject_fd=%d, addr='%s'", server_inject_fd, addr.sun_path);
+
+	sleep(2);
 
 	//getDevice_MACAddress(dev_macAddress,dev);
 

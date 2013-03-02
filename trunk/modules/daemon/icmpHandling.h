@@ -36,7 +36,7 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 
 void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, uint32_t flags);
-void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *params, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
+void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
 		uint32_t flags);
 
 void recvmsg_timeout_icmp(struct daemon_call *call);

@@ -139,14 +139,14 @@ void tcp_out_fdf(struct finsFrame *ff) {
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "flags", &flags);
-	secure_metadata_readFromElement(params, "serial_num", &serial_num);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "flags", &flags);
+	secure_metadata_readFromElement(meta, "serial_num", &serial_num);
 
-	secure_metadata_readFromElement(params, "host_ip", &src_ip); //host
-	secure_metadata_readFromElement(params, "host_port", &src_port);
-	secure_metadata_readFromElement(params, "rem_ip", &dst_ip); //remote
-	secure_metadata_readFromElement(params, "rem_port", &dst_port);
+	secure_metadata_readFromElement(meta, "host_ip", &src_ip); //host
+	secure_metadata_readFromElement(meta, "host_port", &src_port);
+	secure_metadata_readFromElement(meta, "rem_ip", &dst_ip); //remote
+	secure_metadata_readFromElement(meta, "rem_port", &dst_port);
 
 	//TODO if flags & MSG_DONTWAIT, read timeout
 
@@ -1037,7 +1037,7 @@ void *read_param_conn_thread(void *local) {
 
 	uint32_t value;
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	secure_sem_wait(&conn->sem);
@@ -1046,7 +1046,7 @@ void *read_param_conn_thread(void *local) {
 		case READ_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
 			value = conn->recv_win;
-			secure_metadata_writeToElement(params, "ret_msg", &value, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "ret_msg", &value, META_TYPE_INT32);
 
 			ff->destinationID.id = ff->ctrlFrame.senderID;
 
@@ -1121,7 +1121,7 @@ void *read_param_conn_stub_thread(void *local) {
 
 	uint32_t value;
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	secure_sem_wait(&conn_stub->sem);
@@ -1129,7 +1129,7 @@ void *read_param_conn_stub_thread(void *local) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case READ_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
-			secure_metadata_readFromElement(params, "value", &value);
+			secure_metadata_readFromElement(meta, "value", &value);
 			//TODO do something? error?
 
 			//if (value > conn_stub->host_window) {
@@ -1148,7 +1148,7 @@ void *read_param_conn_stub_thread(void *local) {
 			break;
 		case READ_PARAM_TCP_SOCK_OPT:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
-			secure_metadata_readFromElement(params, "value", &value);
+			secure_metadata_readFromElement(meta, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
 			//if (value > conn_stub->host_window) {
@@ -1216,8 +1216,8 @@ void tcp_read_param(struct finsFrame *ff) {
 	//pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	metadata *params = ff->metaData;
-	metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port);
+	metadata *meta = ff->metaData;
+	metadata_read_conn(meta, &state, &host_ip, &host_port, &rem_ip, &rem_port);
 
 	if (state > SS_UNCONNECTED) {
 		PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
@@ -1296,7 +1296,7 @@ void *set_param_conn_thread(void *local) {
 
 	uint32_t value;
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	secure_sem_wait(&conn->sem);
@@ -1304,7 +1304,7 @@ void *set_param_conn_thread(void *local) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=SET_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
-			secure_metadata_readFromElement(params, "value", &value);
+			secure_metadata_readFromElement(meta, "value", &value);
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u), before",
 					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
 			uint32_increase(&conn->recv_win, value, conn->recv_max_win);
@@ -1325,7 +1325,7 @@ void *set_param_conn_thread(void *local) {
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
 			PRINT_DEBUG("param_id=SET_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
-			secure_metadata_readFromElement(params, "value", &value);
+			secure_metadata_readFromElement(meta, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
 			PRINT_ERROR("todo");
@@ -1393,7 +1393,7 @@ void *set_param_conn_stub_thread(void *local) {
 
 	uint32_t value;
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 
 	/*#*/PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
 	secure_sem_wait(&conn_stub->sem);
@@ -1401,7 +1401,7 @@ void *set_param_conn_stub_thread(void *local) {
 		switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 		case SET_PARAM_TCP_HOST_WINDOW:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_HOST_WINDOW (%d)", ff->ctrlFrame.param_id);
-			secure_metadata_readFromElement(params, "value", &value);
+			secure_metadata_readFromElement(meta, "value", &value);
 			//TODO do something? error?
 
 			//if (value > conn_stub->host_window) {
@@ -1417,7 +1417,7 @@ void *set_param_conn_stub_thread(void *local) {
 			break;
 		case SET_PARAM_TCP_SOCK_OPT:
 			PRINT_DEBUG("param_id=READ_PARAM_TCP_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
-			secure_metadata_readFromElement(params, "value", &value);
+			secure_metadata_readFromElement(meta, "value", &value);
 			//fill in with switch of opts? or have them separate?
 
 			//if (value > conn_stub->host_window) {
@@ -1474,8 +1474,8 @@ void tcp_set_param(struct finsFrame *ff) {
 	//pthread_t thread;
 	struct tcp_thread_data *thread_data;
 
-	metadata *params = ff->metaData;
-	metadata_read_conn(params, &state, &host_ip, &host_port, &rem_ip, &rem_port);
+	metadata *meta = ff->metaData;
+	metadata_read_conn(meta, &state, &host_ip, &host_port, &rem_ip, &rem_port);
 
 	if (state > SS_UNCONNECTED) {
 		PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);

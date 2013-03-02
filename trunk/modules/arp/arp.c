@@ -570,19 +570,19 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	PRINT_DEBUG("target=0x%llx/%u, sender=0x%llx/%u, op=%d",
 			msg->target_MAC_addrs, msg->target_IP_addrs, msg->sender_MAC_addrs, msg->sender_IP_addrs, msg->operation);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t ether_type = ARP_TYPE;
-	secure_metadata_writeToElement(params, "send_ether_type", &ether_type, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "send_dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
-	secure_metadata_writeToElement(params, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
+	secure_metadata_writeToElement(meta, "send_ether_type", &ether_type, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_dst_mac", &msg->target_MAC_addrs, META_TYPE_INT64);
+	secure_metadata_writeToElement(meta, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
 
 	struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = INTERFACE_ID;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = sizeof(struct arp_hdr);
@@ -763,13 +763,13 @@ void arp_exec(struct finsFrame *ff) {
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_ARP_GET_ADDR:
 		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(params, "src_ip", &src_ip);
-		secure_metadata_readFromElement(params, "dst_ip", &dst_ip);
+		secure_metadata_readFromElement(meta, "src_ip", &src_ip);
+		secure_metadata_readFromElement(meta, "dst_ip", &dst_ip);
 
 		arp_exec_get_addr(ff, src_ip, dst_ip);
 		//arp_exec_get_addr(ff, addr_ip);

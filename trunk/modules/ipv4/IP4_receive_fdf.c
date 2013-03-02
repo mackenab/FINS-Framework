@@ -52,8 +52,8 @@ void ipv4_get_ff(void) {
 		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			PRINT_DEBUG("IP4_out");
 
-			metadata *params = ff->metaData;
-			secure_metadata_readFromElement(params, "send_protocol", &protocol);
+			metadata *meta = ff->metaData;
+			secure_metadata_readFromElement(meta, "send_protocol", &protocol);
 
 			PRINT_DEBUG("%u", my_host_ip_addr);
 			PRINT_DEBUG("Transport protocol going out passed to IPv4: protocol=%u", protocol);
@@ -167,8 +167,8 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
 			uint64_t dst_mac = 0;
 			uint32_t dst_ip = cache->addr_ip;
 
-			metadata *params = ff->metaData;
-			secure_metadata_readFromElement(params, "dst_mac", &dst_mac);
+			metadata *meta = ff->metaData;
+			secure_metadata_readFromElement(meta, "dst_mac", &dst_mac);
 
 			PRINT_DEBUG("Entered: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
 
@@ -208,6 +208,13 @@ void ipv4_exec_reply_get_addr(struct finsFrame *ff) {
 		} else {
 			//TODO error sending back FDF as FCF? saved pdu for that
 			PRINT_ERROR("todo error");
+
+			uint64_t src_mac = request->src_mac;
+			uint32_t src_ip = request->src_ip;
+			uint64_t dst_mac = 0;
+			uint32_t dst_ip = cache->addr_ip;
+
+			PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p", ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 
 			//TODO remove all requests from same source //split cache into (src,dst) tuples?
 			//ipv4_store_free(store);

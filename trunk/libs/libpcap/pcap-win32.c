@@ -389,18 +389,12 @@ pcap_close_win32(pcap_t *p)
 	}
 }
 
-#include <jni.h>
-#include <android/log.h>
-//__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, linux");
-
 pcap_t *
 pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
     char *ebuf)
 {
 	register pcap_t *p;
 	NetType type;
-
-	__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, win32");
 
 	/* Init WinSock */
 	wsockinit();

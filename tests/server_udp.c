@@ -29,6 +29,12 @@
 #ifndef POLLWRBAND
 #define POLLWRBAND POLLOUT
 #endif
+
+#ifndef SOCK_NONBLOCK
+#include <fcntl.h>
+#define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
 //---------------------------------------------------
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))

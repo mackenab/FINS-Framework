@@ -410,26 +410,26 @@ struct tcp_connection_stub *conn_stub_create(uint32_t host_ip, uint16_t host_por
 int conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn_stub=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn_stub, param_id, ret_val, ret_msg);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
 
 	uint32_t state = SS_UNCONNECTED;
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &conn_stub->host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &conn_stub->host_ip, META_TYPE_INT32);
 
 	uint32_t host_port = conn_stub->host_port;
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.serial_num = gen_control_serial_num();
@@ -1580,28 +1580,28 @@ struct tcp_connection *conn_create(uint32_t host_ip, uint16_t host_port, uint32_
 int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
 
 	uint32_t state = SS_CONNECTED;
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &conn->host_ip, META_TYPE_INT32);
 	uint32_t host_port = conn->host_port;
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
 	uint32_t rem_port = conn->rem_port;
-	secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.serial_num = gen_control_serial_num();
@@ -1624,28 +1624,28 @@ int conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_
 int conn_send_fcf(struct tcp_connection *conn, uint32_t serial_num, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
 
 	uint32_t state = SS_CONNECTED;
-	secure_metadata_writeToElement(params, "state", &state, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &conn->host_ip, META_TYPE_INT32);
 	uint32_t host_port = conn->host_port;
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
 	uint32_t rem_port = conn->rem_port;
-	secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.serial_num = serial_num;
@@ -1669,15 +1669,15 @@ int conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_m
 	PRINT_DEBUG("Entered: conn=%p, ret_val=%u, ret_msg=%u", conn, ret_val, ret_msg);
 
 	struct finsFrame *ff = conn->ff;
-	metadata *params = ff->metaData;
-	secure_metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
+	metadata *meta = ff->metaData;
+	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "host_ip", &conn->host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &conn->host_ip, META_TYPE_INT32);
 	uint32_t host_port = conn->host_port;
-	secure_metadata_writeToElement(params, "host_port", &host_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_ip", &conn->rem_ip, META_TYPE_INT32);
 	uint32_t rem_port = conn->rem_port;
-	secure_metadata_writeToElement(params, "rem_port", &rem_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 
 	ff->destinationID.id = ff->ctrlFrame.senderID;
 
@@ -1881,24 +1881,24 @@ struct finsFrame *tcp_to_fdf(struct tcp_segment *seg) {
 	PRINT_DEBUG( "info: src=%u/%u, dst=%u/%u, seq=%u, len=%d, opts=%d, ack=%u, flags=0x%x, win=%u, checksum=0x%x, F=%u, S=%u, R=%u, A=%u",
 			seg->src_ip, seg->src_port, seg->dst_ip, seg->dst_port, seg->seq_num, seg->data_len, seg->opt_len, seg->ack_num, seg->flags, seg->win_size, seg->checksum, seg->flags&FLAG_FIN, (seg->flags&FLAG_SYN)>>1, (seg->flags&FLAG_RST)>>2, (seg->flags&FLAG_ACK)>>4);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(params, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "send_protocol", &protocol, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "send_src_ip", &seg->src_ip, META_TYPE_INT32); //Write the source ip in
-	secure_metadata_writeToElement(params, "send_dst_ip", &seg->dst_ip, META_TYPE_INT32); //And the destination ip
+	secure_metadata_writeToElement(meta, "send_src_ip", &seg->src_ip, META_TYPE_INT32); //Write the source ip in
+	secure_metadata_writeToElement(meta, "send_dst_ip", &seg->dst_ip, META_TYPE_INT32); //And the destination ip
 	uint32_t src_port = seg->src_port;
-	secure_metadata_writeToElement(params, "send_src_port", &src_port, META_TYPE_INT32); //Write the source port in
+	secure_metadata_writeToElement(meta, "send_src_port", &src_port, META_TYPE_INT32); //Write the source port in
 	uint32_t dst_port = seg->dst_port;
-	secure_metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32); //And the destination port
+	secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32); //And the destination port
 
 	struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA; //leave unset?
 	ff->destinationID.id = IPV4_ID; // destination module ID
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->dataFrame.directionFlag = DIR_DOWN; // ingress or egress network data; see above
 	ff->dataFrame.pduLength = seg->data_len + TCP_HEADER_BYTES(seg->flags); //Add in the header size for this, too
@@ -1979,8 +1979,8 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 
 	uint32_t protocol;
 
-	metadata *params = ff->metaData;
-	secure_metadata_readFromElement(params, "recv_protocol", &protocol);
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
 
 	if (protocol != IPPROTO_TCP) {
 		PRINT_ERROR("error: protocol=%u", protocol);
@@ -1988,8 +1988,8 @@ struct tcp_segment *fdf_to_tcp(struct finsFrame *ff) {
 		return NULL;
 	}
 
-	secure_metadata_readFromElement(params, "recv_src_ip", &seg->src_ip); //host
-	secure_metadata_readFromElement(params, "recv_dst_ip", &seg->dst_ip); //remote
+	secure_metadata_readFromElement(meta, "recv_src_ip", &seg->src_ip); //host
+	secure_metadata_readFromElement(meta, "recv_dst_ip", &seg->dst_ip); //remote
 
 	struct tcpv4_header *hdr = (struct tcpv4_header *) ff->dataFrame.pdu;
 	seg->src_port = ntohs(hdr->src_port);
@@ -2640,41 +2640,41 @@ int in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num,
 	}
 }
 
-void metadata_read_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
+void metadata_read_conn(metadata *meta, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
 	uint32_t state_buf;
 	uint32_t host_port_buf;
 	uint32_t rem_port_buf;
 
-	secure_metadata_readFromElement(params, "state", &state_buf);
+	secure_metadata_readFromElement(meta, "state", &state_buf);
 	*state = (socket_state) state_buf;
 
-	secure_metadata_readFromElement(params, "host_ip", host_ip);
-	secure_metadata_readFromElement(params, "host_port", &host_port_buf);
+	secure_metadata_readFromElement(meta, "host_ip", host_ip);
+	secure_metadata_readFromElement(meta, "host_port", &host_port_buf);
 	*host_port = (uint16_t) host_port_buf;
 
 	if (*state > SS_UNCONNECTED) {
-		secure_metadata_readFromElement(params, "rem_ip", rem_ip);
-		secure_metadata_readFromElement(params, "rem_port", &rem_port_buf);
+		secure_metadata_readFromElement(meta, "rem_ip", rem_ip);
+		secure_metadata_readFromElement(meta, "rem_port", &rem_port_buf);
 		*rem_port = (uint16_t) rem_port_buf;
 	}
 }
 
-void metadata_write_conn(metadata *params, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
+void metadata_write_conn(metadata *meta, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
 	uint32_t state_buf;
 	uint32_t host_port_buf;
 	uint32_t rem_port_buf;
 
 	state_buf = *state;
-	secure_metadata_writeToElement(params, "state", &state_buf, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state_buf, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "host_ip", host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", host_ip, META_TYPE_INT32);
 	host_port_buf = *host_port;
-	secure_metadata_writeToElement(params, "host_port", &host_port_buf, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port_buf, META_TYPE_INT32);
 
 	if (*state > SS_UNCONNECTED) {
-		secure_metadata_writeToElement(params, "rem_ip", rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_ip", rem_ip, META_TYPE_INT32);
 		rem_port_buf = *rem_port;
-		secure_metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 }
 
@@ -2875,53 +2875,53 @@ void tcp_exec(struct finsFrame *ff) {
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params = ff->metaData;
+	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_TCP_LISTEN:
 		PRINT_DEBUG("param_id=EXEC_TCP_LISTEN (%d)", ff->ctrlFrame.param_id);
 
 		uint32_t backlog = 0;
-		secure_metadata_readFromElement(params, "backlog", &backlog);
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "backlog", &backlog);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
 
 		tcp_exec_listen(ff, host_ip, (uint16_t) host_port, backlog);
 		break;
 	case EXEC_TCP_ACCEPT:
 		PRINT_DEBUG("param_id=EXEC_TCP_ACCEPT (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
-		secure_metadata_readFromElement(params, "flags", &flags);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "flags", &flags);
 
 		tcp_exec_accept(ff, host_ip, (uint16_t) host_port, flags);
 		break;
 	case EXEC_TCP_CONNECT:
 		PRINT_DEBUG("param_id=EXEC_TCP_CONNECT (%d)", ff->ctrlFrame.param_id);
-		secure_metadata_readFromElement(params, "flags", &flags);
+		secure_metadata_readFromElement(meta, "flags", &flags);
 
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
-		secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-		secure_metadata_readFromElement(params, "rem_port", &rem_port);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 
 		tcp_exec_connect(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, flags);
 		break;
 	case EXEC_TCP_CLOSE:
 		PRINT_DEBUG("param_id=EXEC_TCP_CLOSE (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
-		secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-		secure_metadata_readFromElement(params, "rem_port", &rem_port);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 
 		tcp_exec_close(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 		break;
 	case EXEC_TCP_CLOSE_STUB:
 		PRINT_DEBUG("param_id=EXEC_TCP_CLOSE_STUB (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
 
 		tcp_exec_close_stub(ff, host_ip, (uint16_t) host_port);
 		break;
@@ -2929,15 +2929,15 @@ void tcp_exec(struct finsFrame *ff) {
 		PRINT_DEBUG("param_id=EXEC_TCP_POLL (%d)", ff->ctrlFrame.param_id);
 
 		uint32_t initial;
-		secure_metadata_readFromElement(params, "initial", &initial);
-		secure_metadata_readFromElement(params, "flags", &flags);
+		secure_metadata_readFromElement(meta, "initial", &initial);
+		secure_metadata_readFromElement(meta, "flags", &flags);
 
-		secure_metadata_readFromElement(params, "state", &state);
-		secure_metadata_readFromElement(params, "host_ip", &host_ip);
-		secure_metadata_readFromElement(params, "host_port", &host_port);
+		secure_metadata_readFromElement(meta, "state", &state);
+		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
+		secure_metadata_readFromElement(meta, "host_port", &host_port);
 		if (state > SS_UNCONNECTED) {
-			secure_metadata_readFromElement(params, "rem_ip", &rem_ip);
-			secure_metadata_readFromElement(params, "rem_port", &rem_port);
+			secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
+			secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 		}
 
 		tcp_exec_poll(ff, (socket_state) state, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port, initial, flags);
@@ -2960,7 +2960,7 @@ void tcp_exec(struct finsFrame *ff) {
 void tcp_error(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	//metadata *params = ff->metaData;
+	//metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
 		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
@@ -2990,28 +2990,28 @@ int tcp_to_switch(struct finsFrame *ff) {
 }
 
 int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val) {
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(params, "protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT32);
 
 	uint32_t state_buf = state;
-	secure_metadata_writeToElement(params, "state", &state_buf, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "host_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "state", &state_buf, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 	uint32_t host_port_buf = host_port;
-	secure_metadata_writeToElement(params, "host_port", &host_port_buf, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "host_port", &host_port_buf, META_TYPE_INT32);
 	if (state > SS_UNCONNECTED) {
-		secure_metadata_writeToElement(params, "rem_ip", &rem_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
 		uint32_t rem_port_buf = rem_port;
-		secure_metadata_writeToElement(params, "rem_port", &rem_port_buf, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "rem_port", &rem_port_buf, META_TYPE_INT32);
 	}
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = CONTROL;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->ctrlFrame.senderID = TCP_ID;
 	ff->ctrlFrame.serial_num = gen_control_serial_num();
@@ -3034,24 +3034,24 @@ int tcp_fcf_to_daemon(socket_state state, uint32_t param_id, uint32_t host_ip, u
 int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, len=%d", host_ip, host_port, rem_ip, rem_port, data_len);
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params);
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
 
 	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(params, "recv_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(params, "recv_src_ip", &host_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_src_ip", &host_ip, META_TYPE_INT32);
 	uint32_t host_port_buf = host_port;
-	secure_metadata_writeToElement(params, "recv_src_port", &host_port_buf, META_TYPE_INT32);
-	secure_metadata_writeToElement(params, "recv_dst_ip", &rem_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_src_port", &host_port_buf, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_dst_ip", &rem_ip, META_TYPE_INT32);
 	uint32_t rem_port_buf = rem_port;
-	secure_metadata_writeToElement(params, "recv_dst_port", &rem_port_buf, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_dst_port", &rem_port_buf, META_TYPE_INT32);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = DAEMON_ID;
 	ff->destinationID.next = NULL;
-	ff->metaData = params;
+	ff->metaData = meta;
 
 	ff->dataFrame.directionFlag = DIR_UP;
 	ff->dataFrame.pduLength = data_len;
@@ -3076,8 +3076,8 @@ int tcp_fdf_to_daemon(uint8_t *data, int data_len, uint32_t host_ip, uint16_t ho
 int tcp_reply_fcf(struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: ff=%p, ret_val=%u, ret_msg=%u", ff, ret_val, ret_msg);
 
-	metadata *params = ff->metaData;
-	secure_metadata_writeToElement(params, "ret_msg", &ret_msg, META_TYPE_INT32);
+	metadata *meta = ff->metaData;
+	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
 
 	ff->destinationID.id = ff->ctrlFrame.senderID;
 

@@ -24,9 +24,10 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 
 void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *sem) {
 	int ret;
-	while ((ret = sem_wait(sem)) && errno == EINTR);
+	while ((ret = sem_wait(sem)) && errno == EINTR)
+		;
 	if (ret) {
-	//if (sem_wait(sem)) {
+		//if (sem_wait(sem)) {
 #ifdef ERROR
 		printf("ERROR(%s, %s, %d):sem_wait prob: sem=%p\n", file, func, line, sem);
 		fflush(stdout);
@@ -35,20 +36,20 @@ void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *s
 	}
 }
 
-void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *params, const char *target, void *value) {
-	if (metadata_readFromElement(params, target, value) == META_FALSE) {
+void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *meta, const char *target, void *value) {
+	if (metadata_readFromElement(meta, target, value) == META_FALSE) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):metadata_readFromElement: meta=%p, target='%s', value=%p\n", file, func, line, params, target, value);
+		printf("ERROR(%s, %s, %d):metadata_readFromElement: meta=%p, target='%s', value=%p\n", file, func, line, meta, target, value);
 		fflush(stdout);
 #endif
 		exit(-1);
 	}
 }
 
-void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *params, char *target, void *value, int type) {
-	if (metadata_writeToElement(params, target, value, type) == META_FALSE) {
+void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *meta, char *target, void *value, int type) {
+	if (metadata_writeToElement(meta, target, value, type) == META_FALSE) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):metadata_writeToElement: meta=%p, target='%s', value=%p, type=%d\n", file, func, line, params, target, value, type);
+		printf("ERROR(%s, %s, %d):metadata_writeToElement: meta=%p, target='%s', value=%p, type=%d\n", file, func, line, meta, target, value, type);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -359,7 +360,7 @@ void list_free(struct linked_list *list) {
 //-1 = less than, goes before
 //0 = problem don't insert
 //1 = greater than, goes after, if is equal but want put in use this
-int list_add(struct linked_list *list, uint8_t *data, int(*comparer)(uint8_t *data1, uint8_t *data2)) {
+int list_add(struct linked_list *list, uint8_t *data, int (*comparer)(uint8_t *data1, uint8_t *data2)) {
 	PRINT_DEBUG("Entered: list=%p, len=%u, data=%p, comparer=%p", list, list->len, data, comparer);
 
 	if (list_is_empty(list)) {
@@ -450,7 +451,7 @@ int list_add(struct linked_list *list, uint8_t *data, int(*comparer)(uint8_t *da
 }
 
 //equal: 0 or 1, 1 if equal, 0 if not
-uint8_t *list_find(struct linked_list *list, int(*equal)(uint8_t *data)) {
+uint8_t *list_find(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
 
 	struct list_node *comp = list->front;
@@ -469,7 +470,7 @@ uint8_t *list_find(struct linked_list *list, int(*equal)(uint8_t *data)) {
 	return NULL;
 }
 
-void list_for_each(struct linked_list *list, void(*apply)(uint8_t *data)) {
+void list_for_each(struct linked_list *list, void (*apply)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, apply=%p", list, apply);
 
 	struct list_node *comp = list->front;
@@ -502,22 +503,22 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	uint8_t fakeDatav[] = "loloa77a7";
 	uint8_t *fakeData = fakeDatav;
 
-	metadata *params = (metadata *) secure_malloc(sizeof(metadata));
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 
-	//metadata *params;
+	//metadata *meta;
 	PRINT_DEBUG("2.2");
-	metadata_create(params);
+	metadata_create(meta);
 	PRINT_DEBUG("2.3");
-	metadata_addElement(params, linkname, META_TYPE_INT32);
+	metadata_addElement(meta, linkname, META_TYPE_INT32);
 	PRINT_DEBUG("2.4");
-	metadata_writeToElement(params, linkname, &linkvalue, META_TYPE_INT32);
+	metadata_writeToElement(meta, linkname, &linkvalue, META_TYPE_INT32);
 	PRINT_DEBUG("2.5");
 	ff->dataOrCtrl = DATA;
 	ff->destinationID.id = (uint8_t) 200;
 	ff->destinationID.next = NULL;
 
 	ff->dataFrame.directionFlag = DIR_UP;
-	ff->metaData = params;
+	ff->metaData = meta;
 	ff->dataFrame.pdu = fakeData;
 	ff->dataFrame.pduLength = 10;
 
@@ -528,22 +529,21 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
  * @param fins_in the pointer to the fins frame
  * */
 void print_finsFrame(struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	struct destinationList *dest;
-
-	PRINT_DEBUG("Printing FINS frame:");
-
-	dest = &(ff->destinationID);
-
-	while (dest != NULL) {
-		PRINT_DEBUG("Destination id %d", dest->id);
-		dest = dest->next;
-	}
+	/*
+	 struct destinationList *dest = &(ff->destinationID);
+	 while (dest != NULL) {
+	 PRINT_DEBUG("Destination id %d", dest->id);
+	 dest = dest->next;
+	 }
+	 */
 
 	if (ff->dataOrCtrl == DATA) {
-		PRINT_DEBUG("Data fins %d", ff->dataOrCtrl);PRINT_DEBUG("Direction flag %d", ff->dataFrame.directionFlag);
-		//PRINT_DEBUG("Meta data (first element) 0x%x", fins_in->metaData);
-		PRINT_DEBUG("PDU size (bytes) %d", ff->dataFrame.pduLength);
+		PRINT_IMPORTANT("frame: ff=%p, DATA, dst=%u, meta=%p, dir=%u, pduLen=%u, pdu=%p",
+				ff, ff->destinationID.id, ff->metaData, ff->dataFrame.directionFlag, ff->dataFrame.pduLength, ff->dataFrame.pdu);
+		metadata_print(ff->metaData);
+
 		int i = 0;
 		while (i < ff->dataFrame.pduLength) {
 			PRINT_DEBUG("%d", ff->dataFrame.pdu[i]);
@@ -560,9 +560,11 @@ void print_finsFrame(struct finsFrame *ff) {
 #endif
 		//######################
 	} else if (ff->dataOrCtrl == CONTROL) {
-		PRINT_DEBUG("Control fins %d", ff->dataOrCtrl);PRINT_DEBUG("Opcode %d", ff->ctrlFrame.opcode);PRINT_DEBUG("Parameter ID %d", ff->ctrlFrame.param_id);PRINT_DEBUG("Parameter Value %d", *(int *) (ff->ctrlFrame.data));
-		//		PRINT_DEBUG("Reply Record (first element) 0x%x", fins_in->ctrlFrame.replyRecord);
-		PRINT_DEBUG("Sender Id %d", ff->ctrlFrame.senderID);PRINT_DEBUG("Serial number %d", ff->ctrlFrame.serial_num);
+		PRINT_IMPORTANT("frame: ff=%p, CONTROL, dst=%u, meta=%p, sender=%u, serial_num=%u, opcode=%u, param_id=%u, data_len=%u, data=%p",
+				ff, ff->destinationID.id, ff->metaData, ff->ctrlFrame.senderID, ff->ctrlFrame.serial_num, ff->ctrlFrame.opcode, ff->ctrlFrame.param_id, ff->ctrlFrame.data_len, ff->ctrlFrame.data);
+		metadata_print(ff->metaData);
+	} else {
+		PRINT_ERROR("todo error");
 	}
 
 }
@@ -604,12 +606,12 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	metadata *params_clone = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(params_clone);
+	metadata *meta_clone = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta_clone);
 
-	metadata *params = ff->metaData;
-	if (params) {
-		if (metadata_copy(params, params_clone) == META_FALSE) {
+	metadata *meta = ff->metaData;
+	if (meta) {
+		if (metadata_copy(meta, meta_clone) == META_FALSE) {
 			PRINT_ERROR("todo error");
 		}
 	} else {
@@ -620,7 +622,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	ff_clone->dataOrCtrl = ff->dataOrCtrl;
 	ff_clone->destinationID.id = ff->destinationID.id;
 	ff_clone->destinationID.next = ff->destinationID.next; //TODO this is a list copy all of them?
-	ff_clone->metaData = params_clone;
+	ff_clone->metaData = meta_clone;
 
 	if (ff_clone->dataOrCtrl == CONTROL) {
 		ff_clone->ctrlFrame.senderID = ff->ctrlFrame.senderID;
@@ -1017,4 +1019,4 @@ void print_hex_block(const u_char *payload, int len) {
 	}
 
 	return;
-} // end of print_frame
+}

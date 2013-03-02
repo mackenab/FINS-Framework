@@ -456,10 +456,6 @@ pcap_close_dlpi(pcap_t *p)
 		close(p->send_fd);
 }
 
-#include <jni.h>
-#include <android/log.h>
-//__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, linux");
-
 pcap_t *
 pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
     char *ebuf)

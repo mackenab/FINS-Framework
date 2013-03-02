@@ -193,10 +193,6 @@ pcap_stats_snoop(pcap_t *p, struct pcap_stat *ps)
 	return (0);
 }
 
-#include <jni.h>
-#include <android/log.h>
-//__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, linux");
-
 /* XXX can't disable promiscuous */
 pcap_t *
 pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
@@ -210,8 +206,6 @@ pcap_open_live(const char *device, int snaplen, int promisc, int to_ms,
 	int snooplen;
 	pcap_t *p;
 	struct ifreq ifr;
-
-	__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, snoop");
 
 	p = (pcap_t *)malloc(sizeof(*p));
 	if (p == NULL) {

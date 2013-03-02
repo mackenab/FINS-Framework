@@ -15,7 +15,7 @@ LOCAL_OBJS :=
 LOCAL_INCS := 
 LOCAL_TYPE := reference #exec
 
-INSTALL_DIR = /data/local/tmp
+INSTALL_DIR = /data/local/fins
 
 #### TARGETS #####
 .PHONY:all

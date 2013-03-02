@@ -142,10 +142,6 @@ static struct device *get_device (int fd)
   return handle_to_device [fd-1];
 }
 
-#include <jni.h>
-#include <android/log.h>
-//__android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, linux");
-
 /*
  * Open MAC-driver with name 'device_name' for live capture of
  * network packets.
@@ -160,9 +156,6 @@ pcap_t *pcap_open_live (const char *device_name, int snaplen, int promisc,
 
   if (snaplen > ETH_MAX)   /* silently accept and truncate large MTUs */
       snaplen = ETH_MAX;
-
-  __android_log_print(ANDROID_LOG_INFO, "FINS", "Entered, dos");
-
 
   pcap = calloc (sizeof(*pcap), 1);
   if (!pcap)

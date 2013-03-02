@@ -68,28 +68,28 @@ void core_termination_handler(int sig) {
 	logger_shutdown();
 	//rtm_shutdown();
 
-	udp_shutdown();
-	tcp_shutdown();
-	icmp_shutdown();
-	ipv4_shutdown();
-	arp_shutdown();
+	//udp_shutdown();
+	//tcp_shutdown();
+	//icmp_shutdown();
+	//ipv4_shutdown();
+	//arp_shutdown();
 
 	interface_shutdown(); //TODO finish
-	daemon_shutdown(); //TODO finish
+	//daemon_shutdown(); //TODO finish
 	switch_shutdown(); //TODO finish
 
 	//have each module free data & que/sem //TODO finish each of these
 	logger_release();
 	//rtm_release();
 
-	udp_release();
-	tcp_release();
-	icmp_release();
-	ipv4_release();
-	arp_release();
+	//udp_release();
+	//tcp_release();
+	//icmp_release();
+	//ipv4_release();
+	//arp_release();
 
 	interface_release();
-	daemon_release();
+	//daemon_release();
 	switch_release();
 
 	sem_destroy(&control_serial_sem);
@@ -118,17 +118,19 @@ void core_main() {
 	//my_host_if_num = 2; //laptop eth0
 	//my_host_if_num = 3; //laptop wlan0
 	//my_host_if_num = 4; //laptop wlan4
-	my_host_if_num = 10; //phone wlan0
+	//my_host_if_num = 10; //phone0 wlan0
+	my_host_if_num = 6; //tablet1 wlan0
 
 	//my_host_mac_addr = 0x080027445566ull; //vbox eth2
 	//my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
 	//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
 	//my_host_mac_addr = 0x00184d8f2a32ull; //laptop wlan4 card
-	my_host_mac_addr = 0xa00bbae94bb0ull; //phone wlan0
+	//my_host_mac_addr = 0xa00bbae94bb0ull; //phone0 wlan0
+	my_host_mac_addr = 0x50465d14e07full; //tablet1 wlan0
 
-	my_host_ip_addr = IP4_ADR_P2H(192,168,1,3); //home testing
+	my_host_ip_addr = IP4_ADR_P2H(192,168,1,5); //home testing
 	my_host_mask = IP4_ADR_P2H(255,255,255,0); //home testing
-	//my_host_ip_addr = IP4_ADR_P2H(172,31,49,250); //lab testing
+	//my_host_ip_addr = IP4_ADR_P2H(172,31,51,55); //lab testing
 	//my_host_mask = IP4_ADR_P2H(255,255,248,0); //lab testing
 
 	//loopback interface
@@ -161,18 +163,18 @@ void core_main() {
 	// Start the driving thread of each module
 	PRINT_IMPORTANT("Initialize Modules");
 	switch_init(); //should always be first
-	daemon_init(); //TODO improve how sets mac/ip
+	//daemon_init(); //TODO improve how sets mac/ip
 	interface_init();
 
-	arp_init();
-	arp_register_interface(my_host_mac_addr, my_host_ip_addr);
+	//arp_init();
+	//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	ipv4_init();
-	ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
+	//ipv4_init();
+	//ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
 
-	icmp_init();
-	tcp_init();
-	udp_init();
+	//icmp_init();
+	//tcp_init();
+	//udp_init();
 
 	//rtm_init(); //TODO when updated/fully implemented
 	logger_init();
@@ -182,14 +184,14 @@ void core_main() {
 
 	PRINT_IMPORTANT("Run/start Modules");
 	switch_run(&fins_pthread_attr);
-	daemon_run(&fins_pthread_attr);
+	//daemon_run(&fins_pthread_attr);
 	interface_run(&fins_pthread_attr);
 
-	arp_run(&fins_pthread_attr);
-	ipv4_run(&fins_pthread_attr);
-	icmp_run(&fins_pthread_attr);
-	tcp_run(&fins_pthread_attr);
-	udp_run(&fins_pthread_attr);
+	//arp_run(&fins_pthread_attr);
+	//ipv4_run(&fins_pthread_attr);
+	//icmp_run(&fins_pthread_attr);
+	//tcp_run(&fins_pthread_attr);
+	//udp_run(&fins_pthread_attr);
 
 	//rtm_run(&fins_pthread_attr);
 	logger_run(&fins_pthread_attr);
@@ -204,22 +206,22 @@ void core_main() {
 
 			PRINT_DEBUG("Sending ARP req");
 
-			metadata *params_req = (metadata *) secure_malloc(sizeof(metadata));
-			metadata_create(params_req);
+			metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta_req);
 
-			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
-			//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 50, 152);
-			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
+			//uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 11);
+			uint32_t dst_ip = IP4_ADR_P2H(172, 31, 54, 169);
+			uint32_t src_ip = my_host_ip_addr; //IP4_ADR_P2H(192, 168, 1, 20);
 			//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
 
-			secure_metadata_writeToElement(params_req, "dst_ip", &dst_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(params_req, "src_ip", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
 
 			struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 			ff_req->dataOrCtrl = CONTROL;
 			ff_req->destinationID.id = ARP_ID;
 			ff_req->destinationID.next = NULL;
-			ff_req->metaData = params_req;
+			ff_req->metaData = meta_req;
 
 			ff_req->ctrlFrame.senderID = IPV4_ID;
 			ff_req->ctrlFrame.serial_num = gen_control_serial_num();
@@ -251,48 +253,53 @@ void core_main() {
 				uint8_t *data = (uint8_t *) secure_malloc(len);
 				memset(data, 74, len);
 
-				metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-				metadata_create(params);
+				metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+				metadata_create(meta);
 
-				uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
+				//uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
+				uint32_t host_ip = my_host_ip_addr;
 				uint32_t host_port = 55454;
-				uint32_t dst_ip = IP4_ADR_P2H(192,168,1,7);
+				uint32_t dst_ip = IP4_ADR_P2H(192,168,1,3);
+				//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 54, 169);
 				uint32_t dst_port = 44444;
 				uint32_t ttl = 64;
 				uint32_t tos = 64;
 
-				secure_metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_src_port", &host_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
 				struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff->dataOrCtrl = DATA;
 				ff->destinationID.id = UDP_ID;
 				ff->destinationID.next = NULL;
-				ff->metaData = params;
+				ff->metaData = meta;
 
 				ff->dataFrame.directionFlag = DIR_DOWN;
 				ff->dataFrame.pduLength = len;
 				ff->dataFrame.pdu = data;
 
-				PRINT_DEBUG("sending: ff=%p, meta=%p", ff, params);
-				if (arp_to_switch(ff)) {
-					i++;
-				} else {
-					PRINT_ERROR("freeing: ff=%p", ff);
-					freeFinsFrame(ff);
-					return;
+				PRINT_IMPORTANT("sending: ff=%p, meta=%p", ff, meta);
+				if (1) {
+					if (arp_to_switch(ff)) {
+						i++;
+					} else {
+						PRINT_ERROR("freeing: ff=%p", ff);
+						freeFinsFrame(ff);
+						return;
+					}
 				}
+				sleep(5);
 
 				if (0) {
-					if (daemon_fdf_to_switch(UDP_ID, data, len, params)) {
+					if (daemon_fdf_to_switch(UDP_ID, data, len, meta)) {
 						i++;
 					} else {
 						PRINT_ERROR("error sending");
-						metadata_destroy(params);
+						metadata_destroy(meta);
 						free(data);
 						break;
 					}
@@ -301,9 +308,11 @@ void core_main() {
 
 			//struct timeval start, end;
 			//gettimeofday(&start, 0);
-			gettimeofday(&end, 0);
-			double diff = time_diff(&start, &end);
-			PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
+			if (0) {
+				gettimeofday(&end, 0);
+				double diff = time_diff(&start, &end);
+				PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
+			}
 			break;
 		}
 	}
@@ -326,8 +335,8 @@ void core_main() {
 				uint8_t *data = (uint8_t *) secure_malloc(len);
 				memset(data, 74, len);
 
-				metadata *params = (metadata *) secure_malloc(sizeof(metadata));
-				metadata_create(params);
+				metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+				metadata_create(meta);
 
 				uint32_t host_ip = IP4_ADR_P2H(192,168,1,7);
 				uint32_t host_port = 55454;
@@ -336,24 +345,24 @@ void core_main() {
 				uint32_t ttl = 64;
 				uint32_t tos = 64;
 
-				secure_metadata_writeToElement(params, "send_src_ip", &host_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_src_port", &host_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_dst_port", &dst_port, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_ttl", &ttl, META_TYPE_INT32);
-				secure_metadata_writeToElement(params, "send_tos", &tos, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
+				secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
 				struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff->dataOrCtrl = DATA;
 				ff->destinationID.id = UDP_ID;
 				ff->destinationID.next = NULL;
-				ff->metaData = params;
+				ff->metaData = meta;
 
 				ff->dataFrame.directionFlag = DIR_DOWN;
 				ff->dataFrame.pduLength = len;
 				ff->dataFrame.pdu = data;
 
-				PRINT_DEBUG("sending: ff=%p, meta=%p", ff, params);
+				PRINT_DEBUG("sending: ff=%p, meta=%p", ff, meta);
 				if (arp_to_switch(ff)) {
 					i++;
 				} else {
@@ -363,11 +372,11 @@ void core_main() {
 				}
 
 				if (0) {
-					if (daemon_fdf_to_switch(UDP_ID, data, len, params)) {
+					if (daemon_fdf_to_switch(UDP_ID, data, len, meta)) {
 						i++;
 					} else {
 						PRINT_ERROR("error sending");
-						metadata_destroy(params);
+						metadata_destroy(meta);
 						free(data);
 						break;
 					}

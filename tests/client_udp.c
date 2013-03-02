@@ -12,14 +12,16 @@
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
+#ifndef BUILD_FOR_ANDROID
 #include <sys/timerfd.h>
+#endif
 #include <time.h>
 #include <unistd.h>
 
-#include <pthread.h>
-#include <semaphore.h>
+//#include <pthread.h>
+//#include <semaphore.h>
 #include <stdint.h>
-#include <libconfig.h>
+//#include <libconfig.h>
 
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
