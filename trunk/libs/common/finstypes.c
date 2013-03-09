@@ -216,7 +216,8 @@ int list_check(struct linked_list *list) { //TODO remove all references
 			PRINT_DEBUG("count=%d, node=%p", count, temp);
 			count++;
 			temp = temp->next;
-		}PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
+		}
+		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
 		return 0;
 	}
 }
@@ -266,7 +267,7 @@ uint8_t *list_remove_front(struct linked_list *list) {
 
 		list->len--;
 		uint8_t *data = node->data;
-		PRINT_DEBUG("freeing: node=%p",node);
+		PRINT_DEBUG("freeing: node=%p", node);
 		free(node);
 
 		//list_check(list);
@@ -302,7 +303,7 @@ void list_remove(struct linked_list *list, uint8_t *data) {
 				//node->prev = NULL;
 			}
 			list->len--;
-			PRINT_DEBUG("freeing: node=%p",node);
+			PRINT_DEBUG("freeing: node=%p", node);
 			free(node);
 
 			//list_check(list);
@@ -348,7 +349,8 @@ void list_free(struct linked_list *list) {
 		if (node->data) {
 			PRINT_DEBUG("freeing: data=%p", node->data);
 			free(node->data);
-		}PRINT_DEBUG("freeing: node=%p",node);
+		}
+		PRINT_DEBUG("freeing: node=%p", node);
 		free(node);
 
 		node = next;
@@ -544,12 +546,10 @@ void print_finsFrame(struct finsFrame *ff) {
 				ff, ff->destinationID.id, ff->metaData, ff->dataFrame.directionFlag, ff->dataFrame.pduLength, ff->dataFrame.pdu);
 		metadata_print(ff->metaData);
 
-		int i = 0;
-		while (i < ff->dataFrame.pduLength) {
-			PRINT_DEBUG("%d", ff->dataFrame.pdu[i]);
-			i++;
+#ifdef DEBUG
+		print_hex(ff->dataFrame.pduLength,ff->dataFrame.pdu);
+#endif
 
-		}
 		//######################
 #ifdef DEBUG
 		char *temp = (char *) secure_malloc(ff->dataFrame.pduLength + 1);
@@ -563,10 +563,13 @@ void print_finsFrame(struct finsFrame *ff) {
 		PRINT_IMPORTANT("frame: ff=%p, CONTROL, dst=%u, meta=%p, sender=%u, serial_num=%u, opcode=%u, param_id=%u, data_len=%u, data=%p",
 				ff, ff->destinationID.id, ff->metaData, ff->ctrlFrame.senderID, ff->ctrlFrame.serial_num, ff->ctrlFrame.opcode, ff->ctrlFrame.param_id, ff->ctrlFrame.data_len, ff->ctrlFrame.data);
 		metadata_print(ff->metaData);
+
+#ifdef DEBUG
+		print_hex(ff->ctrlFrame.data_len,ff->ctrlFrame.data);
+#endif
 	} else {
 		PRINT_ERROR("todo error");
 	}
-
 }
 
 /**@brief copies the contents of one fins frame into another
@@ -637,7 +640,8 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("here");
 			ff_clone->ctrlFrame.data = NULL;
-		}PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
+		}
+		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
 				ff, ff->metaData, ff->ctrlFrame.data, ff_clone, ff_clone->metaData, ff_clone->ctrlFrame.data);
 	} else if (ff_clone->dataOrCtrl == DATA) {
 		ff_clone->dataFrame.directionFlag = ff->dataFrame.directionFlag;
@@ -649,7 +653,8 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("here");
 			ff_clone->dataFrame.pdu = NULL;
-		}PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
+		}
+		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, pdu=%p; clone: ff=%p, meta=%p, pdu=%p",
 				ff, ff->metaData, ff->dataFrame.pdu, ff_clone, ff_clone->metaData, ff_clone->dataFrame.pdu);
 	} else {
 		PRINT_ERROR("todo error");
@@ -1019,4 +1024,25 @@ void print_hex_block(const u_char *payload, int len) {
 	}
 
 	return;
+}
+
+void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
+	uint8_t *temp = (uint8_t *) malloc(3 * msg_len + 1);
+	uint8_t *pt = temp;
+	int i;
+	for (i = 0; i < msg_len; i++) {
+		if (i == 0) {
+			sprintf((char *) pt, "%02x", msg_pt[i]);
+			pt += 2;
+		} else if (i % 4 == 0) {
+			sprintf((char *) pt, ":%02x", msg_pt[i]);
+			pt += 3;
+		} else {
+			sprintf((char *) pt, " %02x", msg_pt[i]);
+			pt += 3;
+		}
+	}
+	temp[3 * msg_len] = '\0';
+	PRINT_IMPORTANT("msg_len=%u, msg='%s'\n", msg_len, temp);
+	free(temp);
 }

@@ -21,19 +21,25 @@ TARGET_PLATFORM := "Android arch-ARM"
 NDK_PLATFORM_VER := 14
 ANDROID_NDK_ROOT := /opt/android/android-ndk-r8d
 USR := $(ANDROID_NDK_ROOT)/platforms/android-$(NDK_PLATFORM_VER)/arch-arm/usr
-BIN := /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin
+#BIN := /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin
+BIN := $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin
 
-CC := $(BIN)/arm-eabi-gcc
+#CC := $(BIN)/arm-eabi-gcc
+CC := $(BIN)/arm-linux-androideabi-gcc
 CCOPTS := -DBUILD_FOR_ANDROID
 CCOPTS += -g -O2 -Wall #flags for valgrind
 INCLS := -I$(USR)/include
 
-LD := $(BIN)/arm-eabi-gcc
+#LD := $(BIN)/arm-eabi-gcc
+LD := $(BIN)/arm-linux-androideabi-gcc
 LDOPTS := -g -O2 -Wall #flags for valgrind
 LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
 #LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcc.a
+#LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcov.a
 LIBPATHS := -L$(USR)/lib 
-LIBS := -lc -llog -lm #-lgcc #-lrt
+#LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3
+#LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.6
+LIBS := -lc -lgcc -llog -lm #-lc -lgcc #-lrt
 
 GDB_CLIENT := $(BIN)/arm-eabi-gdb
 
@@ -41,7 +47,7 @@ FOLDER_LIST := trunk #tests
 EXECS_LIST := capturer launcher wedge
 
 COMMON_LIBS := libconfig
-CAPTURER_LIBS := libpcap #libglue
+CAPTURER_LIBS := libglue libpcap
 LAUNCHER_LIBS := 
 WEDGE_LIBS :=
 
@@ -97,6 +103,8 @@ WEDGE_LIBS :=
 CORE_MODULES := switch daemon interface arp ipv4 icmp tcp udp logger rtm
 endif
 
+
+###### Common stuff ######
 #needs to be deferred
 CFLAGS = $(CCOPTS) $(INCLS)
 LDFLAGS = $(LDOPTS) $(LIBPATHS) $(LIBS)

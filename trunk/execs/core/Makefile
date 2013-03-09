@@ -12,6 +12,7 @@ LOCAL_NAME := core
 LOCAL_LIBS := $(CORE_LIBS)
 #LOCAL_MODS := $(CORE_MODULES)
 LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
+#this code breaks if anything besides folders containing modules are in MODULES_DIR
 LOCAL_OBJS := core.o
 LOCAL_INCS := .
 LOCAL_TYPE := exec #reference
@@ -106,7 +107,7 @@ reference:
 #.PHONY:exec
 exec:$(CURR_OBJS)
 #	@echo "CURR_OBJS='$(CURR_OBJS)'"
-	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
+	@$(LD) $(CURR_OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
 clean:clean_local clean_$(STRIP_TYPE)
@@ -114,7 +115,7 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
 endif
 
-clean_local:
+clean_local:clean_exec
 	@rm -f *.o *.a
 	@rm -f INCS.finsmk OBJS.finsmk
 	@echo "cleaned[$(MAKELEVEL)]:$(STRIP_NAME)\n";

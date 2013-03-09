@@ -123,7 +123,7 @@ reference:
 #.PHONY:exec
 exec:$(CURR_OBJS)
 #	@echo "CURR_OBJS='$(CURR_OBJS)'"
-	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
+	@$(LD) $(CURR_OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
 clean:clean_local clean_$(STRIP_TYPE)

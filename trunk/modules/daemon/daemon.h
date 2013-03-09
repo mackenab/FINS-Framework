@@ -364,8 +364,6 @@ int randoming(int min, int max);
 
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//8192 //Pick an appropriate value here
 
-void print_hex(uint32_t msg_len, uint8_t *msg_pt);
-
 int init_fins_nl(void);
 int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags);
 int nack_send(uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);

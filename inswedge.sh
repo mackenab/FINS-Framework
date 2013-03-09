@@ -1,5 +1,5 @@
-rmmod -f trunk/wedge/fins_stack_wedge
-insmod trunk/wedge/fins_stack_wedge.ko
+sudo rmmod -f trunk/execs/wedge/fins_stack_wedge.ko
+sudo insmod trunk/execs/wedge/fins_stack_wedge.ko
 read -p "..."
 dmesg > output.txt
 

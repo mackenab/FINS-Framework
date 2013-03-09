@@ -27,27 +27,6 @@ int daemon_thread_count;
 
 uint8_t daemon_interrupt_flag;
 
-void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
-	uint8_t *temp = (uint8_t *) secure_malloc(3 * msg_len + 1);
-	uint8_t *pt = temp;
-	int i;
-	for (i = 0; i < msg_len; i++) {
-		if (i == 0) {
-			sprintf((char *) pt, "%02x", msg_pt[i]);
-			pt += 2;
-		} else if (i % 4 == 0) {
-			sprintf((char *) pt, ":%02x", msg_pt[i]);
-			pt += 3;
-		} else {
-			sprintf((char *) pt, " %02x", msg_pt[i]);
-			pt += 3;
-		}
-	}
-	temp[3 * msg_len] = '\0';
-	PRINT_DEBUG("msg='%s'", temp);
-	free(temp);
-}
-
 int init_fins_nl(void) {
 	int sockfd;
 	int ret;

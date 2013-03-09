@@ -1,7 +1,7 @@
 #ifndef FINS_STACK_WEDGE_H_
 #define FINS_STACK_WEDGE_H_
 
-//#include <linux/module.h>	/* Needed by all modules */
+#include <linux/module.h>	/* Needed by all modules */
 //#include <linux/kernel.h>	/* Needed for KERN_INFO */
 //#include <linux/init.h>		/* Needed for the macros */
 #include <net/sock.h>		/* Needed for proto and sock struct defs, etc. */

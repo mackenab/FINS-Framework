@@ -9,7 +9,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 LOCAL_NAME := capturer
-LOCAL_LIBS := $(CAPTURER_LIBS) 
+LOCAL_LIBS := $(CAPTURER_LIBS)
 LOCAL_MODS := 
 LOCAL_OBJS := ethermod.o htoi.o wifistub.o
 LOCAL_INCS := .
@@ -117,7 +117,7 @@ reference:
 #.PHONY:exec
 exec:$(CURR_OBJS)
 #	@echo "CURR_OBJS='$(CURR_OBJS)'"
-	@$(LD) $(LDFLAGS) $(CURR_OBJS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
+	@$(LD) $(CURR_OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(STRIP_NAME)/$(STRIP_NAME) 
 
 .PHONY:clean
 clean:clean_local clean_$(STRIP_TYPE)
@@ -125,7 +125,7 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
 endif
 
-clean_local:
+clean_local:clean_exec
 	@rm -f *.o *.a
 	@rm -f INCS.finsmk OBJS.finsmk
 	@echo "cleaned[$(MAKELEVEL)]:$(STRIP_NAME)\n";

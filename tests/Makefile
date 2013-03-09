@@ -1,5 +1,11 @@
+LOCAL_DIR := $(PWD)
+
+ifndef FINS_ROOT_DIR
+export FINS_ROOT_DIR := $(abspath $(LOCAL_DIR)/..)
+endif
+
 # fins.mk contains the compiler and linker options for each target platform
-include ../settings.finsmk
+include $(FINS_ROOT_DIR)/settings.finsmk
 
 #This is the Module name. This MUST be that same as the current directory!!!
 PROJECT_NAME = tests
@@ -26,31 +32,31 @@ all:$(EXECUTABLES) userspace_tests
 
 client_icmp:client_icmp.c
 	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
+	@$(LD) $@.o $(LDFLAGS) -o $@
 
 client_tcp:client_tcp.c
 	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
-	
+	@$(LD) $@.o $(LDFLAGS) -o $@
+
 client_udp:client_udp.c
-	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
+	$(CC) $(CFLAGS) -c $<
+	$(LD) $@.o $(LDFLAGS) -o $@
 
 server_icmp:server_icmp.c
 	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
+	@$(LD) $@.o $(LDFLAGS) -o $@
 
 server_tcp:server_tcp.c
 	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
+	@$(LD) $@.o $(LDFLAGS) -o $@
 
 server_udp:server_udp.c
 	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
+	@$(LD) $@.o $(LDFLAGS) -o $@
 
 server_forks:server_forks.c
 	@$(CC) $(CFLAGS) -c $<
-	@$(LD) $(LDFLAGS) $@.o -o $@
+	@$(LD) $@.o $(LDFLAGS) -o $@
 
 userspace_tests:
 	@cd Userspace_tests; make all

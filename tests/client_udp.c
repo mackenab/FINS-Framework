@@ -66,6 +66,38 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 }
 
 int main(int argc, char *argv[]) {
+	if (1) { //test assembly instructions (replaced in glue.h)
+		uint32_t test1 = 7;
+		uint32_t test2 = 2;
+		printf("test1=%u\n", test1 / test2);
+		test1 = 9;
+		test2 = 3;
+		printf("test2=%u\n", test1 / test2);
+		test1 = 4;
+		test2 = 5;
+		printf("test3=%u\n", test1 / test2);
+
+		int32_t test3 = 7;
+		int32_t test4 = 2;
+		printf("test4=%d\n", test3 / test4);
+		test3 = 9;
+		test4 = 3;
+		printf("test5=%d\n", test3 / test4);
+		test3 = 4;
+		test4 = 5;
+		printf("test6=%d\n", test3 / test4);
+
+		double test5 = 7;
+		double test6 = 2;
+		printf("test7=%f\n", test5 / test6);
+		test5 = 9;
+		test6 = 3;
+		printf("test8=%f\n", test5 / test6);
+		test5 = 4;
+		test6 = 5;
+		printf("test9=%f\n", test5 / test6);
+	}
+
 	printf("SOCK_RAW=%u\n", SOCK_RAW);
 	printf("SOCK_STREAM=%u\n", SOCK_STREAM);
 	printf("SOCK_DGRAM=%u\n", SOCK_DGRAM);
@@ -97,6 +129,7 @@ int main(int argc, char *argv[]) {
 		perror("socket");
 		exit(1);
 	}
+	printf("here1\n");fflush(stdout);
 
 	int val = 0;
 	setsockopt(sock, SOL_IP, IP_MTU_DISCOVER, &val, sizeof(val));
@@ -106,18 +139,19 @@ int main(int argc, char *argv[]) {
 	setsockopt(sock, SOL_IP, IP_RECVTTL, &val, sizeof(val));
 	val = 1;
 	setsockopt(sock, SOL_IP, IP_RECVERR, &val, sizeof(val));
-
+	printf("here2\n");fflush(stdout);
 	//fcntl64(3, F_SETFL, O_RDONLY|O_NONBLOCK) = 0
 	//fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/16-22:31:09, st_mtime=2012/10/16-22:31:09, st_ctime=2012/10/16-19:33:02}) = 0
 
 	val = 3;
 	setsockopt(sock, SOL_IP, IP_TTL, &val, sizeof(val));
-
-	if (argc > 1) {
-		port = atoi(argv[1]);
-	} else {
+	printf("here3\n");fflush(stdout);
+	//if (argc > 1) { //doesn't work fro android
+	//	port = atoi(argv[1]);
+	//} else {
 		port = 45454;
-	}
+	//}
+	printf("here4\n");fflush(stdout);
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
@@ -126,7 +160,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,2);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -137,11 +171,11 @@ int main(int argc, char *argv[]) {
 			server_addr.sin_addr.s_addr);
 	fflush(stdout);
 
-	if (argc > 2) {
-		client_port = atoi(argv[2]);
-	} else {
+	//if (argc > 2) {
+	//	client_port = atoi(argv[2]);
+	//} else {
 		client_port = 55555;
-	}
+	//}
 	client_addr.sin_family = PF_INET;
 	client_addr.sin_port = htons(client_port);
 
@@ -213,178 +247,173 @@ int main(int argc, char *argv[]) {
 	struct timeval curr;
 	struct timeval *stamp;
 
-	if (0) {
-		int len;
-		int i = 0;
-		while (1) {
-			i++;
-			if (1) {
-				printf("(%d) Input msg (q or Q to quit):", i);
-				fflush(stdout);
-				gets(send_data);
+	/*
+	 if (0) {
+	 int len;
+	 int i = 0;
+	 while (1) {
+	 i++;
+	 if (1) {
+	 printf("(%d) Input msg (q or Q to quit):", i);
+	 fflush(stdout);
+	 gets(send_data);
 
-				//len = strlen(send_data);
-				len = 1000;
-				printf("\nlen=%d, str='%s'\n", len, send_data);
-				fflush(stdout);
-				if (len > 0 && len < send_len) {
-					gettimeofday(&curr, 0);
-					numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-					//sleep(1);
+	 //len = strlen(send_data);
+	 len = 1000;
+	 printf("\nlen=%d, str='%s'\n", len, send_data);
+	 fflush(stdout);
+	 if (len > 0 && len < send_len) {
+	 gettimeofday(&curr, 0);
+	 numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+	 //sleep(1);
 
-					ret = poll(fds, nfds, time);
-					if (ret || 0) {
-						if (1) {
-							printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
-							printf(
-									"POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-									(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents
-											& POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-									(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-									(fds[ret].revents & POLLWRBAND) > 0);
-							fflush(stdout);
-						}
+	 ret = poll(fds, nfds, time);
+	 if (ret || 0) {
+	 if (1) {
+	 printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
+	 printf(
+	 "POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
+	 (fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+	 (fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+	 (fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+	 (fds[ret].revents & POLLWRBAND) > 0);
+	 fflush(stdout);
+	 }
 
-						int recv_bytes;
-						if ((fds[ret].revents & (POLLERR)) || 0) {
-							recv_bytes = recvmsg(sock, &recv_msg, MSG_ERRQUEUE);
-							if (recv_bytes > 0) {
-								printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
+	 int recv_bytes;
+	 if ((fds[ret].revents & (POLLERR)) || 0) {
+	 recv_bytes = recvmsg(sock, &recv_msg, MSG_ERRQUEUE);
+	 if (recv_bytes > 0) {
+	 printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
 
-								/* Receive auxiliary data in msgh */
-								for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
-									printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
+	 //Receive auxiliary data in msgh
+	 for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
+	 printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
-									if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
-										received_ttl = *(int *) CMSG_DATA(cmsg);
-										printf("received_ttl=%d\n", received_ttl);
-										//break;
-									} else if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVERR) {
-										struct sock_extended_err *err = (struct sock_extended_err *) CMSG_DATA(cmsg);
-										printf("ee_errno=%u, ee_origin=%u, ee_type=%u, ee_code=%u, ee_pad=%u, ee_info=%u, ee_data=%u\n", err->ee_errno,
-												err->ee_origin, err->ee_type, err->ee_code, err->ee_pad, err->ee_info, err->ee_data);
+	 if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
+	 received_ttl = *(int *) CMSG_DATA(cmsg);
+	 printf("received_ttl=%d\n", received_ttl);
+	 //break;
+	 } else if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVERR) {
+	 struct sock_extended_err *err = (struct sock_extended_err *) CMSG_DATA(cmsg);
+	 printf("ee_errno=%u, ee_origin=%u, ee_type=%u, ee_code=%u, ee_pad=%u, ee_info=%u, ee_data=%u\n", err->ee_errno,
+	 err->ee_origin, err->ee_type, err->ee_code, err->ee_pad, err->ee_info, err->ee_data);
 
-										struct sockaddr_in *offender = (struct sockaddr_in *) SO_EE_OFFENDER(err);
-										printf("family=%u, addr=%s/%u\n", offender->sin_family, inet_ntoa(offender->sin_addr), ntohs(offender->sin_port));
-									} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
-										struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
-										printf("stamp=%u.%u\n", (uint32_t) stamp->tv_sec, (uint32_t) stamp->tv_usec);
-										printf("diff=%f\n", time_diff(&curr, stamp));
-									}
-								}
-								if (cmsg == NULL) {
-									/*
-									 * Error: IP_TTL not enabled or small buffer
-									 * or I/O error.
-									 */
-								}
+	 struct sockaddr_in *offender = (struct sockaddr_in *) SO_EE_OFFENDER(err);
+	 printf("family=%u, addr=%s/%u\n", offender->sin_family, inet_ntoa(offender->sin_addr), ntohs(offender->sin_port));
+	 } else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
+	 struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
+	 printf("stamp=%u.%u\n", (uint32_t) stamp->tv_sec, (uint32_t) stamp->tv_usec);
+	 printf("diff=%f\n", time_diff(&curr, stamp));
+	 }
+	 }
+	 if (cmsg == NULL) {
+	 //Error: IP_TTL not enabled or small buffer or I/O error.
+	 }
 
-							} else {
-								printf("errno=%d\n", errno);
-								perror("recvmsg");
-							}
-						} else if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
-							recv_bytes = recvmsg(sock, &recv_msg, 0);
-							if (recv_bytes > 0) {
-								printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
+	 } else {
+	 printf("errno=%d\n", errno);
+	 perror("recvmsg");
+	 }
+	 } else if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
+	 recv_bytes = recvmsg(sock, &recv_msg, 0);
+	 if (recv_bytes > 0) {
+	 printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
 
-								/* Receive auxiliary data in msgh */
-								for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
-									printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
+	 //Receive auxiliary data in msgh
+	 for (cmsg = CMSG_FIRSTHDR(&recv_msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv_msg, cmsg)) {
+	 printf("cmsg_len=%u, cmsg_level=%u, cmsg_type=%u\n", cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
-									if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
-										received_ttl = *(int *) CMSG_DATA(cmsg);
-										printf("received_ttl=%d\n", received_ttl);
-										//break;
-									} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
-										struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
-									}
-								}
-								if (cmsg == NULL) {
-									/*
-									 * Error: IP_TTL not enabled or small buffer
-									 * or I/O error.
-									 */
-								}
+	 if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_TTL) {
+	 received_ttl = *(int *) CMSG_DATA(cmsg);
+	 printf("received_ttl=%d\n", received_ttl);
+	 //break;
+	 } else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
+	 struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
+	 }
+	 }
+	 if (cmsg == NULL) {
+	 //Error: IP_TTL not enabled or small buffer or I/O error.
+	 }
 
-							}
-						}
-					}
-				} else {
-					printf("Error string len, len=%d\n", len);
-				}
-			}
+	 }
+	 }
+	 }
+	 } else {
+	 printf("Error string len, len=%d\n", len);
+	 }
+	 }
 
-			if (0) {
-				if (pID == 0) {
-					numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-					printf("\n sent=%d", numbytes);
-					numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-					printf("\n sent=%d", numbytes);
-				} else {
-					//numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
-					printf("\n read=%d", numbytes);
-				}
-				fflush(stdout);
-			}
+	 if (0) {
+	 if (pID == 0) {
+	 numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+	 printf("\n sent=%d", numbytes);
+	 numbytes = sendto(sock, send_data, 1, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+	 printf("\n sent=%d", numbytes);
+	 } else {
+	 //numbytes = recvfrom(sock, send_data, 1024, 0, (struct sockaddr *) &client_addr, &addr_len);
+	 printf("\n read=%d", numbytes);
+	 }
+	 fflush(stdout);
+	 }
 
-			if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
-				break;
-			}
-		}
-	}
+	 if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
+	 break;
+	 }
+	 }
+	 }
+
+	 if (0) {
+	 struct timeval start, end;
+	 int its = 10; //10000;
+
+	 int data_len = 1000;
+	 while (data_len < 4000) {
+	 gets(send_data);
+	 //data_len += 100;
+	 //data_len = 1000;
+
+	 int total_bytes = 0;
+	 double total_time = 0;
+	 int total_success = 0;
+	 double diff;
+
+	 int i = 0;
+	 while (i < its) {
+	 i++;
+
+	 gettimeofday(&start, 0);
+	 numbytes = sendto(sock, send_data, data_len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
+	 gettimeofday(&end, 0);
+	 diff = time_diff(&start, &end);
+
+	 if (numbytes > 0) {
+	 total_success++;
+	 total_bytes += numbytes;
+	 total_time += diff;
+	 }
+
+	 //usleep(100);
+	 }
+
+	 //printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
+	 printf("\n len=%d, time=%f, suc=%d, bytes=%d, avg=%f ms, eff=%f, thr=%f, calls=%f, act=%f", data_len, total_time, total_success, total_bytes,
+	 total_time / total_success, total_success / (double) its, total_bytes / (double) its / data_len, 1000 / (total_time / total_success),
+	 1000 / (total_time / total_success) * data_len * 8);
+	 fflush(stdout);
+
+	 //sleep(5);
+	 }
+	 }
+	 */
 
 	if (1) {
-		struct timeval start, end;
-		int its = 10;//10000;
+		double total = 10;
+		double speed = 200000; //bits per sec
+		int len = 1000; //msg size
 
-		int data_len = 1000;
-		while (data_len < 4000) {
-			gets(send_data);
-			//data_len += 100;
-			//data_len = 1000;
-
-			int total_bytes = 0;
-			double total_time = 0;
-			int total_success = 0;
-			double diff;
-
-			int i = 0;
-			while (i < its) {
-				i++;
-
-				gettimeofday(&start, 0);
-				numbytes = sendto(sock, send_data, data_len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
-				gettimeofday(&end, 0);
-				diff = time_diff(&start, &end);
-
-				if (numbytes > 0) {
-					total_success++;
-					total_bytes += numbytes;
-					total_time += diff;
-				}
-
-				//usleep(100);
-			}
-
-			//printf("\n diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, data_len, diff / its, 1000 / (diff / its), 1000 / (diff / its) * data_len);
-			printf("\n len=%d, time=%f, suc=%d, bytes=%d, avg=%f ms, eff=%f, thr=%f, calls=%f, act=%f", data_len, total_time, total_success, total_bytes,
-					total_time / total_success, total_success / (double) its, total_bytes / (double) its / data_len, 1000 / (total_time / total_success), 1000
-							/ (total_time / total_success) * data_len * 8);
-			fflush(stdout);
-
-			//sleep(5);
-		}
-	}
-
-	if (0) {
-		int i = 0;
-		int its = 10000;
-		double speed = 15000000;
-		int len = 1000;
 		double time = 8 * len / speed * 1000000;
-		int use = (int) (time + .5);//ceil(time);
-
+		int use = (int) (time + .5); //ceil(time);
 		printf("time=%f, used=%u\n", time, use);
 		fflush(stdout);
 
@@ -395,10 +424,15 @@ int main(int argc, char *argv[]) {
 		struct timeval start, end;
 		gettimeofday(&start, 0);
 
+		//char temp_buff[100];
+
+		int i = 0;
 		while (1) {
+			//gets(temp_buff);
 			*data = htonl(i);
 			numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			if (numbytes != len) {
+				printf("error: len=%d, numbytes=%d\n", len, numbytes);
 				break;
 			}
 
@@ -407,10 +441,15 @@ int main(int argc, char *argv[]) {
 				diff = time_diff(&start, &end) / 1000;
 				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
 				fflush(stdout);
+
+				if (total <= diff) {
+					break;
+				}
 			}
+			//break;
 
 			i++;
-			//usleep(use);
+			usleep(use);
 		}
 	}
 

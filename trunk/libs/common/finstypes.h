@@ -205,5 +205,6 @@ struct finsFrame *unserializeCtrlFrame(uint8_t *, int);
 
 void print_hex_ascii_line(const u_char *payload, int len, int offset);
 void print_hex_block(const u_char *payload, int len);
+void print_hex(uint32_t msg_len, uint8_t *msg_pt);
 
 #endif /* FINSTYPES_H_ */

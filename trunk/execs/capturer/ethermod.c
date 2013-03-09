@@ -82,8 +82,10 @@ void capturer_main(void) {
 	PRINT_IMPORTANT("Entered");
 
 	print_app_banner();
+	int ret;
 
 	/*
+	 if (0) { //tests socket creation
 	 //char recv_data[4000];
 	 while (0) {
 	 //gets(recv_data);
@@ -116,14 +118,41 @@ void capturer_main(void) {
 	 int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
 	 PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
 	 }
-	 */
-	int ret = 1;
+	 }
 
-	uint32_t test1 = 5;
-	uint32_t test2 = 2;
-	PRINT_IMPORTANT("test=%d", test1/test2);
+	 if (0) { //test assembly instructions (replaced in glue.h)
+	 uint32_t test1 = 7;
+	 uint32_t test2 = 2;
+	 PRINT_IMPORTANT("test1=%d", test1/test2);
+	 test1 = 9;
+	 test2 = 3;
+	 PRINT_IMPORTANT("test2=%d", test1/test2);
+	 test1 = 4;
+	 test2 = 5;
+	 PRINT_IMPORTANT("test3=%d", test1/test2);
 
-	if (0) {
+	 int32_t test3 = 7;
+	 int32_t test4 = 2;
+	 PRINT_IMPORTANT("test4=%d", test3/test4);
+	 test3 = 9;
+	 test4 = 3;
+	 PRINT_IMPORTANT("test5=%d", test3/test4);
+	 test3 = 4;
+	 test4 = 5;
+	 PRINT_IMPORTANT("test6=%d", test3/test4);
+
+	 double test5 = 7;
+	 double test6 = 2;
+	 PRINT_IMPORTANT("test7=%f", test5/test6);
+	 test5 = 9;
+	 test6 = 3;
+	 PRINT_IMPORTANT("test8=%f", test5/test6);
+	 test5 = 4;
+	 test6 = 5;
+	 PRINT_IMPORTANT("test9=%f", test5/test6);
+	 }
+
+	if (0) { //test interfaces
 		int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 		struct ifreq ifr;
@@ -137,30 +166,23 @@ void capturer_main(void) {
 
 		close(fd);
 		printf("FIN, waiting\n");
-		while(1);
+		while (1)
+			;
 		return;
 	}
 
-	(void) signal(SIGINT, capturer_termination_handler);
-
-	/*
 	 PRINT_IMPORTANT("Gaining su status");
 	 if ((ret = system("su"))) {
 	 PRINT_ERROR("SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
 	 }
 	 */
 
+	(void) signal(SIGINT, capturer_termination_handler);
+
 	PRINT_IMPORTANT("Attempting to make " FINS_TMP_ROOT "");
 	if ((ret = system("mkdir " FINS_TMP_ROOT))) {
 		PRINT_IMPORTANT(FINS_TMP_ROOT " already exists! Cleaning...");
 		// if cannot create directory, assume it contains files and try to delete them
-		/*
-		 if ((ret = system("cd " FINS_TMP_ROOT ";rm *"))) {
-		 PRINT_ERROR("File removal fail: ret=%d, errno=%u, str='%s', path='%s'", ret, errno, strerror(errno), FINS_TMP_ROOT);
-		 } else {
-		 PRINT_IMPORTANT(FINS_TMP_ROOT " was cleaned successfully.");
-		 }
-		 */
 	}
 	fflush(stdout);
 
@@ -185,7 +207,8 @@ void capturer_main(void) {
 		char device_capture[20];
 		strcpy(device_capture, device);
 		capture_init(device_capture);
-		while (1);
+		while (1)
+			;
 	} else { // parent
 		PRINT_DEBUG("inject: pID=%d", (int)pID);
 		char device_inject[20];
