@@ -30,7 +30,7 @@ void *worker_thread(void *local) {
 				worker->work = request->work;
 				worker->local = request->local;
 
-				PRINT_DEBUG("freeing: request=%p",request);
+				PRINT_DEBUG("freeing: request=%p", request);
 				free(request);
 				sem_post(worker->inactive_sem);
 			} else {
@@ -126,7 +126,8 @@ void *controller_thread(void *local) {
 			if (controller->pool->queue->len > controller->pool->inactive_num) {
 				uint32_t space = list_space(controller->pool->workers);
 				double threads = ceil((controller->pool->queue->len - controller->pool->inactive_num) / 2.0);
-				PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f", controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
+				PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f",
+						controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
 				if (space) {
 					if (threads < space) {
 						pool_start(controller->pool, (uint32_t) threads);

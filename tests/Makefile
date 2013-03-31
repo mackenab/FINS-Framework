@@ -39,8 +39,8 @@ client_tcp:client_tcp.c
 	@$(LD) $@.o $(LDFLAGS) -o $@
 
 client_udp:client_udp.c
-	$(CC) $(CFLAGS) -c $<
-	$(LD) $@.o $(LDFLAGS) -o $@
+	@$(CC) $(CFLAGS) -c $<
+	@$(LD) $@.o $(LDFLAGS) -o $@
 
 server_icmp:server_icmp.c
 	@$(CC) $(CFLAGS) -c $<
@@ -66,3 +66,13 @@ clean:
 	@rm -f *.o 
 	@rm -f $(EXECUTABLES) 
 	@cd Userspace_tests; make clean
+
+.PHONY:install
+install:
+ifdef BUILD_FOR_ANDROID_ARM
+	@adb push client_udp $(INSTALL_DIR)
+	@adb push server_udp $(INSTALL_DIR)
+	@adb push client_tcp $(INSTALL_DIR)
+	@adb push server_tcp $(INSTALL_DIR)
+else
+endif

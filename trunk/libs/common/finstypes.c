@@ -19,6 +19,7 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 #endif
 		exit(-1);
 	}
+	memset(buf, 0, len); //needed to prevent problems from uncleared data
 	return buf;
 }
 
@@ -220,6 +221,27 @@ int list_check(struct linked_list *list) { //TODO remove all references
 		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
 		return 0;
 	}
+}
+
+uint8_t *list_look(struct linked_list *list, uint32_t index) {
+	PRINT_DEBUG("Entered: list=%p, index=%u", list, index);
+
+	uint32_t i = 0;
+	struct list_node *comp = list->front;
+	while (comp) {
+		if (i == index) {
+			//list_check(list);
+			PRINT_DEBUG("Exited: list=%p, index=%u, data=%p", list, index, comp->data);
+			return comp->data;
+		} else {
+			comp = comp->next;
+			i++;
+		}
+	}
+
+	//list_check(list);
+	PRINT_DEBUG("Exited: list=%p, index=%u, data=%p", list, index, NULL);
+	return NULL;
 }
 
 int list_contains(struct linked_list *list, uint8_t *data) {
@@ -460,7 +482,7 @@ uint8_t *list_find(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	while (comp) {
 		if (equal(comp->data)) {
 			//list_check(list);
-			PRINT_DEBUG("Entered: list=%p, data=%p", list, comp->data);
+			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
 			comp = comp->next;
@@ -468,7 +490,7 @@ uint8_t *list_find(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Entered: list=%p, data=%p", list, NULL);
+	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
 	return NULL;
 }
 
@@ -547,7 +569,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		metadata_print(ff->metaData);
 
 #ifdef DEBUG
-		print_hex(ff->dataFrame.pduLength,ff->dataFrame.pdu);
+		print_hex(ff->dataFrame.pduLength, ff->dataFrame.pdu);
 #endif
 
 		//######################
@@ -555,7 +577,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		char *temp = (char *) secure_malloc(ff->dataFrame.pduLength + 1);
 		memcpy(temp, ff->dataFrame.pdu, ff->dataFrame.pduLength);
 		temp[ff->dataFrame.pduLength] = '\0';
-		PRINT_DEBUG("pdu=%s", temp);
+		PRINT_DEBUG("pdu='%s'", temp);
 		free(temp);
 #endif
 		//######################
@@ -565,7 +587,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		metadata_print(ff->metaData);
 
 #ifdef DEBUG
-		print_hex(ff->ctrlFrame.data_len,ff->ctrlFrame.data);
+		print_hex(ff->ctrlFrame.data_len, ff->ctrlFrame.data);
 #endif
 	} else {
 		PRINT_ERROR("todo error");
@@ -726,7 +748,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 
 	PRINT_DEBUG("In serializeCtrlFrame!");
 
-	//PRINT_DEBUG("temp_buffer: %ssize of temp_buffer: %d",temp_buffer,sizeof(temp_buffer));
+	//PRINT_DEBUG("temp_buffer: '%s' size of temp_buffer: %d",temp_buffer,sizeof(temp_buffer));
 
 	//initialize buffer
 
@@ -741,14 +763,14 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 
 	//DATA OR CONTROL
 	memcpy((uint8_t *) *buffer, &(ff->dataOrCtrl), sizeof(uint8_t));
-	//PRINT_DEBUG("buffer1:%s", *buffer);
+	//PRINT_DEBUG("buffer1:'%s'", *buffer);
 
 	//increment pointer
 	*buffer += sizeof(uint8_t);
 
 	//DESTINATION ID
 	memcpy((uint8_t *) *buffer, &(ff->destinationID.id), sizeof(uint8_t));
-	//PRINT_DEBUG("buffer2:%s",*buffer);
+	//PRINT_DEBUG("buffer2:'%s'",*buffer);
 
 	//increment pointer
 	*buffer += sizeof(uint8_t);
@@ -763,7 +785,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 	//NAME
 	//strcat((uint8_t *)*buffer, ff->ctrlFrame.name);
 	//memcpy((uint8_t *) *buffer, ff->ctrlFrame.name, temp);
-	//PRINT_DEBUG("buffer3:%s", *buffer);
+	//PRINT_DEBUG("buffer3:'%s'", *buffer);
 
 	//increment pointer
 	*buffer += temp;
@@ -771,7 +793,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 	//OPCODE
 	//	strncat((uint8_t *)*buffer, (uint8_t *) (&(htonl(ff->ctrlFrame.opcode))), sizeof(int));
 	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.opcode), sizeof(unsigned short int));
-	//PRINT_DEBUG("buffer4 = %s", *buffer);
+	//PRINT_DEBUG("buffer4 = '%s'", *buffer);
 
 	//increment pointer
 	*buffer += sizeof(unsigned short int);
@@ -779,14 +801,14 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 	//SENDERID
 	//strncat((uint8_t *)*buffer, &(ff->ctrlFrame.senderID),sizeof(uint8_t *));
 	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.senderID), sizeof(uint8_t));
-	//PRINT_DEBUG("buffer5:%s", *buffer);
+	//PRINT_DEBUG("buffer5:'%s'", *buffer);
 
 	//increment pointer
 	*buffer += sizeof(uint8_t);
 
 	//SERIALNUM
 	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.serial_num), sizeof(unsigned int));
-	//PRINT_DEBUG("buffer6: %s", *buffer);
+	//PRINT_DEBUG("buffer6: '%s'", *buffer);
 
 	*buffer += sizeof(unsigned int);
 
@@ -816,7 +838,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 
 		//send data itself
 		//memcpy(*buffer, (char *) (ff->ctrlFrame.data_old), temp);
-		//PRINT_DEBUG("CSP: buffer7 = %s, temp = %d, data = %s", *buffer,temp,((char *)(ff->ctrlFrame.data)));
+		//PRINT_DEBUG("CSP: buffer7 = '%s', temp = %d, data = '%s'", *buffer,temp,((char *)(ff->ctrlFrame.data)));
 		break;
 
 	case CTRL_EXEC:
@@ -831,7 +853,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 
 	//decrement pointer
 	*buffer = temporary;
-	PRINT_DEBUG("Final value of buffer:%s", *buffer);
+	PRINT_DEBUG("Final value of buffer:'%s'", *buffer);
 
 	return strlen((char *) (*buffer));
 }
@@ -850,18 +872,16 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 	PRINT_DEBUG("In unserializeCtrlFrame!");
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-	memset(ff, 0, sizeof(struct finsFrame));
-
-	//	PRINT_DEBUG("The value of buffer = %s", buffer,length);
+	//	PRINT_DEBUG("The value of buffer = '%s'", buffer,length);
 
 	//DATA OR CONTROL
 	memcpy(&(ff->dataOrCtrl), (uint8_t *) buffer, sizeof(uint8_t));
-	//PRINT_DEBUG("buffer1 = %s, dataOrCtrl = %d", buffer,ff->dataOrCtrl);
+	//PRINT_DEBUG("buffer1 = '%s', dataOrCtrl = %d", buffer,ff->dataOrCtrl);
 	buffer += sizeof(uint8_t);
 
 	//DESTINATION ID
 	memcpy(&(ff->destinationID), (uint8_t *) buffer, sizeof(uint8_t));
-	//PRINT_DEBUG("buffer2 = %s, destination = %d", buffer,ff->destinationID.id);
+	//PRINT_DEBUG("buffer2 = '%s', destination = %d", buffer,ff->destinationID.id);
 	buffer += sizeof(uint8_t);
 
 	//NAME
@@ -875,22 +895,22 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 	//retrieve the name
 	//ff->ctrlFrame.name = fins_malloc(temp);
 	//memcpy(ff->ctrlFrame.name, (uint8_t *) buffer, temp);
-	//PRINT_DEBUG("buffer3 = %s, name = %s", buffer,ff->ctrlFrame.name);
+	//PRINT_DEBUG("buffer3 = '%s', name = '%s'", buffer,ff->ctrlFrame.name);
 	buffer += temp;
 
 	//OPCODE
 	memcpy(&(ff->ctrlFrame.opcode), (uint8_t *) buffer, sizeof(unsigned short int));
-	//PRINT_DEBUG("buffer4 = %s, opcode = %d", buffer,ff->ctrlFrame.opcode);
+	//PRINT_DEBUG("buffer4 = '%s', opcode = %d", buffer,ff->ctrlFrame.opcode);
 	buffer += sizeof(unsigned short int);
 
 	//SENDERID
 	memcpy(&(ff->ctrlFrame.senderID), (uint8_t *) buffer, sizeof(uint8_t));
-	//PRINT_DEBUG("buffer5 = %s, senderID = %d", buffer,ff->ctrlFrame.senderID);
+	//PRINT_DEBUG("buffer5 = '%s', senderID = %d", buffer,ff->ctrlFrame.senderID);
 	buffer += sizeof(uint8_t);
 
 	//SERIALNUM
 	memcpy(&(ff->ctrlFrame.serial_num), (uint8_t *) buffer, sizeof(unsigned int));
-	//PRINT_DEBUG("buffer6 = %s, serial_num = %d", buffer,ff->ctrlFrame.serial_num);
+	//PRINT_DEBUG("buffer6 = '%s', serial_num = %d", buffer,ff->ctrlFrame.serial_num);
 	buffer += sizeof(unsigned int);
 
 	//DATA
@@ -917,16 +937,16 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 		temp = 0;
 		memcpy(&temp, (uint8_t *) buffer, sizeof(int));
 
-		//PRINT_DEBUG("CSP: buffer6.25 = %s", buffer);
+		//PRINT_DEBUG("CSP: buffer6.25 = '%s'", buffer);
 
 		//increment buffer
 		buffer += sizeof(int);
-		//PRINT_DEBUG("CSP: buffer6.5 = %s", buffer);
+		//PRINT_DEBUG("CSP: buffer6.5 = '%s'", buffer);
 
 		//retrieve data itself
 		//ff->ctrlFrame.data_old = fins_malloc(temp);
 		//memcpy((char *) (ff->ctrlFrame.data_old), buffer, temp);
-		//PRINT_DEBUG("CSP: buffer7 = %s, temp = %d, data = %s", buffer, temp,(char *)(ff->ctrlFrame.data));
+		//PRINT_DEBUG("CSP: buffer7 = '%s', temp = %d, data = '%s'", buffer, temp,(char *)(ff->ctrlFrame.data));
 		break;
 
 	case CTRL_EXEC:

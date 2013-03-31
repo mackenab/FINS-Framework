@@ -210,6 +210,46 @@ void *switch_to_logger(void *local) {
 	return NULL;
 }
 
+int logger_init_new(struct fins_module *module, metadata *meta, struct envi_record *envi) {
+	return 0;
+}
+int logger_run_new(struct fins_module *module, pthread_attr_t *fins_pthread_attr) {
+	return 0;
+}
+int logger_pause_new(struct fins_module *module) {
+	return 0;
+}
+int logger_unpause_new(struct fins_module *module) {
+	return 0;
+}
+int logger_shutdown_new(struct fins_module *module) {
+	return 0;
+}
+int logger_release_new(struct fins_module *module) {
+	return 0;
+}
+
+static struct fins_module_ops logger_ops = { .init = logger_init_new, .run = logger_run_new, .pause = logger_pause_new, .unpause = logger_unpause_new,
+		.shutdown = logger_shutdown_new, .release = logger_release_new, };
+
+struct fins_module *logger_create_new(uint32_t index, uint32_t id, char *name) {
+	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+
+	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
+
+	strcpy((char *) module->lib, "logger");
+	module->ops = &logger_ops;
+	module->state = FMS_FREE;
+	module->num_ports = 0;
+
+	module->index = index;
+	module->id = id;
+	strcpy((char *) module->name, name);
+
+	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	return module;
+}
+
 void logger_dummy(void) {
 
 }

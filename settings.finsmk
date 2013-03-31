@@ -3,9 +3,9 @@
 #  ONLY ONE MAY BE UNCOMMENTED AT ONCE!
 #
 
-BUILD_FOR_ANDROID_ARM := "If uncommented, the FINS source will build for android arch-ARM."
+#BUILD_FOR_ANDROID_ARM := "If uncommented, the FINS source will build for android arch-ARM."
 #BUILD_FOR_ANDROID_X86 := "If uncommented, the FINS source will build for android arch-x86"
-#BUILD_FOR_LINUX := "If uncommented, the FINS source will build for linux"
+BUILD_FOR_LINUX := "If uncommented, the FINS source will build for linux"
 
 
 
@@ -51,7 +51,7 @@ CAPTURER_LIBS := libglue libpcap
 LAUNCHER_LIBS := 
 WEDGE_LIBS :=
 
-CORE_MODULES := switch daemon arp interface ipv4 icmp tcp udp rtm logger
+INSTALL_DIR := /data/local/fins
 endif
 
 
@@ -87,7 +87,7 @@ INCLS :=
 LD := gcc
 LDOPTS := -g -O0 -Wall #flags for valgrind
 LIBPATHS :=
-LIBS := -lpthread -lconfig -lpcap -lc -lm -lrt
+LIBS := -lpthread -lconfig -lpcap -lc -lm -lrt -ldl
 
 GDB_CLIENT := gdb
 
@@ -100,7 +100,6 @@ CORE_LIBS := common
 WEDGE_LIBS := 
 
 #remove this and dynamically generate
-CORE_MODULES := switch daemon interface arp ipv4 icmp tcp udp logger rtm
 endif
 
 

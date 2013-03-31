@@ -51,7 +51,7 @@
 /** FINS Sockets database related defined constants */
 #define MAX_SOCKETS 50 //TODO increase
 #define MAX_CALLS 50 //TODO increase
-#define MAX_Queue_size 100000
+//#define MAX_QUEUE_SIZE 100000
 #define ACK 	200
 #define NACK 	6666
 #define MIN_port 32768
@@ -213,7 +213,7 @@ struct tcp_Parameters {
 };
 
 //TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
-extern char my_host_if_name[IFNAMSIZ];
+extern uint8_t my_host_if_name[IFNAMSIZ];
 extern uint8_t my_host_if_num;
 extern uint64_t my_host_mac_addr;
 extern uint32_t my_host_ip_addr;

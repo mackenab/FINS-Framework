@@ -156,6 +156,7 @@ void list_prepend(struct linked_list *list, uint8_t *data);
 void list_append(struct linked_list *list, uint8_t *data);
 void list_insert(struct linked_list *list, uint8_t *data, uint8_t *prev);
 int list_check(struct linked_list *list);
+uint8_t *list_look(struct linked_list *list, uint32_t index);
 int list_contains(struct linked_list *list, uint8_t *data);
 uint8_t *list_remove_front(struct linked_list *list);
 void list_remove(struct linked_list *list, uint8_t *data);
@@ -165,9 +166,9 @@ int list_has_space(struct linked_list *list);
 uint32_t list_space(struct linked_list *list);
 void list_free(struct linked_list *list);
 
-int list_add(struct linked_list *list, uint8_t *data, int(*comparer)(uint8_t *data1, uint8_t *data2));
-uint8_t *list_find(struct linked_list *list, int(*equal)(uint8_t *data));
-void list_for_each(struct linked_list *list, void(*apply)(uint8_t *data));
+int list_add(struct linked_list *list, uint8_t *data, int (*comparer)(uint8_t *data1, uint8_t *data2));
+uint8_t *list_find(struct linked_list *list, int (*equal)(uint8_t *data));
+void list_for_each(struct linked_list *list, void (*apply)(uint8_t *data));
 
 uint32_t gen_control_serial_num(void);
 

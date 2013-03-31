@@ -15,23 +15,20 @@ static struct fins_proto_module switch_proto = { .module_id = SWITCH_ID, .name =
 
 pthread_t switch_thread;
 
-#define MAX_modules 16
-
-static struct fins_proto_module *fins_modules[MAX_modules];
+static struct fins_proto_module *fins_modules[MAX_MODULES];
+static struct fins_module *fins_modules_new[MAX_MODULES];
 
 void module_create_ops(struct fins_proto_module *module) {
 	PRINT_DEBUG("Entered: module=%p, module_id=%d, name='%s'", module, module->module_id, module->name);
-	char buf[50];
+	char buf[MOD_NAME_SIZE+10];
 
 	sprintf(buf, "switch_to_%s", module->name);
-	module->input_queue = init_queue(buf, MAX_Queue_size);
-
+	module->input_queue = init_queue(buf, MAX_QUEUE_SIZE);
 	module->input_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(module->input_sem, 0, 1);
 
 	sprintf(buf, "%s_to_switch", module->name);
-	module->output_queue = init_queue(buf, MAX_Queue_size);
-
+	module->output_queue = init_queue(buf, MAX_QUEUE_SIZE);
 	module->output_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(module->output_sem, 0, 1);
 
@@ -56,7 +53,7 @@ void module_destroy_ops(struct fins_proto_module *module) {
 int module_register(struct fins_proto_module *module) {
 	PRINT_DEBUG("Entered: module=%p, module_id=%d, name='%s'", module, module->module_id, module->name);
 
-	if (module->module_id >= MAX_modules) {
+	if (module->module_id >= MAX_MODULES) {
 		PRINT_ERROR("todo error");
 		return -1;
 	}
@@ -76,7 +73,7 @@ int module_register(struct fins_proto_module *module) {
 void module_unregister(int module_id) {
 	PRINT_DEBUG("Entered: module_id=%d", module_id);
 
-	if (module_id < 0 || module_id > MAX_modules) {
+	if (module_id < 0 || module_id > MAX_MODULES) {
 		PRINT_ERROR("todo error");
 		return;
 	}
@@ -125,7 +122,7 @@ void *switch_loop(void *local) {
 	while (switch_proto.running_flag) {
 		secure_sem_wait(switch_proto.event_sem);
 		secure_sem_wait(switch_proto.input_sem);
-		for (i = 0; i < MAX_modules; i++) {
+		for (i = 0; i < MAX_MODULES; i++) {
 			if (fins_modules[i] != NULL) {
 				if (!IsEmpty(fins_modules[i]->output_queue)) { //added as optimization
 					while ((ret = sem_wait(fins_modules[i]->output_sem)) && errno == EINTR);
@@ -140,7 +137,7 @@ void *switch_loop(void *local) {
 					counter++;
 
 					id = ff->destinationID.id;
-					if (id < 0 || id > MAX_modules) { //TODO check/change should be MAX_ID?
+					if (id < 0 || id > MAX_MODULES) { //TODO check/change should be MAX_ID?
 						PRINT_ERROR("dropping ff: illegal destination: src module_id=%d, dst module_id=%u, ff=%p, meta=%p", i, id, ff, ff->metaData);
 						//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 						freeFinsFrame(ff);
@@ -198,7 +195,7 @@ void switch_init(void) {
 	//module_register(&switch_proto);
 
 	int i;
-	for (i = 0; i < MAX_modules; i++) {
+	for (i = 0; i < MAX_MODULES; i++) {
 		fins_modules[i] = NULL;
 	}
 }

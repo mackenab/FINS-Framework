@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <poll.h>
 #include <netinet/tcp.h>
+#include <math.h>
+#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
 
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
@@ -43,17 +47,42 @@
 
  */
 
+double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
+	double decimal = 0, diff = 0;
+
+	//printf("Entered: time1=%p, time2=%p\n", time1, time2);
+
+	//PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)\n", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+
+	if (time1->tv_usec > time2->tv_usec) {
+		decimal = (1000000.0 + time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec - 1.0;
+	} else {
+		decimal = (time2->tv_usec - time1->tv_usec) / 1000000.0;
+		diff = time2->tv_sec - time1->tv_sec;
+	}
+	diff += decimal;
+
+	diff *= 1000.0;
+
+	//printf("diff=%f\n", diff);
+	return diff;
+}
+
 int main(int argc, char *argv[]) {
 	int sock;
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
 	int numbytes;
-	struct hostent *host;
+	//struct hostent *host;
 	char send_data[131072 + 1];
 	char msg[131092];
 	int port;
 	int client_port;
 	pid_t pID = 0;
+
+	memset(send_data, 89, 131072);
+	send_data[131072] = '\0';
 
 	memset(msg, 89, 131072);
 	msg[131072] = '\0';
@@ -67,16 +96,20 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	int val = 1;
-	int result = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &val, sizeof(int));
+	//int val = 1;
+	//int result = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &val, sizeof(int));
 
-	if (argc > 1) {
+#ifdef BUILD_FOR_ANDROID
+	port = 44444;
+#else
+	if (argc > 1) { //doesn't work fro android
 		port = atoi(argv[1]);
 	} else {
 		port = 44444;
 	}
+#endif
 
-	int optval = 1;
+	//int optval = 1;
 	//setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
@@ -88,17 +121,21 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,4);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	//bzero(&(server_addr.sin_zero), 8);
 
+#ifdef BUILD_FOR_ANDROID
+	client_port = 55555;
+#else
 	if (argc > 2) {
 		client_port = atoi(argv[2]);
 	} else {
 		client_port = 55555;
 	}
+#endif
 
 	memset(&client_addr, 0, sizeof(client_addr));
 	client_addr.sin_family = PF_INET;
@@ -170,7 +207,7 @@ int main(int argc, char *argv[]) {
 
 	//while (1);
 
-	gets(send_data);
+	//gets(send_data);
 
 	int nfds = 2;
 	struct pollfd fds[nfds];
@@ -182,90 +219,141 @@ int main(int argc, char *argv[]) {
 	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
 	int time = -1; //1000;
 
-	int len;
-	int ret;
-	int recv_bytes;
-
 	//pID = fork();
 
-	int i = 0;
-	int j;
-	int total = 0;
-	while (i < 20) {
-		//i++;
-		//printf("(%d) Input msg (q or Q to quit):", i);
-		//gets(send_data);
+	/*
+	if (0) {
+		int len;
+		int ret;
+		int recv_bytes;
 
-		//len = strlen(send_data);
-		//printf("\nlen=%d, str='%s'\n", len, send_data);
-		//fflush(stdout);
+		int i = 0;
+		int j;
+		int total = 0;
+		while (i < 20) {
+			//i++;
+			//printf("(%d) Input msg (q or Q to quit):", i);
+			//gets(send_data);
 
-		//memcpy(msg, send_data, len);
-		//len = 50;
-		len = 131072;
-		//len = 31072;
+			//len = strlen(send_data);
+			//printf("\nlen=%d, str='%s'\n", len, send_data);
+			//fflush(stdout);
 
-		msg[len] = 'a';
+			//memcpy(msg, send_data, len);
+			//len = 50;
+			len = 131072;
+			//len = 31072;
 
-		//if (pID == 0)
-		//	sleep(1);
+			msg[len] = 'a';
 
-		//printf("\nDoing pID=%d\n", pID);
-		//fflush(stdout);
+			//if (pID == 0)
+			//	sleep(1);
 
-		if ((len > 0 && len < 1024) || 1) {
-			if (pID == 0) {
-				//ret = poll(fds, nfds, time);
-				//printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
-			}
-			if (ret || 1) {
-				if (0) {
-					printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
-					printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
-							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-							(fds[ret].revents & POLLWRBAND) > 0);
-					fflush(stdout);
+			//printf("\nDoing pID=%d\n", pID);
+			//fflush(stdout);
+
+			if ((len > 0 && len < 1024) || 1) {
+				if (pID == 0) {
+					//ret = poll(fds, nfds, time);
+					//printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
 				}
-
-				if ((fds[ret].revents & (POLLOUT)) || 1) {
-					//numbytes = send(sock, send_data, strlen(send_data), 0);
-					//printf("\n sending: pID=%d", pID);
-					//fflush(stdout);
-					numbytes = send(sock, msg, len, 0);
-					//numbytes = send(sock, msg, len, MSG_DONTWAIT);
-
-					//for (j = 0, numbytes = 0; j < len; j++) {
-					//	numbytes += send(sock, msg, 1, 0);
-					//}
-
-					if (numbytes >= 0) {
-						total += numbytes;
-
-						printf("\n frame=%d, len=%d, total=%d, pID=%d", ++i, numbytes, total, pID);
+				if (ret || 1) {
+					if (0) {
+						printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
+						printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
+								(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+								(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+								(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+								(fds[ret].revents & POLLWRBAND) > 0);
 						fflush(stdout);
-
-						if (numbytes == 0) {
-							sleep(1);
-						}
 					}
-				} else {
+
+					if ((fds[ret].revents & (POLLOUT)) || 1) {
+						//numbytes = send(sock, send_data, strlen(send_data), 0);
+						//printf("\n sending: pID=%d", pID);
+						//fflush(stdout);
+						numbytes = send(sock, msg, len, 0);
+						//numbytes = send(sock, msg, len, MSG_DONTWAIT);
+
+						//for (j = 0, numbytes = 0; j < len; j++) {
+						//	numbytes += send(sock, msg, 1, 0);
+						//}
+
+						if (numbytes >= 0) {
+							total += numbytes;
+
+							printf("\n frame=%d, len=%d, total=%d, pID=%d", ++i, numbytes, total, pID);
+							fflush(stdout);
+
+							if (numbytes == 0) {
+								sleep(1);
+							}
+						}
+					} else {
+					}
+				}
+			} else {
+				printf("Error string len, len=%d\n", len);
+				fflush(stdout);
+			}
+
+			if (0) {
+				if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
+					break;
+				}
+			} else {
+				if (send_data[0] == 'q' || send_data[0] == 'Q') {
+					break;
 				}
 			}
-		} else {
-			printf("Error string len, len=%d\n", len);
-			fflush(stdout);
 		}
+	}
+	*/
 
-		if (0) {
-			if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
+	if (1) {
+		double total = 10;
+		double speed = 200000; //bits per sec
+		int len = 1000; //msg size
+
+		double time = 8 * len / speed * 1000000;
+		int use = (int) (time + .5); //ceil(time);
+		printf("time=%f, used=%u\n", time, use);
+		fflush(stdout);
+
+		int *data = (int *) send_data;
+		*(data + 1) = 0;
+
+		double diff;
+		struct timeval start, end;
+		gettimeofday(&start, 0);
+
+		//char temp_buff[100];
+
+		int i = 0;
+		while (1) {
+			//gets(temp_buff);
+			*data = htonl(i);
+			numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+			if (numbytes != len) {
+				printf("error: len=%d, numbytes=%d\n", len, numbytes);
 				break;
 			}
-		} else {
-			if (send_data[0] == 'q' || send_data[0] == 'Q') {
-				break;
+
+			if (0) {
+				gettimeofday(&end, 0);
+				diff = time_diff(&start, &end) / 1000;
+				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
+				fflush(stdout);
+
+				if (total <= diff) {
+					break;
+				}
 			}
+			//break;
+
+			i++;
+			usleep(use);
+			sleep(5);
 		}
 	}
 
@@ -285,6 +373,7 @@ int main(int argc, char *argv[]) {
 
 	printf("\n FIN");
 	fflush(stdout);
-	while (1);
+	while (1)
+		;
 }
 

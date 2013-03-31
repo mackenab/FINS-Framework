@@ -137,7 +137,7 @@ void capture_init(char *device) {
 
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet((char *) dev, &net, &mask, errbuf) == -1) {
-		PRINT_ERROR("Couldn't get netmask for device %s: %s", dev, errbuf);
+		PRINT_ERROR("Couldn't get netmask for device '%s': '%s'", dev, errbuf);
 		net = 0;
 		mask = 0;
 	}
@@ -157,24 +157,24 @@ void capture_init(char *device) {
 	/* make sure we're capturing on an Ethernet device [2] */
 	int data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
-		PRINT_ERROR("%s is not an Ethernet", dev);
+		PRINT_ERROR("'%s' is not an Ethernet", dev);
 				while(1);
 		exit(EXIT_FAILURE);
 	}
-	PRINT_IMPORTANT("Datalink layer Description: %s (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
+	PRINT_IMPORTANT("Datalink layer Description: '%s' (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
 
 	/* compile the filter expression */
 
 	struct bpf_program fp; /* compiled filter program (expression) */
 	if (pcap_compile(capture_handle, &fp, filter_exp, 0, net) == -1) {
-		PRINT_ERROR("Couldn't parse filter %s: %s", filter_exp, pcap_geterr(capture_handle));
+		PRINT_ERROR("Couldn't parse filter '%s': '%s'", filter_exp, pcap_geterr(capture_handle));
 				while(1);
 		exit(EXIT_FAILURE);
 	}
 
 	/* apply the compiled filter */
 	if (pcap_setfilter(capture_handle, &fp) == -1) {
-		PRINT_ERROR("Couldn't install filter %s: %s", filter_exp, pcap_geterr(capture_handle));
+		PRINT_ERROR("Couldn't install filter '%s': '%s'", filter_exp, pcap_geterr(capture_handle));
 				while(1);
 		exit(EXIT_FAILURE);
 	}
@@ -246,7 +246,7 @@ void inject_init(char *device) {
 
 	/** Setup the Injection Interface */
 	if ((inject_handle = pcap_open_live((char *) dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
-		PRINT_DEBUG( "Error: %s", errbuf);
+		PRINT_ERROR( "Error: '%s'", errbuf);
 		exit(1);
 	}
 
@@ -278,15 +278,16 @@ void inject_init(char *device) {
 
 		numBytes = pcap_inject(inject_handle, frame, framelen);
 		if (numBytes == -1) {
-			PRINT_DEBUG("Failed to inject the packet");
+			PRINT_ERROR("Failed to inject the packet");
 		} else {
-			PRINT_DEBUG("Message injected: count=%d, size=%d ", server_inject_count, numBytes);
-			server_inject_count++;
+			++server_inject_count;
+			PRINT_IMPORTANT("Packet injected: count=%d, size=%d ", server_inject_count, numBytes);
 		}
 	} // end of while loop
 
-	PRINT_IMPORTANT("**Number of captured frames = %d", server_capture_count);
-	PRINT_IMPORTANT("****Number of Injected frames = %d", server_inject_count);
+	PRINT_IMPORTANT("*****************");
+	PRINT_IMPORTANT("Inject: capture count=%d", server_capture_count);
+	PRINT_IMPORTANT("Inject: inject count=%d", server_inject_count);
 } // inject_init()
 
 /** ------------------------------------------------------------------*/

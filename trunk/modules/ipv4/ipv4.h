@@ -367,7 +367,7 @@ int store_list_has_space(void);
 
 //###############
 
-extern char my_host_if_name[IFNAMSIZ];
+extern uint8_t my_host_if_name[IFNAMSIZ];
 extern uint8_t my_host_if_num;
 extern uint64_t my_host_mac_addr;
 extern uint32_t my_host_ip_addr;

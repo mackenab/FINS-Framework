@@ -58,8 +58,9 @@ void print_app_banner(void) {
 /** handling termination ctrl+c signal
  * */
 void capturer_termination_handler(int sig) {
-	PRINT_IMPORTANT("**Number of captured frames = %d", server_capture_count);
-	PRINT_IMPORTANT("****Number of Injected frames = %d", server_inject_count);
+	PRINT_IMPORTANT("*****************");
+	PRINT_IMPORTANT("Capture: capture count=%d", server_capture_count);
+	PRINT_IMPORTANT("Capture: inject count=%d", server_inject_count);
 
 	if (inject_handle != NULL) {
 		pcap_close(inject_handle);

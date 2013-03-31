@@ -15,7 +15,6 @@ LOCAL_OBJS := ethermod.o htoi.o wifistub.o
 LOCAL_INCS := .
 LOCAL_TYPE := exec #reference
 
-INSTALL_DIR = /data/local/fins
 ifdef BUILD_FOR_ANDROID_ARM
 #This is a tweak for ease of use, fix later by compiling libconfig
 #LOCAL_INC += -I$(LIBS_DIR)/common

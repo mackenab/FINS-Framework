@@ -19,9 +19,10 @@ int read_configurations();
 #endif
 
 #include <net/if.h>
+#include <netinet/in.h>
 #include <stdint.h>
 
-char my_host_if_name[IFNAMSIZ];
+uint8_t my_host_if_name[IFNAMSIZ];
 uint8_t my_host_if_num;
 uint64_t my_host_mac_addr;
 uint32_t my_host_ip_addr;

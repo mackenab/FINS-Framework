@@ -1,17 +1,18 @@
 /* udpserver.c */
 
+#include <arpa/inet.h>
+#include <errno.h>
+#include <poll.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
+#include <time.h>
 #include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <poll.h>
 
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
@@ -111,11 +112,15 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in server_addr;
 	struct sockaddr_in *client_addr;
 
+#ifdef BUILD_FOR_ANDROID
+		port = 45454;
+#else
 	if (argc > 1) {
 		port = atoi(argv[1]);
 	} else {
 		port = 45454;
 	}
+#endif
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
 	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
@@ -128,11 +133,11 @@ int main(int argc, char *argv[]) {
 	printf("Provided with sock=%d\n", sock);
 
 	struct timeval tv_1;
-	int size_1 = sizeof(struct timeval);
+	socklen_t size_1 = sizeof(struct timeval);
 	getsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv_1, &size_1);
 
 	struct timeval tv_2;
-	int size_2 = sizeof(struct timeval);
+	socklen_t size_2 = sizeof(struct timeval);
 	getsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv_2, &size_2);
 
 	printf("size_1=%d, size_2=%d, SO_RCVTIMEO=%u,%u, SO_SNDTIMEO=%u,%u\n", size_1, size_2, (uint32_t) tv_1.tv_sec, (uint32_t) tv_1.tv_usec,
@@ -158,6 +163,7 @@ int main(int argc, char *argv[]) {
 	bzero(&(server_addr.sin_zero), 8);
 
 	printf("Binding to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	fflush(stdout);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
 		perror("Bind");
 		printf("Failure");
@@ -246,7 +252,7 @@ int main(int argc, char *argv[]) {
 					//bytes_read = recv(sock,recv_data,1024,0);
 					if (bytes_read > 0) {
 						if (1) {
-							print_hex(3*4, recv_data);
+							print_hex(3*4, (uint8_t *)recv_data);
 						}
 						recv_data[bytes_read] = '\0';
 						printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++k, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),

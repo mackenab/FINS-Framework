@@ -44,7 +44,6 @@ Queue CreateQueue(const char* name, int MaxElements) {
 	Q = secure_malloc(sizeof(struct QueueRecord));
 
 	Q->Array = (ElementType *) secure_malloc(sizeof(ElementType) * MaxElements);
-	memset(Q->Array, 0, sizeof(ElementType) * MaxElements); //avoid freeFinsFrame: use of f->dataOrControl
 
 	Q->Capacity = MaxElements;
 	strcpy(Q->name, name);

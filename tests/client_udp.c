@@ -10,11 +10,7 @@
 #include <poll.h>
 #include <linux/errqueue.h>
 #include <math.h>
-#include <time.h>
 #include <sys/time.h>
-#ifndef BUILD_FOR_ANDROID
-#include <sys/timerfd.h>
-#endif
 #include <time.h>
 #include <unistd.h>
 
@@ -116,7 +112,7 @@ int main(int argc, char *argv[]) {
 	char send_data[send_len + 24];
 	int port;
 	int client_port;
-	pid_t pID;
+	pid_t pID = 0;
 
 	memset(send_data, 89, send_len);
 	send_data[send_len] = '\0';
@@ -145,13 +141,16 @@ int main(int argc, char *argv[]) {
 
 	val = 3;
 	setsockopt(sock, SOL_IP, IP_TTL, &val, sizeof(val));
-	printf("here3\n");fflush(stdout);
-	//if (argc > 1) { //doesn't work fro android
-	//	port = atoi(argv[1]);
-	//} else {
+
+#ifdef BUILD_FOR_ANDROID
+	port = 45454;
+#else
+	if (argc > 1) { //doesn't work fro android
+		port = atoi(argv[1]);
+	} else {
 		port = 45454;
-	//}
-	printf("here4\n");fflush(stdout);
+	}
+#endif
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
@@ -160,7 +159,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,2);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -171,11 +170,16 @@ int main(int argc, char *argv[]) {
 			server_addr.sin_addr.s_addr);
 	fflush(stdout);
 
-	//if (argc > 2) {
-	//	client_port = atoi(argv[2]);
-	//} else {
+#ifdef BUILD_FOR_ANDROID
+	client_port = 55555;
+#else
+	if (argc > 2) {
+		client_port = atoi(argv[2]);
+	} else {
 		client_port = 55555;
-	//}
+	}
+#endif
+
 	client_addr.sin_family = PF_INET;
 	client_addr.sin_port = htons(client_port);
 
@@ -218,6 +222,7 @@ int main(int argc, char *argv[]) {
 		send_data[0] = 89;
 	}
 
+	/*
 	int ret = 0;
 
 	struct msghdr recv_msg;
@@ -247,7 +252,6 @@ int main(int argc, char *argv[]) {
 	struct timeval curr;
 	struct timeval *stamp;
 
-	/*
 	 if (0) {
 	 int len;
 	 int i = 0;
@@ -436,7 +440,7 @@ int main(int argc, char *argv[]) {
 				break;
 			}
 
-			if (1) {
+			if (0) {
 				gettimeofday(&end, 0);
 				diff = time_diff(&start, &end) / 1000;
 				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
@@ -450,6 +454,7 @@ int main(int argc, char *argv[]) {
 
 			i++;
 			usleep(use);
+			sleep(5);
 		}
 	}
 

@@ -10,11 +10,11 @@ endif
 #Name of the module
 LOCAL_NAME = wedge
 
-INSTALL_DIR = /data/local/fins
+INSTALL_DIR := /data/local/fins
 
 obj-m += fins_stack_wedge.o
 
-BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
+#BUILD_FOR_ANDROID_ARM = "If uncommented, the FINS source will build for android arch-ARM."
 ifdef BUILD_FOR_ANDROID_ARM
 ##important ones options:
 #stated to be these values, but doesn't work with them
@@ -38,7 +38,7 @@ LDFLAGS :=
 #LIBS := 
 
 #undefine LDFLAGS
-ARCH =arm
+ARCH = arm
 
 COMPILER = /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 #COMPILER = /opt/android/android-ndk-r8d/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin/arm-linux-androideabi-

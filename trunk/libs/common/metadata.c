@@ -73,7 +73,7 @@ int metadata_readFromElement(metadata *meta, const char *target, void *value) {
 	root = config_root_setting(meta);
 	handle = config_setting_get_member(root, target);
 	if (handle == NULL) {
-		//PRINT_DEBUG("%s is not found in the metadata", target);
+		//PRINT_DEBUG("'%s' is not found in the metadata", target);
 		status = META_FALSE;
 		PRINT_DEBUG("meta=%p, '%s', %d", meta, target, status);
 
@@ -207,7 +207,7 @@ int metadata_print(metadata *meta) {
 		name = config_setting_name(handle);
 
 		type = config_setting_type(handle);
-		//PRINT_DEBUG("%s \\", name);
+		//PRINT_DEBUG("'%s' \\", name);
 		switch (type) {
 		case CONFIG_TYPE_INT:
 			value = config_setting_get_int(handle);
@@ -336,11 +336,11 @@ metadata *metadata_clone(metadata *meta) {
  if (strcmp(name,target)==0)
  {
  stringValue = config_setting_get_string(handle);
- PRINT_DEBUG("%s",stringValue);
+ PRINT_DEBUG("'%s'",stringValue);
 
  }
  type= config_setting_type(handle);
- PRINT_DEBUG("%s \\",name);
+ PRINT_DEBUG("'%s' \\",name);
  switch (type)
  {
  case CONFIG_TYPE_INT:
@@ -349,17 +349,17 @@ metadata *metadata_clone(metadata *meta) {
  return(&value);
  case CONFIG_TYPE_STRING:
  stringValue = config_setting_get_string(handle);
- PRINT_DEBUG("%s",stringValue);
+ PRINT_DEBUG("'%s'",stringValue);
  return (stringValue);
  case CONFIG_TYPE_GROUP:
- PRINT_DEBUG("%s",handle->value);
+ PRINT_DEBUG("'%s'",handle->value);
  printf("Meta Data Type is group !! ");
  //exit();
  break;
 
  case CONFIG_TYPE_NONE:
  stringValue = config_setting_get_string(handle);
- PRINT_DEBUG("%s",stringValue);
+ PRINT_DEBUG("'%s'",stringValue);
  printf("Meta Data Type is NONE !! ");
  //exit();
  break;

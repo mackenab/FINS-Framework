@@ -140,7 +140,7 @@ struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac,
 	request->src_ip = src_ip;
 	request->pdu = pdu;
 
-	PRINT_DEBUG("Exited: ff=%p, mac=0x%llx, ip=%u, request=%p", ff, src_mac, src_ip, request);
+	PRINT_DEBUG("Exited: ff=%p, src mac=0x%llx, src ip=%u, request=%p", ff, src_mac, src_ip, request);
 	return request;
 }
 

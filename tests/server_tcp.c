@@ -58,6 +58,27 @@ void termination_handler(int sig) {
 	exit(2);
 }
 
+void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
+	uint8_t *temp = (uint8_t *) malloc(3 * msg_len + 1);
+	uint8_t *pt = temp;
+	int i;
+	for (i = 0; i < msg_len; i++) {
+		if (i == 0) {
+			sprintf((char *) pt, "%02x", msg_pt[i]);
+			pt += 2;
+		} else if (i % 4 == 0) {
+			sprintf((char *) pt, ":%02x", msg_pt[i]);
+			pt += 3;
+		} else {
+			sprintf((char *) pt, " %02x", msg_pt[i]);
+			pt += 3;
+		}
+	}
+	temp[3 * msg_len] = '\0';
+	printf("msg='%s'\n", temp);
+	free(temp);
+}
+
 void *poll_thread(void *local) {
 	/*
 	 int nfds = 1;
@@ -99,11 +120,15 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
 
-	if (argc > 1)
-
+#ifdef BUILD_FOR_ANDROID
+	port = 44444;
+#else
+	if (argc > 1) {
 		port = atoi(argv[1]);
-	else
+	} else {
 		port = 44444;
+	}
+#endif
 
 	int j = 0;
 	while (++j <= 10) {
@@ -134,7 +159,7 @@ int main(int argc, char *argv[]) {
 
 	int optval = 1;
 	//fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK);
-	//setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	//setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -267,6 +292,9 @@ int main(int argc, char *argv[]) {
 				//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 				//bytes_read = recv(sock,recv_data,1024,0);
 				if (bytes_read >= 0) {
+					if (1) {
+						print_hex(3*4, (uint8_t *)recv_data);
+					}
 					recv_data[bytes_read] = '\0';
 					//printf("\n(%s:%d) said : ", inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 					//printf("(%d , %d) said : ",(client_addr->sin_addr).s_addr,ntohs(client_addr->sin_port));

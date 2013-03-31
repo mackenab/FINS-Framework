@@ -690,11 +690,11 @@ void nl_data_ready(struct sk_buff *skb) {
 			reply_call = *(u_int *) buf;
 			if (reply_call == daemon_start_call) {
 				if (fins_daemon_pid != -1) {
-					PRINT_IMPORTANT("### Daemon pID changed, old pid=%d", fins_daemon_pid);
+					PRINT_IMPORTANT("########## Daemon pID changed, old pid=%d", fins_daemon_pid);
 				}
 				//fins_stack_passthrough_enabled = 1;
 				fins_daemon_pid = pid;
-				PRINT_IMPORTANT("### Daemon connected, pid=%d", fins_daemon_pid);
+				PRINT_IMPORTANT("########## Daemon connected, pid=%d", fins_daemon_pid);
 
 				if (down_interruptible(&wedge_sockets_sem)) {
 					PRINT_ERROR("sockets_sem acquire fail");
@@ -710,7 +710,7 @@ void nl_data_ready(struct sk_buff *skb) {
 				wedge_calls_remove_all();
 				up(&wedge_calls_sem);
 			} else if (reply_call == daemon_stop_call) {
-				PRINT_IMPORTANT("### Daemon disconnected");
+				PRINT_IMPORTANT("########## Daemon disconnected");
 				//fins_stack_passthrough_enabled = 0;
 				fins_daemon_pid = -1; //TODO expand this functionality
 
@@ -2483,7 +2483,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		//ifreq.ifr_ifindex = x;
 		//if (ioctl(sock, SIOCGIFNAME, &ifreq) < 0)
 		//	perr_quit("ioctl");
-		//printf("index %d is %s\n", x, ifreq.ifr_name);
+		//printf("index %d is '%s'\n", x, ifreq.ifr_name);
 
 		if (copy_from_user(&ifr, arg_pt, sizeof(struct ifreq))) {
 			PRINT_ERROR("ERROR: cmd=%d ==SIOCGIFNAME", cmd);
@@ -3174,8 +3174,8 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 
 	PRINT_DEBUG("file=%p, sock=%p, table=%p", file, sock, table);
 	if (table) {
-		//events = table->key; //key added in Kv2.6.38? still there in Kv3.1.10
-		events = table->_key; //for Kv3.4.0
+		events = table->key; //key added in Kv2.6.38? still there in Kv3.1.10
+		//events = table->_key; //for Kv3.4.0
 	} else {
 		events = 0;
 	}PRINT_DEBUG("events=0x%x", events);
@@ -3453,7 +3453,7 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	// Notify FINS daemon
 	if (fins_daemon_pid == -1) { // FINS daemon has not made contact yet, no idea where to send message
 		PRINT_ERROR("daemon not connected");
-		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -1);
+		PRINT_IMPORTANT("Exited: rc=%d", -1);
 		return -1;
 	}
 
@@ -3467,10 +3467,11 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	ret = nl_send(fins_daemon_pid, buf, buffer_length, 0);
 	if (ret) {
 		PRINT_ERROR("nl_send failed");
-		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -1);
+		PRINT_IMPORTANT("Exited: rc=%d", -1);
 		return -1;
 	}
 
+	PRINT_IMPORTANT("Exited: rc=%d", 0);
 	return 0;
 }
 

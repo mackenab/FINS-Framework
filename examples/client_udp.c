@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		printf("Type Something (q or Q to quit):");
 		gets(send_data);
-		printf("%s", send_data);
+		printf("'%s'", send_data);
 		i = i + 1;
 		sleep(1);
 		if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {

@@ -88,7 +88,6 @@ struct ip4_routing_table *parse_nlmsg(struct nlmsghdr *msg) {
 		if (rtm->rtm_type == RTN_UNICAST) // don't consider local, broadcast and unreachable routes
 				{
 			table_pointer = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
-			memset(table_pointer, 0, sizeof(struct ip4_routing_table)); // zero the routing table entry data
 			for (; RTA_OK(rta, rtaLen); rta = RTA_NEXT(rta, rtaLen)) {
 				switch (rta->rta_type) {
 				case RTA_DST: //destination

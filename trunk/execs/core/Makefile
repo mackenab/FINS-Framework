@@ -10,8 +10,8 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module
 LOCAL_NAME := core
 LOCAL_LIBS := $(CORE_LIBS)
-#LOCAL_MODS := $(CORE_MODULES)
-LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
+LOCAL_MODS := switch logger
+#LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
 #this code breaks if anything besides folders containing modules are in MODULES_DIR
 LOCAL_OBJS := core.o
 LOCAL_INCS := .

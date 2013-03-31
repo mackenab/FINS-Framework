@@ -74,7 +74,6 @@ int send_wedge(int sockfd, uint8_t *buf, size_t len, int flags) {
 	// Build a message to send to the kernel
 	int nlmsg_len = NLMSG_LENGTH(len);
 	struct nlmsghdr *nlh = (struct nlmsghdr *) secure_malloc(nlmsg_len);
-	memset(nlh, 0, nlmsg_len);
 
 	nlh->nlmsg_len = nlmsg_len;
 	// following can be used by application to track message, opaque to netlink core
@@ -478,10 +477,10 @@ int daemon_sockets_insert(uint64_t sock_id, int sock_index, int type, int protoc
 		daemon_sockets[sock_index].call_list = call_list_create(DAEMON_CALL_LIST_MAX); //really only for poll_call & recvmsg_call, split for efficiency?
 		memset(&daemon_sockets[sock_index].stamp, 0, sizeof(struct timeval));
 
-		daemon_sockets[sock_index].data_queue = init_queue(NULL, MAX_Queue_size);
+		daemon_sockets[sock_index].data_queue = init_queue(NULL, MAX_QUEUE_SIZE);
 		daemon_sockets[sock_index].data_buf = 0;
 
-		daemon_sockets[sock_index].error_queue = init_queue(NULL, MAX_Queue_size); //only used when RECVERR enabled for ICMP/UDP
+		daemon_sockets[sock_index].error_queue = init_queue(NULL, MAX_QUEUE_SIZE); //only used when RECVERR enabled for ICMP/UDP
 		daemon_sockets[sock_index].error_buf = 0;
 
 		daemon_sockets[sock_index].error_call = 0;
@@ -1195,7 +1194,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		}
 
 		if (total + sizeof(struct ifreq) <= len) {
-			strcpy(ifr.ifr_name, my_host_if_name);
+			strcpy(ifr.ifr_name, (char *)my_host_if_name);
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(my_host_ip_addr);
 			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
@@ -1236,7 +1235,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
-		if (strcmp((char *) temp, my_host_if_name) == 0) {
+		if (strcmp((char *) temp, (char *)my_host_if_name) == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
 			addr.sin_port = 0;
@@ -1292,7 +1291,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
-		if (strcmp((char *) temp, my_host_if_name) == 0) {
+		if (strcmp((char *) temp, (char *)my_host_if_name) == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
 			addr.sin_port = 0;
@@ -1348,7 +1347,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
-		if (strcmp((char *) temp, my_host_if_name) == 0) {
+		if (strcmp((char *) temp, (char *)my_host_if_name) == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl((my_host_ip_addr & my_host_mask) | (~my_host_mask));
 			addr.sin_port = 0;
@@ -1404,7 +1403,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP?
-		if (strcmp((char *) temp, my_host_if_name) == 0) {
+		if (strcmp((char *) temp, (char *)my_host_if_name) == 0) {
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(my_host_mask);
 			addr.sin_port = 0;
@@ -1473,7 +1472,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 
 		//TODO get correct values from IP?
 		if (total == my_host_if_num) {
-			strcpy((char *) temp, my_host_if_name);
+			strcpy((char *) temp, (char *)my_host_if_name);
 		} else {
 			PRINT_ERROR("index=%d", total);
 		}
@@ -1520,7 +1519,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFFLAGS), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP? ifr_flags
-		if (strcmp((char *) temp, my_host_if_name) == 0) {
+		if (strcmp((char *) temp, (char *)my_host_if_name) == 0) {
 			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST; //TODO remove running if is interface but not connected
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			total = IFF_UP | IFF_LOOPBACK | IFF_RUNNING;
@@ -1577,7 +1576,7 @@ void ioctl_out(struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 		PRINT_DEBUG("cmd=%d (SIOCGIFMTU), len=%d, temp='%s'", cmd, len, temp);
 
 		//TODO get correct values from IP? ifr_mtu
-		if (strcmp((char *) temp, my_host_if_name) == 0) {
+		if (strcmp((char *) temp, (char *)my_host_if_name) == 0) {
 			total = 1500;
 		} else if (strcmp((char *) temp, "lo") == 0) {
 			total = 16436;

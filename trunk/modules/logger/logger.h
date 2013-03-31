@@ -22,6 +22,8 @@
 #include <sys/endian.h>
 #endif
 
+struct fins_module *logger_create_new(uint32_t index, uint32_t id, char *name);
+
 void logger_dummy(void);
 void logger_init(void);
 void logger_run(pthread_attr_t *fins_pthread_attr);
