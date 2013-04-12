@@ -105,7 +105,8 @@ struct finsCtrlFrame {
 struct finsFrame {
 	/* Common Fields between data and control */
 	uint8_t dataOrCtrl; // data frame or control frame; use #def values above
-	struct destinationList destinationID; // destination module ID
+	//struct destinationList destinationID; // destination module ID
+	uint32_t destinationID;
 	metadata *metaData; // metadata
 	union {
 		struct finsDataFrame dataFrame;
@@ -152,23 +153,60 @@ struct linked_list {
 
 //for use as library, not internal
 struct linked_list *list_create(uint32_t max);
-void list_prepend(struct linked_list *list, uint8_t *data);
-void list_append(struct linked_list *list, uint8_t *data);
-void list_insert(struct linked_list *list, uint8_t *data, uint8_t *prev);
+
+#define list_prepend(list, data) list_prepend_full(list, (uint8_t *)data)
+void list_prepend_full(struct linked_list *list, uint8_t *data);
+
+#define list_append(list, data) list_append_full(list, (uint8_t *)data)
+void list_append_full(struct linked_list *list, uint8_t *data);
+
+#define list_insert(list, data, prev) list_insert_full(list, (uint8_t *)data, (uint8_t *)prev)
+void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev);
 int list_check(struct linked_list *list);
 uint8_t *list_look(struct linked_list *list, uint32_t index);
-int list_contains(struct linked_list *list, uint8_t *data);
+
+#define list_contains(list, data) list_contains_full(list, (uint8_t *)data)
+int list_contains_full(struct linked_list *list, uint8_t *data);
 uint8_t *list_remove_front(struct linked_list *list);
-void list_remove(struct linked_list *list, uint8_t *data);
+
+#define list_remove(list, data) list_remove_full(list, (uint8_t *)data)
+void list_remove_full(struct linked_list *list, uint8_t *data);
 int list_is_empty(struct linked_list *list); //change some to inline?
 int list_is_full(struct linked_list *list);
 int list_has_space(struct linked_list *list);
 uint32_t list_space(struct linked_list *list);
-void list_free(struct linked_list *list);
 
-int list_add(struct linked_list *list, uint8_t *data, int (*comparer)(uint8_t *data1, uint8_t *data2));
-uint8_t *list_find(struct linked_list *list, int (*equal)(uint8_t *data));
-void list_for_each(struct linked_list *list, void (*apply)(uint8_t *data));
+typedef int (*comparer_type)(uint8_t *data1, uint8_t *data2);
+#define list_add(list, data, comparer) list_add_full(list, (uint8_t *)data, (comparer_type)comparer)
+int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8_t *data1, uint8_t *data2));
+
+typedef int (*equal_type)(uint8_t *data);
+#define list_find(list, equal) list_find_full(list, (equal_type)equal)
+uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data));
+
+typedef int (*equal1_type)(uint8_t *data, uint8_t *param);
+#define list_find1(list, equal, param) list_find1_full(list, (equal1_type)equal, (uint8_t *)param)
+uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param);
+
+typedef int (*equal2_type)(uint8_t *data, uint8_t *param1, uint8_t param2);
+#define list_find2(list, equal, param1, param2) list_find2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
+uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
+
+typedef void (*apply_type)(uint8_t *data);
+#define list_for_each(list, apply) list_for_each_full(list, (apply_type)apply)
+void list_for_each_full(struct linked_list *list, void (*apply)(uint8_t *data));
+
+typedef void (*apply1_type)(uint8_t *data, uint8_t *param);
+#define list_for_each1(list, apply, param) list_for_each1_full(list, (apply1_type)apply, (uint8_t *)param)
+void list_for_each1_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param), uint8_t *param);
+
+typedef void (*apply2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
+#define list_for_each2(list, apply, param1, param2) list_for_each2_full(list, (apply2_type)apply, (uint8_t *)param1, (uint8_t *)param2)
+void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
+
+typedef void (*release_type)(uint8_t *data);
+#define list_free(list, release) list_free_full(list, (release_type)release)
+void list_free_full(struct linked_list *list, void (*release)(uint8_t *data));
 
 uint32_t gen_control_serial_num(void);
 

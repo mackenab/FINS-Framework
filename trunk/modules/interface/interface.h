@@ -53,8 +53,6 @@ void interface_release(void);
 
 void interface_get_ff(void);
 int interface_to_switch(struct finsFrame *ff); //Send a finsFrame to the switch's queue
-//int interface_fcf_to_daemon(uint32_t status, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
-//int interface_fdf_to_daemon(u_char *dataLocal, int len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 
 void interface_out_fdf(struct finsFrame *ff);
 void interface_in_fdf(struct finsFrame *ff);

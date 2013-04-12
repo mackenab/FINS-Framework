@@ -87,7 +87,8 @@ INCLS :=
 LD := gcc
 LDOPTS := -g -O0 -Wall #flags for valgrind
 LIBPATHS :=
-LIBS := -lpthread -lconfig -lpcap -lc -lm -lrt -ldl
+#LIBS := -lpthread -lconfig -lpcap -lc -lm -lrt
+LIBS := #-lc -ldl -lpthread #-lm -lrt -lconfig -lpcap #added dl for auto config
 
 GDB_CLIENT := gdb
 

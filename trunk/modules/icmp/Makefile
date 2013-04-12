@@ -13,7 +13,9 @@ LOCAL_LIBS := common
 LOCAL_MODS := switch ipv4
 LOCAL_OBJS := icmp.o
 LOCAL_INCS := .
-LOCAL_TYPE := reference #exec
+LOCAL_TYPE := shared #exec
+LOCAL_CFLAGS := -fpic
+LOCAL_LDFLAGS :=
 
 STRIP_NAME := $(strip $(LOCAL_NAME))
 STRIP_LIBS := $(strip $(LOCAL_LIBS))

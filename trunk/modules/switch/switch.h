@@ -30,7 +30,7 @@
 #define MAX_QUEUE_SIZE 100000
 
 struct addr_record { //for a particular address
-	uint8_t if_index;
+	uint32_t if_index;
 	uint32_t family;
 	struct sockaddr_storage ip; //ip
 	struct sockaddr_storage mask; //network mask
@@ -42,7 +42,7 @@ struct addr_record { //for a particular address
 
 struct if_record { //for an interface
 	//inherent
-	uint8_t index;
+	uint32_t index;
 	uint8_t name[IFNAMSIZ]; //SIOCGIFNAME
 	uint64_t mac; //SIOCGIFHWADDR
 	uint16_t type; //eth/Wifi
@@ -90,8 +90,19 @@ struct envi_record {
 	struct linked_list *route_list; //list of addr_record, for a routing table
 	//struct linked_list *route_cache; //TODO add in routing cache?
 	//struct linked_list *foward_list; //TODO add in forwarding table?
-	struct linked_list *module_list;
+	struct linked_list *library_list; //list of open libraries
+	struct linked_list *module_list; //list of modules
 	struct linked_list *link_list;
+};
+
+typedef struct fins_module *(*mod_create_type)(uint32_t index, uint32_t id, uint8_t *name);
+struct fins_library {
+	uint8_t name[MOD_NAME_SIZE];
+	void *handle;
+	//struct fins_module *(*create)(uint32_t index, uint32_t id, uint8_t *name);
+	mod_create_type create;
+	uint32_t num_mods;
+//struct linked_list *mod_list;
 };
 
 typedef enum {
@@ -100,7 +111,7 @@ typedef enum {
 
 struct fins_module {
 	//inherent
-	char lib[MOD_NAME_SIZE]; //name of module, shared library located at <FINS_ROOT>/trunk/modules/<lib>/<lib>.so?
+	uint8_t lib[MOD_NAME_SIZE]; //name of module, shared library located at <FINS_ROOT>/trunk/modules/<lib>/<lib>.so?
 	const struct fins_module_ops *ops;
 	fins_module_state state;
 	uint32_t num_ports;
@@ -108,7 +119,7 @@ struct fins_module {
 	//assigned
 	uint32_t index; //index of module in the module_list/fins_modules
 	uint32_t id; //unique ID of module assigned in .ini files
-	char name[MOD_NAME_SIZE]; //unique name of module (more for human recognition)
+	uint8_t name[MOD_NAME_SIZE]; //unique name of module (more for human recognition)
 
 	//allocated
 	finsQueue input_queue;
@@ -130,34 +141,23 @@ struct fins_module_ops {
 	int (*release)(struct fins_module *module);
 };
 
-//void switch_dummy(void);
-//void init(void);
-struct fins_module *switch_create(uint32_t index, uint32_t id, char *name);
+struct link_record {
+	uint32_t id;
+	uint32_t src_index;
 
-struct fins_proto_module {
-	int module_id;
-	char name[MOD_NAME_SIZE];
-	uint8_t running_flag; //TODO include?
-
-	finsQueue input_queue;
-	sem_t *input_sem;
-
-	finsQueue output_queue;
-	sem_t *output_sem;
-
-	sem_t *event_sem;
+	struct linked_list *dst_list;
+//uint32_t dst_index;
 };
 
-void module_create_ops(struct fins_proto_module *module);
-void module_destroy_ops(struct fins_proto_module *module);
-int module_register(struct fins_proto_module *module);
-void module_unregister(int module_id);
-int module_to_switch(struct fins_proto_module *module, struct finsFrame *ff);
+void module_create_queues(struct fins_module *module);
+void module_destroy_queues(struct fins_module *module);
+int module_to_switch(struct fins_module *module, struct finsFrame *ff);
 
+int module_register(struct fins_module *module);
+void module_unregister(int id);
+
+//#############
 void switch_dummy(void);
-void switch_init(void);
-void switch_run(pthread_attr_t *fins_pthread_attr);
-void switch_shutdown(void);
-void switch_release(void);
+struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name);
 
 #endif /* SWITCH_H_ */

@@ -18,12 +18,11 @@
 
 #include <finsdebug.h>
 //#include <finstypes.h>
-//#include <finstime.h>
+#include <finstime.h>
 //#include <metadata.h>
 //#include <finsqueue.h>
 
 #include <switch.h>
-#include <finstime.h>
 #include <dlfcn.h>
 //#include <daemon.h>
 //#include <interface.h>
@@ -63,6 +62,25 @@ int read_configurations() {
 	return EXIT_SUCCESS;
 }
 
+int write_configurations() {
+
+	config_t cfg;
+	//config_setting_t *setting;
+	//const char *str;
+
+	config_init(&cfg);
+
+	/* Read the file. If there is an error, report it and exit. */
+	if (!config_write_file(&cfg, "fins.cfg")) {
+		PRINT_ERROR("%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+		config_destroy(&cfg);
+		return EXIT_FAILURE;
+	}
+
+	config_destroy(&cfg);
+	return EXIT_SUCCESS;
+}
+
 void core_termination_handler(int sig) {
 	PRINT_IMPORTANT("**********Terminating *******");
 
@@ -78,7 +96,7 @@ void core_termination_handler(int sig) {
 
 	//interface_shutdown(); //TODO finish
 	//daemon_shutdown(); //TODO finish
-	switch_shutdown(); //TODO finish
+	//switch_shutdown(); //TODO finish
 
 	//have each module free data & que/sem //TODO finish each of these
 	//logger_release();
@@ -92,7 +110,7 @@ void core_termination_handler(int sig) {
 
 	//interface_release();
 	//daemon_release();
-	switch_release();
+	//switch_release();
 
 	sem_destroy(&control_serial_sem);
 
@@ -148,11 +166,848 @@ struct if_record *if_list_find_index(struct linked_list *list, uint8_t if_index)
 	return NULL;
 }
 
-static struct fins_module *fins_modules_new[MAX_MODULES];
+int ifr_index_test(struct if_record *ifr, uint32_t *if_index) {
+	return ifr->index == *if_index;
+}
+
+int lib_name_test(struct fins_library *lib, uint8_t *if_name) {
+	return strcmp((char *) lib->name, (char *) if_name) == 0;
+}
+
+//static struct fins_module *fins_modules_new[MAX_MODULES];
 
 void core_main() {
 	PRINT_IMPORTANT("Entered");
 
+	register_to_signal(SIGRTMIN);
+
+	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
+
+	signal(SIGINT, core_termination_handler); //register termination handler
+
+	//######################################################################
+	//new module initialization prototype
+	struct envi_record *envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
+	envi->any_ip_addr = IP4_ADR_P2H(0,0,0,0); //TODO change to addr_in?
+
+	//############# if_list
+	envi->if_list = list_create(MAX_INTERFACES);
+
+	uint32_t if_index;
+	uint8_t if_name[IFNAMSIZ];
+	uint64_t if_mac;
+	uint16_t if_type;
+	uint8_t if_status;
+	uint32_t if_mtu;
+	uint32_t if_flags;
+	//#############
+	struct if_record *ifr;
+
+	if (1) { //TODO change to for loop from read data
+		if_index = 1;
+		strcpy((char *) if_name, "lo");
+		if_mac = 0;
+		if_type = 1;
+		if_status = 1;
+		if_mtu = 16436;
+		if_flags = IFF_LOOPBACK | IFF_UP | IFF_RUNNING;
+		//#############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr == NULL) {
+			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
+			ifr->index = if_index;
+			strcpy((char *) ifr->name, (char *) if_name);
+			ifr->mac = if_mac;
+			ifr->type = if_type;
+
+			ifr->status = if_status;
+			ifr->mtu = if_mtu;
+			ifr->flags = if_flags;
+
+			ifr->addr_list = list_create(MAX_FAMILIES);
+
+			if (list_has_space(envi->if_list)) {
+				list_append(envi->if_list, ifr);
+			} else {
+				//TODO error
+			}
+
+			if (if_flags & IFF_LOOPBACK) {
+				envi->if_loopback = ifr;
+			}
+		} else {
+			//TODO error
+		}
+	}
+
+	if (1) {
+		if_index = 2;
+		strcpy((char *) if_name, "eth0");
+		if_mac = 0;
+		if_type = 1;
+		if_status = 1;
+		if_mtu = 1500;
+		if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_UP; //IFF_RUNNING | //removed for wlan0
+		//#############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr == NULL) {
+			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
+			ifr->index = if_index;
+			strcpy((char *) ifr->name, (char *) if_name);
+			ifr->mac = if_mac;
+			ifr->type = if_type;
+
+			ifr->status = if_status;
+			ifr->mtu = if_mtu;
+			ifr->flags = if_flags;
+
+			ifr->addr_list = list_create(MAX_FAMILIES);
+
+			if (list_has_space(envi->if_list)) {
+				list_append(envi->if_list, ifr);
+			} else {
+				//TODO error
+			}
+
+			if (if_flags & IFF_LOOPBACK) {
+				envi->if_loopback = ifr;
+			}
+		} else {
+			//TODO error
+		}
+	}
+
+	if (1) {
+		if_index = 3;
+		strcpy((char *) if_name, "wlan0");
+		if_mac = 0;
+		if_type = 2;
+		if_status = 1;
+		if_mtu = 1500;
+		if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_UP | IFF_RUNNING;
+		//#############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr == NULL) {
+			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
+			ifr->index = if_index;
+			strcpy((char *) ifr->name, (char *) if_name);
+			ifr->mac = if_mac;
+			ifr->type = if_type;
+
+			ifr->status = if_status;
+			ifr->mtu = if_mtu;
+			ifr->flags = if_flags;
+
+			ifr->addr_list = list_create(MAX_FAMILIES);
+
+			if (list_has_space(envi->if_list)) {
+				list_append(envi->if_list, ifr);
+			} else {
+				//TODO error
+			}
+
+			if (if_flags & IFF_LOOPBACK) {
+				envi->if_loopback = ifr;
+			}
+		} else {
+			//TODO error
+		}
+	}
+
+	//TODO change these to be dynamic, not static
+	envi->if_main = (struct if_record *) list_look(envi->if_list, 2);
+
+	//############# addr_list
+	//envi->addr_list = list_create(MAX_INTERFACES * MAX_FAMILIES); //TODO use?
+
+	uint32_t addr_if_index; //the index parameter of the interface in if_list, most likely its order index as well
+	uint32_t addr_family; //atm only AF_INET, but eventually also AF_INET6
+	uint32_t addr_ip; //SIOCGIFADDR //addr_ip
+	uint32_t addr_mask; //SIOCGIFNETMASK //addr_mask
+	uint32_t addr_gw; //? //(addr_ip & addr_mask)|1;
+	uint32_t addr_bdc; //SIOCGIFBRDADDR //(addr_ip & addr_mask)|~addr_mask
+	uint32_t addr_dst; //SIOCGIFDSTADDR //addr_dst
+	//#############
+	struct addr_record *addr;
+
+	if (1) {
+		addr_if_index = 1;
+		addr_family = AF_INET;
+		addr_ip = IP4_ADR_P2H(127,0,0,1);
+		addr_mask = IP4_ADR_P2H(255,0,0,0);
+		addr_gw = IP4_ADR_P2H(127,0,0,1); //?
+		addr_bdc = IP4_ADR_P2H(127,255,255,255);
+		addr_dst = IP4_ADR_P2H(127,0,0,1); //?
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				if (addr_family == AF_INET) {
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
+				} else {
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
+				}
+
+				if (addr == NULL) {
+					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
+					addr->if_index = addr_if_index;
+					addr->family = AF_INET;
+
+					if (addr_family == AF_INET) {
+						set_addr4(&addr->ip, addr_ip);
+						set_addr4(&addr->mask, addr_mask);
+						set_addr4(&addr->gw, addr_gw);
+						set_addr4(&addr->bdc, addr_bdc);
+						set_addr4(&addr->dst, addr_dst);
+					} else if (addr_family == AF_INET6) {
+						//TODO
+						set_addr6(&addr->ip, addr_ip);
+					} else {
+						//TODO error?
+					}
+
+					if (list_has_space(ifr->addr_list)) {
+						list_append(ifr->addr_list, addr);
+					} else {
+						//TODO error
+					}
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		} else {
+			//TODO error
+		}
+	}
+
+	if (1) {
+		addr_if_index = 2;
+		addr_family = AF_INET;
+		addr_ip = IP4_ADR_P2H(192,168,1,3);
+		addr_mask = IP4_ADR_P2H(255,255,255,0);
+		addr_gw = IP4_ADR_P2H(192,168,1,1); //???
+		addr_bdc = IP4_ADR_P2H(192,168,1,255);
+		addr_dst = envi->any_ip_addr; //???
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				if (addr_family == AF_INET) {
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
+				} else {
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
+				}
+
+				if (addr == NULL) {
+					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
+					addr->if_index = addr_if_index;
+					addr->family = AF_INET;
+
+					if (addr_family == AF_INET) {
+						set_addr4(&addr->ip, addr_ip);
+						set_addr4(&addr->mask, addr_mask);
+						set_addr4(&addr->gw, addr_gw);
+						set_addr4(&addr->bdc, addr_bdc);
+						set_addr4(&addr->dst, addr_dst);
+					} else if (addr_family == AF_INET6) {
+						//TODO
+						set_addr6(&addr->ip, addr_ip);
+					} else {
+						//TODO error?
+					}
+
+					if (list_has_space(ifr->addr_list)) {
+						list_append(ifr->addr_list, addr);
+					} else {
+						//TODO error
+					}
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		} else {
+			//TODO error
+		}
+	}
+
+	if (1) {
+		addr_if_index = 3;
+		addr_family = AF_INET;
+		addr_ip = IP4_ADR_P2H(192,168,1,5);
+		addr_mask = IP4_ADR_P2H(255,255,255,0);
+		addr_gw = IP4_ADR_P2H(192,168,1,1); //???
+		addr_bdc = IP4_ADR_P2H(192,168,1,255);
+		addr_dst = envi->any_ip_addr; //???
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				if (addr_family == AF_INET) {
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
+				} else {
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
+				}
+
+				if (addr == NULL) {
+					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
+					addr->if_index = addr_if_index;
+					addr->family = AF_INET;
+
+					if (addr_family == AF_INET) {
+						set_addr4(&addr->ip, addr_ip);
+						set_addr4(&addr->mask, addr_mask);
+						set_addr4(&addr->gw, addr_gw);
+						set_addr4(&addr->bdc, addr_bdc);
+						set_addr4(&addr->dst, addr_dst);
+					} else if (addr_family == AF_INET6) {
+						//TODO
+						set_addr6(&addr->ip, addr_ip);
+					} else {
+						//TODO error?
+					}
+
+					if (list_has_space(ifr->addr_list)) {
+						list_append(ifr->addr_list, addr);
+					} else {
+						//TODO error
+					}
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		} else {
+			//TODO error
+		}
+	}
+
+	//############# route_list
+	envi->route_list = list_create(MAX_ADDRESSES);
+
+	uint32_t route_if_index;
+	uint32_t route_family;
+	uint32_t route_dst; //SIOCGIFDSTADDR //addr_dst
+	uint32_t route_mask; //SIOCGIFNETMASK //addr_mask
+	uint32_t route_gw; //? //(addr_ip & addr_mask)|1; //not sure about what gw is exactly
+	//uint32_t route_ip; //SIOCGIFADDR //addr_ip //change to be dynamic from if_list?
+	uint32_t route_metric; //SIOCGIFMETRIC
+	uint32_t route_timeout;
+	//struct timeval route_stamp;
+	//#############
+	struct route_record *route;
+
+	if (1) {
+		route_if_index = 3;
+		route_family = AF_INET;
+		route_dst = IP4_ADR_P2H(0,0,0,0);
+		route_mask = IP4_ADR_P2H(0,0,0,0);
+		route_gw = IP4_ADR_P2H(192,168,1,1); //???
+		//route_ip = IP4_ADR_P2H(192,168,1,5);
+		route_metric = 10;
+		route_timeout = 0;
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				//TODO remove copies?
+
+				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
+				route->if_index = route_if_index;
+				route->family = route_family;
+
+				if (route_family == AF_INET) {
+					set_addr4(&route->dst, route_dst);
+					set_addr4(&route->mask, route_mask);
+					set_addr4(&route->gw, route_gw);
+					//set_addr4(&route->ip, route_ip);
+				} else if (route_family == AF_INET6) {
+					//TODO
+					//set_addr6(&route->ip, route_ip);
+				} else {
+					//TODO error?
+				}
+
+				if (list_has_space(envi->route_list)) {
+					list_append(envi->route_list, route);
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		}
+	}
+
+	if (1) {
+		route_if_index = 1;
+		route_family = AF_INET;
+		route_dst = IP4_ADR_P2H(127,0,0,0);
+		route_mask = IP4_ADR_P2H(255,0,0,0);
+		route_gw = IP4_ADR_P2H(127,0,0,1);
+		//route_ip = IP4_ADR_P2H(127,0,0,1);
+		route_metric = 1;
+		route_timeout = 0;
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				//TODO remove copies?
+
+				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
+				route->if_index = route_if_index;
+				route->family = route_family;
+
+				if (route_family == AF_INET) {
+					set_addr4(&route->dst, route_dst);
+					set_addr4(&route->mask, route_mask);
+					set_addr4(&route->gw, route_gw);
+					//set_addr4(&route->ip, route_ip);
+				} else if (route_family == AF_INET6) {
+					//TODO
+					//set_addr6(&route->ip, route_ip);
+				} else {
+					//TODO error?
+				}
+
+				if (list_has_space(envi->route_list)) {
+					list_append(envi->route_list, route);
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		}
+	}
+
+	if (0) { //would need for eth0
+		route_if_index = 3;
+		route_family = AF_INET;
+		route_dst = IP4_ADR_P2H(192,168,1,0);
+		route_mask = IP4_ADR_P2H(255,255,255,0);
+		route_gw = envi->any_ip_addr; //gw==any, so send directly to dst
+		//route_ip = IP4_ADR_P2H(192,168,1,5);
+		route_metric = 1;
+		route_timeout = 0;
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				//TODO remove copies?
+
+				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
+				route->if_index = route_if_index;
+				route->family = route_family;
+
+				if (route_family == AF_INET) {
+					set_addr4(&route->dst, route_dst);
+					set_addr4(&route->mask, route_mask);
+					set_addr4(&route->gw, route_gw);
+					//set_addr4(&route->ip, route_ip);
+				} else if (route_family == AF_INET6) {
+					//TODO
+					//set_addr6(&route->ip, route_ip);
+				} else {
+					//TODO error?
+				}
+
+				if (list_has_space(envi->route_list)) {
+					list_append(envi->route_list, route);
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		}
+	}
+
+	if (1) {
+		route_if_index = 1;
+		route_family = AF_INET;
+		route_dst = IP4_ADR_P2H(192,168,1,5);
+		route_mask = IP4_ADR_P2H(255,255,255,255);
+		route_gw = IP4_ADR_P2H(127,0,0,1);
+		//route_ip = IP4_ADR_P2H(127,0,0,1);
+		route_metric = 10;
+		route_timeout = 0;
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				//TODO remove copies?
+
+				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
+				route->if_index = route_if_index;
+				route->family = route_family;
+
+				if (route_family == AF_INET) {
+					set_addr4(&route->dst, route_dst);
+					set_addr4(&route->mask, route_mask);
+					set_addr4(&route->gw, route_gw);
+					//set_addr4(&route->ip, route_ip);
+				} else if (route_family == AF_INET6) {
+					//TODO
+					//set_addr6(&route->ip, route_ip);
+				} else {
+					//TODO error?
+				}
+
+				if (list_has_space(envi->route_list)) {
+					list_append(envi->route_list, route);
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		}
+	}
+
+	if (0) {
+		route_if_index = 1;
+		route_family = AF_INET;
+		route_dst = IP4_ADR_P2H(192,168,1,255);
+		route_mask = IP4_ADR_P2H(255,255,255,255);
+		route_gw = envi->any_ip_addr; //gw==any, so send directly to dst
+		//route_ip = IP4_ADR_P2H(192,168,1,5);
+		route_metric = 10;
+		route_timeout = 0;
+		//############
+		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		if (ifr) {
+			if (ifr->flags & IFF_RUNNING) {
+				//TODO remove copies?
+
+				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
+				route->if_index = route_if_index;
+				route->family = route_family;
+
+				if (route_family == AF_INET) {
+					set_addr4(&route->dst, route_dst);
+					set_addr4(&route->mask, route_mask);
+					set_addr4(&route->gw, route_gw);
+					//set_addr4(&route->ip, route_ip);
+				} else if (route_family == AF_INET6) {
+					//TODO
+					//set_addr6(&route->ip, route_ip);
+				} else {
+					//TODO error?
+				}
+
+				if (list_has_space(envi->route_list)) {
+					list_append(envi->route_list, route);
+				} else {
+					//TODO error
+				}
+			} else {
+				//TODO error
+			}
+		}
+	}
+
+	//############# module_list
+	struct linked_list *lib_list = list_create(MAX_MODULES);
+	struct fins_module *fins_modules[MAX_MODULES];
+	memset(fins_modules, 0, MAX_MODULES * sizeof(struct fins_module *));
+	//struct linked_list *mod_meta_list = list_create(MAX_MODULES);
+
+	uint8_t base_path[100];
+	uint8_t lib_path[100 + MOD_NAME_SIZE];
+	uint8_t lib_create[20 + MOD_NAME_SIZE];
+	struct fins_library *library;
+	struct fins_module *module;
+	metadata *meta;
+	uint8_t *error;
+
+	memset((char *) base_path, 0, 100);
+	strcpy((char *) base_path, ".");
+
+	//#############
+	uint32_t mod_index; //determined by core
+	uint32_t mod_id; //read in
+	uint8_t mod_lib[MOD_NAME_SIZE]; //read in, determines so file
+	uint8_t mod_name[MOD_NAME_SIZE]; //read in
+	//uint32_t module_ports;
+	uint32_t num_params;
+	//#############
+
+	if (1) { //init switch
+		mod_index = 0;
+		mod_id = 000;
+		strcpy((char *) mod_lib, "switch");
+		strcpy((char *) mod_name, "switch");
+		//module_ports = 1;
+		num_params = 0;
+		//############
+
+		module = switch_create(mod_index, mod_id, mod_name);
+		PRINT_DEBUG("module=%p", module);
+		if (module == NULL) {
+			//TODO error
+			PRINT_ERROR("todo error");
+		}
+
+		fins_modules[mod_index] = module;
+
+		meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		module->ops->init(module, meta, envi); //TODO merge init into create?
+	}
+
+	if (1) { //logger0
+		mod_index = 1;
+		mod_id = 001;
+		strcpy((char *) mod_lib, "logger");
+		strcpy((char *) mod_name, "logger0");
+		//module_ports = 1;
+		num_params = 0;
+		//############
+
+		sprintf((char *) lib_path, "%s/lib%s.so", (char *) base_path, (char *) mod_lib);
+		sprintf((char *) lib_create, "%s_create", (char *) mod_lib);
+		PRINT_DEBUG("lib: path='%s', create='%s'", lib_path, lib_create);
+
+		library = (struct fins_library *) list_find1(lib_list, lib_name_test, mod_lib);
+		PRINT_DEBUG("library=%p", library);
+		if (library == NULL) {
+			library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
+			strcpy((char *) library->name, (char *) mod_lib);
+
+			PRINT_IMPORTANT("opening library: library=%p, name='%s'", library, library->name);
+			library->handle = dlopen((char *) lib_path, RTLD_NOW); //RTLD_LAZY | RTLD_GLOBAL?
+			if (library->handle == NULL) {
+				fputs(dlerror(), stderr);
+				exit(1);
+			}
+
+			library->create = (mod_create_type) dlsym(library->handle, (char *) lib_create);
+			if ((error = (uint8_t *) dlerror()) != NULL) {
+				fputs((char *) error, stderr);
+				exit(1);
+			}
+
+			library->num_mods = 1;
+
+			if (list_has_space(lib_list)) {
+				list_append(lib_list, library);
+			} else {
+				PRINT_ERROR("todo error");
+			}
+		} else {
+			library->num_mods++;
+		}
+
+		module = library->create(mod_index, mod_id, mod_name);
+		PRINT_DEBUG("module=%p", module);
+		if (module == NULL) {
+			//TODO error
+			PRINT_ERROR("todo error");
+		}
+
+		fins_modules[mod_index] = module;
+
+		meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		if (0) {
+			//no params to load
+			//secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
+		}
+
+		module->ops->init(module, meta, envi); //TODO merge init into create?
+	}
+
+	if (1) { //logger1
+		mod_index = 2;
+		mod_id = 002;
+		strcpy((char *) mod_lib, "logger");
+		strcpy((char *) mod_name, "logger1");
+		//module_ports = 1;
+		num_params = 0;
+		//############
+
+		sprintf((char *) lib_path, "%s/lib%s.so", (char *) base_path, (char *) mod_lib);
+		sprintf((char *) lib_create, "%s_create", (char *) mod_lib);
+		PRINT_DEBUG("lib: path='%s', create='%s'", lib_path, lib_create);
+
+		library = (struct fins_library *) list_find1(lib_list, lib_name_test, mod_lib);
+		PRINT_DEBUG("library=%p", library);
+		if (library == NULL) {
+			library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
+			strcpy((char *) library->name, (char *) mod_lib);
+
+			PRINT_IMPORTANT("opening library: library=%p, name='%s'", library, library->name);
+			library->handle = dlopen((char *) lib_path, RTLD_NOW); //RTLD_LAZY | RTLD_GLOBAL?
+			if (library->handle == NULL) {
+				fputs(dlerror(), stderr);
+				exit(1);
+			}
+
+			library->create = (mod_create_type) dlsym(library->handle, (char *) lib_create);
+			if ((error = (uint8_t *) dlerror()) != NULL) {
+				fputs((char *) error, stderr);
+				exit(1);
+			}
+
+			library->num_mods = 1;
+
+			if (list_has_space(lib_list)) {
+				list_append(lib_list, library);
+			} else {
+				PRINT_ERROR("todo error");
+			}
+		} else {
+			library->num_mods++;
+		}
+
+		module = library->create(mod_index, mod_id, mod_name);
+		PRINT_DEBUG("module=%p", module);
+		if (module == NULL) {
+			//TODO error
+			PRINT_ERROR("todo error");
+		}
+
+		fins_modules[mod_index] = module;
+
+		meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		if (0) {
+			//no params to load
+			//secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
+		}
+
+		module->ops->init(module, meta, envi); //TODO merge init into create?
+	}
+
+	if (1) {
+		mod_index = 3;
+		mod_id = 003;
+		strcpy((char *) mod_lib, "arp");
+		strcpy((char *) mod_name, "arp0");
+		//module_ports = 1;
+		num_params = 0;
+		//############
+
+		sprintf((char *) lib_path, "%s/lib%s.so", (char *) base_path, (char *) mod_lib);
+		sprintf((char *) lib_create, "%s_create", (char *) mod_lib);
+		PRINT_DEBUG("lib: path='%s', create='%s'", lib_path, lib_create);
+
+		library = (struct fins_library *) list_find1(lib_list, lib_name_test, mod_lib);
+		PRINT_DEBUG("library=%p", library);
+		if (library == NULL) {
+			library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
+			strcpy((char *) library->name, (char *) mod_lib);
+
+			PRINT_IMPORTANT("opening library: library=%p, name='%s'", library, library->name);
+			library->handle = dlopen((char *) lib_path, RTLD_NOW); //RTLD_LAZY | RTLD_GLOBAL?
+			if (library->handle == NULL) {
+				fputs(dlerror(), stderr);
+				exit(1);
+			}
+
+			library->create = (mod_create_type) dlsym(library->handle, (char *) lib_create);
+			if ((error = (uint8_t *) dlerror()) != NULL) {
+				fputs((char *) error, stderr);
+				exit(1);
+			}
+
+			library->num_mods = 1;
+
+			if (list_has_space(lib_list)) {
+				list_append(lib_list, library);
+			} else {
+				PRINT_ERROR("todo error");
+			}
+		} else {
+			library->num_mods++;
+		}
+
+		module = library->create(mod_index, mod_id, mod_name);
+		PRINT_DEBUG("module=%p", module);
+		if (module == NULL) {
+			//TODO error
+			PRINT_ERROR("todo error");
+		}
+
+		fins_modules[mod_index] = module;
+
+		meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		if (0) {
+			//no params to load
+			//secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
+		}
+
+		module->ops->init(module, meta, envi); //TODO merge init into create?
+	}
+
+	//############# linking_list
+	//read in & construct linking table
+	//TODO linking table
+
+	//############# update
+	//send out subset of linking table to each module as update
+	//TODO table subset update
+	//assign flows in mod to link ids
+
+	//switch_dummy();
+	//switch_init();
+
+	//############ say by this point envi var completely init'd
+	//assumed always connect/init to switch first
+
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	//switch_run(&attr);
+
+	PRINT_IMPORTANT("modules: run");
+
+	int i;
+	for (i = 0; i < MAX_MODULES; i++) {
+		if (fins_modules[i] != NULL) {
+			fins_modules[i]->ops->run(fins_modules[i], &attr);
+		}
+	}
+
+	sleep(10);
+
+	PRINT_IMPORTANT("modules: shutdown");
+	for (i = 0; i < MAX_MODULES; i++) {
+		if (fins_modules[i] != NULL) {
+			fins_modules[i]->ops->shutdown(fins_modules[i]);
+		}
+	}
+
+	PRINT_IMPORTANT("modules: release");
+	for (i = 0; i < MAX_MODULES; i++) {
+		if (fins_modules[i] != NULL) {
+			fins_modules[i]->ops->release(fins_modules[i]);
+		}
+	}
+
+	//############
+	while (1) {
+		library = (struct fins_library *) list_remove_front(lib_list);
+		if (library == NULL) {
+			break;
+		}
+		PRINT_IMPORTANT("closing library: library=%p, name='%s'", library, library->name);
+		dlclose(library->handle);
+		free(library);
+	}
+	exit(1);
+}
+
+void core_main_old() {
 	//###################################################################### //TODO get this from config file eventually
 	//host interface
 	//strcpy((char *)my_host_if_name, "lo");
@@ -190,641 +1045,6 @@ void core_main() {
 	//any
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 	//######################################################################
-	//new module initialization prototype
-	struct envi_record *envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
-	envi->any_ip_addr = IP4_ADR_P2H(0,0,0,0); //TODO change to addr_in?
-
-	//############# if_list
-	envi->if_list = list_create(MAX_INTERFACES);
-
-	uint8_t if_index;
-	uint8_t if_name[IFNAMSIZ];
-	uint64_t if_mac;
-	uint16_t if_type;
-	uint8_t if_status;
-	uint32_t if_mtu;
-	uint32_t if_flags;
-	//#############
-	struct if_record *ifr;
-
-	if (1) { //TODO change to for loop from read data
-		if_index = 1;
-		strcpy((char *) if_name, "lo");
-		if_mac = 0;
-		if_type = 1;
-		if_status = 1;
-		if_mtu = 16436;
-		if_flags = IFF_LOOPBACK | IFF_UP | IFF_RUNNING;
-		//#############
-		ifr = if_list_find_index(envi->if_list, if_index);
-		if (ifr == NULL) {
-			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
-			ifr->index = if_index;
-			strcpy((char *) ifr->name, (char *) if_name);
-			ifr->mac = if_mac;
-			ifr->type = if_type;
-
-			ifr->status = if_status;
-			ifr->mtu = if_mtu;
-			ifr->flags = if_flags;
-
-			ifr->addr_list = list_create(MAX_FAMILIES);
-
-			if (list_has_space(envi->if_list)) {
-				list_append(envi->if_list, (uint8_t *) ifr);
-			} else {
-				//TODO error
-			}
-
-			if (if_flags & IFF_LOOPBACK) {
-				envi->if_loopback = ifr;
-			}
-		} else {
-			//TODO error
-		}
-	}
-
-	if (1) {
-		if_index = 2;
-		strcpy((char *) if_name, "eth0");
-		if_mac = 0;
-		if_type = 1;
-		if_status = 1;
-		if_mtu = 1500;
-		if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_UP; //IFF_RUNNING | //removed for wlan0
-		//#############
-		ifr = if_list_find_index(envi->if_list, if_index);
-		if (ifr == NULL) {
-			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
-			ifr->index = if_index;
-			strcpy((char *) ifr->name, (char *) if_name);
-			ifr->mac = if_mac;
-			ifr->type = if_type;
-
-			ifr->status = if_status;
-			ifr->mtu = if_mtu;
-			ifr->flags = if_flags;
-
-			ifr->addr_list = list_create(MAX_FAMILIES);
-
-			if (list_has_space(envi->if_list)) {
-				list_append(envi->if_list, (uint8_t *) ifr);
-			} else {
-				//TODO error
-			}
-
-			if (if_flags & IFF_LOOPBACK) {
-				envi->if_loopback = ifr;
-			}
-		} else {
-			//TODO error
-		}
-	}
-
-	if (1) {
-		if_index = 3;
-		strcpy((char *) if_name, "wlan0");
-		if_mac = 0;
-		if_type = 2;
-		if_status = 1;
-		if_mtu = 1500;
-		if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_UP | IFF_RUNNING;
-		//#############
-		ifr = if_list_find_index(envi->if_list, if_index);
-		if (ifr == NULL) {
-			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
-			ifr->index = if_index;
-			strcpy((char *) ifr->name, (char *) if_name);
-			ifr->mac = if_mac;
-			ifr->type = if_type;
-
-			ifr->status = if_status;
-			ifr->mtu = if_mtu;
-			ifr->flags = if_flags;
-
-			ifr->addr_list = list_create(MAX_FAMILIES);
-
-			if (list_has_space(envi->if_list)) {
-				list_append(envi->if_list, (uint8_t *) ifr);
-			} else {
-				//TODO error
-			}
-
-			if (if_flags & IFF_LOOPBACK) {
-				envi->if_loopback = ifr;
-			}
-		} else {
-			//TODO error
-		}
-	}
-
-	//TODO change these to be dynamic, not static
-	envi->if_main = (struct if_record *) list_look(envi->if_list, 2);
-
-	//############# addr_list
-	//envi->addr_list = list_create(MAX_INTERFACES * MAX_FAMILIES); //TODO use?
-
-	uint8_t addr_if_index; //the index parameter of the interface in if_list, most likely its order index as well
-	uint32_t addr_family; //atm only AF_INET, but eventually also AF_INET6
-	uint32_t addr_ip; //SIOCGIFADDR //addr_ip
-	uint32_t addr_mask; //SIOCGIFNETMASK //addr_mask
-	uint32_t addr_gw; //? //(addr_ip & addr_mask)|1;
-	uint32_t addr_bdc; //SIOCGIFBRDADDR //(addr_ip & addr_mask)|~addr_mask
-	uint32_t addr_dst; //SIOCGIFDSTADDR //addr_dst
-	//#############
-	struct addr_record *addr;
-
-	if (1) {
-		addr_if_index = 1;
-		addr_family = AF_INET;
-		addr_ip = IP4_ADR_P2H(127,0,0,1);
-		addr_mask = IP4_ADR_P2H(255,0,0,0);
-		addr_gw = IP4_ADR_P2H(127,0,0,1); //?
-		addr_bdc = IP4_ADR_P2H(127,255,255,255);
-		addr_dst = IP4_ADR_P2H(127,0,0,1); //?
-		//############
-		ifr = if_list_find_index(envi->if_list, addr_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				if (addr_family == AF_INET) {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
-				} else {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
-				}
-
-				if (addr == NULL) {
-					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-					addr->if_index = addr_if_index;
-					addr->family = AF_INET;
-
-					if (addr_family == AF_INET) {
-						set_addr4(&addr->ip, addr_ip);
-						set_addr4(&addr->mask, addr_mask);
-						set_addr4(&addr->gw, addr_gw);
-						set_addr4(&addr->bdc, addr_bdc);
-						set_addr4(&addr->dst, addr_dst);
-					} else if (addr_family == AF_INET6) {
-						//TODO
-						set_addr6(&addr->ip, addr_ip);
-					} else {
-						//TODO error?
-					}
-
-					if (list_has_space(ifr->addr_list)) {
-						list_append(ifr->addr_list, (uint8_t *) addr);
-					} else {
-						//TODO error
-					}
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		} else {
-			//TODO error
-		}
-	}
-
-	if (1) {
-		addr_if_index = 2;
-		addr_family = AF_INET;
-		addr_ip = IP4_ADR_P2H(192,168,1,3);
-		addr_mask = IP4_ADR_P2H(255,255,255,0);
-		addr_gw = IP4_ADR_P2H(192,168,1,1); //???
-		addr_bdc = IP4_ADR_P2H(192,168,1,255);
-		addr_dst = envi->any_ip_addr; //???
-		//############
-		ifr = if_list_find_index(envi->if_list, addr_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				if (addr_family == AF_INET) {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
-				} else {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
-				}
-
-				if (addr == NULL) {
-					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-					addr->if_index = addr_if_index;
-					addr->family = AF_INET;
-
-					if (addr_family == AF_INET) {
-						set_addr4(&addr->ip, addr_ip);
-						set_addr4(&addr->mask, addr_mask);
-						set_addr4(&addr->gw, addr_gw);
-						set_addr4(&addr->bdc, addr_bdc);
-						set_addr4(&addr->dst, addr_dst);
-					} else if (addr_family == AF_INET6) {
-						//TODO
-						set_addr6(&addr->ip, addr_ip);
-					} else {
-						//TODO error?
-					}
-
-					if (list_has_space(ifr->addr_list)) {
-						list_append(ifr->addr_list, (uint8_t *) addr);
-					} else {
-						//TODO error
-					}
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		} else {
-			//TODO error
-		}
-	}
-
-	if (1) {
-		addr_if_index = 3;
-		addr_family = AF_INET;
-		addr_ip = IP4_ADR_P2H(192,168,1,5);
-		addr_mask = IP4_ADR_P2H(255,255,255,0);
-		addr_gw = IP4_ADR_P2H(192,168,1,1); //???
-		addr_bdc = IP4_ADR_P2H(192,168,1,255);
-		addr_dst = envi->any_ip_addr; //???
-		//############
-		ifr = if_list_find_index(envi->if_list, addr_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				if (addr_family == AF_INET) {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
-				} else {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
-				}
-
-				if (addr == NULL) {
-					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-					addr->if_index = addr_if_index;
-					addr->family = AF_INET;
-
-					if (addr_family == AF_INET) {
-						set_addr4(&addr->ip, addr_ip);
-						set_addr4(&addr->mask, addr_mask);
-						set_addr4(&addr->gw, addr_gw);
-						set_addr4(&addr->bdc, addr_bdc);
-						set_addr4(&addr->dst, addr_dst);
-					} else if (addr_family == AF_INET6) {
-						//TODO
-						set_addr6(&addr->ip, addr_ip);
-					} else {
-						//TODO error?
-					}
-
-					if (list_has_space(ifr->addr_list)) {
-						list_append(ifr->addr_list, (uint8_t *) addr);
-					} else {
-						//TODO error
-					}
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		} else {
-			//TODO error
-		}
-	}
-
-	//############# route_list
-	envi->route_list = list_create(MAX_ADDRESSES);
-
-	uint32_t route_if_index;
-	uint32_t route_family;
-	uint32_t route_dst; //SIOCGIFDSTADDR //addr_dst
-	uint32_t route_mask; //SIOCGIFNETMASK //addr_mask
-	uint32_t route_gw; //? //(addr_ip & addr_mask)|1; //not sure about what gw is exactly
-	//uint32_t route_ip; //SIOCGIFADDR //addr_ip //change to be dynamic from if_list?
-	uint32_t route_metric; //SIOCGIFMETRIC
-	uint32_t route_timeout;
-	struct timeval route_stamp;
-	//#############
-	struct route_record *route;
-
-	if (1) {
-		route_if_index = 3;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(0,0,0,0);
-		route_mask = IP4_ADR_P2H(0,0,0,0);
-		route_gw = IP4_ADR_P2H(192,168,1,1); //???
-		//route_ip = IP4_ADR_P2H(192,168,1,5);
-		route_metric = 10;
-		route_timeout = 0;
-		//############
-		ifr = if_list_find_index(envi->if_list, route_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, (uint8_t *) route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		}
-	}
-
-	if (1) {
-		route_if_index = 1;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(127,0,0,0);
-		route_mask = IP4_ADR_P2H(255,0,0,0);
-		route_gw = IP4_ADR_P2H(127,0,0,1);
-		//route_ip = IP4_ADR_P2H(127,0,0,1);
-		route_metric = 1;
-		route_timeout = 0;
-		//############
-		ifr = if_list_find_index(envi->if_list, route_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, (uint8_t *) route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		}
-	}
-
-	if (0) { //would need for eth0
-		route_if_index = 3;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(192,168,1,0);
-		route_mask = IP4_ADR_P2H(255,255,255,0);
-		route_gw = envi->any_ip_addr; //gw==any, so send directly to dst
-		//route_ip = IP4_ADR_P2H(192,168,1,5);
-		route_metric = 1;
-		route_timeout = 0;
-		//############
-		ifr = if_list_find_index(envi->if_list, route_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, (uint8_t *) route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		}
-	}
-
-	if (1) {
-		route_if_index = 1;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(192,168,1,5);
-		route_mask = IP4_ADR_P2H(255,255,255,255);
-		route_gw = IP4_ADR_P2H(127,0,0,1);
-		//route_ip = IP4_ADR_P2H(127,0,0,1);
-		route_metric = 10;
-		route_timeout = 0;
-		//############
-		ifr = if_list_find_index(envi->if_list, route_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, (uint8_t *) route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		}
-	}
-
-	if (0) {
-		route_if_index = 1;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(192,168,1,255);
-		route_mask = IP4_ADR_P2H(255,255,255,255);
-		route_gw = envi->any_ip_addr; //gw==any, so send directly to dst
-		//route_ip = IP4_ADR_P2H(192,168,1,5);
-		route_metric = 10;
-		route_timeout = 0;
-		//############
-		ifr = if_list_find_index(envi->if_list, route_if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, (uint8_t *) route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		}
-	}
-
-	//TODO linking table
-	//read in & construct linking table
-
-	//############# module_list
-	envi->module_list = list_create(MAX_MODULES);
-
-	uint32_t module_index; //determined by core
-	uint32_t module_id; //read in
-	char module_lib[MOD_NAME_SIZE]; //read in, determines so file
-	char module_name[MOD_NAME_SIZE]; //read in
-	//uint32_t module_ports;
-	uint32_t num_params;
-	//#############
-	char base_path[100];
-	char lib_path[100 + 2 * MOD_NAME_SIZE + 5];
-	struct fins_module *module;
-	metadata *meta;
-
-	memset(base_path, 0, 100);
-	strcpy((char *) base_path, "../../trunk/modules");
-
-	if (1) {
-		module_index = 0;
-		module_id = 000;
-		strcpy((char *) module_lib, "logger");
-		strcpy((char *) module_name, "logger0");
-		//module_ports = 1;
-		num_params = 0;
-		//############
-
-		//TODO load library
-		//strcpy(, "/lib/libm.so.6");
-		sprintf(lib_path, "%s/%s/%s.so", base_path, module_lib, module_lib);
-		//strcpy(lib_path, base_path module_lib "/" module_lib ".so");
-		PRINT_IMPORTANT("lib_path='%s'", lib_path);
-
-		//#################
-		double (*cosine)(double);
-		//struct fins_module *(*module_create)(uint32_t index, uint32_t id, char *name);
-		char *error;
-
-		void *lib_handle = dlopen(lib_path, RTLD_NOW); //RTLD_LAZY | RTLD_GLOBAL?
-		if (!lib_handle) {
-			fputs(dlerror(), stderr);
-			exit(1);
-		}
-		cosine = dlsym(lib_handle, "cos");
-		if ((error = dlerror()) != NULL) {
-			fputs(error, stderr);
-			exit(1);
-		}
-		void* initializer = dlsym(lib_handle, "cos");
-		if ((error = dlerror()) != NULL) {
-			fputs(error, stderr);
-			exit(1);
-		}
-		typedef double (*cosine2)(double);
-		cosine2 init_func = (cosine2) initializer;
-
-		PRINT_IMPORTANT("cosine=%f\n", (*cosine)(2.0));
-		PRINT_IMPORTANT("cosine2=%f\n", (*init_func)(2.0));
-		dlclose(lib_handle);
-		//#################
-		exit(1);
-
-		module = NULL; //logger_create_new(module_index, module_id, module_name);
-		fins_modules_new[module_index] = module;
-
-		meta = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta);
-
-		if (0) {
-			//no params to load
-		}
-		//secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
-
-		if (list_has_space(envi->module_list)) {
-			list_append(envi->module_list, (uint8_t *) meta);
-		} else {
-			//TODO error
-		}
-	}
-
-	//############# linking_list
-
-	//############ say by this point envi var completely init'd
-	//assumed always connect/init to switch first
-
-	//for loop to init links, j=0
-	//reads in module name (connected to so file), index,
-
-	uint8_t mod_name[MOD_NAME_SIZE];
-
-	if (1) {
-		if_index = 0;
-		strcpy((char *) mod_name, "logger");
-		//############
-		//open so/load library dynamically
-		//call logger_init(virtual_id, module_id, envi);
-	}
-
-	//############ say by this point envi var completely init'd
-
-	//######################################################################
-
-	register_to_signal(SIGRTMIN);
-
-	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
-
-	signal(SIGINT, core_termination_handler); //register termination handler
 
 	switch_dummy();
 	//daemon_dummy();
@@ -841,7 +1061,7 @@ void core_main() {
 
 	// Start the driving thread of each module
 	PRINT_IMPORTANT("Initialize Modules");
-	switch_init(); //should always be first
+	//switch_init(); //should always be first
 	//daemon_init(); //TODO improve how sets mac/ip
 	//interface_init();
 
@@ -862,7 +1082,7 @@ void core_main() {
 	pthread_attr_init(&fins_pthread_attr);
 
 	PRINT_IMPORTANT("Run/start Modules");
-	switch_run(&fins_pthread_attr);
+	//switch_run(&fins_pthread_attr);
 	//daemon_run(&fins_pthread_attr);
 	//interface_run(&fins_pthread_attr);
 

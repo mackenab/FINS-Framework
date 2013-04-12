@@ -27,8 +27,8 @@ extern struct udp_statistics udpStat;
 struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t* PDU, metadata *meta) {
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 
-	char *data;
-	data = (char *) secure_malloc(PDU_length);
+	uint8_t *data;
+	data = (uint8_t *) secure_malloc(PDU_length);
 	memcpy(data, PDU, PDU_length);
 
 	if (dataOrCtrl == DATA) {
@@ -38,7 +38,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 
 		ff->dataFrame.directionFlag = direction;
 		ff->dataFrame.pduLength = PDU_length;
-		ff->dataFrame.pdu = (u_char *) data;
+		ff->dataFrame.pdu = data;
 		ff->metaData = meta;
 		//	memcpy(&ff.metaData, metadata, MAX_METADATASIZE);
 	}

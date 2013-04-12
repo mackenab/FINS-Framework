@@ -262,7 +262,7 @@ void interface_out_fdf(struct finsFrame *ff) {
 	uint64_t src_mac;
 	uint32_t ether_type;
 
-	char *frame;
+	uint8_t *frame;
 	struct sniff_ethernet *hdr;
 	int framelen;
 	int numBytes;

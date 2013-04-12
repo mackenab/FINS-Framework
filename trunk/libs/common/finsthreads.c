@@ -223,7 +223,7 @@ void pool_start(struct thread_pool *pool, uint32_t threads) {
 
 	for (i = 0; i < threads; i++) {
 		worker = worker_create(&pool->inactive_sem, &pool->inactive_num, pool->queue, ++pool->worker_count);
-		list_append(pool->workers, (uint8_t *) worker);
+		list_append(pool->workers, worker);
 	}
 
 	PRINT_DEBUG("Exited: pool=%p, len=%u", pool, pool->workers->len);
@@ -231,10 +231,6 @@ void pool_start(struct thread_pool *pool, uint32_t threads) {
 
 int worker_inactive_test(struct pool_worker *worker) {
 	return worker->running && worker->inactive;
-}
-
-int worker_inactive_test_2(uint8_t *data) {
-	return ((struct pool_worker *) data)->running && ((struct pool_worker *) data)->inactive;
 }
 
 int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *local) {
@@ -271,7 +267,7 @@ int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *loc
 			request->work = work;
 			request->local = local;
 
-			list_append(pool->queue, (uint8_t *) request);
+			list_append(pool->queue, request);
 			sem_post(&pool->inactive_sem);
 
 			return 1;
@@ -285,7 +281,7 @@ int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *loc
 			if (list_has_space(pool->workers)) {
 				PRINT_DEBUG("Starting new worker");
 				struct pool_worker *worker = worker_create(&pool->inactive_sem, &pool->inactive_num, pool->queue, pool->worker_count++);
-				list_append(pool->workers, (uint8_t *) worker);
+				list_append(pool->workers, worker);
 
 				worker->work = work;
 				worker->local = local;
@@ -329,7 +325,7 @@ void pool_free(struct thread_pool *pool) {
 	}
 	free(pool->workers);
 
-	list_free(pool->queue);
+	list_free(pool->queue, free);
 
 	free(pool);
 }
