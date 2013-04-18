@@ -367,7 +367,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = DATA;
-	ff->destinationID = INTERFACE_ID;
+	ff->destinationID = NONE_INDEX; //INTERFACE_ID;
 	ff->metaData = meta;
 
 	ff->dataFrame.directionFlag = DIR_DOWN;
@@ -503,10 +503,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
-		PRINT_ERROR("todo");
-		//arp_set_param(ff);
-		//TODO set interface_mac?
-		freeFinsFrame(ff);
+		arp_set_param(module, ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
@@ -533,6 +530,59 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		break;
 	}
+}
+
+void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	struct arp_data *data = (struct arp_data *) module->data;
+
+	switch (ff->ctrlFrame.param_id) {
+	case PARAM_FLOWS:
+		PRINT_DEBUG("PARAM_FLOWS");
+		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+
+		if (module->num_ports < ff->ctrlFrame.data_len) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = ff->ctrlFrame.data_len;
+
+		int i;
+		for (i = 0; i < ff->ctrlFrame.data_len; i++) {
+			data->flows[i] = flows[i];
+		}
+		break;
+	case PARAM_LINKS:
+		PRINT_DEBUG("PARAM_LINKS");
+		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+
+		if (data->link_list) {
+			list_free(data->link_list, free);
+		}
+
+		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
+		data->link_list = link_list;
+
+		ff->ctrlFrame.data = NULL;
+		break;
+	case PARAM_DUAL:
+		PRINT_DEBUG("PARAM_DUAL");
+		PRINT_ERROR("todo");
+		break;
+	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	}
+
+	freeFinsFrame(ff);
 }
 
 void arp_exec(struct fins_module *module, struct finsFrame *ff) {
@@ -595,21 +645,33 @@ void *switch_to_arp(void *local) {
 	return NULL;
 }
 
-int arp_init(struct fins_module *module, metadata *meta, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, meta=%p, envi=%p", module, meta, envi);
+int arp_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi) {
+	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_queues(module);
 
 	module->data = secure_malloc(sizeof(struct arp_data));
 	struct arp_data *data = (struct arp_data *) module->data;
 
+	if (module->num_ports < flows_num) {
+		PRINT_ERROR("todo error");
+		return 0;
+	}
+	data->flows_num = flows_num;
+
+	int i;
+	for (i = 0; i < flows_num; i++) {
+		data->flows[i] = flows[i];
+	}
+
+	data->interface_list = list_create(ARP_INTERFACE_LIST_MAX);
+	data->cache_list = list_create(ARP_CACHE_LIST_MAX);
+
 	//TODO extract this from meta?
 	//set start-up vars from envi
 	//arp_init();
 	//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
-
-	data->interface_list = list_create(ARP_INTERFACE_LIST_MAX);
-	data->cache_list = list_create(ARP_CACHE_LIST_MAX);
+	arp_register_interface(module, 0x10683f4f7467ull, IP4_ADR_P2H(192, 168, 1, 20));
 
 	return 1;
 }
@@ -692,10 +754,10 @@ struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name) {
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
-	strcpy((char *) module->lib, "arp");
+	strcpy((char *) module->lib, ARP_LIB);
+	module->num_ports = ARP_MAX_PORTS;
 	module->ops = &arp_ops;
 	module->state = FMS_FREE;
-	module->num_ports = 2;
 
 	module->index = index;
 	module->id = id;

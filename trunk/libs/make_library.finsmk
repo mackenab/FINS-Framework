@@ -1,0 +1,139 @@
+LOCAL_NAME := $(strip $(LOCAL_NAME))
+LOCAL_LIBS := $(strip $(LOCAL_LIBS))
+LOCAL_OBJS := $(strip $(LOCAL_OBJS))
+LOCAL_INCS := $(strip $(LOCAL_INCS))
+
+LOCAL_MAKE_FILE := $(LOCAL_DIR)/Makefile
+LOCAL_INCS_FILE := $(LOCAL_DIR)/INCS.finsmk
+#LOCAL_OBJS_FILE := $(LOCAL_DIR)/OBJS.finsmk
+
+LOCAL_INCS_DIRS := $(abspath $(addprefix $(LOCAL_DIR)/,$(LOCAL_INCS)))
+LIB_DIRS := $(addprefix $(LIBS_DIR)/,$(LOCAL_LIBS))
+INCS_DIRS := $(strip $(LIB_DIRS))
+INCS_FILES := $(addsuffix /INCS.finsmk,$(INCS_DIRS))
+FULL_INCS_FILES := $(LOCAL_INCS_FILE) $(INCS_FILES)
+
+FULL_INCS = $(sort $(LOCAL_INCS_DIRS) $(shell cat $(FULL_INCS_FILES) 2> /dev/null))
+CURR_INCS = $(shell cat $(LOCAL_INCS_FILE) 2> /dev/null)
+OTHER_INCS = $(filter-out $(LOCAL_DIR),$(CURR_INCS))
+
+INCLUDES = $(call filter_headers,$(CURR_INCS))
+CFLAGS += $(addprefix -I,$(CURR_INCS))
+CFLAGS += $(LOCAL_CFLAGS)
+
+#FULL_INCS = $(sort $(LOCAL_INCS_DIRS) $(INCS_DIRS))
+#INCLUDES = $(call filter_headers,$(FULL_INCS))
+#CFLAGS += $(addprefix -I,$(FULL_INCS))
+
+LOCAL_OBJS_PATHS := $(addprefix $(LOCAL_DIR)/,$(LOCAL_OBJS))
+LOCAL_SO := lib$(LOCAL_NAME).so
+#LOCAL_SO_PATH := $(LOCAL_DIR)/$(LOCAL_SO)
+LOCAL_SO_PATH := $(OBJ_DIR)/$(LOCAL_SO)
+TEST := $(LOCAL_OBJS_PATHS)
+
+LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).so)
+#LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(LIBS_DIR)/$(LIB)/lib$(LIB).so)
+LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).so)
+
+OTHER_SO := $(LIB_SO)
+OTHER_SO_PATHS := $(LIB_SO_PATHS)
+
+LDFLAGS += $(LOCAL_LDFLAGS)
+LDFLAGS += $(foreach SO_PATH,$(sort $(dir $(OTHER_SO_PATHS))), -L$(SO_PATH))
+LDFLAGS += $(addprefix -l,$(LOCAL_LIBS))
+
+#	@ar rvs lib$(LOCAL_NAME).a $(OBJS)
+#TEST = $(shell cat TEST2 2> out.txt)
+
+##### TARGETS #####
+#.PHONY:all
+all:setup build
+	@echo "compiled[$(MAKELEVEL)]:'$(LOCAL_NAME)'\n"
+
+.PHONY:setup
+setup:$(LOCAL_INCS_FILE)
+	@echo "setup[$(MAKELEVEL)]:'$(LOCAL_NAME)'\n"
+
+$(LOCAL_INCS_FILE):$(LOCAL_MAKE_FILE) $(INCS_FILES)
+	@echo $(FULL_INCS) > $(LOCAL_INCS_FILE)
+
+$(LIBS_DIR)/%/INCS.finsmk:$(LIBS_DIR)/%/Makefile
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+	@cd $(dir $@); $(MAKE) $@; cd $(LOCAL_DIR);
+endif
+
+$(MODULES_DIR)/%/INCS.finsmk:$(MODULES_DIR)/%/Makefile
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+	@cd $(dir $@); $(MAKE) $@; cd $(LOCAL_DIR);
+endif
+
+.PHONY:build
+build:build_others $(LOCAL_SO_PATH)
+	@echo "built[$(MAKELEVEL)]:'$(LOCAL_NAME)'\n"
+
+.PHONY:build_others
+build_others:
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+#	@$(foreach LIB,$(LOCAL_LIBS),cd $(LIBS_DIR)/$(LIB); $(MAKE) $(LIBS_DIR)/$(LIB)/lib$(LIB).so; cd $(LOCAL_DIR);)
+	@$(foreach LIB,$(LOCAL_LIBS),cd $(LIBS_DIR)/$(LIB); $(MAKE) build; cd $(LOCAL_DIR);)
+endif
+
+$(LOCAL_SO_PATH):$(LOCAL_OBJS) #$(OTHER_SO_PATHS) #$(LOCAL_OBJS_FILE)
+	@echo "test1='$(LOCAL_DIR)'"
+	@$(LD) $(LOCAL_OBJS) $(LDFLAGS) -shared -o $(LOCAL_SO_PATH)
+
+%.o:%.c $(INCLUDES)
+	@echo "test3='$(LOCAL_DIR)'"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(LOCAL_DIR)/%.o:%.c $(INCLUDES)
+	@echo "test2='$(LOCAL_DIR)'"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+#$(LOCAL_OBJS_FILE):$(LOCAL_MAKE_FILE)
+#	@echo "OBJS.finsmk"
+#	@echo $(LOCAL_OBJS_PATHS) $(OTHER_SO_PATHS) > $(LOCAL_OBJS_FILE)
+
+$(LIB_SO_PATHS):
+	@echo "test5='$(LOCAL_DIR)'"
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+#	@cd $(dir $@); $(MAKE) $(notdir $@); cd $(LOCAL_DIR);
+	@cd $(LIBS_DIR)/$(subst .so,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);
+endif
+
+#.SECONDEXPANSION:
+#$(LIBS_DIR)/%.so:$(shell cat $(dir $@)OBJS.finsmk 2> /dev/null)
+#$(OTHER_SO_PATHS): #$$(shell cat $$(dir $$@)OBJS.finsmk 2> /dev/null)
+#	@echo "test5='$(LOCAL_DIR)'"
+#ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+#	@cd $(dir $@); $(MAKE) $(notdir $@); cd $(LOCAL_DIR);
+#	@cd $(dir $@); $(MAKE) build; cd $(LOCAL_DIR);
+#endif
+
+.PHONY:clean
+clean:clean_local
+ifneq ($(MAX_DEPTH),$(MAKELEVEL))
+	@$(foreach DIR,$(INCS_DIRS),cd $(DIR); $(MAKE) clean; cd $(LOCAL_DIR);)
+endif
+
+clean_local:clean_shared
+	@rm -f $(LOCAL_OBJS_PATHS)
+	@rm -f $(LOCAL_INCS_FILE) #$(LOCAL_OBJS_FILE)
+	@echo "cleaned[$(MAKELEVEL)]:$(LOCAL_NAME)\n";
+
+clean_shared:
+	@rm -f $(LOCAL_SO_PATH)
+
+.PHONY:temp
+temp:
+	@echo "CFLAGS='$(CFLAGS)'"
+	@echo "INCLUDES='$(INCLUDES)'"
+	@echo "LOCAL_OBJS='$(LOCAL_OBJS)'"
+	@echo "LOCAL_OBJS_PATHS='$(LOCAL_OBJS_PATHS)'\n"
+#	@echo "FULL_INCS='$(FULL_INCS)'"
+#	echo $(sort $(shell cat INCS.finsmk)) > $(LOCAL_DIR)/INCS.finsmk
+
+.PHONY:test
+test:
+	@echo "TEST='$(TEST)'"
+	@echo "LOCAL_DIR='$(LOCAL_DIR)'"

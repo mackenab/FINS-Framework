@@ -25,10 +25,13 @@
 #define MAX_ADDRESSES 8192
 #define MAX_ROUTES 8192
 
-#define MAX_MODULES 16
+#define MAX_MODULES 32
+#define MAX_BASE_PATH 100
 #define MOD_NAME_SIZE 64
 #define MAX_QUEUE_SIZE 100000
-
+#define MAX_FLOWS 256
+#define MAX_LINKS 1024
+#define SWITCH_INDEX 0 //Needs to be 0 so that is loaded first
 struct addr_record { //for a particular address
 	uint32_t if_index;
 	uint32_t family;
@@ -56,7 +59,7 @@ struct if_record { //for an interface
 };
 
 struct route_record {
-	uint8_t if_index;
+	uint32_t if_index;
 	uint32_t family;
 	struct sockaddr_storage dst; //end-to-end dst
 	struct sockaddr_storage mask; //network mask
@@ -72,7 +75,7 @@ struct cache_record {
 	struct sockaddr_storage src;
 	struct sockaddr_storage dst;
 	struct sockaddr_storage gw;
-	uint8_t if_index;
+	uint32_t if_index;
 
 	uint32_t metric; //TODO remove?
 	uint32_t timeout; //TODO remove?
@@ -112,14 +115,14 @@ typedef enum {
 struct fins_module {
 	//inherent
 	uint8_t lib[MOD_NAME_SIZE]; //name of module, shared library located at <FINS_ROOT>/trunk/modules/<lib>/<lib>.so?
+	uint32_t num_ports;
 	const struct fins_module_ops *ops;
 	fins_module_state state;
-	uint32_t num_ports;
 
 	//assigned
 	uint32_t index; //index of module in the module_list/fins_modules
 	uint32_t id; //unique ID of module assigned in .ini files
-	uint8_t name[MOD_NAME_SIZE]; //unique name of module (more for human recognition)
+	uint8_t name[MOD_NAME_SIZE]; //unique name of instance of this module (more for human recognition)
 
 	//allocated
 	finsQueue input_queue;
@@ -128,12 +131,13 @@ struct fins_module {
 	sem_t *output_sem;
 	sem_t *event_sem;
 
+	//private & dependent on the module
 	uint8_t *data;
 };
 
 struct fins_module_ops {
 	//struct fins_module *owner; //TODO remove?
-	int (*init)(struct fins_module *module, metadata *meta, struct envi_record *envi);
+	int (*init)(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi);
 	int (*run)(struct fins_module *module, pthread_attr_t *fins_pthread_attr);
 	int (*pause)(struct fins_module *module);
 	int (*unpause)(struct fins_module *module);
@@ -141,20 +145,33 @@ struct fins_module_ops {
 	int (*release)(struct fins_module *module);
 };
 
+struct fins_module_table {
+	//add num_ports? //as max number of flows
+	struct linked_list *link_list;
+	uint32_t flows_num;
+	uint32_t flows[MAX_FLOWS];
+};
+
 struct link_record {
 	uint32_t id;
 	uint32_t src_index;
-
-	struct linked_list *dst_list;
-//uint32_t dst_index;
+	uint32_t dsts_index[MAX_MODULES];
+	uint32_t dsts_num;
+//struct linked_list *dst_list;
 };
+
+int link_id_test(struct link_record *link, uint32_t *id);
 
 void module_create_queues(struct fins_module *module);
 void module_destroy_queues(struct fins_module *module);
 int module_to_switch(struct fins_module *module, struct finsFrame *ff);
+int module_send_flow(struct fins_module *module, struct fins_module_table *table, struct finsFrame *ff, uint32_t flow);
+int module_register(struct fins_module *module, struct fins_module *new_mod);
+void module_unregister(struct fins_module *module, int index);
 
-int module_register(struct fins_module *module);
-void module_unregister(int id);
+#define PARAM_FLOWS 0
+#define PARAM_LINKS 1
+#define PARAM_DUAL 2
 
 //#############
 void switch_dummy(void);

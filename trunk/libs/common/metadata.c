@@ -200,6 +200,7 @@ int metadata_print(metadata *meta) {
 
 	root = config_root_setting(meta);
 	howManySettings = config_setting_length(root);
+	PRINT_IMPORTANT("meta=%p, settings=%d", meta, howManySettings);
 
 	for (i = 0; i < howManySettings; i++) {
 
@@ -221,8 +222,24 @@ int metadata_print(metadata *meta) {
 			stringValue = (char *) config_setting_get_string(handle);
 			PRINT_IMPORTANT("meta=%p, '%s'='%s'", meta, name, stringValue);
 			break;
+
+		case CONFIG_TYPE_FLOAT:
+			PRINT_ERROR("Unsupported: type=%d (CONFIG_TYPE_FLOAT)", type);
+			break;
+		case CONFIG_TYPE_BOOL:
+			PRINT_ERROR("Unsupported: type=%d (CONFIG_TYPE_BOOL)", type);
+			break;
+		case CONFIG_TYPE_ARRAY:
+			PRINT_ERROR("Unsupported: type=%d (CONFIG_TYPE_ARRAY)", type);
+			break;
+		case CONFIG_TYPE_LIST:
+			PRINT_ERROR("Unsupported: type=%d (CONFIG_TYPE_LIST)", type);
+			break;
+		case CONFIG_TYPE_GROUP:
+			PRINT_ERROR("Unsupported: type=%d (CONFIG_TYPE_GROUP)", type);
+			break;
 		default:
-			PRINT_ERROR(" wrong type found");
+			PRINT_ERROR("Unsupported: type=%d", type);
 			break;
 		}
 	}

@@ -30,6 +30,7 @@
 #include "metadata.h"
 
 //Definition of the modules IDs
+#define NONE_INDEX 0
 #define SWITCH_ID 0
 #define DAEMON_ID 1
 #define INTERFACE_ID 2
@@ -203,6 +204,17 @@ void list_for_each1_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 typedef void (*apply2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
 #define list_for_each2(list, apply, param1, param2) list_for_each2_full(list, (apply2_type)apply, (uint8_t *)param1, (uint8_t *)param2)
 void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
+
+typedef uint8_t *(*copy_type)(uint8_t *data);
+#define list_filter(list, equal, copy) list_filter_full(list, (equal_type)equal, (copy_type)copy)
+struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*copy)(uint8_t *data));
+
+#define list_filter1(list, equal, param, copy) list_filter1_full(list, (equal1_type)equal, (uint8_t *)param, (copy_type)copy)
+struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*copy)(uint8_t *data));
+
+#define list_filter2(list, equal, param1, param2, copy) list_filter2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2, (copy_type)copy)
+struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
+		uint8_t *(*copy)(uint8_t *data));
 
 typedef void (*release_type)(uint8_t *data);
 #define list_free(list, release) list_free_full(list, (release_type)release)

@@ -82,7 +82,9 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 						gen_requestARP(&msg, src_mac, src_ip, dst_mac, dst_ip);
 
 						struct finsFrame *ff_req = arp_to_fdf(&msg);
-						if (arp_to_switch(module, ff_req)) {
+
+						if (module_send_flow(module, (struct fins_module_table *) module->data, ff_req, 0)) {
+//						if (arp_to_switch(module, ff_req)) {
 							cache->seeking = 1;
 							cache->retries = 0;
 
@@ -124,7 +126,9 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 				gen_requestARP(&msg, src_mac, src_ip, dst_mac, dst_ip);
 
 				struct finsFrame *ff_req = arp_to_fdf(&msg);
-				if (arp_to_switch(module, ff_req)) {
+				PRINT_DEBUG("module->data=%p", module->data);
+				if (module_send_flow(module, (struct fins_module_table *) module->data, ff_req, 0)) {
+					//if (arp_to_switch(module, ff_req)) {
 					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
 					if (!list_has_space(data->cache_list)) {
 						PRINT_DEBUG("Making space in cache_list");
@@ -229,7 +233,8 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					gen_replyARP(&arp_msg_reply, dst_mac, dst_ip, src_mac, src_ip);
 
 					struct finsFrame *ff_reply = arp_to_fdf(&arp_msg_reply);
-					if (!arp_to_switch(module, ff_reply)) {
+					if (!module_send_flow(module, (struct fins_module_table *) module->data, ff_reply, 0)) {
+						//if (!arp_to_switch(module, ff_reply)) {
 						PRINT_ERROR("todo error");
 						freeFinsFrame(ff_reply);
 					}
@@ -319,7 +324,8 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 				gen_requestARP(&msg, src_mac, src_ip, dst_mac, dst_ip);
 
 				struct finsFrame *ff_req = arp_to_fdf(&msg);
-				if (arp_to_switch(module, ff_req)) {
+				if (module_send_flow(module, (struct fins_module_table *) module->data, ff_req, 0)) {
+					//if (arp_to_switch(module, ff_req)) {
 					cache->retries++;
 
 					//gettimeofday(&cache->updated_stamp, 0);
