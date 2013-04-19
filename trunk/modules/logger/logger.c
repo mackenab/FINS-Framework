@@ -60,6 +60,7 @@ void logger_get_ff(struct fins_module *module) {
 			freeFinsFrame(ff);
 		} else {
 			PRINT_ERROR("todo error");
+			exit(-1);
 		}
 	} else if (data->logger_interrupt_flag) {
 		data->logger_interrupt_flag = 0;
@@ -131,24 +132,26 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	struct logger_data *data = (struct logger_data *) module->data;
+	int i;
 
 	switch (ff->ctrlFrame.param_id) {
 	case PARAM_FLOWS:
 		PRINT_DEBUG("PARAM_FLOWS");
+		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
 		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
-		if (module->num_ports < ff->ctrlFrame.data_len) {
+		if (module->num_ports < flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
 		}
-		data->flows_num = ff->ctrlFrame.data_len;
+		data->flows_num = flows_num;
 
-
-		int i;
-		for (i = 0; i < ff->ctrlFrame.data_len; i++) {
+		for (i = 0; i < flows_num; i++) {
 			data->flows[i] = flows[i];
 		}
+
+		//freeFF frees flows
 		break;
 	case PARAM_LINKS:
 		PRINT_DEBUG("PARAM_LINKS");
@@ -161,7 +164,6 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		if (data->link_list) {
 			list_free(data->link_list, free);
 		}
-
 		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
 		data->link_list = link_list;
 
@@ -169,12 +171,35 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case PARAM_DUAL:
 		PRINT_DEBUG("PARAM_DUAL");
-		PRINT_ERROR("todo");
+
+		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
+
+		if (module->num_ports < table->flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = table->flows_num;
+
+		for (i = 0; i < table->flows_num; i++) {
+			data->flows[i] = table->flows[i];
+		}
+
+		if (data->link_list) {
+			list_free(data->link_list, free);
+		}
+		data->link_list = table->link_list;
+
+		//freeFF frees table
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
 		break;
 	}
 

@@ -17,6 +17,7 @@
 #include <finstypes.h>
 #include <metadata.h>
 #include <finsqueue.h>
+//#include <finsmodule.h> //move standard switch template to
 
 #include <net/if.h>
 
@@ -31,7 +32,11 @@
 #define MAX_QUEUE_SIZE 100000
 #define MAX_FLOWS 256
 #define MAX_LINKS 1024
-#define SWITCH_INDEX 0 //Needs to be 0 so that is loaded first
+
+//Needs to be 0 so that is loaded first
+#define SWITCH_INDEX 0
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv Move to finstypes.h?
 struct addr_record { //for a particular address
 	uint32_t if_index;
 	uint32_t family;
@@ -42,6 +47,11 @@ struct addr_record { //for a particular address
 	struct sockaddr_storage dst; //end-to-end dst
 //union {}; //bdc & dst can be unioned, not done for simplicity
 };
+
+void set_addr4(struct sockaddr_storage *addr, uint32_t val);
+int addr_is_addr4(struct addr_record *addr);
+void set_addr6(struct sockaddr_storage *addr, uint32_t val);
+int addr_is_addr6(struct addr_record *addr);
 
 struct if_record { //for an interface
 	//inherent
@@ -57,6 +67,7 @@ struct if_record { //for an interface
 
 	struct linked_list *addr_list;
 };
+int ifr_index_test(struct if_record *ifr, uint32_t *index);
 
 struct route_record {
 	uint32_t if_index;
@@ -91,13 +102,16 @@ struct envi_record {
 
 	struct linked_list *addr_list;
 	struct linked_list *route_list; //list of addr_record, for a routing table
-	//struct linked_list *route_cache; //TODO add in routing cache?
-	//struct linked_list *foward_list; //TODO add in forwarding table?
-	struct linked_list *library_list; //list of open libraries
-	struct linked_list *module_list; //list of modules
-	struct linked_list *link_list;
+//struct linked_list *route_cache; //TODO add in routing cache?
+//struct linked_list *foward_list; //TODO add in forwarding table?
+//struct linked_list *library_list; //list of open libraries
+//struct linked_list *module_list; //list of modules
+//struct linked_list *link_list;
 };
 
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Move to finstypes.h?
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv Move to finsmodule.h?
 typedef struct fins_module *(*mod_create_type)(uint32_t index, uint32_t id, uint8_t *name);
 struct fins_library {
 	uint8_t name[MOD_NAME_SIZE];
@@ -107,6 +121,8 @@ struct fins_library {
 	uint32_t num_mods;
 //struct linked_list *mod_list;
 };
+struct fins_library *library_load(uint8_t *lib, uint8_t *base_path);
+int lib_name_test(struct fins_library *lib, uint8_t *name);
 
 typedef enum {
 	FMS_FREE = 0, FMS_INIT, FMS_RUNNING, FMS_PAUSED, FMS_SHUTDOWN
@@ -134,6 +150,7 @@ struct fins_module {
 	//private & dependent on the module
 	uint8_t *data;
 };
+int mod_id_test(struct fins_module *mod, uint32_t *id);
 
 struct fins_module_ops {
 	//struct fins_module *owner; //TODO remove?
@@ -145,13 +162,6 @@ struct fins_module_ops {
 	int (*release)(struct fins_module *module);
 };
 
-struct fins_module_table {
-	//add num_ports? //as max number of flows
-	struct linked_list *link_list;
-	uint32_t flows_num;
-	uint32_t flows[MAX_FLOWS];
-};
-
 struct link_record {
 	uint32_t id;
 	uint32_t src_index;
@@ -161,17 +171,32 @@ struct link_record {
 };
 
 int link_id_test(struct link_record *link, uint32_t *id);
+int link_involved_test(struct link_record *link, uint32_t *index);
+struct link_record *link_copy(struct link_record *link);
 
+struct fins_module_table {
+	//add num_ports? //as max number of flows
+	struct linked_list *link_list;
+	uint32_t flows_num;
+	uint32_t flows[MAX_FLOWS];
+};
+
+//definitely move to finsmodule.h
 void module_create_queues(struct fins_module *module);
 void module_destroy_queues(struct fins_module *module);
-int module_to_switch(struct fins_module *module, struct finsFrame *ff);
+//definitely move to finsmodule.h
 int module_send_flow(struct fins_module *module, struct fins_module_table *table, struct finsFrame *ff, uint32_t flow);
-int module_register(struct fins_module *module, struct fins_module *new_mod);
-void module_unregister(struct fins_module *module, int index);
+
+//keep in switch
+int switch_register_module(struct fins_module *module, struct fins_module *new_mod);
+void switch_unregister_module(struct fins_module *module, int index);
+//not as sure since switch_event_sem
+int module_to_switch(struct fins_module *module, struct finsFrame *ff);
 
 #define PARAM_FLOWS 0
 #define PARAM_LINKS 1
 #define PARAM_DUAL 2
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Move to finsmodule.h?
 
 //#############
 void switch_dummy(void);

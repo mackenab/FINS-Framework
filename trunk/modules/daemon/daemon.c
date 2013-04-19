@@ -2905,6 +2905,7 @@ void daemon_get_ff(void) {
 			}
 		} else {
 			PRINT_ERROR("todo error");
+			exit(-1);
 		}
 	} else if (daemon_interrupt_flag) {
 		daemon_interrupt_flag = 0;

@@ -2757,6 +2757,7 @@ void tcp_get_ff(void) {
 		}
 	} else {
 		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 }
 

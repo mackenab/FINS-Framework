@@ -169,16 +169,16 @@ int addr_is_addr6(struct addr_record *addr) {
 	return addr->family == AF_INET6;
 }
 
-int ifr_index_test(struct if_record *ifr, uint32_t *if_index) {
-	return ifr->index == *if_index;
+int ifr_index_test(struct if_record *ifr, uint32_t *index) {
+	return ifr->index == *index;
 }
 
-int lib_name_test(struct fins_library *lib, uint8_t *if_name) {
-	return strcmp((char *) lib->name, (char *) if_name) == 0;
+int lib_name_test(struct fins_library *lib, uint8_t *name) {
+	return strcmp((char *) lib->name, (char *) name) == 0;
 }
 
-int mod_id_test(struct fins_module *mod, uint32_t *mod_id) {
-	return mod->id == *mod_id;
+int mod_id_test(struct fins_module *mod, uint32_t *id) {
+	return mod->id == *id;
 }
 
 int link_involved_test(struct link_record *link, uint32_t *index) {
@@ -193,16 +193,6 @@ int link_involved_test(struct link_record *link, uint32_t *index) {
 		}
 		return 0;
 	}
-}
-
-int link_id_test(struct link_record *link, uint32_t *id) {
-	return link->id == *id;
-}
-
-struct link_record *link_copy(struct link_record *link) {
-	struct link_record *copy = (struct link_record *) secure_malloc(sizeof(struct link_record));
-	memcpy(copy, link, sizeof(struct link_record)); //would need to change if linked_list
-	return copy;
 }
 
 struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
@@ -246,50 +236,112 @@ void core_main() {
 
 	signal(SIGINT, core_termination_handler); //register termination handler
 
-	//######################################################################
 	int status;
 	int i, j, k;
 
-	//load envi.cfg file
-
-	//#############
-	//new module initialization prototype
+	//######################################################################
 	struct envi_record *envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
+
+	PRINT_IMPORTANT("loading environment");
+	metadata *meta_envi = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta_envi);
+
+	status = config_read_file(meta_envi, "envi.cfg");
+	if (status == META_FALSE) {
+		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta_envi), config_error_line(meta_envi), config_error_text(meta_envi));
+		metadata_destroy(meta_envi);
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+
+	//############# any ip address
+	PRINT_IMPORTANT("Any Addr");
 	envi->any_ip_addr = IP4_ADR_P2H(0,0,0,0); //TODO change to addr_in?
+	//TODO get from environment.any_addr
 
 	//############# if_list
+	PRINT_IMPORTANT("interface list");
 	envi->if_list = list_create(MAX_INTERFACES);
 
-	uint32_t if_index; //assigned by core?
-	uint8_t if_name[IFNAMSIZ];
-	uint64_t if_mac;
-	uint16_t if_type;
-	uint8_t if_status;
-	uint32_t if_mtu;
-	uint32_t if_flags;
-	//#############
+	metadata_element *list_elem = config_lookup(meta_envi, "environment.interfaces");
+	if (list_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+	int list_num = config_setting_length(list_elem);
+
+	metadata_element *elem;
+	uint32_t if_index;
+	uint8_t *name;
+	uint64_t mac;
+	uint32_t type;
+	uint32_t if_status;
+	uint32_t mtu;
+	uint32_t flags;
+
 	struct if_record *ifr;
 
-	if (1) { //TODO change to for loop from read data
-		if_index = 1;
-		strcpy((char *) if_name, "lo");
-		if_mac = 0;
-		if_type = 1;
-		if_status = 1;
-		if_mtu = 16436;
-		if_flags = IFF_LOOPBACK | IFF_UP | IFF_RUNNING;
+	for (i = 0; i < list_num; i++) {
+		elem = config_setting_get_elem(list_elem, i);
+		if (elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int(elem, "index", (int *) &if_index);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_string(elem, "name", (const char **) &name);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int64(elem, "mac", (long long *) &mac);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int(elem, "type", (int *) &type);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int(elem, "status", (int *) &if_status);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int(elem, "mtu", (int *) &mtu);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int(elem, "flags", (int *) &flags);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
 		//#############
 		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
 		if (ifr == NULL) {
 			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
 			ifr->index = if_index;
-			strcpy((char *) ifr->name, (char *) if_name);
-			ifr->mac = if_mac;
-			ifr->type = if_type;
+			strcpy((char *) ifr->name, (char *) name);
+			ifr->mac = mac;
+			ifr->type = (uint16_t) type;
 
-			ifr->status = if_status;
-			ifr->mtu = if_mtu;
-			ifr->flags = if_flags;
+			ifr->status = (uint8_t) if_status;
+			ifr->mtu = mtu;
+			ifr->flags = flags;
 
 			ifr->addr_list = list_create(MAX_FAMILIES);
 
@@ -297,223 +349,137 @@ void core_main() {
 				list_append(envi->if_list, ifr);
 			} else {
 				//TODO error
+				PRINT_ERROR("todo error");
+				exit(-1);
 			}
 
-			if (if_flags & IFF_LOOPBACK) {
+			if (flags & IFF_LOOPBACK) {
 				envi->if_loopback = ifr;
 			}
 		} else {
-			//TODO error
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
 	}
 
-	if (1) {
-		if_index = 2;
-		strcpy((char *) if_name, "eth0");
-		if_mac = 0;
-		if_type = 1;
-		if_status = 1;
-		if_mtu = 1500;
-		if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_UP; //IFF_RUNNING | //removed for wlan0
-		//#############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr == NULL) {
-			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
-			ifr->index = if_index;
-			strcpy((char *) ifr->name, (char *) if_name);
-			ifr->mac = if_mac;
-			ifr->type = if_type;
+	//############# if_main
+	PRINT_IMPORTANT("main interface");
+	uint32_t if_main;
 
-			ifr->status = if_status;
-			ifr->mtu = if_mtu;
-			ifr->flags = if_flags;
-
-			ifr->addr_list = list_create(MAX_FAMILIES);
-
-			if (list_has_space(envi->if_list)) {
-				list_append(envi->if_list, ifr);
-			} else {
-				//TODO error
-			}
-
-			if (if_flags & IFF_LOOPBACK) {
-				envi->if_loopback = ifr;
-			}
-		} else {
-			//TODO error
-		}
+	status = config_lookup_int(meta_envi, "environment.main_interface", (int *) &if_main);
+	if (status == META_FALSE) {
+		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 
-	if (1) {
-		if_index = 3;
-		strcpy((char *) if_name, "wlan0");
-		if_mac = 0;
-		if_type = 2;
-		if_status = 1;
-		if_mtu = 1500;
-		if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_UP | IFF_RUNNING;
-		//#############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr == NULL) {
-			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
-			ifr->index = if_index;
-			strcpy((char *) ifr->name, (char *) if_name);
-			ifr->mac = if_mac;
-			ifr->type = if_type;
-
-			ifr->status = if_status;
-			ifr->mtu = if_mtu;
-			ifr->flags = if_flags;
-
-			ifr->addr_list = list_create(MAX_FAMILIES);
-
-			if (list_has_space(envi->if_list)) {
-				list_append(envi->if_list, ifr);
-			} else {
-				//TODO error
-			}
-
-			if (if_flags & IFF_LOOPBACK) {
-				envi->if_loopback = ifr;
-			}
-		} else {
-			//TODO error
-		}
+	envi->if_main = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_main);
+	if (envi->if_main == NULL) {
+		PRINT_ERROR("todo");
 	}
-
-	//TODO change these to be dynamic, not static
-	envi->if_main = (struct if_record *) list_look(envi->if_list, 2);
 
 	//############# addr_list
+	PRINT_IMPORTANT("address list");
 	//envi->addr_list = list_create(MAX_INTERFACES * MAX_FAMILIES); //TODO use?
 
-	uint32_t addr_if_index; //the index parameter of the interface in if_list, most likely its order index as well
-	uint32_t addr_family; //atm only AF_INET, but eventually also AF_INET6
-	uint32_t addr_ip; //SIOCGIFADDR //addr_ip
-	uint32_t addr_mask; //SIOCGIFNETMASK //addr_mask
-	uint32_t addr_gw; //? //(addr_ip & addr_mask)|1;
-	uint32_t addr_bdc; //SIOCGIFBRDADDR //(addr_ip & addr_mask)|~addr_mask
-	uint32_t addr_dst; //SIOCGIFDSTADDR //addr_dst
-	//#############
+	list_elem = config_lookup(meta_envi, "environment.addresses");
+	if (list_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+	list_num = config_setting_length(list_elem);
+
+	uint32_t family; //atm only AF_INET, but eventually also AF_INET6
+
+	metadata_element *ip_elem;
+	uint32_t ip_num;
+
+	uint32_t ip[4]; //SIOCGIFADDR //ip
+	uint32_t mask[4]; //SIOCGIFNETMASK //mask
+	uint32_t gw[4]; //? //(ip & mask) | 1;
+	uint32_t bdc[4]; //SIOCGIFBRDADDR //(ip & mask) | ~mask
+	uint32_t dst[4]; //SIOCGIFDSTADDR //dst
+
 	struct addr_record *addr;
 
-	if (1) {
-		addr_if_index = 1;
-		addr_family = AF_INET;
-		addr_ip = IP4_ADR_P2H(127,0,0,1);
-		addr_mask = IP4_ADR_P2H(255,0,0,0);
-		addr_gw = IP4_ADR_P2H(127,0,0,1); //?
-		addr_bdc = IP4_ADR_P2H(127,255,255,255);
-		addr_dst = IP4_ADR_P2H(127,0,0,1); //?
-		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				if (addr_family == AF_INET) {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
-				} else {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
-				}
-
-				if (addr == NULL) {
-					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-					addr->if_index = addr_if_index;
-					addr->family = AF_INET;
-
-					if (addr_family == AF_INET) {
-						set_addr4(&addr->ip, addr_ip);
-						set_addr4(&addr->mask, addr_mask);
-						set_addr4(&addr->gw, addr_gw);
-						set_addr4(&addr->bdc, addr_bdc);
-						set_addr4(&addr->dst, addr_dst);
-					} else if (addr_family == AF_INET6) {
-						//TODO
-						set_addr6(&addr->ip, addr_ip);
-					} else {
-						//TODO error?
-					}
-
-					if (list_has_space(ifr->addr_list)) {
-						list_append(ifr->addr_list, addr);
-					} else {
-						//TODO error
-					}
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		} else {
-			//TODO error
+	for (i = 0; i < list_num; i++) {
+		elem = config_setting_get_elem(list_elem, i);
+		if (elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
-	}
 
-	if (1) {
-		addr_if_index = 2;
-		addr_family = AF_INET;
-		addr_ip = IP4_ADR_P2H(192,168,1,3);
-		addr_mask = IP4_ADR_P2H(255,255,255,0);
-		addr_gw = IP4_ADR_P2H(192,168,1,1); //???
-		addr_bdc = IP4_ADR_P2H(192,168,1,255);
-		addr_dst = envi->any_ip_addr; //???
-		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				if (addr_family == AF_INET) {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
-				} else {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
-				}
-
-				if (addr == NULL) {
-					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-					addr->if_index = addr_if_index;
-					addr->family = AF_INET;
-
-					if (addr_family == AF_INET) {
-						set_addr4(&addr->ip, addr_ip);
-						set_addr4(&addr->mask, addr_mask);
-						set_addr4(&addr->gw, addr_gw);
-						set_addr4(&addr->bdc, addr_bdc);
-						set_addr4(&addr->dst, addr_dst);
-					} else if (addr_family == AF_INET6) {
-						//TODO
-						set_addr6(&addr->ip, addr_ip);
-					} else {
-						//TODO error?
-					}
-
-					if (list_has_space(ifr->addr_list)) {
-						list_append(ifr->addr_list, addr);
-					} else {
-						//TODO error
-					}
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
-		} else {
-			//TODO error
+		status = config_setting_lookup_int(elem, "if_index", (int *) &if_index);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
-	}
 
-	if (1) {
-		addr_if_index = 3;
-		addr_family = AF_INET;
-		addr_ip = IP4_ADR_P2H(192,168,1,5);
-		addr_mask = IP4_ADR_P2H(255,255,255,0);
-		addr_gw = IP4_ADR_P2H(192,168,1,1); //???
-		addr_bdc = IP4_ADR_P2H(192,168,1,255);
-		addr_dst = envi->any_ip_addr; //???
+		status = config_setting_lookup_int(elem, "family", (int *) &family);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		ip_elem = config_setting_get_member(elem, "ip");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			ip[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
+		ip_elem = config_setting_get_member(elem, "mask");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			mask[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
+		ip_elem = config_setting_get_member(elem, "gw");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			gw[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
+		ip_elem = config_setting_get_member(elem, "bdc");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			bdc[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
+		ip_elem = config_setting_get_member(elem, "dst");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			dst[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
 		//############
 		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
 		if (ifr) {
 			if (ifr->flags & IFF_RUNNING) {
-				if (addr_family == AF_INET) {
+				if (family == AF_INET) {
 					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
 				} else {
 					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
@@ -521,251 +487,151 @@ void core_main() {
 
 				if (addr == NULL) {
 					addr = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-					addr->if_index = addr_if_index;
+					addr->if_index = if_index;
 					addr->family = AF_INET;
 
-					if (addr_family == AF_INET) {
-						set_addr4(&addr->ip, addr_ip);
-						set_addr4(&addr->mask, addr_mask);
-						set_addr4(&addr->gw, addr_gw);
-						set_addr4(&addr->bdc, addr_bdc);
-						set_addr4(&addr->dst, addr_dst);
-					} else if (addr_family == AF_INET6) {
+					if (family == AF_INET) {
+						set_addr4(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
+						set_addr4(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
+						set_addr4(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
+						set_addr4(&addr->bdc, IP4_ADR_P2H(bdc[0], bdc[1], bdc[2], bdc[3]));
+						set_addr4(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
+					} else if (family == AF_INET6) {
 						//TODO
-						set_addr6(&addr->ip, addr_ip);
+						//set_addr6(&addr->ip, ip);
+						PRINT_ERROR("todo");
 					} else {
 						//TODO error?
+						PRINT_ERROR("todo error");
+						exit(-1);
 					}
 
 					if (list_has_space(ifr->addr_list)) {
 						list_append(ifr->addr_list, addr);
 					} else {
 						//TODO error
+						PRINT_ERROR("todo error");
+						exit(-1);
 					}
 				} else {
 					//TODO error
+					PRINT_ERROR("todo: replace or add new?");
 				}
 			} else {
 				//TODO error
+				PRINT_ERROR("todo: decide just drop or add?");
 			}
 		} else {
 			//TODO error
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
 	}
 
 	//############# route_list
+	PRINT_IMPORTANT("route list");
 	envi->route_list = list_create(MAX_ADDRESSES);
 
-	uint32_t route_if_index;
-	uint32_t route_family;
-	uint32_t route_dst; //SIOCGIFDSTADDR //addr_dst
-	uint32_t route_mask; //SIOCGIFNETMASK //addr_mask
-	uint32_t route_gw; //? //(addr_ip & addr_mask)|1; //not sure about what gw is exactly
-	//uint32_t route_ip; //SIOCGIFADDR //addr_ip //change to be dynamic from if_list?
-	uint32_t route_metric; //SIOCGIFMETRIC
-	uint32_t route_timeout;
+	list_elem = config_lookup(meta_envi, "environment.routes");
+	if (list_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+	list_num = config_setting_length(list_elem);
+
+	uint32_t metric; //SIOCGIFMETRIC
+	uint32_t timeout;
 	//struct timeval route_stamp;
-	//#############
+
 	struct route_record *route;
 
-	if (1) {
-		route_if_index = 3;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(0,0,0,0);
-		route_mask = IP4_ADR_P2H(0,0,0,0);
-		route_gw = IP4_ADR_P2H(192,168,1,1); //???
-		//route_ip = IP4_ADR_P2H(192,168,1,5);
-		route_metric = 10;
-		route_timeout = 0;
-		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
+	for (i = 0; i < list_num; i++) {
+		elem = config_setting_get_elem(list_elem, i);
+		if (elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
-	}
 
-	if (1) {
-		route_if_index = 1;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(127,0,0,0);
-		route_mask = IP4_ADR_P2H(255,0,0,0);
-		route_gw = IP4_ADR_P2H(127,0,0,1);
-		//route_ip = IP4_ADR_P2H(127,0,0,1);
-		route_metric = 1;
-		route_timeout = 0;
-		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
+		status = config_setting_lookup_int(elem, "if_index", (int *) &if_index);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
-	}
 
-	if (0) { //would need for eth0
-		route_if_index = 3;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(192,168,1,0);
-		route_mask = IP4_ADR_P2H(255,255,255,0);
-		route_gw = envi->any_ip_addr; //gw==any, so send directly to dst
-		//route_ip = IP4_ADR_P2H(192,168,1,5);
-		route_metric = 1;
-		route_timeout = 0;
-		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
+		status = config_setting_lookup_int(elem, "family", (int *) &family);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
-	}
 
-	if (1) {
-		route_if_index = 1;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(192,168,1,5);
-		route_mask = IP4_ADR_P2H(255,255,255,255);
-		route_gw = IP4_ADR_P2H(127,0,0,1);
-		//route_ip = IP4_ADR_P2H(127,0,0,1);
-		route_metric = 10;
-		route_timeout = 0;
-		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
-			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
-				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
-
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
-					//TODO
-					//set_addr6(&route->ip, route_ip);
-				} else {
-					//TODO error?
-				}
-
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, route);
-				} else {
-					//TODO error
-				}
-			} else {
-				//TODO error
-			}
+		ip_elem = config_setting_get_member(elem, "dst");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
-	}
+		ip_num = config_setting_length(ip_elem);
 
-	if (0) {
-		route_if_index = 1;
-		route_family = AF_INET;
-		route_dst = IP4_ADR_P2H(192,168,1,255);
-		route_mask = IP4_ADR_P2H(255,255,255,255);
-		route_gw = envi->any_ip_addr; //gw==any, so send directly to dst
-		//route_ip = IP4_ADR_P2H(192,168,1,5);
-		route_metric = 10;
-		route_timeout = 0;
+		for (j = 0; j < ip_num; j++) {
+			dst[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
+		ip_elem = config_setting_get_member(elem, "mask");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			mask[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+
+		ip_elem = config_setting_get_member(elem, "gw");
+		if (ip_elem == NULL) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+		ip_num = config_setting_length(ip_elem);
+
+		for (j = 0; j < ip_num; j++) {
+			gw[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
+		}
+		////ip = IP4_ADR_P2H(192,168,1,5);
+
+		status = config_setting_lookup_int(elem, "metric", (int *) &metric);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
+		status = config_setting_lookup_int(elem, "timeout", (int *) &timeout);
+		if (status == META_FALSE) {
+			PRINT_ERROR("todo error");
+			exit(-1);
+		}
+
 		//############
 		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
 		if (ifr) {
 			if (ifr->flags & IFF_RUNNING) {
-				//TODO remove copies?
-
 				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
-				route->if_index = route_if_index;
-				route->family = route_family;
+				route->if_index = if_index;
+				route->family = family;
 
-				if (route_family == AF_INET) {
-					set_addr4(&route->dst, route_dst);
-					set_addr4(&route->mask, route_mask);
-					set_addr4(&route->gw, route_gw);
-					//set_addr4(&route->ip, route_ip);
-				} else if (route_family == AF_INET6) {
+				if (family == AF_INET) {
+					set_addr4(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
+					set_addr4(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
+					set_addr4(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
+					//set_addr4(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
+				} else if (family == AF_INET6) {
 					//TODO
-					//set_addr6(&route->ip, route_ip);
+					//set_addr6(&route->ip, ip);
 				} else {
 					//TODO error?
 				}
+
+				route->metric = metric;
+				route->timeout = timeout;
 
 				if (list_has_space(envi->route_list)) {
 					list_append(envi->route_list, route);
@@ -783,7 +649,7 @@ void core_main() {
 	metadata *meta_stack = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_stack);
 
-	status = config_read_file(meta_stack, "test2.cfg");
+	status = config_read_file(meta_stack, "stack.cfg");
 	if (status == META_FALSE) {
 		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta_stack), config_error_line(meta_stack), config_error_text(meta_stack));
 		metadata_destroy(meta_stack);
@@ -807,7 +673,6 @@ void core_main() {
 		exit(-1);
 	}
 	int mods_num = config_setting_length(mods_elem);
-	PRINT_IMPORTANT("meta=%p, mods_elem=%p, mods_num=%d", meta_stack, mods_elem, mods_num);
 
 	metadata_element *mod_elem;
 	uint32_t mod_id;
@@ -827,24 +692,20 @@ void core_main() {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
-		PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p", meta_stack, mods_elem, mod_elem);
 
 		status = config_setting_lookup_int(mod_elem, "id", (int *) &mod_id);
-		PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p, mod_id=%d, status=%d", meta_stack, mods_elem, mod_elem, mod_id, status);
 		if (status == META_FALSE) {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
 
 		status = config_setting_lookup_string(mod_elem, "lib", (const char **) &mod_lib);
-		PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p, mod_lib='%s', status=%d", meta_stack, mods_elem, mod_elem, mod_lib, status);
 		if (status == META_FALSE) {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
 
 		status = config_setting_lookup_string(mod_elem, "name", (const char **) &mod_name);
-		PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p, mod_name='%s', status=%d", meta_stack, mods_elem, mod_elem, mod_name, status);
 		if (status == META_FALSE) {
 			PRINT_ERROR("todo error");
 			exit(-1);
@@ -856,12 +717,9 @@ void core_main() {
 			exit(-1);
 		}
 		mod_flows_num = config_setting_length(flows_elem);
-		PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p, flows_elem=%p, mod_flows_num=%d", meta_stack, mods_elem, mod_elem, flows_elem, mod_flows_num);
 
 		for (j = 0; j < mod_flows_num; j++) {
-			mod_flows[j] = (int32_t) config_setting_get_int_elem(flows_elem, j);
-			PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p, flows_elem=%p, mod_flows[%d]=%d",
-					meta_stack, mods_elem, mod_elem, flows_elem, j, mod_flows[j]);
+			mod_flows[j] = (uint32_t) config_setting_get_int_elem(flows_elem, j);
 		}
 
 		mod_params = config_setting_get_member(mod_elem, "params");
@@ -869,7 +727,6 @@ void core_main() {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
-		PRINT_IMPORTANT("meta=%p, mods_elem=%p, mod_elem=%p, mod_params=%p", meta_stack, mods_elem, mod_elem, mod_params);
 
 		//############
 		//library = library_get(lib_list, mod_lib, base_path);if (library == NULL) {PRINT_ERROR("todo error");exit(-1);}
@@ -897,7 +754,7 @@ void core_main() {
 				switch_module = module; //TODO remove? unnecessary
 			}
 			fins_modules[i] = module;
-			module_register(fins_modules[SWITCH_INDEX], module);
+			switch_register_module(fins_modules[SWITCH_INDEX], module);
 		} else {
 			PRINT_ERROR("todo error");
 			exit(-1);
@@ -917,7 +774,6 @@ void core_main() {
 		exit(-1);
 	}
 	int links_num = config_setting_length(links_elem);
-	PRINT_IMPORTANT("meta=%p, links_elem=%p, links_num=%d", meta_stack, links_elem, links_num);
 
 	metadata_element *link_elem;
 	uint32_t link_id;
@@ -934,17 +790,14 @@ void core_main() {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
-		PRINT_IMPORTANT("meta=%p, links_elem=%p, elem=%p", meta_stack, links_elem, link_elem);
 
 		status = config_setting_lookup_int(link_elem, "id", (int *) &link_id);
-		PRINT_IMPORTANT("meta=%p, links_elem=%p, link_elem=%p, link_id=%d, status=%d", meta_stack, links_elem, link_elem, link_id, status);
 		if (status == META_FALSE) {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
 
 		status = config_setting_lookup_int(link_elem, "src", (int *) &link_src);
-		PRINT_IMPORTANT("meta=%p, links_elem=%p, link_elem=%p, src=%d, status=%d", meta_stack, links_elem, link_elem, link_src, status);
 		if (status == META_FALSE) {
 			PRINT_ERROR("todo error");
 			exit(-1);
@@ -956,12 +809,9 @@ void core_main() {
 			exit(-1);
 		}
 		link_dsts_num = config_setting_length(dsts_elem);
-		PRINT_IMPORTANT("meta=%p, links_elem=%p, link_elem=%p, dsts_elem=%p, dsts_num=%d", meta_stack, links_elem, link_elem, dsts_elem, link_dsts_num);
 
 		for (j = 0; j < link_dsts_num; j++) {
 			link_dsts[j] = (uint32_t) config_setting_get_int_elem(dsts_elem, j);
-			PRINT_IMPORTANT("meta=%p, links_elem=%p, link_elem=%p, dsts_elem=%p, link_dsts[%d]=%d",
-					meta_stack, links_elem, link_elem, dsts_elem, j, link_dsts[j]);
 		}
 
 		//############

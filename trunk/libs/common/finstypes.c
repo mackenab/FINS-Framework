@@ -847,6 +847,7 @@ int freeFinsFrame(struct finsFrame *ff) {
 	} else {
 		//dataOrCtrl uninitialized
 		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 
 	free(ff);

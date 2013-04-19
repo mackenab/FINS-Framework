@@ -27,6 +27,7 @@ struct switch_data {
 	struct fins_module *fins_modules[MAX_MODULES];
 };
 
+//TODO move to finsmodule.h?
 sem_t *switch_event_sem;
 
 int switch_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi);
@@ -35,5 +36,8 @@ int switch_pause(struct fins_module *module);
 int switch_unpause(struct fins_module *module);
 int switch_shutdown(struct fins_module *module);
 int switch_release(struct fins_module *module);
+
+void switch_process_ff(struct fins_module *module, struct finsFrame *ff);
+void switch_fcf(struct fins_module *module, struct finsFrame *ff);
 
 #endif /* SWITCH_INTERNAL_H_ */

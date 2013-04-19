@@ -83,7 +83,7 @@ void ipv4_get_ff(void) {
 		}
 	} else {
 		PRINT_ERROR("Error: Wrong ff->dataOrCtrl value");
-		freeFinsFrame(ff);
+		exit(-1);
 	}
 
 }
