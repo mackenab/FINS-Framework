@@ -87,15 +87,15 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 endif
 
 $(LOCAL_SO_PATH):$(LOCAL_OBJS) #$(OTHER_SO_PATHS) #$(LOCAL_OBJS_FILE)
-	@echo "test1='$(LOCAL_DIR)'"
+#	@echo "test1='$(LOCAL_DIR)'"
 	@$(LD) $(LOCAL_OBJS) $(LDFLAGS) -shared -o $(LOCAL_SO_PATH)
 
 %.o:%.c $(INCLUDES)
-	@echo "test3='$(LOCAL_DIR)'"
+#	@echo "test3='$(LOCAL_DIR)'"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(LOCAL_DIR)/%.o:%.c $(INCLUDES)
-	@echo "test2='$(LOCAL_DIR)'"
+#	@echo "test2='$(LOCAL_DIR)'"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 #$(LOCAL_OBJS_FILE):$(LOCAL_MAKE_FILE)
@@ -103,14 +103,14 @@ $(LOCAL_DIR)/%.o:%.c $(INCLUDES)
 #	@echo $(LOCAL_OBJS_PATHS) $(OTHER_SO_PATHS) > $(LOCAL_OBJS_FILE)
 
 $(LIB_SO_PATHS):
-	@echo "test5='$(LOCAL_DIR)'"
+#	@echo "test5='$(LOCAL_DIR)'"
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 #	@cd $(dir $@); $(MAKE) $(notdir $@); cd $(LOCAL_DIR);
 	@cd $(LIBS_DIR)/$(subst .so,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);
 endif
 
 $(MOD_SO_PATHS):
-	@echo "test5='$(LOCAL_DIR)'"
+#	@echo "test6='$(LOCAL_DIR)'"
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 #	@cd $(dir $@); $(MAKE) $(notdir $@); cd $(LOCAL_DIR);
 	@cd $(MODULES_DIR)/$(subst .so,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);

@@ -27,15 +27,15 @@
 #include <sys/endian.h>
 #endif
 
-#include <arp.h>
+#include "arp.h"
 
 #define ARP_LIB "arp"
-#define ARP_MAX_PORTS 2
+#define ARP_MAX_FLOWS 2
 
 struct arp_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[ARP_MAX_PORTS];
+	uint32_t flows[ARP_MAX_FLOWS];
 
 	pthread_t switch_to_arp_thread;
 	struct linked_list *interface_list;
@@ -168,15 +168,13 @@ int arp_shutdown(struct fins_module *module);
 int arp_release(struct fins_module *module);
 
 void arp_get_ff(struct fins_module *module);
-int arp_to_switch(struct fins_module *module, struct finsFrame *ff);
-
-#define EXEC_ARP_GET_ADDR 0
-
 void arp_fcf(struct fins_module *module, struct finsFrame *ff);
 void arp_set_param(struct fins_module *module, struct finsFrame *ff);
 void arp_exec(struct fins_module *module, struct finsFrame *ff);
 void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 //void arp_exec_get_addr(struct finsFrame *ff, uint32_t addr_ip);
+
+#define EXEC_ARP_GET_ADDR 0
 
 void arp_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void arp_out_fdf(struct fins_module *module, struct finsFrame *ff);

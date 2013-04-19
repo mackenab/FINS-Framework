@@ -9,25 +9,9 @@
 #ifndef RTM_H_
 #define RTM_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <pthread.h>
+#include <finsmodule.h>
 
-#include <finstypes.h>
-#include <metadata.h>
-#include <finsdebug.h>
-
-void rtm_out(struct finsFrame *ff);
-
-void rtm_in(struct finsFrame *ff);
-
-void rtm_get_ff(void);
-
-void rtm_init(pthread_attr_t *fins_pthread_attr);
+void rtm_dummy(void);
+struct fins_module *rtm_create(uint32_t index, uint32_t id, uint8_t *name);
 
 #endif /* RTM_H_ */

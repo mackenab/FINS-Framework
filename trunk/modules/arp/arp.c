@@ -472,6 +472,7 @@ void arp_get_ff(struct fins_module *module) {
 		arp_interrupt(module);
 	} else {
 		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 }
 
@@ -545,7 +546,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
 		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
-		if (module->num_ports < flows_num) {
+		if (module->max_flows < flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -584,7 +585,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		}
 		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
 
-		if (module->num_ports < table->flows_num) {
+		if (module->max_flows < table->flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -650,11 +651,6 @@ void arp_interrupt(struct fins_module *module) {
 	list_for_each1(data->cache_list, arp_to_func, module);
 }
 
-/**@brief to be completed. A fins frame is written to the 'wire'*/
-int arp_to_switch(struct fins_module *module, struct finsFrame *ff) {
-	return module_to_switch(module, ff);
-}
-
 void *switch_to_arp(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
 
@@ -679,7 +675,7 @@ int arp_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, me
 	module->data = secure_malloc(sizeof(struct arp_data));
 	struct arp_data *data = (struct arp_data *) module->data;
 
-	if (module->num_ports < flows_num) {
+	if (module->max_flows < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
@@ -749,7 +745,7 @@ int arp_release(struct fins_module *module) {
 	struct arp_data *data = (struct arp_data *) module->data;
 	//TODO free all module related mem
 
-	//stop threads
+	//delete threads
 	PRINT_IMPORTANT("arp_interface_num=%u", data->interface_list->len);
 	list_free(data->interface_list, arp_interface_free);
 
@@ -762,8 +758,11 @@ int arp_release(struct fins_module *module) {
 		arp_cache_free(cache);
 	}
 
+	if (data->link_list) {
+		list_free(data->link_list, free);
+	}
+	free(data);
 	module_destroy_queues(module);
-
 	free(module);
 	return 1;
 }
@@ -781,7 +780,7 @@ struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name) {
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
 	strcpy((char *) module->lib, ARP_LIB);
-	module->num_ports = ARP_MAX_PORTS;
+	module->max_flows = ARP_MAX_FLOWS;
 	module->ops = &arp_ops;
 	module->state = FMS_FREE;
 

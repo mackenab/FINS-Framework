@@ -7,9 +7,9 @@
 #ifndef ARP_H_
 #define ARP_H_
 
-#include <switch.h>
+#include <finsmodule.h>
+
 void arp_dummy(void);
 struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name);
 
-#endif
-
+#endif /* ARP_H_ */

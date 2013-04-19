@@ -721,7 +721,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		//######################
 	} else if (ff->dataOrCtrl == CONTROL) {
 		PRINT_IMPORTANT("frame: ff=%p, CONTROL, dst=%u, meta=%p, sender=%u, serial_num=%u, opcode=%u, param_id=%u, data_len=%u, data=%p",
-				ff, ff->destinationID, ff->metaData, ff->ctrlFrame.senderID, ff->ctrlFrame.serial_num, ff->ctrlFrame.opcode, ff->ctrlFrame.param_id, ff->ctrlFrame.data_len, ff->ctrlFrame.data);
+				ff, ff->destinationID, ff->metaData, ff->ctrlFrame.sender_id, ff->ctrlFrame.serial_num, ff->ctrlFrame.opcode, ff->ctrlFrame.param_id, ff->ctrlFrame.data_len, ff->ctrlFrame.data);
 		metadata_print(ff->metaData);
 
 #ifdef DEBUG
@@ -760,7 +760,7 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 		dst->ctrlFrame.param_id = src->ctrlFrame.param_id;
 		dst->ctrlFrame.data = src->ctrlFrame.data;
 		//dst->ctrlFrame.replyRecord = (void *) src->ctrlFrame.data;
-		dst->ctrlFrame.senderID = src->ctrlFrame.senderID;
+		dst->ctrlFrame.sender_id = src->ctrlFrame.sender_id;
 		dst->ctrlFrame.serial_num = src->ctrlFrame.serial_num;
 	}
 
@@ -787,7 +787,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	ff_clone->metaData = meta_clone;
 
 	if (ff_clone->dataOrCtrl == CONTROL) {
-		ff_clone->ctrlFrame.senderID = ff->ctrlFrame.senderID;
+		ff_clone->ctrlFrame.sender_id = ff->ctrlFrame.sender_id;
 		ff_clone->ctrlFrame.serial_num = gen_control_serial_num();
 		ff_clone->ctrlFrame.opcode = ff->ctrlFrame.opcode;
 		ff_clone->ctrlFrame.param_id = ff->ctrlFrame.param_id;
@@ -882,7 +882,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 
 	//load buffer
 
-	//	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.senderID) + itoa(ff->ctrlFrame.serial_num) + sizeof((char)ff->ctrlFrame.data)))
+	//	if(sizeof(buffer) < sizeof(itoa(ff->dataOrCtrl) + ff->destinationID + ff->ctrlFrame.name + itoa(ff->ctrlFrame.opcode) + itoa(ff->ctrlFrame.sender_id) + itoa(ff->ctrlFrame.serial_num) + sizeof((char)ff->ctrlFrame.data)))
 
 	PRINT_DEBUG("In serializeCtrlFrame!");
 
@@ -937,8 +937,8 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 	*buffer += sizeof(unsigned short int);
 
 	//SENDERID
-	//strncat((uint8_t *)*buffer, &(ff->ctrlFrame.senderID),sizeof(uint8_t *));
-	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.senderID), sizeof(uint8_t));
+	//strncat((uint8_t *)*buffer, &(ff->ctrlFrame.sender_id),sizeof(uint8_t *));
+	memcpy((uint8_t *) *buffer, &(ff->ctrlFrame.sender_id), sizeof(uint8_t));
 	//PRINT_DEBUG("buffer5:'%s'", *buffer);
 
 	//increment pointer
@@ -1042,8 +1042,8 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 	buffer += sizeof(unsigned short int);
 
 	//SENDERID
-	memcpy(&(ff->ctrlFrame.senderID), (uint8_t *) buffer, sizeof(uint8_t));
-	//PRINT_DEBUG("buffer5 = '%s', senderID = %d", buffer,ff->ctrlFrame.senderID);
+	memcpy(&(ff->ctrlFrame.sender_id), (uint8_t *) buffer, sizeof(uint8_t));
+	//PRINT_DEBUG("buffer5 = '%s', senderID = %d", buffer,ff->ctrlFrame.sender_id);
 	buffer += sizeof(uint8_t);
 
 	//SERIALNUM
@@ -1203,4 +1203,40 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 	temp[3 * msg_len] = '\0';
 	PRINT_IMPORTANT("msg_len=%u, msg='%s'\n", msg_len, temp);
 	free(temp);
+}
+
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+//#include <finsdebug.h>
+//#include <finstypes.h>
+//#include <metadata.h>
+//#include <finsqueue.h>
+//#include <finsmodule.h>
+
+void set_addr4(struct sockaddr_storage *addr, uint32_t val) {
+	struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
+	memset(addr4, 0, sizeof(struct sockaddr_in));
+	addr4->sin_family = AF_INET;
+	addr4->sin_addr.s_addr = val;
+}
+
+int addr_is_addr4(struct addr_record *addr) {
+	return addr->family == AF_INET;
+}
+
+void set_addr6(struct sockaddr_storage *addr, uint32_t val) {
+	struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) addr;
+	memset(addr6, 0, sizeof(struct sockaddr_in6));
+	addr6->sin6_family = AF_INET6;
+	//addr6->sin6_addr.s_addr = val;
+}
+
+int addr_is_addr6(struct addr_record *addr) {
+	return addr->family == AF_INET6;
+}
+
+int ifr_index_test(struct if_record *ifr, uint32_t *index) {
+	return ifr->index == *index;
 }

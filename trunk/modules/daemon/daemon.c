@@ -749,7 +749,7 @@ int daemon_fcf_to_switch(uint8_t dest_id, metadata *meta, uint32_t serial_num, u
 	ff->destinationID.next = NULL;
 	ff->metaData = meta;
 
-	ff->ctrlFrame.senderID = DAEMON_ID;
+	ff->ctrlFrame.sender_id = DAEMON_ID;
 	ff->ctrlFrame.serial_num = serial_num;
 	ff->ctrlFrame.opcode = opcode;
 	ff->ctrlFrame.param_id = param_id;
@@ -3121,9 +3121,9 @@ void daemon_exec(struct finsFrame *ff) {
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 
-		ff->destinationID.id = ff->ctrlFrame.senderID;
+		ff->destinationID.id = ff->ctrlFrame.sender_id;
 
-		ff->ctrlFrame.senderID = DAEMON_ID;
+		ff->ctrlFrame.sender_id = DAEMON_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		ff->ctrlFrame.ret_val = 0;
 

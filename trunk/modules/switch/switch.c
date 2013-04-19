@@ -7,117 +7,6 @@
 
 #include "switch_internal.h"
 
-int module_to_switch(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s', ff=%p, meta=%p", module, module->id, module->name, ff, ff->metaData);
-	int ret;
-
-	while ((ret = sem_wait(module->output_sem)) && errno == EINTR)
-		;
-	if (ret) {
-		PRINT_ERROR("output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d", module, module->id, module->name, ff, ff->metaData, ret);
-		exit(-1);
-	}
-	if (write_queue(ff, module->output_queue)) {
-		PRINT_DEBUG("Exited: module=%p, id=%d, name='%s', 1", module, module->id, module->name);
-		sem_post(switch_event_sem);
-		sem_post(module->output_sem);
-		return 1;
-	} else {
-		PRINT_ERROR("Exited: module=%p, id=%d, name='%s', ff=%p, 0", module, module->id, module->name, ff);
-		sem_post(module->output_sem);
-		return 0;
-	}
-}
-
-int link_id_test(struct link_record *link, uint32_t *id) {
-	return link->id == *id;
-}
-
-struct link_record *link_copy(struct link_record *link) {
-	struct link_record *copy = (struct link_record *) secure_malloc(sizeof(struct link_record));
-	memcpy(copy, link, sizeof(struct link_record)); //would need to change if linked_list
-	return copy;
-}
-
-int module_send_flow(struct fins_module *module, struct fins_module_table *table, struct finsFrame *ff, uint32_t flow) {
-	PRINT_DEBUG("Entered: module=%p, table=%p, ff=%p, flow=%u", module, table, ff, flow);
-
-	PRINT_DEBUG("table: flows_num=%u", table->flows_num);
-
-	if (!table->flows_num) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-		return 0;
-	}
-
-	if (flow >= table->flows_num) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-		return 0;
-	}
-
-	PRINT_DEBUG("*table->flows=%u", *table->flows);
-	PRINT_DEBUG("table->flows[0]=%u", table->flows[0]);
-
-	if (!table->flows[flow]) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-		return 0;
-	}
-
-	struct link_record *link = (struct link_record *) list_find1(table->link_list, link_id_test, &table->flows[flow]);
-	if (link == NULL) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-		return 0;
-	}
-
-	if (link->dsts_num > 1) {
-		struct finsFrame *ff_copy;
-
-		int i;
-		for (i = 1; i < link->dsts_num; i++) {
-			ff_copy = cloneFinsFrame(ff); //TODO Has problem if you're actually passing pointers, as it won't copy it
-			ff_copy->destinationID = link->dsts_index[i];
-			if (!module_to_switch(module, ff_copy)) {
-				PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-				return 0;
-			}
-		}
-	}
-
-	ff->destinationID = link->dsts_index[0];
-	return module_to_switch(module, ff);
-}
-
-void module_create_queues(struct fins_module *module) {
-	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s'", module, module->id, module->name);
-	char buf[MOD_NAME_SIZE + 10];
-
-	sprintf(buf, "switch_to_%s", module->name);
-	module->input_queue = init_queue(buf, MAX_QUEUE_SIZE);
-	module->input_sem = (sem_t *) secure_malloc(sizeof(sem_t));
-	sem_init(module->input_sem, 0, 1);
-
-	sprintf(buf, "%s_to_switch", module->name);
-	module->output_queue = init_queue(buf, MAX_QUEUE_SIZE);
-	module->output_sem = (sem_t *) secure_malloc(sizeof(sem_t));
-	sem_init(module->output_sem, 0, 1);
-
-	module->event_sem = (sem_t *) secure_malloc(sizeof(sem_t));
-	sem_init(module->event_sem, 0, 0);
-}
-
-void module_destroy_queues(struct fins_module *module) {
-	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s'", module, module->id, module->name);
-
-	term_queue(module->output_queue);
-	term_queue(module->input_queue);
-
-	sem_destroy(module->output_sem);
-	free(module->output_sem);
-	sem_destroy(module->input_sem);
-	free(module->input_sem);
-	sem_destroy(module->event_sem);
-	free(module->event_sem);
-}
-
 //#################################################
 
 int switch_register_module(struct fins_module *module, struct fins_module *new_mod) {
@@ -339,7 +228,7 @@ int switch_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num,
 	module->data = secure_malloc(sizeof(struct switch_data));
 	struct switch_data *data = (struct switch_data *) module->data;
 
-	if (module->num_ports < flows_num) {
+	if (module->max_flows < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
@@ -429,7 +318,7 @@ struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
 	strcpy((char *) module->lib, SWITCH_LIB);
-	module->num_ports = SWITCH_MAX_PORTS; //TODO change?
+	module->max_flows = SWITCH_MAX_FLOWS; //TODO change?
 	module->ops = &switch_ops;
 	module->state = FMS_FREE;
 

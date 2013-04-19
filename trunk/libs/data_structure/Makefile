@@ -10,7 +10,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module
 LOCAL_NAME := data_structure
 LOCAL_LIBS := common
-LOCAL_OBJS := queue.o finsqueue.o
+LOCAL_OBJS := queue.o finsqueue.o finsmodule.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
 LOCAL_LDFLAGS := -lc

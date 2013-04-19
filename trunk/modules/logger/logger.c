@@ -6,10 +6,6 @@
  */
 #include "logger_internal.h"
 
-int logger_to_switch(struct fins_module *module, struct finsFrame *ff) {
-	return module_to_switch(module, ff);
-}
-
 void logger_get_ff(struct fins_module *module) {
 	struct logger_data *data = (struct logger_data *) module->data;
 
@@ -140,7 +136,7 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
 		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
-		if (module->num_ports < flows_num) {
+		if (module->max_flows < flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -179,7 +175,7 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		}
 		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
 
-		if (module->num_ports < table->flows_num) {
+		if (module->max_flows < table->flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -264,7 +260,7 @@ int logger_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num,
 	module->data = secure_malloc(sizeof(struct logger_data));
 	struct logger_data *data = (struct logger_data *) module->data;
 
-	if (module->num_ports < flows_num) {
+	if (module->max_flows < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
@@ -338,13 +334,15 @@ int logger_release(struct fins_module *module) {
 	struct logger_data *data = (struct logger_data *) module->data;
 	//TODO free all module related mem
 
-	//stop threads
+	//delete threads
 	timer_delete(data->logger_to_data->tid);
 	free(data->logger_to_data);
+
+	if (data->link_list) {
+		list_free(data->link_list, free);
+	}
 	free(data);
-
 	module_destroy_queues(module);
-
 	free(module);
 	return 1;
 }
@@ -362,7 +360,7 @@ struct fins_module *logger_create(uint32_t index, uint32_t id, uint8_t *name) {
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
 	strcpy((char *) module->lib, LOGGER_LIB);
-	module->num_ports = LOGGER_MAX_PORTS;
+	module->max_flows = LOGGER_MAX_PORTS;
 	module->ops = &logger_ops;
 	module->state = FMS_FREE;
 

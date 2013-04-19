@@ -33,12 +33,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 
 			secure_metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
 
-			ff->destinationID = ff->ctrlFrame.senderID;
-			ff->ctrlFrame.senderID = ARP_ID;
+			ff->destinationID = ff->ctrlFrame.sender_id;
+			ff->ctrlFrame.sender_id = ARP_ID;
 			ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 			ff->ctrlFrame.ret_val = 1;
 
-			arp_to_switch(module, ff);
+			module_to_switch(module, ff);
 		} else {
 			cache = (struct arp_cache *) list_find1(data->interface_list, arp_cache_ip_test, &dst_ip);
 			if (cache) {
@@ -50,12 +50,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 					} else {
 						PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
 
-						ff->destinationID = ff->ctrlFrame.senderID;
-						ff->ctrlFrame.senderID = ARP_ID;
+						ff->destinationID = ff->ctrlFrame.sender_id;
+						ff->ctrlFrame.sender_id = ARP_ID;
 						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 						ff->ctrlFrame.ret_val = 0;
 
-						arp_to_switch(module, ff);
+						module_to_switch(module, ff);
 					}
 				} else {
 					dst_mac = cache->addr_mac;
@@ -69,12 +69,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 
 						secure_metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
 
-						ff->destinationID = ff->ctrlFrame.senderID;
-						ff->ctrlFrame.senderID = ARP_ID;
+						ff->destinationID = ff->ctrlFrame.sender_id;
+						ff->ctrlFrame.sender_id = ARP_ID;
 						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 						ff->ctrlFrame.ret_val = 1;
 
-						arp_to_switch(module, ff);
+						module_to_switch(module, ff);
 					} else {
 						PRINT_DEBUG("cache expired: cache=%p", cache);
 
@@ -84,7 +84,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 						struct finsFrame *ff_req = arp_to_fdf(&msg);
 
 						if (module_send_flow(module, (struct fins_module_table *) module->data, ff_req, 0)) {
-//						if (arp_to_switch(module, ff_req)) {
+//						if (module_to_switch(module, ff_req)) {
 							cache->seeking = 1;
 							cache->retries = 0;
 
@@ -97,23 +97,23 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 							} else {
 								PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
 
-								ff->destinationID = ff->ctrlFrame.senderID;
-								ff->ctrlFrame.senderID = ARP_ID;
+								ff->destinationID = ff->ctrlFrame.sender_id;
+								ff->ctrlFrame.sender_id = ARP_ID;
 								ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 								ff->ctrlFrame.ret_val = 0;
 
-								arp_to_switch(module, ff);
+								module_to_switch(module, ff);
 							}
 						} else {
 							PRINT_ERROR("switch send failed");
 							freeFinsFrame(ff_req);
 
-							ff->destinationID = ff->ctrlFrame.senderID;
-							ff->ctrlFrame.senderID = ARP_ID;
+							ff->destinationID = ff->ctrlFrame.sender_id;
+							ff->ctrlFrame.sender_id = ARP_ID;
 							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 							ff->ctrlFrame.ret_val = 0;
 
-							arp_to_switch(module, ff);
+							module_to_switch(module, ff);
 						}
 					}
 				}
@@ -128,7 +128,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 				struct finsFrame *ff_req = arp_to_fdf(&msg);
 				PRINT_DEBUG("module->data=%p", module->data);
 				if (module_send_flow(module, (struct fins_module_table *) module->data, ff_req, 0)) {
-					//if (arp_to_switch(module, ff_req)) {
+					//if (module_to_switch(module, ff_req)) {
 					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
 					if (!list_has_space(data->cache_list)) {
 						PRINT_DEBUG("Making space in cache_list");
@@ -145,12 +145,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 								temp_request = (struct arp_request *) list_remove_front(temp_cache->request_list);
 								temp_ff = temp_request->ff;
 
-								temp_ff->destinationID = temp_ff->ctrlFrame.senderID;
-								temp_ff->ctrlFrame.senderID = ARP_ID;
+								temp_ff->destinationID = temp_ff->ctrlFrame.sender_id;
+								temp_ff->ctrlFrame.sender_id = ARP_ID;
 								temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 								temp_ff->ctrlFrame.ret_val = 0;
 
-								arp_to_switch(module, temp_ff);
+								module_to_switch(module, temp_ff);
 
 								temp_request->ff = NULL;
 								arp_request_free(temp_request);
@@ -161,12 +161,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 						} else {
 							PRINT_ERROR("Cache full");
 
-							ff->destinationID = ff->ctrlFrame.senderID;
-							ff->ctrlFrame.senderID = ARP_ID;
+							ff->destinationID = ff->ctrlFrame.sender_id;
+							ff->ctrlFrame.sender_id = ARP_ID;
 							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 							ff->ctrlFrame.ret_val = 0;
 
-							arp_to_switch(module, ff);
+							module_to_switch(module, ff);
 							return;
 						}
 					}
@@ -185,24 +185,24 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 					PRINT_DEBUG("switch send failed");
 					freeFinsFrame(ff_req);
 
-					ff->destinationID = ff->ctrlFrame.senderID;
-					ff->ctrlFrame.senderID = ARP_ID;
+					ff->destinationID = ff->ctrlFrame.sender_id;
+					ff->ctrlFrame.sender_id = ARP_ID;
 					ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 					ff->ctrlFrame.ret_val = 0;
 
-					arp_to_switch(module, ff);
+					module_to_switch(module, ff);
 				}
 			}
 		}
 	} else {
 		PRINT_ERROR("No corresponding interface: ff=%p, src_ip=%u", ff, src_ip);
 
-		ff->destinationID = ff->ctrlFrame.senderID;
-		ff->ctrlFrame.senderID = ARP_ID;
+		ff->destinationID = ff->ctrlFrame.sender_id;
+		ff->ctrlFrame.sender_id = ARP_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		ff->ctrlFrame.ret_val = 0;
 
-		arp_to_switch(module, ff);
+		module_to_switch(module, ff);
 	}
 }
 
@@ -234,7 +234,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 					struct finsFrame *ff_reply = arp_to_fdf(&arp_msg_reply);
 					if (!module_send_flow(module, (struct fins_module_table *) module->data, ff_reply, 0)) {
-						//if (!arp_to_switch(module, ff_reply)) {
+						//if (!module_to_switch(module, ff_reply)) {
 						PRINT_ERROR("todo error");
 						freeFinsFrame(ff_reply);
 					}
@@ -261,12 +261,12 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 								secure_metadata_writeToElement(ff_resp->metaData, "dst_mac", &src_mac, META_TYPE_INT64);
 
-								ff_resp->destinationID = ff_resp->ctrlFrame.senderID;
-								ff_resp->ctrlFrame.senderID = ARP_ID;
+								ff_resp->destinationID = ff_resp->ctrlFrame.sender_id;
+								ff_resp->ctrlFrame.sender_id = ARP_ID;
 								ff_resp->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 								ff_resp->ctrlFrame.ret_val = 1;
 
-								if (!arp_to_switch(module, ff_resp)) {
+								if (!module_to_switch(module, ff_resp)) {
 									freeFinsFrame(ff_resp);
 								}
 
@@ -325,7 +325,7 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 
 				struct finsFrame *ff_req = arp_to_fdf(&msg);
 				if (module_send_flow(module, (struct fins_module_table *) module->data, ff_req, 0)) {
-					//if (arp_to_switch(module, ff_req)) {
+					//if (module_to_switch(module, ff_req)) {
 					cache->retries++;
 
 					//gettimeofday(&cache->updated_stamp, 0);
@@ -348,12 +348,12 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 				request = (struct arp_request *) list_remove_front(cache->request_list);
 				ff = request->ff;
 
-				ff->destinationID = ff->ctrlFrame.senderID;
-				ff->ctrlFrame.senderID = ARP_ID;
+				ff->destinationID = ff->ctrlFrame.sender_id;
+				ff->ctrlFrame.sender_id = ARP_ID;
 				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 				ff->ctrlFrame.ret_val = 0;
 
-				arp_to_switch(module, ff);
+				module_to_switch(module, ff);
 
 				request->ff = NULL;
 				arp_request_free(request);

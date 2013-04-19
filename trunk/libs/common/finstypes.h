@@ -87,7 +87,7 @@ struct finsDataFrame {
 
 struct finsCtrlFrame {
 	/* only for FINS control frames */
-	uint8_t senderID; //ID of the src module
+	uint8_t sender_id; //ID of the src module
 	uint32_t serial_num; //unique identifier among all FCF, see gen_control_serial_num()
 
 	uint16_t opcode; //type of control message, see CTRL_* values
@@ -257,5 +257,85 @@ struct finsFrame *unserializeCtrlFrame(uint8_t *, int);
 void print_hex_ascii_line(const u_char *payload, int len, int offset);
 void print_hex_block(const u_char *payload, int len);
 void print_hex(uint32_t msg_len, uint8_t *msg_pt);
+
+#include <net/if.h>
+#include <netinet/in.h>
+
+#define MAX_INTERFACES 30
+#define MAX_FAMILIES 64
+#define MAX_ADDRESSES 8192
+#define MAX_ROUTES 8192
+
+struct addr_record { //for a particular address
+	uint32_t if_index;
+	uint32_t family;
+	struct sockaddr_storage ip; //ip
+	struct sockaddr_storage mask; //network mask
+	struct sockaddr_storage gw; //gateway
+	struct sockaddr_storage bdc; //broadcast
+	struct sockaddr_storage dst; //end-to-end dst
+//union {}; //bdc & dst can be unioned, not done for simplicity
+};
+
+void set_addr4(struct sockaddr_storage *addr, uint32_t val);
+int addr_is_addr4(struct addr_record *addr);
+void set_addr6(struct sockaddr_storage *addr, uint32_t val);
+int addr_is_addr6(struct addr_record *addr);
+
+struct if_record { //for an interface
+	//inherent
+	uint32_t index;
+	uint8_t name[IFNAMSIZ]; //SIOCGIFNAME
+	uint64_t mac; //SIOCGIFHWADDR
+	uint16_t type; //eth/Wifi
+
+	//changeable
+	uint8_t status; //up/down
+	uint32_t mtu; //SIOCGIFMTU
+	uint32_t flags; //TODO use? //SIOCGIFFLAGS
+
+	struct linked_list *addr_list;
+};
+int ifr_index_test(struct if_record *ifr, uint32_t *index);
+
+struct route_record {
+	uint32_t if_index;
+	uint32_t family;
+	struct sockaddr_storage dst; //end-to-end dst
+	struct sockaddr_storage mask; //network mask
+	struct sockaddr_storage gw; //gateway
+	struct sockaddr_storage ip; //ip //TODO remove?
+
+	uint32_t metric; //TODO remove?
+	uint32_t timeout; //TODO remove?
+	struct timeval *stamp;
+};
+
+struct cache_record {
+	struct sockaddr_storage src;
+	struct sockaddr_storage dst;
+	struct sockaddr_storage gw;
+	uint32_t if_index;
+
+	uint32_t metric; //TODO remove?
+	uint32_t timeout; //TODO remove?
+	struct timeval *stamp;
+};
+
+struct envi_record {
+	uint32_t any_ip_addr; //change to sockaddr_storage? or any_ip_addr & any_ip_addr6?
+	//struct if_record if_list[MAX_INTERFACES];
+	struct linked_list *if_list; //list of if_record, for a list of interfaces
+	struct if_record *if_loopback;
+	struct if_record *if_main;
+
+	struct linked_list *addr_list;
+	struct linked_list *route_list; //list of addr_record, for a routing table
+//struct linked_list *route_cache; //TODO add in routing cache?
+//struct linked_list *foward_list; //TODO add in forwarding table?
+//struct linked_list *library_list; //list of open libraries
+//struct linked_list *module_list; //list of modules
+//struct linked_list *link_list;
+};
 
 #endif /* FINSTYPES_H_ */

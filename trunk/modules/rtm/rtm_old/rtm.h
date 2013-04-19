@@ -6,8 +6,8 @@
  */
 
 
-#ifndef TCP_H_
-#define TCP_H_
+#ifndef RTM_H_
+#define RTM_H_
 
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <finstypes.h>
 #include <metadata.h>
@@ -25,11 +26,8 @@ void rtm_out(struct finsFrame *ff);
 
 void rtm_in(struct finsFrame *ff);
 
-void rtm_send_FF(int socket, struct finsFrame *ff);
+void rtm_get_ff(void);
 
-void* rtm_get_FF(void* socket);
+void rtm_init(pthread_attr_t *fins_pthread_attr);
 
-
-void rtm_init();
-
-#endif /* TCP_H_ */
+#endif /* RTM_H_ */

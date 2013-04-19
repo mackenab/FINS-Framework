@@ -15,15 +15,16 @@
 #include "core.h"
 
 #include <signal.h>
+#include <dlfcn.h>
 
 #include <finsdebug.h>
-//#include <finstypes.h>
+#include <finstypes.h>
 #include <finstime.h>
-//#include <metadata.h>
+#include <metadata.h>
 //#include <finsqueue.h>
+#include <finsmodule.h>
 
-#include <switch.h>
-#include <dlfcn.h>
+//#include <switch.h>
 //#include <daemon.h>
 //#include <interface.h>
 //#include <ipv4.h>
@@ -36,7 +37,7 @@
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
-struct fins_module *switch_module; //TODO if move fins_modules entirely to switch, use this to get to them, remove otherwise
+//struct fins_module *switch_module; //TODO if move fins_modules entirely to switch, use this to get to them, remove otherwise
 
 /**
  * @brief read the core parameters from the configuraions file called fins.cfg
@@ -147,53 +148,15 @@ void core_dummy(void) {
 
 }
 
-void set_addr4(struct sockaddr_storage *addr, uint32_t val) {
-	struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
-	memset(addr4, 0, sizeof(struct sockaddr_in));
-	addr4->sin_family = AF_INET;
-	addr4->sin_addr.s_addr = val;
-}
-
-int addr_is_addr4(struct addr_record *addr) {
-	return addr->family == AF_INET;
-}
-
-void set_addr6(struct sockaddr_storage *addr, uint32_t val) {
-	struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) addr;
-	memset(addr6, 0, sizeof(struct sockaddr_in6));
-	addr6->sin6_family = AF_INET6;
-	//addr6->sin6_addr.s_addr = val;
-}
-
-int addr_is_addr6(struct addr_record *addr) {
-	return addr->family == AF_INET6;
-}
-
-int ifr_index_test(struct if_record *ifr, uint32_t *index) {
-	return ifr->index == *index;
-}
-
-int lib_name_test(struct fins_library *lib, uint8_t *name) {
-	return strcmp((char *) lib->name, (char *) name) == 0;
-}
-
-int mod_id_test(struct fins_module *mod, uint32_t *id) {
-	return mod->id == *id;
-}
-
-int link_involved_test(struct link_record *link, uint32_t *index) {
-	if (link->src_index == *index) {
-		return 1;
-	} else {
-		int i;
-		for (i = 0; i < link->dsts_num; i++) {
-			if (link->dsts_index[i] == *index) {
-				return 1;
-			}
-		}
-		return 0;
-	}
-}
+typedef struct fins_module *(*mod_create_type)(uint32_t index, uint32_t id, uint8_t *name);
+struct fins_library {
+	uint8_t name[MOD_NAME_SIZE];
+	void *handle;
+	//struct fins_module *(*create)(uint32_t index, uint32_t id, uint8_t *name);
+	mod_create_type create;
+	uint32_t num_mods;
+//struct linked_list *mod_list;
+};
 
 struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
 	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s'", lib, base_path);
@@ -225,7 +188,10 @@ struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
 	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s', library=%p", lib, base_path, library);
 	return library;
 }
-//################################ move above code to finsmodule.h or maybe finstypes.h
+
+int lib_name_test(struct fins_library *lib, uint8_t *name) {
+	return strcmp((char *) lib->name, (char *) name) == 0;
+}
 
 void core_main() {
 	PRINT_IMPORTANT("Entered");
@@ -750,9 +716,7 @@ void core_main() {
 		//TODO move flow to update? or links here?
 		status = module->ops->init(module, mod_flows, mod_flows_num, mod_params, envi); //TODO merge init into create?
 		if (status) {
-			if (i == SWITCH_INDEX) {
-				switch_module = module; //TODO remove? unnecessary
-			}
+			//if (i == SWITCH_INDEX) {switch_module = module;} //TODO remove? unnecessary
 			fins_modules[i] = module;
 			switch_register_module(fins_modules[SWITCH_INDEX], module);
 		} else {
@@ -880,7 +844,7 @@ void core_main() {
 			ff_update->destinationID = i;
 			ff_update->metaData = meta_update;
 
-			ff_update->ctrlFrame.senderID = SWITCH_INDEX;
+			ff_update->ctrlFrame.sender_id = SWITCH_INDEX;
 			ff_update->ctrlFrame.serial_num = gen_control_serial_num();
 			ff_update->ctrlFrame.opcode = CTRL_SET_PARAM;
 			ff_update->ctrlFrame.param_id = PARAM_LINKS;
@@ -977,7 +941,7 @@ void core_main() {
 		ff_req->destinationID = 3;
 		ff_req->metaData = meta_req;
 
-		ff_req->ctrlFrame.senderID = IPV4_ID;
+		ff_req->ctrlFrame.sender_id = IPV4_ID;
 		ff_req->ctrlFrame.serial_num = gen_control_serial_num();
 		ff_req->ctrlFrame.opcode = CTRL_EXEC;
 		ff_req->ctrlFrame.param_id = 0; //EXEC_ARP_GET_ADDR;
@@ -1071,24 +1035,24 @@ void core_main_old() {
 	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
 //######################################################################
 
-	switch_dummy();
-//daemon_dummy();
-//interface_dummy();
+	//switch_dummy();
+	//daemon_dummy();
+	//interface_dummy();
 
-//arp_dummy();
-//ipv4_dummy();
-//icmp_dummy();
-//tcp_dummy();
-//udp_dummy();
+	//arp_dummy();
+	//ipv4_dummy();
+	//icmp_dummy();
+	//tcp_dummy();
+	//udp_dummy();
 
-//rtm_dummy();
-//logger_dummy();
+	//rtm_dummy();
+	//logger_dummy();
 
-// Start the driving thread of each module
+	// Start the driving thread of each module
 	PRINT_IMPORTANT("Initialize Modules");
-//switch_init(); //should always be first
-//daemon_init(); //TODO improve how sets mac/ip
-//interface_init();
+	//switch_init(); //should always be first
+	//daemon_init(); //TODO improve how sets mac/ip
+	//interface_init();
 
 //arp_init();
 //arp_register_interface(my_host_mac_addr, my_host_ip_addr);
@@ -1147,7 +1111,7 @@ void core_main_old() {
 	 ff_req->destinationID.next = NULL;
 	 ff_req->metaData = meta_req;
 
-	 ff_req->ctrlFrame.senderID = IPV4_ID;
+	 ff_req->ctrlFrame.sender_id = IPV4_ID;
 	 ff_req->ctrlFrame.serial_num = gen_control_serial_num();
 	 ff_req->ctrlFrame.opcode = CTRL_EXEC;
 	 ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
