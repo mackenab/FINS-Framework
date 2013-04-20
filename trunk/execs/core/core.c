@@ -24,69 +24,14 @@
 //#include <finsqueue.h>
 #include <finsmodule.h>
 
-//#include <switch.h>
-//#include <daemon.h>
-//#include <interface.h>
-//#include <ipv4.h>
-//#include <arp.h>
-//#include <udp.h>
-//#include <tcp.h>
-//#include <icmp.h>
-//#include <rtm.h>
-//#include <logger.h>
-
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
+struct envi_record *envi;
+struct linked_list *lib_list;
+struct fins_module *fins_modules[MAX_MODULES];
+struct linked_list *link_list;
+
 //struct fins_module *switch_module; //TODO if move fins_modules entirely to switch, use this to get to them, remove otherwise
-
-/**
- * @brief read the core parameters from the configuraions file called fins.cfg
- * @param
- * @return nothing
- */
-int read_configurations() {
-	//const char *str;
-
-	//config_t cfg;
-	//config_init(&cfg);
-
-	metadata *meta = (metadata *) secure_malloc(sizeof(metadata)); //equivalent
-	metadata_create(meta);
-
-	/* Read the file. If there is an error, report it and exit. */
-	if (!config_read_file(meta, "test.cfg")) {
-		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta), config_error_line(meta), config_error_text(meta));
-		config_destroy(meta);
-		return EXIT_FAILURE;
-	}
-
-	metadata_print(meta);
-
-	//int config_setting_lookup_int64 (const config_setting_t * setting, const char * name, long long * value)
-	//int config_lookup_int64 (const config_t * config, const char * path, long long * value)
-	/*
-	 int var1;
-	 double var2;
-	 const char *var3;
-
-	 //config_lookup_int64
-	 if (config.lookupValue("values.var1", var1) && config.lookupValue("values.var2", var2) && config.lookupValue("values.var3", var3)) {
-	 // use var1, var2, var3
-	 } else {
-	 // error handling here
-	 }
-
-	 long width = config.lookup("application.window.size.w");
-
-	 bool splashScreen = config.lookup("application.splash_screen");
-
-	 std::string title = config.lookup("application.window.title");
-	 title = (const char *)config.lookup("application.window.title");
-	 */
-
-	config_destroy(meta);
-	return EXIT_SUCCESS;
-}
 
 int write_configurations() {
 
@@ -105,43 +50,6 @@ int write_configurations() {
 
 	config_destroy(&cfg);
 	return EXIT_SUCCESS;
-}
-
-void core_termination_handler(int sig) {
-	PRINT_IMPORTANT("**********Terminating *******");
-
-	//shutdown all module threads in backwards order of startup
-	//logger_shutdown();
-	//rtm_shutdown();
-
-	//udp_shutdown();
-	//tcp_shutdown();
-	//icmp_shutdown();
-	//ipv4_shutdown();
-	//arp_shutdown();
-
-	//interface_shutdown(); //TODO finish
-	//daemon_shutdown(); //TODO finish
-	//switch_shutdown(); //TODO finish
-
-	//have each module free data & que/sem //TODO finish each of these
-	//logger_release();
-	//rtm_release();
-
-	//udp_release();
-	//tcp_release();
-	//icmp_release();
-	//ipv4_release();
-	//arp_release();
-
-	//interface_release();
-	//daemon_release();
-	//switch_release();
-
-	sem_destroy(&control_serial_sem);
-
-	PRINT_IMPORTANT("FIN");
-	exit(-1);
 }
 
 void core_dummy(void) {
@@ -193,6 +101,54 @@ int lib_name_test(struct fins_library *lib, uint8_t *name) {
 	return strcmp((char *) lib->name, (char *) name) == 0;
 }
 
+void core_termination_handler(int sig) {
+	PRINT_IMPORTANT("**********Terminating *******");
+
+	int i;
+
+	//shutdown all module threads in backwards order of startup
+	PRINT_IMPORTANT("modules: shutdown");
+	for (i = MAX_MODULES - 1; i >= 0; i--) {
+		if (fins_modules[i] != NULL) {
+			fins_modules[i]->ops->shutdown(fins_modules[i]);
+		}
+	}
+
+	//have each module free data & que/sem //TODO finish each of these
+	PRINT_IMPORTANT("modules: release");
+	for (i = MAX_MODULES - 1; i >= 0; i--) {
+		if (fins_modules[i] != NULL) {
+			fins_modules[i]->ops->release(fins_modules[i]);
+		}
+	}
+
+	PRINT_IMPORTANT("libraries: close");
+	struct fins_library *library;
+	while (1) {
+		library = (struct fins_library *) list_remove_front(lib_list);
+		if (library == NULL) {
+			break;
+		}
+		PRINT_IMPORTANT("closing library: library=%p, name='%s'", library, library->name);
+		dlclose(library->handle);
+		free(library);
+	}
+	free(lib_list);
+
+	PRINT_IMPORTANT("freeing links");
+	list_free(link_list, free);
+
+	PRINT_IMPORTANT("freeing environment");
+	list_free(envi->if_list, ifr_free);
+	list_free(envi->route_list, free);
+	free(envi);
+
+	sem_destroy(&control_serial_sem);
+
+	PRINT_IMPORTANT("FIN");
+	exit(-1);
+}
+
 void core_main() {
 	PRINT_IMPORTANT("Entered");
 
@@ -206,7 +162,7 @@ void core_main() {
 	int i, j, k;
 
 	//######################################################################
-	struct envi_record *envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
+	envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
 
 	PRINT_IMPORTANT("loading environment");
 	metadata *meta_envi = (metadata *) secure_malloc(sizeof(metadata));
@@ -603,12 +559,16 @@ void core_main() {
 					list_append(envi->route_list, route);
 				} else {
 					//TODO error
+					PRINT_ERROR("todo error");
+					exit(-1);
 				}
 			} else {
 				//TODO error
+				PRINT_ERROR("todo: decide just drop or add?");
 			}
 		}
 	}
+	metadata_destroy(meta_envi);
 
 	//######################################################################
 	PRINT_IMPORTANT("loading stack");
@@ -625,8 +585,7 @@ void core_main() {
 
 	//############# module_list
 	PRINT_IMPORTANT("module list");
-	struct linked_list *lib_list = list_create(MAX_MODULES);
-	struct fins_module *fins_modules[MAX_MODULES];
+	lib_list = list_create(MAX_MODULES);
 	memset(fins_modules, 0, MAX_MODULES * sizeof(struct fins_module *));
 
 	uint8_t base_path[100];
@@ -651,6 +610,7 @@ void core_main() {
 
 	struct fins_library *library;
 	struct fins_module *module;
+	struct fins_module_switch_ops *switch_ops;
 
 	for (i = 0; i < mods_num; i++) {
 		mod_elem = config_setting_get_elem(mods_elem, i);
@@ -695,7 +655,6 @@ void core_main() {
 		}
 
 		//############
-		//library = library_get(lib_list, mod_lib, base_path);if (library == NULL) {PRINT_ERROR("todo error");exit(-1);}
 		library = (struct fins_library *) list_find1(lib_list, lib_name_test, mod_lib);
 		if (library == NULL) {
 			library = library_load(mod_lib, base_path);
@@ -703,6 +662,13 @@ void core_main() {
 				PRINT_ERROR("todo error");
 				exit(-1);
 			}
+		}
+
+		if (list_has_space(lib_list)) {
+			list_append(lib_list, library);
+		} else {
+			PRINT_ERROR("todo error");
+			exit(-1);
 		}
 
 		module = library->create(i, mod_id, mod_name);
@@ -716,21 +682,24 @@ void core_main() {
 		//TODO move flow to update? or links here?
 		status = module->ops->init(module, mod_flows, mod_flows_num, mod_params, envi); //TODO merge init into create?
 		if (status) {
-			//if (i == SWITCH_INDEX) {switch_module = module;} //TODO remove? unnecessary
 			fins_modules[i] = module;
-			switch_register_module(fins_modules[SWITCH_INDEX], module);
+
+			if (i == SWITCH_INDEX) {
+				switch_ops = (struct fins_module_switch_ops *) fins_modules[SWITCH_INDEX]->ops;
+			}
+			switch_ops->register_module(fins_modules[SWITCH_INDEX], module);
 		} else {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
 
-		free(mod_lib);
-		free(mod_name);
+		//free(mod_lib);
+		//free(mod_name);
 	}
 
 	//############# linking_list
 	PRINT_IMPORTANT("link list");
-	struct linked_list *link_list = list_create(MAX_LINKS);
+	link_list = list_create(MAX_LINKS);
 
 	metadata_element *links_elem = config_lookup(meta_stack, "stack.links");
 	if (links_elem == NULL) {
@@ -817,8 +786,9 @@ void core_main() {
 			exit(-1);
 		}
 	}
+	metadata_destroy(meta_stack);
 
-	//############# update
+	//######################################################################
 	PRINT_IMPORTANT("update modules");
 	//send out subset of linking table to each module as update
 	//TODO table subset update
@@ -991,300 +961,17 @@ void core_main() {
 		dlclose(library->handle);
 		free(library);
 	}
+	free(lib_list);
 
-	metadata_destroy(meta_stack);
+	PRINT_IMPORTANT("freeing links");
+	list_free(link_list, free);
+
+	PRINT_IMPORTANT("freeing environment");
+	list_free(envi->if_list, ifr_free);
+	list_free(envi->route_list, free);
+	free(envi);
+
 	exit(1);
-}
-
-void core_main_old() {
-//###################################################################### //TODO get this from config file eventually
-//host interface
-//strcpy((char *)my_host_if_name, "lo");
-//strcpy((char *)my_host_if_name, "eth0");
-//strcpy((char *)my_host_if_name, "eth1");
-//strcpy((char *)my_host_if_name, "eth2");
-	strcpy((char *) my_host_if_name, "wlan0");
-//strcpy((char *)my_host_if_name, "wlan4");
-
-//my_host_if_num = 1; //laptop lo //phone wlan0
-//my_host_if_num = 2; //laptop eth0
-//my_host_if_num = 3; //laptop wlan0
-//my_host_if_num = 4; //laptop wlan4
-//my_host_if_num = 10; //phone0 wlan0
-	my_host_if_num = 17; //phone1 wlan0
-//my_host_if_num = 6; //tablet1 wlan0
-
-//my_host_mac_addr = 0x080027445566ull; //vbox eth2
-//my_host_mac_addr = 0x001d09b35512ull; //laptop eth0
-//my_host_mac_addr = 0x001cbf86d2daull; //laptop wlan0
-//my_host_mac_addr = 0x00184d8f2a32ull; //laptop wlan4 card
-//my_host_mac_addr = 0xa00bbae94bb0ull; //phone0 wlan0
-	my_host_mac_addr = 0x10683f4f7467ull; //phone1 wlan0
-//my_host_mac_addr = 0x50465d14e07full; //tablet1 wlan0
-
-	my_host_ip_addr = IP4_ADR_P2H(192,168,1,8); //home testing
-	my_host_mask = IP4_ADR_P2H(255,255,255,0); //home testing
-//my_host_ip_addr = IP4_ADR_P2H(172,31,51,55); //lab testing
-//my_host_mask = IP4_ADR_P2H(255,255,248,0); //lab testing
-
-//loopback interface
-	loopback_ip_addr = IP4_ADR_P2H(127,0,0,1);
-	loopback_mask = IP4_ADR_P2H(255,0,0,0);
-
-//any
-	any_ip_addr = IP4_ADR_P2H(0,0,0,0);
-//######################################################################
-
-	//switch_dummy();
-	//daemon_dummy();
-	//interface_dummy();
-
-	//arp_dummy();
-	//ipv4_dummy();
-	//icmp_dummy();
-	//tcp_dummy();
-	//udp_dummy();
-
-	//rtm_dummy();
-	//logger_dummy();
-
-	// Start the driving thread of each module
-	PRINT_IMPORTANT("Initialize Modules");
-	//switch_init(); //should always be first
-	//daemon_init(); //TODO improve how sets mac/ip
-	//interface_init();
-
-//arp_init();
-//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
-
-//ipv4_init();
-//ipv4_register_interface(my_host_mac_addr, my_host_ip_addr);
-
-//icmp_init();
-//tcp_init();
-//udp_init();
-
-//rtm_init(); //TODO when updated/fully implemented
-//logger_init();
-
-	pthread_attr_t fins_pthread_attr;
-	pthread_attr_init(&fins_pthread_attr);
-
-	PRINT_IMPORTANT("Run/start Modules");
-//switch_run(&fins_pthread_attr);
-//daemon_run(&fins_pthread_attr);
-//interface_run(&fins_pthread_attr);
-
-//arp_run(&fins_pthread_attr);
-//ipv4_run(&fins_pthread_attr);
-//icmp_run(&fins_pthread_attr);
-//tcp_run(&fins_pthread_attr);
-//udp_run(&fins_pthread_attr);
-
-//rtm_run(&fins_pthread_attr);
-//logger_run(&fins_pthread_attr);
-
-//############################# //TODO custom test, remove later
-	/*
-	 if (1) {
-	 //char recv_data[4000];
-
-	 while (1) {
-	 //gets(recv_data);
-
-	 PRINT_DEBUG("Sending ARP req");
-
-	 metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
-	 metadata_create(meta_req);
-
-	 uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1);
-	 //uint32_t dst_ip = IP4_ADR_P2H(172, 31, 54, 169);
-	 uint32_t src_ip = my_host_ip_addr; //IP4_ADR_P2H(192, 168, 1, 20);
-	 //uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
-
-	 secure_metadata_writeToElement(meta_req, "dst_ip", &dst_ip, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
-
-	 struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-	 ff_req->dataOrCtrl = CONTROL;
-	 ff_req->destinationID.id = ARP_ID;
-	 ff_req->destinationID.next = NULL;
-	 ff_req->metaData = meta_req;
-
-	 ff_req->ctrlFrame.sender_id = IPV4_ID;
-	 ff_req->ctrlFrame.serial_num = gen_control_serial_num();
-	 ff_req->ctrlFrame.opcode = CTRL_EXEC;
-	 ff_req->ctrlFrame.param_id = EXEC_ARP_GET_ADDR;
-
-	 ff_req->ctrlFrame.data_len = 0;
-	 ff_req->ctrlFrame.data = NULL;
-
-	 arp_to_switch(ff_req); //doesn't matter which queue
-	 }
-	 }
-	 if (0) {
-	 //char recv_data[4000];
-	 while (1) {
-	 //gets(recv_data);
-	 sleep(15);
-
-	 PRINT_IMPORTANT("start timing");
-
-	 struct timeval start, end;
-	 gettimeofday(&start, 0);
-
-	 int its = 2; //30000;
-	 int len = 10; //1000;
-
-	 int i = 0;
-	 while (i < its) {
-	 uint8_t *data = (uint8_t *) secure_malloc(len);
-	 memset(data, 74, len);
-
-	 metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-	 metadata_create(meta);
-
-	 //uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
-	 uint32_t host_ip = my_host_ip_addr;
-	 uint32_t host_port = 55454;
-	 uint32_t dst_ip = IP4_ADR_P2H(192,168,1,3);
-	 //uint32_t dst_ip = IP4_ADR_P2H(172, 31, 54, 169);
-	 uint32_t dst_port = 44444;
-	 uint32_t ttl = 64;
-	 uint32_t tos = 64;
-
-	 secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
-
-	 struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-	 ff->dataOrCtrl = DATA;
-	 ff->destinationID.id = UDP_ID;
-	 ff->destinationID.next = NULL;
-	 ff->metaData = meta;
-
-	 ff->dataFrame.directionFlag = DIR_DOWN;
-	 ff->dataFrame.pduLength = len;
-	 ff->dataFrame.pdu = data;
-
-	 PRINT_IMPORTANT("sending: ff=%p, meta=%p", ff, meta);
-	 if (1) {
-	 if (arp_to_switch(ff)) {
-	 i++;
-	 } else {
-	 PRINT_ERROR("freeing: ff=%p", ff);
-	 freeFinsFrame(ff);
-	 return;
-	 }
-	 }
-	 sleep(5);
-
-	 if (0) {
-	 if (daemon_fdf_to_switch(UDP_ID, data, len, meta)) {
-	 i++;
-	 } else {
-	 PRINT_ERROR("error sending");
-	 metadata_destroy(meta);
-	 free(data);
-	 break;
-	 }
-	 }
-	 }
-
-	 //struct timeval start, end;
-	 //gettimeofday(&start, 0);
-	 if (0) {
-	 gettimeofday(&end, 0);
-	 double diff = time_diff(&start, &end);
-	 PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
-	 }
-	 break;
-	 }
-	 }
-	 if (0) {
-	 //char recv_data[4000];
-	 while (1) {
-	 //gets(recv_data);
-	 sleep(15);
-
-	 PRINT_IMPORTANT("start timing");
-
-	 struct timeval start, end;
-	 gettimeofday(&start, 0);
-
-	 int its = 1; //30000;
-	 int len = 10; //1000;
-
-	 int i = 0;
-	 while (i < its) {
-	 uint8_t *data = (uint8_t *) secure_malloc(len);
-	 memset(data, 74, len);
-
-	 metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-	 metadata_create(meta);
-
-	 uint32_t host_ip = IP4_ADR_P2H(192,168,1,7);
-	 uint32_t host_port = 55454;
-	 uint32_t dst_ip = IP4_ADR_P2H(192,168,1,8);
-	 uint32_t dst_port = 44444;
-	 uint32_t ttl = 64;
-	 uint32_t tos = 64;
-
-	 secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
-	 secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
-
-	 struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-	 ff->dataOrCtrl = DATA;
-	 ff->destinationID.id = UDP_ID;
-	 ff->destinationID.next = NULL;
-	 ff->metaData = meta;
-
-	 ff->dataFrame.directionFlag = DIR_DOWN;
-	 ff->dataFrame.pduLength = len;
-	 ff->dataFrame.pdu = data;
-
-	 PRINT_DEBUG("sending: ff=%p, meta=%p", ff, meta);
-	 if (arp_to_switch(ff)) {
-	 i++;
-	 } else {
-	 PRINT_ERROR("freeing: ff=%p", ff);
-	 freeFinsFrame(ff);
-	 return;
-	 }
-
-	 if (0) {
-	 if (daemon_fdf_to_switch(UDP_ID, data, len, meta)) {
-	 i++;
-	 } else {
-	 PRINT_ERROR("error sending");
-	 metadata_destroy(meta);
-	 free(data);
-	 break;
-	 }
-	 }
-	 }
-
-	 //struct timeval start, end;
-	 //gettimeofday(&start, 0);
-	 gettimeofday(&end, 0);
-	 double diff = time_diff(&start, &end);
-	 PRINT_IMPORTANT("diff=%f, len=%d, avg=%f ms, calls=%f, bits=%f", diff, len, diff/its, 1000/(diff/its), 8*1000/(diff/its)*len);
-	 break;
-	 }
-	 }
-	 //*/
-//#############################
-	PRINT_IMPORTANT("Just waiting");
-	while (1) {
-		//sleep(1);
-	}
 }
 
 #ifndef BUILD_FOR_ANDROID

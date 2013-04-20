@@ -757,6 +757,7 @@ int arp_release(struct fins_module *module) {
 		arp_cache_shutdown(cache);
 		arp_cache_free(cache);
 	}
+	free(data->cache_list);
 
 	if (data->link_list) {
 		list_free(data->link_list, free);

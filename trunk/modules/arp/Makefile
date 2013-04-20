@@ -9,8 +9,8 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module, must be equal to folder
 LOCAL_NAME := arp
-LOCAL_LIBS := common
-LOCAL_MODS := switch
+LOCAL_LIBS := common data_structure
+LOCAL_MODS := 
 LOCAL_OBJS := arp.o arp_in_out.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic

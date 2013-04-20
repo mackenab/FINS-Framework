@@ -69,6 +69,17 @@ struct fins_module_ops {
 	int (*release)(struct fins_module *module);
 };
 
+struct fins_module_switch_ops {
+	int (*init)(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi);
+	int (*run)(struct fins_module *module, pthread_attr_t *fins_pthread_attr);
+	int (*pause)(struct fins_module *module);
+	int (*unpause)(struct fins_module *module);
+	int (*shutdown)(struct fins_module *module);
+	int (*release)(struct fins_module *module);
+	int (*register_module)(struct fins_module *module, struct fins_module *new_mod);
+	int (*unregister_module)(struct fins_module *module, int index);
+};
+
 struct link_record {
 	uint32_t id;
 	uint32_t src_index;
@@ -92,9 +103,6 @@ void module_create_queues(struct fins_module *module);
 void module_destroy_queues(struct fins_module *module);
 int module_to_switch(struct fins_module *module, struct finsFrame *ff);
 int module_send_flow(struct fins_module *module, struct fins_module_table *table, struct finsFrame *ff, uint32_t flow);
-
-int switch_register_module(struct fins_module *module, struct fins_module *new_mod);
-void switch_unregister_module(struct fins_module *module, int index);
 
 //not as sure since switch_event_sem
 

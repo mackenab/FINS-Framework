@@ -14,7 +14,8 @@
 //};
 
 void* recvr(void* socket) {
-	int rtm_in_fd, rtm_in_fd1;
+	int rtm_in_fd1 = 0;
+	//int rtm_in_fd;
 
 	//initializes all necessary variables
 	int numBytes;
@@ -81,32 +82,49 @@ void* recvr(void* socket) {
 
 }
 
-void *cmdline_to_rtm(void *local) {
-	struct fins_module *module = (struct fins_module *) local;
+int rtm_setNonblocking(int fd) { //TODO move to common file?
+	int flags;
 
-	struct rtm_data *data = (struct rtm_data *) module->data;
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 1;
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
 
-	struct sockaddr_un addr;
-	memset(&addr, 0, sizeof(struct sockaddr_un));
-	int32_t size = sizeof(addr);
+int rtm_setBlocking(int fd) {
+	int flags;
 
-	int server_cmd_fd;
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 0; //TODO verify is right?
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
 
-	while (module->state == FMS_RUNNING) {
-		server_cmd_fd = accept(data->server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
-		if (server_cmd_fd < 0) {
-			PRINT_ERROR("accept error: cmd_fd=%d, errno=%u, str='%s'", server_cmd_fd, errno, strerror(errno));
-			continue;
-		}
-		PRINT_DEBUG("accepted at: cmd_fd=%d, addr='%s'", server_cmd_fd, addr.sun_path);
+void console_free(struct rtm_console *console) {
+	PRINT_DEBUG("Entered: console=%p", console);
 
-		//close(data->server_fd);
-		PRINT_DEBUG("");
+	if (console->addr) {
+		PRINT_DEBUG("Freeing addr=%p", console->addr);
+		free(console->addr);
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
-	return NULL;
+	free(console);
 }
 
 void rtm_get_ff(struct fins_module *module) {
@@ -139,9 +157,9 @@ void rtm_get_ff(struct fins_module *module) {
 		} else if (ff->dataOrCtrl == DATA) {
 			if (ff->dataFrame.directionFlag == DIR_UP) {
 				//rtm_in_fdf(module, ff);
-				PRINT_DEBUG("");
+				PRINT_ERROR("todo error");
 			} else { //directionFlag==DIR_DOWN
-				//rtm_out_fdf(ff); //TODO remove?
+				//rtm_out_fdf(module, ff);
 				PRINT_ERROR("todo error");
 			}
 		} else {
@@ -161,7 +179,8 @@ void rtm_get_ff(struct fins_module *module) {
 void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	//TODO fill out
+	//TODO when recv FCF, pull params from meta to figure out connection, send through socket
+
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
@@ -296,6 +315,9 @@ void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
 void rtm_interrupt(struct fins_module *module) {
 	struct rtm_data *data = (struct rtm_data *) module->data;
 
+	if (data) {
+
+	}
 	//list_for_each1(data->cache_list, arp_to_func, module);
 }
 
@@ -308,6 +330,187 @@ void *switch_to_rtm(void *local) {
 		rtm_get_ff(module);
 		PRINT_DEBUG("");
 	}
+
+	PRINT_IMPORTANT("Exited: module=%p", module);
+	return NULL;
+}
+
+int console_fd_test(struct rtm_console *console, int *fd) {
+	return console->fd == *fd;
+}
+
+void *console_to_rtm(void *local) {
+	struct fins_module *module = (struct fins_module *) local;
+	struct rtm_data *data = (struct rtm_data *) module->data;
+
+	PRINT_IMPORTANT("Entered: module=%p", module);
+
+	int poll_num;
+	struct pollfd poll_fds[MAX_CONSOLES];
+	int time = 1;
+	int ret;
+	struct rtm_console *console;
+
+	int i;
+	for (i = 0; i < MAX_CONSOLES; i++) {
+		poll_fds[i].events = POLLIN | POLLPRI | POLLRDNORM;
+		//poll_fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+	}
+	PRINT_DEBUG("events=0x%x", poll_fds[0].events);
+
+	int numBytes;
+	uint32_t cmd_len;
+	uint8_t cmd_buf[MAX_CMD_LEN + 1];
+
+	secure_sem_wait(&data->console_sem);
+	while (module->state == FMS_RUNNING) {
+		poll_num = data->console_list->len;
+		if (poll_num) {
+			for (i = 0; i < MAX_CONSOLES; i++) {
+				if (data->console_fds[i] == 0) {
+					poll_fds[i].fd = -1;
+				} else {
+					poll_fds[i].fd = data->console_fds[i];
+				}
+			}
+			sem_post(&data->console_sem);
+
+			ret = poll(poll_fds, poll_num, time);
+			if (ret < 0) {
+				PRINT_ERROR("ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+				break;
+			} else if (ret) {
+				PRINT_DEBUG("poll: ret=%d", ret);
+
+				secure_sem_wait(&data->console_sem);
+				for (i = 0; i < MAX_CONSOLES; i++) {
+					if (poll_fds[i].fd > 0 && poll_fds[i].revents > 0) {
+						if (1) {
+							PRINT_DEBUG(
+									"POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d",
+									(poll_fds[i].revents & POLLIN) > 0, (poll_fds[i].revents & POLLPRI) > 0, (poll_fds[i].revents & POLLOUT) > 0, (poll_fds[i].revents & POLLERR) > 0, (poll_fds[i].revents & POLLHUP) > 0, (poll_fds[i].revents & POLLNVAL) > 0, (poll_fds[i].revents & POLLRDNORM) > 0, (poll_fds[i].revents & POLLRDBAND) > 0, (poll_fds[i].revents & POLLWRNORM) > 0, (poll_fds[i].revents & POLLWRBAND) > 0);
+						}
+						if (poll_fds[i].revents & (POLLERR | POLLNVAL)) {
+							//TODO ??
+							PRINT_DEBUG("todo");
+						} else if (poll_fds[i].revents & (POLLHUP)) {
+							//TODO console closed etc, remove, from list
+							data->console_fds[i] = 0;
+							console = (struct rtm_console *) list_find1(data->console_list, console_fd_test, &poll_fds[i].fd);
+							list_remove(data->console_list, console);
+							console_free(console);
+						} else if (poll_fds[i].revents & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
+							numBytes = read(poll_fds[i].fd, &cmd_len, sizeof(uint32_t));
+							if (numBytes <= 0) {
+								PRINT_ERROR("error reading size: numBytes=%d", numBytes);
+								PRINT_ERROR("todo error");
+								exit(-1);
+							}
+
+							numBytes = read(poll_fds[i].fd, cmd_buf, cmd_len);
+							if (numBytes <= 0) {
+								PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
+								PRINT_ERROR("todo error");
+								exit(-1);
+							}
+
+							if (numBytes != cmd_len) {
+								PRINT_ERROR("lengths not equal: cmd_len=%d, numBytes=%d", cmd_len, numBytes);
+								PRINT_ERROR("todo error");
+								exit(-1);
+							}
+							cmd_buf[cmd_len] = '\0';
+
+							rtm_process_cmd(module, poll_fds[i].fd, cmd_len, cmd_buf);
+						}
+					}
+				}
+			}
+		} else {
+			sem_post(&data->console_sem);
+			sleep(time);
+			secure_sem_wait(&data->console_sem);
+		}
+	}
+
+	PRINT_IMPORTANT("Exited: module=%p", module);
+	return NULL;
+}
+
+void rtm_process_cmd(struct fins_module *module, int fd, uint32_t cmd_len, uint8_t *cmd_buf) {
+	PRINT_DEBUG("Entered: module=%p, fd=%d, cmd_len=%u, cmd_buf='%s'", module, fd, cmd_len, cmd_buf);
+
+	uint8_t *word, *cmd_pt;
+	for (word = (uint8_t *) strtok_r((char *) cmd_buf, " ", (char **) &cmd_pt); word; word = (uint8_t *) strtok_r(NULL, " ", (char **) &cmd_pt)) {
+		PRINT_DEBUG("word='%s'", word);
+		PRINT_DEBUG("*cmd_pt=0x%x cmd_pt='%s'", *cmd_pt, cmd_pt);
+	}
+
+	PRINT_DEBUG("Exited: cmd_len=%u, cmd_buf='%s'", strlen((char *)cmd_buf), cmd_buf);
+}
+
+void *accept_console(void *local) {
+	struct fins_module *module = (struct fins_module *) local;
+	struct rtm_data *data = (struct rtm_data *) module->data;
+
+	PRINT_IMPORTANT("Entered: module=%p", module);
+
+	int32_t addr_size = sizeof(struct sockaddr_un);
+	struct sockaddr_un *addr;
+	int console_fd;
+	struct rtm_console *console;
+	int i;
+
+	secure_sem_wait(&data->console_sem);
+	while (module->state == FMS_RUNNING) {
+		if (list_has_space(data->console_list)) {
+			sem_post(&data->console_sem);
+
+			addr = (struct sockaddr_un *) secure_malloc(addr_size);
+			while (module->state == FMS_RUNNING) {
+				sleep(1);
+				console_fd = accept(data->server_fd, (struct sockaddr *) addr, (socklen_t *) &addr_size);
+				if (console_fd > 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+					break;
+				}
+			}
+			if (module->state != FMS_RUNNING) {
+				free(addr);
+
+				secure_sem_wait(&data->console_sem);
+				break;
+			}
+
+			if (console_fd < 0) {
+				PRINT_ERROR("accept error: server_fd=%d, console_fd=%d, errno=%u, str='%s'", data->server_fd, console_fd, errno, strerror(errno));
+				free(addr);
+
+				secure_sem_wait(&data->console_sem);
+				continue;
+			}
+
+			secure_sem_wait(&data->console_sem);
+			console = (struct rtm_console *) secure_malloc(sizeof(struct rtm_console));
+			console->id = data->console_counter++;
+			console->fd = console_fd;
+			console->addr = addr;
+
+			PRINT_IMPORTANT("Console created: id=%u, fd=%d, addr='%s'", console->id, console->fd, console->addr->sun_path);
+			list_append(data->console_list, console);
+
+			for (i = 0; i < MAX_CONSOLES; i++) {
+				if (data->console_fds[i] == 0) {
+					data->console_fds[i] = console_fd;
+					break;
+				}
+			}
+		} else {
+			sem_post(&data->console_sem);
+			sleep(5);
+			secure_sem_wait(&data->console_sem);
+		}
+	}
+	sem_post(&data->console_sem);
 
 	PRINT_IMPORTANT("Exited: module=%p", module);
 	return NULL;
@@ -332,9 +535,6 @@ int rtm_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, me
 		data->flows[i] = flows[i];
 	}
 
-	//TODO extract this from meta?
-	//data->rtm_started = 0;
-
 	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	int32_t size = sizeof(addr);
@@ -343,7 +543,7 @@ int rtm_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, me
 	snprintf(addr.sun_path, UNIX_PATH_MAX, RTM_PATH);
 	unlink(addr.sun_path);
 
-	data->server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	data->server_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (data->server_fd < 0) {
 		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", data->server_fd, errno, strerror(errno));
 		return 0;
@@ -359,6 +559,14 @@ int rtm_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, me
 		return 0;
 	}
 
+	sem_init(&data->console_sem, 0, 1);
+	data->console_list = list_create(MAX_CONSOLES);
+	data->console_counter = 0;
+
+	for (i = 0; i < MAX_CONSOLES; i++) {
+		data->console_fds[i] = 0;
+	}
+
 	return 1;
 }
 
@@ -368,9 +576,8 @@ int rtm_run(struct fins_module *module, pthread_attr_t *attr) {
 
 	struct rtm_data *data = (struct rtm_data *) module->data;
 	secure_pthread_create(&data->switch_to_rtm_thread, attr, switch_to_rtm, module);
-	//secure_pthread_create(&data->cmdline_to_rtm_thread, attr, to_rtm, module);
-	secure_pthread_create(&data->cmdline_to_rtm_thread, attr, cmdline_to_rtm, module);
-
+	secure_pthread_create(&data->console_to_rtm_thread, attr, console_to_rtm, module);
+	secure_pthread_create(&data->accept_console_thread, attr, accept_console, module);
 	return 1;
 }
 
@@ -399,9 +606,13 @@ int rtm_shutdown(struct fins_module *module) {
 	//timer_stop(data->rtm_to_data->tid);
 
 	//TODO expand this
+	close(data->server_fd);
+	list_free(data->console_list, console_free);
 
 	PRINT_IMPORTANT("Joining switch_to_rtm_thread");
 	pthread_join(data->switch_to_rtm_thread, NULL);
+	pthread_join(data->console_to_rtm_thread, NULL);
+	pthread_join(data->accept_console_thread, NULL);
 
 	return 1;
 }

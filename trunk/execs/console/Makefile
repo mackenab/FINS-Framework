@@ -8,12 +8,12 @@ endif
 include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
-LOCAL_NAME := logger
-LOCAL_LIBS := common data_structure
-LOCAL_MODS := 
-LOCAL_OBJS := logger.o
-LOCAL_INCS := .
-LOCAL_CFLAGS := -fpic
-LOCAL_LDFLAGS := -lc -lpthread
+LOCAL_NAME := console
+LOCAL_LIBS := #common #data_structure
+LOCAL_MODS := #rtm
+LOCAL_OBJS := console.o
+LOCAL_INCS := . ../../libs/common
+LOCAL_CFLAGS :=
+LOCAL_LDFLAGS := -lc -lm #-ldl -lpthread
 
-include $(MODULES_DIR)/make_module.finsmk
+include $(EXECS_DIR)/make_executable.finsmk

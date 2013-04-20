@@ -256,6 +256,7 @@ void unblock_to_signal(void) {
 
 void timer_create_to(struct to_timer_data *data) {
 	struct sigevent sev;
+	memset(&sev, 0, sizeof(struct sigevent));
 	sev.sigev_notify = SIGEV_SIGNAL;
 	sev.sigev_signo = to_signal;
 	sev.sigev_value.sival_ptr = data;

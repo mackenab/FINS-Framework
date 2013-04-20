@@ -464,13 +464,15 @@ uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
 
 	struct list_node *comp = list->front;
+	struct list_node *next;
 	while (comp) {
+		next = comp->next;
 		if (equal(comp->data)) {
 			//list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
-			comp = comp->next;
+			comp = next;
 		}
 	}
 
@@ -486,13 +488,15 @@ uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
 
 	struct list_node *comp = list->front;
+	struct list_node *next;
 	while (comp) {
+		next = comp->next;
 		if (equal(comp->data, param)) {
 			//list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
-			comp = comp->next;
+			comp = next;
 		}
 	}
 
@@ -508,13 +512,15 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
 
 	struct list_node *comp = list->front;
+	struct list_node *next;
 	while (comp) {
+		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
 			//list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
-			comp = comp->next;
+			comp = next;
 		}
 	}
 
@@ -573,11 +579,13 @@ struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint
 	struct linked_list *return_list = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
+	struct list_node *next;
 	while (comp) {
+		next = comp->next;
 		if (equal(comp->data)) {
 			list_append(return_list, copy(comp->data));
 		}
-		comp = comp->next;
+		comp = next;
 	}
 
 	//list_check(list);
@@ -592,11 +600,13 @@ struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uin
 	struct linked_list *return_list = list_create(list->max);
 
 	struct list_node *comp = list->front;
+	struct list_node *next;
 	while (comp) {
+		next = comp->next;
 		if (equal(comp->data, param)) {
 			list_append(return_list, copy(comp->data));
 		}
-		comp = comp->next;
+		comp = next;
 	}
 
 	//list_check(list);
@@ -612,11 +622,13 @@ struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uin
 	struct linked_list *return_list = list_create(list->max);
 
 	struct list_node *comp = list->front;
+	struct list_node *next;
 	while (comp) {
+		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
 			list_append(return_list, copy(comp->data));
 		}
-		comp = comp->next;
+		comp = next;
 	}
 
 	//list_check(list);
@@ -1239,4 +1251,14 @@ int addr_is_addr6(struct addr_record *addr) {
 
 int ifr_index_test(struct if_record *ifr, uint32_t *index) {
 	return ifr->index == *index;
+}
+
+void ifr_free(struct if_record *ifr) {
+	PRINT_DEBUG("Entered: ifr=%p", ifr);
+
+	if (ifr->addr_list) {
+		list_free(ifr->addr_list, free);
+	}
+
+	free(ifr);
 }

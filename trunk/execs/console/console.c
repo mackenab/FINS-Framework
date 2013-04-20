@@ -1,0 +1,167 @@
+/*
+ * console.h
+ *
+ *  Created on: Apr 19, 2013
+ *      Author: Jonathan Reed
+ */
+
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <math.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <time.h>
+#include <unistd.h>
+
+//#include <netdb.h>
+
+#include <finsdebug.h>
+
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX 108
+#endif
+
+//ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
+#ifdef BUILD_FOR_ANDROID
+//#define FINS_TMP_ROOT "/data/data/fins"
+#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
+#else
+#define FINS_TMP_ROOT "/tmp/fins"
+#endif
+
+#define RTM_PATH FINS_TMP_ROOT "/fins_rtm"
+#define MAX_CMD_LEN 500
+
+int get_line(char *line, int *max_size) {
+	if (*max_size <= 0) {
+		return -1;
+	}
+
+	if (line == NULL) {
+		return -1;
+	}
+	char *pt = line;
+
+	int c;
+	size_t len = 0;
+
+	for (;;) {
+		c = fgetc(stdin);
+		if (c == EOF) {
+			break;
+		}
+
+		if (c == '\n') {
+			break;
+		}
+		*pt = c;
+		pt++;
+
+		len++;
+		if (len == *max_size) {
+			printf("\ntodo error");
+			return -1;
+		}
+	}
+
+	*pt = '\0';
+	return len;
+}
+
+int main() {
+	PRINT_IMPORTANT("Entered");
+
+	///*
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	int32_t size = sizeof(addr);
+
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, RTM_PATH);
+
+	int console_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (console_fd < 0) {
+		printf("\nsocket error: capture_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
+		return 0;
+	}
+
+	printf("\nconnecting to: addr='%s'", RTM_PATH);
+	if (connect(console_fd, (struct sockaddr *) &addr, size) != 0) {
+		printf("\nconnect error: capture_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
+		return 0;
+	}
+	printf("\nconnected at: capture_fd=%d, addr='%s'", console_fd, addr.sun_path);
+	//*/
+
+	//TODO fork for recv process that or do nonblocking read on STDIN
+	int buf_size = MAX_CMD_LEN;
+	int cmd_len;
+	char cmd_buf[buf_size + 1];
+	int numBytes;
+
+	while (1) {
+		printf("\n$:");
+		fflush(stdout);
+
+		cmd_len = get_line(cmd_buf, &buf_size);
+		printf("cmd: len=%d, str='%s'", cmd_len, cmd_buf);
+		fflush(stdout);
+
+		if (cmd_len > 0) {
+			if ((strcmp(cmd_buf, "quit") == 0) || strcmp(cmd_buf, "q") == 0) {
+				break;
+			} else if ((strcmp(cmd_buf, "help") == 0) || strcmp(cmd_buf, "?") == 0) {
+				printf("todo!!!");
+			} else {
+				//##### write
+				numBytes = write(console_fd, &cmd_len, sizeof(int));
+				if (numBytes <= 0) {
+					printf("\nerror write len: numBytes=%d", numBytes);
+					return 0;
+				}
+
+				numBytes = write(console_fd, cmd_buf, cmd_len);
+				if (numBytes <= 0) {
+					printf("\nerror write buf: numBytes=%d", numBytes);
+					return 0;
+				}
+
+				if (0) {
+					//##### read
+					numBytes = read(console_fd, &cmd_len, sizeof(int));
+					if (numBytes <= 0) {
+						printf("\nerror read len: numBytes=%d", numBytes);
+						return 0;
+					}
+
+					numBytes = read(console_fd, cmd_buf, cmd_len);
+					if (numBytes <= 0) {
+						printf("\nerror read buf: numBytes=%d", numBytes);
+						return 0;
+					}
+
+					if (cmd_len != numBytes) {
+						printf("\nwrite len different: cmd_len=%d, numBytes=%d", cmd_len, numBytes);
+						exit(-1);
+					}
+					printf("\nechod: len=%u, buf='%s'", cmd_len, cmd_buf);
+				}
+			}
+		} else if (cmd_len < 0) {
+			sleep(1);
+		}
+	}
+
+	return 0;
+}

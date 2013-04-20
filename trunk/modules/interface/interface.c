@@ -17,6 +17,14 @@
 //#include <finsqueue.h>
 #include <sys/time.h>
 
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <stddef.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+
 #include <finsdebug.h>
 
 #include <switch.h>
@@ -354,13 +362,6 @@ int interface_to_switch(struct finsFrame *ff) {
 void interface_dummy(void) {
 
 }
-
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stddef.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 
 void interface_init(void) {
 	PRINT_IMPORTANT("Entered");

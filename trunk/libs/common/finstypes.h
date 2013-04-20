@@ -221,15 +221,10 @@ typedef void (*release_type)(uint8_t *data);
 void list_free_full(struct linked_list *list, void (*release)(uint8_t *data));
 
 uint32_t gen_control_serial_num(void);
-
 struct finsFrame *buildFinsFrame(void);
-
 void print_finsFrame(struct finsFrame *fins_in);
-
 void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src);
-
 struct finsFrame *cloneFinsFrame(struct finsFrame *ff);
-
 int freeFinsFrame(struct finsFrame *f);
 
 /* needed function defs */
@@ -297,6 +292,7 @@ struct if_record { //for an interface
 	struct linked_list *addr_list;
 };
 int ifr_index_test(struct if_record *ifr, uint32_t *index);
+void ifr_free(struct if_record *ifr);
 
 struct route_record {
 	uint32_t if_index;
@@ -328,8 +324,8 @@ struct envi_record {
 	struct linked_list *if_list; //list of if_record, for a list of interfaces
 	struct if_record *if_loopback;
 	struct if_record *if_main;
+	//struct linked_list *addr_list; //list of addr_record, for interfaces
 
-	struct linked_list *addr_list;
 	struct linked_list *route_list; //list of addr_record, for a routing table
 //struct linked_list *route_cache; //TODO add in routing cache?
 //struct linked_list *foward_list; //TODO add in forwarding table?

@@ -7,8 +7,6 @@
 
 #include "switch_internal.h"
 
-//#################################################
-
 int switch_register_module(struct fins_module *module, struct fins_module *new_mod) {
 	PRINT_DEBUG("Entered: module=%p, new_mod=%p, id=%d, name='%s'", module, new_mod, new_mod->id, new_mod->name);
 
@@ -32,12 +30,12 @@ int switch_register_module(struct fins_module *module, struct fins_module *new_m
 	return 0;
 }
 
-void switch_unregister_module(struct fins_module *module, int index) {
+int switch_unregister_module(struct fins_module *module, int index) {
 	PRINT_DEBUG("Entered: index=%d", index);
 
 	if (index < 0 || index > MAX_MODULES) {
 		PRINT_ERROR("todo error");
-		return;
+		return 0;
 	}
 
 	struct switch_data *data = (struct switch_data *) module->data;
@@ -50,7 +48,11 @@ void switch_unregister_module(struct fins_module *module, int index) {
 		PRINT_IMPORTANT("No module to unregister: index=%d", index);
 	}
 	sem_post(module->input_sem);
+
+	return 1;
 }
+
+//#################################################
 
 void *switch_loop(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
@@ -309,8 +311,8 @@ void switch_dummy(void) {
 
 }
 
-static struct fins_module_ops switch_ops = { .init = switch_init, .run = switch_run, .pause = switch_pause, .unpause = switch_unpause, .shutdown =
-		switch_shutdown, .release = switch_release, };
+static struct fins_module_switch_ops switch_ops = { .init = switch_init, .run = switch_run, .pause = switch_pause, .unpause = switch_unpause, .shutdown =
+		switch_shutdown, .release = switch_release, .register_module = switch_register_module, .unregister_module = switch_unregister_module };
 
 struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
 	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
@@ -319,7 +321,7 @@ struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
 
 	strcpy((char *) module->lib, SWITCH_LIB);
 	module->max_flows = SWITCH_MAX_FLOWS; //TODO change?
-	module->ops = &switch_ops;
+	module->ops = (struct fins_module_ops *) &switch_ops;
 	module->state = FMS_FREE;
 
 	module->index = index;
