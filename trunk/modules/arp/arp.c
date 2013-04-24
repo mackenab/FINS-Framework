@@ -445,7 +445,7 @@ void arp_get_ff(struct fins_module *module) {
 		return;
 	}
 
-	if (ff) {
+	if (ff != NULL) {
 		if (ff->metaData == NULL) {
 			PRINT_ERROR("Error fcf.metadata==NULL");
 			exit(-1);
@@ -541,12 +541,12 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 	int i;
 
 	switch (ff->ctrlFrame.param_id) {
-	case PARAM_FLOWS:
+	case MOD_SET_PARAM_FLOWS:
 		PRINT_DEBUG("PARAM_FLOWS");
 		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
 		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
-		if (module->max_flows < flows_num) {
+		if (module->flows_max < flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -559,7 +559,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		//freeFF frees flows
 		break;
-	case PARAM_LINKS:
+	case MOD_SET_PARAM_LINKS:
 		PRINT_DEBUG("PARAM_LINKS");
 		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
 			PRINT_ERROR("todo error");
@@ -575,7 +575,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		ff->ctrlFrame.data = NULL;
 		break;
-	case PARAM_DUAL:
+	case MOD_SET_PARAM_DUAL:
 		PRINT_DEBUG("PARAM_DUAL");
 
 		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
@@ -585,7 +585,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		}
 		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
 
-		if (module->max_flows < table->flows_num) {
+		if (module->flows_max < table->flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -663,19 +663,42 @@ void *switch_to_arp(void *local) {
 	}
 
 	PRINT_IMPORTANT("Exited");
-	//pthread_exit(NULL);
 	return NULL;
 }
 
-int arp_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi) {
+void arp_init_params(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->params);
+	metadata_element *sub = config_setting_add(root, "test", CONFIG_TYPE_GROUP);
+	if (sub == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+
+	metadata_element *elem = config_setting_add(sub, "key", CONFIG_TYPE_INT);
+	if (elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+
+	uint32_t value = 10;
+	int status = config_setting_set_int(elem, *(int *) &value);
+	if (status == CONFIG_FALSE) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+}
+
+int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
-	module_create_queues(module);
+	module_create_structs(module);
+
+	arp_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct arp_data));
 	struct arp_data *data = (struct arp_data *) module->data;
 
-	if (module->max_flows < flows_num) {
+	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
@@ -763,7 +786,7 @@ int arp_release(struct fins_module *module) {
 		list_free(data->link_list, free);
 	}
 	free(data);
-	module_destroy_queues(module);
+	module_destroy_structs(module);
 	free(module);
 	return 1;
 }
@@ -781,7 +804,7 @@ struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name) {
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
 	strcpy((char *) module->lib, ARP_LIB);
-	module->max_flows = ARP_MAX_FLOWS;
+	module->flows_max = ARP_MAX_FLOWS;
 	module->ops = &arp_ops;
 	module->state = FMS_FREE;
 

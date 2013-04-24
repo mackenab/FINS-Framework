@@ -15,7 +15,7 @@ void logger_get_ff(struct fins_module *module) {
 		secure_sem_wait(module->input_sem);
 		ff = read_queue(module->input_queue);
 		sem_post(module->input_sem);
-	} while (module->state == FMS_RUNNING && ff == NULL && !data->logger_interrupt_flag); //TODO change logic here, combine with switch_to_logger?
+	} while (module->state == FMS_RUNNING && ff == NULL && !data->interrupt_flag); //TODO change logic here, combine with switch_to_logger?
 
 	if (module->state != FMS_RUNNING) {
 		if (ff != NULL) {
@@ -24,7 +24,7 @@ void logger_get_ff(struct fins_module *module) {
 		return;
 	}
 
-	if (ff) {
+	if (ff != NULL) {
 		if (ff->metaData == NULL) {
 			PRINT_ERROR("Error fcf.metadata==NULL");
 			exit(-1);
@@ -58,8 +58,8 @@ void logger_get_ff(struct fins_module *module) {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
-	} else if (data->logger_interrupt_flag) {
-		data->logger_interrupt_flag = 0;
+	} else if (data->interrupt_flag) {
+		data->interrupt_flag = 0;
 
 		logger_interrupt(module);
 	} else {
@@ -131,12 +131,12 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 	int i;
 
 	switch (ff->ctrlFrame.param_id) {
-	case PARAM_FLOWS:
-		PRINT_DEBUG("PARAM_FLOWS");
+	case LOGGER_SET_PARAM_FLOWS:
+		PRINT_DEBUG("LOGGER_SET_PARAM_FLOWS");
 		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
 		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
-		if (module->max_flows < flows_num) {
+		if (module->flows_max < flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -149,8 +149,8 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		//freeFF frees flows
 		break;
-	case PARAM_LINKS:
-		PRINT_DEBUG("PARAM_LINKS");
+	case LOGGER_SET_PARAM_LINKS:
+		PRINT_DEBUG("LOGGER_SET_PARAM_LINKS");
 		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
@@ -165,8 +165,8 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		ff->ctrlFrame.data = NULL;
 		break;
-	case PARAM_DUAL:
-		PRINT_DEBUG("PARAM_DUAL");
+	case LOGGER_SET_PARAM_DUAL:
+		PRINT_DEBUG("LOGGER_SET_PARAM_DUAL");
 
 		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
 			PRINT_ERROR("todo error");
@@ -175,7 +175,7 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		}
 		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
 
-		if (module->max_flows < table->flows_num) {
+		if (module->flows_max < table->flows_num) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
 			return;
@@ -192,6 +192,30 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		data->link_list = table->link_list;
 
 		//freeFF frees table
+		break;
+	case LOGGER_SET_INTERVAL__id:
+		PRINT_DEBUG("LOGGER_SET_INTERVAL");
+		ff->destinationID = ff->ctrlFrame.sender_id;
+
+		//TODO change to actual
+
+		ff->ctrlFrame.sender_id = module->index;
+		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
+		module_to_switch(module, ff);
+		break;
+	case LOGGER_SET_REPEATS__id:
+		PRINT_DEBUG("LOGGER_SET_REPEATS");
+		ff->destinationID = ff->ctrlFrame.sender_id;
+
+		//TODO change to actual
+
+		ff->ctrlFrame.sender_id = module->index;
+		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		ff->ctrlFrame.ret_val = 0;
+
+		module_to_switch(module, ff);
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
@@ -252,15 +276,47 @@ void *switch_to_logger(void *local) {
 	return NULL;
 }
 
-int logger_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi) {
+void logger_init_params(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->params);
+	//int status;
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	if (exec_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	if (get_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
+	elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	if (set_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
+}
+
+int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
-	module_create_queues(module);
+	module_create_structs(module);
+
+	logger_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct logger_data));
 	struct logger_data *data = (struct logger_data *) module->data;
 
-	if (module->max_flows < flows_num) {
+	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
@@ -279,7 +335,7 @@ int logger_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num,
 	data->logger_to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
 	data->logger_to_data->handler = intsem_to_handler;
 	data->logger_to_data->flag = &data->logger_flag;
-	data->logger_to_data->interrupt = &data->logger_interrupt_flag;
+	data->logger_to_data->interrupt = &data->interrupt_flag;
 	data->logger_to_data->sem = module->event_sem;
 	timer_create_to((struct to_timer_data *) data->logger_to_data);
 
@@ -342,7 +398,7 @@ int logger_release(struct fins_module *module) {
 		list_free(data->link_list, free);
 	}
 	free(data);
-	module_destroy_queues(module);
+	module_destroy_structs(module);
 	free(module);
 	return 1;
 }
@@ -360,7 +416,7 @@ struct fins_module *logger_create(uint32_t index, uint32_t id, uint8_t *name) {
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
 	strcpy((char *) module->lib, LOGGER_LIB);
-	module->max_flows = LOGGER_MAX_PORTS;
+	module->flows_max = LOGGER_MAX_FLOWS;
 	module->ops = &logger_ops;
 	module->state = FMS_FREE;
 

@@ -1,40 +1,4 @@
-#include "interface.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <ctype.h>
-//#include <errno.h>
-#include <fcntl.h>
-//#include <limits.h>
-//#include <sys/stat.h>
-//#include <linux/if_ether.h>
-#include <pthread.h>
-//#include <finstypes.h>
-//#include <finsqueue.h>
-#include <sys/time.h>
-
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stddef.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-
-
-#include <finsdebug.h>
-
-#include <switch.h>
-static struct fins_proto_module interface_proto = { .module_id = INTERFACE_ID, .name = "interface", .running_flag = 1, };
-
-pthread_t switch_to_interface_thread;
-pthread_t capturer_to_interface_thread;
-
-int client_capture_fd; /** capture file descriptor to read from capturer */
-int client_inject_fd; /** inject file descriptor to read from capturer */
+#include "interface_internal.h"
 
 /** special functions to print the data within a frame for testing*/
 
@@ -74,8 +38,273 @@ int interface_setBlocking(int fd) {
 #endif
 }
 
+void *switch_to_interface(void *local) {
+	struct fins_module *module = (struct fins_module *) local;
+	PRINT_IMPORTANT("Entered: module=%p", module);
+
+	while (module->state == FMS_RUNNING) {
+		interface_get_ff(module);
+		PRINT_DEBUG("");
+	}
+
+	PRINT_IMPORTANT("Exited: module=%p", module);
+	return NULL;
+} // end of Inject Function
+
+void interface_get_ff(struct fins_module *module) {
+	struct finsFrame *ff;
+	do {
+		secure_sem_wait(module->event_sem);
+		secure_sem_wait(module->input_sem);
+		ff = read_queue(module->input_queue);
+		sem_post(module->input_sem);
+	} while (module->state == FMS_RUNNING && ff == NULL); //TODO change logic here, combine with switch_to_interface?
+
+	if (module->state != FMS_RUNNING) {
+		if (ff != NULL) {
+			freeFinsFrame(ff);
+		}
+		return;
+	}
+
+	if (ff->metaData == NULL) {
+		PRINT_ERROR("Error fcf.metadata==NULL");
+		exit(-1);
+	}
+
+	PRINT_DEBUG(" At least one frame has been read from the Switch to Etherstub ff=%p", ff);
+
+	if (ff->dataOrCtrl == CONTROL) {
+		interface_fcf(module, ff);
+		PRINT_DEBUG("");
+	} else if (ff->dataOrCtrl == DATA) {
+		if (ff->dataFrame.directionFlag == DIR_UP) {
+			//interface_in_fdf(module, ff); //TODO remove?
+			PRINT_ERROR("todo error");
+		} else { //directionFlag==DIR_DOWN
+			interface_out_fdf(module, ff);
+			PRINT_DEBUG("");
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+}
+
+void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	//TODO fill out
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_ALERT:
+		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_ALERT_REPLY:
+		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_READ_PARAM:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_READ_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_SET_PARAM:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
+		interface_set_param(module, ff);
+		break;
+	case CTRL_SET_PARAM_REPLY:
+		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_EXEC:
+		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_EXEC_REPLY:
+		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	case CTRL_ERROR:
+		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	default:
+		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	}
+}
+
+void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	struct interface_data *data = (struct interface_data *) module->data;
+	int i;
+
+	switch (ff->ctrlFrame.param_id) {
+	case PARAM_FLOWS:
+		PRINT_DEBUG("PARAM_FLOWS");
+		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
+		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+
+		if (module->flows_max < flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = flows_num;
+
+		for (i = 0; i < flows_num; i++) {
+			data->flows[i] = flows[i];
+		}
+
+		//freeFF frees flows
+		break;
+	case PARAM_LINKS:
+		PRINT_DEBUG("PARAM_LINKS");
+		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+
+		if (data->link_list) {
+			list_free(data->link_list, free);
+		}
+		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
+		data->link_list = link_list;
+
+		ff->ctrlFrame.data = NULL;
+		break;
+	case PARAM_DUAL:
+		PRINT_DEBUG("PARAM_DUAL");
+
+		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
+
+		if (module->flows_max < table->flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = table->flows_num;
+
+		for (i = 0; i < table->flows_num; i++) {
+			data->flows[i] = table->flows[i];
+		}
+
+		if (data->link_list) {
+			list_free(data->link_list, free);
+		}
+		data->link_list = table->link_list;
+
+		//freeFF frees table
+		break;
+	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
+		break;
+	}
+
+	freeFinsFrame(ff);
+}
+
+void interface_out_fdf(struct fins_module *module, struct finsFrame *ff) {
+	struct interface_data *data = (struct interface_data *) module->data;
+
+	uint64_t dst_mac;
+	uint64_t src_mac;
+	uint32_t ether_type;
+
+	uint8_t *frame;
+	struct sniff_ethernet *hdr;
+	int framelen;
+	int numBytes;
+
+	metadata *meta = ff->metaData;
+	secure_metadata_readFromElement(meta, "send_dst_mac", &dst_mac);
+	secure_metadata_readFromElement(meta, "send_src_mac", &src_mac);
+	secure_metadata_readFromElement(meta, "send_ether_type", &ether_type);
+
+	PRINT_DEBUG("send frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
+
+	framelen = ff->dataFrame.pduLength + SIZE_ETHERNET;
+	PRINT_DEBUG("framelen=%d", framelen);
+
+	frame = (uint8_t *) secure_malloc(framelen);
+	hdr = (struct sniff_ethernet *) frame;
+
+	hdr->ether_dhost[0] = (dst_mac >> 40) & 0xff;
+	hdr->ether_dhost[1] = (dst_mac >> 32) & 0xff;
+	hdr->ether_dhost[2] = (dst_mac >> 24) & 0xff;
+	hdr->ether_dhost[3] = (dst_mac >> 16) & 0xff;
+	hdr->ether_dhost[4] = (dst_mac >> 8) & 0xff;
+	hdr->ether_dhost[5] = dst_mac & 0xff;
+
+	hdr->ether_shost[0] = (src_mac >> 40) & 0xff;
+	hdr->ether_shost[1] = (src_mac >> 32) & 0xff;
+	hdr->ether_shost[2] = (src_mac >> 24) & 0xff;
+	hdr->ether_shost[3] = (src_mac >> 16) & 0xff;
+	hdr->ether_shost[4] = (src_mac >> 8) & 0xff;
+	hdr->ether_shost[5] = src_mac & 0xff;
+
+	if (ether_type == ETH_TYPE_ARP) {
+		hdr->ether_type = htons(ETH_TYPE_ARP);
+	} else if (ether_type == ETH_TYPE_IP4) {
+		hdr->ether_type = htons(ETH_TYPE_IP4);
+	} else {
+		PRINT_ERROR("todo error");
+		freeFinsFrame(ff);
+		free(frame);
+		return;
+	}
+
+	//memcpy(frame + SIZE_ETHERNET, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	memcpy(hdr->data, ff->dataFrame.pdu, ff->dataFrame.pduLength);
+	//	print_finsFrame(ff);
+	PRINT_DEBUG("daemon inject to ethernet stub ");
+
+	numBytes = write(data->client_inject_fd, &framelen, sizeof(int));
+	if (numBytes <= 0) {
+		PRINT_ERROR("numBytes written %d", numBytes);
+		freeFinsFrame(ff);
+		free(frame);
+		return;
+	}
+
+	numBytes = write(data->client_inject_fd, frame, framelen);
+	if (numBytes <= 0) {
+		PRINT_ERROR("numBytes written %d", numBytes);
+		freeFinsFrame(ff);
+		free(frame);
+		return;
+	}
+
+	freeFinsFrame(ff);
+	free(frame);
+}
+
 void *capturer_to_interface(void *local) {
-	PRINT_IMPORTANT("Entered");
+	struct fins_module *module = (struct fins_module *) local;
+	struct interface_data *data = (struct interface_data *) module->data;
+	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	int size_len = sizeof(int);
 	int numBytes;
@@ -91,7 +320,7 @@ void *capturer_to_interface(void *local) {
 	metadata *meta;
 	struct finsFrame *ff;
 
-	while (interface_proto.running_flag) {
+	while (module->state == FMS_RUNNING) {
 		/*
 		 if (0) { //works, allows for terminating, though creates unbound while(1) loop
 		 interface_setNonblocking(capture_pipe_fd);
@@ -109,14 +338,14 @@ void *capturer_to_interface(void *local) {
 		//if (1) { //works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		//PRINT_IMPORTANT("Reading");
 		do {
-			numBytes = read(client_capture_fd, &frame_len, size_len);
+			numBytes = read(data->client_capture_fd, &frame_len, size_len);
 			if (numBytes <= 0) {
 				PRINT_ERROR("numBytes=%d", numBytes);
 				break;
 			}
-		} while (interface_proto.running_flag && numBytes <= 0);
+		} while (module->state == FMS_RUNNING && numBytes <= 0);
 
-		if (!interface_proto.running_flag) {
+		if (module->state != FMS_RUNNING) {
 			break;
 		}
 		//}
@@ -126,7 +355,7 @@ void *capturer_to_interface(void *local) {
 			break;
 		}
 
-		numBytes = read(client_capture_fd, frame, frame_len);
+		numBytes = read(data->client_capture_fd, frame, frame_len);
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
 			break;
@@ -173,203 +402,43 @@ void *capturer_to_interface(void *local) {
 		ff->dataOrCtrl = DATA;
 		ff->metaData = meta;
 
-		if (ether_type == ETH_TYPE_IP4) { //0x0800 == 2048, IPv4
-			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
-			ff->destinationID.id = IPV4_ID;
-			ff->destinationID.next = NULL;
-		} else if (ether_type == ETH_TYPE_ARP) { //0x0806 == 2054, ARP
-			PRINT_DEBUG("ARP: proto=0x%x (%u)", ether_type, ether_type);
-			ff->destinationID.id = ARP_ID;
-			ff->destinationID.next = NULL;
-		} else if (ether_type == ETH_TYPE_IP6) { //0x86dd == 34525, IPv6
-			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
-			//drop, don't handle & don't catch sys calls, change after do catch
-			ff->dataFrame.pdu = NULL;
-			freeFinsFrame(ff);
-			continue;
-		} else {
-			PRINT_ERROR("default: proto=0x%x (%u)", ether_type, ether_type);
-			//drop
-			ff->dataFrame.pdu = NULL;
-			freeFinsFrame(ff);
-			continue;
-		}
-
 		ff->dataFrame.directionFlag = DIR_UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		if (!interface_to_switch(ff)) {
+		if (!module_send_flow(module, (struct fins_module_table *) module->data, ff, INTERFACE_FLOW_UP)) {
 			PRINT_ERROR("send to switch error, ff=%p", ff);
 			freeFinsFrame(ff);
 		}
 	}
 
 	PRINT_IMPORTANT("Exited");
-	//pthread_exit(NULL);
 	return NULL;
 }
 
-void *switch_to_interface(void *local) {
-	PRINT_IMPORTANT("Entered");
+int interface_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi) {
+	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	module->state = FMS_INIT;
+	module_create_structs(module);
 
-	while (interface_proto.running_flag) {
-		interface_get_ff();
-		PRINT_DEBUG("");
-	}
+	//interface_init_params(module);
 
-	PRINT_IMPORTANT("Exited");
-	//pthread_exit(NULL);
-	return NULL;
-} // end of Inject Function
+	module->data = secure_malloc(sizeof(struct interface_data));
+	struct interface_data *data = (struct interface_data *) module->data;
 
-void interface_get_ff(void) {
-	struct finsFrame *ff;
-
-	do {
-		secure_sem_wait(interface_proto.event_sem);
-		secure_sem_wait(interface_proto.input_sem);
-		ff = read_queue(interface_proto.input_queue);
-		sem_post(interface_proto.input_sem);
-	} while (interface_proto.running_flag && ff == NULL);
-
-	if (!interface_proto.running_flag) {
-		if (ff != NULL) {
-			freeFinsFrame(ff);
-		}
-		return;
-	}
-
-	if (ff->metaData == NULL) {
-		PRINT_ERROR("Error fcf.metadata==NULL");
-		exit(-1);
-	}
-
-	PRINT_DEBUG(" At least one frame has been read from the Switch to Etherstub ff=%p", ff);
-
-	if (ff->dataOrCtrl == CONTROL) {
-		interface_fcf(ff);
-		PRINT_DEBUG("");
-	} else if (ff->dataOrCtrl == DATA) {
-		if (ff->dataFrame.directionFlag == DIR_UP) {
-			//interface_in_fdf(ff); //TODO remove?
-			PRINT_ERROR("todo error");
-		} else { //directionFlag==DIR_DOWN
-			interface_out_fdf(ff);
-			PRINT_DEBUG("");
-		}
-	} else {
+	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
-		exit(-1);
+		return 0;
 	}
-}
+	data->flows_num = flows_num;
 
-void interface_out_fdf(struct finsFrame *ff) {
-
-	uint64_t dst_mac;
-	uint64_t src_mac;
-	uint32_t ether_type;
-
-	uint8_t *frame;
-	struct sniff_ethernet *hdr;
-	int framelen;
-	int numBytes;
-
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "send_dst_mac", &dst_mac);
-	secure_metadata_readFromElement(meta, "send_src_mac", &src_mac);
-	secure_metadata_readFromElement(meta, "send_ether_type", &ether_type);
-
-	PRINT_DEBUG("send frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
-
-	framelen = ff->dataFrame.pduLength + SIZE_ETHERNET;
-	PRINT_DEBUG("framelen=%d", framelen);
-
-	frame = (char *) secure_malloc(framelen);
-	hdr = (struct sniff_ethernet *) frame;
-
-	hdr->ether_dhost[0] = (dst_mac >> 40) & 0xff;
-	hdr->ether_dhost[1] = (dst_mac >> 32) & 0xff;
-	hdr->ether_dhost[2] = (dst_mac >> 24) & 0xff;
-	hdr->ether_dhost[3] = (dst_mac >> 16) & 0xff;
-	hdr->ether_dhost[4] = (dst_mac >> 8) & 0xff;
-	hdr->ether_dhost[5] = dst_mac & 0xff;
-
-	hdr->ether_shost[0] = (src_mac >> 40) & 0xff;
-	hdr->ether_shost[1] = (src_mac >> 32) & 0xff;
-	hdr->ether_shost[2] = (src_mac >> 24) & 0xff;
-	hdr->ether_shost[3] = (src_mac >> 16) & 0xff;
-	hdr->ether_shost[4] = (src_mac >> 8) & 0xff;
-	hdr->ether_shost[5] = src_mac & 0xff;
-
-	if (ether_type == ETH_TYPE_ARP) {
-		hdr->ether_type = htons(ETH_TYPE_ARP);
-	} else if (ether_type == ETH_TYPE_IP4) {
-		hdr->ether_type = htons(ETH_TYPE_IP4);
-	} else {
-		PRINT_ERROR("todo error");
-		freeFinsFrame(ff);
-		free(frame);
-		return;
+	int i;
+	for (i = 0; i < flows_num; i++) {
+		data->flows[i] = flows[i];
 	}
 
-	//memcpy(frame + SIZE_ETHERNET, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	memcpy(hdr->data, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	//	print_finsFrame(ff);
-	PRINT_DEBUG("daemon inject to ethernet stub ");
-
-	numBytes = write(client_inject_fd, &framelen, sizeof(int));
-	if (numBytes <= 0) {
-		PRINT_ERROR("numBytes written %d", numBytes);
-		freeFinsFrame(ff);
-		free(frame);
-		return;
-	}
-
-	numBytes = write(client_inject_fd, frame, framelen);
-	if (numBytes <= 0) {
-		PRINT_ERROR("numBytes written %d", numBytes);
-		freeFinsFrame(ff);
-		free(frame);
-		return;
-	}
-
-	freeFinsFrame(ff);
-	free(frame);
-}
-
-void interface_in_fdf(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-
-}
-
-void interface_fcf(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	PRINT_ERROR("todo");
-	freeFinsFrame(ff);
-}
-
-void interface_exec(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-
-}
-
-int interface_to_switch(struct finsFrame *ff) {
-	return module_to_switch(&interface_proto, ff);
-}
-
-void interface_dummy(void) {
-
-}
-
-void interface_init(void) {
-	PRINT_IMPORTANT("Entered");
-	interface_proto.running_flag = 1;
-
-	module_create_ops(&interface_proto);
-	module_register(&interface_proto);
-
+	//TODO move to associated thread, so init() is nonblocking
 	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	int32_t size = sizeof(addr);
@@ -377,62 +446,121 @@ void interface_init(void) {
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
 
-	client_capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (client_capture_fd < 0) {
-		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", client_capture_fd, errno, strerror(errno));
-		return;
+	data->client_capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (data->client_capture_fd < 0) {
+		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", data->client_capture_fd, errno, strerror(errno));
+		return 0;
 	}
 
 	PRINT_DEBUG("connecting to: addr='%s'", CAPTURE_PATH);
-	if (connect(client_capture_fd, (struct sockaddr *) &addr, size) != 0) {
-		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", client_capture_fd, errno, strerror(errno));
-		return;
+	if (connect(data->client_capture_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", data->client_capture_fd, errno, strerror(errno));
+		return 0;
 	}
-	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", client_capture_fd, addr.sun_path);
+	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", data->client_capture_fd, addr.sun_path);
 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
 
-	client_inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (client_inject_fd < 0) {
-		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", client_inject_fd, errno, strerror(errno));
-		return;
+	data->client_inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (data->client_inject_fd < 0) {
+		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", data->client_inject_fd, errno, strerror(errno));
+		return 0;
 	}
 
 	PRINT_DEBUG("connecting to: addr='%s'", INJECT_PATH);
-	if (connect(client_inject_fd, (struct sockaddr *) &addr, size) != 0) {
-		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", client_inject_fd, errno, strerror(errno));
-		return;
+	if (connect(data->client_inject_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", data->client_inject_fd, errno, strerror(errno));
+		return 0;
 	}
-	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", client_inject_fd, addr.sun_path);
+	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", data->client_inject_fd, addr.sun_path);
 
 	PRINT_IMPORTANT("PCAP processes connected");
+	return 1;
 }
 
-void interface_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_IMPORTANT("Entered");
+int interface_run(struct fins_module *module, pthread_attr_t *attr) {
+	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	module->state = FMS_RUNNING;
 
-	secure_pthread_create(&switch_to_interface_thread, fins_pthread_attr, switch_to_interface, fins_pthread_attr);
-	secure_pthread_create(&capturer_to_interface_thread, fins_pthread_attr, capturer_to_interface, fins_pthread_attr);
+	struct interface_data *data = (struct interface_data *) module->data;
+	secure_pthread_create(&data->switch_to_interface_thread, attr, switch_to_interface, module);
+	secure_pthread_create(&data->capturer_to_interface_thread, attr, capturer_to_interface, module);
+
+	return 1;
 }
 
-void interface_shutdown(void) {
-	PRINT_IMPORTANT("Entered");
-	interface_proto.running_flag = 0;
-	sem_post(interface_proto.event_sem);
+int interface_pause(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+	module->state = FMS_PAUSED;
+
+	//TODO
+	return 1;
+}
+
+int interface_unpause(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+	module->state = FMS_RUNNING;
+
+	//TODO
+	return 1;
+}
+
+int interface_shutdown(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+	module->state = FMS_SHUTDOWN;
+	sem_post(module->event_sem);
+
+	struct interface_data *data = (struct interface_data *) module->data;
 
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_interface_thread");
-	pthread_join(switch_to_interface_thread, NULL);
+	pthread_join(data->switch_to_interface_thread, NULL);
 	PRINT_IMPORTANT("Joining capturer_to_interface_thread");
-	pthread_join(capturer_to_interface_thread, NULL);
+	pthread_join(data->capturer_to_interface_thread, NULL);
+
+	return 1;
 }
 
-void interface_release(void) {
-	PRINT_IMPORTANT("Entered");
+int interface_release(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+
+	struct interface_data *data = (struct interface_data *) module->data;
 	//TODO free all module related mem
 
-	module_unregister(interface_proto.module_id);
-	module_destroy_ops(&interface_proto);
+	//delete threads
+
+	if (data->link_list) {
+		list_free(data->link_list, free);
+	}
+	free(data);
+	module_destroy_structs(module);
+	free(module);
+	return 1;
+}
+
+void interface_dummy(void) {
+
+}
+
+static struct fins_module_ops interface_ops = { .init = interface_init, .run = interface_run, .pause = interface_pause, .unpause = interface_unpause,
+		.shutdown = interface_shutdown, .release = interface_release, };
+
+struct fins_module *interface_create(uint32_t index, uint32_t id, uint8_t *name) {
+	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+
+	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
+
+	strcpy((char *) module->lib, INTERFACE_LIB);
+	module->flows_max = INTERFACE_MAX_FLOWS;
+	module->ops = &interface_ops;
+	module->state = FMS_FREE;
+
+	module->index = index;
+	module->id = id;
+	strcpy((char *) module->name, (char *) name);
+
+	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	return module;
 }

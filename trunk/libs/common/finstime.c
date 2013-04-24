@@ -59,7 +59,6 @@ void *interrupt_to_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%d, fd=%d", id, fd);
-	//pthread_exit(NULL);
 	return NULL;
 }
 
@@ -98,7 +97,6 @@ void *sem_to_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u, fd=%d", id, fd);
-	//pthread_exit(NULL);
 	return NULL;
 }
 
@@ -137,7 +135,6 @@ void *intsem_to_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u, fd=%d", id, fd);
-	//pthread_exit(NULL);
 	return NULL;
 }
 

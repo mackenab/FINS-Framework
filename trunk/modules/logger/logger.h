@@ -10,6 +10,8 @@
 
 #include <finsmodule.h>
 
+//TODO move shared structs/params here
+
 void logger_dummy(void);
 struct fins_module *logger_create(uint32_t index, uint32_t id, uint8_t *name);
 

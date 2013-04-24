@@ -55,7 +55,7 @@ void metadata_create(metadata *meta) {
 void metadata_destroy(metadata *meta) {
 	PRINT_DEBUG("Entered: meta=%p", meta);
 
-	if (meta) {
+	if (meta != NULL) {
 		config_destroy(meta);
 		free(meta);
 	}
@@ -124,6 +124,13 @@ int metadata_writeToElement(metadata *meta, char *target, void *value, int type)
 		if (handle == NULL)
 			handle = config_setting_add(root, target, CONFIG_TYPE_INT64);
 		status = config_setting_set_int64(handle, *(int64_t *) value);
+		break;
+
+	case META_TYPE_FLOAT:
+		handle = config_setting_get_member(root, target);
+		if (handle == NULL)
+			handle = config_setting_add(root, target, CONFIG_TYPE_FLOAT);
+		status = config_setting_set_float(handle, *(float *) value);
 		break;
 
 	case META_TYPE_STRING:
@@ -398,3 +405,38 @@ metadata *metadata_clone(metadata *meta) {
 
  */
 
+void elem_add_param(metadata_element *elem, char *param_str, int param_id, int param_type) {
+	metadata_element *param = config_setting_add(elem, param_str, CONFIG_TYPE_GROUP);
+	if (param == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+
+	metadata_element *info;
+	//int val;
+	int status;
+
+	info = config_setting_add(param, PARAM_ID, CONFIG_TYPE_INT);
+	if (info == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	//val = param_id;
+	status = config_setting_set_int(info, *(int *) &param_id);
+	if (status == META_FALSE) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+
+	info = config_setting_add(param, PARAM_TYPE, CONFIG_TYPE_INT);
+	if (info == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	//val = param_type;
+	status = config_setting_set_int(info, *(int *) &param_type);
+	if (status == META_FALSE) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+}

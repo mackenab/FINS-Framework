@@ -12,8 +12,6 @@
  *       and act appropriately. Notice that this isn’t the same as reading an invalid file
  *       descriptor, which read considers an error and indicates by returning –1.
  *       */
-#include "core.h"
-
 #include <signal.h>
 #include <dlfcn.h>
 
@@ -21,17 +19,14 @@
 #include <finstypes.h>
 #include <finstime.h>
 #include <metadata.h>
-//#include <finsqueue.h>
+#include <finsqueue.h>
 #include <finsmodule.h>
+
+#include "core.h"
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
-struct envi_record *envi;
-struct linked_list *lib_list;
-struct fins_module *fins_modules[MAX_MODULES];
-struct linked_list *link_list;
-
-//struct fins_module *switch_module; //TODO if move fins_modules entirely to switch, use this to get to them, remove otherwise
+struct fins_overall *overall;
 
 int write_configurations() {
 
@@ -101,6 +96,23 @@ int lib_name_test(struct fins_library *lib, uint8_t *name) {
 	return strcmp((char *) lib->name, (char *) name) == 0;
 }
 
+void register_all(struct fins_module *module) {
+	//struct fins_module_admin_ops *admin_ops = (struct fins_module_admin_ops *) module->ops;
+
+	int i;
+	for (i = 0; i < MAX_MODULES; i++) {
+		if (overall->modules[i] != NULL) {
+			//admin_ops->register_module(module, overall->modules[i]);
+		}
+	}
+}
+
+void assign_overall(struct fins_module *module, struct fins_overall *overall) {
+	struct fins_module_admin_ops *admin_ops = (struct fins_module_admin_ops *) module->ops;
+
+	admin_ops->pass_overall(module, overall);
+}
+
 void core_termination_handler(int sig) {
 	PRINT_IMPORTANT("**********Terminating *******");
 
@@ -109,23 +121,23 @@ void core_termination_handler(int sig) {
 	//shutdown all module threads in backwards order of startup
 	PRINT_IMPORTANT("modules: shutdown");
 	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (fins_modules[i] != NULL) {
-			fins_modules[i]->ops->shutdown(fins_modules[i]);
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->shutdown(overall->modules[i]);
 		}
 	}
 
 	//have each module free data & que/sem //TODO finish each of these
 	PRINT_IMPORTANT("modules: release");
 	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (fins_modules[i] != NULL) {
-			fins_modules[i]->ops->release(fins_modules[i]);
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->release(overall->modules[i]);
 		}
 	}
 
 	PRINT_IMPORTANT("libraries: close");
 	struct fins_library *library;
 	while (1) {
-		library = (struct fins_library *) list_remove_front(lib_list);
+		library = (struct fins_library *) list_remove_front(overall->lib_list);
 		if (library == NULL) {
 			break;
 		}
@@ -133,15 +145,15 @@ void core_termination_handler(int sig) {
 		dlclose(library->handle);
 		free(library);
 	}
-	free(lib_list);
+	free(overall->lib_list);
 
 	PRINT_IMPORTANT("freeing links");
-	list_free(link_list, free);
+	list_free(overall->link_list, free);
 
 	PRINT_IMPORTANT("freeing environment");
-	list_free(envi->if_list, ifr_free);
-	list_free(envi->route_list, free);
-	free(envi);
+	list_free(overall->envi->if_list, ifr_free);
+	list_free(overall->envi->route_list, free);
+	free(overall->envi);
 
 	sem_destroy(&control_serial_sem);
 
@@ -160,9 +172,18 @@ void core_main() {
 
 	int status;
 	int i, j, k;
+	metadata_element *list_elem;
+	int list_num;
+	metadata_element *elem;
+	metadata_element *ip_elem;
+	uint32_t ip_num;
 
 	//######################################################################
-	envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
+	overall = (struct fins_overall *) secure_malloc(sizeof(struct fins_overall ));
+	sem_init(&overall->sem, 0, 1);
+
+	//######################################################################
+	overall->envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
 
 	PRINT_IMPORTANT("loading environment");
 	metadata *meta_envi = (metadata *) secure_malloc(sizeof(metadata));
@@ -178,21 +199,39 @@ void core_main() {
 
 	//############# any ip address
 	PRINT_IMPORTANT("Any Addr");
-	envi->any_ip_addr = IP4_ADR_P2H(0,0,0,0); //TODO change to addr_in?
-	//TODO get from environment.any_addr
 
-	//############# if_list
-	PRINT_IMPORTANT("interface list");
-	envi->if_list = list_create(MAX_INTERFACES);
-
-	metadata_element *list_elem = config_lookup(meta_envi, "environment.interfaces");
+	list_elem = config_lookup(meta_envi, "environment.any_addr");
 	if (list_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
-	int list_num = config_setting_length(list_elem);
 
-	metadata_element *elem;
+	uint32_t any_ip[4];
+
+	ip_elem = config_setting_get_member(list_elem, "ip");
+	if (ip_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+	ip_num = config_setting_length(ip_elem);
+
+	for (i = 0; i < ip_num; i++) {
+		any_ip[i] = (uint32_t) config_setting_get_int_elem(ip_elem, i);
+	}
+
+	overall->envi->any_ip_addr = IP4_ADR_P2H(any_ip[0],any_ip[1],any_ip[2],any_ip[3]); //TODO change to addr_in?
+
+	//############# if_list
+	PRINT_IMPORTANT("interface list");
+	overall->envi->if_list = list_create(MAX_INTERFACES);
+
+	list_elem = config_lookup(meta_envi, "environment.interfaces");
+	if (list_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+	list_num = config_setting_length(list_elem);
+
 	uint32_t if_index;
 	uint8_t *name;
 	uint64_t mac;
@@ -253,7 +292,7 @@ void core_main() {
 		}
 
 		//#############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
+		ifr = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_index);
 		if (ifr == NULL) {
 			ifr = (struct if_record *) secure_malloc(sizeof(struct if_record));
 			ifr->index = if_index;
@@ -267,8 +306,8 @@ void core_main() {
 
 			ifr->addr_list = list_create(MAX_FAMILIES);
 
-			if (list_has_space(envi->if_list)) {
-				list_append(envi->if_list, ifr);
+			if (list_has_space(overall->envi->if_list)) {
+				list_append(overall->envi->if_list, ifr);
 			} else {
 				//TODO error
 				PRINT_ERROR("todo error");
@@ -276,7 +315,7 @@ void core_main() {
 			}
 
 			if (flags & IFF_LOOPBACK) {
-				envi->if_loopback = ifr;
+				overall->envi->if_loopback = ifr;
 			}
 		} else {
 			PRINT_ERROR("todo error");
@@ -294,14 +333,14 @@ void core_main() {
 		exit(-1);
 	}
 
-	envi->if_main = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_main);
-	if (envi->if_main == NULL) {
+	overall->envi->if_main = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_main);
+	if (overall->envi->if_main == NULL) {
 		PRINT_ERROR("todo");
 	}
 
 	//############# addr_list
 	PRINT_IMPORTANT("address list");
-	//envi->addr_list = list_create(MAX_INTERFACES * MAX_FAMILIES); //TODO use?
+	//overall->envi->addr_list = list_create(MAX_INTERFACES * MAX_FAMILIES); //TODO use?
 
 	list_elem = config_lookup(meta_envi, "environment.addresses");
 	if (list_elem == NULL) {
@@ -311,10 +350,6 @@ void core_main() {
 	list_num = config_setting_length(list_elem);
 
 	uint32_t family; //atm only AF_INET, but eventually also AF_INET6
-
-	metadata_element *ip_elem;
-	uint32_t ip_num;
-
 	uint32_t ip[4]; //SIOCGIFADDR //ip
 	uint32_t mask[4]; //SIOCGIFNETMASK //mask
 	uint32_t gw[4]; //? //(ip & mask) | 1;
@@ -398,8 +433,8 @@ void core_main() {
 		}
 
 		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
+		ifr = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_index);
+		if (ifr != NULL) {
 			if (ifr->flags & IFF_RUNNING) {
 				if (family == AF_INET) {
 					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
@@ -452,7 +487,7 @@ void core_main() {
 
 	//############# route_list
 	PRINT_IMPORTANT("route list");
-	envi->route_list = list_create(MAX_ADDRESSES);
+	overall->envi->route_list = list_create(MAX_ADDRESSES);
 
 	list_elem = config_lookup(meta_envi, "environment.routes");
 	if (list_elem == NULL) {
@@ -533,8 +568,8 @@ void core_main() {
 		}
 
 		//############
-		ifr = (struct if_record *) list_find1(envi->if_list, ifr_index_test, &if_index);
-		if (ifr) {
+		ifr = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_index);
+		if (ifr != NULL) {
 			if (ifr->flags & IFF_RUNNING) {
 				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
 				route->if_index = if_index;
@@ -555,8 +590,8 @@ void core_main() {
 				route->metric = metric;
 				route->timeout = timeout;
 
-				if (list_has_space(envi->route_list)) {
-					list_append(envi->route_list, route);
+				if (list_has_space(overall->envi->route_list)) {
+					list_append(overall->envi->route_list, route);
 				} else {
 					//TODO error
 					PRINT_ERROR("todo error");
@@ -585,8 +620,9 @@ void core_main() {
 
 	//############# module_list
 	PRINT_IMPORTANT("module list");
-	lib_list = list_create(MAX_MODULES);
-	memset(fins_modules, 0, MAX_MODULES * sizeof(struct fins_module *));
+	overall->lib_list = list_create(MAX_MODULES);
+	memset(overall->modules, 0, MAX_MODULES * sizeof(struct fins_module *));
+	overall->admin_list = list_create(MAX_MODULES);
 
 	uint8_t base_path[100];
 	memset((char *) base_path, 0, 100);
@@ -607,10 +643,10 @@ void core_main() {
 	uint32_t mod_flows[MAX_FLOWS];
 	uint32_t mod_flows_num;
 	metadata_element *mod_params;
+	metadata_element *mod_admin;
 
 	struct fins_library *library;
 	struct fins_module *module;
-	struct fins_module_switch_ops *switch_ops;
 
 	for (i = 0; i < mods_num; i++) {
 		mod_elem = config_setting_get_elem(mods_elem, i);
@@ -654,8 +690,11 @@ void core_main() {
 			exit(-1);
 		}
 
+		mod_admin = config_setting_get_member(mod_elem, "admin");
+		PRINT_DEBUG("admin=%u", mod_admin != NULL)
+
 		//############
-		library = (struct fins_library *) list_find1(lib_list, lib_name_test, mod_lib);
+		library = (struct fins_library *) list_find1(overall->lib_list, lib_name_test, mod_lib);
 		if (library == NULL) {
 			library = library_load(mod_lib, base_path);
 			if (library == NULL) {
@@ -664,8 +703,8 @@ void core_main() {
 			}
 		}
 
-		if (list_has_space(lib_list)) {
-			list_append(lib_list, library);
+		if (list_has_space(overall->lib_list)) {
+			list_append(overall->lib_list, library);
 		} else {
 			PRINT_ERROR("todo error");
 			exit(-1);
@@ -680,26 +719,29 @@ void core_main() {
 		library->num_mods++;
 
 		//TODO move flow to update? or links here?
-		status = module->ops->init(module, mod_flows, mod_flows_num, mod_params, envi); //TODO merge init into create?
-		if (status) {
-			fins_modules[i] = module;
+		status = module->ops->init(module, mod_flows_num, mod_flows, mod_params, overall->envi); //TODO merge init into create?
+		if (status != 0) {
+			overall->modules[i] = module;
 
-			if (i == SWITCH_INDEX) {
-				switch_ops = (struct fins_module_switch_ops *) fins_modules[SWITCH_INDEX]->ops;
+			if (mod_admin != NULL) {
+				list_append(overall->admin_list, module);
 			}
-			switch_ops->register_module(fins_modules[SWITCH_INDEX], module);
 		} else {
 			PRINT_ERROR("todo error");
 			exit(-1);
 		}
 
-		//free(mod_lib);
+		//free(mod_lib); //don't free, string from libconfig points to metadata memory
 		//free(mod_name);
 	}
 
+	//############# admin_list //TODO change to admin_list?
+	//list_for_each(overall->admin_list, register_all);
+	list_for_each1(overall->admin_list, assign_overall, overall);
+
 	//############# linking_list
 	PRINT_IMPORTANT("link list");
-	link_list = list_create(MAX_LINKS);
+	overall->link_list = list_create(MAX_LINKS);
 
 	metadata_element *links_elem = config_lookup(meta_stack, "stack.links");
 	if (links_elem == NULL) {
@@ -751,11 +793,11 @@ void core_main() {
 		link = (struct link_record *) secure_malloc(sizeof(struct link_record));
 		link->id = link_id;
 
-		//module = (struct fins_module *) list_find1(envi->module_list, mod_id_test, &link_src);
+		//module = (struct fins_module *) list_find1(overall->envi->module_list, mod_id_test, &link_src);
 		link->src_index = -1;
 		for (j = 0; j < MAX_MODULES; j++) {
-			if (fins_modules[j] != NULL && fins_modules[j]->id == link_src) {
-				link->src_index = fins_modules[j]->index;
+			if (overall->modules[j] != NULL && overall->modules[j]->id == link_src) {
+				link->src_index = overall->modules[j]->index;
 			}
 		}
 		if (link->src_index == -1) {
@@ -765,11 +807,11 @@ void core_main() {
 
 		link->dsts_num = link_dsts_num;
 		for (j = 0; j < link_dsts_num; j++) {
-			//module = (struct fins_module *) list_find1(envi->module_list, mod_id_test, &link_dsts[j]);
+			//module = (struct fins_module *) list_find1(overall->envi->module_list, mod_id_test, &link_dsts[j]);
 			link->dsts_index[j] = -1;
 			for (k = 0; k < MAX_MODULES; k++) {
-				if (fins_modules[k] != NULL && fins_modules[k]->id == link_dsts[j]) {
-					link->dsts_index[j] = fins_modules[k]->index;
+				if (overall->modules[k] != NULL && overall->modules[k]->id == link_dsts[j]) {
+					link->dsts_index[j] = overall->modules[k]->index;
 				}
 			}
 			if (link->dsts_index[j] == (uint32_t) -1) {
@@ -778,8 +820,8 @@ void core_main() {
 			}
 		}
 
-		if (list_has_space(link_list)) {
-			list_append(link_list, link);
+		if (list_has_space(overall->link_list)) {
+			list_append(overall->link_list, link);
 		} else {
 			//TODO error
 			PRINT_ERROR("todo error");
@@ -798,8 +840,8 @@ void core_main() {
 	struct finsFrame *ff_update;
 
 	for (i = 0; i < MAX_MODULES; i++) {
-		if (fins_modules[i] != NULL) {
-			link_subset_list = list_filter1(link_list, link_involved_test, &fins_modules[i]->index, link_copy);
+		if (overall->modules[i] != NULL) {
+			link_subset_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_copy);
 			PRINT_IMPORTANT("i=%d, link_subset_list=%p, len=%d", i, link_subset_list, link_subset_list->len);
 
 			meta_update = (metadata *) secure_malloc(sizeof(metadata));
@@ -814,7 +856,7 @@ void core_main() {
 			ff_update->destinationID = i;
 			ff_update->metaData = meta_update;
 
-			ff_update->ctrlFrame.sender_id = SWITCH_INDEX;
+			ff_update->ctrlFrame.sender_id = 0;
 			ff_update->ctrlFrame.serial_num = gen_control_serial_num();
 			ff_update->ctrlFrame.opcode = CTRL_SET_PARAM;
 			ff_update->ctrlFrame.param_id = PARAM_LINKS;
@@ -822,7 +864,7 @@ void core_main() {
 			ff_update->ctrlFrame.data_len = sizeof(struct linked_list);
 			ff_update->ctrlFrame.data = (uint8_t *) link_subset_list;
 
-			if (module_to_switch(fins_modules[SWITCH_INDEX], ff_update)) {
+			if (module_to_switch(overall->modules[0], ff_update)) {
 
 			} else {
 				PRINT_ERROR("todo error");
@@ -842,8 +884,8 @@ void core_main() {
 	PRINT_IMPORTANT("modules: run");
 
 	for (i = 0; i < MAX_MODULES; i++) {
-		if (fins_modules[i] != NULL) {
-			fins_modules[i]->ops->run(fins_modules[i], &attr);
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->run(overall->modules[i], &attr);
 		}
 	}
 
@@ -875,15 +917,15 @@ void core_main() {
 
 		struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 		ff->dataOrCtrl = DATA;
-		ff->destinationID = 2;
+		ff->destinationID = 1;
 		ff->metaData = meta;
 
 		ff->dataFrame.directionFlag = DIR_UP;
 		ff->dataFrame.pduLength = 10;
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(10);
 
-		PRINT_IMPORTANT("sending: ff=%p, meta=%p", ff, meta);
-		if (module_to_switch(fins_modules[3], ff)) {
+		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[1]->name);
+		if (module_to_switch(overall->modules[0], ff)) {
 			//i++;
 		} else {
 			PRINT_ERROR("freeing: ff=%p", ff);
@@ -908,7 +950,7 @@ void core_main() {
 
 		struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 		ff_req->dataOrCtrl = CONTROL;
-		ff_req->destinationID = 3;
+		ff_req->destinationID = 1;
 		ff_req->metaData = meta_req;
 
 		ff_req->ctrlFrame.sender_id = IPV4_ID;
@@ -919,7 +961,8 @@ void core_main() {
 		ff_req->ctrlFrame.data_len = 0;
 		ff_req->ctrlFrame.data = NULL;
 
-		if (module_to_switch(fins_modules[3], ff_req)) {
+		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff_req, meta_req, overall->modules[0]->name, overall->modules[1]->name);
+		if (module_to_switch(overall->modules[0], ff_req)) {
 			//i++;
 		} else {
 			PRINT_ERROR("freeing: ff=%p", ff_req);
@@ -939,21 +982,21 @@ void core_main() {
 	//############ terminating
 	PRINT_IMPORTANT("modules: shutdown");
 	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (fins_modules[i] != NULL) {
-			fins_modules[i]->ops->shutdown(fins_modules[i]);
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->shutdown(overall->modules[i]);
 		}
 	}
 
 	PRINT_IMPORTANT("modules: release");
 	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (fins_modules[i] != NULL) {
-			fins_modules[i]->ops->release(fins_modules[i]);
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->release(overall->modules[i]);
 		}
 	}
 
 	PRINT_IMPORTANT("libraries: close");
 	while (1) {
-		library = (struct fins_library *) list_remove_front(lib_list);
+		library = (struct fins_library *) list_remove_front(overall->lib_list);
 		if (library == NULL) {
 			break;
 		}
@@ -961,15 +1004,15 @@ void core_main() {
 		dlclose(library->handle);
 		free(library);
 	}
-	free(lib_list);
+	free(overall->lib_list);
 
 	PRINT_IMPORTANT("freeing links");
-	list_free(link_list, free);
+	list_free(overall->link_list, free);
 
 	PRINT_IMPORTANT("freeing environment");
-	list_free(envi->if_list, ifr_free);
-	list_free(envi->route_list, free);
-	free(envi);
+	list_free(overall->envi->if_list, ifr_free);
+	list_free(overall->envi->route_list, free);
+	free(overall->envi);
 
 	exit(1);
 }

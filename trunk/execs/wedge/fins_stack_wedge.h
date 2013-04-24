@@ -2,20 +2,20 @@
 #define FINS_STACK_WEDGE_H_
 
 #include <linux/module.h>	/* Needed by all modules */
-//#include <linux/kernel.h>	/* Needed for KERN_INFO */
-//#include <linux/init.h>		/* Needed for the macros */
+#include <linux/kernel.h>	/* Needed for KERN_INFO */
+#include <linux/init.h>		/* Needed for the macros */
 #include <net/sock.h>		/* Needed for proto and sock struct defs, etc. */
-//#include <linux/socket.h>	/* Needed for the sockaddr struct def */
-//#include <linux/errno.h>	/* Needed for error number defines */
-//#include <linux/aio.h>		/* Needed for fins_sendmsg */
-//#include <linux/skbuff.h>	/* Needed for sk_buff struct def, etc. */
-//#include <linux/net.h>		/* Needed for socket struct def, etc. */
-//#include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
-//#include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
-//#include <asm/uaccess.h>	/** Copy from user */
+#include <linux/socket.h>	/* Needed for the sockaddr struct def */
+#include <linux/errno.h>	/* Needed for error number defines */
+#include <linux/aio.h>		/* Needed for fins_sendmsg */
+#include <linux/skbuff.h>	/* Needed for sk_buff struct def, etc. */
+#include <linux/net.h>		/* Needed for socket struct def, etc. */
+#include <linux/netlink.h>	/* Needed for netlink socket API, macros, etc. */
+#include <linux/semaphore.h>	/* Needed to lock/unlock blocking calls with handler */
+#include <asm/uaccess.h>	/** Copy from user */
 #include <asm/ioctls.h>		/* Needed for fins_ioctl */
-//#include <linux/sockios.h>
-//#include <linux/delay.h>	/* For sleep */
+#include <linux/sockios.h>
+#include <linux/delay.h>	/* For sleep */
 #include <linux/if.h>		/* Needed for fins_ioctl */
 
 /*

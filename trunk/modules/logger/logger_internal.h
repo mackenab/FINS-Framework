@@ -30,15 +30,15 @@
 #include "logger.h"
 
 #define LOGGER_LIB "logger"
-#define LOGGER_MAX_PORTS 0
+#define LOGGER_MAX_FLOWS 0
 
 struct logger_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[LOGGER_MAX_PORTS];
+	uint32_t flows[LOGGER_MAX_FLOWS];
 
 	pthread_t switch_to_logger_thread;
-	uint8_t logger_interrupt_flag;
+	uint8_t interrupt_flag;
 
 	double logger_interval;
 	int logger_repeats;
@@ -59,7 +59,6 @@ struct logger_data {
 
 int logger_to_switch(struct fins_module *module, struct finsFrame *ff);
 void logger_get_ff(struct fins_module *module);
-
 void logger_fcf(struct fins_module *module, struct finsFrame *ff);
 void logger_set_param(struct fins_module *module, struct finsFrame *ff);
 //void logger_exec(struct fins_module *module, struct finsFrame *ff);
@@ -71,11 +70,38 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff);
 
 void logger_interrupt(struct fins_module *module);
 
-int logger_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi);
+int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
 int logger_run(struct fins_module *module, pthread_attr_t *attr);
 int logger_pause(struct fins_module *module);
 int logger_unpause(struct fins_module *module);
 int logger_shutdown(struct fins_module *module);
 int logger_release(struct fins_module *module);
+
+//don't use 0
+#define RTM_EXEC_START 1
+#define RTM_EXEC_PAUSE 2
+#define RTM_EXEC_UNPAUSE 3
+#define RTM_EXEC_STOP 4
+
+//don't use 0
+#define LOGGER_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
+#define LOGGER_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
+#define LOGGER_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define LOGGER_GET_INTERVAL__id 3
+#define LOGGER_GET_INTERVAL__str "interval"
+#define LOGGER_GET_INTERVAL__type CONFIG_TYPE_FLOAT
+#define LOGGER_GET_REPEATS__id 4
+#define LOGGER_GET_REPEATS__str "repeats"
+#define LOGGER_GET_REPEATS__type CONFIG_TYPE_INT
+
+#define LOGGER_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
+#define LOGGER_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
+#define LOGGER_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+#define LOGGER_SET_INTERVAL__id 3
+#define LOGGER_SET_INTERVAL__str "interval"
+#define LOGGER_SET_INTERVAL__type CONFIG_TYPE_FLOAT
+#define LOGGER_SET_REPEATS__id 4
+#define LOGGER_SET_REPEATS__str "repeats"
+#define LOGGER_SET_REPEATS__type CONFIG_TYPE_INT
 
 #endif /* LOGGER_INTERNAL_H_ */

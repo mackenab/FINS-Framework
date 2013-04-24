@@ -42,6 +42,7 @@
 
 #define RTM_PATH FINS_TMP_ROOT "/fins_rtm"
 #define MAX_CMD_LEN 500
+#define MAX_REPLY_LEN 1000
 
 int get_line(char *line, int *max_size) {
 	if (*max_size <= 0) {
@@ -107,7 +108,7 @@ int main() {
 	//TODO fork for recv process that or do nonblocking read on STDIN
 	int buf_size = MAX_CMD_LEN;
 	int cmd_len;
-	char cmd_buf[buf_size + 1];
+	char cmd_buf[MAX_REPLY_LEN + 1];
 	int numBytes;
 
 	while (1) {
@@ -115,14 +116,13 @@ int main() {
 		fflush(stdout);
 
 		cmd_len = get_line(cmd_buf, &buf_size);
-		printf("cmd: len=%d, str='%s'", cmd_len, cmd_buf);
+		printf("\tcmd: len=%d, str='%s'", cmd_len, cmd_buf);
 		fflush(stdout);
 
 		if (cmd_len > 0) {
 			if ((strcmp(cmd_buf, "quit") == 0) || strcmp(cmd_buf, "q") == 0) {
 				break;
-			} else if ((strcmp(cmd_buf, "help") == 0) || strcmp(cmd_buf, "?") == 0) {
-				printf("todo!!!");
+				//} else if ((strcmp(cmd_buf, "help") == 0) || strcmp(cmd_buf, "?") == 0) { printf("todo!!!");
 			} else {
 				//##### write
 				numBytes = write(console_fd, &cmd_len, sizeof(int));
@@ -137,7 +137,7 @@ int main() {
 					return 0;
 				}
 
-				if (0) {
+				if (1) {
 					//##### read
 					numBytes = read(console_fd, &cmd_len, sizeof(int));
 					if (numBytes <= 0) {
@@ -155,7 +155,9 @@ int main() {
 						printf("\nwrite len different: cmd_len=%d, numBytes=%d", cmd_len, numBytes);
 						exit(-1);
 					}
-					printf("\nechod: len=%u, buf='%s'", cmd_len, cmd_buf);
+					cmd_buf[cmd_len] = '\0';
+					printf("\n\trecv: len=%u, buf='%s'", cmd_len, cmd_buf); //TODO remove
+					printf("\n%s", cmd_buf);
 				}
 			}
 		} else if (cmd_len < 0) {

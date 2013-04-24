@@ -43,7 +43,6 @@ void *worker_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u", worker->id);
-	//pthread_exit(NULL);
 	return NULL;
 }
 
@@ -128,7 +127,7 @@ void *controller_thread(void *local) {
 				double threads = ceil((controller->pool->queue->len - controller->pool->inactive_num) / 2.0);
 				PRINT_DEBUG("workers=%u, inact=%u, queue=%u, space=%u, threads=%f",
 						controller->pool->workers->len, controller->pool->inactive_num, controller->pool->queue->len, space, threads);
-				if (space) {
+				if (space > 0) {
 					if (threads < space) {
 						pool_start(controller->pool, (uint32_t) threads);
 					} else {
@@ -146,7 +145,6 @@ void *controller_thread(void *local) {
 	}
 
 	PRINT_DEBUG("Exited: id=%u", controller->id);
-	//pthread_exit(NULL);
 	return NULL;
 }
 
@@ -241,7 +239,7 @@ int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *loc
 	if (pool->inactive_num) {
 		struct pool_worker *worker = (struct pool_worker *) list_find(pool->workers, worker_inactive_test);
 		PRINT_DEBUG("found worker=%p", worker);
-		if (worker) {
+		if (worker != NULL) {
 			pool->inactive_num--;
 
 			worker->inactive = 0;

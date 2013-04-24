@@ -30,7 +30,6 @@
 #include "metadata.h"
 
 //Definition of the modules IDs
-#define NONE_INDEX 0
 #define SWITCH_ID 0
 #define DAEMON_ID 1
 #define INTERFACE_ID 2
@@ -326,12 +325,9 @@ struct envi_record {
 	struct if_record *if_main;
 	//struct linked_list *addr_list; //list of addr_record, for interfaces
 
-	struct linked_list *route_list; //list of addr_record, for a routing table
+	struct linked_list *route_list; //list of route_record, for a routing table
 //struct linked_list *route_cache; //TODO add in routing cache?
 //struct linked_list *foward_list; //TODO add in forwarding table?
-//struct linked_list *library_list; //list of open libraries
-//struct linked_list *module_list; //list of modules
-//struct linked_list *link_list;
 };
 
 #endif /* FINSTYPES_H_ */

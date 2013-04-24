@@ -45,6 +45,8 @@ struct arp_data {
 	int thread_count;
 };
 
+#define ARP_FLOW_DOWN 0
+
 #define ARP_OP_REQUEST 1
 #define ARP_OP_REPLY 2
 
@@ -160,7 +162,7 @@ void print_cache(struct fins_module *module);
 struct finsFrame *arp_to_fdf(struct arp_message *msg);
 struct arp_message *fdf_to_arp(struct finsFrame *ff);
 
-int arp_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi);
+int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
 int arp_run(struct fins_module *module, pthread_attr_t *attr);
 int arp_pause(struct fins_module *module);
 int arp_unpause(struct fins_module *module);

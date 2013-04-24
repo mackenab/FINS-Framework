@@ -7,53 +7,6 @@
 
 #include "switch_internal.h"
 
-int switch_register_module(struct fins_module *module, struct fins_module *new_mod) {
-	PRINT_DEBUG("Entered: module=%p, new_mod=%p, id=%d, name='%s'", module, new_mod, new_mod->id, new_mod->name);
-
-	if (new_mod->index >= MAX_MODULES) {
-		PRINT_ERROR("todo error");
-		return -1;
-	}
-
-	struct switch_data *data = (struct switch_data *) module->data;
-
-	secure_sem_wait(module->input_sem);
-	if (data->fins_modules[new_mod->index] != NULL) {
-		PRINT_IMPORTANT("Replacing: mod=%p, id=%d, name='%s'",
-				data->fins_modules[new_mod->index], data->fins_modules[new_mod->index]->id, data->fins_modules[new_mod->index]->name);
-	}
-	PRINT_IMPORTANT("Registered: new_mod=%p, id=%d, name='%s'", new_mod, new_mod->id, new_mod->name);
-	data->fins_modules[new_mod->index] = new_mod;
-	sem_post(module->input_sem);
-
-	PRINT_DEBUG("Exited: module=%p, new_mod=%p, id=%d, name='%s'", module, new_mod, new_mod->id, new_mod->name);
-	return 0;
-}
-
-int switch_unregister_module(struct fins_module *module, int index) {
-	PRINT_DEBUG("Entered: index=%d", index);
-
-	if (index < 0 || index > MAX_MODULES) {
-		PRINT_ERROR("todo error");
-		return 0;
-	}
-
-	struct switch_data *data = (struct switch_data *) module->data;
-
-	secure_sem_wait(module->input_sem);
-	if (data->fins_modules[index] != NULL) {
-		PRINT_IMPORTANT("Unregistering: mod=%p, id=%d, name='%s'", data->fins_modules[index], data->fins_modules[index]->id, data->fins_modules[index]->name);
-		data->fins_modules[index] = NULL;
-	} else {
-		PRINT_IMPORTANT("No module to unregister: index=%d", index);
-	}
-	sem_post(module->input_sem);
-
-	return 1;
-}
-
-//#################################################
-
 void *switch_loop(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
 
@@ -70,18 +23,19 @@ void *switch_loop(void *local) {
 
 	while (module->state == FMS_RUNNING) {
 		secure_sem_wait(module->event_sem);
-		secure_sem_wait(module->input_sem);
+		//secure_sem_wait(module->input_sem);
+		secure_sem_wait(&data->overall->sem);
 		for (i = 0; i < MAX_MODULES; i++) {
-			if (data->fins_modules[i] != NULL) {
-				if (!IsEmpty(data->fins_modules[i]->output_queue)) { //added as optimization
-					while ((ret = sem_wait(data->fins_modules[i]->output_sem)) && errno == EINTR)
+			if (data->overall->modules[i] != NULL) {
+				if (!IsEmpty(data->overall->modules[i]->output_queue)) { //added as optimization
+					while ((ret = sem_wait(data->overall->modules[i]->output_sem)) && errno == EINTR)
 						;
-					if (ret) {
+					if (ret != 0) {
 						PRINT_ERROR("sem wait prob: src module_index=%u, ret=%d", i, ret);
 						exit(-1);
 					}
-					ff = read_queue(data->fins_modules[i]->output_queue);
-					sem_post(data->fins_modules[i]->output_sem);
+					ff = read_queue(data->overall->modules[i]->output_queue);
+					sem_post(data->overall->modules[i]->output_sem);
 
 					//if (ff != NULL) { //shouldn't occur
 					counter++;
@@ -93,24 +47,24 @@ void *switch_loop(void *local) {
 						freeFinsFrame(ff);
 					} else { //if (i != id) //TODO add this?
 						//id = LOGGER_ID; //TODO comment
-						if (data->fins_modules[index] != NULL) {
+						if (data->overall->modules[index] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p",
-									counter, data->fins_modules[i]->name, data->fins_modules[index]->name, ff, ff->metaData);
+									counter, data->overall->modules[i]->name, data->overall->modules[index]->name, ff, ff->metaData);
 							//TODO decide if should drop all traffic to switch input queues, or use that as linking table requests
-							if (index == SWITCH_INDEX) {
+							if (index == module->index) {
 								switch_process_ff(module, ff);
 							} else {
-								while ((ret = sem_wait(data->fins_modules[index]->input_sem)) && errno == EINTR)
+								while ((ret = sem_wait(data->overall->modules[index]->input_sem)) && errno == EINTR)
 									;
-								if (ret) {
+								if (ret != 0) {
 									PRINT_ERROR("sem wait prob: dst index=%u, ff=%p, meta=%p, ret=%d", index, ff, ff->metaData, ret);
 									exit(-1);
 								}
-								if (write_queue(ff, data->fins_modules[index]->input_queue)) {
-									sem_post(data->fins_modules[index]->event_sem);
-									sem_post(data->fins_modules[index]->input_sem);
+								if (write_queue(ff, data->overall->modules[index]->input_queue)) {
+									sem_post(data->overall->modules[index]->event_sem);
+									sem_post(data->overall->modules[index]->input_sem);
 								} else {
-									sem_post(data->fins_modules[index]->input_sem);
+									sem_post(data->overall->modules[index]->input_sem);
 									PRINT_ERROR("Write queue error: dst index=%u, ff=%p, meta=%p", index, ff, ff->metaData);
 									freeFinsFrame(ff);
 								}
@@ -126,13 +80,13 @@ void *switch_loop(void *local) {
 				}
 			}
 		}
-		sem_post(module->input_sem);
+		//sem_post(module->input_sem);
+		sem_post(&data->overall->sem);
 	}
 
 	PRINT_IMPORTANT("Exited");
-	//pthread_exit(NULL);
 	return NULL;
-} // end of switch_init Function
+}
 
 void switch_process_ff(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_IMPORTANT("Entered: module=%p, ff=%p", module, ff);
@@ -220,17 +174,38 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 	}
 }
 
-int switch_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi) {
+void switch_init_params(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->params);
+	metadata_element *sub = config_setting_add(root, "test", CONFIG_TYPE_GROUP);
+	if (sub == NULL) {
+		PRINT_DEBUG("todo error");
+	}
+
+	metadata_element *elem = config_setting_add(sub, "key", CONFIG_TYPE_INT);
+	if (elem == NULL) {
+		PRINT_DEBUG("todo error");
+	}
+
+	uint32_t value = 10;
+	int status = config_setting_set_int(elem, *(int *) &value);
+	if (status == CONFIG_FALSE) {
+		PRINT_DEBUG("todo error");
+	}
+}
+
+int switch_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
-	module_create_queues(module);
+	module_create_structs(module);
 
 	switch_event_sem = module->event_sem;
+
+	switch_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct switch_data));
 	struct switch_data *data = (struct switch_data *) module->data;
 
-	if (module->max_flows < flows_num) {
+	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
@@ -239,10 +214,6 @@ int switch_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num,
 	int i;
 	for (i = 0; i < flows_num; i++) {
 		data->flows[i] = flows[i];
-	}
-
-	for (i = 0; i < MAX_MODULES; i++) {
-		data->fins_modules[i] = NULL;
 	}
 
 	return 1;
@@ -281,7 +252,7 @@ int switch_shutdown(struct fins_module *module) {
 
 	struct switch_data *data = (struct switch_data *) module->data;
 
-//TODO expand this
+	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_thread");
 	pthread_join(data->switch_thread, NULL);
@@ -296,14 +267,65 @@ int switch_release(struct fins_module *module) {
 //TODO free all module related mem
 
 	free(data);
-
-	module_destroy_queues(module);
-//sem_destroy(module->input_sem);
-//free(module->input_sem);
-//sem_destroy(module->event_sem);
-//free(module->event_sem);
-
+	module_destroy_structs(module);
 	free(module);
+	return 1;
+}
+
+//TODO remove? deprecated
+int switch_register_module(struct fins_module *module, struct fins_module *new_mod) {
+	PRINT_DEBUG("Entered: module=%p, new_mod=%p, id=%d, name='%s'", module, new_mod, new_mod->id, new_mod->name);
+
+	if (new_mod->index >= MAX_MODULES) {
+		PRINT_ERROR("todo error");
+		return -1;
+	}
+
+	struct switch_data *data = (struct switch_data *) module->data;
+
+	secure_sem_wait(module->input_sem);
+	if (data->overall->modules[new_mod->index] != NULL) {
+		PRINT_IMPORTANT("Replacing: mod=%p, id=%d, name='%s'",
+				data->overall->modules[new_mod->index], data->overall->modules[new_mod->index]->id, data->overall->modules[new_mod->index]->name);
+	}
+	PRINT_IMPORTANT("Registered: new_mod=%p, id=%d, name='%s'", new_mod, new_mod->id, new_mod->name);
+	data->overall->modules[new_mod->index] = new_mod;
+	sem_post(module->input_sem);
+
+	PRINT_DEBUG("Exited: module=%p, new_mod=%p, id=%d, name='%s'", module, new_mod, new_mod->id, new_mod->name);
+	return 0;
+}
+
+//TODO remove? deprecated
+int switch_unregister_module(struct fins_module *module, int index) {
+	PRINT_DEBUG("Entered: index=%d", index);
+
+	if (index < 0 || index > MAX_MODULES) {
+		PRINT_ERROR("todo error");
+		return 0;
+	}
+
+	struct switch_data *data = (struct switch_data *) module->data;
+
+	secure_sem_wait(module->input_sem);
+	if (data->overall->modules[index] != NULL) {
+		PRINT_IMPORTANT("Unregistering: mod=%p, id=%d, name='%s'",
+				data->overall->modules[index], data->overall->modules[index]->id, data->overall->modules[index]->name);
+		data->overall->modules[index] = NULL;
+	} else {
+		PRINT_IMPORTANT("No module to unregister: index=%d", index);
+	}
+	sem_post(module->input_sem);
+
+	return 1;
+}
+
+int switch_pass_overall(struct fins_module *module, struct fins_overall *overall) {
+	PRINT_DEBUG("Entered: module=%p, overall=%p", module, overall);
+
+	struct switch_data *data = (struct switch_data *) module->data;
+	data->overall = overall;
+
 	return 1;
 }
 
@@ -311,8 +333,8 @@ void switch_dummy(void) {
 
 }
 
-static struct fins_module_switch_ops switch_ops = { .init = switch_init, .run = switch_run, .pause = switch_pause, .unpause = switch_unpause, .shutdown =
-		switch_shutdown, .release = switch_release, .register_module = switch_register_module, .unregister_module = switch_unregister_module };
+static struct fins_module_admin_ops switch_ops = { .init = switch_init, .run = switch_run, .pause = switch_pause, .unpause = switch_unpause, .shutdown =
+		switch_shutdown, .release = switch_release, .pass_overall = switch_pass_overall };
 
 struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
 	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
@@ -320,7 +342,7 @@ struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
 	strcpy((char *) module->lib, SWITCH_LIB);
-	module->max_flows = SWITCH_MAX_FLOWS; //TODO change?
+	module->flows_max = SWITCH_MAX_FLOWS;
 	module->ops = (struct fins_module_ops *) &switch_ops;
 	module->state = FMS_FREE;
 

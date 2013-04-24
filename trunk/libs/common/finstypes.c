@@ -27,7 +27,7 @@ void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *s
 	int ret;
 	while ((ret = sem_wait(sem)) && errno == EINTR)
 		;
-	if (ret) {
+	if (ret != 0) {
 		//if (sem_wait(sem)) {
 #ifdef ERROR
 		printf("ERROR(%s, %s, %d):sem_wait prob: sem=%p\n", file, func, line, sem);
@@ -785,7 +785,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	metadata_create(meta_clone);
 
 	metadata *meta = ff->metaData;
-	if (meta) {
+	if (meta != NULL) {
 		if (metadata_copy(meta, meta_clone) == META_FALSE) {
 			PRINT_ERROR("todo error");
 		}
@@ -800,7 +800,8 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 
 	if (ff_clone->dataOrCtrl == CONTROL) {
 		ff_clone->ctrlFrame.sender_id = ff->ctrlFrame.sender_id;
-		ff_clone->ctrlFrame.serial_num = gen_control_serial_num();
+		ff_clone->ctrlFrame.serial_num = gen_control_serial_num(); //TODO change!!! Causes problems with module_send_flow
+		//ff_clone->ctrlFrame.serial_num = ff->ctrlFrame.serial_num;
 		ff_clone->ctrlFrame.opcode = ff->ctrlFrame.opcode;
 		ff_clone->ctrlFrame.param_id = ff->ctrlFrame.param_id;
 

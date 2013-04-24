@@ -9,6 +9,8 @@
 
 #include <finsmodule.h>
 
+//TODO move shared structs/params here
+
 void arp_dummy(void);
 struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name);
 

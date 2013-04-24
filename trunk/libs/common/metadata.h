@@ -20,6 +20,7 @@
 
 #define META_TYPE_INT32 	CONFIG_TYPE_INT
 #define META_TYPE_INT64 	CONFIG_TYPE_INT64
+#define META_TYPE_FLOAT 	CONFIG_TYPE_FLOAT
 #define META_TYPE_STRING 	CONFIG_TYPE_STRING
 #define META_TRUE 			CONFIG_TRUE
 #define META_FALSE 			CONFIG_FALSE
@@ -41,5 +42,10 @@ int metadata_print(metadata *meta);
 
 int metadata_copy(metadata *meta, metadata *meta_copy);
 metadata *metadata_clone(metadata *meta);
+
+//tags need to start with letter
+#define PARAM_ID "info___id"
+#define PARAM_TYPE "info___type"
+void elem_add_param(metadata_element *elem, char *param_str, int param_id, int param_type);
 
 #endif /* METADATA_H_ */

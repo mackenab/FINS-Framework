@@ -35,7 +35,7 @@ struct link_record *link_copy(struct link_record *link) {
 	return copy;
 }
 
-void module_create_queues(struct fins_module *module) {
+void module_create_structs(struct fins_module *module) {
 	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s'", module, module->id, module->name);
 	char buf[MOD_NAME_SIZE + 10];
 
@@ -51,9 +51,12 @@ void module_create_queues(struct fins_module *module) {
 
 	module->event_sem = (sem_t *) secure_malloc(sizeof(sem_t));
 	sem_init(module->event_sem, 0, 0);
+
+	module->params = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(module->params);
 }
 
-void module_destroy_queues(struct fins_module *module) {
+void module_destroy_structs(struct fins_module *module) {
 	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s'", module, module->id, module->name);
 
 	term_queue(module->output_queue);
@@ -65,6 +68,8 @@ void module_destroy_queues(struct fins_module *module) {
 	free(module->input_sem);
 	sem_destroy(module->event_sem);
 	free(module->event_sem);
+
+	metadata_destroy(module->params);
 }
 
 int module_to_switch(struct fins_module *module, struct finsFrame *ff) {
@@ -73,7 +78,7 @@ int module_to_switch(struct fins_module *module, struct finsFrame *ff) {
 
 	while ((ret = sem_wait(module->output_sem)) && errno == EINTR)
 		;
-	if (ret) {
+	if (ret != 0) {
 		PRINT_ERROR("output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d", module, module->id, module->name, ff, ff->metaData, ret);
 		exit(-1);
 	}
