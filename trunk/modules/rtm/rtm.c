@@ -345,10 +345,15 @@ metadata_element *match_params(metadata *params, uint8_t **words, int path_end) 
 	int i;
 	for (i = INDEX_PARAM; i < path_end; i++) {
 		if (strcmp(PARAM_ID, (char *) words[i]) != 0 && strcmp(PARAM_TYPE, (char *) words[i]) != 0) {
-			elem = config_setting_get_member(elem, (char *) words[i]);
-			if (elem == NULL) {
-				PRINT_DEBUG("missing: words[%d]='%s'", i, words[i]);
+			if (strchr((char *) words[i], '=') == NULL) {
+				elem = config_setting_get_member(elem, (char *) words[i]);
+				if (elem == NULL) {
+					PRINT_DEBUG("missing: words[%d]='%s'", i, words[i]);
+					return NULL;
+				}
+			} else {
 				return NULL;
+				//return elem; //?
 			}
 		} else {
 			return NULL;
@@ -391,7 +396,7 @@ void rtm_process_help(struct fins_module *module, struct rtm_console *console, s
 	memset(msg, 0, 2000);
 	uint8_t *pt = msg;
 
-	//TODO build better help, such as topics etc
+//TODO build better help, such as topics etc
 
 	int i;
 	if (cmd->words_num == 1) {
@@ -453,7 +458,7 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 		return;
 	}
 
-	//TODO identify module
+//TODO identify module
 	struct fins_module **modules = data->overall->modules;
 
 	secure_sem_wait(&data->overall->sem);
@@ -469,7 +474,7 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 	}
 	PRINT_IMPORTANT("op=%u, mod=%u", cmd->op, cmd->mod);
 
-	//TODO poll to get params or look at directly?
+//TODO poll to get params or look at directly?
 
 //TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = INDEX_PARAM + 1;
@@ -507,9 +512,9 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta);
 
-	//TODO process key=value pairs passed after procedure, store in metadata
-	//uint32_t src_ip = 0;
-	//secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
+//TODO process key=value pairs passed after procedure, store in metadata
+//uint32_t src_ip = 0;
+//secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
 
 	if (rtm_send_fcf(module, cmd, meta)) {
 		if (list_has_space(data->cmd_list)) {
@@ -522,8 +527,8 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 		metadata_destroy(meta);
 	}
 
-	//rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
-	//PRINT_DEBUG("Exited: module=%p, console=%p, cmd_len=%u, cmd_buf='%s'", module, console, cmd_len, cmd_buf);
+//rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
+//PRINT_DEBUG("Exited: module=%p, console=%p, cmd_len=%u, cmd_buf='%s'", module, console, cmd_len, cmd_buf);
 }
 
 void rtm_process_get(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {
@@ -540,7 +545,7 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 		return;
 	}
 
-	//TODO identify module
+//TODO identify module
 	struct fins_module **modules = data->overall->modules;
 
 	secure_sem_wait(&data->overall->sem);
@@ -556,9 +561,9 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 	}
 	PRINT_IMPORTANT("op=%u, mod=%u", cmd->op, cmd->mod);
 
-	//TODO poll to get params or look at directly?
+//TODO poll to get params or look at directly?
 
-	//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
+//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = cmd->words_num;
 
 	metadata_element *param = match_params(modules[mod]->params, cmd->words, path_end);
@@ -594,8 +599,8 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta);
 
-	//uint32_t src_ip = 0;
-	//secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
+//uint32_t src_ip = 0;
+//secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
 
 	if (rtm_send_fcf(module, cmd, meta)) {
 		if (list_has_space(data->cmd_list)) {
@@ -608,8 +613,8 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 		metadata_destroy(meta);
 	}
 
-	//rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
-	//PRINT_DEBUG("Exited: module=%p, console=%p, cmd_len=%u, cmd_buf='%s'", module, console, cmd_len, cmd_buf);
+//rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
+//PRINT_DEBUG("Exited: module=%p, console=%p, cmd_len=%u, cmd_buf='%s'", module, console, cmd_len, cmd_buf);
 }
 
 void rtm_process_set(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {
@@ -626,7 +631,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 		return;
 	}
 
-	//TODO identify module
+//TODO identify module
 	struct fins_module **modules = data->overall->modules;
 
 	secure_sem_wait(&data->overall->sem);
@@ -642,9 +647,9 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	}
 	PRINT_IMPORTANT("op=%u, mod=%u", cmd->op, cmd->mod);
 
-	//TODO poll to get params or look at directly?
+//TODO poll to get params or look at directly?
 
-	//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
+//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = cmd->words_num - 1;
 
 	metadata_element *param = match_params(modules[mod]->params, cmd->words, path_end);
@@ -759,8 +764,8 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 		metadata_destroy(meta);
 	}
 
-	//rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
-	//PRINT_DEBUG("Exited: module=%p, console=%p, cmd_len=%u, cmd_buf='%s'", module, console, cmd_len, cmd_buf);
+//rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
+//PRINT_DEBUG("Exited: module=%p, console=%p, cmd_len=%u, cmd_buf='%s'", module, console, cmd_len, cmd_buf);
 }
 
 void rtm_process_pause(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {

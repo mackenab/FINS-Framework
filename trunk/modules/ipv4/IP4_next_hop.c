@@ -4,11 +4,9 @@
  *  Created on: Jul 21, 2010
  *      Author: rado
  */
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
-extern struct ip4_routing_table* routing_table;
-
-struct ip4_next_hop_info IP4_next_hop(uint32_t dst) {
+struct ip4_next_hop_info IP4_next_hop(struct fins_module *module, uint32_t dst) {
 	PRINT_DEBUG("Entered: dst=%u", dst);
 
 	struct ip4_next_hop_info info;
@@ -16,7 +14,8 @@ struct ip4_next_hop_info IP4_next_hop(uint32_t dst) {
 	struct ip4_routing_table* current_table_entry = routing_table;
 	while (current_table_entry != NULL) {
 		//mask = (uint32_t)((0xffffffff << (8*IP4_ALEN - current_table_entry->mask)) & 0xffffffff);
-		PRINT_DEBUG("table->dst=%u, mask=%x, table=%x, dst=%x", current_table_entry->dst, current_table_entry->mask, current_table_entry->dst & current_table_entry->mask, dst & current_table_entry->mask);
+		PRINT_DEBUG("table->dst=%u, mask=%x, table=%x, dst=%x",
+				current_table_entry->dst, current_table_entry->mask, current_table_entry->dst & current_table_entry->mask, dst & current_table_entry->mask);
 		if (((current_table_entry->dst & current_table_entry->mask) == (dst & current_table_entry->mask)) || (current_table_entry->dst == 0)) { //if dst=0, this is the default route, always match
 			if (current_table_entry->gw == 0) { //dst host in on our net, can be contacted directly
 				info.address = dst;

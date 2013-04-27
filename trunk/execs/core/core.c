@@ -640,7 +640,7 @@ void core_main() {
 	uint8_t *mod_lib;
 	uint8_t *mod_name;
 	metadata_element *flows_elem;
-	uint32_t mod_flows[MAX_FLOWS];
+	uint32_t mod_flows[MAX_MOD_FLOWS];
 	uint32_t mod_flows_num;
 	metadata_element *mod_params;
 	metadata_element *mod_admin;
@@ -741,7 +741,7 @@ void core_main() {
 
 	//############# linking_list
 	PRINT_IMPORTANT("link list");
-	overall->link_list = list_create(MAX_LINKS);
+	overall->link_list = list_create(MAX_TABLE_LINKS);
 
 	metadata_element *links_elem = config_lookup(meta_stack, "stack.links");
 	if (links_elem == NULL) {
@@ -859,7 +859,7 @@ void core_main() {
 			ff_update->ctrlFrame.sender_id = 0;
 			ff_update->ctrlFrame.serial_num = gen_control_serial_num();
 			ff_update->ctrlFrame.opcode = CTRL_SET_PARAM;
-			ff_update->ctrlFrame.param_id = PARAM_LINKS;
+			ff_update->ctrlFrame.param_id = MOD_SET_PARAM_LINKS;
 
 			ff_update->ctrlFrame.data_len = sizeof(struct linked_list);
 			ff_update->ctrlFrame.data = (uint8_t *) link_subset_list;

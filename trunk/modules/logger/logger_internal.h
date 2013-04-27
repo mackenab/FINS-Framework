@@ -57,6 +57,13 @@ struct logger_data {
 	uint8_t logger_flag;
 };
 
+int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int logger_run(struct fins_module *module, pthread_attr_t *attr);
+int logger_pause(struct fins_module *module);
+int logger_unpause(struct fins_module *module);
+int logger_shutdown(struct fins_module *module);
+int logger_release(struct fins_module *module);
+
 int logger_to_switch(struct fins_module *module, struct finsFrame *ff);
 void logger_get_ff(struct fins_module *module);
 void logger_fcf(struct fins_module *module, struct finsFrame *ff);
@@ -69,13 +76,6 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff);
 //void logger_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
 void logger_interrupt(struct fins_module *module);
-
-int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
-int logger_run(struct fins_module *module, pthread_attr_t *attr);
-int logger_pause(struct fins_module *module);
-int logger_unpause(struct fins_module *module);
-int logger_shutdown(struct fins_module *module);
-int logger_release(struct fins_module *module);
 
 //don't use 0
 #define RTM_EXEC_START 1

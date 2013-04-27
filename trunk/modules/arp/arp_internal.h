@@ -29,24 +29,6 @@
 
 #include "arp.h"
 
-#define ARP_LIB "arp"
-#define ARP_MAX_FLOWS 2
-
-struct arp_data {
-	struct linked_list *link_list;
-	uint32_t flows_num;
-	uint32_t flows[ARP_MAX_FLOWS];
-
-	pthread_t switch_to_arp_thread;
-	struct linked_list *interface_list;
-	struct linked_list *cache_list;
-
-	uint8_t interrupt_flag;
-	int thread_count;
-};
-
-#define ARP_FLOW_DOWN 0
-
 #define ARP_OP_REQUEST 1
 #define ARP_OP_REPLY 2
 
@@ -101,13 +83,19 @@ void gen_requestARP(struct arp_message *request_ARP_ptr, uint64_t sender_mac, ui
 void gen_replyARP(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip);
 int check_valid_arp(struct arp_message *msg);
 
+#define ARP_INTERFACE_LIST_MAX 256
+#define ARP_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
+//#define ARP_THREADS_MAX 50
+#define ARP_RETRANS_TO_DEFAULT 1000
+#define ARP_CACHE_TO_DEFAULT 15000
+#define ARP_RETRIES 2
+#define ARP_CACHE_LIST_MAX 8192
+
+
 struct arp_interface {
 	uint64_t addr_mac;
 	uint32_t addr_ip;
 };
-
-#define ARP_INTERFACE_LIST_MAX 256
-
 struct arp_interface *arp_interface_create(uint64_t addr_mac, uint32_t addr_ip);
 int arp_interface_ip_test(struct arp_interface *interface, uint32_t *addr_ip);
 void arp_interface_free(struct arp_interface *interface);
@@ -119,8 +107,6 @@ struct arp_request {
 	uint64_t src_mac;
 	uint32_t src_ip;
 };
-
-#define ARP_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
 struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip);
 int arp_request_ip_test(struct arp_request *request, uint32_t *src_ip);
 void arp_request_free(struct arp_request *request);
@@ -138,14 +124,6 @@ struct arp_cache {
 	uint8_t to_flag;
 	int retries;
 };
-
-//#define ARP_THREADS_MAX 50
-#define ARP_RETRANS_TO_DEFAULT 1000
-#define ARP_CACHE_TO_DEFAULT 15000
-#define ARP_RETRIES 2
-
-#define ARP_CACHE_LIST_MAX 8192
-
 struct arp_cache *arp_cache_create(uint32_t addr_ip, uint8_t *interrupt_flag, sem_t *event_sem);
 int arp_cache_ip_test(struct arp_cache *cache, uint32_t *src_ip);
 int arp_cache_non_seeking_test(struct arp_cache *cache);
@@ -161,6 +139,23 @@ void print_cache(struct fins_module *module);
 
 struct finsFrame *arp_to_fdf(struct arp_message *msg);
 struct arp_message *fdf_to_arp(struct finsFrame *ff);
+
+#define ARP_LIB "arp"
+#define ARP_MAX_FLOWS 2
+#define ARP_FLOW_DOWN 0
+
+struct arp_data {
+	struct linked_list *link_list;
+	uint32_t flows_num;
+	uint32_t flows[ARP_MAX_FLOWS];
+
+	pthread_t switch_to_arp_thread;
+	struct linked_list *interface_list;
+	struct linked_list *cache_list;
+
+	uint8_t interrupt_flag;
+	int thread_count;
+};
 
 int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
 int arp_run(struct fins_module *module, pthread_attr_t *attr);

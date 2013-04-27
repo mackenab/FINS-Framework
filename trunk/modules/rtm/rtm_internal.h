@@ -35,38 +35,6 @@
 
 #include "rtm.h"
 
-#define RTM_LIB "rtm"
-#define RTM_MAX_FLOWS 0
-
-#define MAX_CONSOLES 20
-#define MAX_COMMANDS 40
-#define MAX_CMD_LEN 500
-#define MAX_WORDS 500
-#define CMD_DELIMS " "
-
-struct rtm_data {
-	struct linked_list *link_list;
-	uint32_t flows_num;
-	uint32_t flows[RTM_MAX_FLOWS];
-
-	pthread_t switch_to_rtm_thread;
-	pthread_t console_to_rtm_thread;
-	pthread_t accept_console_thread;
-	uint8_t interrupt_flag;
-
-	struct fins_overall *overall;
-	int server_fd;
-
-	sem_t shared_sem;
-	int console_fds[MAX_CONSOLES];
-
-	struct linked_list *console_list;
-	uint32_t console_counter;
-
-	struct linked_list *cmd_list;
-	uint32_t cmd_counter;
-};
-
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
 #define POLLRDNORM POLLIN
@@ -102,6 +70,12 @@ struct rtm_data {
 #endif
 
 #define RTM_PATH FINS_TMP_ROOT "/fins_rtm"
+
+#define MAX_CONSOLES 20
+#define MAX_COMMANDS 40
+#define MAX_CMD_LEN 500
+#define MAX_WORDS 500
+#define CMD_DELIMS " "
 
 //$: <command> <module_name> <param_name> <value>
 //TODO instead of 4 fixed, change to have value as LAST word, everything after module as augments
@@ -228,6 +202,42 @@ typedef void (*process_op_type)(struct fins_module *module, struct rtm_console *
 process_op_type op_funcs[] = { rtm_process_help, rtm_process_exec, rtm_process_get, rtm_process_set, rtm_process_pause, rtm_process_unpause, rtm_process_link,
 		rtm_process_unlink, rtm_process_load, rtm_process_unload, rtm_process_replace, rtm_process_shutdown };
 
+#define RTM_LIB "rtm"
+#define RTM_MAX_FLOWS 0
+
+struct rtm_data {
+	struct linked_list *link_list;
+	uint32_t flows_num;
+	uint32_t flows[RTM_MAX_FLOWS];
+
+	pthread_t switch_to_rtm_thread;
+	pthread_t console_to_rtm_thread;
+	pthread_t accept_console_thread;
+	uint8_t interrupt_flag;
+
+	struct fins_overall *overall;
+	int server_fd;
+
+	sem_t shared_sem;
+	int console_fds[MAX_CONSOLES];
+
+	struct linked_list *console_list;
+	uint32_t console_counter;
+
+	struct linked_list *cmd_list;
+	uint32_t cmd_counter;
+};
+
+int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int rtm_run(struct fins_module *module, pthread_attr_t *attr);
+int rtm_pause(struct fins_module *module);
+int rtm_unpause(struct fins_module *module);
+int rtm_shutdown(struct fins_module *module);
+int rtm_release(struct fins_module *module);
+int rtm_register_module(struct fins_module *module, struct fins_module *new_mod);
+int rtm_unregister_module(struct fins_module *module, int index);
+int rtm_pass_overall(struct fins_module *module, struct fins_overall *overall);
+
 void rtm_get_ff(struct fins_module *module);
 void rtm_fcf(struct fins_module *module, struct finsFrame *ff);
 void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff);
@@ -243,15 +253,5 @@ void rtm_exec_reply(struct fins_module *module, struct finsFrame *ff);
 //void rtm_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
 void rtm_interrupt(struct fins_module *module);
-
-int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
-int rtm_run(struct fins_module *module, pthread_attr_t *attr);
-int rtm_pause(struct fins_module *module);
-int rtm_unpause(struct fins_module *module);
-int rtm_shutdown(struct fins_module *module);
-int rtm_release(struct fins_module *module);
-int rtm_register_module(struct fins_module *module, struct fins_module *new_mod);
-int rtm_unregister_module(struct fins_module *module, int index);
-int rtm_pass_overall(struct fins_module *module, struct fins_overall *overall);
 
 #endif /* RTM_INTERNAL_H_ */

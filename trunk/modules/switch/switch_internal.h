@@ -22,9 +22,6 @@ struct switch_data {
 	struct fins_overall *overall;
 };
 
-void switch_process_ff(struct fins_module *module, struct finsFrame *ff);
-void switch_fcf(struct fins_module *module, struct finsFrame *ff);
-
 int switch_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
 int switch_run(struct fins_module *module, pthread_attr_t *fins_pthread_attr);
 int switch_pause(struct fins_module *module);
@@ -33,5 +30,8 @@ int switch_shutdown(struct fins_module *module);
 int switch_release(struct fins_module *module);
 int switch_register_module(struct fins_module *module, struct fins_module *new_mod);
 int switch_unregister_module(struct fins_module *module, int index);
+
+void switch_process_ff(struct fins_module *module, struct finsFrame *ff);
+void switch_fcf(struct fins_module *module, struct finsFrame *ff);
 
 #endif /* SWITCH_INTERNAL_H_ */

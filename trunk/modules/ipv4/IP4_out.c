@@ -5,13 +5,10 @@
  *      Author: rado
  */
 
-#include "ipv4.h"
+#include "ipv4_internal.h"
 #include <finsqueue.h>
 
-extern struct ip4_stats stats;
-
-//extern struct ip4_packet *construct_packet_buffer;
-void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t protocol) {
+void IP4_out(struct fins_module *module, struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t protocol) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p, len=%u, src=%u, proto=%u", ff, ff->metaData, length, source, protocol);
 
 	//print_finsFrame(ff);
@@ -46,10 +43,11 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 		//TODO implement
 	}
 
-	next_hop = IP4_next_hop(destination);
+	next_hop = IP4_next_hop(module, destination);
 	PRINT_DEBUG("next_hop: address=%u, interface=%u", next_hop.address, next_hop.interface);
 	if (next_hop.interface) {
 		//stats.outfragments++;
+		uint32_t my_host_ip_addr = 0; //TODO remove/fix, is for compiling
 		if (next_hop.address == my_host_ip_addr || next_hop.address == my_host_ip_addr) {
 			PRINT_DEBUG("internal, routing back to netw layer");
 			struct timeval current;
@@ -67,30 +65,13 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 				secure_metadata_writeToElement(meta, "recv_tos", &send_tos, META_TYPE_INT32);
 			}
 
-			//ff->dataOrCtrl = DATA;
-			switch (protocol) {
-			case IP4_PT_ICMP:
-				ff->destinationID.id = ICMP_ID;
-				ff->destinationID.next = NULL;
-				break;
-			case IP4_PT_TCP:
-				ff->destinationID.id = TCP_ID;
-				ff->destinationID.next = NULL;
-				break;
-			case IP4_PT_UDP:
-				ff->destinationID.id = UDP_ID;
-				ff->destinationID.next = NULL;
-				break;
-			default:
-				PRINT_ERROR("invalid protocol: protocol=%u", protocol);
-				freeFinsFrame(ff);
-				return;
-			}
-			//ff->metaData = meta;
-
 			ff->dataFrame.directionFlag = DIR_UP;
 
-			ipv4_to_switch(ff);
+			//module_to_switch(module, ff);
+			if (!module_send_flow(module, (struct fins_module_table *) module->data, ff, IPV4_FLOW_UP)) {
+				PRINT_ERROR("todo error");
+				freeFinsFrame(ff);
+			}
 		} else {
 			/** TODO
 			 * finding out what is wrong with the fragmentation and reimplement it
@@ -134,7 +115,7 @@ void IP4_out(struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t pr
 			construct_packet_buffer->ip_cksum = IP4_checksum(construct_packet_buffer, IP4_MIN_HLEN);
 
 			//print_finsFrame(ff);
-			IP4_send_fdf_out(ff, construct_packet_buffer, next_hop, length);
+			IP4_send_fdf_out(module, ff, construct_packet_buffer, next_hop, length);
 			return;
 		}
 	}

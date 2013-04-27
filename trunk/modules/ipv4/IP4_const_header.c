@@ -5,7 +5,7 @@
  *      Author: rado
  */
 
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 void IP4_const_header(struct ip4_packet *packet, uint32_t source,
 		uint32_t destination, uint8_t protocol) {

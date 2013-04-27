@@ -1,4 +1,4 @@
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offset, uint16_t fragment_size) {
 	struct ip4_fragment fragment;

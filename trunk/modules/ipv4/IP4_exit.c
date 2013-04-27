@@ -5,7 +5,7 @@
  *      Author: rado
  */
 
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 void ip4_exit() {
 

@@ -9,12 +9,15 @@
  *      It is aware of broadcast addresses as well
  */
 
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 int IP4_dest_check(uint32_t destination) {
+	uint32_t my_host_ip_addr = 0; //TODO remove after new system in
+	uint32_t my_host_mask = 0; //TODO remove after new system in
 	uint32_t subnet_broadcast = my_host_ip_addr | (~my_host_mask);
 	uint32_t network_broadcast;
 
+	//TODO remove? there shouldn't be a network broadcast address
 	if (IP4_CLASSA(my_host_ip_addr)) {
 		network_broadcast = my_host_ip_addr | (~IP4_ADR_P2H(255, 0, 0, 0));
 	} else if (IP4_CLASSB(my_host_ip_addr)) {
@@ -25,10 +28,9 @@ int IP4_dest_check(uint32_t destination) {
 		network_broadcast = 0;
 	}
 
-	if (destination == my_host_ip_addr || destination == IP4_ADR_P2H(127,0,0,1)
-			|| destination == subnet_broadcast || destination
-			== network_broadcast || destination == IP4_ADR_P2H(255,255,255,255)
-			|| destination == IP4_ADR_P2H(0,0,0,0)) {
+	if (destination == my_host_ip_addr|| destination == IP4_ADR_P2H(127,0,0,1)
+	|| destination == subnet_broadcast || destination == network_broadcast || destination == IP4_ADR_P2H(255,255,255,255)
+	|| destination == IP4_ADR_P2H(0,0,0,0)) {
 		return (1);
 	}
 	return (0);

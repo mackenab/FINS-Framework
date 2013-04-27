@@ -129,14 +129,14 @@ struct arp_interface *arp_interface_create(uint64_t addr_mac, uint32_t addr_ip) 
 	return interface;
 }
 
+int arp_interface_ip_test(struct arp_interface *interface, uint32_t *addr_ip) {
+	return interface->addr_ip == *addr_ip;
+}
+
 void arp_interface_free(struct arp_interface *interface) {
 	PRINT_DEBUG("Entered: interface=%p", interface);
 
 	free(interface);
-}
-
-int arp_interface_ip_test(struct arp_interface *interface, uint32_t *addr_ip) {
-	return interface->addr_ip == *addr_ip;
 }
 
 int arp_register_interface(struct fins_module *module, uint64_t MAC_address, uint32_t IP_address) {

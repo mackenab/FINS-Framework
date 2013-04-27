@@ -4,18 +4,17 @@
  *  Created on: Jul 20, 2010
  *      Author: rado
  */
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
-extern struct ip4_stats stats;
-
-int IP4_forward(struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length) {
+int IP4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length) {
 	PRINT_DEBUG("");
+	struct ipv4_data *data = (struct ipv4_data *) module->data;
 
-	struct ip4_next_hop_info next_hop = IP4_next_hop(dest);
+	struct ip4_next_hop_info next_hop = IP4_next_hop(module, dest); //TODO fix this, returning stacked memory is dangerous
 	if (next_hop.interface >= 0) {
 		//IP4_send_fdf_out(ff, ppacket, next_hop, length); //TODO uncommenct/fix
 		return 1;
 	}
-	stats.cantforward++;
+	data->stats.cantforward++;
 	return 0;
 }

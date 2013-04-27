@@ -131,6 +131,7 @@ int module_send_flow(struct fins_module *module, struct fins_module_table *table
 			ff_copy = cloneFinsFrame(ff); //TODO Has problem if you're actually passing pointers, as it won't copy it
 			ff_copy->destinationID = link->dsts_index[i];
 			if (!module_to_switch(module, ff_copy)) {
+				freeFinsFrame(ff_copy);
 				PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
 				return 0;
 			}

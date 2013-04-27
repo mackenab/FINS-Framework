@@ -3,7 +3,7 @@
  *------------------------------------------------------------------------
  */
 
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 uint16_t IP4_checksum(struct ip4_packet* ptr, int length) {
 

@@ -24,8 +24,8 @@
 #define MAX_BASE_PATH 100
 #define MOD_NAME_SIZE 64
 #define MAX_QUEUE_SIZE 100000
-#define MAX_FLOWS 256
-#define MAX_LINKS 1024
+#define MAX_MOD_FLOWS 256
+#define MAX_TABLE_LINKS 1024
 
 //Needs to be 0 so that is loaded first
 #define NONE_INDEX 0
@@ -108,7 +108,7 @@ struct fins_module_table {
 	//add max_flows? //as max number of flows
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[MAX_FLOWS];
+	uint32_t flows[MAX_MOD_FLOWS];
 };
 
 void module_create_structs(struct fins_module *module);

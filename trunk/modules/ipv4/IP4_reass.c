@@ -5,7 +5,7 @@
  *      Author: rado
  */
 
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 /* Variable pointing to the first element of a double
  * linked list holding partially received packets.

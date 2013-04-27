@@ -1,15 +1,9 @@
-#include "ipv4.h"
+#include "ipv4_internal.h"
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
 #include <sys/socket.h>
 #endif
-
-extern uint32_t my_host_ip_addr;
-extern uint32_t my_host_mask;
-extern uint32_t loopback_ip_addr;
-extern uint32_t loopback_mask;
-extern uint32_t any_ip_addr;
 
 void IP4_print_routing_table(struct ip4_routing_table *table_pointer) {
 	struct ip4_routing_table *current_pointer;
@@ -21,7 +15,8 @@ void IP4_print_routing_table(struct ip4_routing_table *table_pointer) {
 				current_pointer->dst & 0xFF);
 		printf("%u.%u.%u.%u \t", current_pointer->gw >> 24, (current_pointer->gw >> 16) & 0xFF, (current_pointer->gw >> 8) & 0xFF, current_pointer->gw & 0xFF);
 		//printf("%u \t", current_pointer->mask);
-		printf("%u.%u.%u.%u \t", current_pointer->mask >> 24, (current_pointer->mask >> 16) & 0xFF, (current_pointer->mask >> 8) & 0xFF, current_pointer->mask & 0xFF);
+		printf("%u.%u.%u.%u \t", current_pointer->mask >> 24, (current_pointer->mask >> 16) & 0xFF, (current_pointer->mask >> 8) & 0xFF,
+				current_pointer->mask & 0xFF);
 		printf("%u \t", current_pointer->metric);
 		printf("%u", current_pointer->interface);
 		printf("\n");
@@ -193,6 +188,13 @@ struct ip4_routing_table *IP4_get_routing_table_old() {
 
 struct ip4_routing_table *IP4_get_routing_table() {
 	struct ip4_routing_table *routing_table;
+
+	//TODO remove/fix, is just for compiling
+	uint32_t my_host_ip_addr = 0;
+	uint32_t my_host_mask = 0;
+	uint32_t loopback_ip_addr = 0;
+	uint32_t loopback_mask = 0;
+	uint32_t any_ip_addr = 0;
 
 	struct ip4_routing_table *row0 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));
 	struct ip4_routing_table *row1 = (struct ip4_routing_table*) secure_malloc(sizeof(struct ip4_routing_table));

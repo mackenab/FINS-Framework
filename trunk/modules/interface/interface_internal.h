@@ -68,7 +68,8 @@ struct sniff_ethernet {
 
 #define INTERFACE_LIB "interface"
 #define INTERFACE_MAX_FLOWS 2
-
+#define INTERFACE_FLOW_UP 0
+#define INTERFACE_FLOW_ARP 1 //for when ARP is called through interface using FCF
 struct interface_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
@@ -81,19 +82,16 @@ struct interface_data {
 	int client_inject_fd;
 };
 
-#define INTERFACE_FLOW_UP 0
-#define INTERFACE_FLOW_ARP 1 //for when ARP is called through interface using FCF
-
-void interface_get_ff(struct fins_module *module);
-void interface_fcf(struct fins_module *module, struct finsFrame *ff);
-void interface_set_param(struct fins_module *module, struct finsFrame *ff);
-void interface_out_fdf(struct fins_module *module, struct finsFrame *ff);
-
 int interface_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi);
 int interface_run(struct fins_module *module, pthread_attr_t *attr);
 int interface_pause(struct fins_module *module);
 int interface_unpause(struct fins_module *module);
 int interface_shutdown(struct fins_module *module);
 int interface_release(struct fins_module *module);
+
+void interface_get_ff(struct fins_module *module);
+void interface_fcf(struct fins_module *module, struct finsFrame *ff);
+void interface_set_param(struct fins_module *module, struct finsFrame *ff);
+void interface_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
 #endif /* INTERFACE_INTERNAL_H_ */
