@@ -4,7 +4,7 @@
  *  Created on: Jun 29, 2010
  *      Author: Abdallah Abdallah
  */
-#include "udp.h"
+#include "udp_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,11 +20,8 @@
  * datagram. Prior to this however, the checksum is verified.
  */
 
-extern struct udp_statistics udpStat;
-
-void udp_in_fdf(struct finsFrame* ff) {
-
-	//struct finsFrame *newFF;
+void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
+	struct udp_data *data = (struct udp_data *) module->data;
 
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != DATA) {
@@ -37,7 +34,7 @@ void udp_in_fdf(struct finsFrame* ff) {
 		freeFinsFrame(ff);
 		return;
 	}
-	if (ff->destinationID.id != UDP_ID) {
+	if (ff->destinationID != module->index) { //TODO update to get from metadata??
 		// release FDF here
 		freeFinsFrame(ff);
 		return;
@@ -63,16 +60,16 @@ void udp_in_fdf(struct finsFrame* ff) {
 	/** TODO Fix the length check below , I will highlighted for now */
 	/**
 	 if (meta->u_pslen != packet->u_len) {
-	 udpStat.mismatchingLengths++;
-	 udpStat.totalBadDatagrams ++;
+	 data->udpStat.mismatchingLengths++;
+	 data->udpStat.totalBadDatagrams ++;
 	 PRINT_DEBUG("UDP_in");
 
 	 return;
 	 }
 	 */
 	if (protocol != UDP_PROTOCOL) {
-		udpStat.wrongProtocol++;
-		udpStat.totalBadDatagrams++;
+		data->udpStat.wrongProtocol++;
+		data->udpStat.totalBadDatagrams++;
 		PRINT_ERROR("wrong proto=%d", protocol);
 
 		return;
@@ -93,15 +90,15 @@ void udp_in_fdf(struct finsFrame* ff) {
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
-			udpStat.badChecksum++;
-			udpStat.totalBadDatagrams++;
+			data->udpStat.badChecksum++;
+			data->udpStat.totalBadDatagrams++;
 			PRINT_ERROR("bad checksum=0x%x, calc=0x%x", packet->u_cksum, checksum);
 
 			return;
 		}
 	} else {
-		udpStat.noChecksum++;
-		PRINT_DEBUG("ignore checksum=%d", udpStat.noChecksum);
+		data->udpStat.noChecksum++;
+		PRINT_DEBUG("ignore checksum=%d", data->udpStat.noChecksum);
 	}
 
 	//metadata *udp_meta = (metadata *)fins_malloc (sizeof(metadata));
@@ -123,10 +120,10 @@ void udp_in_fdf(struct finsFrame* ff) {
 	int leng = ff->dataFrame.pduLength;
 	ff->dataFrame.pduLength = leng - U_HEADER_LEN;
 
-	uint8_t *pdu = ff->dataFrame.pdu;
-	uint8_t *data = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
-	memcpy(data, pdu + U_HEADER_LEN, ff->dataFrame.pduLength);
-	ff->dataFrame.pdu = data;
+	uint8_t *old = ff->dataFrame.pdu;
+	uint8_t *pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+	memcpy(pdu, old + U_HEADER_LEN, ff->dataFrame.pduLength);
+	ff->dataFrame.pdu = pdu;
 
 	//#########################
 #ifdef DEBUG
@@ -138,21 +135,12 @@ void udp_in_fdf(struct finsFrame* ff) {
 #endif
 	//#########################
 
-	ff->destinationID.id = DAEMON_ID;
-	ff->destinationID.next = NULL;
+	//ff->destinationID = DAEMON_ID;
 
-	//newFF = create_ff(DATA, DIR_UP, SOCKETSTUBID, ((int)(ff->dataFrame.pdu) - U_HEADER_LEN), &((ff->dataFrame).pdu), meta);
-	//newFF = create_ff(DATA, DIR_UP, SOCKETSTUBID, ff->dataFrame.pduLength - U_HEADER_LEN, ff->dataFrame.pdu, meta);
-
-	//PRINT_DEBUG("newff=%p, PDU Len=%d", newFF, (newFF->dataFrame).pduLength);
-	//print_finsFrame(newFF);
-
-	//sendToSwitch(newFF);
-	udp_to_switch(ff);
+	module_to_switch(module, ff);
 
 	//PRINT_DEBUG("freeing: ff=%p", ff);
 
-	PRINT_DEBUG("Freeing pdu=%p", pdu);
-	free(pdu);
+	PRINT_DEBUG("Freeing pdu=%p", old);
+	free(old);
 }
-

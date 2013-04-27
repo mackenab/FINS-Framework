@@ -3,8 +3,6 @@
 
 #include <finsmodule.h>
 
-//TODO move shared structs/params here
-
 void interface_dummy(void);
 struct fins_module *interface_create(uint32_t index, uint32_t id, uint8_t *name);
 

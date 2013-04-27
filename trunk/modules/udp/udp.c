@@ -5,9 +5,7 @@
  *      Author: Abdallah Abdallah
  */
 
-//Kevin added some debugging code in this file to print out the received control frames and send back a response
-//The control frames were never updated to the new types
-#include "udp.h"
+#include "udp_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,214 +17,92 @@
 
 #include <finstime.h>
 
-#define DUMMYA 123
-#define DUMMYB 456
-#define DUMMYC 789
-
-#include <switch.h>
-static struct fins_proto_module udp_proto = { .module_id = UDP_ID, .name = "udp", .running_flag = 1, };
-
-pthread_t switch_to_udp_thread;
-
-struct udp_statistics udpStat;
-
-struct udp_sent_list *udp_sent_packet_list;
-
 struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p, host=%u/%u, rem=%u/%u", ff, ff->metaData, host_ip, host_port, rem_ip, rem_port);
 
 	struct udp_sent *sent = (struct udp_sent *) secure_malloc(sizeof(struct udp_sent));
-	sent->next = NULL;
-
 	sent->ff = ff;
 	sent->host_ip = host_ip;
 	sent->host_port = host_port;
 	sent->rem_ip = rem_ip;
 	sent->rem_port = rem_port;
 
-	memset(&sent->stamp, 0, sizeof(struct timeval));
-
 	PRINT_DEBUG("Exited: ff=%p, sent=%p", ff, sent);
 	return sent;
+}
+
+int udp_sent_host_test(struct udp_sent *sent, uint32_t *host_ip, uint16_t *host_port) {
+	return sent->host_ip == *host_ip && sent->host_port == *host_port;
+}
+
+int udp_sent_data_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len) {
+	if (sent->ff->dataFrame.pduLength >= *data_len) { //TODO check if this logic is sound
+		return strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, *data_len) == 0;
+	} else {
+		return strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, sent->ff->dataFrame.pduLength) == 0;
+	}
 }
 
 void udp_sent_free(struct udp_sent *sent) {
 	PRINT_DEBUG("Entered: sent=%p", sent);
 
-	if (sent->ff) {
+	if (sent->ff != NULL) {
 		freeFinsFrame(sent->ff);
 	}
 
 	free(sent);
 }
 
-struct udp_sent_list *udp_sent_list_create(uint32_t max) {
-	PRINT_DEBUG("Entered: max=%u", max);
+/*
+ void udp_sent_list_gc(struct udp_sent_list *sent_list, double timeout) {
+ PRINT_DEBUG("Entered");
 
-	struct udp_sent_list *sent_list = (struct udp_sent_list *) secure_malloc(sizeof(struct udp_sent_list));
-	sent_list->max = max;
-	sent_list->len = 0;
+ struct timeval current;
+ gettimeofday(&current, 0);
 
-	sent_list->front = NULL;
-	sent_list->end = NULL;
+ struct udp_sent *old;
 
-	PRINT_DEBUG("Exited: max=%u, sent_list=%p", max, sent_list);
-	return sent_list;
-}
+ struct udp_sent *temp = sent_list->front;
+ while (temp) {
+ if (time_diff(&temp->stamp, &current) >= timeout) {
+ old = temp;
+ temp = temp->next;
 
-void udp_sent_list_append(struct udp_sent_list *sent_list, struct udp_sent *sent) {
-	PRINT_DEBUG("Entered: sent_list=%p, sent=%p", sent_list, sent);
+ udp_sent_list_remove(sent_list, old);
+ udp_sent_free(old);
+ } else {
+ temp = temp->next;
+ }
+ }
+ }
+ */
 
-	sent->next = NULL;
-	if (udp_sent_list_is_empty(sent_list)) {
-		//queue empty
-		sent_list->front = sent;
-	} else {
-		//node after end
-		sent_list->end->next = sent;
-	}
-	sent_list->end = sent;
-	sent_list->len++;
-}
+void *switch_to_udp(void *local) {
+	struct fins_module *module = (struct fins_module *) local;
 
-struct udp_sent *udp_sent_list_find(struct udp_sent_list *sent_list, uint8_t *data, uint32_t data_len) {
-	PRINT_DEBUG("Entered: sent_list=%p, data=%p, data_len=%u", sent_list, data, data_len);
+	PRINT_IMPORTANT("Entered: module=%p", module);
 
-	struct udp_sent *sent = sent_list->front;
-
-	while (sent != NULL) {
-		if (sent->ff && sent->ff->dataOrCtrl == DATA && sent->ff->dataFrame.pdu) {
-			PRINT_DEBUG("ff=%p, meta=%p, pduLen=%u, pdu=%p", sent->ff, sent->ff->metaData, sent->ff->dataFrame.pduLength, sent->ff->dataFrame.pdu);
-			if (sent->ff->dataFrame.pduLength >= data_len) { //TODO check if this logic is sound
-				if (strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, data_len) == 0) {
-					break;
-				}
-			} else {
-				if (strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, sent->ff->dataFrame.pduLength) == 0) {
-					break;
-				}
-			}
-		} else {
-			if (sent->ff) {
-				if (sent->ff->dataOrCtrl == DATA) {
-					PRINT_ERROR("todo error, ff=%p, meta=%p, pdu=%p", sent->ff, sent->ff->metaData, sent->ff->dataFrame.pdu);
-				} else {
-					PRINT_ERROR("todo error, ff=%p, meta=%p, CONTROL", sent->ff, sent->ff->metaData);
-				}
-			} else {
-				PRINT_ERROR("todo error, ff=%p", sent->ff);
-			}
-		}
-		sent = sent->next;
+	while (module->state == FMS_RUNNING) {
+		udp_get_ff(module);
+		PRINT_DEBUG("");
 	}
 
-	PRINT_DEBUG("Exited: sent_list=%p, data=%p, data_len=%u, sent=%p", sent_list, data, data_len, sent);
-	return sent;
+	PRINT_IMPORTANT("Exited: module=%p", module);
+	return NULL;
 }
 
-struct udp_sent *udp_sent_list_remove_front(struct udp_sent_list *sent_list) {
-	PRINT_DEBUG("Entered: sent_list=%p", sent_list);
-
-	struct udp_sent *sent = sent_list->front;
-	if (sent) {
-		sent_list->front = sent->next;
-		sent_list->len--;
-	} else {
-		PRINT_ERROR("reseting len: len=%d", sent_list->len);
-		sent_list->len = 0;
-	}
-
-	PRINT_DEBUG("Exited: sent_list=%p, sent=%p", sent_list, sent);
-	return sent;
-}
-
-void udp_sent_list_remove(struct udp_sent_list *sent_list, struct udp_sent *sent) {
-	PRINT_DEBUG("Entered: sent_list=%p, sent=%p", sent_list, sent);
-
-	if (udp_sent_list_is_empty(sent_list)) {
-		return;
-	}
-
-	if (sent_list->front == sent) {
-		sent_list->front = sent_list->front->next;
-		sent_list->len--;
-		return;
-	}
-
-	struct udp_sent *temp = sent_list->front;
-	while (temp->next != NULL) {
-		if (temp->next == sent) {
-			if (sent_list->end == sent) {
-				sent_list->end = temp;
-				temp->next = NULL;
-			} else {
-				temp->next = sent->next;
-			}
-
-			sent_list->len--;
-			return;
-		}
-		temp = temp->next;
-	}
-}
-
-int udp_sent_list_is_empty(struct udp_sent_list *sent_list) {
-	return sent_list->len == 0;
-}
-
-int udp_sent_list_has_space(struct udp_sent_list *sent_list) {
-	return sent_list->len < sent_list->max;
-}
-
-void udp_sent_list_free(struct udp_sent_list *sent_list) {
-	PRINT_DEBUG("Entered: sent_list=%p", sent_list);
-
-	struct udp_sent *sent;
-	while (!udp_sent_list_is_empty(sent_list)) {
-		sent = udp_sent_list_remove_front(sent_list);
-		udp_sent_free(sent);
-	}
-
-	free(sent_list);
-}
-
-void udp_sent_list_gc(struct udp_sent_list *sent_list, double timeout) {
-	PRINT_DEBUG("Entered");
-
-	struct timeval current;
-	gettimeofday(&current, 0);
-
-	struct udp_sent *old;
-
-	struct udp_sent *temp = sent_list->front;
-	while (temp) {
-		if (time_diff(&temp->stamp, &current) >= timeout) {
-			old = temp;
-			temp = temp->next;
-
-			udp_sent_list_remove(sent_list, old);
-			udp_sent_free(old);
-		} else {
-			temp = temp->next;
-		}
-	}
-}
-
-int udp_to_switch(struct finsFrame *ff) {
-	return module_to_switch(&udp_proto, ff);
-}
-
-void udp_get_ff(void) {
+void udp_get_ff(struct fins_module *module) {
+	struct udp_data *data = (struct udp_data *) module->data;
 
 	struct finsFrame *ff;
 	do {
-		secure_sem_wait(udp_proto.event_sem);
-		secure_sem_wait(udp_proto.input_sem);
-		ff = read_queue(udp_proto.input_queue);
-		sem_post(udp_proto.input_sem);
-	} while (udp_proto.running_flag && ff == NULL);
+		secure_sem_wait(module->event_sem);
+		secure_sem_wait(module->input_sem);
+		ff = read_queue(module->input_queue);
+		sem_post(module->input_sem);
+	} while (module->state == FMS_RUNNING && ff == NULL); //TODO change logic here, combine with switch_to_logger?
 
-	if (!udp_proto.running_flag) {
+	if (module->state != FMS_RUNNING) {
 		if (ff != NULL) {
 			freeFinsFrame(ff);
 		}
@@ -238,16 +114,16 @@ void udp_get_ff(void) {
 		exit(-1);
 	}
 
-	udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", udpStat.totalRecieved, ff, ff->metaData);
+	data->udpStat.totalRecieved++;
+	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", data->udpStat.totalRecieved, ff, ff->metaData);
 	if (ff->dataOrCtrl == CONTROL) {
-		udp_fcf(ff);
+		udp_fcf(module, ff);
 	} else if (ff->dataOrCtrl == DATA) {
 		if (ff->dataFrame.directionFlag == DIR_UP) {
-			udp_in_fdf(ff);
+			udp_in_fdf(module, ff);
 			PRINT_DEBUG("");
 		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
-			udp_out_fdf(ff);
+			udp_out_fdf(module, ff);
 			PRINT_DEBUG("");
 		}
 	} else {
@@ -256,7 +132,7 @@ void udp_get_ff(void) {
 	}
 }
 
-void udp_fcf(struct finsFrame *ff) {
+void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	//TODO fill out
@@ -273,8 +149,7 @@ void udp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		udp_read_param(module, ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -284,28 +159,25 @@ void udp_fcf(struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		udp_set_param(module, ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
 		PRINT_ERROR("todo");
-		//daemon_set_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
-		udp_exec(ff);
+		udp_exec(module, ff);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		//daemon_exec_reply(ff);
 		PRINT_ERROR("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		udp_error(ff);
+		udp_error(module, ff);
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
@@ -315,7 +187,17 @@ void udp_fcf(struct finsFrame *ff) {
 	}
 }
 
-void udp_exec(struct finsFrame *ff) {
+void udp_read_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_ERROR("todo");
+	freeFinsFrame(ff);
+}
+
+void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_ERROR("todo");
+	freeFinsFrame(ff);
+}
+
+void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 	uint32_t host_ip = 0;
 	uint32_t host_port = 0;
 	uint32_t rem_ip = 0;
@@ -333,55 +215,38 @@ void udp_exec(struct finsFrame *ff) {
 		secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
 		secure_metadata_readFromElement(meta, "rem_port", &rem_port);
 
-		udp_exec_clear_sent(ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+		udp_exec_clear_sent(module, ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		//TODO implement?
 
-		ff->destinationID.id = ff->ctrlFrame.senderID;
+		ff->destinationID = ff->ctrlFrame.sender_id;
 
-		ff->ctrlFrame.senderID = UDP_ID;
+		ff->ctrlFrame.sender_id = UDP_ID;
 		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 		ff->ctrlFrame.ret_val = 0;
 
-		udp_to_switch(ff);
+		module_to_switch(module, ff);
 		break;
 	}
 }
 
-void udp_exec_clear_sent(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+void udp_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: ff=%p, host=%u/%u, rem=%u/%u", ff, host_ip, host_port, rem_ip, rem_port);
-	if (!udp_sent_list_is_empty(udp_sent_packet_list)) {
-		struct udp_sent *old;
+	struct udp_data *data = (struct udp_data *) module->data;
 
-		struct udp_sent *temp = udp_sent_packet_list->front;
-		while (temp) {
-			if (temp->host_ip == host_ip && temp->host_port == host_port) {
-				old = temp;
-				temp = temp->next;
-
-				udp_sent_list_remove(udp_sent_packet_list, old);
-				udp_sent_free(old);
-			} else {
-				temp = temp->next;
-			}
-		}
+	if (!list_is_empty(data->sent_packet_list)) {
+		struct linked_list *old_list = list_remove_all2(data->sent_packet_list, udp_sent_host_test, &host_ip, &host_port);
+		list_free(old_list, udp_sent_free);
 	}
 
 	freeFinsFrame(ff);
 }
 
-struct udp_header_frag {
-	uint16_t src_port;
-	uint16_t dst_port;
-	uint16_t len;
-	uint16_t checksum;
-	uint8_t data[1];
-};
-
-void udp_error(struct finsFrame *ff) {
+void udp_error(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	struct udp_data *data = (struct udp_data *) module->data;
 
 	//uint32_t src_ip;
 	//uint32_t src_port;
@@ -407,24 +272,22 @@ void udp_error(struct finsFrame *ff) {
 		 */
 
 		//if recv_dst_ip==send_src_ip, recv_dst_port==send_src_port, recv_udp_len==, recv_checksum==,  \\should be unique!
-
-		if (udp_sent_list_is_empty(udp_sent_packet_list)) {
+		if (list_is_empty(data->sent_packet_list)) {
 			PRINT_ERROR("todo error");
 			//TODO drop
 			freeFinsFrame(ff);
 		} else {
-			uint8_t *data = ff->ctrlFrame.data;
-			if (data) {
-				struct udp_sent *sent = udp_sent_list_find(udp_sent_packet_list, data, ff->ctrlFrame.data_len);
-				if (sent) {
+			uint8_t *pdu = ff->ctrlFrame.data;
+			if (pdu != NULL) { //TODO make func!!
+				struct udp_sent *sent = (struct udp_sent *) list_find2(data->sent_packet_list, udp_sent_data_test,data,&ff->ctrlFrame.data_len);
+				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
 					//ff->dataOrCtrl = CONTROL;
-					ff->destinationID.id = DAEMON_ID;
-					ff->destinationID.next = NULL;
+					//ff->destinationID = DAEMON_ID;
 					//ff->metaData = meta_err;
 
-					ff->ctrlFrame.senderID = UDP_ID;
+					ff->ctrlFrame.sender_id = module->index;
 					//ff->ctrlFrame.serial_num = gen_control_serial_num();
 					//ff->ctrlFrame.opcode = CTRL_ERROR;
 					//ff->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code //ERROR_UDP_TTL?
@@ -433,11 +296,12 @@ void udp_error(struct finsFrame *ff) {
 					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
 					sent->ff->dataFrame.pdu = NULL;
 
-					udp_to_switch(ff);
+					//module flow up
+					//module_to_switch(module, ff);
 
-					udp_sent_list_remove(udp_sent_packet_list, sent);
+					list_remove(data->sent_packet_list, sent);
 					udp_sent_free(sent);
-					free(data);
+					free(pdu);
 				} else {
 					PRINT_ERROR("todo error");
 					freeFinsFrame(ff);
@@ -452,23 +316,22 @@ void udp_error(struct finsFrame *ff) {
 	case ERROR_ICMP_DEST_UNREACH:
 		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
 
-		if (udp_sent_list_is_empty(udp_sent_packet_list)) {
+		if (list_is_empty(data->sent_packet_list)) {
 			PRINT_ERROR("todo error");
 			//TODO drop
 			freeFinsFrame(ff);
 		} else {
-			uint8_t *data = ff->ctrlFrame.data;
-			if (data) {
-				struct udp_sent *sent = udp_sent_list_find(udp_sent_packet_list, data, ff->ctrlFrame.data_len);
-				if (sent) {
+			uint8_t *pdu = ff->ctrlFrame.data;
+			if (pdu != NULL) {
+				struct udp_sent *sent = (struct udp_sent *) list_find2(data->sent_packet_list, udp_sent_data_test, data, &ff->ctrlFrame.data_len);
+				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
 					//ff->dataOrCtrl = CONTROL;
-					ff->destinationID.id = DAEMON_ID;
-					ff->destinationID.next = NULL;
+					//ff->destinationID = DAEMON_ID;
 					//ff->metaData = meta_err;
 
-					ff->ctrlFrame.senderID = UDP_ID;
+					ff->ctrlFrame.sender_id = module->index;
 					//ff->ctrlFrame.serial_num = gen_control_serial_num();
 					//ff->ctrlFrame.opcode = CTRL_ERROR;
 					//ff->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code //ERROR_UDP_TTL?
@@ -477,9 +340,10 @@ void udp_error(struct finsFrame *ff) {
 					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
 					sent->ff->dataFrame.pdu = NULL;
 
-					udp_to_switch(ff);
+					//module flow up
+					//module_to_switch(module, ff);
 
-					udp_sent_list_remove(udp_sent_packet_list, sent);
+					list_remove(data->sent_packet_list, sent);
 					udp_sent_free(sent);
 					free(data);
 				} else {
@@ -501,58 +365,143 @@ void udp_error(struct finsFrame *ff) {
 	}
 }
 
-void *switch_to_udp(void *local) {
-	PRINT_IMPORTANT("Entered");
+void udp_init_params(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->params);
+	//int status;
 
-	while (udp_proto.running_flag) {
-		udp_get_ff();
-		PRINT_DEBUG("");
+	//-------------------------------------------------------------------------------------------
+	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	if (exec_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
 	}
 
-	PRINT_IMPORTANT("Exited");
-	//pthread_exit(NULL);
-	return NULL;
+	//-------------------------------------------------------------------------------------------
+	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	if (get_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	//elem_add_param(get_elem, UDP_GET_INTERVAL__str, UDP_GET_INTERVAL__id, UDP_GET_INTERVAL__type);
+	//elem_add_param(get_elem, UDP_GET_REPEATS__str, UDP_GET_REPEATS__id, UDP_GET_REPEATS__type);
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	if (set_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	//elem_add_param(set_elem, UDP_SET_INTERVAL__str, UDP_SET_INTERVAL__id, UDP_SET_INTERVAL__type);
+	//elem_add_param(set_elem, UDP_SET_REPEATS__str, UDP_SET_REPEATS__id, UDP_SET_REPEATS__type);
+}
+
+int udp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	module->state = FMS_INIT;
+	module_create_structs(module);
+
+	udp_init_params(module);
+
+	module->data = secure_malloc(sizeof(struct udp_data));
+	struct udp_data *data = (struct udp_data *) module->data;
+
+	if (module->flows_max < flows_num) {
+		PRINT_ERROR("todo error");
+		return 0;
+	}
+	data->flows_num = flows_num;
+
+	int i;
+	for (i = 0; i < flows_num; i++) {
+		data->flows[i] = flows[i];
+	}
+
+	//TODO extract this from meta?
+	data->sent_packet_list = list_create(UDP_SENT_LIST_MAX);
+
+	return 1;
+}
+
+int udp_run(struct fins_module *module, pthread_attr_t *attr) {
+	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	module->state = FMS_RUNNING;
+
+	struct udp_data *data = (struct udp_data *) module->data;
+	secure_pthread_create(&data->switch_to_udp_thread, attr, switch_to_udp, module);
+
+	return 1;
+}
+
+int udp_pause(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+	module->state = FMS_PAUSED;
+
+	//TODO
+	return 1;
+}
+
+int udp_unpause(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+	module->state = FMS_RUNNING;
+
+	//TODO
+	return 1;
+}
+
+int udp_shutdown(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+	module->state = FMS_SHUTDOWN;
+	sem_post(module->event_sem);
+
+	struct udp_data *data = (struct udp_data *) module->data;
+	//TODO expand this
+
+	PRINT_IMPORTANT("Joining switch_to_udp_thread");
+	pthread_join(data->switch_to_udp_thread, NULL);
+
+	return 1;
+}
+
+int udp_release(struct fins_module *module) {
+	PRINT_IMPORTANT("Entered: module=%p", module);
+
+	struct udp_data *data = (struct udp_data *) module->data;
+	//TODO free all module related mem
+
+	//delete threads
+	PRINT_IMPORTANT("sent_packet_list->len=%u", data->sent_packet_list->len);
+	list_free(data->sent_packet_list, udp_sent_free);
+
+	if (data->link_list != NULL) {
+		list_free(data->link_list, free);
+	}
+	free(data);
+	module_destroy_structs(module);
+	free(module);
+	return 1;
 }
 
 void udp_dummy(void) {
 
 }
 
-void udp_init(void) {
-	PRINT_IMPORTANT("Entered");
-	udp_proto.running_flag = 1;
+static struct fins_module_ops udp_ops = { .init = udp_init, .run = udp_run, .pause = udp_pause, .unpause = udp_unpause, .shutdown = udp_shutdown, .release =
+		udp_release, };
 
-	module_create_ops(&udp_proto);
-	module_register(&udp_proto);
+struct fins_module *udp_create(uint32_t index, uint32_t id, uint8_t *name) {
+	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
-	udp_sent_packet_list = udp_sent_list_create(UDP_SENT_LIST_MAX);
-}
+	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
-void udp_run(pthread_attr_t *fins_pthread_attr) {
-	PRINT_IMPORTANT("Entered");
+	strcpy((char *) module->lib, UDP_LIB);
+	module->flows_max = UDP_MAX_FLOWS;
+	module->ops = &udp_ops;
+	module->state = FMS_FREE;
 
-	secure_pthread_create(&switch_to_udp_thread, fins_pthread_attr, switch_to_udp, fins_pthread_attr);
-}
+	module->index = index;
+	module->id = id;
+	strcpy((char *) module->name, (char *) name);
 
-void udp_shutdown(void) {
-	PRINT_IMPORTANT("Entered");
-	udp_proto.running_flag = 0;
-	sem_post(udp_proto.event_sem);
-
-	//TODO expand this
-
-	PRINT_IMPORTANT("Joining switch_to_udp_thread");
-	pthread_join(switch_to_udp_thread, NULL);
-}
-
-void udp_release(void) {
-	PRINT_IMPORTANT("Entered");
-	module_unregister(udp_proto.module_id);
-
-	PRINT_IMPORTANT("udp_sent_packet_list->len=%u", udp_sent_packet_list->len);
-	udp_sent_list_free(udp_sent_packet_list);
-
-	//TODO free all module related mem
-
-	module_destroy_ops(&udp_proto);
+	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	return module;
 }

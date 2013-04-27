@@ -4,7 +4,7 @@
  *  Created on: Jul 5, 2010
  *      Author: Abdallah Abdallah
  */
-#include "udp.h"
+#include "udp_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,8 +22,6 @@
  * @param metadata a pointer to the metadata
  */
 
-extern struct udp_statistics udpStat;
-
 struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t* PDU, metadata *meta) {
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 
@@ -33,8 +31,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 
 	if (dataOrCtrl == DATA) {
 		ff->dataOrCtrl = DATA;
-		ff->destinationID.id = destID;
-		ff->destinationID.next = NULL;
+		ff->destinationID = destID;
 
 		ff->dataFrame.directionFlag = direction;
 		ff->dataFrame.pduLength = PDU_length;
@@ -45,9 +42,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 
 	if (dataOrCtrl == CONTROL) {
 		ff->dataOrCtrl = CONTROL;
-		ff->destinationID.id = destID;
-
-		ff->destinationID.next = NULL;
+		ff->destinationID = destID;
 		ff->metaData = meta;
 		// fill the important FCF data in here
 	}

@@ -2,7 +2,7 @@
  * interface_internal.h
  *
  *  Created on: Apr 20, 2013
- *      Author: root
+ *      Author: Jonathan Reed
  */
 
 #ifndef INTERFACE_INTERNAL_H_

@@ -22,7 +22,7 @@ int console_fd_test(struct rtm_console *console, int *fd) {
 void console_free(struct rtm_console *console) {
 	PRINT_DEBUG("Entered: console=%p", console);
 
-	if (console->addr) {
+	if (console->addr != NULL) {
 		PRINT_DEBUG("Freeing addr=%p", console->addr);
 		free(console->addr);
 	}
@@ -980,7 +980,7 @@ void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
 			return;
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
@@ -1009,7 +1009,7 @@ void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
 			data->flows[i] = table->flows[i];
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		data->link_list = table->link_list;
@@ -1226,7 +1226,7 @@ int rtm_release(struct fins_module *module) {
 //TODO free all module related mem
 //delete threads
 
-	if (data->link_list) {
+	if (data->link_list != NULL) {
 		list_free(data->link_list, free);
 	}
 	free(data);

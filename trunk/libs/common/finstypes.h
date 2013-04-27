@@ -138,11 +138,16 @@ struct data_buf {
 	uint8_t *data;
 };
 
+//NOTE: this structure is meant for only internal use
 struct list_node {
 	struct list_node *next;
 	struct list_node *prev;
 	uint8_t *data;
 };
+
+//vvvvvvvvvvvvvvvvv Linked list data structure, meant for external use as a library
+#define LIST_TRUE 1
+#define LIST_FALSE 0
 
 struct linked_list {
 	uint32_t max;
@@ -151,73 +156,175 @@ struct linked_list {
 	struct list_node *end;
 };
 
-//for use as library, not internal
+//A test that always returns true
+int true_test(uint8_t *data);
+
+//A test that always returns false
+int false_test(uint8_t *data);
+
+//<equal> should return:
+//1 if equal
+//0 if not
+typedef int (*equal_type)(uint8_t *data);
+typedef int (*equal1_type)(uint8_t *data, uint8_t *param);
+typedef int (*equal2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
+
+//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
+typedef uint8_t *(*copy_type)(uint8_t *data);
+
+//<comparer> should return:
+//-1 = less than, goes before
+//0 = problem don't insert
+//1 = greater than, goes after, if is equal but want put in use this
+typedef int (*comparer_type)(uint8_t *data1, uint8_t *data2);
+
+//<apply> should do something on the element, removing an element in <apply> is permissible
+typedef void (*apply_type)(uint8_t *data);
+typedef void (*apply1_type)(uint8_t *data, uint8_t *param);
+typedef void (*apply2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
+
+//<release> should free the data structure in the element as well as any subcomponents
+typedef void (*release_type)(uint8_t *data);
+
+//Return a malloc'd linked_list with 0 elements, & a maximum of <max>
 struct linked_list *list_create(uint32_t max);
 
+//Prepend the pointer to the front of the list
 #define list_prepend(list, data) list_prepend_full(list, (uint8_t *)data)
 void list_prepend_full(struct linked_list *list, uint8_t *data);
 
+//Append the pointer to the end of the list
 #define list_append(list, data) list_append_full(list, (uint8_t *)data)
 void list_append_full(struct linked_list *list, uint8_t *data);
 
+//Insert the pointer after the pointer given by <prev>
 #define list_insert(list, data, prev) list_insert_full(list, (uint8_t *)data, (uint8_t *)prev)
 void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev);
+
+//Iterate through the list to check that the total length matches the number of elements
 int list_check(struct linked_list *list);
+
+//Return the pointer at the <index> location in the list
 uint8_t *list_look(struct linked_list *list, uint32_t index);
 
+//Return true if the list contains the pointer data
 #define list_contains(list, data) list_contains_full(list, (uint8_t *)data)
 int list_contains_full(struct linked_list *list, uint8_t *data);
+
+//Remove the first element of the list & return it
 uint8_t *list_remove_front(struct linked_list *list);
 
+//Remove the specific pointer <data> from the list
 #define list_remove(list, data) list_remove_full(list, (uint8_t *)data)
 void list_remove_full(struct linked_list *list, uint8_t *data);
+
+//Iterate through <list> and remove elements for which <equal> returns true, add those elements to a new list that is returned.
+//<equal> should return:
+//1 if equal
+//0 if not
+#define list_remove_all(list, equal) list_remove_all_full(list, (equal_type)equal)
+struct linked_list *list_remove_all_full(struct linked_list *list, int (*equal)(uint8_t *data));
+
+//See list_remove_all()
+#define list_remove_all1(list, equal, param) list_remove_all1_full(list, (equal1_type)equal, (uint8_t *)param)
+struct linked_list *list_remove_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param);
+
+//See list_remove_all()
+#define list_remove_all2(list, equal, param1, param2) list_remove_all2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
+struct linked_list *list_remove_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1,
+		uint8_t *param2);
+
+//Return true if the list has no elements
 int list_is_empty(struct linked_list *list); //change some to inline?
+
+//Return true if the list has reached the limit of elements given by list->max
 int list_is_full(struct linked_list *list);
+
+//Return true if the list has space for another element
 int list_has_space(struct linked_list *list);
+
+//Return the number of elements the list can add before reaching max
 uint32_t list_space(struct linked_list *list);
 
-typedef int (*comparer_type)(uint8_t *data1, uint8_t *data2);
+//Copy the list and return a new list
+//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
+#define list_copy(list, copy) list_copy_full(list, (copy_type)copy)
+struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(uint8_t *data));
+
+//Add the pointer <data> to the list, using the comparer, returns true if inserts, false if problem
+//<comparer> should return:
+//-1 = less than, goes before
+//0 = problem don't insert
+//1 = greater than, goes after, if is equal but want put in use this
 #define list_add(list, data, comparer) list_add_full(list, (uint8_t *)data, (comparer_type)comparer)
 int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8_t *data1, uint8_t *data2));
 
-typedef int (*equal_type)(uint8_t *data);
+//Finds the first element that satisfies <equal>
+//<equal> should return:
+//1 if equal
+//0 if not
 #define list_find(list, equal) list_find_full(list, (equal_type)equal)
 uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data));
 
-typedef int (*equal1_type)(uint8_t *data, uint8_t *param);
+//See list_find()
 #define list_find1(list, equal, param) list_find1_full(list, (equal1_type)equal, (uint8_t *)param)
 uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param);
 
-typedef int (*equal2_type)(uint8_t *data, uint8_t *param1, uint8_t param2);
+//See list_find()
 #define list_find2(list, equal, param1, param2) list_find2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
 uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
 
-typedef void (*apply_type)(uint8_t *data);
+//Creates a new list and returns the pointers for which <equal> returns true
+//<equal> should return:
+//1 if equal
+//0 if not
+#define list_find_all(list, equal) list_find_all_full(list, (equal_type)equal)
+struct linked_list *list_find_all_full(struct linked_list *list, int (*equal)(uint8_t *data));
+
+//See list_find_all()
+#define list_find_all1(list, equal, param) list_find_all1_full(list, (equal1_type)equal, (uint8_t *)param)
+struct linked_list *list_find_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param);
+
+//See list_find_all()
+#define list_find_all2(list, equal, param1, param2) list_find_all2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
+struct linked_list *list_find_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1,
+		uint8_t *param2);
+
+//Iterates through list and calls <apply> on each element
+//<apply> should do something on the element, removing an element in <apply> is permissible
 #define list_for_each(list, apply) list_for_each_full(list, (apply_type)apply)
 void list_for_each_full(struct linked_list *list, void (*apply)(uint8_t *data));
 
-typedef void (*apply1_type)(uint8_t *data, uint8_t *param);
+//See list_for_each()
 #define list_for_each1(list, apply, param) list_for_each1_full(list, (apply1_type)apply, (uint8_t *)param)
 void list_for_each1_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param), uint8_t *param);
 
-typedef void (*apply2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
+//See list_for_each()
 #define list_for_each2(list, apply, param1, param2) list_for_each2_full(list, (apply2_type)apply, (uint8_t *)param1, (uint8_t *)param2)
 void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
 
-typedef uint8_t *(*copy_type)(uint8_t *data);
+//Return a new list containing copies of each element that <equal> returns true for
+//<equal> should return:
+//1 if equal
+//0 if not
+//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
 #define list_filter(list, equal, copy) list_filter_full(list, (equal_type)equal, (copy_type)copy)
 struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*copy)(uint8_t *data));
 
+//See list_filter()
 #define list_filter1(list, equal, param, copy) list_filter1_full(list, (equal1_type)equal, (uint8_t *)param, (copy_type)copy)
 struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*copy)(uint8_t *data));
 
+//See list_filter()
 #define list_filter2(list, equal, param1, param2, copy) list_filter2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2, (copy_type)copy)
 struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
 		uint8_t *(*copy)(uint8_t *data));
 
-typedef void (*release_type)(uint8_t *data);
+//Iterate and free the elements of <list>, afterwards free the list
+//<release> should free the data structure in the element as well as any subcomponents
 #define list_free(list, release) list_free_full(list, (release_type)release)
 void list_free_full(struct linked_list *list, void (*release)(uint8_t *data));
+//^^^^^^^^^^^^^^^^^ End of linked_list data structure library
 
 uint32_t gen_control_serial_num(void);
 struct finsFrame *buildFinsFrame(void);

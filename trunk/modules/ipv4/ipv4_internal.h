@@ -2,7 +2,7 @@
  * ipv4_internal.h
  *
  *  Created on: Apr 24, 2013
- *      Author: root
+ *      Author: Jonathan Reed
  */
 
 #ifndef IPV4_INTERNAL_H_
@@ -299,6 +299,8 @@ void ipv4_store_free(struct ipv4_store *store);
 
 //void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint64_t dst_mac);
 //void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint64_t dst_mac, uint32_t dst_ip);
+
+#define IPV4_ROUTE_LIST_MAX 4096//8192
 
 #define IPV4_LIB "ipv4"
 #define IPV4_MAX_FLOWS 3

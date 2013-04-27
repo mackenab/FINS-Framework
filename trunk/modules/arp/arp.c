@@ -173,7 +173,7 @@ int arp_request_ip_test(struct arp_request *request, uint32_t *src_ip) {
 void arp_request_free(struct arp_request *request) {
 	PRINT_DEBUG("Entered: request=%p", request);
 
-	if (request->ff) {
+	if (request->ff != NULL) {
 		freeFinsFrame(request->ff);
 	}
 
@@ -223,7 +223,7 @@ void arp_cache_shutdown(struct arp_cache *cache) {
 void arp_cache_free(struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
-	if (cache->request_list) {
+	if (cache->request_list != NULL) {
 		list_free(cache->request_list, arp_request_free);
 	}
 
@@ -567,7 +567,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 			return;
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
@@ -596,7 +596,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 			data->flows[i] = table->flows[i];
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		data->link_list = table->link_list;
@@ -782,7 +782,7 @@ int arp_release(struct fins_module *module) {
 	}
 	free(data->cache_list);
 
-	if (data->link_list) {
+	if (data->link_list != NULL) {
 		list_free(data->link_list, free);
 	}
 	free(data);

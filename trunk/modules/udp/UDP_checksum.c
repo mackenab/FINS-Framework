@@ -4,7 +4,7 @@
  *  Created on: Jun 28, 2010
  *      Author: Abdallah Abdallah
  */
-#include "udp.h"
+#include "udp_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>

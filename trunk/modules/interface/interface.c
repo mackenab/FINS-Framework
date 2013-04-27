@@ -181,7 +181,7 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 			return;
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
@@ -210,7 +210,7 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 			data->flows[i] = table->flows[i];
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		data->link_list = table->link_list;
@@ -531,7 +531,7 @@ int interface_release(struct fins_module *module) {
 
 	//delete threads
 
-	if (data->link_list) {
+	if (data->link_list != NULL) {
 		list_free(data->link_list, free);
 	}
 	free(data);

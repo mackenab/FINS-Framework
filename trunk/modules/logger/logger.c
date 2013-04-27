@@ -6,6 +6,20 @@
  */
 #include "logger_internal.h"
 
+void *switch_to_logger(void *local) {
+	struct fins_module *module = (struct fins_module *) local;
+
+	PRINT_IMPORTANT("Entered: module=%p", module);
+
+	while (module->state == FMS_RUNNING) {
+		logger_get_ff(module);
+		PRINT_DEBUG("");
+	}
+
+	PRINT_IMPORTANT("Exited: module=%p", module);
+	return NULL;
+}
+
 void logger_get_ff(struct fins_module *module) {
 	struct logger_data *data = (struct logger_data *) module->data;
 
@@ -157,7 +171,7 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 			return;
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
@@ -186,7 +200,7 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 			data->flows[i] = table->flows[i];
 		}
 
-		if (data->link_list) {
+		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
 		data->link_list = table->link_list;
@@ -260,20 +274,6 @@ void logger_interrupt(struct fins_module *module) {
 	} else {
 		PRINT_ERROR("run over?");
 	}
-}
-
-void *switch_to_logger(void *local) {
-	struct fins_module *module = (struct fins_module *) local;
-
-	PRINT_IMPORTANT("Entered: module=%p", module);
-
-	while (module->state == FMS_RUNNING) {
-		logger_get_ff(module);
-		PRINT_DEBUG("");
-	}
-
-	PRINT_IMPORTANT("Exited: module=%p", module);
-	return NULL;
 }
 
 void logger_init_params(struct fins_module *module) {
@@ -394,7 +394,7 @@ int logger_release(struct fins_module *module) {
 	timer_delete(data->logger_to_data->tid);
 	free(data->logger_to_data);
 
-	if (data->link_list) {
+	if (data->link_list != NULL) {
 		list_free(data->link_list, free);
 	}
 	free(data);

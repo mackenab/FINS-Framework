@@ -79,11 +79,11 @@ int ipv4_request_ip_test(struct ipv4_request *request, uint32_t *src_ip) {
 void ipv4_request_free(struct ipv4_request *request) {
 	PRINT_DEBUG("Entered: request=%p", request);
 
-	if (request->ff) {
+	if (request->ff != NULL) {
 		freeFinsFrame(request->ff);
 	}
 
-	if (request->pdu) {
+	if (request->pdu != NULL) {
 		PRINT_DEBUG("Freeing pdu=%p", request->pdu);
 		free(request->pdu);
 	}
@@ -118,7 +118,7 @@ int ipv4_cache_non_seeking_test(struct ipv4_cache *cache) {
 void ipv4_cache_free(struct ipv4_cache *cache) {
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
-	if (cache->request_list) {
+	if (cache->request_list != NULL) {
 		list_free(cache->request_list, ipv4_request_free);
 	}
 
@@ -144,7 +144,7 @@ int ipv4_store_serial_test(struct ipv4_store *store, uint32_t *serial_num) {
 void ipv4_store_free(struct ipv4_store *store) {
 	PRINT_DEBUG("Entered: store=%p", store);
 
-	if (store->cache) {
+	if (store->cache != NULL) {
 		ipv4_cache_free(store->cache);
 	}
 
@@ -204,8 +204,13 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 		data->flows[i] = flows[i];
 	}
 
-	data->route_list = list_create(100); //TODO change num?
-	routing_table = IP4_get_routing_table();
+	data->route_list = list_create(IPV4_ROUTE_LIST_MAX);
+
+	//envi->route_list
+	//(struct route_record *)
+
+	//routing_table = IP4_get_routing_table();
+
 	PRINT_DEBUG("after ip4 sort route table");
 	memset(&data->stats, 0, sizeof(struct ip4_stats));
 
@@ -214,10 +219,6 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 	data->interface_list = list_create(IPV4_INTERFACE_LIST_MAX);
 	data->cache_list = list_create(IPV4_CACHE_LIST_MAX);
 
-	/* find a way to get the IP of the desired interface automatically from the system
-	 * or from a configuration file
-	 */
-	//ADDED mrd015 !!!!!
 	return 1;
 }
 
@@ -275,7 +276,7 @@ int ipv4_release(struct fins_module *module) {
 
 	list_free(data->route_list, free);
 
-	if (data->link_list) {
+	if (data->link_list != NULL) {
 		list_free(data->link_list, free);
 	}
 	free(data);

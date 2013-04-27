@@ -42,7 +42,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 		} else {
 			cache = (struct arp_cache *) list_find1(data->interface_list, arp_cache_ip_test, &dst_ip);
 			if (cache != NULL) {
-				if (cache->seeking) {
+				if (cache->seeking != 0) {
 					PRINT_DEBUG("cache seeking: cache=%p", cache);
 					if (list_has_space(cache->request_list)) {
 						struct arp_request *request = arp_request_create(ff, src_mac, src_ip);
@@ -243,7 +243,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 					struct arp_cache *cache = (struct arp_cache *) list_find1(data->cache_list, arp_cache_ip_test,src_ip);
 					if (cache != NULL) {
-						if (cache->seeking) {
+						if (cache->seeking != 0) {
 							PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
 							timer_stop(cache->to_data->tid);
 							cache->to_flag = 0;
@@ -305,7 +305,7 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 	struct arp_data *data = (struct arp_data *) module->data;
 	PRINT_DEBUG("Entered: cache=%p", cache);
 
-	if (cache->seeking) {
+	if (cache->seeking != 0) {
 		if (cache->retries < ARP_RETRIES) {
 			uint64_t dst_mac = ARP_MAC_BROADCAST;
 			uint32_t dst_ip = cache->addr_ip;

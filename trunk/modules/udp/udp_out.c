@@ -4,14 +4,7 @@
  *  Created on: Jul 2, 2010
  *      Author: Abdallah Abdallah
  */
-#include "udp.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-
-#include <finstypes.h>
+#include "udp_internal.h"
 
 /**
  * @brief Creates a new FDF to be sent to the dataswitch for all outgoing data, data headed to another computer
@@ -23,13 +16,8 @@
  *placed in the new FDF, the checksum is first calculated and placed within the UDP datagram's header.
  */
 
-extern struct udp_statistics udpStat;
-
-extern struct udp_sent_list *udp_sent_packet_list;
-
-void udp_out_fdf(struct finsFrame* ff) {
-
-	//struct finsFrame* newFF;
+void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
+	struct udp_data *data = (struct udp_data *) module->data;
 	//struct udp_metadata_parsed parsed_meta;
 
 	//struct udp_packet packet_host;
@@ -47,7 +35,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 		PRINT_ERROR("shouldn't reach here");
 		return;
 	}
-	if (ff->destinationID.id != UDP_ID) {
+	if (ff->destinationID != module->index) { //TODO update to get from metadata
 		// release FDF here
 		PRINT_ERROR("shouldn't reach here");
 		return;
@@ -129,8 +117,7 @@ void udp_out_fdf(struct finsFrame* ff) {
 	//newFF = create_ff(DATA, DIR_DOWN, IPV4_ID, packet_length, udp_dataunit, meta);
 
 	//ff->dataOrCtrl = DATA;
-	ff->destinationID.id = IPV4_ID;
-	ff->destinationID.next = NULL;
+	//ff->destinationID = IPV4_ID;
 
 	//ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = packet_length;
@@ -141,16 +128,16 @@ void udp_out_fdf(struct finsFrame* ff) {
 
 	//print_finsFrame(newFF);
 	//print_finsFrame(ff);
-	udpStat.totalSent++;
+	data->udpStat.totalSent++;
 
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
-	if (udp_to_switch(ff)) {
+	if (module_to_switch(module, ff)) {
 		struct udp_sent *sent = udp_sent_create(ff_clone, src_ip, src_port, dst_ip, dst_port);
 
-		if (udp_sent_list_has_space(udp_sent_packet_list)) {
-			udp_sent_list_append(udp_sent_packet_list, sent);
-			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max);
+		if (list_has_space(data->sent_packet_list)) {
+			list_append(data->sent_packet_list, sent);
+			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
 
 			gettimeofday(&sent->stamp, 0);
 		} else {
@@ -159,11 +146,11 @@ void udp_out_fdf(struct finsFrame* ff) {
 
 			//if (!udp_sent_list_has_space(udp_sent_packet_list)) {
 			PRINT_DEBUG("Dropping head of sent_packet_list");
-			struct udp_sent *old = udp_sent_list_remove_front(udp_sent_packet_list);
+			struct udp_sent *old = (struct udp_sent *) list_remove_front(data->sent_packet_list);
 			udp_sent_free(old);
 			//}
-			udp_sent_list_append(udp_sent_packet_list, sent);
-			PRINT_DEBUG ("sent_packet_list=%p, len=%u, max=%u", udp_sent_packet_list, udp_sent_packet_list->len, udp_sent_packet_list->max);
+			list_append(data->sent_packet_list, sent);
+			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
 
 			gettimeofday(&sent->stamp, 0);
 		}
