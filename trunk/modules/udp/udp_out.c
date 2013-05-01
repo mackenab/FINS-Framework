@@ -25,7 +25,7 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint16_t packet_length;
 
 	/* read the FDF and make sure everything is correct*/
-	if (ff->dataOrCtrl != DATA) {
+	if (ff->dataOrCtrl != FF_DATA) {
 		// release FDF here
 		PRINT_ERROR("shouldn't reach here");
 		return;
@@ -76,9 +76,9 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint32_t src_ip;
 
 	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "send_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "send_src_ipv4", &src_ip);
 	secure_metadata_readFromElement(meta, "send_src_port", &src_port);
-	secure_metadata_readFromElement(meta, "send_dst_ip", &dst_ip);
+	secure_metadata_readFromElement(meta, "send_dst_ipv4", &dst_ip);
 	secure_metadata_readFromElement(meta, "send_dst_port", &dst_port);
 
 	uint32_t protocol = UDP_PROTOCOL;
@@ -112,55 +112,41 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	//ff->dataFrame.pdu = udp_dataunit;
 	/* creates a new FDF to be sent out */
 	PRINT_DEBUG("%p", udp_dataunit);
-	//(int)ff->dataFrame.pdu);
 
-	//newFF = create_ff(DATA, DIR_DOWN, IPV4_ID, packet_length, udp_dataunit, meta);
-
-	//ff->dataOrCtrl = DATA;
-	//ff->destinationID = IPV4_ID;
-
-	//ff->dataFrame.directionFlag = DIR_DOWN;
 	ff->dataFrame.pduLength = packet_length;
 	ff->dataFrame.pdu = udp_dataunit;
-	//ff->metaData = meta;
 
-	//PRINT_DEBUG("newff=0x%x, pdu=0x%x", (int)newFF, (int)newFF->dataFrame.pdu);
-
-	//print_finsFrame(newFF);
-	//print_finsFrame(ff);
 	data->udpStat.totalSent++;
 
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
-	if (module_to_switch(module, ff)) {
-		struct udp_sent *sent = udp_sent_create(ff_clone, src_ip, src_port, dst_ip, dst_port);
-
-		if (list_has_space(data->sent_packet_list)) {
-			list_append(data->sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
-
-			gettimeofday(&sent->stamp, 0);
-		} else {
-			//PRINT_DEBUG("Clearing sent_packet_list");
-			//udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT);
-
-			//if (!udp_sent_list_has_space(udp_sent_packet_list)) {
-			PRINT_DEBUG("Dropping head of sent_packet_list");
-			struct udp_sent *old = (struct udp_sent *) list_remove_front(data->sent_packet_list);
-			udp_sent_free(old);
-			//}
-			list_append(data->sent_packet_list, sent);
-			PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
-
-			gettimeofday(&sent->stamp, 0);
-		}
-	} else {
-		PRINT_ERROR("todo error");
-		freeFinsFrame(ff_clone);
+	//TODO add switch & move between ipv4/ipv6
+	if (!module_send_flow(module, ff, UDP_FLOW_IPV4)) {
+		PRINT_ERROR("send to switch error, ff=%p", ff);
 		freeFinsFrame(ff);
 	}
+	struct udp_sent *sent = udp_sent_create(ff_clone, src_ip, src_port, dst_ip, dst_port);
 
-	//PRINT_DEBUG("freeing: ff=%p", ff);
-	PRINT_DEBUG("freeing: pdu=%p", pdu);
+	if (list_has_space(data->sent_packet_list)) {
+		list_append(data->sent_packet_list, sent);
+		PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
+
+		gettimeofday(&sent->stamp, 0);
+	} else {
+		//PRINT_DEBUG("Clearing sent_packet_list");
+		//udp_sent_list_gc(udp_sent_packet_list, UDP_MSL_TO_DEFAULT);
+
+		//if (!udp_sent_list_has_space(udp_sent_packet_list)) {
+		PRINT_DEBUG("Dropping head of sent_packet_list");
+		struct udp_sent *old = (struct udp_sent *) list_remove_front(data->sent_packet_list);
+		udp_sent_free(old);
+		//}
+		list_append(data->sent_packet_list, sent);
+		PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
+
+		gettimeofday(&sent->stamp, 0);
+	}
+
+	PRINT_DEBUG("Freeing: pdu=%p", pdu);
 	free(pdu);
 }

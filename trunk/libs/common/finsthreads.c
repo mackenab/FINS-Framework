@@ -30,7 +30,7 @@ void *worker_thread(void *local) {
 				worker->work = request->work;
 				worker->local = request->local;
 
-				PRINT_DEBUG("freeing: request=%p", request);
+				PRINT_DEBUG("Freeing: request=%p", request);
 				free(request);
 				sem_post(worker->inactive_sem);
 			} else {

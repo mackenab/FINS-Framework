@@ -118,42 +118,6 @@ int check_valid_arp(struct arp_message *msg) {
 			&& (msg->target_IP_addrs != ARP_IP_NULL);
 }
 
-struct arp_interface *arp_interface_create(uint64_t addr_mac, uint32_t addr_ip) {
-	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", addr_mac, addr_ip);
-
-	struct arp_interface *interface = (struct arp_interface *) secure_malloc(sizeof(struct arp_interface));
-	interface->addr_mac = addr_mac;
-	interface->addr_ip = addr_ip;
-
-	PRINT_DEBUG("Exited: mac=0x%llx, ip=%u, interface=%p", addr_mac, addr_ip, interface);
-	return interface;
-}
-
-int arp_interface_ip_test(struct arp_interface *interface, uint32_t *addr_ip) {
-	return interface->addr_ip == *addr_ip;
-}
-
-void arp_interface_free(struct arp_interface *interface) {
-	PRINT_DEBUG("Entered: interface=%p", interface);
-
-	free(interface);
-}
-
-int arp_register_interface(struct fins_module *module, uint64_t MAC_address, uint32_t IP_address) {
-	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
-
-	struct arp_data *data = (struct arp_data *) module->data;
-
-	if (list_has_space(data->interface_list)) {
-		struct arp_interface *interface = arp_interface_create(MAC_address, IP_address);
-		list_append(data->interface_list, interface);
-
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
 struct arp_request *arp_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip) {
 	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
 
@@ -180,12 +144,12 @@ void arp_request_free(struct arp_request *request) {
 	free(request);
 }
 
-struct arp_cache *arp_cache_create(uint32_t addr_ip, uint8_t *interrupt_flag, sem_t *event_sem) {
-	PRINT_DEBUG("Entered: ip=%u", addr_ip);
+struct arp_cache *arp_cache_create(uint32_t ip, uint8_t *interrupt_flag, sem_t *event_sem) {
+	PRINT_DEBUG("Entered: ip=%u", ip);
 
 	struct arp_cache *cache = (struct arp_cache *) secure_malloc(sizeof(struct arp_cache));
-	cache->addr_mac = ARP_MAC_NULL;
-	cache->addr_ip = addr_ip;
+	cache->mac = ARP_MAC_NULL;
+	cache->ip = ip;
 
 	cache->request_list = list_create(ARP_REQUEST_LIST_MAX);
 
@@ -201,7 +165,7 @@ struct arp_cache *arp_cache_create(uint32_t addr_ip, uint8_t *interrupt_flag, se
 	cache->to_data->sem = event_sem;
 	timer_create_to((struct to_timer_data *) cache->to_data);
 
-	PRINT_DEBUG("Exited: ip=%u, cache=%p, tid=%ld", addr_ip, cache, (long) cache->to_data->tid);
+	PRINT_DEBUG("Exited: ip=%u, cache=%p, tid=%ld", ip, cache, (long) cache->to_data->tid);
 	return cache;
 }
 
@@ -233,8 +197,8 @@ void arp_cache_free(struct arp_cache *cache) {
 	free(cache);
 }
 
-int arp_cache_ip_test(struct arp_cache *cache, uint32_t *addr_ip) {
-	return cache->addr_ip == *addr_ip;
+int arp_cache_ip_test(struct arp_cache *cache, uint32_t *ip) {
+	return cache->ip == *ip;
 }
 
 int arp_cache_non_seeking_test(struct arp_cache *cache) {
@@ -324,8 +288,8 @@ void print_cache(struct fins_module *module) { //TODO fix/update?
 	//struct arp_data *data = (struct arp_data *) module->data;
 	//PRINT_DEBUG("Host Interface:");
 	//ptr_elementInList = arp_cache_list;
-	//print_IP_addrs(ptr_elementInList->addr_ip);
-	//print_MAC_addrs(ptr_elementInList->addr_mac);
+	//print_IP_addrs(ptr_elementInList->ip);
+	//print_MAC_addrs(ptr_elementInList->mac);
 	//ptr_elementInList = ptr_elementInList->next; //move the pointer to the stored node
 	//print_neighbors(data->cache_list);
 	PRINT_DEBUG("");
@@ -345,8 +309,8 @@ void print_cache(struct fins_module *module) { //TODO fix/update?
  PRINT_DEBUG("List of addresses of neighbors:");
 
  while (ptr_elementInList != NULL) {
- print_IP_addrs(ptr_elementInList->addr_ip);
- print_MAC_addrs(ptr_elementInList->addr_mac);
+ print_IP_addrs(ptr_elementInList->ip);
+ print_MAC_addrs(ptr_elementInList->mac);
  }
  }
  */
@@ -366,7 +330,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 	secure_metadata_writeToElement(meta, "send_src_mac", &msg->sender_MAC_addrs, META_TYPE_INT64);
 
 	struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-	ff->dataOrCtrl = DATA;
+	ff->dataOrCtrl = FF_DATA;
 	ff->destinationID = NONE_INDEX; //INTERFACE_ID;
 	ff->metaData = meta;
 
@@ -451,19 +415,23 @@ void arp_get_ff(struct fins_module *module) {
 			exit(-1);
 		}
 
-		if (ff->dataOrCtrl == CONTROL) {
+		if (ff->dataOrCtrl == FF_CONTROL) {
 			arp_fcf(module, ff);
 			PRINT_DEBUG("");
-		} else if (ff->dataOrCtrl == DATA) {
+		} else if (ff->dataOrCtrl == FF_DATA) {
 			if (ff->dataFrame.directionFlag == DIR_UP) {
 				arp_in_fdf(module, ff);
 				PRINT_DEBUG("");
-			} else { //directionFlag==DIR_DOWN
+			} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 				//arp_out_fdf(ff); //TODO remove?
 				PRINT_ERROR("todo error");
+				freeFinsFrame(ff);
+			} else {
+				PRINT_ERROR("todo error");
+				freeFinsFrame(ff);
 			}
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 			exit(-1);
 		}
 	} else if (data->interrupt_flag) {
@@ -477,7 +445,7 @@ void arp_get_ff(struct fins_module *module) {
 }
 
 void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
@@ -570,8 +538,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
-		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
-		data->link_list = link_list;
+		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
 
 		ff->ctrlFrame.data = NULL;
 		break;
@@ -613,21 +580,21 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void arp_exec(struct fins_module *module, struct finsFrame *ff) {
-	uint32_t src_ip = 0;
-	uint32_t dst_ip = 0;
-
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case EXEC_ARP_GET_ADDR:
 		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
+		uint32_t src_ip;
+		uint32_t dst_ip;
+		//if_index?
 		secure_metadata_readFromElement(meta, "src_ip", &src_ip);
 		secure_metadata_readFromElement(meta, "dst_ip", &dst_ip);
 
 		arp_exec_get_addr(module, ff, src_ip, dst_ip);
-		//arp_exec_get_addr(ff, addr_ip);
+		//arp_exec_get_addr(ff, ip);
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
@@ -662,7 +629,7 @@ void *switch_to_arp(void *local) {
 		//	free(pff);
 	}
 
-	PRINT_IMPORTANT("Exited");
+	PRINT_IMPORTANT("Exited: module=%p", module);
 	return NULL;
 }
 
@@ -709,14 +676,16 @@ int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 		data->flows[i] = flows[i];
 	}
 
-	data->interface_list = list_create(ARP_INTERFACE_LIST_MAX);
-	data->cache_list = list_create(ARP_CACHE_LIST_MAX);
+	data->if_list = list_copy(envi->if_list, ifr_copy);
+	if (data->if_list->len > ARP_IF_LIST_MAX) {
+		PRINT_ERROR("todo");
+		struct linked_list *leftover = list_split(data->if_list, ARP_IF_LIST_MAX - 1);
+		list_free(leftover, free);
+	}
+	data->if_list->max = ARP_IF_LIST_MAX;
 
-	//TODO extract this from meta?
-	//set start-up vars from envi
-	//arp_init();
-	//arp_register_interface(my_host_mac_addr, my_host_ip_addr);
-	arp_register_interface(module, 0x10683f4f7467ull, IP4_ADR_P2H(192, 168, 1, 20));
+	//TODO extract cache_list from meta?
+	data->cache_list = list_create(ARP_CACHE_LIST_MAX);
 
 	return 1;
 }
@@ -753,7 +722,6 @@ int arp_shutdown(struct fins_module *module) {
 	sem_post(module->event_sem);
 
 	struct arp_data *data = (struct arp_data *) module->data;
-
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_arp_thread");
@@ -766,13 +734,10 @@ int arp_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	struct arp_data *data = (struct arp_data *) module->data;
-	//TODO free all module related mem
+	PRINT_IMPORTANT("if_list->len=%u", data->if_list->len);
+	list_free(data->if_list, ifr_free);
 
-	//delete threads
-	PRINT_IMPORTANT("arp_interface_num=%u", data->interface_list->len);
-	list_free(data->interface_list, arp_interface_free);
-
-	PRINT_IMPORTANT("arp_cache_num=%u", data->cache_list->len);
+	PRINT_IMPORTANT("cache_list->len=%u", data->cache_list->len);
 	struct arp_cache *cache;
 	while (!list_is_empty(data->cache_list)) {
 		cache = (struct arp_cache *) list_remove_front(data->cache_list);

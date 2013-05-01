@@ -119,7 +119,6 @@ struct udp_statistics {
 //unsigned short UDP_checksum(struct udp_packet *pcket, struct udp_metadata_parsed *meta);
 uint16_t UDP_checksum(struct udp_packet *pcket, uint32_t src_ip, uint32_t dst_ip);
 
-struct finsFrame *create_ff(int dataOrCtrl, int direction, int destID, int PDU_length, uint8_t *PDU, metadata *meta);
 int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 
 //static inline unsigned short from64to16(unsigned long x);
@@ -131,7 +130,10 @@ uint16_t UDP_checkSeparate(uint32_t src, uint32_t dest, uint16_t len, uint16_t p
 #define ERROR_ICMP_DEST_UNREACH 1
 
 #define UDP_LIB "udp"
-#define UDP_MAX_FLOWS 0
+#define UDP_MAX_FLOWS 	3
+#define UDP_FLOW_IPV4 	0
+#define UDP_FLOW_ICMP 	1
+#define UDP_FLOW_DAEMON	2
 
 struct udp_data {
 	struct linked_list *link_list;

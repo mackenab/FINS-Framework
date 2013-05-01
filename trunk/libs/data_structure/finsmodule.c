@@ -72,72 +72,77 @@ void module_destroy_structs(struct fins_module *module) {
 	metadata_destroy(module->params);
 }
 
-int module_to_switch(struct fins_module *module, struct finsFrame *ff) {
+void module_to_switch_full(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s', ff=%p, meta=%p", module, module->id, module->name, ff, ff->metaData);
 	int ret;
 
 	while ((ret = sem_wait(module->output_sem)) && errno == EINTR)
 		;
 	if (ret != 0) {
-		PRINT_ERROR("output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d", module, module->id, module->name, ff, ff->metaData, ret);
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n", file, func, line, module, module->id,
+				module->name, ff, ff->metaData, ret);
+		fflush(stdout);
+#endif
 		exit(-1);
 	}
 	if (write_queue(ff, module->output_queue)) {
 		PRINT_DEBUG("Exited: module=%p, id=%d, name='%s', 1", module, module->id, module->name);
 		sem_post(switch_event_sem);
 		sem_post(module->output_sem);
-		return 1;
 	} else {
-		PRINT_ERROR("Exited: module=%p, id=%d, name='%s', ff=%p, 0", module, module->id, module->name, ff);
 		sem_post(module->output_sem);
-		return 0;
+#ifdef ERROR
+		printf("ERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n", file, func, line, module, module->id, module->name, ff);
+		fflush(stdout);
+#endif
+		exit(-1);
 	}
 }
 
-int module_send_flow(struct fins_module *module, struct fins_module_table *table, struct finsFrame *ff, uint32_t flow) {
-	PRINT_DEBUG("Entered: module=%p, table=%p, ff=%p, flow=%u", module, table, ff, flow);
+//exits - problem sending
+//0 - flow outside range, no link
+//dst_num - sent all ff
+int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t flow) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, flow=%u", module, ff, flow);
+	struct fins_module_table *table = (struct fins_module_table *) module->data;
 
 	PRINT_DEBUG("table: flows_num=%u", table->flows_num);
-
-	if (!table->flows_num) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-		return 0;
-	}
-
 	if (flow >= table->flows_num) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
+		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	}
 
-	PRINT_DEBUG("*table->flows=%u", *table->flows);
-	PRINT_DEBUG("table->flows[0]=%u", table->flows[0]);
-
-	if (!table->flows[flow]) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
+	PRINT_DEBUG("table->flows[%u]=%u", flow, table->flows[flow]);
+	if (table->flows[flow] == LINK_NULL) {
+		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	}
 
 	struct link_record *link = (struct link_record *) list_find1(table->link_list, link_id_test, &table->flows[flow]);
 	if (link == NULL) {
-		PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
+		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	}
+	PRINT_DEBUG("link=%p, id=%u, src=%u, dst_num=%u", link, link->id, link->src_index, link->dsts_num);
 
-	if (link->dsts_num > 1) {
+	if (link->dsts_num == 0) {
+		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
+		return 0;
+	} else {
 		struct finsFrame *ff_copy;
 
 		int i;
 		for (i = 1; i < link->dsts_num; i++) {
 			ff_copy = cloneFinsFrame(ff); //TODO Has problem if you're actually passing pointers, as it won't copy it
 			ff_copy->destinationID = link->dsts_index[i];
-			if (!module_to_switch(module, ff_copy)) {
-				freeFinsFrame(ff_copy);
-				PRINT_DEBUG("Exited: module=%p, table=%p, ff=%p, flow=%u, 0", module, table, ff, flow);
-				return 0;
-			}
+			module_to_switch(module, ff_copy);
 		}
-	}
 
-	ff->destinationID = link->dsts_index[0];
-	return module_to_switch(module, ff);
+		ff->destinationID = link->dsts_index[0];
+		module_to_switch(module, ff);
+
+		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, link->dsts_num);
+		return link->dsts_num;
+	}
 }

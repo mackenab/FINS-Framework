@@ -11,9 +11,12 @@
  *
  * Responsible for parsing, checking reassembling and passing packets out.
  */
-void IP4_in(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, int len) {
-	PRINT_DEBUG("Entered: ff=%p, ppacket=%p, len=%d", ff, ppacket, len);
+void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct ipv4_data *data = (struct ipv4_data *) module->data;
+
+	struct ip4_packet* ppacket = (struct ip4_packet*) ff->dataFrame.pdu;
+	int len = ff->dataFrame.pduLength;
 
 	data->stats.receivedtotal++;
 	/* Parse the header. Some of the items only needed to be inserted into FDF meta data*/
@@ -31,8 +34,8 @@ void IP4_in(struct fins_module *module, struct finsFrame *ff, struct ip4_packet*
 	header.protocol = ppacket->ip_proto;
 	PRINT_DEBUG("protocol number is %d", header.protocol);
 	header.checksum = ntohs(ppacket->ip_cksum);
-
 	PRINT_DEBUG("");
+
 	/** Check packet version */
 	if (header.version != IP4_VERSION) {
 		data->stats.badver++;
@@ -95,17 +98,22 @@ void IP4_in(struct fins_module *module, struct finsFrame *ff, struct ip4_packet*
 
 	PRINT_DEBUG("src=%u, dst=%u (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
-	if (IP4_dest_check(header.destination) == 0) { //TODO update away from class system
-		PRINT_DEBUG("");
-
-		if (IP4_forward(module, ff, ppacket, header.destination, len)) { //TODO disabled atm
-			PRINT_DEBUG("");
-
-			return;
+	if (header.destination != IPV4_ADDR_ANY_IP && header.destination != IPV4_ADDR_EVERY_IP) { //TODO check this
+		struct addr_record *addr = (struct addr_record *) list_find1(data->addr_list, addr_ipv4_test, &header.destination);
+		if (addr == NULL) {
+			addr = (struct addr_record *) list_find1(data->addr_list, addr_bdcv4_test, &header.destination);
+			if (addr == NULL) {
+				if (IP4_forward(module, ff, ppacket, header.destination, len)) { //TODO disabled atm
+					data->stats.forwarded++;
+					PRINT_DEBUG("");
+				} else {
+					data->stats.droppedtotal++;
+					PRINT_DEBUG("");
+					freeFinsFrame(ff);
+				}
+				return;
+			}
 		}
-		data->stats.droppedtotal++;
-		//free ppacket
-		return;
 	}
 	PRINT_DEBUG("");
 
@@ -128,10 +136,9 @@ void IP4_in(struct fins_module *module, struct finsFrame *ff, struct ip4_packet*
 		data->stats.delivered++;
 		PRINT_DEBUG("");
 
-		IP4_send_fdf_in(module, ff, &header, ppacket);
-		//free ppacket
-		return;
+		ipv4_send_fdf_in(module, ff, &header, ppacket);
 	} else {
+		PRINT_ERROR("todo");
 		//TODO fix this!! convert to module based
 		PRINT_DEBUG("Packet ID %d is fragmented", header.id);
 		struct ip4_packet* ppacket_reassembled = IP4_reass(&header, ppacket);
@@ -139,8 +146,7 @@ void IP4_in(struct fins_module *module, struct finsFrame *ff, struct ip4_packet*
 		if (ppacket_reassembled != NULL) {
 			data->stats.delivered++;
 			data->stats.reassembled++;
-			IP4_send_fdf_in(module, ff, &header, ppacket_reassembled);
+			ipv4_send_fdf_in(module, ff, &header, ppacket_reassembled);
 		}
-		return;
 	}
 }

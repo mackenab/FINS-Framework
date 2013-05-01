@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "finsdebug.h"
 #include "metadata.h"
@@ -54,12 +55,14 @@
 #define CTRL_EXEC_REPLY 7		// a reply to the above, if necessary
 #define CTRL_ERROR 8 			// error message; ICMP msg for example
 //frame type - finsframe.dataOrCtrl values
-#define DATA 0
-#define CONTROL 1
+#define FF_NONE 	0
+#define FF_DATA 	1
+#define FF_CONTROL 	2
 
 //frame direction - finsDataFrame.directionFlag values
-#define DIR_UP 0	// ingress network data (interface -> app)
-#define DIR_DOWN 1	// egress network data (app -> interface)
+#define DIR_NONE 	0
+#define DIR_UP 		1	// ingress network data (interface -> app)
+#define DIR_DOWN 	2	// egress network data (app -> interface)
 //this should be removed -MST
 struct destinationList {
 	uint8_t id;
@@ -162,6 +165,9 @@ int true_test(uint8_t *data);
 //A test that always returns false
 int false_test(uint8_t *data);
 
+//A function (apply/release) that does nothing
+void nop_func(uint8_t *data);
+
 //<equal> should return:
 //1 if equal
 //0 if not
@@ -251,6 +257,12 @@ uint32_t list_space(struct linked_list *list);
 #define list_copy(list, copy) list_copy_full(list, (copy_type)copy)
 struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(uint8_t *data));
 
+//Append as many elements of <list2> to <list1> up to its max, return true if all of <list2> joined to <list1>
+int list_join(struct linked_list *list1, struct linked_list *list2);
+
+//Remove all elements of <list> after <index> & return rest as separate list
+struct linked_list *list_split(struct linked_list *list, uint32_t index);
+
 //Add the pointer <data> to the list, using the comparer, returns true if inserts, false if problem
 //<comparer> should return:
 //-1 = less than, goes before
@@ -259,7 +271,7 @@ struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(ui
 #define list_add(list, data, comparer) list_add_full(list, (uint8_t *)data, (comparer_type)comparer)
 int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8_t *data1, uint8_t *data2));
 
-//Finds the first element that satisfies <equal>
+//Finds & returns the first element that satisfies <equal>
 //<equal> should return:
 //1 if equal
 //0 if not
@@ -289,6 +301,21 @@ struct linked_list *list_find_all1_full(struct linked_list *list, int (*equal)(u
 #define list_find_all2(list, equal, param1, param2) list_find_all2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
 struct linked_list *list_find_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1,
 		uint8_t *param2);
+
+//Finds & returns the last element that satisfies <equal>
+//<equal> should return:
+//1 if equal
+//0 if not
+#define list_find_last(list, equal) list_find_last_full(list, (equal_type)equal)
+uint8_t *list_find_last_full(struct linked_list *list, int (*equal)(uint8_t *data));
+
+//See list_find_last()
+#define list_find_last1(list, equal, param) list_find_last1_full(list, (equal1_type)equal, (uint8_t *)param)
+uint8_t *list_find_last1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param);
+
+//See list_find_last()
+#define list_find_last2(list, equal, param1, param2) list_find_last2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
+uint8_t *list_find_last2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
 
 //Iterates through list and calls <apply> on each element
 //<apply> should do something on the element, removing an element in <apply> is permissible
@@ -364,8 +391,8 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt);
 
 #define MAX_INTERFACES 30
 #define MAX_FAMILIES 64
-#define MAX_ADDRESSES 8192
-#define MAX_ROUTES 8192
+#define MAX_ADDRESSES 1024
+#define MAX_ROUTES 1024
 
 struct addr_record { //for a particular address
 	uint32_t if_index;
@@ -375,13 +402,19 @@ struct addr_record { //for a particular address
 	struct sockaddr_storage gw; //gateway
 	struct sockaddr_storage bdc; //broadcast
 	struct sockaddr_storage dst; //end-to-end dst
-//union {}; //bdc & dst can be unioned, not done for simplicity
 };
+struct addr_record *addr_copy(struct addr_record *addr);
+int addr_is_v4(struct addr_record *addr);
+int addr_ipv4_test(struct addr_record *addr, uint32_t *ip);
+int addr_bdcv4_test(struct addr_record *addr, uint32_t *ip);
+int addr_is_v6(struct addr_record *addr);
+int addr_ipv6_test(struct addr_record *addr, uint32_t *ip); //TODO
+int addr_bdcv6_test(struct addr_record *addr, uint32_t *ip); //TODO
 
-void set_addr4(struct sockaddr_storage *addr, uint32_t val);
-int addr_is_addr4(struct addr_record *addr);
-void set_addr6(struct sockaddr_storage *addr, uint32_t val);
-int addr_is_addr6(struct addr_record *addr);
+void addr4_set_addr(struct sockaddr_storage *addr, uint32_t val);
+uint32_t addr4_get_addr(struct sockaddr_storage *addr);
+void addr6_set_addr(struct sockaddr_storage *addr, uint32_t val); //TODO
+uint8_t *addr6_get_addr(struct sockaddr_storage *addr); //TODO
 
 struct if_record { //for an interface
 	//inherent
@@ -397,7 +430,10 @@ struct if_record { //for an interface
 
 	struct linked_list *addr_list;
 };
+struct if_record *ifr_copy(struct if_record *ifr);
 int ifr_index_test(struct if_record *ifr, uint32_t *index);
+int ifr_ipv4_test(struct if_record *ifr, uint32_t *ip);
+int ifr_ipv6_test(struct if_record *ifr, uint32_t *ip); //TODO
 void ifr_free(struct if_record *ifr);
 
 struct route_record {
@@ -406,12 +442,13 @@ struct route_record {
 	struct sockaddr_storage dst; //end-to-end dst
 	struct sockaddr_storage mask; //network mask
 	struct sockaddr_storage gw; //gateway
-	struct sockaddr_storage ip; //ip //TODO remove?
-
-	uint32_t metric; //TODO remove?
-	uint32_t timeout; //TODO remove?
+	uint32_t metric;
+	uint32_t timeout;
 	struct timeval *stamp;
 };
+int route_is_addr4(struct route_record *route);
+int route_is_addr6(struct route_record *route);
+struct route_record *route_copy(struct route_record *route);
 
 struct cache_record {
 	struct sockaddr_storage src;
@@ -425,8 +462,6 @@ struct cache_record {
 };
 
 struct envi_record {
-	uint32_t any_ip_addr; //change to sockaddr_storage? or any_ip_addr & any_ip_addr6?
-	//struct if_record if_list[MAX_INTERFACES];
 	struct linked_list *if_list; //list of if_record, for a list of interfaces
 	struct if_record *if_loopback;
 	struct if_record *if_main;

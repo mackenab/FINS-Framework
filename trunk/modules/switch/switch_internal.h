@@ -11,7 +11,8 @@
 #include "switch.h"
 
 #define SWITCH_LIB "switch"
-#define SWITCH_MAX_FLOWS 0 //TODO change?
+#define SWITCH_MAX_FLOWS 0
+
 struct switch_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
@@ -33,5 +34,6 @@ int switch_unregister_module(struct fins_module *module, int index);
 
 void switch_process_ff(struct fins_module *module, struct finsFrame *ff);
 void switch_fcf(struct fins_module *module, struct finsFrame *ff);
+void switch_set_param(struct fins_module *module, struct finsFrame *ff);
 
 #endif /* SWITCH_INTERNAL_H_ */

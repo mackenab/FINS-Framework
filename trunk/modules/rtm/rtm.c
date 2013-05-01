@@ -7,15 +7,15 @@
 
 #include "rtm_internal.h"
 
-int cmd_serial_test(struct rtm_command *cmd, uint32_t *serial_num) {
+int rtm_cmd_serial_test(struct rtm_command *cmd, uint32_t *serial_num) {
 	return cmd->serial_num == *serial_num;
 }
 
-int console_id_test(struct rtm_console *console, uint32_t *id) {
+int rtm_console_id_test(struct rtm_console *console, uint32_t *id) {
 	return console->id == *id;
 }
 
-int console_fd_test(struct rtm_console *console, int *fd) {
+int rtm_console_fd_test(struct rtm_console *console, int *fd) {
 	return console->fd == *fd;
 }
 
@@ -23,7 +23,7 @@ void console_free(struct rtm_console *console) {
 	PRINT_DEBUG("Entered: console=%p", console);
 
 	if (console->addr != NULL) {
-		PRINT_DEBUG("Freeing addr=%p", console->addr);
+		PRINT_DEBUG("Freeing: addr=%p", console->addr);
 		free(console->addr);
 	}
 
@@ -147,7 +147,7 @@ void *console_to_rtm(void *local) {
 									(poll_fds[i].revents & POLLIN) > 0, (poll_fds[i].revents & POLLPRI) > 0, (poll_fds[i].revents & POLLOUT) > 0, (poll_fds[i].revents & POLLERR) > 0, (poll_fds[i].revents & POLLHUP) > 0, (poll_fds[i].revents & POLLNVAL) > 0, (poll_fds[i].revents & POLLRDNORM) > 0, (poll_fds[i].revents & POLLRDBAND) > 0, (poll_fds[i].revents & POLLWRNORM) > 0, (poll_fds[i].revents & POLLWRBAND) > 0);
 						}
 
-						console = (struct rtm_console *) list_find1(data->console_list, console_fd_test, &poll_fds[i].fd);
+						console = (struct rtm_console *) list_find1(data->console_list, rtm_console_fd_test, &poll_fds[i].fd);
 						if (console != NULL) {
 							if (poll_fds[i].revents & (POLLERR | POLLNVAL)) {
 								//TODO ??
@@ -315,7 +315,7 @@ void rtm_process_cmd(struct fins_module *module, struct rtm_console *console, ui
 	PRINT_IMPORTANT("Operation unsupported: console=%p, id=%u, op='%s'", console, console->id, cmd->words[INDEX_OP]);
 	rtm_send_error(console->fd, "See 'help', unsupported operation", (uint32_t) strlen((char *) cmd->words[INDEX_OP]), cmd->words[INDEX_OP]);
 
-	PRINT_DEBUG("Freeing cmd=%p", cmd);
+	PRINT_DEBUG("Freeing: cmd=%p", cmd);
 	free(cmd);
 }
 
@@ -363,11 +363,11 @@ metadata_element *match_params(metadata *params, uint8_t **words, int path_end) 
 	return elem;
 }
 
-int rtm_send_fcf(struct fins_module *module, struct rtm_command *cmd, metadata *meta) {
+void rtm_send_fcf(struct fins_module *module, struct rtm_command *cmd, metadata *meta) {
 	PRINT_DEBUG("Entered: module=%p, cmd=%p, meta=%p", module, cmd, meta);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-	ff->dataOrCtrl = CONTROL;
+	ff->dataOrCtrl = FF_CONTROL;
 	ff->destinationID = cmd->mod;
 	ff->metaData = meta;
 
@@ -380,13 +380,7 @@ int rtm_send_fcf(struct fins_module *module, struct rtm_command *cmd, metadata *
 	ff->ctrlFrame.data = NULL;
 
 	PRINT_DEBUG("Sending ff=%p", ff);
-	if (module_to_switch(module, ff)) {
-		return 1;
-	} else {
-		ff->metaData = NULL;
-		freeFinsFrame(ff);
-		return 0;
-	}
+	module_to_switch(module, ff);
 }
 
 void rtm_process_help(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {
@@ -416,7 +410,7 @@ void rtm_process_help(struct fins_module *module, struct rtm_console *console, s
 		PRINT_IMPORTANT("msg='%s'", msg);
 		rtm_send_text(console->fd, (char *) msg);
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		PRINT_DEBUG("Freeing: cmd=%p", cmd);
 		free(cmd);
 		return;
 	}
@@ -430,7 +424,7 @@ void rtm_process_help(struct fins_module *module, struct rtm_console *console, s
 				PRINT_IMPORTANT("msg='%s'", msg);
 				rtm_send_text(console->fd, (char *) msg);
 
-				PRINT_DEBUG("Freeing cmd=%p", cmd);
+				PRINT_DEBUG("Freeing: cmd=%p", cmd);
 				free(cmd);
 				return;
 			}
@@ -516,15 +510,12 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 //uint32_t src_ip = 0;
 //secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
 
-	if (rtm_send_fcf(module, cmd, meta)) {
-		if (list_has_space(data->cmd_list)) {
-			list_append(data->cmd_list, cmd);
-		} else {
-			PRINT_ERROR("todo error");
-		}
+	rtm_send_fcf(module, cmd, meta);
+
+	if (list_has_space(data->cmd_list)) {
+		list_append(data->cmd_list, cmd);
 	} else {
 		PRINT_ERROR("todo error");
-		metadata_destroy(meta);
 	}
 
 //rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
@@ -602,15 +593,12 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 //uint32_t src_ip = 0;
 //secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
 
-	if (rtm_send_fcf(module, cmd, meta)) {
-		if (list_has_space(data->cmd_list)) {
-			list_append(data->cmd_list, cmd);
-		} else {
-			PRINT_ERROR("todo error");
-		}
+	rtm_send_fcf(module, cmd, meta);
+
+	if (list_has_space(data->cmd_list)) {
+		list_append(data->cmd_list, cmd);
 	} else {
 		PRINT_ERROR("todo error");
-		metadata_destroy(meta);
 	}
 
 //rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
@@ -753,15 +741,12 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 		break;
 	}
 
-	if (rtm_send_fcf(module, cmd, meta)) {
-		if (list_has_space(data->cmd_list)) {
-			list_append(data->cmd_list, cmd);
-		} else {
-			PRINT_ERROR("todo error");
-		}
+	rtm_send_fcf(module, cmd, meta);
+
+	if (list_has_space(data->cmd_list)) {
+		list_append(data->cmd_list, cmd);
 	} else {
 		PRINT_ERROR("todo error");
-		metadata_destroy(meta);
 	}
 
 //rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
@@ -862,16 +847,21 @@ void rtm_get_ff(struct fins_module *module) {
 			exit(-1);
 		}
 
-		if (ff->dataOrCtrl == CONTROL) {
+		if (ff->dataOrCtrl == FF_CONTROL) {
 			rtm_fcf(module, ff);
 			PRINT_DEBUG("");
-		} else if (ff->dataOrCtrl == DATA) {
+		} else if (ff->dataOrCtrl == FF_DATA) {
 			if (ff->dataFrame.directionFlag == DIR_UP) {
 				//rtm_in_fdf(module, ff);
 				PRINT_ERROR("todo error");
-			} else { //directionFlag==DIR_DOWN
+				freeFinsFrame(ff);
+			} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 				//rtm_out_fdf(module, ff);
 				PRINT_ERROR("todo error");
+				freeFinsFrame(ff);
+			} else {
+				PRINT_ERROR("todo error");
+				freeFinsFrame(ff);
 			}
 		} else {
 			PRINT_ERROR("todo error");
@@ -882,13 +872,13 @@ void rtm_get_ff(struct fins_module *module) {
 
 		rtm_interrupt(module); //TODO unused, implement or remove
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 		exit(-1);
 	}
 }
 
 void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 //TODO when recv FCF, pull params from meta to figure out connection, send through socket
 
@@ -983,8 +973,7 @@ void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
 		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
-		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
-		data->link_list = link_list;
+		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
 
 		ff->ctrlFrame.data = NULL;
 		break;
@@ -1031,11 +1020,11 @@ void rtm_set_param_reply(struct fins_module *module, struct finsFrame *ff) {
 	struct rtm_data *data = (struct rtm_data *) module->data;
 
 	secure_sem_wait(&data->shared_sem);
-	struct rtm_command *cmd = (struct rtm_command *) list_find1(data->cmd_list, cmd_serial_test, &ff->ctrlFrame.serial_num);
+	struct rtm_command *cmd = (struct rtm_command *) list_find1(data->cmd_list, rtm_cmd_serial_test, &ff->ctrlFrame.serial_num);
 	if (cmd != NULL) {
 		list_remove(data->cmd_list, cmd);
 
-		struct rtm_console *console = (struct rtm_console *) list_find1(data->console_list, console_id_test, &cmd->console_id);
+		struct rtm_console *console = (struct rtm_console *) list_find1(data->console_list, rtm_console_id_test, &cmd->console_id);
 		if (console != NULL) {
 			//TODO extract answer
 			if (ff->ctrlFrame.ret_val) {
@@ -1224,7 +1213,7 @@ int rtm_release(struct fins_module *module) {
 
 	struct rtm_data *data = (struct rtm_data *) module->data;
 //TODO free all module related mem
-//delete threads
+	list_free(data->cmd_list, free);
 
 	if (data->link_list != NULL) {
 		list_free(data->link_list, free);
@@ -1257,7 +1246,7 @@ int rtm_register_module(struct fins_module *module, struct fins_module *new_mod)
 }
 
 int rtm_unregister_module(struct fins_module *module, int index) {
-	PRINT_DEBUG("Entered: index=%d", index);
+	PRINT_DEBUG("Entered: module=%p, index=%d", module, index);
 
 	if (index < 0 || index > MAX_MODULES) {
 		PRINT_ERROR("todo error");

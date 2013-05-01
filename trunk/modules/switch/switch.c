@@ -84,7 +84,7 @@ void *switch_loop(void *local) {
 		sem_post(&data->overall->sem);
 	}
 
-	PRINT_IMPORTANT("Exited");
+	PRINT_IMPORTANT("Exited: module=%p", module);
 	return NULL;
 }
 
@@ -99,25 +99,30 @@ void switch_process_ff(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_ERROR("TODO: switch process received frames: ff=%p, meta=%p", ff, ff->metaData);
 	print_finsFrame(ff);
 
-	if (ff->dataOrCtrl == CONTROL) {
+	if (ff->dataOrCtrl == FF_CONTROL) {
 		switch_fcf(module, ff);
 		PRINT_DEBUG("");
-	} else if (ff->dataOrCtrl == DATA) {
+	} else if (ff->dataOrCtrl == FF_DATA) {
 		if (ff->dataFrame.directionFlag == DIR_UP) {
 			//switch_in_fdf(module, ff);
 			PRINT_DEBUG("todo");
-		} else { //directionFlag==DIR_DOWN
+			freeFinsFrame(ff);
+		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			//switch_out_fdf(ff);
 			PRINT_ERROR("todo");
+			freeFinsFrame(ff);
+		} else {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
 		}
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 		exit(-1);
 	}
 }
 
 void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
@@ -143,8 +148,7 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM (%d)", CTRL_SET_PARAM);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		switch_set_param(module, ff);
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
@@ -172,6 +176,83 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		break;
 	}
+}
+
+void switch_set_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	struct switch_data *data = (struct switch_data *) module->data;
+	int i;
+
+	switch (ff->ctrlFrame.param_id) {
+	case MOD_SET_PARAM_FLOWS:
+		PRINT_DEBUG("PARAM_FLOWS");
+		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
+		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+
+		if (module->flows_max < flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = flows_num;
+
+		for (i = 0; i < flows_num; i++) {
+			data->flows[i] = flows[i];
+		}
+
+		//freeFF frees flows
+		break;
+	case MOD_SET_PARAM_LINKS:
+		PRINT_DEBUG("PARAM_LINKS");
+		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+
+		if (data->link_list != NULL) {
+			list_free(data->link_list, free);
+		}
+		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
+
+		ff->ctrlFrame.data = NULL;
+		break;
+	case MOD_SET_PARAM_DUAL:
+		PRINT_DEBUG("PARAM_DUAL");
+
+		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
+
+		if (module->flows_max < table->flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = table->flows_num;
+
+		for (i = 0; i < table->flows_num; i++) {
+			data->flows[i] = table->flows[i];
+		}
+
+		if (data->link_list != NULL) {
+			list_free(data->link_list, free);
+		}
+		data->link_list = table->link_list;
+
+		//freeFF frees table
+		break;
+	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
+		break;
+	}
+
+	freeFinsFrame(ff);
 }
 
 void switch_init_params(struct fins_module *module) {
@@ -264,8 +345,11 @@ int switch_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	struct switch_data *data = (struct switch_data *) module->data;
-//TODO free all module related mem
+	//TODO free all module related mem
 
+	if (data->link_list != NULL) {
+		list_free(data->link_list, free);
+	}
 	free(data);
 	module_destroy_structs(module);
 	free(module);
@@ -298,7 +382,7 @@ int switch_register_module(struct fins_module *module, struct fins_module *new_m
 
 //TODO remove? deprecated
 int switch_unregister_module(struct fins_module *module, int index) {
-	PRINT_DEBUG("Entered: index=%d", index);
+	PRINT_DEBUG("Entered: module=%p, index=%d", module, index);
 
 	if (index < 0 || index > MAX_MODULES) {
 		PRINT_ERROR("todo error");

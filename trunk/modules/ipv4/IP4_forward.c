@@ -7,8 +7,10 @@
 #include "ipv4_internal.h"
 
 int IP4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length) {
-	PRINT_DEBUG("");
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct ipv4_data *data = (struct ipv4_data *) module->data;
+
+	return 0; //to disable
 
 	struct ip4_next_hop_info next_hop = IP4_next_hop(module, dest); //TODO fix this, returning stacked memory is dangerous
 	if (next_hop.interface >= 0) {

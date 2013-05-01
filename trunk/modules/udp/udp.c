@@ -116,24 +116,28 @@ void udp_get_ff(struct fins_module *module) {
 
 	data->udpStat.totalRecieved++;
 	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", data->udpStat.totalRecieved, ff, ff->metaData);
-	if (ff->dataOrCtrl == CONTROL) {
+	if (ff->dataOrCtrl == FF_CONTROL) {
 		udp_fcf(module, ff);
-	} else if (ff->dataOrCtrl == DATA) {
+		PRINT_DEBUG("");
+	} else if (ff->dataOrCtrl == FF_DATA) {
 		if (ff->dataFrame.directionFlag == DIR_UP) {
 			udp_in_fdf(module, ff);
 			PRINT_DEBUG("");
 		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			udp_out_fdf(module, ff);
 			PRINT_DEBUG("");
+		} else {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
 		}
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 		exit(-1);
 	}
 }
 
 void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
@@ -193,17 +197,89 @@ void udp_read_param(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_ERROR("todo");
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	struct udp_data *data = (struct udp_data *) module->data;
+	int i;
+
+	switch (ff->ctrlFrame.param_id) {
+	case MOD_SET_PARAM_FLOWS:
+		PRINT_DEBUG("PARAM_FLOWS");
+		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
+		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+
+		if (module->flows_max < flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = flows_num;
+
+		for (i = 0; i < flows_num; i++) {
+			data->flows[i] = flows[i];
+		}
+
+		//freeFF frees flows
+		break;
+	case MOD_SET_PARAM_LINKS:
+		PRINT_DEBUG("PARAM_LINKS");
+		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+
+		if (data->link_list != NULL) {
+			list_free(data->link_list, free);
+		}
+		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
+
+		ff->ctrlFrame.data = NULL;
+		break;
+	case MOD_SET_PARAM_DUAL:
+		PRINT_DEBUG("PARAM_DUAL");
+
+		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
+
+		if (module->flows_max < table->flows_num) {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+			return;
+		}
+		data->flows_num = table->flows_num;
+
+		for (i = 0; i < table->flows_num; i++) {
+			data->flows[i] = table->flows[i];
+		}
+
+		if (data->link_list != NULL) {
+			list_free(data->link_list, free);
+		}
+		data->link_list = table->link_list;
+
+		//freeFF frees table
+		break;
+	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
+		break;
+	}
+
 	freeFinsFrame(ff);
 }
 
 void udp_exec(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
 	uint32_t host_ip = 0;
 	uint32_t host_port = 0;
 	uint32_t rem_ip = 0;
 	uint32_t rem_port = 0;
-
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
@@ -233,7 +309,7 @@ void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void udp_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: ff=%p, host=%u/%u, rem=%u/%u", ff, host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, host=%u/%u, rem=%u/%u", module, ff, host_ip, host_port, rem_ip, rem_port);
 	struct udp_data *data = (struct udp_data *) module->data;
 
 	if (!list_is_empty(data->sent_packet_list)) {
@@ -245,7 +321,7 @@ void udp_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint3
 }
 
 void udp_error(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct udp_data *data = (struct udp_data *) module->data;
 
 	//uint32_t src_ip;
@@ -283,7 +359,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
-					//ff->dataOrCtrl = CONTROL;
+					//ff->dataOrCtrl = FF_CONTROL;
 					//ff->destinationID = DAEMON_ID;
 					//ff->metaData = meta_err;
 
@@ -327,7 +403,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
-					//ff->dataOrCtrl = CONTROL;
+					//ff->dataOrCtrl = FF_CONTROL;
 					//ff->destinationID = DAEMON_ID;
 					//ff->metaData = meta_err;
 

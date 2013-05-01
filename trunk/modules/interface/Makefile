@@ -10,7 +10,6 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module
 LOCAL_NAME := interface
 LOCAL_LIBS := common data_structure
-LOCAL_MODS := 
 LOCAL_OBJS := interface.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic

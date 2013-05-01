@@ -29,6 +29,8 @@
 
 //Needs to be 0 so that is loaded first
 #define NONE_INDEX 0
+#define LINK_NULL 0
+#define FLOW_NULL ((uint32_t) -1)
 
 typedef enum {
 	FMS_FREE = 0, FMS_INIT, FMS_RUNNING, FMS_PAUSED, FMS_SHUTDOWN
@@ -113,9 +115,10 @@ struct fins_module_table {
 
 void module_create_structs(struct fins_module *module);
 void module_destroy_structs(struct fins_module *module);
-int module_to_switch(struct fins_module *module, struct finsFrame *ff);
-int module_send_flow(struct fins_module *module, struct fins_module_table *table, struct finsFrame *ff, uint32_t flow);
-//solve problem where send FCF & it makes copies, doesn't have same serial_num
+
+#define module_to_switch(module, ff) module_to_switch_full(__FILE__, __FUNCTION__, __LINE__, module, ff)
+void module_to_switch_full(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff);
+int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t flow);
 
 //SET_PARAM / GET_PARAM
 #define MOD_GET_PARAM_FLOWS 0

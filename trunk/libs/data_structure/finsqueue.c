@@ -43,7 +43,7 @@ int TerminateFinsQueue(finsQueue Q) {
 		for (i = min; i <= max; i++) {
 			if (Q->Array[i]) {
 				/*
-				 if (Q->Array[i]->dataOrCtrl == DATA) {
+				 if (Q->Array[i]->dataOrCtrl == FF_DATA) {
 				 if (Q->Array[i]->dataFrame.pdu) {
 				 free(Q->Array[i]->dataFrame.pdu);
 				 }
@@ -68,7 +68,7 @@ int TerminateFinsQueue(finsQueue Q) {
 		for (i = max; i < Q->Capacity; i++) {
 			if (Q->Array[i]) {
 				/*
-				 if (Q->Array[i]->dataOrCtrl == DATA) {
+				 if (Q->Array[i]->dataOrCtrl == FF_DATA) {
 				 if (Q->Array[i]->dataFrame.pdu) {
 				 free(Q->Array[i]->dataFrame.pdu);
 				 }
@@ -89,7 +89,7 @@ int TerminateFinsQueue(finsQueue Q) {
 		for (i = 0; i <= min; i++) {
 			if (Q->Array[i]) {
 				/*
-				 if (Q->Array[i]->dataOrCtrl == DATA) {
+				 if (Q->Array[i]->dataOrCtrl == FF_DATA) {
 				 if (Q->Array[i]->dataFrame.pdu) {
 				 free(Q->Array[i]->dataFrame.pdu);
 				 }

@@ -17,140 +17,9 @@ void *switch_to_ipv4(void *local) {
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited");
-	//pthread_exit(NULL);
+	PRINT_IMPORTANT("Exited: module=%p", module);
 	return NULL;
 }
-
-//################ ARP/interface stuff //TODO move to common?
-struct ipv4_interface *ipv4_interface_create(uint64_t addr_mac, uint32_t addr_ip) {
-	PRINT_DEBUG("Entered: mac=0x%llx, ip=%u", addr_mac, addr_ip);
-
-	struct ipv4_interface *interface = (struct ipv4_interface *) secure_malloc(sizeof(struct ipv4_interface));
-	interface->addr_mac = addr_mac;
-	interface->addr_ip = addr_ip;
-
-	PRINT_DEBUG("Exited: mac=0x%llx, ip=%u, interface=%p", addr_mac, addr_ip, interface);
-	return interface;
-}
-
-int ipv4_interface_ip_test(struct ipv4_interface *interface, uint32_t *addr_ip) {
-	return interface->addr_ip == *addr_ip;
-}
-
-void ipv4_interface_free(struct ipv4_interface *interface) {
-	PRINT_DEBUG("Entered: interface=%p", interface);
-
-	free(interface);
-}
-
-int ipv4_register_interface(struct fins_module *module, uint64_t MAC_address, uint32_t IP_address) {
-	PRINT_DEBUG("Registering Interface: MAC=0x%llx, IP=%u", MAC_address, IP_address);
-
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
-
-	if (list_has_space(data->interface_list)) {
-		struct ipv4_interface *interface = ipv4_interface_create(MAC_address, IP_address);
-		list_append(data->interface_list, interface);
-
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint8_t *pdu) {
-	PRINT_DEBUG("Entered: ff=%p, mac=0x%llx, ip=%u", ff, src_mac, src_ip);
-
-	struct ipv4_request *request = (struct ipv4_request *) secure_malloc(sizeof(struct ipv4_request));
-	request->ff = ff;
-	request->src_mac = src_mac;
-	request->src_ip = src_ip;
-	request->pdu = pdu;
-
-	PRINT_DEBUG("Exited: ff=%p, src mac=0x%llx, src ip=%u, request=%p", ff, src_mac, src_ip, request);
-	return request;
-}
-
-int ipv4_request_ip_test(struct ipv4_request *request, uint32_t *src_ip) {
-	return request->src_ip == *src_ip;
-}
-
-void ipv4_request_free(struct ipv4_request *request) {
-	PRINT_DEBUG("Entered: request=%p", request);
-
-	if (request->ff != NULL) {
-		freeFinsFrame(request->ff);
-	}
-
-	if (request->pdu != NULL) {
-		PRINT_DEBUG("Freeing pdu=%p", request->pdu);
-		free(request->pdu);
-	}
-
-	free(request);
-}
-
-struct ipv4_cache *ipv4_cache_create(uint32_t addr_ip) {
-	PRINT_DEBUG("Entered: ip=%u", addr_ip);
-
-	struct ipv4_cache *cache = (struct ipv4_cache *) secure_malloc(sizeof(struct ipv4_cache));
-	cache->addr_mac = IPV4_MAC_NULL;
-	cache->addr_ip = addr_ip;
-
-	cache->request_list = list_create(IPV4_REQUEST_LIST_MAX);
-
-	cache->seeking = 0;
-	memset(&cache->updated_stamp, 0, sizeof(struct timeval));
-
-	PRINT_DEBUG("Exited: ip=%u, cache=%p", addr_ip, cache);
-	return cache;
-}
-
-int ipv4_cache_ip_test(struct ipv4_cache *cache, uint32_t *addr_ip) {
-	return cache->addr_ip == *addr_ip;
-}
-
-int ipv4_cache_non_seeking_test(struct ipv4_cache *cache) {
-	return !cache->seeking;
-}
-
-void ipv4_cache_free(struct ipv4_cache *cache) {
-	PRINT_DEBUG("Entered: cache=%p", cache);
-
-	if (cache->request_list != NULL) {
-		list_free(cache->request_list, ipv4_request_free);
-	}
-
-	free(cache);
-}
-
-struct ipv4_store *ipv4_store_create(uint32_t serial_num, struct ipv4_cache *cache, struct ipv4_request *request) { //TODO remove request? not used
-	PRINT_DEBUG("Entered: serial_num=%u, cache=%p, request=%p", serial_num, cache, request);
-
-	struct ipv4_store *store = (struct ipv4_store *) secure_malloc(sizeof(struct ipv4_store));
-	store->serial_num = serial_num;
-	store->cache = cache;
-	store->request = request;
-
-	PRINT_DEBUG("Exited: serial_num=%u, cache=%p, request=%p, store=%p", serial_num, cache, request, store);
-	return store;
-}
-
-int ipv4_store_serial_test(struct ipv4_store *store, uint32_t *serial_num) {
-	return store->serial_num == *serial_num;
-}
-
-void ipv4_store_free(struct ipv4_store *store) {
-	PRINT_DEBUG("Entered: store=%p", store);
-
-	if (store->cache != NULL) {
-		ipv4_cache_free(store->cache);
-	}
-
-	free(store);
-}
-//################
 
 //####################################### autoconfig
 void ipv4_init_params(struct fins_module *module) {
@@ -183,6 +52,20 @@ void ipv4_init_params(struct fins_module *module) {
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
+void ipv4_ifr_get_addr_func(struct if_record *ifr, struct linked_list *ret_list) {
+	if (ifr->flags & IFF_RUNNING) { //ifr->status ?
+		//struct linked_list *temp_list = list_find_all(ifr->addr_list, addr_is_v4);
+		struct linked_list *temp_list = list_filter(ifr->addr_list, addr_is_v4, addr_copy);
+		if (list_join(ret_list, temp_list)) {
+			free(temp_list);
+		} else {
+			PRINT_ERROR("todo error");
+			//list_free(temp_list, nop_func);
+			list_free(temp_list, free);
+		}
+	}
+}
+
 int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
@@ -204,20 +87,31 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 		data->flows[i] = flows[i];
 	}
 
-	data->route_list = list_create(IPV4_ROUTE_LIST_MAX);
+	data->addr_list = list_create(IPV4_ADDRESS_LIST_MAX);
+	list_for_each1(envi->if_list, ipv4_ifr_get_addr_func, data->addr_list);
+	if (envi->if_loopback) {
+		data->addr_loopback = (struct addr_record *) list_find(envi->if_loopback->addr_list, addr_is_v4);
+	}
+	if (envi->if_main) {
+		data->addr_main = (struct addr_record *) list_find(envi->if_main->addr_list, addr_is_v4);
+	}
 
-	//envi->route_list
-	//(struct route_record *)
+	data->route_list = list_filter(envi->route_list, route_is_addr4, route_copy);
+	if (data->route_list->len > IPV4_ROUTE_LIST_MAX) {
+		PRINT_ERROR("todo");
+		struct linked_list *leftover = list_split(data->route_list, IPV4_ROUTE_LIST_MAX - 1);
+		list_free(leftover, free);
+	}
+	data->route_list->max = IPV4_ROUTE_LIST_MAX;
+
+	//when recv pkt would need to check addresses
+	//when send pkt would need to check routing table & addresses (for ip address)
+	//both of these would need to be updated by switch etc
 
 	//routing_table = IP4_get_routing_table();
 
 	PRINT_DEBUG("after ip4 sort route table");
 	memset(&data->stats, 0, sizeof(struct ip4_stats));
-
-	//ARP stuff that should be moved to interface
-	data->store_list = list_create(IPV4_STORE_LIST_MAX);
-	data->interface_list = list_create(IPV4_INTERFACE_LIST_MAX);
-	data->cache_list = list_create(IPV4_CACHE_LIST_MAX);
 
 	return 1;
 }
@@ -253,7 +147,6 @@ int ipv4_shutdown(struct fins_module *module) {
 	sem_post(module->event_sem);
 
 	struct ipv4_data *data = (struct ipv4_data *) module->data;
-
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_ipv4_thread");
@@ -264,16 +157,10 @@ int ipv4_shutdown(struct fins_module *module) {
 
 int ipv4_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
-
 	struct ipv4_data *data = (struct ipv4_data *) module->data;
-	//TODO free all module related mem
-	PRINT_IMPORTANT("store_list->len=%u", data->store_list->len);
-	list_free(data->store_list, ipv4_store_free);
-	PRINT_IMPORTANT("interface_list->len=%u", data->interface_list->len);
-	list_free(data->interface_list, ipv4_interface_free);
-	PRINT_IMPORTANT("cache_list->len=%u", data->cache_list->len);
-	list_free(data->cache_list, ipv4_cache_free);
 
+	//TODO free all module related mem
+	list_free(data->addr_list, free);
 	list_free(data->route_list, free);
 
 	if (data->link_list != NULL) {

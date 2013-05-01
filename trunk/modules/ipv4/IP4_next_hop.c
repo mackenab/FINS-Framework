@@ -7,7 +7,7 @@
 #include "ipv4_internal.h"
 
 struct ip4_next_hop_info IP4_next_hop(struct fins_module *module, uint32_t dst) {
-	PRINT_DEBUG("Entered: dst=%u", dst);
+	PRINT_DEBUG("Entered: module=%p, dst=%u", module, dst);
 
 	struct ip4_next_hop_info info;
 	//uint32_t mask;

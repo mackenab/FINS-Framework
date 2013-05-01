@@ -44,10 +44,10 @@ void logger_get_ff(struct fins_module *module) {
 			exit(-1);
 		}
 
-		if (ff->dataOrCtrl == CONTROL) {
+		if (ff->dataOrCtrl == FF_CONTROL) {
 			logger_fcf(module, ff);
 			PRINT_DEBUG("");
-		} else if (ff->dataOrCtrl == DATA) {
+		} else if (ff->dataOrCtrl == FF_DATA) {
 			if (data->logger_started) {
 				gettimeofday(&data->logger_end, 0);
 				data->logger_packets++;
@@ -69,7 +69,7 @@ void logger_get_ff(struct fins_module *module) {
 			}
 			freeFinsFrame(ff);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 			exit(-1);
 		}
 	} else if (data->interrupt_flag) {
@@ -174,8 +174,7 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
-		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
-		data->link_list = link_list;
+		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
 
 		ff->ctrlFrame.data = NULL;
 		break;

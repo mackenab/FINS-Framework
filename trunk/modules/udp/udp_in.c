@@ -24,7 +24,7 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	struct udp_data *data = (struct udp_data *) module->data;
 
 	/* read the FDF and make sure everything is correct*/
-	if (ff->dataOrCtrl != DATA) {
+	if (ff->dataOrCtrl != FF_DATA) {
 		// release FDF here
 		freeFinsFrame(ff);
 		return;
@@ -135,12 +135,11 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 #endif
 	//#########################
 
-	//ff->destinationID = DAEMON_ID;
+	if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
+		PRINT_ERROR("send to switch error, ff=%p", ff);
+		freeFinsFrame(ff);
+	}
 
-	module_to_switch(module, ff);
-
-	//PRINT_DEBUG("freeing: ff=%p", ff);
-
-	PRINT_DEBUG("Freeing pdu=%p", old);
+	PRINT_DEBUG("Freeing: pdu=%p", old);
 	free(old);
 }

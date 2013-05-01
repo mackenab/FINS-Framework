@@ -134,27 +134,29 @@ void core_termination_handler(int sig) {
 		}
 	}
 
+	PRINT_IMPORTANT("admin: free");
+	list_free(overall->admin_list, nop_func);
+
 	PRINT_IMPORTANT("libraries: close");
 	struct fins_library *library;
-	while (1) {
+	while (!list_is_empty(overall->lib_list)) {
 		library = (struct fins_library *) list_remove_front(overall->lib_list);
-		if (library == NULL) {
-			break;
-		}
+
 		PRINT_IMPORTANT("closing library: library=%p, name='%s'", library, library->name);
 		dlclose(library->handle);
 		free(library);
 	}
 	free(overall->lib_list);
 
-	PRINT_IMPORTANT("freeing links");
+	PRINT_IMPORTANT("Freeing links");
 	list_free(overall->link_list, free);
 
-	PRINT_IMPORTANT("freeing environment");
+	PRINT_IMPORTANT("Freeing environment");
 	list_free(overall->envi->if_list, ifr_free);
 	list_free(overall->envi->route_list, free);
 	free(overall->envi);
 
+	free(overall);
 	sem_destroy(&control_serial_sem);
 
 	PRINT_IMPORTANT("FIN");
@@ -179,7 +181,7 @@ void core_main() {
 	uint32_t ip_num;
 
 	//######################################################################
-	overall = (struct fins_overall *) secure_malloc(sizeof(struct fins_overall ));
+	overall = (struct fins_overall *) secure_malloc(sizeof(struct fins_overall));
 	sem_init(&overall->sem, 0, 1);
 
 	//######################################################################
@@ -196,30 +198,6 @@ void core_main() {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
-
-	//############# any ip address
-	PRINT_IMPORTANT("Any Addr");
-
-	list_elem = config_lookup(meta_envi, "environment.any_addr");
-	if (list_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-
-	uint32_t any_ip[4];
-
-	ip_elem = config_setting_get_member(list_elem, "ip");
-	if (ip_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	ip_num = config_setting_length(ip_elem);
-
-	for (i = 0; i < ip_num; i++) {
-		any_ip[i] = (uint32_t) config_setting_get_int_elem(ip_elem, i);
-	}
-
-	overall->envi->any_ip_addr = IP4_ADR_P2H(any_ip[0],any_ip[1],any_ip[2],any_ip[3]); //TODO change to addr_in?
 
 	//############# if_list
 	PRINT_IMPORTANT("interface list");
@@ -437,9 +415,9 @@ void core_main() {
 		if (ifr != NULL) {
 			if (ifr->flags & IFF_RUNNING) {
 				if (family == AF_INET) {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr4);
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
 				} else {
-					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_addr6);
+					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v6);
 				}
 
 				if (addr == NULL) {
@@ -448,14 +426,14 @@ void core_main() {
 					addr->family = AF_INET;
 
 					if (family == AF_INET) {
-						set_addr4(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
-						set_addr4(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
-						set_addr4(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
-						set_addr4(&addr->bdc, IP4_ADR_P2H(bdc[0], bdc[1], bdc[2], bdc[3]));
-						set_addr4(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
+						addr4_set_addr(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
+						addr4_set_addr(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
+						addr4_set_addr(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
+						addr4_set_addr(&addr->bdc, IP4_ADR_P2H(bdc[0], bdc[1], bdc[2], bdc[3]));
+						addr4_set_addr(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
 					} else if (family == AF_INET6) {
 						//TODO
-						//set_addr6(&addr->ip, ip);
+						//addr_set_addr6(&addr->ip, ip);
 						PRINT_ERROR("todo");
 					} else {
 						//TODO error?
@@ -487,7 +465,7 @@ void core_main() {
 
 	//############# route_list
 	PRINT_IMPORTANT("route list");
-	overall->envi->route_list = list_create(MAX_ADDRESSES);
+	overall->envi->route_list = list_create(MAX_ROUTES);
 
 	list_elem = config_lookup(meta_envi, "environment.routes");
 	if (list_elem == NULL) {
@@ -576,13 +554,13 @@ void core_main() {
 				route->family = family;
 
 				if (family == AF_INET) {
-					set_addr4(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
-					set_addr4(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
-					set_addr4(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
-					//set_addr4(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
+					addr4_set_addr(&route->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
+					addr4_set_addr(&route->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
+					addr4_set_addr(&route->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
+					//addr4_set_addr(&route->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
 				} else if (family == AF_INET6) {
 					//TODO
-					//set_addr6(&route->ip, ip);
+					//addr_set_addr6(&route->ip, ip);
 				} else {
 					//TODO error?
 				}
@@ -701,13 +679,13 @@ void core_main() {
 				PRINT_ERROR("todo error");
 				exit(-1);
 			}
-		}
 
-		if (list_has_space(overall->lib_list)) {
-			list_append(overall->lib_list, library);
-		} else {
-			PRINT_ERROR("todo error");
-			exit(-1);
+			if (list_has_space(overall->lib_list)) {
+				list_append(overall->lib_list, library);
+			} else {
+				PRINT_ERROR("todo error");
+				exit(-1);
+			}
 		}
 
 		module = library->create(i, mod_id, mod_name);
@@ -841,7 +819,7 @@ void core_main() {
 
 	for (i = 0; i < MAX_MODULES; i++) {
 		if (overall->modules[i] != NULL) {
-			link_subset_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_copy);
+			link_subset_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_copy); //TODO is mem leak
 			PRINT_IMPORTANT("i=%d, link_subset_list=%p, len=%d", i, link_subset_list, link_subset_list->len);
 
 			meta_update = (metadata *) secure_malloc(sizeof(metadata));
@@ -852,7 +830,7 @@ void core_main() {
 			//secure_metadata_writeToElement(meta_update, "send_src_ip", &host_ip, META_TYPE_INT32);
 
 			ff_update = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-			ff_update->dataOrCtrl = CONTROL;
+			ff_update->dataOrCtrl = FF_CONTROL;
 			ff_update->destinationID = i;
 			ff_update->metaData = meta_update;
 
@@ -864,14 +842,7 @@ void core_main() {
 			ff_update->ctrlFrame.data_len = sizeof(struct linked_list);
 			ff_update->ctrlFrame.data = (uint8_t *) link_subset_list;
 
-			if (module_to_switch(overall->modules[0], ff_update)) {
-
-			} else {
-				PRINT_ERROR("todo error");
-				freeFinsFrame(ff_update);
-				list_free(link_subset_list, free);
-				exit(-1);
-			}
+			module_to_switch(overall->modules[0], ff_update);
 		}
 	}
 
@@ -916,7 +887,7 @@ void core_main() {
 		secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
 		struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = DATA;
+		ff->dataOrCtrl = FF_DATA;
 		ff->destinationID = 1;
 		ff->metaData = meta;
 
@@ -925,16 +896,10 @@ void core_main() {
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(10);
 
 		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[1]->name);
-		if (module_to_switch(overall->modules[0], ff)) {
-			//i++;
-		} else {
-			PRINT_ERROR("freeing: ff=%p", ff);
-			freeFinsFrame(ff);
-			return;
-		}
+		module_to_switch(overall->modules[0], ff);
 	}
 
-	if (1) {
+	if (0) {
 		PRINT_DEBUG("Sending ARP req");
 
 		metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
@@ -949,11 +914,11 @@ void core_main() {
 		secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
 
 		struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-		ff_req->dataOrCtrl = CONTROL;
-		ff_req->destinationID = 1;
+		ff_req->dataOrCtrl = FF_CONTROL;
+		ff_req->destinationID = 1; //arp
 		ff_req->metaData = meta_req;
 
-		ff_req->ctrlFrame.sender_id = IPV4_ID;
+		ff_req->ctrlFrame.sender_id = 4; //ipv4
 		ff_req->ctrlFrame.serial_num = gen_control_serial_num();
 		ff_req->ctrlFrame.opcode = CTRL_EXEC;
 		ff_req->ctrlFrame.param_id = 0; //EXEC_ARP_GET_ADDR;
@@ -962,13 +927,68 @@ void core_main() {
 		ff_req->ctrlFrame.data = NULL;
 
 		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff_req, meta_req, overall->modules[0]->name, overall->modules[1]->name);
-		if (module_to_switch(overall->modules[0], ff_req)) {
-			//i++;
-		} else {
-			PRINT_ERROR("freeing: ff=%p", ff_req);
-			freeFinsFrame(ff_req);
-			return;
-		}
+		module_to_switch(overall->modules[0], ff_req);
+	}
+
+	if (0) {
+		PRINT_DEBUG("Sending data");
+
+		metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta_req);
+
+		uint32_t ether_type = 0x0800; //ipv4
+		if_index = 3; //wlan0
+		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
+		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
+
+		secure_metadata_writeToElement(meta_req, "send_ether_type", &ether_type, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "send_if_index", &if_index, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "send_src_ipv4", &src_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_req, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
+
+		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+		ff->dataOrCtrl = FF_DATA;
+		ff->destinationID = 1; //arp
+		ff->metaData = meta_req;
+
+		ff->dataFrame.directionFlag = DIR_DOWN;
+		ff->dataFrame.pduLength = 100;
+		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+		memset(ff->dataFrame.pdu, 59, ff->dataFrame.pduLength);
+
+		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta_req, overall->modules[0]->name, overall->modules[1]->name);
+		module_to_switch(overall->modules[0], ff);
+	}
+
+	if (1) {
+		PRINT_DEBUG("Sending data");
+
+		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
+		uint32_t src_port = 6666;
+		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
+		uint32_t dst_port = 5555;
+
+		secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "send_src_port", &src_port, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
+
+		uint32_t dst_index = 4;
+		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+		ff->dataOrCtrl = FF_DATA;
+		ff->destinationID = dst_index; //arp
+		ff->metaData = meta;
+
+		ff->dataFrame.directionFlag = DIR_DOWN;
+		ff->dataFrame.pduLength = 10;
+		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+		memset(ff->dataFrame.pdu, 65, ff->dataFrame.pduLength);
+
+		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
+		module_to_switch(overall->modules[0], ff);
 	}
 
 	while (1)
@@ -980,41 +1000,7 @@ void core_main() {
 	gets(recv_data2);
 
 	//############ terminating
-	PRINT_IMPORTANT("modules: shutdown");
-	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (overall->modules[i] != NULL) {
-			overall->modules[i]->ops->shutdown(overall->modules[i]);
-		}
-	}
-
-	PRINT_IMPORTANT("modules: release");
-	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (overall->modules[i] != NULL) {
-			overall->modules[i]->ops->release(overall->modules[i]);
-		}
-	}
-
-	PRINT_IMPORTANT("libraries: close");
-	while (1) {
-		library = (struct fins_library *) list_remove_front(overall->lib_list);
-		if (library == NULL) {
-			break;
-		}
-		PRINT_IMPORTANT("closing library: library=%p, name='%s'", library, library->name);
-		dlclose(library->handle);
-		free(library);
-	}
-	free(overall->lib_list);
-
-	PRINT_IMPORTANT("freeing links");
-	list_free(overall->link_list, free);
-
-	PRINT_IMPORTANT("freeing environment");
-	list_free(overall->envi->if_list, ifr_free);
-	list_free(overall->envi->route_list, free);
-	free(overall->envi);
-
-	exit(1);
+	core_termination_handler(0);
 }
 
 #ifndef BUILD_FOR_ANDROID

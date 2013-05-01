@@ -54,7 +54,6 @@ struct ip4_packet_header {
 	uint16_t ip_cksum; /* header checksum 			*/
 	uint32_t ip_src; /* IP address of source			*/
 	uint32_t ip_dst; /* IP address of destination		*/
-
 };
 
 struct ip4_header {
@@ -246,67 +245,20 @@ int IP4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_pac
 int InputQueue_Read_local(struct finsFrame *pff);
 void IP4_exit(void);
 
-//vvvvvvvvvvvvvvvvvv ARP/interface stuff //TODO move to common
-#define IPV4_INTERFACE_LIST_MAX 256
-#define IPV4_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
-#define IPV4_CACHE_TO_DEFAULT 15000
-#define IPV4_MAC_NULL 0x0
-#define IPV4_CACHE_LIST_MAX 8192
-#define IPV4_STORE_LIST_MAX (2*65536)
-
-struct ipv4_interface {
-	uint64_t addr_mac;
-	uint32_t addr_ip;
-};
-struct ipv4_interface *ipv4_interface_create(uint64_t addr_mac, uint32_t addr_ip);
-int ipv4_interface_ip_test(struct ipv4_interface *interface, uint32_t *addr_ip);
-void ipv4_interface_free(struct ipv4_interface *interface);
-
-int ipv4_register_interface(struct fins_module *module, uint64_t MAC_address, uint32_t IP_address);
-
-struct ipv4_request {
-	struct finsFrame *ff;
-	uint64_t src_mac;
-	uint32_t src_ip;
-	uint8_t *pdu;
-};
-struct ipv4_request *ipv4_request_create(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint8_t *pdu);
-int ipv4_request_ip_test(struct ipv4_request *request, uint32_t *src_ip);
-void ipv4_request_free(struct ipv4_request *request);
-
-struct ipv4_cache {
-	uint64_t addr_mac;
-	uint32_t addr_ip;
-
-	struct linked_list *request_list;
-	uint8_t seeking;
-	struct timeval updated_stamp;
-};
-struct ipv4_cache *ipv4_cache_create(uint32_t addr_ip);
-int ipv4_cache_ip_test(struct ipv4_cache *cache, uint32_t *src_ip);
-int ipv4_cache_non_seeking_test(struct ipv4_cache *cache);
-void ipv4_cache_free(struct ipv4_cache *cache);
-
-struct ipv4_store {
-	uint32_t serial_num;
-	struct ipv4_cache *cache;
-	struct ipv4_request *request;
-};
-struct ipv4_store *ipv4_store_create(uint32_t serial_num, struct ipv4_cache *cache, struct ipv4_request *request);
-int ipv4_store_serial_test(struct ipv4_store *store, uint32_t *serial_num);
-void ipv4_store_free(struct ipv4_store *store);
-//^^^^^^^^^^^^^^^^^^ ARP/interface stuff //TODO move ARP fcf calling to interface & remove this
-
 //void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint64_t dst_mac);
 //void ipv4_exec_reply_get_addr(struct finsFrame *ff, uint64_t src_mac, uint32_t src_ip, uint64_t dst_mac, uint32_t dst_ip);
 
-#define IPV4_ROUTE_LIST_MAX 4096//8192
+#define IPV4_ADDRESS_LIST_MAX 	512
+#define IPV4_ROUTE_LIST_MAX 	512
+#define IPV4_ADDR_ANY_IP 		IP4_ADR_P2H(0,0,0,0)
+#define IPV4_ADDR_EVERY_IP 		IP4_ADR_P2H(255,255,255,255)
 
 #define IPV4_LIB "ipv4"
-#define IPV4_MAX_FLOWS 3
-#define IPV4_FLOW_DOWN 0
-#define IPV4_FLOW_ERROR 1
-#define IPV4_FLOW_UP 2
+#define IPV4_MAX_FLOWS 		4
+#define IPV4_FLOW_INTERFACE 0
+#define IPV4_FLOW_ICMP 		1
+#define IPV4_FLOW_TCP 		2
+#define IPV4_FLOW_UDP 		3
 
 struct ipv4_data {
 	struct linked_list *link_list;
@@ -317,13 +269,14 @@ struct ipv4_data {
 
 	//struct ip4_routing_table* routing_table;
 	//struct ip4_packet *construct_packet_buffer;
-	struct ip4_stats stats;
+	struct linked_list *addr_list;
+	struct addr_record *addr_loopback;
+	struct addr_record *addr_main;
+
 	struct linked_list *route_list;
 	//struct ip4_reass_list *packet_list = NULL;
 
-	struct linked_list *store_list;
-	struct linked_list *interface_list;
-	struct linked_list *cache_list; //The list of current cache we have
+	struct ip4_stats stats;
 };
 
 int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
@@ -345,11 +298,11 @@ void ipv4_error(struct fins_module *module, struct finsFrame *ff);
 
 #define EXEC_ARP_GET_ADDR 0
 
-void IP4_in(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, int len);
-void IP4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct ip4_header*, struct ip4_packet*);
+void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff);
+void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct ip4_header *pheader, struct ip4_packet *ppacket);
 
-void IP4_out(struct fins_module *module, struct finsFrame *ff, uint16_t length, uint32_t source, uint32_t protocol);
-void IP4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, struct ip4_next_hop_info next_hop, uint16_t length);
+void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff);
+void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet *ppacket, uint32_t address, uint32_t if_index);
 
 //TODO remove once we have the new routing table
 struct ip4_routing_table* routing_table;

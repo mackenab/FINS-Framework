@@ -29,8 +29,8 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 	data = (uint8_t *) secure_malloc(PDU_length);
 	memcpy(data, PDU, PDU_length);
 
-	if (dataOrCtrl == DATA) {
-		ff->dataOrCtrl = DATA;
+	if (dataOrCtrl == FF_DATA) {
+		ff->dataOrCtrl = FF_DATA;
 		ff->destinationID = destID;
 
 		ff->dataFrame.directionFlag = direction;
@@ -38,13 +38,13 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 		ff->dataFrame.pdu = data;
 		ff->metaData = meta;
 		//	memcpy(&ff.metaData, metadata, MAX_METADATASIZE);
-	}
-
-	if (dataOrCtrl == CONTROL) {
-		ff->dataOrCtrl = CONTROL;
+	} else if (dataOrCtrl == FF_CONTROL) {
+		ff->dataOrCtrl = FF_CONTROL;
 		ff->destinationID = destID;
 		ff->metaData = meta;
 		// fill the important FCF data in here
+	} else {
+		PRINT_ERROR("todo error");
 	}
 	//print_finsFrame(ff);
 	return ff;

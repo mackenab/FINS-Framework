@@ -93,6 +93,9 @@ int false_test(uint8_t *data) {
 	return LIST_FALSE;
 }
 
+void nop_func(uint8_t *data) {
+}
+
 //Return a malloc'd linked_list with 0 elements, & a maximum of <max>
 struct linked_list *list_create(uint32_t max) {
 	PRINT_DEBUG("Entered: max=%u", max);
@@ -103,7 +106,7 @@ struct linked_list *list_create(uint32_t max) {
 	list->front = NULL;
 	list->end = NULL;
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: max=%u, list=%p", max, list);
 	return list;
 }
@@ -125,7 +128,7 @@ void list_prepend_full(struct linked_list *list, uint8_t *data) {
 	list->front = node;
 	list->len++;
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 }
 
@@ -147,7 +150,7 @@ void list_append_full(struct linked_list *list, uint8_t *data) {
 	list->end = node;
 	list->len++;
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 }
 
@@ -156,7 +159,7 @@ void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev) {
 	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
 
 	if (list_is_empty(list)) {
-		//list_check(list);
+		list_check(list);
 		PRINT_ERROR("No prev node: list=%p, len=%u, prev=%p", list, list->len, prev);
 		return;
 	}
@@ -171,7 +174,7 @@ void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev) {
 		list->end = node;
 		list->len++;
 
-		//list_check(list);
+		list_check(list);
 		PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 		return;
 	}
@@ -188,7 +191,7 @@ void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev) {
 			temp->next = node;
 			list->len++;
 
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 			return;
 		} else {
@@ -196,7 +199,7 @@ void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev) {
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_ERROR("No prev node: list=%p, len=%u, prev=%p", list, list->len, prev);
 }
 
@@ -246,7 +249,7 @@ uint8_t *list_look(struct linked_list *list, uint32_t index) {
 	struct list_node *comp = list->front;
 	while (comp) {
 		if (i == index) {
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, index=%u, data=%p", list, index, comp->data);
 			return comp->data;
 		} else {
@@ -255,7 +258,7 @@ uint8_t *list_look(struct linked_list *list, uint32_t index) {
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, index=%u, data=%p", list, index, NULL);
 	return NULL;
 }
@@ -265,7 +268,7 @@ int list_contains_full(struct linked_list *list, uint8_t *data) {
 	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
 
 	if (list_is_empty(list)) {
-		//list_check(list);
+		list_check(list);
 		PRINT_DEBUG("Exited: list=%p, data=%p, 0", list, data);
 		return LIST_FALSE;
 	}
@@ -273,7 +276,7 @@ int list_contains_full(struct linked_list *list, uint8_t *data) {
 	struct list_node *node = list->front;
 	while (node) {
 		if (node->data == data) {
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p, 1", list, data);
 			return LIST_TRUE;
 		} else {
@@ -281,7 +284,7 @@ int list_contains_full(struct linked_list *list, uint8_t *data) {
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, data=%p, 0", list, data);
 	return LIST_FALSE;
 }
@@ -291,7 +294,7 @@ uint8_t *list_remove_front(struct linked_list *list) {
 	PRINT_DEBUG("Entered: list=%p", list);
 
 	if (list_is_empty(list)) {
-		//list_check(list);
+		list_check(list);
 		PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, NULL);
 		return NULL;
 	} else {
@@ -307,10 +310,10 @@ uint8_t *list_remove_front(struct linked_list *list) {
 
 		list->len--;
 		uint8_t *data = node->data;
-		PRINT_DEBUG("freeing: node=%p", node);
+		PRINT_DEBUG("Freeing: node=%p", node);
 		free(node);
 
-		//list_check(list);
+		list_check(list);
 		PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, data);
 		return data;
 	}
@@ -321,7 +324,7 @@ void list_remove_full(struct linked_list *list, uint8_t *data) {
 	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
 
 	if (list_is_empty(list)) {
-		//list_check(list);
+		list_check(list);
 		PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 		return;
 	}
@@ -349,10 +352,10 @@ void list_remove_full(struct linked_list *list, uint8_t *data) {
 				//node->prev = NULL; //unnecessary
 			}
 			list->len--;
-			PRINT_DEBUG("freeing: node=%p", node);
+			PRINT_DEBUG("Freeing: node=%p", node);
 			free(node);
 
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 			return;
 		} else {
@@ -360,7 +363,7 @@ void list_remove_full(struct linked_list *list, uint8_t *data) {
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, len=%u", list, list->len);
 	return;
 }
@@ -372,7 +375,7 @@ void list_remove_full(struct linked_list *list, uint8_t *data) {
 struct linked_list *list_remove_all_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
 
-	struct linked_list *return_list = list_create(list->max); //should it be list->len?
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -397,31 +400,32 @@ struct linked_list *list_remove_all_full(struct linked_list *list, int (*equal)(
 			}
 			list->len--;
 
-			//append to return_list
+			//append to list_ret
 			comp->next = NULL;
-			if (list_is_empty(return_list)) {
+			if (list_is_empty(list_ret)) {
 				comp->prev = NULL;
-				return_list->front = comp;
+				list_ret->front = comp;
 			} else {
-				comp->prev = return_list->end;
-				return_list->end->next = comp;
+				comp->prev = list_ret->end;
+				list_ret->end->next = comp;
 			}
-			return_list->end = comp;
-			return_list->len++;
+			list_ret->end = comp;
+			list_ret->len++;
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //See list_remove_all()
 struct linked_list *list_remove_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
 
-	struct linked_list *return_list = list_create(list->max);
+	struct linked_list *list_ret = list_create(list->max);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -446,24 +450,25 @@ struct linked_list *list_remove_all1_full(struct linked_list *list, int (*equal)
 			}
 			list->len--;
 
-			//append to return_list
+			//append to list_ret
 			comp->next = NULL;
-			if (list_is_empty(return_list)) {
+			if (list_is_empty(list_ret)) {
 				comp->prev = NULL;
-				return_list->front = comp;
+				list_ret->front = comp;
 			} else {
-				comp->prev = return_list->end;
-				return_list->end->next = comp;
+				comp->prev = list_ret->end;
+				list_ret->end->next = comp;
 			}
-			return_list->end = comp;
-			return_list->len++;
+			list_ret->end = comp;
+			list_ret->len++;
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //See list_remove_all()
@@ -471,7 +476,7 @@ struct linked_list *list_remove_all2_full(struct linked_list *list, int (*equal)
 		uint8_t *param2) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
 
-	struct linked_list *return_list = list_create(list->max);
+	struct linked_list *list_ret = list_create(list->max);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -496,24 +501,25 @@ struct linked_list *list_remove_all2_full(struct linked_list *list, int (*equal)
 			}
 			list->len--;
 
-			//append to return_list
+			//append to list_ret
 			comp->next = NULL;
-			if (list_is_empty(return_list)) {
+			if (list_is_empty(list_ret)) {
 				comp->prev = NULL;
-				return_list->front = comp;
+				list_ret->front = comp;
 			} else {
-				comp->prev = return_list->end;
-				return_list->end->next = comp;
+				comp->prev = list_ret->end;
+				list_ret->end->next = comp;
 			}
-			return_list->end = comp;
-			return_list->len++;
+			list_ret->end = comp;
+			list_ret->len++;
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //Return true if the list has no elements
@@ -542,19 +548,119 @@ uint32_t list_space(struct linked_list *list) {
 struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, copy=%p", list, copy);
 
-	struct linked_list *return_list = list_create(list->max); //should it be list->len?
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
-		list_append(return_list, copy(comp->data));
+		list_append(list_ret, copy(comp->data));
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p", list, list_ret);
+	return list_ret;
+}
+
+//Remove & append as many elements of <list2> to <list1> up to its max, return true if all of <list2> appended to <list1>
+int list_join(struct linked_list *list1, struct linked_list *list2) {
+	PRINT_DEBUG("Entered: list1=%p, list2=%p", list1, list2);
+	if (list_is_empty(list2)) {
+		list_check(list1);
+		list_check(list2);
+		PRINT_DEBUG("Exited: list1=%p, list2=%p, %u", list1, list2, LIST_TRUE);
+		return LIST_TRUE;
+	} else {
+		uint32_t space = list_space(list1);
+		if (list2->len <= space) { //use space, prevents rollover
+			if (list_is_empty(list1)) {
+				list1->front = list2->front;
+				list1->end = list2->end;
+			} else {
+				list1->end->next = list2->front;
+				list2->front->prev = list1->end;
+				list1->end = list2->end;
+			}
+			list2->front = NULL;
+			list2->end = NULL;
+			list1->len += list2->len;
+			list2->len = 0;
+
+			list_check(list1);
+			list_check(list2);
+			PRINT_DEBUG("Exited: list1=%p, list2=%p, %u", list1, list2, LIST_TRUE);
+			return LIST_TRUE;
+		} else if (space > 0) {
+			uint32_t i = 0;
+			struct list_node *comp = list2->front;
+			while (comp) {
+				if (i == space) {
+					break;
+				} else {
+					comp = comp->next;
+					i++;
+				}
+			}
+
+			if (list_is_empty(list1)) {
+				list1->front = list2->front;
+			} else {
+				list1->end->next = list2->front;
+				list2->front->prev = list1->end;
+			}
+			list1->end = comp->prev;
+			comp->prev->next = NULL;
+
+			comp->prev = NULL;
+			list2->front = comp;
+			list2->len -= space;
+
+			list_check(list1);
+			list_check(list2);
+			PRINT_DEBUG("Exited: list1=%p, list2=%p, %u", list1, list2, LIST_FALSE);
+			return LIST_FALSE;
+		} else {
+			list_check(list1);
+			list_check(list2);
+			PRINT_DEBUG("Exited: list1=%p, list2=%p, %u", list1, list2, LIST_FALSE);
+			return LIST_FALSE;
+		}
+	}
+}
+
+//Remove all elements of <list> after <index> & return rest as separate list
+struct linked_list *list_split(struct linked_list *list, uint32_t index) {
+	PRINT_DEBUG("Entered: list=%p, index=%u", list, index);
+
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
+
+	if (index + 1 < list->len) {
+		uint32_t i = 0;
+		struct list_node *comp = list->front;
+		while (comp) {
+			if (i == index) {
+				break;
+			} else {
+				comp = comp->next;
+				i++;
+			}
+		}
+		list_ret->front = comp->next;
+		list_ret->end = list->end;
+		list_ret->len = list->len - (index + 1);
+		list_ret->front->prev = NULL;
+
+		list->end = comp;
+		comp->next = NULL;
+		list->len = index + 1;
+	}
+
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //Add the pointer <data> to the list, using the comparer, returns true if inserts, false if problem
@@ -575,8 +681,8 @@ int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8
 		list->end = node;
 		list->len++;
 
-		//list_check(list);
-		PRINT_DEBUG("Exited: list=%p, len=%u, 1", list, list->len);
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_TRUE);
 		return LIST_TRUE;
 	}
 
@@ -591,12 +697,12 @@ int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8
 		list->front = node;
 		list->len++;
 
-		//list_check(list);
-		PRINT_DEBUG("Exited: list=%p, len=%u, 1", list, list->len);
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_TRUE);
 		return LIST_TRUE;
 	} else if (ret == 0) {
-		//list_check(list);
-		PRINT_DEBUG("Exited: list=%p, len=%u, 0", list, list->len);
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_FALSE);
 		return LIST_FALSE;
 	}
 
@@ -611,12 +717,12 @@ int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8
 		list->end = node;
 		list->len++;
 
-		//list_check(list);
-		PRINT_DEBUG("Exited: list=%p, len=%u, 1", list, list->len);
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_TRUE);
 		return LIST_TRUE;
 	} else if (ret == 0) {
-		//list_check(list);
-		PRINT_DEBUG("Exited: list=%p, len=%u, 0", list, list->len);
+		list_check(list);
+		PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_FALSE);
 		return LIST_FALSE;
 	}
 
@@ -634,19 +740,19 @@ int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8
 			temp->next = node;
 			list->len++;
 
-			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, len=%u, 1", list, list->len);
+			list_check(list);
+			PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_TRUE);
 			return LIST_TRUE;
 		} else if (ret == 0) {
-			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, len=%u, 0", list, list->len);
+			list_check(list);
+			PRINT_DEBUG("Exited: list=%p, len=%u, %u", list, list->len, LIST_FALSE);
 			return LIST_FALSE;
 		} else {
 			temp = temp->next;
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	//unable to insert, but didn't trip any overlaps - big error/not possible?
 	PRINT_ERROR("unreachable insert location: list=%p, data=%p", list, data);
 	exit(-1);
@@ -664,7 +770,7 @@ uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data)) {
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
@@ -672,7 +778,7 @@ uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
 	return NULL;
 }
@@ -686,7 +792,7 @@ uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param)) {
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
@@ -694,7 +800,7 @@ uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
 	return NULL;
 }
@@ -708,7 +814,7 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
-			//list_check(list);
+			list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
 		} else {
@@ -716,7 +822,7 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 		}
 	}
 
-	//list_check(list);
+	list_check(list);
 	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
 	return NULL;
 }
@@ -728,42 +834,44 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 struct linked_list *list_find_all_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
 
-	struct linked_list *return_list = list_create(list->max); //should it be list->len?
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data)) {
-			list_append(return_list, comp->data);
+			list_append(list_ret, comp->data);
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //See list_find_all()
 struct linked_list *list_find_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
 
-	struct linked_list *return_list = list_create(list->max); //should it be list->len?
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param)) {
-			list_append(return_list, comp->data);
+			list_append(list_ret, comp->data);
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //See list_find_all()
@@ -771,21 +879,85 @@ struct linked_list *list_find_all2_full(struct linked_list *list, int (*equal)(u
 		uint8_t *param2) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
 
-	struct linked_list *return_list = list_create(list->max); //should it be list->len?
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
-			list_append(return_list, comp->data);
+			list_append(list_ret, comp->data);
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	return list_ret;
+}
+
+//Finds & returns the last element that satisfies <equal>
+//<equal> should return:
+//1 if equal
+//0 if not
+uint8_t *list_find_last_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
+
+	struct list_node *comp = list->front;
+	struct list_node *next;
+	struct list_node *ret = NULL;
+	while (comp) {
+		next = comp->next;
+		if (equal(comp->data)) {
+			ret = comp;
+		}
+		comp = next;
+	}
+
+	list_check(list);
+	PRINT_DEBUG("Exited: list=%p, data=%p", list, ret->data);
+	return ret->data;
+}
+
+//See list_find_last()
+uint8_t *list_find_last1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
+
+	struct list_node *comp = list->front;
+	struct list_node *next;
+	struct list_node *ret = NULL;
+	while (comp) {
+		next = comp->next;
+		if (equal(comp->data, param)) {
+			ret = comp;
+		}
+		comp = next;
+	}
+
+	list_check(list);
+	PRINT_DEBUG("Exited: list=%p, data=%p", list, ret->data);
+	return ret->data;
+}
+
+//See list_find_last()
+uint8_t *list_find_last2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
+
+	struct list_node *comp = list->front;
+	struct list_node *next;
+	struct list_node *ret = NULL;
+	while (comp) {
+		next = comp->next;
+		if (equal(comp->data, param1, param2)) {
+			ret = comp;
+		}
+		comp = next;
+	}
+
+	list_check(list);
+	PRINT_DEBUG("Exited: list=%p, data=%p", list, ret->data);
+	return ret->data;
 }
 
 //Iterates through list and calls <apply> on each element
@@ -801,7 +973,7 @@ void list_for_each_full(struct linked_list *list, void (*apply)(uint8_t *data)) 
 		comp = next;
 	}
 
-	//list_check(list);
+	list_check(list);
 }
 
 //See list_for_each()
@@ -816,7 +988,7 @@ void list_for_each1_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 		comp = next;
 	}
 
-	//list_check(list);
+	list_check(list);
 }
 
 //See list_for_each()
@@ -831,7 +1003,7 @@ void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 		comp = next;
 	}
 
-	//list_check(list);
+	list_check(list);
 }
 
 //Return a new list containing copies of each element that <equal> returns true for
@@ -842,42 +1014,44 @@ void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*copy)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, copy=%p", list, equal, copy);
 
-	struct linked_list *return_list = list_create(list->max); //should it be list->len?
+	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data)) {
-			list_append(return_list, copy(comp->data));
+			list_append(list_ret, copy(comp->data));
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //See list_filter()
 struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*copy)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p, copy=%p", list, equal, param, copy);
 
-	struct linked_list *return_list = list_create(list->max);
+	struct linked_list *list_ret = list_create(list->max);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param)) {
-			list_append(return_list, copy(comp->data));
+			list_append(list_ret, copy(comp->data));
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //See list_filter()
@@ -885,21 +1059,22 @@ struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uin
 		uint8_t *(*copy)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, copy=%p", list, equal, param1, param2, copy);
 
-	struct linked_list *return_list = list_create(list->max);
+	struct linked_list *list_ret = list_create(list->max);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
-			list_append(return_list, copy(comp->data));
+			list_append(list_ret, copy(comp->data));
 		}
 		comp = next;
 	}
 
-	//list_check(list);
-	//list_check(return_list);
-	return return_list;
+	list_check(list);
+	list_check(list_ret);
+	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	return list_ret;
 }
 
 //Iterate and free the elements of <list>, afterwards free the list
@@ -907,7 +1082,7 @@ struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uin
 void list_free_full(struct linked_list *list, void (*release)(uint8_t *data)) {
 	PRINT_DEBUG("Entered: list=%p, release=%p", list, release);
 
-	//list_check(list);
+	list_check(list);
 
 	struct list_node *next;
 
@@ -915,10 +1090,10 @@ void list_free_full(struct linked_list *list, void (*release)(uint8_t *data)) {
 	while (node) {
 		next = node->next;
 		if (node->data) {
-			PRINT_DEBUG("freeing: data=%p", node->data);
+			PRINT_DEBUG("Freeing: data=%p", node->data);
 			release(node->data);
 		}
-		PRINT_DEBUG("freeing: node=%p", node);
+		PRINT_DEBUG("Freeing: node=%p", node);
 		free(node);
 
 		node = next;
@@ -957,7 +1132,7 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 	PRINT_DEBUG("2.4");
 	metadata_writeToElement(meta, linkname, &linkvalue, META_TYPE_INT32);
 	PRINT_DEBUG("2.5");
-	ff->dataOrCtrl = DATA;
+	ff->dataOrCtrl = FF_DATA;
 	ff->destinationID = (uint32_t) 200;
 
 	ff->dataFrame.directionFlag = DIR_UP;
@@ -982,8 +1157,8 @@ void print_finsFrame(struct finsFrame *ff) {
 	 }
 	 */
 
-	if (ff->dataOrCtrl == DATA) {
-		PRINT_IMPORTANT("frame: ff=%p, DATA, dst=%u, meta=%p, dir=%u, pduLen=%u, pdu=%p",
+	if (ff->dataOrCtrl == FF_DATA) {
+		PRINT_IMPORTANT("frame: ff=%p, FF_DATA, dst=%u, meta=%p, dir=%u, pduLen=%u, pdu=%p",
 				ff, ff->destinationID, ff->metaData, ff->dataFrame.directionFlag, ff->dataFrame.pduLength, ff->dataFrame.pdu);
 		metadata_print(ff->metaData);
 
@@ -1000,8 +1175,8 @@ void print_finsFrame(struct finsFrame *ff) {
 		free(temp);
 #endif
 		//######################
-	} else if (ff->dataOrCtrl == CONTROL) {
-		PRINT_IMPORTANT("frame: ff=%p, CONTROL, dst=%u, meta=%p, sender=%u, serial_num=%u, opcode=%u, param_id=%u, data_len=%u, data=%p",
+	} else if (ff->dataOrCtrl == FF_CONTROL) {
+		PRINT_IMPORTANT("frame: ff=%p, FF_CONTROL, dst=%u, meta=%p, sender=%u, serial_num=%u, opcode=%u, param_id=%u, data_len=%u, data=%p",
 				ff, ff->destinationID, ff->metaData, ff->ctrlFrame.sender_id, ff->ctrlFrame.serial_num, ff->ctrlFrame.opcode, ff->ctrlFrame.param_id, ff->ctrlFrame.data_len, ff->ctrlFrame.data);
 		metadata_print(ff->metaData);
 
@@ -1019,7 +1194,7 @@ void print_finsFrame(struct finsFrame *ff) {
  * */
 void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 
-	if (src->dataOrCtrl == DATA) {
+	if (src->dataOrCtrl == FF_DATA) {
 
 		dst->destinationID = src->destinationID;
 		dst->dataOrCtrl = src->dataOrCtrl;
@@ -1030,7 +1205,7 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 		dst->dataFrame.pduLength = src->dataFrame.pduLength;
 		dst->metaData = src->metaData;
 
-	} else if (src->dataOrCtrl == CONTROL) {
+	} else if (src->dataOrCtrl == FF_CONTROL) {
 
 		PRINT_DEBUG("control fins frame");
 
@@ -1043,8 +1218,9 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 		//dst->ctrlFrame.replyRecord = (void *) src->ctrlFrame.data;
 		dst->ctrlFrame.sender_id = src->ctrlFrame.sender_id;
 		dst->ctrlFrame.serial_num = src->ctrlFrame.serial_num;
+	} else {
+		PRINT_ERROR("todo error");
 	}
-
 }
 
 struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
@@ -1067,10 +1243,10 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	ff_clone->destinationID = ff->destinationID;
 	ff_clone->metaData = meta_clone;
 
-	if (ff_clone->dataOrCtrl == CONTROL) {
+	if (ff_clone->dataOrCtrl == FF_CONTROL) {
 		ff_clone->ctrlFrame.sender_id = ff->ctrlFrame.sender_id;
-		ff_clone->ctrlFrame.serial_num = gen_control_serial_num(); //TODO change!!! Causes problems with module_send_flow
-		//ff_clone->ctrlFrame.serial_num = ff->ctrlFrame.serial_num;
+		//ff_clone->ctrlFrame.serial_num = gen_control_serial_num(); //TODO change!!! Causes problems with module_send_flow
+		ff_clone->ctrlFrame.serial_num = ff->ctrlFrame.serial_num;
 		ff_clone->ctrlFrame.opcode = ff->ctrlFrame.opcode;
 		ff_clone->ctrlFrame.param_id = ff->ctrlFrame.param_id;
 
@@ -1084,7 +1260,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		}
 		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
 				ff, ff->metaData, ff->ctrlFrame.data, ff_clone, ff_clone->metaData, ff_clone->ctrlFrame.data);
-	} else if (ff_clone->dataOrCtrl == DATA) {
+	} else if (ff_clone->dataOrCtrl == FF_DATA) {
 		ff_clone->dataFrame.directionFlag = ff->dataFrame.directionFlag;
 
 		ff_clone->dataFrame.pduLength = ff->dataFrame.pduLength;
@@ -1110,20 +1286,20 @@ int freeFinsFrame(struct finsFrame *ff) {
 	}
 
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
-	if (ff->dataOrCtrl == CONTROL) {
+	if (ff->dataOrCtrl == FF_CONTROL) {
 		if (ff->metaData != NULL) {
 			metadata_destroy(ff->metaData);
 		}
 		if (ff->ctrlFrame.data) {
-			PRINT_DEBUG("Freeing data=%p", ff->ctrlFrame.data);
+			PRINT_DEBUG("Freeing: data=%p", ff->ctrlFrame.data);
 			free(ff->ctrlFrame.data);
 		}
-	} else if (ff->dataOrCtrl == DATA) {
+	} else if (ff->dataOrCtrl == FF_DATA) {
 		if (ff->metaData != NULL) {
 			metadata_destroy(ff->metaData);
 		}
 		if (ff->dataFrame.pdu) {
-			PRINT_DEBUG("Freeing pdu=%p", ff->dataFrame.pdu);
+			PRINT_DEBUG("Freeing: pdu=%p", ff->dataFrame.pdu);
 			free(ff->dataFrame.pdu);
 		}
 	} else {
@@ -1181,7 +1357,7 @@ int serializeCtrlFrame(struct finsFrame *ff, uint8_t **buffer)
 
 	uint8_t *temporary = *buffer;
 
-	//DATA OR CONTROL
+	//FF_DATA OR FF_CONTROL
 	memcpy((uint8_t *) *buffer, &(ff->dataOrCtrl), sizeof(uint8_t));
 	//PRINT_DEBUG("buffer1:'%s'", *buffer);
 
@@ -1294,7 +1470,7 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	//	PRINT_DEBUG("The value of buffer = '%s'", buffer,length);
 
-	//DATA OR CONTROL
+	//FF_DATA OR FF_CONTROL
 	memcpy(&(ff->dataOrCtrl), (uint8_t *) buffer, sizeof(uint8_t));
 	//PRINT_DEBUG("buffer1 = '%s', dataOrCtrl = %d", buffer,ff->dataOrCtrl);
 	buffer += sizeof(uint8_t);
@@ -1333,7 +1509,7 @@ struct finsFrame* unserializeCtrlFrame(uint8_t * buffer, int length)
 	//PRINT_DEBUG("buffer6 = '%s', serial_num = %d", buffer,ff->ctrlFrame.serial_num);
 	buffer += sizeof(unsigned int);
 
-	//DATA
+	//FF_DATA
 	//fill in known/common parts
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_READ_PARAM:
@@ -1487,40 +1663,90 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 	free(temp);
 }
 
-#include <pthread.h>
-#include <semaphore.h>
-#include <unistd.h>
+struct addr_record *addr_copy(struct addr_record *addr) {
+	PRINT_DEBUG("Entered: addr=%p", addr);
 
-//#include <finsdebug.h>
-//#include <finstypes.h>
-//#include <metadata.h>
-//#include <finsqueue.h>
-//#include <finsmodule.h>
+	struct addr_record *addr_copy = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
+	memcpy(addr_copy, addr, sizeof(struct addr_record));
 
-void set_addr4(struct sockaddr_storage *addr, uint32_t val) {
+	return addr_copy;
+}
+
+int addr_is_v4(struct addr_record *addr) {
+	return addr->family == AF_INET;
+}
+
+int addr_ipv4_test(struct addr_record *addr, uint32_t *ip) {
+	struct sockaddr_in *addr4 = (struct sockaddr_in *) &addr->ip;
+	return addr4->sin_family == AF_INET && addr4->sin_addr.s_addr == *ip;
+}
+
+int addr_bdcv4_test(struct addr_record *addr, uint32_t *ip) {
+	struct sockaddr_in *addr4 = (struct sockaddr_in *) &addr->bdc;
+	return addr4->sin_family == AF_INET && addr4->sin_addr.s_addr == *ip;
+}
+
+int addr_is_v6(struct addr_record *addr) {
+	return addr->family == AF_INET6;
+}
+
+int addr_ipv6_test(struct addr_record *addr, uint32_t *ip) {
+	return 0;
+}
+
+int addr_bdcv6_test(struct addr_record *addr, uint32_t *ip) {
+	return 0;
+}
+
+void addr4_set_addr(struct sockaddr_storage *addr, uint32_t val) {
 	struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 	memset(addr4, 0, sizeof(struct sockaddr_in));
 	addr4->sin_family = AF_INET;
 	addr4->sin_addr.s_addr = val;
 }
 
-int addr_is_addr4(struct addr_record *addr) {
-	return addr->family == AF_INET;
+uint32_t addr4_get_addr(struct sockaddr_storage *addr) {
+	return ((uint32_t) ((struct sockaddr_in *) addr)->sin_addr.s_addr);
 }
 
-void set_addr6(struct sockaddr_storage *addr, uint32_t val) {
+void addr6_set_addr(struct sockaddr_storage *addr, uint32_t val) {
 	struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) addr;
 	memset(addr6, 0, sizeof(struct sockaddr_in6));
 	addr6->sin6_family = AF_INET6;
 	//addr6->sin6_addr.s_addr = val;
 }
 
-int addr_is_addr6(struct addr_record *addr) {
-	return addr->family == AF_INET6;
+uint8_t *addr6_get_addr(struct sockaddr_storage *addr) {
+	return NULL;
+}
+
+struct if_record *ifr_copy(struct if_record *ifr) {
+	PRINT_DEBUG("Entered: ifr=%p", ifr);
+
+	struct if_record *ifr_copy = (struct if_record *) secure_malloc(sizeof(struct if_record));
+	memcpy(ifr_copy, ifr, sizeof(struct if_record));
+
+	if (ifr->addr_list) {
+		ifr_copy->addr_list = list_copy(ifr->addr_list, addr_copy);
+	}
+
+	return ifr_copy;
 }
 
 int ifr_index_test(struct if_record *ifr, uint32_t *index) {
 	return ifr->index == *index;
+}
+
+int ifr_ipv4_test(struct if_record *ifr, uint32_t *ip) {
+	if (ifr->addr_list != NULL) {
+		struct addr_record *addr = (struct addr_record *) list_find1(ifr->addr_list, addr_ipv4_test, ip);
+		return addr != NULL;
+	}
+	return 0;
+}
+
+int ifr_ipv6_test(struct if_record *ifr, uint32_t *ip) {
+	return 0;
 }
 
 void ifr_free(struct if_record *ifr) {
@@ -1531,4 +1757,21 @@ void ifr_free(struct if_record *ifr) {
 	}
 
 	free(ifr);
+}
+
+int route_is_addr4(struct route_record *route) {
+	return route->family == AF_INET;
+}
+
+int route_is_addr6(struct route_record *route) {
+	return route->family == AF_INET6;
+}
+
+struct route_record *route_copy(struct route_record *route) {
+	PRINT_DEBUG("Entered: route=%p", route);
+
+	struct route_record *route_copy = (struct route_record *) secure_malloc(sizeof(struct route_record));
+	memcpy(route_copy, route, sizeof(struct route_record));
+
+	return route_copy;
 }

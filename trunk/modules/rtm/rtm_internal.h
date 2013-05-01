@@ -166,15 +166,15 @@ struct rtm_command {
 	uint32_t op;
 	uint32_t param_id;
 };
-int cmd_serial_test(struct rtm_command *cmd, uint32_t *serial_num);
+int rtm_cmd_serial_test(struct rtm_command *cmd, uint32_t *serial_num);
 
 struct rtm_console {
 	uint32_t id;
 	int fd;
 	struct sockaddr_un *addr;
 };
-int console_id_test(struct rtm_console *console, uint32_t *id);
-int console_fd_test(struct rtm_console *console, int *fd);
+int rtm_console_id_test(struct rtm_console *console, uint32_t *id);
+int rtm_console_fd_test(struct rtm_console *console, int *fd);
 void console_free(struct rtm_console *console);
 
 int rtm_recv_fd(int fd, uint32_t buf_len, uint8_t *buf);

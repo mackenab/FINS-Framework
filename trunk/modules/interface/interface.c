@@ -38,6 +38,71 @@ int interface_setBlocking(int fd) {
 #endif
 }
 
+//################ ARP/interface stuff //TODO move to common?
+int interface_request_ipv4_test(struct interface_request *request, uint32_t *src_ip) {
+	return addr4_get_addr(&request->src_ip) == *src_ip;
+}
+
+void interface_request_free(struct interface_request *request) {
+	PRINT_DEBUG("Entered: request=%p", request);
+
+	if (request->ff != NULL) {
+		freeFinsFrame(request->ff);
+	}
+
+	free(request);
+}
+
+int interface_cache_ipv4_test(struct interface_cache *cache, uint32_t *ip) {
+	return cache->ip.ss_family == AF_INET && addr4_get_addr(&cache->ip) == *ip;
+}
+
+int interface_cache_ipv6_test(struct interface_cache *cache, uint8_t *ip) {
+	return cache->ip.ss_family == AF_INET6 && strcmp((char *) addr6_get_addr(&cache->ip), (char *) ip) == 0;
+}
+
+int interface_cache_non_seeking_test(struct interface_cache *cache) {
+	return !cache->seeking;
+}
+
+void interface_cache_free(struct interface_cache *cache) {
+	PRINT_DEBUG("Entered: cache=%p", cache);
+
+	if (cache->request_list != NULL) {
+		list_free(cache->request_list, interface_request_free);
+	}
+
+	free(cache);
+}
+
+struct interface_store *interface_store_create(uint32_t serial_num, uint32_t sent, struct interface_cache *cache, struct interface_request *request) { //TODO remove request? not used
+	PRINT_DEBUG("Entered: serial_num=%u, sent=%u, cache=%p, request=%p", serial_num, sent, cache, request);
+
+	struct interface_store *store = (struct interface_store *) secure_malloc(sizeof(struct interface_store));
+	store->serial_num = serial_num;
+	store->sent = sent;
+	store->cache = cache;
+	store->request = request;
+
+	PRINT_DEBUG("Exited: serial_num=%u, store=%p", serial_num, store);
+	return store;
+}
+
+int interface_store_serial_test(struct interface_store *store, uint32_t *serial_num) {
+	return store->serial_num == *serial_num;
+}
+
+void interface_store_free(struct interface_store *store) {
+	PRINT_DEBUG("Entered: store=%p", store);
+
+	if (store->cache != NULL) {
+		interface_cache_free(store->cache);
+	}
+
+	free(store);
+}
+//################
+
 void *switch_to_interface(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
 	PRINT_IMPORTANT("Entered: module=%p", module);
@@ -74,19 +139,23 @@ void interface_get_ff(struct fins_module *module) {
 
 	PRINT_DEBUG(" At least one frame has been read from the Switch to Etherstub ff=%p", ff);
 
-	if (ff->dataOrCtrl == CONTROL) {
+	if (ff->dataOrCtrl == FF_CONTROL) {
 		interface_fcf(module, ff);
 		PRINT_DEBUG("");
-	} else if (ff->dataOrCtrl == DATA) {
+	} else if (ff->dataOrCtrl == FF_DATA) {
 		if (ff->dataFrame.directionFlag == DIR_UP) {
 			//interface_in_fdf(module, ff); //TODO remove?
 			PRINT_ERROR("todo error");
-		} else { //directionFlag==DIR_DOWN
+			freeFinsFrame(ff);
+		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			interface_out_fdf(module, ff);
 			PRINT_DEBUG("");
+		} else {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
 		}
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 		exit(-1);
 	}
 }
@@ -155,8 +224,8 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 	int i;
 
 	switch (ff->ctrlFrame.param_id) {
-	case PARAM_FLOWS:
-		PRINT_DEBUG("PARAM_FLOWS");
+	case INTERFACE_GET_PARAM_FLOWS:
+		PRINT_DEBUG("INTERFACE_GET_PARAM_FLOWS");
 		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
 		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
@@ -173,8 +242,8 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		//freeFF frees flows
 		break;
-	case PARAM_LINKS:
-		PRINT_DEBUG("PARAM_LINKS");
+	case INTERFACE_GET_PARAM_LINKS:
+		PRINT_DEBUG("INTERFACE_GET_PARAM_LINKS");
 		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
 			PRINT_ERROR("todo error");
 			freeFinsFrame(ff);
@@ -184,13 +253,12 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 		if (data->link_list != NULL) {
 			list_free(data->link_list, free);
 		}
-		struct linked_list *link_list = (struct linked_list *) ff->ctrlFrame.data;
-		data->link_list = link_list;
+		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
 
 		ff->ctrlFrame.data = NULL;
 		break;
-	case PARAM_DUAL:
-		PRINT_DEBUG("PARAM_DUAL");
+	case INTERFACE_GET_PARAM_DUAL:
+		PRINT_DEBUG("INTERFACE_GET_PARAM_DUAL");
 
 		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
 			PRINT_ERROR("todo error");
@@ -226,30 +294,334 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 	freeFinsFrame(ff);
 }
 
+void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_ERROR("todo");
+	freeFinsFrame(ff);
+
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	switch (ff->ctrlFrame.param_id) {
+	case EXEC_INTERFACE_GET_ADDR:
+		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+		interface_exec_reply_get_addr(module, ff);
+		break;
+	default:
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+		break;
+	}
+}
+
+void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct interface_data *data = (struct interface_data *) module->data;
+
+	struct interface_store *store = (struct interface_store *) list_find1(data->store_list, interface_store_serial_test, &ff->ctrlFrame.serial_num);
+	if (store != NULL) {
+		PRINT_DEBUG("store=%p, serial_num=%u, sent=%u, cache=%p, request=%p", store, store->serial_num, store->sent, store->cache, store->request);
+		if (--store->sent == 0) {
+			list_remove(data->store_list, store);
+		}
+
+		struct interface_cache *cache = store->cache;
+		struct interface_request *request = store->request;
+
+		if (ff->ctrlFrame.ret_val) {
+			uint64_t src_mac = request->src_mac;
+			uint32_t src_ip = addr4_get_addr(&request->src_ip);
+			uint64_t dst_mac = 0;
+			uint32_t dst_ip = addr4_get_addr(&cache->ip);
+
+			metadata *meta = ff->metaData;
+			secure_metadata_readFromElement(meta, "dst_mac", &dst_mac);
+
+			PRINT_DEBUG("Entered: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
+
+			if (cache->seeking) {
+				PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+				cache->mac = dst_mac;
+
+				cache->seeking = 0;
+				gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
+
+				struct interface_request *request_resp;
+				struct finsFrame *ff_resp;
+
+				while (!list_is_empty(cache->request_list)) {
+					request_resp = (struct interface_request *) list_remove_front(cache->request_list);
+					ff_resp = request_resp->ff;
+
+					secure_metadata_writeToElement(ff_resp->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+					PRINT_DEBUG("send frame: src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", src_mac, dst_mac, ETH_TYPE_IP4);
+
+					if (interface_inject_pdu(data->client_inject_fd, ff_resp->dataFrame.pduLength, ff_resp->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
+						PRINT_ERROR("todo");
+						freeFinsFrame(ff_resp);
+					} else {
+						PRINT_ERROR("todo error");
+						exit(-1); //TODO change, send FCF?
+					}
+
+					request_resp->ff = NULL;
+					interface_request_free(request_resp);
+				}
+			} else {
+				PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p", ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+			}
+
+			if (store->sent == 0) {
+				store->cache = NULL;
+				interface_store_free(store);
+			}
+		} else {
+			if (store->sent == 0) {
+				//TODO error sending back FDF as FCF? saved pdu for that
+				PRINT_ERROR("todo error");
+
+				uint64_t src_mac = request->src_mac;
+				uint32_t src_ip = addr4_get_addr(&request->src_ip);
+				uint64_t dst_mac = 0;
+				uint32_t dst_ip = addr4_get_addr(&cache->ip);
+				PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p", ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+
+				//TODO checked up to here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+				//TODO send FCF error frame??
+
+				//TODO remove all requests from same source //split cache into (src,dst) tuples?
+				//store->cache = NULL;
+				//interface_store_free(store);
+			}
+		}
+	} else {
+		PRINT_ERROR("Exited, no corresponding store: ff=%p, serial_num=%u", ff, ff->ctrlFrame.serial_num);
+	}
+
+	freeFinsFrame(ff);
+}
+
 void interface_out_fdf(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	uint32_t ether_type;
+	secure_metadata_readFromElement(ff->metaData, "send_ether_type", &ether_type);
+
+	switch (ether_type) {
+	case ETH_TYPE_IP4:
+		//32bit addr
+		interface_out_ipv4(module, ff);
+		break;
+	case ETH_TYPE_ARP:
+		//send through
+		interface_out_arp(module, ff);
+		break;
+	case ETH_TYPE_IP6:
+		//128bit addr
+		interface_out_ipv6(module, ff);
+		break;
+	default:
+		break;
+	}
+}
+
+void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct interface_data *data = (struct interface_data *) module->data;
+
+	uint32_t if_index;
+	secure_metadata_readFromElement(ff->metaData, "send_if_index", &if_index);
+
+	struct if_record *ifr = (struct if_record *) list_find1(data->if_list, ifr_index_test, &if_index);
+	if (ifr != NULL) {
+		uint32_t src_ip;
+		uint32_t dst_ip;
+
+		secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
+		secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
+
+		struct addr_record *addr = (struct addr_record *) list_find1(ifr->addr_list, addr_ipv4_test, &src_ip);
+		if (addr != NULL) {
+			uint64_t dst_mac;
+			uint64_t src_mac = ifr->mac;
+			secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
+			PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip);
+
+			struct interface_cache *cache = (struct interface_cache *) list_find1(data->cache_list, interface_cache_ipv4_test, &dst_ip);
+			if (cache != NULL) {
+				if (cache->seeking) {
+					PRINT_DEBUG("cache seeking: cache=%p", cache);
+
+					if (list_has_space(cache->request_list)) {
+
+						//TODO if src is first of unique in request_list, send FCF!
+
+						struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
+						addr4_set_addr(&request->src_ip, src_ip);
+						request->src_mac = src_mac;
+						request->ff = ff;
+						list_append(cache->request_list, request);
+
+						gettimeofday(&cache->updated_stamp, 0);
+					} else {
+						PRINT_ERROR("Error: request_list full, request_list->len=%u, ff=%p", cache->request_list->len, ff);
+						PRINT_ERROR("todo error");
+						freeFinsFrame(ff);
+					}
+				} else {
+					dst_mac = cache->mac;
+					PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+
+					struct timeval current;
+					gettimeofday(&current, 0);
+
+					if (time_diff(&cache->updated_stamp, &current) <= INTERFACE_CACHE_TO_DEFAULT) {
+						PRINT_DEBUG("up to date cache: cache=%p", cache);
+						if (interface_inject_pdu(data->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
+							PRINT_ERROR("todo");
+							freeFinsFrame(ff);
+						} else {
+							PRINT_ERROR("todo error");
+							exit(-1); //TODO change, send FCF?
+						}
+					} else {
+						PRINT_DEBUG("cache expired: cache=%p", cache);
+						if (list_has_space(cache->request_list) && list_has_space(data->store_list)) {
+							uint32_t serial_num = gen_control_serial_num();
+							int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
+							if (sent == -1 || sent == 0) {
+								PRINT_ERROR("todo erro");
+							}
+
+							struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
+							addr4_set_addr(&request->src_ip, src_ip);
+							request->src_mac = src_mac;
+							request->ff = ff;
+							list_append(cache->request_list, request);
+
+							struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
+							list_append(data->store_list, store);
+
+							cache->seeking = 1;
+							gettimeofday(&cache->updated_stamp, 0);
+						} else {
+							if (list_has_space(cache->request_list)) {
+								PRINT_ERROR("Error: no space, request_list->len=%u, ff=%p", cache->request_list->len, ff);
+							} else {
+								PRINT_ERROR("Error: no space, store_list full, ff=%p", ff);
+							}
+							freeFinsFrame(ff);
+						}
+					}
+				}
+			} else {
+				PRINT_DEBUG("create cache: start seeking");
+				if (list_has_space(data->store_list)) {
+					uint32_t serial_num = gen_control_serial_num();
+					int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
+					if (sent == -1 || sent == 0) {
+						PRINT_ERROR("todo erro");
+					}
+
+					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
+					if (!list_has_space(data->cache_list)) {
+						PRINT_DEBUG("Making space in cache_list");
+
+						struct interface_cache *temp_cache = (struct interface_cache *) list_find(data->cache_list, interface_cache_non_seeking_test);
+						if (temp_cache != NULL) {
+							list_remove(data->cache_list, temp_cache);
+
+							struct interface_request *temp_request;
+							struct finsFrame *temp_ff;
+
+							while (!list_is_empty(temp_cache->request_list)) {
+								temp_request = (struct interface_request *) list_remove_front(temp_cache->request_list);
+								temp_ff = temp_request->ff;
+
+								temp_ff->destinationID = ff->ctrlFrame.sender_id;
+								temp_ff->ctrlFrame.sender_id = module->index;
+								temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+								temp_ff->ctrlFrame.ret_val = 0;
+
+								module_to_switch(module, temp_ff);
+
+								temp_request->ff = NULL;
+								interface_request_free(temp_request);
+							}
+
+							interface_cache_free(temp_cache);
+						} else {
+							PRINT_ERROR("todo error");
+							freeFinsFrame(ff);
+							return;
+						}
+					}
+
+					struct interface_cache *cache = (struct interface_cache *) secure_malloc(sizeof(struct interface_cache));
+					addr4_set_addr(&cache->ip, dst_ip);
+					cache->request_list = list_create(INTERFACE_REQUEST_LIST_MAX);
+					list_append(data->cache_list, cache);
+
+					struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
+					addr4_set_addr(&request->src_ip, src_ip);
+					request->src_mac = src_mac;
+					request->ff = ff;
+					list_append(cache->request_list, request);
+
+					struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
+					list_append(data->store_list, store);
+
+					cache->seeking = 1;
+					gettimeofday(&cache->updated_stamp, 0);
+				} else {
+					PRINT_ERROR("Error: no space, store_list full, ff=%p", ff);
+					freeFinsFrame(ff);
+				}
+			}
+		} else {
+			PRINT_ERROR("todo error");
+			freeFinsFrame(ff);
+		}
+	} else {
+		PRINT_ERROR("todo error");
+		freeFinsFrame(ff);
+	}
+}
+
+void interface_out_arp(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct interface_data *data = (struct interface_data *) module->data;
 
 	uint64_t dst_mac;
 	uint64_t src_mac;
-	uint32_t ether_type;
+	secure_metadata_readFromElement(ff->metaData, "send_dst_mac", &dst_mac);
+	secure_metadata_readFromElement(ff->metaData, "send_src_mac", &src_mac);
 
-	uint8_t *frame;
-	struct sniff_ethernet *hdr;
-	int framelen;
-	int numBytes;
+	if (interface_inject_pdu(data->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_ARP)) {
+		PRINT_ERROR("todo");
+		freeFinsFrame(ff);
+	} else {
+		PRINT_ERROR("todo error");
+		exit(-1); //TODO change, send FCF?
+	}
+}
 
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "send_dst_mac", &dst_mac);
-	secure_metadata_readFromElement(meta, "send_src_mac", &src_mac);
-	secure_metadata_readFromElement(meta, "send_ether_type", &ether_type);
+void interface_out_ipv6(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	PRINT_ERROR("todo");
+	freeFinsFrame(ff);
+}
+
+int interface_inject_pdu(int fd, uint32_t pduLength, uint8_t *pdu, uint64_t dst_mac, uint64_t src_mac, uint32_t ether_type) {
+	PRINT_DEBUG("Entered: fd=%d, pduLength=%u, pdu=%p", fd, pduLength, pdu);
 
 	PRINT_DEBUG("send frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 
-	framelen = ff->dataFrame.pduLength + SIZE_ETHERNET;
+	int framelen = pduLength + SIZE_ETHERNET;
 	PRINT_DEBUG("framelen=%d", framelen);
 
-	frame = (uint8_t *) secure_malloc(framelen);
-	hdr = (struct sniff_ethernet *) frame;
+	uint8_t *frame = (uint8_t *) secure_malloc(framelen);
+	struct sniff_ethernet *hdr = (struct sniff_ethernet *) frame;
 
 	hdr->ether_dhost[0] = (dst_mac >> 40) & 0xff;
 	hdr->ether_dhost[1] = (dst_mac >> 32) & 0xff;
@@ -271,34 +643,54 @@ void interface_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 		hdr->ether_type = htons(ETH_TYPE_IP4);
 	} else {
 		PRINT_ERROR("todo error");
-		freeFinsFrame(ff);
 		free(frame);
-		return;
+		return 0;
 	}
 
-	//memcpy(frame + SIZE_ETHERNET, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	memcpy(hdr->data, ff->dataFrame.pdu, ff->dataFrame.pduLength);
-	//	print_finsFrame(ff);
-	PRINT_DEBUG("daemon inject to ethernet stub ");
+	memcpy(hdr->data, pdu, pduLength);
 
-	numBytes = write(data->client_inject_fd, &framelen, sizeof(int));
+	int numBytes = write(fd, &framelen, sizeof(int));
 	if (numBytes <= 0) {
 		PRINT_ERROR("numBytes written %d", numBytes);
-		freeFinsFrame(ff);
 		free(frame);
-		return;
+		return 0;
 	}
 
-	numBytes = write(data->client_inject_fd, frame, framelen);
+	numBytes = write(fd, frame, framelen);
 	if (numBytes <= 0) {
 		PRINT_ERROR("numBytes written %d", numBytes);
-		freeFinsFrame(ff);
 		free(frame);
-		return;
+		return 0;
 	}
 
-	freeFinsFrame(ff);
 	free(frame);
+	return 1;
+}
+
+int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t dst_ip, uint32_t serial_num) {
+	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+	metadata_create(meta);
+
+	secure_metadata_writeToElement(meta, "src_ip", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "dst_ip", &dst_ip, META_TYPE_INT32);
+
+	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+	ff->dataOrCtrl = FF_CONTROL;
+	ff->metaData = meta;
+
+	ff->ctrlFrame.sender_id = module->index;
+	ff->ctrlFrame.serial_num = serial_num;
+	ff->ctrlFrame.opcode = CTRL_EXEC;
+	ff->ctrlFrame.param_id = EXEC_INTERFACE_GET_ADDR;
+
+	ff->ctrlFrame.data_len = 0;
+	ff->ctrlFrame.data = NULL;
+
+	int sent = module_send_flow(module, ff, INTERFACE_FLOW_ARP);
+	if (sent == 0) {
+		freeFinsFrame(ff);
+	}
+	return sent;
 }
 
 void *capturer_to_interface(void *local) {
@@ -321,22 +713,7 @@ void *capturer_to_interface(void *local) {
 	struct finsFrame *ff;
 
 	while (module->state == FMS_RUNNING) {
-		/*
-		 if (0) { //works, allows for terminating, though creates unbound while(1) loop
-		 interface_setNonblocking(capture_pipe_fd);
-		 do {
-		 numBytes = read(capture_pipe_fd, &frame_len, sizeof(int));
-		 } while (interface_proto.running_flag && numBytes <= 0);
-
-		 if (!interface_proto.running_flag) {
-		 break;
-		 }
-
-		 interface_setBlocking(capture_pipe_fd);
-		 }
-		 */
-		//if (1) { //works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
-		//PRINT_IMPORTANT("Reading");
+		//works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		do {
 			numBytes = read(data->client_capture_fd, &frame_len, size_len);
 			if (numBytes <= 0) {
@@ -348,7 +725,6 @@ void *capturer_to_interface(void *local) {
 		if (module->state != FMS_RUNNING) {
 			break;
 		}
-		//}
 
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading size: numBytes=%d", numBytes);
@@ -399,30 +775,80 @@ void *capturer_to_interface(void *local) {
 		secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
 
 		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = DATA;
+		ff->dataOrCtrl = FF_DATA;
 		ff->metaData = meta;
+
+		uint32_t flow;
+		switch (ether_type) {
+		case ETH_TYPE_IP4:
+			PRINT_DEBUG("IPv4: proto=0x%x (%u)", ether_type, ether_type);
+			flow = INTERFACE_FLOW_IPV4;
+			break;
+		case ETH_TYPE_ARP:
+			PRINT_DEBUG("ARP: proto=0x%x (%u)", ether_type, ether_type);
+			flow = INTERFACE_FLOW_ARP;
+			break;
+		case ETH_TYPE_IP6:
+			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
+			flow = INTERFACE_FLOW_IPV6;
+			continue;
+		default:
+			PRINT_DEBUG("default: proto=0x%x (%u)", ether_type, ether_type);
+			freeFinsFrame(ff);
+			continue;
+		}
 
 		ff->dataFrame.directionFlag = DIR_UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
 		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
-		if (!module_send_flow(module, (struct fins_module_table *) module->data, ff, INTERFACE_FLOW_UP)) {
+		if (!module_send_flow(module, ff, flow)) {
 			PRINT_ERROR("send to switch error, ff=%p", ff);
 			freeFinsFrame(ff);
 		}
 	}
 
-	PRINT_IMPORTANT("Exited");
+	PRINT_IMPORTANT("Exited: module=%p", module);
 	return NULL;
 }
 
-int interface_init(struct fins_module *module, uint32_t *flows, uint32_t flows_num, metadata_element *params, struct envi_record *envi) {
+void interface_init_params(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->params);
+	//int status;
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	if (exec_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	if (get_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
+	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	if (set_elem == NULL) {
+		PRINT_DEBUG("todo error");
+		exit(-1);
+	}
+	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
+}
+
+int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	//interface_init_params(module);
+	interface_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct interface_data));
 	struct interface_data *data = (struct interface_data *) module->data;
@@ -437,6 +863,17 @@ int interface_init(struct fins_module *module, uint32_t *flows, uint32_t flows_n
 	for (i = 0; i < flows_num; i++) {
 		data->flows[i] = flows[i];
 	}
+
+	data->if_list = list_copy(envi->if_list, ifr_copy);
+	if (data->if_list->len > INTERFACE_IF_LIST_MAX) {
+		PRINT_ERROR("todo");
+		struct linked_list *leftover = list_split(data->if_list, INTERFACE_IF_LIST_MAX - 1);
+		list_free(leftover, free);
+	}
+	data->if_list->max = INTERFACE_IF_LIST_MAX;
+
+	data->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
+	data->store_list = list_create(INTERFACE_STORE_LIST_MAX);
 
 	//TODO move to associated thread, so init() is nonblocking
 	struct sockaddr_un addr;
@@ -527,9 +964,12 @@ int interface_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	struct interface_data *data = (struct interface_data *) module->data;
-	//TODO free all module related mem
-
-	//delete threads
+	PRINT_IMPORTANT("if_list->len=%u", data->if_list->len);
+	list_free(data->if_list, ifr_free);
+	PRINT_IMPORTANT("cache_list->len=%u", data->cache_list->len);
+	list_free(data->cache_list, interface_cache_free);
+	PRINT_IMPORTANT("store_list->len=%u", data->store_list->len);
+	list_free(data->store_list, free);
 
 	if (data->link_list != NULL) {
 		list_free(data->link_list, free);

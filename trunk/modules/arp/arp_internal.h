@@ -83,24 +83,13 @@ void gen_requestARP(struct arp_message *request_ARP_ptr, uint64_t sender_mac, ui
 void gen_replyARP(struct arp_message *reply_ARP, uint64_t sender_mac, uint32_t sender_ip, uint64_t target_mac, uint32_t target_ip);
 int check_valid_arp(struct arp_message *msg);
 
-#define ARP_INTERFACE_LIST_MAX 256
+#define ARP_IF_LIST_MAX 256
 #define ARP_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
 //#define ARP_THREADS_MAX 50
 #define ARP_RETRANS_TO_DEFAULT 1000
 #define ARP_CACHE_TO_DEFAULT 15000
 #define ARP_RETRIES 2
 #define ARP_CACHE_LIST_MAX 8192
-
-
-struct arp_interface {
-	uint64_t addr_mac;
-	uint32_t addr_ip;
-};
-struct arp_interface *arp_interface_create(uint64_t addr_mac, uint32_t addr_ip);
-int arp_interface_ip_test(struct arp_interface *interface, uint32_t *addr_ip);
-void arp_interface_free(struct arp_interface *interface);
-
-int arp_register_interface(struct fins_module *module, uint64_t MAC_address, uint32_t IP_address);
 
 struct arp_request {
 	struct finsFrame *ff;
@@ -113,8 +102,8 @@ void arp_request_free(struct arp_request *request);
 
 /**This struct is used to store information about neighboring nodes of the host interface*/
 struct arp_cache {
-	uint64_t addr_mac;
-	uint32_t addr_ip;
+	uint64_t mac;
+	uint32_t ip;
 
 	struct linked_list *request_list;
 	uint8_t seeking;
@@ -141,8 +130,8 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg);
 struct arp_message *fdf_to_arp(struct finsFrame *ff);
 
 #define ARP_LIB "arp"
-#define ARP_MAX_FLOWS 2
-#define ARP_FLOW_DOWN 0
+#define ARP_MAX_FLOWS 		1
+#define ARP_FLOW_INTERFACE	0
 
 struct arp_data {
 	struct linked_list *link_list;
@@ -150,7 +139,7 @@ struct arp_data {
 	uint32_t flows[ARP_MAX_FLOWS];
 
 	pthread_t switch_to_arp_thread;
-	struct linked_list *interface_list;
+	struct linked_list *if_list;
 	struct linked_list *cache_list;
 
 	uint8_t interrupt_flag;
