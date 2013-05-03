@@ -235,7 +235,6 @@ void IP4_remove_hole(struct ip4_reass_hole* current_hole, struct ip4_reass_list 
 void IP4_const_header(struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
 struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offest, uint16_t fragment_size);
 
-void IP4_init(void);
 struct ip4_routing_table *IP4_get_routing_table();
 struct ip4_routing_table *IP4_sort_routing_table(struct ip4_routing_table *table_pointer);
 void IP4_print_routing_table(struct ip4_routing_table *table_pointer);

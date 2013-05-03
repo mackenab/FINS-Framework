@@ -141,12 +141,14 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_ERROR("todo");
 		//TODO fix this!! convert to module based
 		PRINT_DEBUG("Packet ID %d is fragmented", header.id);
-		struct ip4_packet* ppacket_reassembled = IP4_reass(&header, ppacket);
+		struct ip4_packet* ppacket_reassembled = NULL; //IP4_reass(&header, ppacket);
 		//free ppacket
 		if (ppacket_reassembled != NULL) {
 			data->stats.delivered++;
 			data->stats.reassembled++;
 			ipv4_send_fdf_in(module, ff, &header, ppacket_reassembled);
+		} else {
+
 		}
 	}
 }

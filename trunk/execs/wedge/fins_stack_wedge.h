@@ -29,29 +29,29 @@
 //#define NETLINK_FINS    20	// must match userspace definition
 #define KERNEL_PID      0	// This is used to identify netlink traffic into and out of the kernel
 /** Socket related calls and their codes */
-#define socket_call 1
-#define bind_call 2
-#define listen_call 3
-#define connect_call 4
-#define accept_call 5
-#define getname_call 6
-#define ioctl_call 7
-#define sendmsg_call 8
-#define recvmsg_call 9
-#define getsockopt_call 10
-#define setsockopt_call 11
-#define release_call 12
-#define poll_call 13
-#define mmap_call 14
-#define socketpair_call 15
-#define shutdown_call 16
-#define close_call 17
-#define sendpage_call 18
+#define SOCKET_CALL 1
+#define BIND_CALL 2
+#define LISTEN_CALL 3
+#define CONNECT_CALL 4
+#define ACCEPT_CALL 5
+#define GETNAME_CALL 6
+#define IOCTL_CALL 7
+#define SENDMSG_CALL 8
+#define RECVMSG_CALL 9
+#define GETSOCKOPT_CALL 10
+#define SETSOCKOPT_CALL 11
+#define RELEASE_CALL 12
+#define POLL_CALL 13
+#define MMAP_CALL 14
+#define SOCKETPAIR_CALL 15
+#define SHUTDOWN_CALL 16
+#define CLOSE_CALL 17
+#define SENDPAGE_CALL 18
 
 //only sent from daemon to wedge
-#define daemon_start_call 19
-#define daemon_stop_call 20
-#define poll_event_call 21
+#define DAEMON_START_CALL 19
+#define DAEMON_STOP_CALL 20
+#define POLL_EVENT_CALL 21
 
 /** Additional calls
  * To hande special cases

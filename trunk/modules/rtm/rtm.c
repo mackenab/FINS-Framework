@@ -1212,7 +1212,7 @@ int rtm_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	struct rtm_data *data = (struct rtm_data *) module->data;
-//TODO free all module related mem
+	list_free(data->console_list, free);
 	list_free(data->cmd_list, free);
 
 	if (data->link_list != NULL) {

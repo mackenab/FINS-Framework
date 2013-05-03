@@ -792,7 +792,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = socket_call;
+	u_int call_type = SOCKET_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -958,7 +958,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = bind_call;
+	u_int call_type = BIND_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -1102,7 +1102,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = listen_call;
+	u_int call_type = LISTEN_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -1240,7 +1240,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = connect_call;
+	u_int call_type = CONNECT_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -1384,7 +1384,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	struct sock *sk, *sk_new;
 	unsigned long long sock_id, sock_id_new;
 	int sock_index, index_new;
-	u_int call_type = accept_call;
+	u_int call_type = ACCEPT_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -1600,7 +1600,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = getname_call;
+	u_int call_type = GETNAME_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -1776,7 +1776,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = sendmsg_call;
+	u_int call_type = SENDMSG_CALL;
 	u_int call_id;
 	int call_index;
 
@@ -1991,7 +1991,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = recvmsg_call;
+	u_int call_type = RECVMSG_CALL;
 	u_int call_id;
 	int call_index;
 	struct sockaddr_in *addr_in;
@@ -2270,7 +2270,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = ioctl_call;
+	u_int call_type = IOCTL_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -2969,7 +2969,7 @@ static int fins_release(struct socket *sock) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = release_call;
+	u_int call_type = RELEASE_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -3112,7 +3112,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = poll_call;
+	u_int call_type = POLL_CALL;
 	u_int call_id;
 	int call_index;
 	int events;
@@ -3299,7 +3299,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = shutdown_call;
+	u_int call_type = SHUTDOWN_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -3480,7 +3480,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = mmap_call;
+	u_int call_type = MMAP_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -3615,7 +3615,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = sendpage_call;
+	u_int call_type = SENDPAGE_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -3751,7 +3751,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = getsockopt_call;
+	u_int call_type = GETSOCKOPT_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;
@@ -3960,7 +3960,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	struct sock *sk;
 	unsigned long long sock_id;
 	int sock_index;
-	u_int call_type = setsockopt_call;
+	u_int call_type = SETSOCKOPT_CALL;
 	u_int call_id;
 	int call_index;
 	int buf_len;

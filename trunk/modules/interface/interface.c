@@ -92,6 +92,10 @@ int interface_store_serial_test(struct interface_store *store, uint32_t *serial_
 	return store->serial_num == *serial_num;
 }
 
+int interface_store_request_test(struct interface_store *store, struct interface_request *request) {
+	return store->request == request;
+}
+
 void interface_store_free(struct interface_store *store) {
 	PRINT_DEBUG("Entered: store=%p", store);
 
@@ -177,8 +181,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		interface_read_param(module, ff);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -196,13 +199,11 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		interface_exec(module, ff);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		interface_exec_reply(module, ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
@@ -215,6 +216,11 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		break;
 	}
+}
+
+void interface_read_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_ERROR("todo");
+	freeFinsFrame(ff);
 }
 
 void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
@@ -294,10 +300,12 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 	freeFinsFrame(ff);
 }
 
-void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
+void interface_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_ERROR("todo");
 	freeFinsFrame(ff);
+}
 
+void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	switch (ff->ctrlFrame.param_id) {
@@ -330,40 +338,32 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 		if (ff->ctrlFrame.ret_val) {
 			uint64_t src_mac = request->src_mac;
 			uint32_t src_ip = addr4_get_addr(&request->src_ip);
-			uint64_t dst_mac = 0;
 			uint32_t dst_ip = addr4_get_addr(&cache->ip);
 
-			metadata *meta = ff->metaData;
-			secure_metadata_readFromElement(meta, "dst_mac", &dst_mac);
-
-			PRINT_DEBUG("Entered: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
+			uint64_t dst_mac;
+			secure_metadata_readFromElement(ff->metaData, "dst_mac", &dst_mac);
 
 			if (cache->seeking) {
-				PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+				PRINT_DEBUG("Updating host: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
 				cache->mac = dst_mac;
 
 				cache->seeking = 0;
 				gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
 
 				struct interface_request *request_resp;
-				struct finsFrame *ff_resp;
-
 				while (!list_is_empty(cache->request_list)) {
 					request_resp = (struct interface_request *) list_remove_front(cache->request_list);
-					ff_resp = request_resp->ff;
 
-					secure_metadata_writeToElement(ff_resp->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
-					PRINT_DEBUG("send frame: src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", src_mac, dst_mac, ETH_TYPE_IP4);
+					secure_metadata_writeToElement(request_resp->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+					PRINT_DEBUG("send frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
 
-					if (interface_inject_pdu(data->client_inject_fd, ff_resp->dataFrame.pduLength, ff_resp->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
-						PRINT_ERROR("todo");
-						freeFinsFrame(ff_resp);
-					} else {
+					if (!interface_inject_pdu(data->client_inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
+							ETH_TYPE_IP4)) {
 						PRINT_ERROR("todo error");
 						exit(-1); //TODO change, send FCF?
 					}
 
-					request_resp->ff = NULL;
+					//add interface statistics, injected++
 					interface_request_free(request_resp);
 				}
 			} else {
@@ -376,22 +376,49 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 			}
 		} else {
 			if (store->sent == 0) {
-				//TODO error sending back FDF as FCF? saved pdu for that
-				PRINT_ERROR("todo error");
-
 				uint64_t src_mac = request->src_mac;
 				uint32_t src_ip = addr4_get_addr(&request->src_ip);
 				uint64_t dst_mac = 0;
 				uint32_t dst_ip = addr4_get_addr(&cache->ip);
-				PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p", ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+				PRINT_ERROR("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
+						ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 
 				//TODO checked up to here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-				//TODO send FCF error frame??
-
 				//TODO remove all requests from same source //split cache into (src,dst) tuples?
-				//store->cache = NULL;
-				//interface_store_free(store);
+				if (cache->seeking) {
+					list_remove(data->cache_list, cache);
+
+					struct interface_request *request_resp;
+					struct interface_store *temp_store;
+					while (!list_is_empty(cache->request_list)) {
+						request_resp = (struct interface_request *) list_remove_front(cache->request_list);
+
+						temp_store = (struct interface_store *) list_find1(data->store_list, interface_store_request_test, request_resp);
+						if (temp_store != NULL) {
+							temp_store->cache = NULL;
+							interface_store_free(temp_store);
+						}
+
+						//TODO generate ICMP msg, send FCF error frame?
+						//TODO or send icmp msg to ip/transport proto
+
+						interface_request_free(request_resp);
+					}
+
+					interface_store_free(store);
+				} else {
+					//cache already confirmed, so do nothing
+					list_remove(cache->request_list, request);
+
+					//TODO generate ICMP msg, send FCF error frame?
+					//TODO or send icmp msg to ip/transport proto
+
+					interface_request_free(request);
+
+					store->cache = NULL;
+					interface_store_free(store);
+				}
 			}
 		}
 	} else {
@@ -478,7 +505,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 					if (time_diff(&cache->updated_stamp, &current) <= INTERFACE_CACHE_TO_DEFAULT) {
 						PRINT_DEBUG("up to date cache: cache=%p", cache);
 						if (interface_inject_pdu(data->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
-							PRINT_ERROR("todo");
+							//add interface statistics, injected++
 							freeFinsFrame(ff);
 						} else {
 							PRINT_ERROR("todo error");
@@ -598,7 +625,7 @@ void interface_out_arp(struct fins_module *module, struct finsFrame *ff) {
 	secure_metadata_readFromElement(ff->metaData, "send_src_mac", &src_mac);
 
 	if (interface_inject_pdu(data->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_ARP)) {
-		PRINT_ERROR("todo");
+		//add interface statistics, injected++
 		freeFinsFrame(ff);
 	} else {
 		PRINT_ERROR("todo error");

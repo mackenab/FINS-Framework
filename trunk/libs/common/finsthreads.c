@@ -316,13 +316,7 @@ void pool_free(struct thread_pool *pool) {
 	sem_destroy(&pool->inactive_sem);
 	//TODO finish
 
-	struct pool_worker *worker;
-	while (!list_is_empty(pool->workers)) {
-		worker = (struct pool_worker *) list_remove_front(pool->workers);
-		worker_free(worker);
-	}
-	free(pool->workers);
-
+	list_free(pool->workers, worker_free);
 	list_free(pool->queue, free);
 
 	free(pool);

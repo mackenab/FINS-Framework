@@ -217,8 +217,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 					struct finsFrame *ff_reply = arp_to_fdf(&arp_msg_reply);
 
-					int sent = module_send_flow(module, ff_reply, ARP_FLOW_INTERFACE);
-					if (sent > 0) {
+					if (!module_send_flow(module, ff_reply, ARP_FLOW_INTERFACE)) {
 						PRINT_ERROR("todo error");
 						freeFinsFrame(ff_reply);
 					}
@@ -228,7 +227,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					struct arp_cache *cache = (struct arp_cache *) list_find1(data->cache_list, arp_cache_ip_test, &src_ip);
 					if (cache != NULL) {
 						if (cache->seeking != 0) {
-							PRINT_DEBUG("Updating host: node=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
+							PRINT_DEBUG("Updating host: cache=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
 							timer_stop(cache->to_data->tid);
 							cache->to_flag = 0;
 							gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
@@ -271,6 +270,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);
 		}
 
+		PRINT_DEBUG("Freeing: msg=%p", msg);
 		free(msg);
 	} else {
 		PRINT_ERROR("Bad ARP message. Dropping: ff=%p", ff);

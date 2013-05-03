@@ -11,7 +11,7 @@
 #define MAX_DATA_PER_ICMP 4096
 
 #include <linux/icmp.h>
-#include "daemon.h"
+#include "daemon_internal.h"
 
 void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol);
 void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr);

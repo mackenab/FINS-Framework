@@ -104,6 +104,7 @@ struct interface_store {
 };
 struct interface_store *interface_store_create(uint32_t serial_num, uint32_t sent, struct interface_cache *cache, struct interface_request *request);
 int interface_store_serial_test(struct interface_store *store, uint32_t *serial_num);
+int interface_store_request_test(struct interface_store *store, struct interface_request *request);
 void interface_store_free(struct interface_store *store);
 //^^^^^^^^^^^^^^^^^^ ARP/interface stuff
 
@@ -138,7 +139,9 @@ int interface_release(struct fins_module *module);
 
 void interface_get_ff(struct fins_module *module);
 void interface_fcf(struct fins_module *module, struct finsFrame *ff);
+void interface_read_param(struct fins_module *module, struct finsFrame *ff);
 void interface_set_param(struct fins_module *module, struct finsFrame *ff);
+void interface_exec(struct fins_module *module, struct finsFrame *ff);
 void interface_exec_reply(struct fins_module *module, struct finsFrame *ff);
 void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame *ff);
 

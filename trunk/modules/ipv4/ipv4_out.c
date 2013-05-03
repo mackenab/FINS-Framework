@@ -146,29 +146,13 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 			 */
 
 			uint16_t length = ff->dataFrame.pduLength;
-			uint8_t *pdu = ff->dataFrame.pdu;
-
 			pkt_buf->ip_fragoff = htons(0);
 			pkt_buf->ip_id = htons(0);
 			pkt_buf->ip_len = htons(length + IP4_MIN_HLEN);
 			pkt_buf->ip_cksum = 0;
 			pkt_buf->ip_cksum = IP4_checksum(pkt_buf, IP4_MIN_HLEN);
 
-			ff->dataFrame.pduLength += IP4_MIN_HLEN;
-			ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
-			memcpy(ff->dataFrame.pdu, pkt_buf, IP4_MIN_HLEN);
-			memcpy(ff->dataFrame.pdu + IP4_MIN_HLEN, pdu, length);
-
-			uint32_t ether_type = IP4_ETH_TYPE;
-			secure_metadata_writeToElement(ff->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
-			secure_metadata_writeToElement(ff->metaData, "send_if_index", &route->if_index, META_TYPE_INT32);
-
-			if (!module_send_flow(module, ff, IPV4_FLOW_INTERFACE)) {
-				PRINT_ERROR("todo error");
-				freeFinsFrame(ff);
-			}
-			free(pdu);
-			//ipv4_send_fdf_out(module, ff, pkt_buf, address, route->if_index);
+			ipv4_send_fdf_out(module, ff, pkt_buf, address, route->if_index);
 		}
 	} else {
 		PRINT_ERROR("todo error");

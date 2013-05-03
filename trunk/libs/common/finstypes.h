@@ -220,7 +220,7 @@ int list_contains_full(struct linked_list *list, uint8_t *data);
 //Remove the first element of the list & return it
 uint8_t *list_remove_front(struct linked_list *list);
 
-//Remove the specific pointer <data> from the list
+//Remove first instance of the specific pointer <data> from the list
 #define list_remove(list, data) list_remove_full(list, (uint8_t *)data)
 void list_remove_full(struct linked_list *list, uint8_t *data);
 

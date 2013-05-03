@@ -140,8 +140,8 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 
 void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-
 	struct logger_data *data = (struct logger_data *) module->data;
+
 	int i;
 
 	switch (ff->ctrlFrame.param_id) {

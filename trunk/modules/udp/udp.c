@@ -377,6 +377,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 
 					list_remove(data->sent_packet_list, sent);
 					udp_sent_free(sent);
+					PRINT_DEBUG("Freeing: pdu=%p", pdu);
 					free(pdu);
 				} else {
 					PRINT_ERROR("todo error");
@@ -421,6 +422,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 
 					list_remove(data->sent_packet_list, sent);
 					udp_sent_free(sent);
+					PRINT_DEBUG("Freeing: pdu=%p", pdu);
 					free(data);
 				} else {
 					PRINT_ERROR("todo error");
