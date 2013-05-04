@@ -156,7 +156,7 @@ void interface_get_ff(struct fins_module *module) {
 			PRINT_DEBUG("");
 		} else {
 			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
+			exit(-1);
 		}
 	} else {
 		PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
@@ -172,7 +172,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -212,97 +212,44 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		exit(-1);
 		break;
 	}
 }
 
 void interface_read_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	freeFinsFrame(ff);
+	module_reply_fcf(module, ff, 0, 0);
 }
 
 void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	struct interface_data *data = (struct interface_data *) module->data;
-	int i;
-
 	switch (ff->ctrlFrame.param_id) {
-	case INTERFACE_GET_PARAM_FLOWS:
+	case INTERFACE_SET_PARAM_FLOWS:
 		PRINT_DEBUG("INTERFACE_GET_PARAM_FLOWS");
-		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
-		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
-
-		if (module->flows_max < flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = flows_num;
-
-		for (i = 0; i < flows_num; i++) {
-			data->flows[i] = flows[i];
-		}
-
-		//freeFF frees flows
+		module_set_param_flows(module, ff);
 		break;
-	case INTERFACE_GET_PARAM_LINKS:
+	case INTERFACE_SET_PARAM_LINKS:
 		PRINT_DEBUG("INTERFACE_GET_PARAM_LINKS");
-		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
-
-		ff->ctrlFrame.data = NULL;
+		module_set_param_links(module, ff);
 		break;
-	case INTERFACE_GET_PARAM_DUAL:
+	case INTERFACE_SET_PARAM_DUAL:
 		PRINT_DEBUG("INTERFACE_GET_PARAM_DUAL");
-
-		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
-
-		if (module->flows_max < table->flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = table->flows_num;
-
-		for (i = 0; i < table->flows_num; i++) {
-			data->flows[i] = table->flows[i];
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = table->link_list;
-
-		//freeFF frees table
+		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
-
-	freeFinsFrame(ff);
 }
 
 void interface_exec(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	freeFinsFrame(ff);
+	module_reply_fcf(module, ff, 0, 0);
 }
 
 void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
@@ -323,13 +270,13 @@ void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
 
 void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct interface_data *data = (struct interface_data *) module->data;
+	struct interface_data *md = (struct interface_data *) module->data;
 
-	struct interface_store *store = (struct interface_store *) list_find1(data->store_list, interface_store_serial_test, &ff->ctrlFrame.serial_num);
+	struct interface_store *store = (struct interface_store *) list_find1(md->store_list, interface_store_serial_test, &ff->ctrlFrame.serial_num);
 	if (store != NULL) {
 		PRINT_DEBUG("store=%p, serial_num=%u, sent=%u, cache=%p, request=%p", store, store->serial_num, store->sent, store->cache, store->request);
 		if (--store->sent == 0) {
-			list_remove(data->store_list, store);
+			list_remove(md->store_list, store);
 		}
 
 		struct interface_cache *cache = store->cache;
@@ -355,9 +302,9 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 					request_resp = (struct interface_request *) list_remove_front(cache->request_list);
 
 					secure_metadata_writeToElement(request_resp->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
-					PRINT_DEBUG("send frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
 
-					if (!interface_inject_pdu(data->client_inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
+					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
+					if (!interface_inject_pdu(md->client_inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
 							ETH_TYPE_IP4)) {
 						PRINT_ERROR("todo error");
 						exit(-1); //TODO change, send FCF?
@@ -383,18 +330,16 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 				PRINT_ERROR("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
 						ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 
-				//TODO checked up to here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 				//TODO remove all requests from same source //split cache into (src,dst) tuples?
 				if (cache->seeking) {
-					list_remove(data->cache_list, cache);
+					list_remove(md->cache_list, cache);
 
 					struct interface_request *request_resp;
 					struct interface_store *temp_store;
 					while (!list_is_empty(cache->request_list)) {
 						request_resp = (struct interface_request *) list_remove_front(cache->request_list);
 
-						temp_store = (struct interface_store *) list_find1(data->store_list, interface_store_request_test, request_resp);
+						temp_store = (struct interface_store *) list_find1(md->store_list, interface_store_request_test, request_resp);
 						if (temp_store != NULL) {
 							temp_store->cache = NULL;
 							interface_store_free(temp_store);
@@ -454,12 +399,12 @@ void interface_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct interface_data *data = (struct interface_data *) module->data;
+	struct interface_data *md = (struct interface_data *) module->data;
 
 	uint32_t if_index;
 	secure_metadata_readFromElement(ff->metaData, "send_if_index", &if_index);
 
-	struct if_record *ifr = (struct if_record *) list_find1(data->if_list, ifr_index_test, &if_index);
+	struct if_record *ifr = (struct if_record *) list_find1(md->if_list, ifr_index_test, &if_index);
 	if (ifr != NULL) {
 		uint32_t src_ip;
 		uint32_t dst_ip;
@@ -474,7 +419,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 			secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
 			PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip);
 
-			struct interface_cache *cache = (struct interface_cache *) list_find1(data->cache_list, interface_cache_ipv4_test, &dst_ip);
+			struct interface_cache *cache = (struct interface_cache *) list_find1(md->cache_list, interface_cache_ipv4_test, &dst_ip);
 			if (cache != NULL) {
 				if (cache->seeking) {
 					PRINT_DEBUG("cache seeking: cache=%p", cache);
@@ -504,7 +449,9 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 
 					if (time_diff(&cache->updated_stamp, &current) <= INTERFACE_CACHE_TO_DEFAULT) {
 						PRINT_DEBUG("up to date cache: cache=%p", cache);
-						if (interface_inject_pdu(data->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
+
+						PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
+						if (interface_inject_pdu(md->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
 							//add interface statistics, injected++
 							freeFinsFrame(ff);
 						} else {
@@ -513,7 +460,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 						}
 					} else {
 						PRINT_DEBUG("cache expired: cache=%p", cache);
-						if (list_has_space(cache->request_list) && list_has_space(data->store_list)) {
+						if (list_has_space(cache->request_list) && list_has_space(md->store_list)) {
 							uint32_t serial_num = gen_control_serial_num();
 							int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
 							if (sent == -1 || sent == 0) {
@@ -527,7 +474,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 							list_append(cache->request_list, request);
 
 							struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
-							list_append(data->store_list, store);
+							list_append(md->store_list, store);
 
 							cache->seeking = 1;
 							gettimeofday(&cache->updated_stamp, 0);
@@ -543,7 +490,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 				}
 			} else {
 				PRINT_DEBUG("create cache: start seeking");
-				if (list_has_space(data->store_list)) {
+				if (list_has_space(md->store_list)) {
 					uint32_t serial_num = gen_control_serial_num();
 					int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
 					if (sent == -1 || sent == 0) {
@@ -551,12 +498,12 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 					}
 
 					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
-					if (!list_has_space(data->cache_list)) {
+					if (!list_has_space(md->cache_list)) {
 						PRINT_DEBUG("Making space in cache_list");
 
-						struct interface_cache *temp_cache = (struct interface_cache *) list_find(data->cache_list, interface_cache_non_seeking_test);
+						struct interface_cache *temp_cache = (struct interface_cache *) list_find(md->cache_list, interface_cache_non_seeking_test);
 						if (temp_cache != NULL) {
-							list_remove(data->cache_list, temp_cache);
+							list_remove(md->cache_list, temp_cache);
 
 							struct interface_request *temp_request;
 							struct finsFrame *temp_ff;
@@ -587,7 +534,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 					struct interface_cache *cache = (struct interface_cache *) secure_malloc(sizeof(struct interface_cache));
 					addr4_set_addr(&cache->ip, dst_ip);
 					cache->request_list = list_create(INTERFACE_REQUEST_LIST_MAX);
-					list_append(data->cache_list, cache);
+					list_append(md->cache_list, cache);
 
 					struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
 					addr4_set_addr(&request->src_ip, src_ip);
@@ -596,7 +543,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 					list_append(cache->request_list, request);
 
 					struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
-					list_append(data->store_list, store);
+					list_append(md->store_list, store);
 
 					cache->seeking = 1;
 					gettimeofday(&cache->updated_stamp, 0);
@@ -617,14 +564,15 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 
 void interface_out_arp(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct interface_data *data = (struct interface_data *) module->data;
+	struct interface_data *md = (struct interface_data *) module->data;
 
 	uint64_t dst_mac;
 	uint64_t src_mac;
 	secure_metadata_readFromElement(ff->metaData, "send_dst_mac", &dst_mac);
 	secure_metadata_readFromElement(ff->metaData, "send_src_mac", &src_mac);
 
-	if (interface_inject_pdu(data->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_ARP)) {
+	PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_ARP);
+	if (interface_inject_pdu(md->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_ARP)) {
 		//add interface statistics, injected++
 		freeFinsFrame(ff);
 	} else {
@@ -641,8 +589,6 @@ void interface_out_ipv6(struct fins_module *module, struct finsFrame *ff) {
 
 int interface_inject_pdu(int fd, uint32_t pduLength, uint8_t *pdu, uint64_t dst_mac, uint64_t src_mac, uint32_t ether_type) {
 	PRINT_DEBUG("Entered: fd=%d, pduLength=%u, pdu=%p", fd, pduLength, pdu);
-
-	PRINT_DEBUG("send frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x", dst_mac, src_mac, ether_type);
 
 	int framelen = pduLength + SIZE_ETHERNET;
 	PRINT_DEBUG("framelen=%d", framelen);
@@ -722,7 +668,7 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 
 void *capturer_to_interface(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	struct interface_data *data = (struct interface_data *) module->data;
+	struct interface_data *md = (struct interface_data *) module->data;
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	int size_len = sizeof(int);
@@ -742,7 +688,7 @@ void *capturer_to_interface(void *local) {
 	while (module->state == FMS_RUNNING) {
 		//works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		do {
-			numBytes = read(data->client_capture_fd, &frame_len, size_len);
+			numBytes = read(md->client_capture_fd, &frame_len, size_len);
 			if (numBytes <= 0) {
 				PRINT_ERROR("numBytes=%d", numBytes);
 				break;
@@ -758,7 +704,7 @@ void *capturer_to_interface(void *local) {
 			break;
 		}
 
-		numBytes = read(data->client_capture_fd, frame, frame_len);
+		numBytes = read(md->client_capture_fd, frame, frame_len);
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
 			break;
@@ -878,29 +824,29 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	interface_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct interface_data));
-	struct interface_data *data = (struct interface_data *) module->data;
+	struct interface_data *md = (struct interface_data *) module->data;
 
 	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
-	data->flows_num = flows_num;
+	md->flows_num = flows_num;
 
 	int i;
 	for (i = 0; i < flows_num; i++) {
-		data->flows[i] = flows[i];
+		md->flows[i] = flows[i];
 	}
 
-	data->if_list = list_copy(envi->if_list, ifr_copy);
-	if (data->if_list->len > INTERFACE_IF_LIST_MAX) {
+	md->if_list = list_copy(envi->if_list, ifr_copy);
+	if (md->if_list->len > INTERFACE_IF_LIST_MAX) {
 		PRINT_ERROR("todo");
-		struct linked_list *leftover = list_split(data->if_list, INTERFACE_IF_LIST_MAX - 1);
+		struct linked_list *leftover = list_split(md->if_list, INTERFACE_IF_LIST_MAX - 1);
 		list_free(leftover, free);
 	}
-	data->if_list->max = INTERFACE_IF_LIST_MAX;
+	md->if_list->max = INTERFACE_IF_LIST_MAX;
 
-	data->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
-	data->store_list = list_create(INTERFACE_STORE_LIST_MAX);
+	md->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
+	md->store_list = list_create(INTERFACE_STORE_LIST_MAX);
 
 	//TODO move to associated thread, so init() is nonblocking
 	struct sockaddr_un addr;
@@ -910,34 +856,34 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
 
-	data->client_capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (data->client_capture_fd < 0) {
-		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", data->client_capture_fd, errno, strerror(errno));
+	md->client_capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (md->client_capture_fd < 0) {
+		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", md->client_capture_fd, errno, strerror(errno));
 		return 0;
 	}
 
 	PRINT_DEBUG("connecting to: addr='%s'", CAPTURE_PATH);
-	if (connect(data->client_capture_fd, (struct sockaddr *) &addr, size) != 0) {
-		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", data->client_capture_fd, errno, strerror(errno));
+	if (connect(md->client_capture_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", md->client_capture_fd, errno, strerror(errno));
 		return 0;
 	}
-	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", data->client_capture_fd, addr.sun_path);
+	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", md->client_capture_fd, addr.sun_path);
 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
 
-	data->client_inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (data->client_inject_fd < 0) {
-		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", data->client_inject_fd, errno, strerror(errno));
+	md->client_inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (md->client_inject_fd < 0) {
+		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", md->client_inject_fd, errno, strerror(errno));
 		return 0;
 	}
 
 	PRINT_DEBUG("connecting to: addr='%s'", INJECT_PATH);
-	if (connect(data->client_inject_fd, (struct sockaddr *) &addr, size) != 0) {
-		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", data->client_inject_fd, errno, strerror(errno));
+	if (connect(md->client_inject_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", md->client_inject_fd, errno, strerror(errno));
 		return 0;
 	}
-	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", data->client_inject_fd, addr.sun_path);
+	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", md->client_inject_fd, addr.sun_path);
 
 	PRINT_IMPORTANT("PCAP processes connected");
 	return 1;
@@ -947,9 +893,9 @@ int interface_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
-	struct interface_data *data = (struct interface_data *) module->data;
-	secure_pthread_create(&data->switch_to_interface_thread, attr, switch_to_interface, module);
-	secure_pthread_create(&data->capturer_to_interface_thread, attr, capturer_to_interface, module);
+	struct interface_data *md = (struct interface_data *) module->data;
+	secure_pthread_create(&md->switch_to_interface_thread, attr, switch_to_interface, module);
+	secure_pthread_create(&md->capturer_to_interface_thread, attr, capturer_to_interface, module);
 
 	return 1;
 }
@@ -975,14 +921,14 @@ int interface_shutdown(struct fins_module *module) {
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
-	struct interface_data *data = (struct interface_data *) module->data;
+	struct interface_data *md = (struct interface_data *) module->data;
 
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_interface_thread");
-	pthread_join(data->switch_to_interface_thread, NULL);
+	pthread_join(md->switch_to_interface_thread, NULL);
 	PRINT_IMPORTANT("Joining capturer_to_interface_thread");
-	pthread_join(data->capturer_to_interface_thread, NULL);
+	pthread_join(md->capturer_to_interface_thread, NULL);
 
 	return 1;
 }
@@ -990,18 +936,18 @@ int interface_shutdown(struct fins_module *module) {
 int interface_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
-	struct interface_data *data = (struct interface_data *) module->data;
-	PRINT_IMPORTANT("if_list->len=%u", data->if_list->len);
-	list_free(data->if_list, ifr_free);
-	PRINT_IMPORTANT("cache_list->len=%u", data->cache_list->len);
-	list_free(data->cache_list, interface_cache_free);
-	PRINT_IMPORTANT("store_list->len=%u", data->store_list->len);
-	list_free(data->store_list, free);
+	struct interface_data *md = (struct interface_data *) module->data;
+	PRINT_IMPORTANT("if_list->len=%u", md->if_list->len);
+	list_free(md->if_list, ifr_free);
+	PRINT_IMPORTANT("cache_list->len=%u", md->cache_list->len);
+	list_free(md->cache_list, interface_cache_free);
+	PRINT_IMPORTANT("store_list->len=%u", md->store_list->len);
+	list_free(md->store_list, free);
 
-	if (data->link_list != NULL) {
-		list_free(data->link_list, free);
+	if (md->link_list != NULL) {
+		list_free(md->link_list, free);
 	}
-	free(data);
+	free(md);
 	module_destroy_structs(module);
 	free(module);
 	return 1;

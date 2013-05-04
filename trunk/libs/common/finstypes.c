@@ -1234,18 +1234,10 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	}
 
 	struct finsFrame *ff_clone = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-	ff_clone->dataOrCtrl = ff->dataOrCtrl;
-	ff_clone->destinationID = ff->destinationID;
+	memcpy(ff_clone, ff, sizeof(struct finsFrame));
 	ff_clone->metaData = meta_clone;
 
 	if (ff_clone->dataOrCtrl == FF_CONTROL) {
-		ff_clone->ctrlFrame.sender_id = ff->ctrlFrame.sender_id;
-		//ff_clone->ctrlFrame.serial_num = gen_control_serial_num(); //TODO change!!! Causes problems with module_send_flow
-		ff_clone->ctrlFrame.serial_num = ff->ctrlFrame.serial_num;
-		ff_clone->ctrlFrame.opcode = ff->ctrlFrame.opcode;
-		ff_clone->ctrlFrame.param_id = ff->ctrlFrame.param_id;
-
-		ff_clone->ctrlFrame.data_len = ff->ctrlFrame.data_len;
 		if (ff_clone->ctrlFrame.data_len) {
 			ff_clone->ctrlFrame.data = (uint8_t *) secure_malloc(ff_clone->ctrlFrame.data_len);
 			memcpy(ff_clone->ctrlFrame.data, ff->ctrlFrame.data, ff_clone->ctrlFrame.data_len);
@@ -1256,9 +1248,6 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 		PRINT_DEBUG("Exited: orig: ff=%p, meta=%p, data=%p; clone: ff=%p, meta=%p, data=%p",
 				ff, ff->metaData, ff->ctrlFrame.data, ff_clone, ff_clone->metaData, ff_clone->ctrlFrame.data);
 	} else if (ff_clone->dataOrCtrl == FF_DATA) {
-		ff_clone->dataFrame.directionFlag = ff->dataFrame.directionFlag;
-
-		ff_clone->dataFrame.pduLength = ff->dataFrame.pduLength;
 		if (ff_clone->dataFrame.pduLength) {
 			ff_clone->dataFrame.pdu = (uint8_t *) secure_malloc(ff_clone->dataFrame.pduLength);
 			memcpy(ff_clone->dataFrame.pdu, ff->dataFrame.pdu, ff_clone->dataFrame.pduLength);
@@ -1270,6 +1259,7 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 				ff, ff->metaData, ff->dataFrame.pdu, ff_clone, ff_clone->metaData, ff_clone->dataFrame.pdu);
 	} else {
 		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 
 	return ff_clone;

@@ -10,7 +10,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module, must be equal to folder
 LOCAL_NAME := rtm
 LOCAL_LIBS := common data_structure 
-LOCAL_OBJS := rtm.o
+LOCAL_OBJS := rtm.o rtm_process.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
 LOCAL_LDFLAGS := -lc -lpthread

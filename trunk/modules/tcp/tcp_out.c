@@ -3,8 +3,7 @@
  * @date Feb 22, 2012
  * @author Jonathan Reed
  */
-
-#include "tcp.h"
+#include "tcp_internal.h"
 
 void *write_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
@@ -127,7 +126,9 @@ void *write_thread(void *local) {
 	return NULL;
 }
 
-void tcp_out_fdf(struct finsFrame *ff) {
+void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
 	//receiving straight data from the APP layer, process/package into segment
 	uint32_t src_ip;
 	uint32_t dst_ip;
@@ -1204,7 +1205,9 @@ void *read_param_conn_stub_thread(void *local) {
 	return NULL;
 }
 
-void tcp_read_param(struct finsFrame *ff) {
+void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
 	socket_state state;
 	uint32_t host_ip;
 	uint16_t host_port;
@@ -1464,7 +1467,9 @@ void *set_param_conn_stub_thread(void *local) {
 	return NULL;
 }
 
-void tcp_set_param(struct finsFrame *ff) {
+void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
 	socket_state state = 0;
 	uint32_t host_ip = 0;
 	uint16_t host_port = 0;

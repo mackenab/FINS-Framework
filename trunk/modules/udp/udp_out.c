@@ -17,7 +17,7 @@
  */
 
 void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 	//struct udp_metadata_parsed parsed_meta;
 
 	//struct udp_packet packet_host;
@@ -116,7 +116,7 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	ff->dataFrame.pduLength = packet_length;
 	ff->dataFrame.pdu = udp_dataunit;
 
-	data->udpStat.totalSent++;
+	md->udpStat.totalSent++;
 
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 
@@ -127,9 +127,9 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	}
 	struct udp_sent *sent = udp_sent_create(ff_clone, src_ip, src_port, dst_ip, dst_port);
 
-	if (list_has_space(data->sent_packet_list)) {
-		list_append(data->sent_packet_list, sent);
-		PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
+	if (list_has_space(md->sent_packet_list)) {
+		list_append(md->sent_packet_list, sent);
+		PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", md->sent_packet_list, md->sent_packet_list->len, md->sent_packet_list->max);
 
 		gettimeofday(&sent->stamp, 0);
 	} else {
@@ -138,11 +138,11 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 
 		//if (!udp_sent_list_has_space(udp_sent_packet_list)) {
 		PRINT_DEBUG("Dropping head of sent_packet_list");
-		struct udp_sent *old = (struct udp_sent *) list_remove_front(data->sent_packet_list);
+		struct udp_sent *old = (struct udp_sent *) list_remove_front(md->sent_packet_list);
 		udp_sent_free(old);
 		//}
-		list_append(data->sent_packet_list, sent);
-		PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", data->sent_packet_list, data->sent_packet_list->len, data->sent_packet_list->max);
+		list_append(md->sent_packet_list, sent);
+		PRINT_DEBUG("sent_packet_list=%p, len=%u, max=%u", md->sent_packet_list, md->sent_packet_list->len, md->sent_packet_list->max);
 
 		gettimeofday(&sent->stamp, 0);
 	}

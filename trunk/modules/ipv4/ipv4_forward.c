@@ -6,9 +6,9 @@
  */
 #include "ipv4_internal.h"
 
-int IP4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length) {
+int ipv4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
 	return 0; //to disable
 
@@ -17,6 +17,6 @@ int IP4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_pac
 		//IP4_send_fdf_out(ff, ppacket, next_hop, length); //TODO uncommenct/fix
 		return 1;
 	}
-	data->stats.cantforward++;
+	md->stats.cantforward++;
 	return 0;
 }

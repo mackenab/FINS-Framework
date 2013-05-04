@@ -102,9 +102,6 @@
 //tab complete?
 //list of modules / current state
 
-char *op_strs[] = { OP_HELP_STR, OP_EXEC_STR, OP_GET_STR, OP_SET_STR, OP_PAUSE_STR, OP_UNPAUSE_STR, OP_LINK_STR, OP_UNLINK_STR, OP_LOAD_STR, OP_UNLOAD_STR,
-		OP_REPLACE_STR, OP_SHUTDOWN_STR };
-
 #define OP_HELP_MSG "Available operations:"
 
 //TODO finish
@@ -121,9 +118,6 @@ char *op_strs[] = { OP_HELP_STR, OP_EXEC_STR, OP_GET_STR, OP_SET_STR, OP_PAUSE_S
 #define OP_REPLACE_INFO "todo"
 #define OP_SHUTDOWN_INFO "todo"
 
-char *op_info[] = { OP_HELP_INFO, OP_EXEC_INFO, OP_GET_INFO, OP_SET_INFO, OP_PAUSE_INFO, OP_UNPAUSE_INFO, OP_LINK_INFO, OP_UNLINK_INFO, OP_LOAD_INFO,
-		OP_UNLOAD_INFO, OP_REPLACE_INFO, OP_SHUTDOWN_INFO };
-
 //TODO finish
 #define OP_HELP_USAGE "help <operation>"
 #define OP_EXEC_USAGE "exec <module> <procedure> [<param1>=<value1>]"
@@ -137,9 +131,6 @@ char *op_info[] = { OP_HELP_INFO, OP_EXEC_INFO, OP_GET_INFO, OP_SET_INFO, OP_PAU
 #define OP_UNLOAD_USAGE "unload <module>"
 #define OP_REPLACE_USAGE "replace <module>"
 #define OP_SHUTDOWN_USAGE "shutdown"
-
-char *op_usages[] = { OP_HELP_USAGE, OP_EXEC_USAGE, OP_GET_USAGE, OP_SET_USAGE, OP_PAUSE_USAGE, OP_UNPAUSE_USAGE, OP_LINK_USAGE, OP_UNLINK_USAGE, OP_LOAD_USAGE,
-		OP_UNLOAD_USAGE, OP_REPLACE_USAGE, OP_SHUTDOWN_USAGE };
 
 typedef enum {
 	OP_HELP = 0, OP_EXEC, OP_GET, OP_SET, OP_PAUSE, OP_UNPAUSE, OP_LINK, OP_UNLINK, OP_LOAD, OP_UNLOAD, OP_REPLACE, OP_SHUTDOWN, OP_MAX
@@ -184,7 +175,14 @@ int rtm_send_nack(int fd, uint32_t cmd_len, uint8_t *cmd_buf);
 int rtm_send_error(int fd, const char *text, uint32_t buf_len, uint8_t *buf);
 int rtm_send_text(int fd, const char *text);
 
+void rtm_send_fcf(struct fins_module *module, struct rtm_command *cmd, metadata *meta);
+
+int match_module(struct fins_module **modules, uint8_t *word);
+metadata_element *match_params(metadata *params, uint8_t **words, int path_end);
+
 void rtm_process_cmd(struct fins_module *module, struct rtm_console *console, uint32_t cmd_len, uint8_t *cmd_buf);
+typedef void (*process_op_type)(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
+
 void rtm_process_help(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 void rtm_process_exec(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 void rtm_process_get(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
@@ -197,10 +195,6 @@ void rtm_process_load(struct fins_module *module, struct rtm_console *console, s
 void rtm_process_unload(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 void rtm_process_replace(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 void rtm_process_shutdown(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
-
-typedef void (*process_op_type)(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
-process_op_type op_funcs[] = { rtm_process_help, rtm_process_exec, rtm_process_get, rtm_process_set, rtm_process_pause, rtm_process_unpause, rtm_process_link,
-		rtm_process_unlink, rtm_process_load, rtm_process_unload, rtm_process_replace, rtm_process_shutdown };
 
 #define RTM_LIB "rtm"
 #define RTM_MAX_FLOWS 0
@@ -243,15 +237,22 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff);
 void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff);
 void rtm_set_param(struct fins_module *module, struct finsFrame *ff);
 void rtm_set_param_reply(struct fins_module *module, struct finsFrame *ff);
-void rtm_exec_reply(struct fins_module *module, struct finsFrame *ff);
-
 //void rtm_exec(struct fins_module *module, struct finsFrame *ff);
-//void rtm_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+void rtm_exec_reply(struct fins_module *module, struct finsFrame *ff);
 //void rtm_error(struct fins_module *module, struct finsFrame *ff);
 
 //void rtm_in_fdf(struct fins_module *module, struct finsFrame *ff);
 //void rtm_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
 void rtm_interrupt(struct fins_module *module);
+
+//don't use 0
+#define RTM_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
+#define RTM_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
+#define RTM_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+
+#define RTM_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
+#define RTM_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
+#define RTM_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
 
 #endif /* RTM_INTERNAL_H_ */

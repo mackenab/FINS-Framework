@@ -15,7 +15,7 @@ int ipv4_route_dst_test(struct route_record *route, uint32_t *dst) {
 
 void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
 	uint32_t protocol;
 	uint32_t src_ip;
@@ -29,7 +29,7 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	struct ip4_packet_header pkt;
 	struct ip4_packet *pkt_buf = (struct ip4_packet *) &pkt;
-	IP4_const_header(pkt_buf, src_ip, dst_ip, protocol);
+	ipv4_const_header(pkt_buf, src_ip, dst_ip, protocol);
 
 	uint32_t send_ttl = 0;
 	if (metadata_readFromElement(meta, "send_ttl", &send_ttl) == META_TRUE) {
@@ -42,7 +42,7 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	}
 
 	//keep routing table sorted (envi & local), search through routing table, find best match (last match)
-	struct route_record *route = (struct route_record *) list_find_last1(data->route_list, ipv4_route_dst_test, &dst_ip);
+	struct route_record *route = (struct route_record *) list_find_last1(md->route_list, ipv4_route_dst_test, &dst_ip);
 	if (route != NULL) {
 		PRINT_DEBUG("next_hop: interface=%u, dst=%u, gw=%u", route->if_index, addr4_get_addr(&route->dst), addr4_get_addr(&route->gw));
 		uint32_t address;
@@ -53,14 +53,14 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 		}
 
 		uint32_t loopback = 0;
-		if (data->addr_loopback != NULL) {
+		if (md->addr_loopback != NULL) {
 			//table should catch pkts to self & direct to LL
-			if (data->addr_loopback->if_index == route->if_index) {
+			if (md->addr_loopback->if_index == route->if_index) {
 				loopback = 1;
 			}
 		} else {
 			//see if loops back by checking each address, though should be caught by routing table & directed to LL
-			struct addr_record *addr = (struct addr_record *) list_find1(data->addr_list, addr_ipv4_test, &address);
+			struct addr_record *addr = (struct addr_record *) list_find1(md->addr_list, addr_ipv4_test, &address);
 			if (addr != NULL) {
 				loopback = 1;
 			}
@@ -150,7 +150,7 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 			pkt_buf->ip_id = htons(0);
 			pkt_buf->ip_len = htons(length + IP4_MIN_HLEN);
 			pkt_buf->ip_cksum = 0;
-			pkt_buf->ip_cksum = IP4_checksum(pkt_buf, IP4_MIN_HLEN);
+			pkt_buf->ip_cksum = ipv4_checksum(pkt_buf, IP4_MIN_HLEN);
 
 			ipv4_send_fdf_out(module, ff, pkt_buf, address, route->if_index);
 		}

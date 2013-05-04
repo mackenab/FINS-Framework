@@ -92,7 +92,7 @@ void *switch_to_udp(void *local) {
 }
 
 void udp_get_ff(struct fins_module *module) {
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 
 	struct finsFrame *ff;
 	do {
@@ -114,8 +114,8 @@ void udp_get_ff(struct fins_module *module) {
 		exit(-1);
 	}
 
-	data->udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", data->udpStat.totalRecieved, ff, ff->metaData);
+	md->udpStat.totalRecieved++;
+	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", md->udpStat.totalRecieved, ff, ff->metaData);
 	if (ff->dataOrCtrl == FF_CONTROL) {
 		udp_fcf(module, ff);
 		PRINT_DEBUG("");
@@ -128,7 +128,7 @@ void udp_get_ff(struct fins_module *module) {
 			PRINT_DEBUG("");
 		} else {
 			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
+			exit(-1);
 		}
 	} else {
 		PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
@@ -144,7 +144,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -192,85 +192,33 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void udp_read_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	freeFinsFrame(ff);
+	module_reply_fcf(module, ff, 0, 0);
 }
 
 void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	struct udp_data *data = (struct udp_data *) module->data;
-	int i;
-
 	switch (ff->ctrlFrame.param_id) {
 	case MOD_SET_PARAM_FLOWS:
 		PRINT_DEBUG("PARAM_FLOWS");
-		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
-		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
-
-		if (module->flows_max < flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = flows_num;
-
-		for (i = 0; i < flows_num; i++) {
-			data->flows[i] = flows[i];
-		}
-
-		//freeFF frees flows
+		module_set_param_flows(module, ff);
 		break;
 	case MOD_SET_PARAM_LINKS:
 		PRINT_DEBUG("PARAM_LINKS");
-		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
-
-		ff->ctrlFrame.data = NULL;
+		module_set_param_links(module, ff);
 		break;
 	case MOD_SET_PARAM_DUAL:
 		PRINT_DEBUG("PARAM_DUAL");
-
-		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
-
-		if (module->flows_max < table->flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = table->flows_num;
-
-		for (i = 0; i < table->flows_num; i++) {
-			data->flows[i] = table->flows[i];
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = table->link_list;
-
-		//freeFF frees table
+		module_set_param_dual(module, ff);
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
-
-	freeFinsFrame(ff);
 }
 
 void udp_exec(struct fins_module *module, struct finsFrame *ff) {
@@ -295,25 +243,18 @@ void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		//TODO implement?
-
-		ff->destinationID = ff->ctrlFrame.sender_id;
-
-		ff->ctrlFrame.sender_id = UDP_ID;
-		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-		ff->ctrlFrame.ret_val = 0;
-
-		module_to_switch(module, ff);
+		PRINT_ERROR("todo");
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
 }
 
 void udp_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, host=%u/%u, rem=%u/%u", module, ff, host_ip, host_port, rem_ip, rem_port);
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 
-	if (!list_is_empty(data->sent_packet_list)) {
-		struct linked_list *old_list = list_remove_all2(data->sent_packet_list, udp_sent_host_test, &host_ip, &host_port);
+	if (!list_is_empty(md->sent_packet_list)) {
+		struct linked_list *old_list = list_remove_all2(md->sent_packet_list, udp_sent_host_test, &host_ip, &host_port);
 		list_free(old_list, udp_sent_free);
 	}
 
@@ -322,7 +263,7 @@ void udp_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint3
 
 void udp_error(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 
 	//uint32_t src_ip;
 	//uint32_t src_port;
@@ -348,34 +289,30 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		 */
 
 		//if recv_dst_ip==send_src_ip, recv_dst_port==send_src_port, recv_udp_len==, recv_checksum==,  \\should be unique!
-		if (list_is_empty(data->sent_packet_list)) {
+		if (list_is_empty(md->sent_packet_list)) {
 			PRINT_ERROR("todo error");
 			//TODO drop
 			freeFinsFrame(ff);
 		} else {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) { //TODO make func!!
-				struct udp_sent *sent = (struct udp_sent *) list_find2(data->sent_packet_list, udp_sent_data_test,data,&ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_data_test,md,&ff->ctrlFrame.data_len);
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
-					//ff->dataOrCtrl = FF_CONTROL;
-					//ff->destinationID = DAEMON_ID;
-					//ff->metaData = meta_err;
-
 					ff->ctrlFrame.sender_id = module->index;
-					//ff->ctrlFrame.serial_num = gen_control_serial_num();
-					//ff->ctrlFrame.opcode = CTRL_ERROR;
 					//ff->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code //ERROR_UDP_TTL?
 
 					ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
 					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
 					sent->ff->dataFrame.pdu = NULL;
 
-					//module flow up
-					//module_to_switch(module, ff);
+					if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
+						PRINT_ERROR("todo error");
+						freeFinsFrame(ff);
+					}
 
-					list_remove(data->sent_packet_list, sent);
+					list_remove(md->sent_packet_list, sent);
 					udp_sent_free(sent);
 					PRINT_DEBUG("Freeing: pdu=%p", pdu);
 					free(pdu);
@@ -393,37 +330,33 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 	case ERROR_ICMP_DEST_UNREACH:
 		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
 
-		if (list_is_empty(data->sent_packet_list)) {
+		if (list_is_empty(md->sent_packet_list)) {
 			PRINT_ERROR("todo error");
 			//TODO drop
 			freeFinsFrame(ff);
 		} else {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) {
-				struct udp_sent *sent = (struct udp_sent *) list_find2(data->sent_packet_list, udp_sent_data_test, data, &ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_data_test, md, &ff->ctrlFrame.data_len);
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
-					//ff->dataOrCtrl = FF_CONTROL;
-					//ff->destinationID = DAEMON_ID;
-					//ff->metaData = meta_err;
-
 					ff->ctrlFrame.sender_id = module->index;
-					//ff->ctrlFrame.serial_num = gen_control_serial_num();
-					//ff->ctrlFrame.opcode = CTRL_ERROR;
 					//ff->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code //ERROR_UDP_TTL?
 
 					ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
 					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
 					sent->ff->dataFrame.pdu = NULL;
 
-					//module flow up
-					//module_to_switch(module, ff);
+					if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
+						PRINT_ERROR("todo error");
+						freeFinsFrame(ff);
+					}
 
-					list_remove(data->sent_packet_list, sent);
+					list_remove(md->sent_packet_list, sent);
 					udp_sent_free(sent);
 					PRINT_DEBUG("Freeing: pdu=%p", pdu);
-					free(data);
+					free(md);
 				} else {
 					PRINT_ERROR("todo error");
 					//TODO drop?
@@ -437,7 +370,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		//TODO implement?
+		PRINT_ERROR("todo error");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -481,21 +414,21 @@ int udp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	udp_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct udp_data));
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 
 	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
-	data->flows_num = flows_num;
+	md->flows_num = flows_num;
 
 	int i;
 	for (i = 0; i < flows_num; i++) {
-		data->flows[i] = flows[i];
+		md->flows[i] = flows[i];
 	}
 
 	//TODO extract this from meta?
-	data->sent_packet_list = list_create(UDP_SENT_LIST_MAX);
+	md->sent_packet_list = list_create(UDP_SENT_LIST_MAX);
 
 	return 1;
 }
@@ -504,8 +437,8 @@ int udp_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
-	struct udp_data *data = (struct udp_data *) module->data;
-	secure_pthread_create(&data->switch_to_udp_thread, attr, switch_to_udp, module);
+	struct udp_data *md = (struct udp_data *) module->data;
+	secure_pthread_create(&md->switch_to_udp_thread, attr, switch_to_udp, module);
 
 	return 1;
 }
@@ -531,11 +464,11 @@ int udp_shutdown(struct fins_module *module) {
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_udp_thread");
-	pthread_join(data->switch_to_udp_thread, NULL);
+	pthread_join(md->switch_to_udp_thread, NULL);
 
 	return 1;
 }
@@ -543,17 +476,17 @@ int udp_shutdown(struct fins_module *module) {
 int udp_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 	//TODO free all module related mem
 
 	//delete threads
-	PRINT_IMPORTANT("sent_packet_list->len=%u", data->sent_packet_list->len);
-	list_free(data->sent_packet_list, udp_sent_free);
+	PRINT_IMPORTANT("sent_packet_list->len=%u", md->sent_packet_list->len);
+	list_free(md->sent_packet_list, udp_sent_free);
 
-	if (data->link_list != NULL) {
-		list_free(data->link_list, free);
+	if (md->link_list != NULL) {
+		list_free(md->link_list, free);
 	}
-	free(data);
+	free(md);
 	module_destroy_structs(module);
 	free(module);
 	return 1;

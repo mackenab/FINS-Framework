@@ -21,7 +21,7 @@
  */
 
 void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
-	struct udp_data *data = (struct udp_data *) module->data;
+	struct udp_data *md = (struct udp_data *) module->data;
 
 	/* read the FDF and make sure everything is correct*/
 	if (ff->dataOrCtrl != FF_DATA) {
@@ -68,8 +68,8 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	 }
 	 */
 	if (protocol != UDP_PROTOCOL) {
-		data->udpStat.wrongProtocol++;
-		data->udpStat.totalBadDatagrams++;
+		md->udpStat.wrongProtocol++;
+		md->udpStat.totalBadDatagrams++;
 		PRINT_ERROR("wrong proto=%d", protocol);
 
 		return;
@@ -90,15 +90,15 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
-			data->udpStat.badChecksum++;
-			data->udpStat.totalBadDatagrams++;
+			md->udpStat.badChecksum++;
+			md->udpStat.totalBadDatagrams++;
 			PRINT_ERROR("bad checksum=0x%x, calc=0x%x", packet->u_cksum, checksum);
 
 			return;
 		}
 	} else {
-		data->udpStat.noChecksum++;
-		PRINT_DEBUG("ignore checksum=%d", data->udpStat.noChecksum);
+		md->udpStat.noChecksum++;
+		PRINT_DEBUG("ignore checksum=%d", md->udpStat.noChecksum);
 	}
 
 	//metadata *udp_meta = (metadata *)fins_malloc (sizeof(metadata));

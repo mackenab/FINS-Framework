@@ -4,14 +4,14 @@
  *@author Jonathan Reed
  *@date  September 5, 2012
  */
+#include "arp_internal.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <string.h>
 #include <pthread.h>
-
-#include "arp_internal.h"
 
 /**
  * An address like a:b:c:d:e:f is converted into an 64-byte unsigned integer
@@ -285,7 +285,7 @@ void print_arp_hdr(struct arp_hdr *pckt) {
 void print_cache(struct fins_module *module) { //TODO fix/update?
 	//struct arp_cache *ptr_elementInList;
 
-	//struct arp_data *data = (struct arp_data *) module->data;
+	//struct arp_data *md = (struct arp_data *) module->data;
 	//PRINT_DEBUG("Host Interface:");
 	//ptr_elementInList = arp_cache_list;
 	//print_IP_addrs(ptr_elementInList->ip);
@@ -331,7 +331,7 @@ struct finsFrame *arp_to_fdf(struct arp_message *msg) {
 
 	struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = FF_DATA;
-	ff->destinationID = NONE_INDEX; //INTERFACE_ID;
+	//ff->destinationID = NONE_INDEX;
 	ff->metaData = meta;
 
 	ff->dataFrame.directionFlag = DIR_DOWN;
@@ -392,7 +392,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff) {
 }
 
 void arp_get_ff(struct fins_module *module) {
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 	struct finsFrame *ff;
 
 	do {
@@ -400,7 +400,7 @@ void arp_get_ff(struct fins_module *module) {
 		secure_sem_wait(module->input_sem);
 		ff = read_queue(module->input_queue);
 		sem_post(module->input_sem);
-	} while (module->state == FMS_RUNNING && ff == NULL && !data->interrupt_flag); //TODO change logic here, combine with switch_to_arp?
+	} while (module->state == FMS_RUNNING && ff == NULL && !md->interrupt_flag); //TODO change logic here, combine with switch_to_arp?
 
 	if (module->state != FMS_RUNNING) {
 		if (ff != NULL) {
@@ -428,14 +428,14 @@ void arp_get_ff(struct fins_module *module) {
 				freeFinsFrame(ff);
 			} else {
 				PRINT_ERROR("todo error");
-				freeFinsFrame(ff);
+				exit(-1);
 			}
 		} else {
 			PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 			exit(-1);
 		}
-	} else if (data->interrupt_flag) {
-		data->interrupt_flag = 0;
+	} else if (md->interrupt_flag) {
+		md->interrupt_flag = 0;
 
 		arp_interrupt(module);
 	} else {
@@ -452,7 +452,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -462,9 +462,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		PRINT_ERROR("todo");
-		//arp_read_param(ff);
-		//TODO read interface_mac?
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -497,7 +495,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		exit(-1);
 		break;
 	}
 }
@@ -505,78 +503,24 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	struct arp_data *data = (struct arp_data *) module->data;
-	int i;
-
 	switch (ff->ctrlFrame.param_id) {
-	case MOD_SET_PARAM_FLOWS:
-		PRINT_DEBUG("PARAM_FLOWS");
-		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
-		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
-
-		if (module->flows_max < flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = flows_num;
-
-		for (i = 0; i < flows_num; i++) {
-			data->flows[i] = flows[i];
-		}
-
-		//freeFF frees flows
+	case ARP_SET_PARAM_FLOWS:
+		PRINT_DEBUG("ARP_SET_PARAM_FLOWS");
+		module_set_param_flows(module, ff);
 		break;
-	case MOD_SET_PARAM_LINKS:
-		PRINT_DEBUG("PARAM_LINKS");
-		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
-
-		ff->ctrlFrame.data = NULL;
+	case ARP_SET_PARAM_LINKS:
+		PRINT_DEBUG("ARP_SET_PARAM_LINKS");
+		module_set_param_links(module, ff);
 		break;
-	case MOD_SET_PARAM_DUAL:
-		PRINT_DEBUG("PARAM_DUAL");
-
-		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
-
-		if (module->flows_max < table->flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = table->flows_num;
-
-		for (i = 0; i < table->flows_num; i++) {
-			data->flows[i] = table->flows[i];
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = table->link_list;
-
-		//freeFF frees table
+	case ARP_SET_PARAM_DUAL:
+		PRINT_DEBUG("ARP_SET_PARAM_DUAL");
+		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
-
-	freeFinsFrame(ff);
 }
 
 void arp_exec(struct fins_module *module, struct finsFrame *ff) {
@@ -597,9 +541,8 @@ void arp_exec(struct fins_module *module, struct finsFrame *ff) {
 		//arp_exec_get_addr(ff, ip);
 		break;
 	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		//TODO implement?
-		freeFinsFrame(ff);
+		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
 }
@@ -613,9 +556,9 @@ void arp_to_func(struct arp_cache *cache, struct fins_module *module) {
 }
 
 void arp_interrupt(struct fins_module *module) {
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 
-	list_for_each1(data->cache_list, arp_to_func, module);
+	list_for_each1(md->cache_list, arp_to_func, module);
 }
 
 void *switch_to_arp(void *local) {
@@ -663,29 +606,29 @@ int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	arp_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct arp_data));
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 
 	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
-	data->flows_num = flows_num;
+	md->flows_num = flows_num;
 
 	int i;
 	for (i = 0; i < flows_num; i++) {
-		data->flows[i] = flows[i];
+		md->flows[i] = flows[i];
 	}
 
-	data->if_list = list_copy(envi->if_list, ifr_copy);
-	if (data->if_list->len > ARP_IF_LIST_MAX) {
+	md->if_list = list_copy(envi->if_list, ifr_copy);
+	if (md->if_list->len > ARP_IF_LIST_MAX) {
 		PRINT_ERROR("todo");
-		struct linked_list *leftover = list_split(data->if_list, ARP_IF_LIST_MAX - 1);
+		struct linked_list *leftover = list_split(md->if_list, ARP_IF_LIST_MAX - 1);
 		list_free(leftover, free);
 	}
-	data->if_list->max = ARP_IF_LIST_MAX;
+	md->if_list->max = ARP_IF_LIST_MAX;
 
 	//TODO extract cache_list from meta?
-	data->cache_list = list_create(ARP_CACHE_LIST_MAX);
+	md->cache_list = list_create(ARP_CACHE_LIST_MAX);
 
 	return 1;
 }
@@ -694,8 +637,8 @@ int arp_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
-	struct arp_data *data = (struct arp_data *) module->data;
-	secure_pthread_create(&data->switch_to_arp_thread, attr, switch_to_arp, module);
+	struct arp_data *md = (struct arp_data *) module->data;
+	secure_pthread_create(&md->switch_to_arp_thread, attr, switch_to_arp, module);
 
 	return 1;
 }
@@ -721,11 +664,11 @@ int arp_shutdown(struct fins_module *module) {
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_arp_thread");
-	pthread_join(data->switch_to_arp_thread, NULL);
+	pthread_join(md->switch_to_arp_thread, NULL);
 
 	return 1;
 }
@@ -733,24 +676,24 @@ int arp_shutdown(struct fins_module *module) {
 int arp_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
-	struct arp_data *data = (struct arp_data *) module->data;
-	PRINT_IMPORTANT("if_list->len=%u", data->if_list->len);
-	list_free(data->if_list, ifr_free);
+	struct arp_data *md = (struct arp_data *) module->data;
+	PRINT_IMPORTANT("if_list->len=%u", md->if_list->len);
+	list_free(md->if_list, ifr_free);
 
-	PRINT_IMPORTANT("cache_list->len=%u", data->cache_list->len);
+	PRINT_IMPORTANT("cache_list->len=%u", md->cache_list->len);
 	struct arp_cache *cache;
-	while (!list_is_empty(data->cache_list)) {
-		cache = (struct arp_cache *) list_remove_front(data->cache_list);
+	while (!list_is_empty(md->cache_list)) {
+		cache = (struct arp_cache *) list_remove_front(md->cache_list);
 
 		arp_cache_shutdown(cache);
 		arp_cache_free(cache);
 	}
-	free(data->cache_list);
+	free(md->cache_list);
 
-	if (data->link_list != NULL) {
-		list_free(data->link_list, free);
+	if (md->link_list != NULL) {
+		list_free(md->link_list, free);
 	}
-	free(data);
+	free(md);
 	module_destroy_structs(module);
 	free(module);
 	return 1;

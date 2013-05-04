@@ -36,4 +36,13 @@ void switch_process_ff(struct fins_module *module, struct finsFrame *ff);
 void switch_fcf(struct fins_module *module, struct finsFrame *ff);
 void switch_set_param(struct fins_module *module, struct finsFrame *ff);
 
+//don't use 0
+#define SWITCH_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
+#define SWITCH_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
+#define SWITCH_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+
+#define SWITCH_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
+#define SWITCH_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
+#define SWITCH_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+
 #endif /* SWITCH_INTERNAL_H_ */

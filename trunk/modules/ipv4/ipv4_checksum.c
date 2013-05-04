@@ -5,7 +5,7 @@
 
 #include "ipv4_internal.h"
 
-uint16_t IP4_checksum(struct ip4_packet* ptr, int length) {
+uint16_t ipv4_checksum(struct ip4_packet* ptr, int length) {
 
 	int sum = 0;
 	u_short ret = 0;

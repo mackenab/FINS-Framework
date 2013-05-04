@@ -77,7 +77,7 @@ struct ip4_settings {
 	uint32_t gateway;
 };
 
-struct ip4_stats {
+struct ipv4_stats {
 	/* Incomming direction */
 	uint16_t badhlen; /* packet with invalid IP header length 				*/
 	uint16_t badlen; /* packet with inconsistent IP header and data lengths 	*/
@@ -221,7 +221,7 @@ struct ip4_next_hop_info {
 #define	IP4_CLASSD(x) (((x) & 0xf0000000) == 0xe0000000)	/* IP Class D */
 #define	IP4_CLASSE(x) (((x) & 0xf8000000) == 0xf0000000)	/* IP Class E */
 
-uint16_t IP4_checksum(struct ip4_packet* ptr, int length);
+uint16_t ipv4_checksum(struct ip4_packet* ptr, int length);
 int IP4_dest_check(uint32_t destination);
 //void IP4_reass(void);
 
@@ -232,14 +232,14 @@ struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader, struct i
 struct ip4_reass_hole* IP4_previous_hole(struct ip4_reass_hole* current_hole);
 struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole);
 void IP4_remove_hole(struct ip4_reass_hole* current_hole, struct ip4_reass_list *list);
-void IP4_const_header(struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
+void ipv4_const_header(struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
 struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offest, uint16_t fragment_size);
 
 struct ip4_routing_table *IP4_get_routing_table();
 struct ip4_routing_table *IP4_sort_routing_table(struct ip4_routing_table *table_pointer);
 void IP4_print_routing_table(struct ip4_routing_table *table_pointer);
 struct ip4_next_hop_info IP4_next_hop(struct fins_module *module, uint32_t dst);
-int IP4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length);
+int ipv4_forward(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t dest, uint16_t length);
 
 int InputQueue_Read_local(struct finsFrame *pff);
 void IP4_exit(void);
@@ -266,8 +266,6 @@ struct ipv4_data {
 
 	pthread_t switch_to_ipv4_thread;
 
-	//struct ip4_routing_table* routing_table;
-	//struct ip4_packet *construct_packet_buffer;
 	struct linked_list *addr_list;
 	struct addr_record *addr_loopback;
 	struct addr_record *addr_main;
@@ -275,7 +273,7 @@ struct ipv4_data {
 	struct linked_list *route_list;
 	//struct ip4_reass_list *packet_list = NULL;
 
-	struct ip4_stats stats;
+	struct ipv4_stats stats;
 };
 
 int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
@@ -295,14 +293,21 @@ void ipv4_exec_reply_get_addr(struct fins_module *module, struct finsFrame *ff);
 
 void ipv4_error(struct fins_module *module, struct finsFrame *ff);
 
-#define EXEC_ARP_GET_ADDR 0
-
 void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct ip4_header *pheader, struct ip4_packet *ppacket);
 
 void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff);
 void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet *ppacket, uint32_t address, uint32_t if_index);
 
-//TODO remove once we have the new routing table
-struct ip4_routing_table* routing_table;
+#define EXEC_ARP_GET_ADDR 0
+
+//don't use 0
+#define IPV4_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
+#define IPV4_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
+#define IPV4_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+
+#define IPV4_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
+#define IPV4_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
+#define IPV4_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+
 #endif /* IPV4_INTERNAL_H_ */

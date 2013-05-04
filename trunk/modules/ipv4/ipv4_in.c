@@ -13,12 +13,12 @@
  */
 void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
 	struct ip4_packet* ppacket = (struct ip4_packet*) ff->dataFrame.pdu;
 	int len = ff->dataFrame.pduLength;
 
-	data->stats.receivedtotal++;
+	md->stats.receivedtotal++;
 	/* Parse the header. Some of the items only needed to be inserted into FDF meta data*/
 	struct ip4_header header;
 	header.source = ntohl(ppacket->ip_src);
@@ -38,8 +38,8 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	/** Check packet version */
 	if (header.version != IP4_VERSION) {
-		data->stats.badver++;
-		data->stats.droppedtotal++;
+		md->stats.badver++;
+		md->stats.droppedtotal++;
 		PRINT_ERROR("Packet ID %d has a wrong IP version (%d)", header.id, header.version);
 		//free ppacket
 		return;
@@ -49,8 +49,8 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	/* Check minimum header length */
 	if (header.header_length < IP4_MIN_HLEN) {
 		PRINT_ERROR("Packet header length (%d) in packet ID %d is smaller than the defined minimum (20).", header.header_length, header.id);
-		data->stats.badhlen++;
-		data->stats.droppedtotal++;
+		md->stats.badhlen++;
+		md->stats.droppedtotal++;
 
 		//free ppacket
 		freeFinsFrame(ff);
@@ -60,10 +60,10 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("hdr_len=%u, hlen=%u", header.header_length, IP4_HLEN(ppacket));
 
 	/* Check the integrity of the header. Drop the packet if corrupted header.*/
-	if (IP4_checksum(ppacket, hlen) != 0) { //TODO check this checksum, don't think it does uneven?
-		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, IP4_checksum(ppacket, IP4_HLEN(ppacket)));
-		data->stats.badsum++;
-		data->stats.droppedtotal++;
+	if (ipv4_checksum(ppacket, hlen) != 0) { //TODO check this checksum, don't think it does uneven?
+		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, ipv4_checksum(ppacket, IP4_HLEN(ppacket)));
+		md->stats.badsum++;
+		md->stats.droppedtotal++;
 
 		//free ppacket
 		freeFinsFrame(ff);
@@ -75,11 +75,11 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	 * drop the packet
 	 */
 	if (header.packet_length != len) {
-		data->stats.badlen++;
+		md->stats.badlen++;
 		PRINT_DEBUG("The declared length is not equal to the actual length. pkt_len=%u len=%u", header.packet_length, len);
 		if (header.packet_length > len) {
 			PRINT_DEBUG("The header length is even longer than the len");
-			data->stats.droppedtotal++;
+			md->stats.droppedtotal++;
 
 			//free ppacket
 			freeFinsFrame(ff);
@@ -99,15 +99,15 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("src=%u, dst=%u (hostf)", header.source, header.destination);
 	/* Check the destination address, if not our, forward*/
 	if (header.destination != IPV4_ADDR_ANY_IP && header.destination != IPV4_ADDR_EVERY_IP) { //TODO check this
-		struct addr_record *addr = (struct addr_record *) list_find1(data->addr_list, addr_ipv4_test, &header.destination);
+		struct addr_record *addr = (struct addr_record *) list_find1(md->addr_list, addr_ipv4_test, &header.destination);
 		if (addr == NULL) {
-			addr = (struct addr_record *) list_find1(data->addr_list, addr_bdcv4_test, &header.destination);
+			addr = (struct addr_record *) list_find1(md->addr_list, addr_bdcv4_test, &header.destination);
 			if (addr == NULL) {
-				if (IP4_forward(module, ff, ppacket, header.destination, len)) { //TODO disabled atm
-					data->stats.forwarded++;
+				if (ipv4_forward(module, ff, ppacket, header.destination, len)) { //TODO disabled atm
+					md->stats.forwarded++;
 					PRINT_DEBUG("");
 				} else {
-					data->stats.droppedtotal++;
+					md->stats.droppedtotal++;
 					PRINT_DEBUG("");
 					freeFinsFrame(ff);
 				}
@@ -119,8 +119,8 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	/* Check fragmentation errors */
 	if ((header.flags & (IP4_DF | IP4_MF)) == (IP4_DF | IP4_MF)) {
-		data->stats.fragerror++;
-		data->stats.droppedtotal++;
+		md->stats.fragerror++;
+		md->stats.droppedtotal++;
 		PRINT_ERROR("Packet ID %d has both DF and MF flags set", header.id);
 		//free ppacket
 		freeFinsFrame(ff);
@@ -133,7 +133,7 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("");
 
 	if (((header.flags & IP4_MF) | header.fragmentation_offset) == 0) {
-		data->stats.delivered++;
+		md->stats.delivered++;
 		PRINT_DEBUG("");
 
 		ipv4_send_fdf_in(module, ff, &header, ppacket);
@@ -144,8 +144,8 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		struct ip4_packet* ppacket_reassembled = NULL; //IP4_reass(&header, ppacket);
 		//free ppacket
 		if (ppacket_reassembled != NULL) {
-			data->stats.delivered++;
-			data->stats.reassembled++;
+			md->stats.delivered++;
+			md->stats.reassembled++;
 			ipv4_send_fdf_in(module, ff, &header, ppacket_reassembled);
 		} else {
 

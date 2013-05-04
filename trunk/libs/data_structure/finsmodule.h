@@ -118,7 +118,12 @@ void module_destroy_structs(struct fins_module *module);
 
 #define module_to_switch(module, ff) module_to_switch_full(__FILE__, __FUNCTION__, __LINE__, module, ff)
 void module_to_switch_full(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff);
+void module_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t flow);
+
+void module_set_param_flows(struct fins_module *module, struct finsFrame *ff);
+void module_set_param_links(struct fins_module *module, struct finsFrame *ff);
+void module_set_param_dual(struct fins_module *module, struct finsFrame *ff);
 
 //SET_PARAM / GET_PARAM
 #define MOD_GET_PARAM_FLOWS 0

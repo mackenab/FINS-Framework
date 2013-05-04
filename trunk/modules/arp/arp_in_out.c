@@ -4,12 +4,11 @@
  *  Created on: September 5, 2012
  *      Author: Jonathan Reed
  */
-
 #include "arp_internal.h"
 
 void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, src_ip=%u, dst_ip=%u", module, ff, src_ip, dst_ip);
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 
 	struct if_record *ifr;
 	struct arp_cache *cache;
@@ -19,14 +18,14 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 
 	metadata *meta = ff->metaData;
 
-	ifr = (struct if_record *) list_find1(data->if_list, ifr_ipv4_test, &src_ip);
+	ifr = (struct if_record *) list_find1(md->if_list, ifr_ipv4_test, &src_ip);
 	if (ifr != NULL) {
 		src_mac = ifr->mac;
 		PRINT_DEBUG("src: if_index=%u, mac=0x%llx, ip=%u", ifr->index, src_mac, src_ip);
 
 		secure_metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
 
-		cache = (struct arp_cache *) list_find1(data->cache_list, arp_cache_ip_test, &dst_ip);
+		cache = (struct arp_cache *) list_find1(md->cache_list, arp_cache_ip_test, &dst_ip);
 		if (cache != NULL) {
 			if (cache->seeking != 0) {
 				PRINT_DEBUG("cache seeking: cache=%p", cache);
@@ -116,13 +115,13 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 			int sent = module_send_flow(module, ff_req, ARP_FLOW_INTERFACE);
 			if (sent > 0) {
 				//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
-				if (!list_has_space(data->cache_list)) {
+				if (!list_has_space(md->cache_list)) {
 					PRINT_DEBUG("Making space in cache_list");
 
 					//temp_cache = arp_cache_list_remove_first_non_seeking();
-					temp_cache = (struct arp_cache *) list_find(data->cache_list,arp_cache_non_seeking_test);
+					temp_cache = (struct arp_cache *) list_find(md->cache_list,arp_cache_non_seeking_test);
 					if (temp_cache != NULL) {
-						list_remove(data->cache_list, temp_cache);
+						list_remove(md->cache_list, temp_cache);
 
 						struct arp_request *temp_request;
 						struct finsFrame *temp_ff;
@@ -157,8 +156,8 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 					}
 				}
 
-				cache = arp_cache_create(dst_ip, &data->interrupt_flag, module->event_sem);
-				list_append(data->cache_list, cache);
+				cache = arp_cache_create(dst_ip, &md->interrupt_flag, module->event_sem);
+				list_append(md->cache_list, cache);
 				cache->seeking = 1;
 				cache->retries = 0;
 
@@ -193,7 +192,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 
 void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 
 	struct arp_message *msg = fdf_to_arp(ff);
 	if (msg != NULL) {
@@ -202,7 +201,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		if (check_valid_arp(msg)) {
 			uint32_t dst_ip = msg->target_IP_addrs;
 
-			struct if_record *ifr = (struct if_record *) list_find1(data->if_list, ifr_ipv4_test, &dst_ip);
+			struct if_record *ifr = (struct if_record *) list_find1(md->if_list, ifr_ipv4_test, &dst_ip);
 			if (ifr != NULL) {
 				uint64_t dst_mac = ifr->mac;
 
@@ -224,7 +223,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 				} else {
 					PRINT_DEBUG("Reply");
 
-					struct arp_cache *cache = (struct arp_cache *) list_find1(data->cache_list, arp_cache_ip_test, &src_ip);
+					struct arp_cache *cache = (struct arp_cache *) list_find1(md->cache_list, arp_cache_ip_test, &src_ip);
 					if (cache != NULL) {
 						if (cache->seeking != 0) {
 							PRINT_DEBUG("Updating host: cache=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
@@ -285,7 +284,7 @@ void arp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 	PRINT_DEBUG("Entered: module=%p, cache=%p", module, cache);
-	struct arp_data *data = (struct arp_data *) module->data;
+	struct arp_data *md = (struct arp_data *) module->data;
 
 	if (cache->seeking != 0) {
 		if (cache->retries < ARP_RETRIES) {
@@ -341,7 +340,7 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 				arp_request_free(request);
 			}
 
-			list_remove(data->cache_list, cache);
+			list_remove(md->cache_list, cache);
 			arp_cache_shutdown(cache);
 			arp_cache_free(cache);
 		}

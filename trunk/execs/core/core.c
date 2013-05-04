@@ -960,7 +960,7 @@ void core_main() {
 		module_to_switch(overall->modules[0], ff);
 	}
 
-	if (1) {
+	if (0) {
 		PRINT_DEBUG("Sending data");
 
 		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -980,6 +980,33 @@ void core_main() {
 		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 		ff->dataOrCtrl = FF_DATA;
 		ff->destinationID = dst_index; //arp
+		ff->metaData = meta;
+
+		ff->dataFrame.directionFlag = DIR_DOWN;
+		ff->dataFrame.pduLength = 10;
+		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+		memset(ff->dataFrame.pdu, 65, ff->dataFrame.pduLength);
+
+		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
+		module_to_switch(overall->modules[0], ff);
+	}
+
+	if (1) {
+		PRINT_DEBUG("Sending data");
+
+		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
+		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
+
+		secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
+
+		uint32_t dst_index = 4;
+		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+		ff->dataOrCtrl = FF_DATA;
+		ff->destinationID = dst_index;
 		ff->metaData = meta;
 
 		ff->dataFrame.directionFlag = DIR_DOWN;

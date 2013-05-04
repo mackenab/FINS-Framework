@@ -74,35 +74,35 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 	ipv4_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct ipv4_data));
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
 	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
-	data->flows_num = flows_num;
+	md->flows_num = flows_num;
 
 	int i;
 	for (i = 0; i < flows_num; i++) {
-		data->flows[i] = flows[i];
+		md->flows[i] = flows[i];
 	}
 
-	data->addr_list = list_create(IPV4_ADDRESS_LIST_MAX);
-	list_for_each1(envi->if_list, ipv4_ifr_get_addr_func, data->addr_list);
+	md->addr_list = list_create(IPV4_ADDRESS_LIST_MAX);
+	list_for_each1(envi->if_list, ipv4_ifr_get_addr_func, md->addr_list);
 	if (envi->if_loopback) {
-		data->addr_loopback = (struct addr_record *) list_find(envi->if_loopback->addr_list, addr_is_v4);
+		md->addr_loopback = (struct addr_record *) list_find(envi->if_loopback->addr_list, addr_is_v4);
 	}
 	if (envi->if_main) {
-		data->addr_main = (struct addr_record *) list_find(envi->if_main->addr_list, addr_is_v4);
+		md->addr_main = (struct addr_record *) list_find(envi->if_main->addr_list, addr_is_v4);
 	}
 
-	data->route_list = list_filter(envi->route_list, route_is_addr4, route_copy);
-	if (data->route_list->len > IPV4_ROUTE_LIST_MAX) {
+	md->route_list = list_filter(envi->route_list, route_is_addr4, route_copy);
+	if (md->route_list->len > IPV4_ROUTE_LIST_MAX) {
 		PRINT_ERROR("todo");
-		struct linked_list *leftover = list_split(data->route_list, IPV4_ROUTE_LIST_MAX - 1);
+		struct linked_list *leftover = list_split(md->route_list, IPV4_ROUTE_LIST_MAX - 1);
 		list_free(leftover, free);
 	}
-	data->route_list->max = IPV4_ROUTE_LIST_MAX;
+	md->route_list->max = IPV4_ROUTE_LIST_MAX;
 
 	//when recv pkt would need to check addresses
 	//when send pkt would need to check routing table & addresses (for ip address)
@@ -111,7 +111,7 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 	//routing_table = IP4_get_routing_table();
 
 	PRINT_DEBUG("after ip4 sort route table");
-	memset(&data->stats, 0, sizeof(struct ip4_stats));
+	memset(&md->stats, 0, sizeof(struct ipv4_stats));
 
 	return 1;
 }
@@ -120,8 +120,8 @@ int ipv4_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
-	secure_pthread_create(&data->switch_to_ipv4_thread, attr, switch_to_ipv4, module);
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
+	secure_pthread_create(&md->switch_to_ipv4_thread, attr, switch_to_ipv4, module);
 	return 1;
 }
 
@@ -146,27 +146,27 @@ int ipv4_shutdown(struct fins_module *module) {
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_ipv4_thread");
-	pthread_join(data->switch_to_ipv4_thread, NULL);
+	pthread_join(md->switch_to_ipv4_thread, NULL);
 
 	return 1;
 }
 
 int ipv4_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
+	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
 	//TODO free all module related mem
-	list_free(data->addr_list, free);
-	list_free(data->route_list, free);
+	list_free(md->addr_list, free);
+	list_free(md->route_list, free);
 
-	if (data->link_list != NULL) {
-		list_free(data->link_list, free);
+	if (md->link_list != NULL) {
+		list_free(md->link_list, free);
 	}
-	free(data);
+	free(md);
 	module_destroy_structs(module);
 	free(module);
 	return 1;

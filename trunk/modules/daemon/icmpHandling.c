@@ -8,49 +8,41 @@
 #include "icmpHandling.h"
 #include <finstypes.h>
 
-extern sem_t daemon_sockets_sem;
-extern struct daemon_socket daemon_sockets[MAX_SOCKETS];
-
-extern struct daemon_call daemon_calls[MAX_CALLS];
-extern struct daemon_call_list *expired_call_list;
-
 /**
  * End of interfacing socketdaemon with FINS core
  * */
-void socket_out_icmp(struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol) {
+void socket_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int domain, int type, int protocol) {
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d, type=%d, proto=%d", hdr, domain, type, protocol);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	int ret = daemon_sockets_insert(hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &icmp_ops
+	secure_sem_wait(&md->daemon_sockets_sem);
+	int ret = daemon_sockets_insert(module, hdr->sock_id, hdr->sock_index, type, protocol); //TODO add &icmp_ops
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	if (ret) {
-		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
-void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
-
-	uint16_t host_port;
-	uint32_t host_ip;
-
+void bind_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_ERROR("Wrong address family=%d", addr->sin_family);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	host_port = ntohs(addr->sin_port);
-	host_ip = ntohl(addr->sin_addr.s_addr);
+	uint16_t host_port = ntohs(addr->sin_port);
+	uint32_t host_ip = ntohl(addr->sin_addr.s_addr);
 
 	/**TODO check if the port is free for binding or previously allocated
 	 * Current code assume that the port is authorized to be accessed
@@ -64,25 +56,25 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	PRINT_DEBUG("bind address: host=%s/%d, host_IP_netformat=%d", inet_ntoa(addr->sin_addr), host_port, addr->sin_addr.s_addr);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	/** check if the same port and address have been both used earlier or not
 	 * it returns (-1) in case they already exist, so that we should not reuse them
 	 * */
-	if (!daemon_sockets_check_ports(host_port, host_ip) && !daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR) {
+	if (!daemon_sockets_check_ports(module, host_port, host_ip) && !md->daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR) {
 		PRINT_ERROR("this port is not free");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(addr);
 		return;
 	}
@@ -90,18 +82,18 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	/**
 	 * Binding
 	 */
-	daemon_sockets[hdr->sock_index].host_port = host_port;
+	md->daemon_sockets[hdr->sock_index].host_port = host_port;
 
 	if (host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
-		daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
+		md->daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
 	} else {
-		daemon_sockets[hdr->sock_index].host_ip = host_ip;
+		md->daemon_sockets[hdr->sock_index].host_ip = host_ip;
 	}
 
 	PRINT_DEBUG("bind: index:%d, host:%u/%u, dst:%u/%u",
-			hdr->sock_index, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
+			hdr->sock_index, md->daemon_sockets[hdr->sock_index].host_ip, md->daemon_sockets[hdr->sock_index].host_port, md->daemon_sockets[hdr->sock_index].rem_ip, md->daemon_sockets[hdr->sock_index].rem_port);
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
 	 * In our example it is not reversed */
@@ -110,53 +102,52 @@ void bind_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr) {
 	 * sending to the fins core
 	 */
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	free(addr);
 } // end of bind_icmp
 
-void listen_out_icmp(struct nl_wedge_to_daemon *hdr, int backlog) {
+void listen_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int backlog) {
 	PRINT_DEBUG("Entered: hdr=%p, backlog=%d", hdr, backlog);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
-	daemon_sockets[hdr->sock_index].listening = 1;
-	daemon_sockets[hdr->sock_index].backlog = backlog;
+	md->daemon_sockets[hdr->sock_index].listening = 1;
+	md->daemon_sockets[hdr->sock_index].backlog = backlog;
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, int flags) {
-
-	uint32_t dst_ip;
-	uint16_t dst_port;
-
+void connect_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, flags=%d", hdr, flags);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
 	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d), O_NONBLOCK=%d (%d), O_ASYNC=%d (%d)",
 			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
 
 	if (addr->sin_family != AF_INET) {
 		PRINT_ERROR("Wrong address family");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	/** TODO fix host port below, it is not initialized with any variable !!! */
 	/** the check below is to make sure that the port is not previously allocated */
-	dst_ip = ntohl((addr->sin_addr).s_addr);
-	dst_port = ntohs(addr->sin_port);
+	uint32_t dst_ip = ntohl((addr->sin_addr).s_addr);
+	uint16_t dst_port = ntohs(addr->sin_port);
 
 	PRINT_DEBUG("%d,%d,%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family);
 
@@ -173,25 +164,25 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 	 * */
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
+			md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, md->daemon_sockets[hdr->sock_index].state, md->daemon_sockets[hdr->sock_index].host_ip, md->daemon_sockets[hdr->sock_index].host_port, md->daemon_sockets[hdr->sock_index].rem_ip, md->daemon_sockets[hdr->sock_index].rem_port);
 
 	/**
 	 * NOTICE THAT the relation between the host and the destined address is many to one.
 	 * more than one local socket maybe connected to the same destined address
 	 */
-	if (daemon_sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-		PRINT_DEBUG("old destined address %d, %d", daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
+	if (md->daemon_sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+		PRINT_DEBUG("old destined address %d, %d", md->daemon_sockets[hdr->sock_index].rem_ip, md->daemon_sockets[hdr->sock_index].rem_port);
 		PRINT_DEBUG("new destined address %d, %d", dst_ip, dst_port);
 
 	}
@@ -205,15 +196,15 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 	/** TODO lock and unlock the protecting semaphores before making
 	 * any modifications to the contents of the daemonSockets database
 	 */
-	daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
-	daemon_sockets[hdr->sock_index].rem_ip = dst_ip;
-	daemon_sockets[hdr->sock_index].rem_port = dst_port;
+	md->daemon_sockets[hdr->sock_index].state = SS_CONNECTING;
+	md->daemon_sockets[hdr->sock_index].rem_ip = dst_ip;
+	md->daemon_sockets[hdr->sock_index].rem_port = dst_port;
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
+			md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, md->daemon_sockets[hdr->sock_index].state, md->daemon_sockets[hdr->sock_index].host_ip, md->daemon_sockets[hdr->sock_index].host_port, md->daemon_sockets[hdr->sock_index].rem_ip, md->daemon_sockets[hdr->sock_index].rem_port);
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	/** Reverse again because it was reversed by the application itself
 	 * In our example it is not reversed */
@@ -222,76 +213,78 @@ void connect_out_icmp(struct nl_wedge_to_daemon *hdr, struct sockaddr_in *addr, 
 	 * sending to the fins core
 	 */
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	free(addr);
 	return;
 
 }
 
-void accept_out_icmp(struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int sock_index_new, int flags) {
-
+void accept_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int sock_index_new, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, sock_id_new=%llu, index_new=%d, flags=%d", hdr, sock_id_new, sock_index_new, flags);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
 	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d), O_NONBLOCK=%d (%d), O_ASYNC=%d (%d)",
 			SOCK_NONBLOCK & flags, SOCK_NONBLOCK, SOCK_CLOEXEC & flags, SOCK_CLOEXEC, O_NONBLOCK & flags, O_NONBLOCK, O_ASYNC & flags, O_ASYNC);
 
 	//TODO: finish this
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
+void getname_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int peer) {
+	PRINT_DEBUG("Entered: hdr=%p, peer=%d", hdr, peer);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->daemon_sockets_sem);
+
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		return;
+	}
+
+	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
+			md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, md->daemon_sockets[hdr->sock_index].state, md->daemon_sockets[hdr->sock_index].host_ip, md->daemon_sockets[hdr->sock_index].host_port, md->daemon_sockets[hdr->sock_index].rem_ip, md->daemon_sockets[hdr->sock_index].rem_port);
+
 	int state;
 	uint32_t host_ip;
 	uint16_t host_port;
 	uint32_t rem_ip;
 	uint16_t rem_port;
 
-	PRINT_DEBUG("Entered: hdr=%p, peer=%d", hdr, peer);
-
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
-
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-
-	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
-
 	if (peer == 0) { //getsockname
-		host_ip = daemon_sockets[hdr->sock_index].host_ip;
-		host_port = daemon_sockets[hdr->sock_index].host_port;
+		host_ip = md->daemon_sockets[hdr->sock_index].host_ip;
+		host_port = md->daemon_sockets[hdr->sock_index].host_port;
 	} else if (peer == 1) { //getpeername
-		state = daemon_sockets[hdr->sock_index].state;
+		state = md->daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
-			rem_port = daemon_sockets[hdr->sock_index].rem_port;
+			rem_ip = md->daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = md->daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
 		}
 	} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
-		state = daemon_sockets[hdr->sock_index].state;
+		state = md->daemon_sockets[hdr->sock_index].state;
 		if (state > SS_UNCONNECTED) {
-			rem_ip = daemon_sockets[hdr->sock_index].rem_ip;
-			rem_port = daemon_sockets[hdr->sock_index].rem_port;
+			rem_ip = md->daemon_sockets[hdr->sock_index].rem_ip;
+			rem_port = md->daemon_sockets[hdr->sock_index].rem_port;
 		} else {
 			rem_ip = 0;
 			rem_port = 0;
@@ -302,7 +295,7 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	}
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	struct sockaddr_in *addr = (struct sockaddr_in *) secure_malloc(sizeof(struct sockaddr_in));
 
@@ -347,40 +340,43 @@ void getname_out_icmp(struct nl_wedge_to_daemon *hdr, int peer) {
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+	if (send_wedge(module, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
 		PRINT_DEBUG("Exited: normal: hdr=%p", hdr);
 	}
 
 	free(msg);
+	free(addr);
 }
 
-void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
+void ioctl_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
+	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("socket descriptor not found into daemon sockets");
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->daemon_sockets_sem);
+
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		return;
+	}
+
 	uint32_t len;
 	//uint8_t *val;
 	int msg_len;
 	uint8_t *msg = NULL;
 	struct nl_daemon_to_wedge *hdr_ret;
 	uint8_t *pt;
-
-	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("socket descriptor not found into daemon sockets");
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
-
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
 
 	switch (cmd) {
 	case FIONREAD:
@@ -399,7 +395,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		*(uint32_t *) pt = daemon_sockets[hdr->sock_index].data_buf;
+		*(uint32_t *) pt = md->daemon_sockets[hdr->sock_index].data_buf;
 		pt += sizeof(uint32_t);
 
 		if (pt - msg != msg_len) {
@@ -407,9 +403,9 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -417,7 +413,7 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		PRINT_DEBUG("SIOCGSTAMP cmd=%d", cmd);
 
 		len = sizeof(struct timeval);
-		//val = &daemon_sockets[hdr->sock_index].latest;
+		//val = &md->daemon_sockets[hdr->sock_index].latest;
 
 		//send msg to wedge
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
@@ -434,9 +430,9 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		*(uint32_t *) pt = len;
 		pt += sizeof(uint32_t);
 
-		PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[hdr->sock_index].stamp.tv_sec, (uint32_t) daemon_sockets[hdr->sock_index].stamp.tv_usec);
+		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->daemon_sockets[hdr->sock_index].stamp.tv_sec, (uint32_t) md->daemon_sockets[hdr->sock_index].stamp.tv_usec);
 
-		memcpy(pt, &daemon_sockets[hdr->sock_index].stamp, len);
+		memcpy(pt, &md->daemon_sockets[hdr->sock_index].stamp, len);
 		pt += len;
 
 		if (pt - msg != msg_len) {
@@ -444,9 +440,9 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 			free(msg);
 
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
 		break;
@@ -456,29 +452,26 @@ void ioctl_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, 
 		break;
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
 	if (msg_len) {
-		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+		if (send_wedge(module, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 		free(msg);
 	} else {
-		//nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO uncomment
-		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		//nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO uncomment
+		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	}
 }
 
-void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags, struct sockaddr_in *addr, int addr_len) {
-
-	uint32_t host_ip = 0;
-	uint16_t host_port = 0;
-	uint32_t dst_ip = 0;
-	uint16_t dst_port = 0;
-
+void sendmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t data_len, uint32_t flags, struct sockaddr_in *addr,
+		int addr_len) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
 	PRINT_DEBUG("MSG_CONFIRM=%d (%d), MSG_DONTROUTE=%d (%d), MSG_DONTWAIT=%d (%d), MSG_EOR=%d (%d), MSG_MORE=%d (%d), MSG_NOSIGNAL=%d (%d), MSG_OOB=%d (%d)",
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
@@ -498,17 +491,22 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	if (data_len == 0) { //TODO check this prob wrong!
 		PRINT_ERROR("todo/redo");
 		PRINT_DEBUG("data_len == 0, send ACK");
-		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 		if (addr)
 			free(addr);
 		return;
 	}
 
+	uint32_t host_ip = 0;
+	uint16_t host_port = 0;
+	uint32_t dst_ip = 0;
+	uint16_t dst_port = 0;
+
 	if (addr_len) {
 		if (addr->sin_family != AF_INET) {
 			PRINT_ERROR("Wrong address family, send NACK");
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 			free(data);
 			if (addr)
@@ -525,13 +523,13 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	}
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_ERROR("CRASH !! socket descriptor not found into daemon sockets");
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 		free(data);
 		if (addr)
@@ -540,18 +538,18 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	}
 
 	if (addr_len == 0) {
-		dst_ip = daemon_sockets[hdr->sock_index].rem_ip;
-		dst_port = daemon_sockets[hdr->sock_index].rem_port;
+		dst_ip = md->daemon_sockets[hdr->sock_index].rem_ip;
+		dst_port = md->daemon_sockets[hdr->sock_index].rem_port;
 	}
 
 	/**
 	 * the current value of host_IP is zero but to be filled later with
 	 * the current IP using the IPv4 modules unless a binding has occured earlier
 	 */
-	if (daemon_sockets[hdr->sock_index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
-		daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
+	if (md->daemon_sockets[hdr->sock_index].host_ip == any_ip_addr) { //TODO change this when have multiple interfaces
+		md->daemon_sockets[hdr->sock_index].host_ip = my_host_ip_addr;
 	}
-	host_ip = daemon_sockets[hdr->sock_index].host_ip;
+	host_ip = md->daemon_sockets[hdr->sock_index].host_ip;
 
 	/**
 	 * Default current host port to be assigned is 58088
@@ -562,7 +560,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	 * check insert_daemonSocket(processid, sockfd, fakeID, type, protocol);
 	 */
 
-	host_port = daemon_sockets[hdr->sock_index].host_port;
+	host_port = md->daemon_sockets[hdr->sock_index].host_port;
 	/*
 	 if (host_port == 0) {
 	 while (1) {
@@ -571,7 +569,7 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	 break;
 	 }
 	 }
-	 daemon_sockets[hdr->sock_index].host_port = host_port;
+	 md->daemon_sockets[hdr->sock_index].host_port = host_port;
 	 }*/
 
 	/*//TODO uncomment? find out if connect rem addr sent through sendmsg
@@ -580,11 +578,11 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	 dst_ip = daemonSockets[hdr->sock_index].rem_ip;
 	 }*/
 
-	uint32_t ttl = daemon_sockets[hdr->sock_index].sockopts.FIP_TTL;
-	uint32_t tos = daemon_sockets[hdr->sock_index].sockopts.FIP_TOS;
+	uint32_t ttl = md->daemon_sockets[hdr->sock_index].sockopts.FIP_TTL;
+	uint32_t tos = md->daemon_sockets[hdr->sock_index].sockopts.FIP_TOS;
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	//PRINT_DEBUG("index=%d, dst=%u/%d, host=%u/%d", hdr->sock_index, dst_ip, dst_port, host_ip, host_port);
 
@@ -610,11 +608,11 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
 	secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
-	if (daemon_fdf_to_switch(ICMP_ID, data, data_len, meta)) {
-		ack_send(hdr->call_id, hdr->call_index, hdr->call_type, data_len);
+	if (daemon_fdf_to_switch(module, ICMP_ID, data, data_len, meta)) {
+		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, data_len);
 	} else {
 		PRINT_ERROR("socketdaemon failed to accomplish sendto");
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 		metadata_destroy(meta);
 		free(data);
@@ -630,8 +628,9 @@ void sendmsg_out_icmp(struct nl_wedge_to_daemon *hdr, uint8_t *data, uint32_t da
  *	Note this method is coded to be thread safe since ICMPreadFrom_fins mimics blocking and needs to be threaded.
  *
  */
-void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_controllen, int flags) {
+void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_controllen, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, msg_controllen=%u, flags=%d", hdr, data_len, msg_controllen, flags);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
 			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0);
@@ -639,36 +638,37 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
+				hdr->sock_index, md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("curr: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, dst=%u/%u",
-			daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, daemon_sockets[hdr->sock_index].state, daemon_sockets[hdr->sock_index].host_ip, daemon_sockets[hdr->sock_index].host_port, daemon_sockets[hdr->sock_index].rem_ip, daemon_sockets[hdr->sock_index].rem_port);
+			md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_index, md->daemon_sockets[hdr->sock_index].state, md->daemon_sockets[hdr->sock_index].host_ip, md->daemon_sockets[hdr->sock_index].host_port, md->daemon_sockets[hdr->sock_index].rem_ip, md->daemon_sockets[hdr->sock_index].rem_port);
 
 	if (flags & MSG_ERRQUEUE) {
-		if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-			if (daemon_sockets[hdr->sock_index].error_buf > 0) {
-				struct finsFrame *ff = read_queue(daemon_sockets[hdr->sock_index].error_queue);
+		if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+			if (md->daemon_sockets[hdr->sock_index].error_buf > 0) {
+				struct finsFrame *ff = read_queue(md->daemon_sockets[hdr->sock_index].error_queue);
 				if (ff == NULL) { //TODO shoulnd't happen
 					PRINT_ERROR("todo error");
 					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-					sem_post(&daemon_sockets_sem);
+					sem_post(&md->daemon_sockets_sem);
 
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					return;
 				}
 
-				daemon_sockets[hdr->sock_index].error_buf--;
+				md->daemon_sockets[hdr->sock_index].error_buf--;
 
 				metadata *meta = ff->metaData;
-				secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+				secure_metadata_readFromElement(meta, "recv_stamp", &md->daemon_sockets[hdr->sock_index].stamp);
 
 				uint32_t control_len = 0;
 				uint8_t *control_msg = NULL;
@@ -686,7 +686,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 					struct cmsghdr *cmsg;
 					uint8_t *cmsg_data;
 
-					if (daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP) {
+					if (md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP) {
 						cmsg_data_len = sizeof(struct timeval);
 						cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -699,7 +699,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 									cmsg_space, cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
 							cmsg_data = (uint8_t *) CMSG_DATA(cmsg);
-							memcpy(cmsg_data, &daemon_sockets[hdr->sock_index].stamp, cmsg_data_len);
+							memcpy(cmsg_data, &md->daemon_sockets[hdr->sock_index].stamp, cmsg_data_len);
 
 							control_len += cmsg_space;
 							control_pt += cmsg_space;
@@ -708,7 +708,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 						}
 					}
 
-					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
+					if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
 						int32_t recv_ttl = 255;
 						if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 							cmsg_data_len = sizeof(int32_t);
@@ -735,7 +735,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 						}
 					}
 
-					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+					if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
 						uint32_t err_src_ip;
 						secure_metadata_readFromElement(meta, "recv_src_ip", &err_src_ip);
 
@@ -778,7 +778,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 					//TODO send some error
 				}
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
 				struct sockaddr_in addr;
 				addr.sin_family = AF_INET;
@@ -840,7 +840,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 				if (pt - msg != msg_len) {
 					PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 					if (control_msg)
 						free(control_msg);
@@ -850,9 +850,9 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				}
 
 				PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-				if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+				if (send_wedge(module, msg, msg_len, 0)) {
 					PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-					nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				} else {
 					//PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 				}
@@ -864,38 +864,38 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				return;
 			} else {
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
 				//NACK
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
 				return;
 			}
 		} else {
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
 			//NACK
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
 			return;
 		}
 	} else {
-		PRINT_DEBUG("before: sock_index=%d, data_buf=%d", hdr->sock_index, daemon_sockets[hdr->sock_index].data_buf);
-		if (daemon_sockets[hdr->sock_index].data_buf > 0) {
-			struct finsFrame *ff = read_queue(daemon_sockets[hdr->sock_index].data_queue);
+		PRINT_DEBUG("before: sock_index=%d, data_buf=%d", hdr->sock_index, md->daemon_sockets[hdr->sock_index].data_buf);
+		if (md->daemon_sockets[hdr->sock_index].data_buf > 0) {
+			struct finsFrame *ff = read_queue(md->daemon_sockets[hdr->sock_index].data_queue);
 			if (ff == NULL) { //TODO shoulnd't happen
 				PRINT_ERROR("todo error");
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
 
-			daemon_sockets[hdr->sock_index].data_buf -= ff->dataFrame.pduLength;
-			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, daemon_sockets[hdr->sock_index].data_buf);
+			md->daemon_sockets[hdr->sock_index].data_buf -= ff->dataFrame.pduLength;
+			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->daemon_sockets[hdr->sock_index].data_buf);
 
 			metadata *meta = ff->metaData;
-			secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[hdr->sock_index].stamp);
+			secure_metadata_readFromElement(meta, "recv_stamp", &md->daemon_sockets[hdr->sock_index].stamp);
 
 			uint32_t control_len = 0;
 			uint8_t *control_msg = NULL;
@@ -913,7 +913,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				struct cmsghdr *cmsg;
 				uint8_t *cmsg_data;
 
-				if (daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP) {
+				if (md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP) {
 					cmsg_data_len = sizeof(struct timeval);
 					cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -925,7 +925,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 						PRINT_DEBUG("cmsg_space=%u, cmsg_len=%u, cmsg_level=%d, cmsg_type=0x%x", cmsg_space, cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
 						cmsg_data = (uint8_t *) CMSG_DATA(cmsg);
-						memcpy(cmsg_data, &daemon_sockets[hdr->sock_index].stamp, cmsg_data_len);
+						memcpy(cmsg_data, &md->daemon_sockets[hdr->sock_index].stamp, cmsg_data_len);
 
 						control_len += cmsg_space;
 						control_pt += cmsg_space;
@@ -934,7 +934,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 					}
 				}
 
-				if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
+				if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL) {
 					int32_t recv_ttl = 255;
 					if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 						cmsg_data_len = sizeof(int32_t);
@@ -968,7 +968,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 				//TODO send some error
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
 			struct sockaddr_in addr;
 			addr.sin_family = AF_INET;
@@ -1030,7 +1030,7 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 
 			if (pt - msg != msg_len) {
 				PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 
 				if (control_msg)
 					free(control_msg);
@@ -1040,9 +1040,9 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 			}
 
 			PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-			if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+			if (send_wedge(module, msg, msg_len, 0)) {
 				PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			} else {
 				//PRINT_DEBUG("Exiting, normal: id=%d, index=%d, uniqueSockID=%llu", id, index, uniqueSockID);
 			}
@@ -1055,72 +1055,77 @@ void recvmsg_out_icmp(struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg
 		}
 	}
 
-	if (daemon_calls_insert(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
-		daemon_calls[hdr->call_index].flags = flags;
-		daemon_calls[hdr->call_index].data = data_len;
-		daemon_calls[hdr->call_index].ret = msg_controllen;
+	if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		md->daemon_calls[hdr->call_index].flags = flags;
+		md->daemon_calls[hdr->call_index].buf = data_len;
+		md->daemon_calls[hdr->call_index].ret = msg_controllen;
 
-		struct daemon_call_list *call_list = daemon_sockets[hdr->sock_index].call_list;
-		if (call_list_has_space(call_list)) {
-			call_list_append(call_list, &daemon_calls[hdr->call_index]);
+		struct linked_list *call_list = md->daemon_sockets[hdr->sock_index].call_list;
+		if (list_has_space(call_list)) {
+			list_append(call_list, &md->daemon_calls[hdr->call_index]);
 
 			if (flags & (MSG_DONTWAIT)) {
-				timer_once_start(daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
+				timer_once_start(md->daemon_calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 		} else {
 			PRINT_ERROR("call_list full");
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
-			nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
 		PRINT_ERROR("Insert fail: hdr=%p", hdr);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
-void release_out_icmp(struct nl_wedge_to_daemon *hdr) {
+void release_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
+				hdr->sock_index, md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->daemon_sockets_sem);
+
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
-	daemon_sockets_remove(hdr->sock_index);
+	daemon_sockets_remove(module, hdr->sock_index);
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	//TODO send FCF to ICMP module clearing error buffers of any msgs from this socket
 }
 
-void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
+void poll_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t events) {
 	PRINT_DEBUG("Entered: hdr=%p, events=0x%x", hdr, events);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	uint32_t mask = 0;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
+				hdr->sock_index, md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL);
 		return;
 	}
 	if (events) { //initial
@@ -1128,8 +1133,8 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 		if (events & (POLLERR)) {
-			if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-				if (daemon_sockets[hdr->sock_index].error_buf > 0) {
+			if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+				if (md->daemon_sockets[hdr->sock_index].error_buf > 0) {
 					mask |= POLLERR;
 				}
 			} else {
@@ -1138,7 +1143,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 		}
 
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
-			if (daemon_sockets[hdr->sock_index].data_buf > 0) {
+			if (md->daemon_sockets[hdr->sock_index].data_buf > 0) {
 				mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
 			}
 		}
@@ -1155,40 +1160,41 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 		PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
 		if (ret_mask) {
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
-			ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
+			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 		} else {
-			struct daemon_call *call = call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
-			call->data = events;
+			struct daemon_call *call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+			call->buf = events;
 			call->ret = 0;
 
-			struct daemon_call_list *call_list = daemon_sockets[hdr->sock_index].call_list;
-			if (call_list_has_space(call_list)) {
-				call_list_append(call_list, call);
+			struct linked_list *call_list = md->daemon_sockets[hdr->sock_index].call_list;
+			if (list_has_space(call_list)) {
+				list_append(call_list, call);
 
 				PRINT_DEBUG("");
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
-				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 			} else {
 				PRINT_ERROR("call_list full");
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
-				nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		}
 	} else { //final
-		struct daemon_call *call = call_list_find_pid(daemon_sockets[hdr->sock_index].call_list, hdr->call_pid, hdr->call_type, hdr->sock_id);
+		struct daemon_call *call =
+				(struct daemon_call *) list_find2(md->daemon_sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
 		if (call) {
-			events = call->data;
+			events = call->buf;
 			mask = call->ret;
 
-			call_list_remove(daemon_sockets[hdr->sock_index].call_list, call);
+			list_remove(md->daemon_sockets[hdr->sock_index].call_list, call);
 			if (call->alloc) {
-				call_free(call);
+				daemon_call_free(call);
 			} else {
 				PRINT_ERROR("todo error");
 			}
@@ -1197,16 +1203,17 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 			PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
 			if (ret_mask) {
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
-				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
+				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
-				PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+				PRINT_DEBUG(
+						"POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
-					if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-						if (daemon_sockets[hdr->sock_index].error_buf > 0) {
+					if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+						if (md->daemon_sockets[hdr->sock_index].error_buf > 0) {
 							mask |= POLLERR;
 						}
 					} else {
@@ -1215,7 +1222,7 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 				}
 
 				if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
-					if (daemon_sockets[hdr->sock_index].data_buf > 0) {
+					if (md->daemon_sockets[hdr->sock_index].data_buf > 0) {
 						mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
 					}
 				}
@@ -1228,25 +1235,25 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 					//mask |= POLLHUP; //TODO implement
 				}
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&daemon_sockets_sem);
+				sem_post(&md->daemon_sockets_sem);
 
 				ret_mask = events & mask;
 				PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
-				ack_send(hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
+				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			}
 		} else {
 			PRINT_ERROR("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 
-			if (daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-				if (daemon_sockets[hdr->sock_index].error_buf > 0) {
+			if (md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+				if (md->daemon_sockets[hdr->sock_index].error_buf > 0) {
 					mask |= POLLERR;
 				}
 			} else {
 				PRINT_ERROR("todo: POLLERR");
 			}
 
-			if (daemon_sockets[hdr->sock_index].data_buf > 0) {
+			if (md->daemon_sockets[hdr->sock_index].data_buf > 0) {
 				mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
 			}
 
@@ -1254,17 +1261,17 @@ void poll_out_icmp(struct nl_wedge_to_daemon *hdr, uint32_t events) {
 
 			//mask |= POLLHUP; //TODO implement
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&daemon_sockets_sem);
+			sem_post(&md->daemon_sockets_sem);
 
 			PRINT_DEBUG("mask=0x%x", mask);
-			ack_send(hdr->call_id, hdr->call_index, hdr->call_type, mask);
+			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, mask);
 		}
 	}
 }
 
 /** .......................................................................*/
 
-void shutdown_out_icmp(struct nl_wedge_to_daemon *hdr, int how) {
+void shutdown_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int how) {
 	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
 
 	/**
@@ -1284,20 +1291,22 @@ void shutdown_out_icmp(struct nl_wedge_to_daemon *hdr, int how) {
 	 PRINT_DEBUG("index = %d", index);
 	 */
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
+void setsockopt_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
+				hdr->sock_index, md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1321,36 +1330,36 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case IP_TOS:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FIP_TOS = *(int *) optval;
-				PRINT_DEBUG("FIP_TOS=%d", daemon_sockets[hdr->sock_index].sockopts.FIP_TOS);
+				md->daemon_sockets[hdr->sock_index].sockopts.FIP_TOS = *(int *) optval;
+				PRINT_DEBUG("FIP_TOS=%d", md->daemon_sockets[hdr->sock_index].sockopts.FIP_TOS);
 			} else {
 				PRINT_ERROR("todo error");
 			}
 			break;
 		case IP_RECVERR:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR = *(int *) optval;
-				PRINT_DEBUG("FIP_RECVERR=%d", daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR);
+				md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR = *(int *) optval;
+				PRINT_DEBUG("FIP_RECVERR=%d", md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR);
 			} else {
 				PRINT_ERROR("todo error");
 			}
 			break;
 		case IP_MTU_DISCOVER:
 			//TODO
-			PRINT_ERROR("todo");
+			PRINT_ERROR("todo: IP_MTU_DISCOVER");
 			break;
 		case IP_RECVTTL:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL = *(int *) optval;
-				PRINT_DEBUG("FIP_RECVTTL=%d", daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
+				md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL = *(int *) optval;
+				PRINT_DEBUG("FIP_RECVTTL=%d", md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
 			} else {
 				PRINT_ERROR("todo error");
 			}
 			break;
 		case IP_TTL:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FIP_TTL = *(int *) optval;
-				PRINT_DEBUG("FIP_TTL=%d", daemon_sockets[hdr->sock_index].sockopts.FIP_TTL);
+				md->daemon_sockets[hdr->sock_index].sockopts.FIP_TTL = *(int *) optval;
+				PRINT_DEBUG("FIP_TTL=%d", md->daemon_sockets[hdr->sock_index].sockopts.FIP_TTL);
 			} else {
 				PRINT_ERROR("todo error");
 			}
@@ -1363,8 +1372,8 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case ICMP_FILTER:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FICMP_FILTER = *(int *) optval;
-				PRINT_DEBUG("FICMP_FILTER=%d", daemon_sockets[hdr->sock_index].sockopts.FICMP_FILTER);
+				md->daemon_sockets[hdr->sock_index].sockopts.FICMP_FILTER = *(int *) optval;
+				PRINT_DEBUG("FICMP_FILTER=%d", md->daemon_sockets[hdr->sock_index].sockopts.FICMP_FILTER);
 			} else {
 				PRINT_ERROR("todo error");
 			}
@@ -1377,8 +1386,8 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case TCP_NODELAY:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FTCP_NODELAY = *(int *) optval;
-				PRINT_DEBUG("FTCP_NODELAY=%d", daemon_sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
+				md->daemon_sockets[hdr->sock_index].sockopts.FTCP_NODELAY = *(int *) optval;
+				PRINT_DEBUG("FTCP_NODELAY=%d", md->daemon_sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
 			} else {
 				PRINT_ERROR("todo error");
 			}
@@ -1391,31 +1400,33 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case SO_DEBUG:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG = *(int *) optval;
-				PRINT_DEBUG("FSO_DEBUG=%d", daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG);
+				md->daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG = *(int *) optval;
+				PRINT_DEBUG("FSO_DEBUG=%d", md->daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG);
 			} else {
 				PRINT_ERROR("todo error");
 			}
 			break;
 		case SO_REUSEADDR:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR = *(int *) optval;
-				PRINT_DEBUG("FSO_REUSEADDR=%d", daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
+				md->daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR = *(int *) optval;
+				PRINT_DEBUG("FSO_REUSEADDR=%d", md->daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
 			} else {
 				PRINT_ERROR("todo error");
 			}
 			break;
 		case SO_TYPE:
+#ifndef BUILD_FOR_ANDROID
 		case SO_PROTOCOL:
 		case SO_DOMAIN:
+#endif
 		case SO_ERROR:
 		case SO_DONTROUTE:
 		case SO_BROADCAST:
 			break;
 		case SO_SNDBUF:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF = *(int *) optval;
-				PRINT_DEBUG("FSO_SNDBUF=%d", daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
+				md->daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF = *(int *) optval;
+				PRINT_DEBUG("FSO_SNDBUF=%d", md->daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
 			} else {
 				PRINT_ERROR("todo error");
 			}
@@ -1424,8 +1435,8 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 			break;
 		case SO_RCVBUF:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF = 2 * (*(int *) optval); //TODO add conditions
-				PRINT_DEBUG("FSO_RCVBUF=%d", daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
+				md->daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF = 2 * (*(int *) optval); //TODO add conditions
+				PRINT_DEBUG("FSO_RCVBUF=%d", md->daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
 			} else {
 				PRINT_ERROR("todo error");
 			}
@@ -1440,14 +1451,16 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 			break;
 		case SO_TIMESTAMP:
 			if (optlen >= sizeof(int)) {
-				daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP = *(int *) optval;
-				PRINT_DEBUG("FSO_TIMESTAMP=%d", daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
+				md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP = *(int *) optval;
+				PRINT_DEBUG("FSO_TIMESTAMP=%d", md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
 			} else {
 				PRINT_ERROR("todo error");
 			}
 			break;
+#ifndef BUILD_FOR_ANDROID
 		case SO_TIMESTAMPNS:
 		case SO_TIMESTAMPING:
+#endif
 		case SO_RCVTIMEO:
 			//TODO less - gets 8 byte value, timestamp??
 		case SO_SNDTIMEO:
@@ -1460,8 +1473,10 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		case SO_ACCEPTCONN:
 		case SO_PASSSEC:
 		case SO_PEERSEC:
+#ifndef BUILD_FOR_ANDROID
 		case SO_MARK:
 		case SO_RXQ_OVFL:
+#endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
 			PRINT_ERROR("todo");
@@ -1476,27 +1491,30 @@ void setsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 	}
 
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
-	ack_send(hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 
 	if (optlen > 0)
 		free(optval);
 }
 
-void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
+void getsockopt_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
+	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
 	int len = 0;
 	char *val;
 
-	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
-	if (daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
+	secure_sem_wait(&md->daemon_sockets_sem);
+	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu",
+				hdr->sock_index, md->daemon_sockets[hdr->sock_index].sock_id, hdr->sock_id);
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&daemon_sockets_sem);
+		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
@@ -1505,11 +1523,11 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case IP_TOS:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FIP_TOS);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FIP_TOS);
 			break;
 		case IP_RECVERR:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVERR);
 			break;
 		case IP_MTU_DISCOVER:
 			//TODO
@@ -1517,11 +1535,11 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 			break;
 		case IP_RECVTTL:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
 			break;
 		case IP_TTL:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FIP_TTL);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FIP_TTL);
 			break;
 		default:
 			break;
@@ -1531,7 +1549,7 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case ICMP_FILTER:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FICMP_FILTER);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FICMP_FILTER);
 			break;
 		default:
 			break;
@@ -1541,7 +1559,7 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case TCP_NODELAY:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
 			break;
 		default:
 			break;
@@ -1551,28 +1569,30 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		switch (optname) {
 		case SO_DEBUG:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FSO_DEBUG);
 			break;
 		case SO_REUSEADDR:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
 			break;
 		case SO_TYPE:
+#ifndef BUILD_FOR_ANDROID
 		case SO_PROTOCOL:
 		case SO_DOMAIN:
+#endif
 		case SO_ERROR:
 		case SO_DONTROUTE:
 		case SO_BROADCAST:
 			break;
 		case SO_SNDBUF:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
 			break;
 		case SO_SNDBUFFORCE:
 			break;
 		case SO_RCVBUF:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
 			break;
 		case SO_RCVBUFFORCE:
 		case SO_KEEPALIVE:
@@ -1584,10 +1604,12 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 			break;
 		case SO_TIMESTAMP:
 			len = sizeof(int);
-			val = (char *) &(daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
+			val = (char *) &(md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
 			break;
+#ifndef BUILD_FOR_ANDROID
 		case SO_TIMESTAMPNS:
 		case SO_TIMESTAMPING:
+#endif
 		case SO_RCVTIMEO:
 			//TODO less - gets 8 byte value, timestamp??
 		case SO_SNDTIMEO:
@@ -1600,8 +1622,10 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		case SO_ACCEPTCONN:
 		case SO_PASSSEC:
 		case SO_PEERSEC:
+#ifndef BUILD_FOR_ANDROID
 		case SO_MARK:
 		case SO_RXQ_OVFL:
+#endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
 			PRINT_ERROR("todo");
@@ -1615,7 +1639,7 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 		break;
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	//if (len) {
 	//send msg to wedge
@@ -1641,24 +1665,24 @@ void getsockopt_out_icmp(struct nl_wedge_to_daemon *hdr, int level, int optname,
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
 		free(msg);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+	if (send_wedge(module, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
 
 	}
 	free(msg);
 }
 
-void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, uint32_t flags) {
+void poll_in_icmp(struct fins_module *module, struct linked_list *call_list, struct daemon_call *call, uint32_t flags) {
 	PRINT_DEBUG("Entered: call_list=%p, call=%p, flags=0x%x", call_list, call, flags);
 
-	uint32_t events = call->data;
+	uint32_t events = call->buf;
 
 	PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
 			(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
@@ -1685,7 +1709,7 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 		uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
 		struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
-		hdr_ret->call_type = poll_event_call;
+		hdr_ret->call_type = POLL_EVENT_CALL;
 		hdr_ret->sock_id = call->sock_id;
 		hdr_ret->sock_index = call->sock_index;
 		hdr_ret->ret = ACK;
@@ -1699,7 +1723,7 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 		}
 
 		PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-		if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+		if (send_wedge(module, msg, msg_len, 0)) {
 			PRINT_ERROR("Exited: send_wedge error: call=%p", call);
 		} else {
 
@@ -1710,16 +1734,17 @@ void poll_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, 
 	}
 }
 
-void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len, uint32_t addr_ip,
-		uint32_t flags) {
+void recvmsg_in_icmp(struct fins_module *module, struct linked_list *call_list, struct daemon_call *call, metadata *meta, uint8_t *data, uint32_t data_len,
+		uint32_t addr_ip, uint32_t flags) {
 	PRINT_DEBUG("Entered: call_list=%p, call=%p, meta=%p, data=%p, len=%u, addr_ip=%u, flags=0x%x", call_list, call, meta, data, data_len, addr_ip, flags);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	uint32_t call_len = call->data; //buffer size
+	uint32_t call_len = call->buf; //buffer size
 	uint32_t msg_controllen = call->ret;
 
-	secure_metadata_readFromElement(meta, "recv_stamp", &daemon_sockets[call->sock_index].stamp);
+	secure_metadata_readFromElement(meta, "recv_stamp", &md->daemon_sockets[call->sock_index].stamp);
 
-	PRINT_DEBUG("stamp=%u.%u", (uint32_t)daemon_sockets[call->sock_index].stamp.tv_sec, (uint32_t)daemon_sockets[call->sock_index].stamp.tv_usec);
+	PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->daemon_sockets[call->sock_index].stamp.tv_sec, (uint32_t)md->daemon_sockets[call->sock_index].stamp.tv_usec);
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
@@ -1757,7 +1782,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		struct cmsghdr *cmsg;
 		uint8_t *cmsg_data;
 
-		if (daemon_sockets[call->sock_index].sockopts.FSO_TIMESTAMP) {
+		if (md->daemon_sockets[call->sock_index].sockopts.FSO_TIMESTAMP) {
 			cmsg_data_len = sizeof(struct timeval);
 			cmsg_space = CMSG_SPACE(cmsg_data_len);
 
@@ -1769,7 +1794,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 				PRINT_DEBUG("cmsg_space=%u, cmsg_len=%u, cmsg_level=%d, cmsg_type=0x%x", cmsg_space, cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
 				cmsg_data = (uint8_t *) CMSG_DATA(cmsg);
-				memcpy(cmsg_data, &daemon_sockets[call->sock_index].stamp, cmsg_data_len);
+				memcpy(cmsg_data, &md->daemon_sockets[call->sock_index].stamp, cmsg_data_len);
 
 				control_len += cmsg_space;
 				control_pt += cmsg_space;
@@ -1778,7 +1803,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 			}
 		}
 
-		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVTTL) {
+		if (md->daemon_sockets[call->sock_index].sockopts.FIP_RECVTTL) {
 			int32_t recv_ttl = 255;
 			if (metadata_readFromElement(meta, "recv_ttl", &recv_ttl) == META_TRUE) {
 				cmsg_data_len = sizeof(int32_t);
@@ -1804,7 +1829,7 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 			}
 		}
 
-		if (daemon_sockets[call->sock_index].sockopts.FIP_RECVERR && (flags & MSG_ERRQUEUE)) { //TODO remove?
+		if (md->daemon_sockets[call->sock_index].sockopts.FIP_RECVERR && (flags & MSG_ERRQUEUE)) { //TODO remove?
 			uint32_t err_src_ip;
 			secure_metadata_readFromElement(meta, "recv_src_ip", &err_src_ip);
 
@@ -1884,14 +1909,14 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		free(msg);
 
 		PRINT_DEBUG("Exited: write error: call_list=%p, call=%p", call_list, call);
-		nack_send(call->call_id, call->call_index, call->call_type, 1);
+		nack_send(module, call->call_id, call->call_index, call->call_type, 1);
 		return;
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (send_wedge(nl_sockfd, msg, msg_len, 0)) {
+	if (send_wedge(module, msg, msg_len, 0)) {
 		PRINT_ERROR("Exited: send_wedge error: call_list=%p, call=%p", call_list, call);
-		nack_send(call->call_id, call->call_index, call->call_type, 1);
+		nack_send(module, call->call_id, call->call_index, call->call_type, 1);
 	} else {
 		PRINT_DEBUG("Exited: Normal: call_list=%p, call=%p", call_list, call);
 	}
@@ -1899,12 +1924,13 @@ void recvmsg_in_icmp(struct daemon_call_list *call_list, struct daemon_call *cal
 		free(control_msg);
 	free(msg);
 
-	call_list_remove(call_list, call);
-	daemon_calls_remove(call->call_index);
+	list_remove(call_list, call);
+	daemon_calls_remove(module, call->call_index);
 }
 
-void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
+void daemon_icmp_in_fdf(struct fins_module *module, struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	metadata *meta = ff->metaData;
 
@@ -1915,47 +1941,49 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 	//secure_metadata_writeToElement(meta, "stamp", &current, META_TYPE_INT64);
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
+	secure_sem_wait(&md->daemon_sockets_sem);
 
-	struct daemon_call_list *call_list;
+	struct linked_list *call_list;
 	struct daemon_call *call;
 	int unsent;
 	struct finsFrame *ff_clone;
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].protocol == IPPROTO_ICMP && daemon_sockets[i].host_ip == dst_ip) {
+		if (md->daemon_sockets[i].sock_id != -1 && md->daemon_sockets[i].protocol == IPPROTO_ICMP && md->daemon_sockets[i].host_ip == dst_ip) {
 			PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].rem_ip, daemon_sockets[i].rem_port, daemon_sockets[i].protocol);
+					md->daemon_sockets[i].sock_id, i, md->daemon_sockets[i].host_ip, md->daemon_sockets[i].host_port, md->daemon_sockets[i].rem_ip, md->daemon_sockets[i].rem_port, md->daemon_sockets[i].protocol);
 
 			//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 
-			call_list = daemon_sockets[i].call_list;
+			call_list = md->daemon_sockets[i].call_list;
 
-			call = call_list->front;
-			while (call) {
-				if (call->call_type == poll_call) { //signal all poll calls in list
-					poll_in_icmp(call_list, call, POLLIN);
-				}
-				call = call->next;
-			}
+			/*
+			 call = call_list->front;
+			 while (call) {
+			 if (call->call_type == POLL_CALL) { //signal all poll calls in list
+			 poll_in_icmp(module, call_list, call, POLLIN);
+			 }
+			 call = call->next;
+			 }
 
-			unsent = 1;
-			call = call_list->front;
-			while (call) {
-				if (call->call_type == recvmsg_call && !(call->flags & (MSG_ERRQUEUE))) { //signal first recvmsg for data
-					recvmsg_in_icmp(call_list, call, meta, ff->dataFrame.pdu, ff->dataFrame.pduLength, src_ip, 0);
-					unsent = 0;
-					break;
-				}
-				call = call->next;
-			}
+			 unsent = 1;
+			 call = call_list->front;
+			 while (call) {
+			 if (call->call_type == RECVMSG_CALL && !(call->flags & (MSG_ERRQUEUE))) { //signal first recvmsg for data
+			 recvmsg_in_icmp(module, call_list, call, meta, ff->dataFrame.pdu, ff->dataFrame.pduLength, src_ip, 0);
+			 unsent = 0;
+			 break;
+			 }
+			 call = call->next;
+			 }
+			 */
 
 			if (unsent) {
 				ff_clone = cloneFinsFrame(ff);
-				if (write_queue(ff_clone, daemon_sockets[i].data_queue)) {
-					daemon_sockets[i].data_buf += ff_clone->dataFrame.pduLength;
-					PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", i, ff_clone, ff_clone->metaData, daemon_sockets[i].data_buf);
+				if (write_queue(ff_clone, md->daemon_sockets[i].data_queue)) {
+					md->daemon_sockets[i].data_buf += ff_clone->dataFrame.pduLength;
+					PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", i, ff_clone, ff_clone->metaData, md->daemon_sockets[i].data_buf);
 				} else {
 					PRINT_ERROR("Write queue error: ff=%p", ff_clone);
 					freeFinsFrame(ff_clone);
@@ -1964,39 +1992,41 @@ void daemon_icmp_in_fdf(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) 
 		}
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	freeFinsFrame(ff);
 	return;
 }
 
-void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
+void daemon_icmp_in_error(struct fins_module *module, struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip) {
 	PRINT_DEBUG("Entered: ff=%p, src_ip=%u, dst_ip=%u", ff, src_ip, dst_ip);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	metadata *meta = ff->metaData;
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&daemon_sockets_sem);
+	secure_sem_wait(&md->daemon_sockets_sem);
 
 	//TODO change behavior by error type?
 
-	struct daemon_call_list *call_list;
+	struct linked_list *call_list;
 	struct daemon_call *call;
 	int unsent;
 	struct finsFrame *ff_clone;
 
 	int i;
 	for (i = 0; i < MAX_SOCKETS; i++) {
-		if (daemon_sockets[i].sock_id != -1 && daemon_sockets[i].protocol == IPPROTO_ICMP && daemon_sockets[i].host_ip == src_ip) {
+		if (md->daemon_sockets[i].sock_id != -1 && md->daemon_sockets[i].protocol == IPPROTO_ICMP && md->daemon_sockets[i].host_ip == src_ip) {
 			PRINT_DEBUG( "Matched: sock_id=%llu, sock_index=%d, host=%u/%u, dst=%u/%u, prot=%u",
-					daemon_sockets[i].sock_id, i, daemon_sockets[i].host_ip, daemon_sockets[i].host_port, daemon_sockets[i].rem_ip, daemon_sockets[i].rem_port, daemon_sockets[i].protocol);
+					md->daemon_sockets[i].sock_id, i, md->daemon_sockets[i].host_ip, md->daemon_sockets[i].host_port, md->daemon_sockets[i].rem_ip, md->daemon_sockets[i].rem_port, md->daemon_sockets[i].protocol);
 
-			if (daemon_sockets[i].sockopts.FIP_RECVERR) {
-				call_list = daemon_sockets[i].call_list;
+			if (md->daemon_sockets[i].sockopts.FIP_RECVERR) {
+				call_list = md->daemon_sockets[i].call_list;
 
+				/*
 				call = call_list->front;
 				while (call) {
-					if (call->call_type == poll_call) { //signal all poll calls in list
+					if (call->call_type == POLL_CALL) { //signal all poll calls in list
 						poll_in_icmp(call_list, call, POLLERR);
 					}
 					call = call->next;
@@ -2005,19 +2035,20 @@ void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip
 				unsent = 1;
 				call = call_list->front;
 				while (call) {
-					if (call->call_type == recvmsg_call && (call->ret & (MSG_ERRQUEUE))) { //signal first recvmsg for data
+					if (call->call_type == RECVMSG_CALL && (call->ret & (MSG_ERRQUEUE))) { //signal first recvmsg for data
 						recvmsg_in_icmp(call_list, call, meta, ff->ctrlFrame.data, ff->ctrlFrame.data_len, dst_ip, MSG_ERRQUEUE);
 						unsent = 0;
 						break;
 					}
 					call = call->next;
 				}
+				*/
 
 				if (unsent) {
 					ff_clone = cloneFinsFrame(ff); //NOTE this FCF clone has a different serial_num!!!
-					if (write_queue(ff_clone, daemon_sockets[i].error_queue)) {
-						daemon_sockets[i].error_buf++; //TODO change to byte size?
-						PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, error_buf=%d", i, ff_clone, ff_clone->metaData, daemon_sockets[i].error_buf);
+					if (write_queue(ff_clone, md->daemon_sockets[i].error_queue)) {
+						md->daemon_sockets[i].error_buf++; //TODO change to byte size?
+						PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, error_buf=%d", i, ff_clone, ff_clone->metaData, md->daemon_sockets[i].error_buf);
 					} else {
 						PRINT_ERROR("Write queue error: ff=%p", ff_clone);
 						freeFinsFrame(ff_clone);
@@ -2029,28 +2060,29 @@ void daemon_icmp_in_error(struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip
 		}
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&daemon_sockets_sem);
+	sem_post(&md->daemon_sockets_sem);
 
 	freeFinsFrame(ff);
 }
 
-void recvmsg_timeout_icmp(struct daemon_call *call) {
+void recvmsg_timeout_icmp(struct fins_module *module, struct daemon_call *call) {
 	PRINT_DEBUG("Entered: call=%p", call);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	call_list_remove(daemon_sockets[call->sock_index].call_list, call);
+	list_remove(md->daemon_sockets[call->sock_index].call_list, call);
 
-	switch (daemon_sockets[call->sock_index].state) {
+	switch (md->daemon_sockets[call->sock_index].state) {
 	case SS_UNCONNECTED:
-		nack_send(call->call_id, call->call_index, call->call_type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
+		nack_send(module, call->call_id, call->call_index, call->call_type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	case SS_CONNECTING:
-		nack_send(call->call_id, call->call_index, call->call_type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
+		nack_send(module, call->call_id, call->call_index, call->call_type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	default:
 		PRINT_ERROR("todo error");
-		nack_send(call->call_id, call->call_index, call->call_type, 1);
+		nack_send(module, call->call_id, call->call_index, call->call_type, 1);
 		break;
 	}
 
-	daemon_calls_remove(call->call_index);
+	daemon_calls_remove(module, call->call_index);
 }

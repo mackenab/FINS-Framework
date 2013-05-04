@@ -168,4 +168,13 @@ void arp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 void arp_interrupt(struct fins_module *module);
 void arp_handle_to(struct fins_module *module, struct arp_cache *cache);
 
+//don't use 0
+#define ARP_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
+#define ARP_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
+#define ARP_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+
+#define ARP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
+#define ARP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
+#define ARP_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+
 #endif /* ARP_INTERNAL_H_ */

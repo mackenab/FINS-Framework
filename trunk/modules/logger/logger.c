@@ -21,7 +21,7 @@ void *switch_to_logger(void *local) {
 }
 
 void logger_get_ff(struct fins_module *module) {
-	struct logger_data *data = (struct logger_data *) module->data;
+	struct logger_data *md = (struct logger_data *) module->data;
 
 	struct finsFrame *ff;
 	do {
@@ -29,7 +29,7 @@ void logger_get_ff(struct fins_module *module) {
 		secure_sem_wait(module->input_sem);
 		ff = read_queue(module->input_queue);
 		sem_post(module->input_sem);
-	} while (module->state == FMS_RUNNING && ff == NULL && !data->interrupt_flag); //TODO change logic here, combine with switch_to_logger?
+	} while (module->state == FMS_RUNNING && ff == NULL && !md->interrupt_flag); //TODO change logic here, combine with switch_to_logger?
 
 	if (module->state != FMS_RUNNING) {
 		if (ff != NULL) {
@@ -48,23 +48,23 @@ void logger_get_ff(struct fins_module *module) {
 			logger_fcf(module, ff);
 			PRINT_DEBUG("");
 		} else if (ff->dataOrCtrl == FF_DATA) {
-			if (data->logger_started) {
-				gettimeofday(&data->logger_end, 0);
-				data->logger_packets++;
-				data->logger_bytes += ff->dataFrame.pduLength;
+			if (md->logger_started) {
+				gettimeofday(&md->logger_end, 0);
+				md->logger_packets++;
+				md->logger_bytes += ff->dataFrame.pduLength;
 				//logger_bytes += ff->dataFrame.pduLength-28; //for end-end throughput of exp 2, to remove IP/UDP hdrs
 			} else {
-				data->logger_started = 1;
-				gettimeofday(&data->logger_start, 0);
-				data->logger_packets = 1;
-				data->logger_bytes = ff->dataFrame.pduLength;
+				md->logger_started = 1;
+				gettimeofday(&md->logger_start, 0);
+				md->logger_packets = 1;
+				md->logger_bytes = ff->dataFrame.pduLength;
 				//logger_bytes = ff->dataFrame.pduLength-28; //for end-end throughput of exp 2, to remove IP/UDP hdrs
 
-				data->logger_saved_packets = 0;
-				data->logger_saved_bytes = 0;
-				data->logger_saved_curr = 0;
+				md->logger_saved_packets = 0;
+				md->logger_saved_bytes = 0;
+				md->logger_saved_curr = 0;
 
-				timer_once_start(data->logger_to_data->tid, data->logger_interval);
+				timer_once_start(md->logger_to_data->tid, md->logger_interval);
 				PRINT_IMPORTANT("Logger starting");
 			}
 			freeFinsFrame(ff);
@@ -72,8 +72,8 @@ void logger_get_ff(struct fins_module *module) {
 			PRINT_ERROR("todo error: dataOrCtrl=%u", ff->dataOrCtrl);
 			exit(-1);
 		}
-	} else if (data->interrupt_flag) {
-		data->interrupt_flag = 0;
+	} else if (md->interrupt_flag) {
+		md->interrupt_flag = 0;
 
 		logger_interrupt(module);
 	} else {
@@ -89,7 +89,7 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -99,7 +99,7 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -118,7 +118,7 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -133,142 +133,75 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		exit(-1);
 		break;
 	}
 }
 
 void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	struct logger_data *data = (struct logger_data *) module->data;
-
-	int i;
 
 	switch (ff->ctrlFrame.param_id) {
 	case LOGGER_SET_PARAM_FLOWS:
 		PRINT_DEBUG("LOGGER_SET_PARAM_FLOWS");
-		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
-		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
-
-		if (module->flows_max < flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = flows_num;
-
-		for (i = 0; i < flows_num; i++) {
-			data->flows[i] = flows[i];
-		}
-
-		//freeFF frees flows
+		module_set_param_flows(module, ff);
 		break;
 	case LOGGER_SET_PARAM_LINKS:
 		PRINT_DEBUG("LOGGER_SET_PARAM_LINKS");
-		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
-
-		ff->ctrlFrame.data = NULL;
+		module_set_param_links(module, ff);
 		break;
 	case LOGGER_SET_PARAM_DUAL:
 		PRINT_DEBUG("LOGGER_SET_PARAM_DUAL");
-
-		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
-
-		if (module->flows_max < table->flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = table->flows_num;
-
-		for (i = 0; i < table->flows_num; i++) {
-			data->flows[i] = table->flows[i];
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = table->link_list;
-
-		//freeFF frees table
+		module_set_param_dual(module, ff);
 		break;
 	case LOGGER_SET_INTERVAL__id:
 		PRINT_DEBUG("LOGGER_SET_INTERVAL");
-		ff->destinationID = ff->ctrlFrame.sender_id;
-
-		//TODO change to actual
-
-		ff->ctrlFrame.sender_id = module->index;
-		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-		ff->ctrlFrame.ret_val = 0;
-
-		module_to_switch(module, ff);
+		PRINT_ERROR("todo");
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case LOGGER_SET_REPEATS__id:
 		PRINT_DEBUG("LOGGER_SET_REPEATS");
-		ff->destinationID = ff->ctrlFrame.sender_id;
-
-		//TODO change to actual
-
-		ff->ctrlFrame.sender_id = module->index;
-		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
-		ff->ctrlFrame.ret_val = 0;
-
-		module_to_switch(module, ff);
+		PRINT_ERROR("todo");
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
-
-	freeFinsFrame(ff);
 }
 
 void logger_interrupt(struct fins_module *module) {
 	PRINT_DEBUG("Entered: module=%p", module);
 
-	struct logger_data *data = (struct logger_data *) module->data;
+	struct logger_data *md = (struct logger_data *) module->data;
 
-	if (data->logger_started) {
+	if (md->logger_started) {
 		struct timeval current;
 		gettimeofday(&current, 0);
 
-		double diff_curr = time_diff(&data->logger_start, &current) / 1000.0;
-		double diff_period = diff_curr - data->logger_saved_curr;
-		int diff_packets = data->logger_packets - data->logger_saved_packets;
-		int diff_bytes = data->logger_bytes - data->logger_saved_bytes;
+		double diff_curr = time_diff(&md->logger_start, &current) / 1000.0;
+		double diff_period = diff_curr - md->logger_saved_curr;
+		int diff_packets = md->logger_packets - md->logger_saved_packets;
+		int diff_bytes = md->logger_bytes - md->logger_saved_bytes;
 		double diff_through = 8.0 * diff_bytes / diff_period;
-		PRINT_IMPORTANT("period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f", data->logger_saved_curr, diff_curr, diff_packets, diff_bytes, diff_through);
+		PRINT_IMPORTANT("period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f", md->logger_saved_curr, diff_curr, diff_packets, diff_bytes, diff_through);
 
-		data->logger_saved_packets = data->logger_packets;
-		data->logger_saved_bytes = data->logger_bytes;
-		data->logger_saved_curr = diff_curr;
+		md->logger_saved_packets = md->logger_packets;
+		md->logger_saved_bytes = md->logger_bytes;
+		md->logger_saved_curr = diff_curr;
 
 		//if (diff_curr > 2 * logger_repeats * logger_interval / 1000.0) {
-		if (diff_curr >= 1 * data->logger_repeats * data->logger_interval / 1000.0) {
-			data->logger_started = 0;
+		if (diff_curr >= 1 * md->logger_repeats * md->logger_interval / 1000.0) {
+			md->logger_started = 0;
 
-			double test = time_diff(&data->logger_start, &data->logger_end) / 1000.0;
+			double test = time_diff(&md->logger_start, &md->logger_end) / 1000.0;
 			//double through = 8.0 * (logger_bytes - 10 * 1470) / test;
-			double through = 8.0 * data->logger_bytes / test;
-			PRINT_IMPORTANT("Logger stopping: total=%f,\t packets=%d,\t bytes=%d,\t through=%f", test, data->logger_packets, data->logger_bytes, through);
+			double through = 8.0 * md->logger_bytes / test;
+			PRINT_IMPORTANT("Logger stopping: total=%f,\t packets=%d,\t bytes=%d,\t through=%f", test, md->logger_packets, md->logger_bytes, through);
 		} else {
-			timer_once_start(data->logger_to_data->tid, data->logger_interval);
+			timer_once_start(md->logger_to_data->tid, md->logger_interval);
 		}
 	} else {
 		PRINT_ERROR("run over?");
@@ -313,30 +246,30 @@ int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows,
 	logger_init_params(module);
 
 	module->data = secure_malloc(sizeof(struct logger_data));
-	struct logger_data *data = (struct logger_data *) module->data;
+	struct logger_data *md = (struct logger_data *) module->data;
 
 	if (module->flows_max < flows_num) {
 		PRINT_ERROR("todo error");
 		return 0;
 	}
-	data->flows_num = flows_num;
+	md->flows_num = flows_num;
 
 	int i;
 	for (i = 0; i < flows_num; i++) {
-		data->flows[i] = flows[i];
+		md->flows[i] = flows[i];
 	}
 
 	//TODO extract this from meta?
-	data->logger_started = 0;
-	data->logger_interval = 1000;
-	data->logger_repeats = 10;
+	md->logger_started = 0;
+	md->logger_interval = 1000;
+	md->logger_repeats = 10;
 
-	data->logger_to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
-	data->logger_to_data->handler = intsem_to_handler;
-	data->logger_to_data->flag = &data->logger_flag;
-	data->logger_to_data->interrupt = &data->interrupt_flag;
-	data->logger_to_data->sem = module->event_sem;
-	timer_create_to((struct to_timer_data *) data->logger_to_data);
+	md->logger_to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
+	md->logger_to_data->handler = intsem_to_handler;
+	md->logger_to_data->flag = &md->logger_flag;
+	md->logger_to_data->interrupt = &md->interrupt_flag;
+	md->logger_to_data->sem = module->event_sem;
+	timer_create_to((struct to_timer_data *) md->logger_to_data);
 
 	return 1;
 }
@@ -345,8 +278,8 @@ int logger_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
-	struct logger_data *data = (struct logger_data *) module->data;
-	secure_pthread_create(&data->switch_to_logger_thread, attr, switch_to_logger, module);
+	struct logger_data *md = (struct logger_data *) module->data;
+	secure_pthread_create(&md->switch_to_logger_thread, attr, switch_to_logger, module);
 
 	return 1;
 }
@@ -372,13 +305,13 @@ int logger_shutdown(struct fins_module *module) {
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
-	struct logger_data *data = (struct logger_data *) module->data;
-	timer_stop(data->logger_to_data->tid);
+	struct logger_data *md = (struct logger_data *) module->data;
+	timer_stop(md->logger_to_data->tid);
 
 	//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_to_logger_thread");
-	pthread_join(data->switch_to_logger_thread, NULL);
+	pthread_join(md->switch_to_logger_thread, NULL);
 
 	return 1;
 }
@@ -386,17 +319,17 @@ int logger_shutdown(struct fins_module *module) {
 int logger_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
-	struct logger_data *data = (struct logger_data *) module->data;
+	struct logger_data *md = (struct logger_data *) module->data;
 	//TODO free all module related mem
 
 	//delete threads
-	timer_delete(data->logger_to_data->tid);
-	free(data->logger_to_data);
+	timer_delete(md->logger_to_data->tid);
+	free(md->logger_to_data);
 
-	if (data->link_list != NULL) {
-		list_free(data->link_list, free);
+	if (md->link_list != NULL) {
+		list_free(md->link_list, free);
 	}
-	free(data);
+	free(md);
 	module_destroy_structs(module);
 	free(module);
 	return 1;

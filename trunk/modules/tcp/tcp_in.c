@@ -3,8 +3,7 @@
  * @date Feb 22, 2012
  * @author Jonathan Reed
  */
-
-#include "tcp.h"
+#include "tcp_internal.h"
 
 void calcRTT(struct tcp_connection *conn) {
 	struct timeval current;
@@ -1880,15 +1879,15 @@ void *recv_thread(void *local) {
 	return NULL;
 }
 
-void tcp_in_fdf(struct finsFrame *ff) {
+void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
 	struct tcp_segment *seg;
 	struct tcp_connection *conn;
 	struct tcp_thread_data *thread_data;
 	//pthread_t thread;
 	struct tcp_connection_stub *conn_stub;
 	struct tcp_segment *temp_seg;
-
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
 	seg = fdf_to_tcp(ff);
 	if (seg) {

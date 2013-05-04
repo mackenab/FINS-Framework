@@ -100,6 +100,38 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 	}
 }
 
+void module_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, ret_val=%u, ret_msg=%u", module, ff, ret_val, ret_msg);
+
+	metadata *meta = ff->metaData;
+	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
+
+	ff->destinationID = ff->ctrlFrame.sender_id;
+
+	ff->ctrlFrame.sender_id = module->index;
+	switch (ff->ctrlFrame.opcode) {
+	case CTRL_ALERT:
+		ff->ctrlFrame.opcode = CTRL_ALERT_REPLY;
+		break;
+	case CTRL_READ_PARAM:
+		ff->ctrlFrame.opcode = CTRL_READ_PARAM_REPLY;
+		break;
+	case CTRL_SET_PARAM:
+		ff->ctrlFrame.opcode = CTRL_SET_PARAM_REPLY;
+		break;
+	case CTRL_EXEC:
+		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
+		break;
+	default:
+		PRINT_ERROR("Unhandled msg case: opcode=%u", ff->ctrlFrame.opcode);
+		exit(-1);
+		return;
+	}
+	ff->ctrlFrame.ret_val = ret_val;
+
+	module_to_switch(module, ff);
+}
+
 //exits - problem sending
 //0 - flow outside range, no link
 //dst_num - sent all ff
@@ -145,4 +177,78 @@ int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t 
 		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, link->dsts_num);
 		return link->dsts_num;
 	}
+}
+
+void module_set_param_flows(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct fins_module_table *mt = (struct fins_module_table *) module->data;
+
+	uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
+	uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+
+	if (module->flows_max < flows_num) {
+		PRINT_ERROR("todo error");
+		freeFinsFrame(ff);
+		return;
+	}
+	mt->flows_num = flows_num;
+
+	int i;
+	for (i = 0; i < flows_num; i++) {
+		mt->flows[i] = flows[i];
+	}
+
+	//freeFF frees flows
+	freeFinsFrame(ff);
+}
+
+void module_set_param_links(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct fins_module_table *mt = (struct fins_module_table *) module->data;
+
+	if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
+		PRINT_ERROR("todo error");
+		freeFinsFrame(ff);
+		return;
+	}
+
+	if (mt->link_list != NULL) {
+		list_free(mt->link_list, free);
+	}
+	mt->link_list = (struct linked_list *) ff->ctrlFrame.data;
+
+	ff->ctrlFrame.data = NULL;
+	freeFinsFrame(ff);
+}
+
+void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct fins_module_table *mt = (struct fins_module_table *) module->data;
+
+	if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
+		PRINT_ERROR("todo error");
+		freeFinsFrame(ff);
+		return;
+	}
+	struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
+
+	if (module->flows_max < table->flows_num) {
+		PRINT_ERROR("todo error");
+		freeFinsFrame(ff);
+		return;
+	}
+	mt->flows_num = table->flows_num;
+
+	int i;
+	for (i = 0; i < table->flows_num; i++) {
+		mt->flows[i] = table->flows[i];
+	}
+
+	if (mt->link_list != NULL) {
+		list_free(mt->link_list, free);
+	}
+	mt->link_list = table->link_list;
+
+	//freeFF frees table
+	freeFinsFrame(ff);
 }

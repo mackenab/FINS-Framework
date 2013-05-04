@@ -6,6 +6,7 @@
  */
 
 #include "ipv4_internal.h"
+
 #include <finsqueue.h>
 
 void ipv4_get_ff(struct fins_module *module) {
@@ -41,7 +42,7 @@ void ipv4_get_ff(struct fins_module *module) {
 			PRINT_DEBUG("");
 		} else {
 			PRINT_ERROR("Error: Wrong value of fdf.directionFlag");
-			freeFinsFrame(ff);
+			exit(-1);
 		}
 	} else {
 		PRINT_ERROR("Error: Wrong ff->dataOrCtrl value");
@@ -60,7 +61,7 @@ void ipv4_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -101,99 +102,49 @@ void ipv4_fcf(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		PRINT_ERROR("todo");
-		freeFinsFrame(ff);
+		exit(-1);
 		break;
 	}
 }
 
 void ipv4_read_param(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	freeFinsFrame(ff);
+	module_reply_fcf(module, ff, 0, 0);
 }
 
 void ipv4_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	struct ipv4_data *data = (struct ipv4_data *) module->data;
-	int i;
-
 	switch (ff->ctrlFrame.param_id) {
-	case MOD_SET_PARAM_FLOWS:
-		PRINT_DEBUG("PARAM_FLOWS");
-		uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
-		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
-
-		if (module->flows_max < flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = flows_num;
-
-		for (i = 0; i < flows_num; i++) {
-			data->flows[i] = flows[i];
-		}
-
-		//freeFF frees flows
+	case IPV4_SET_PARAM_FLOWS:
+		PRINT_DEBUG("IPV4_SET_PARAM_FLOWS");
+		module_set_param_flows(module, ff);
 		break;
-	case MOD_SET_PARAM_LINKS:
-		PRINT_DEBUG("PARAM_LINKS");
-		if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = (struct linked_list *) ff->ctrlFrame.data;
-
-		ff->ctrlFrame.data = NULL;
+	case IPV4_SET_PARAM_LINKS:
+		PRINT_DEBUG("IPV4_SET_PARAM_LINKS");
+		module_set_param_links(module, ff);
 		break;
-	case MOD_SET_PARAM_DUAL:
-		PRINT_DEBUG("PARAM_DUAL");
-
-		if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
-
-		if (module->flows_max < table->flows_num) {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
-			return;
-		}
-		data->flows_num = table->flows_num;
-
-		for (i = 0; i < table->flows_num; i++) {
-			data->flows[i] = table->flows[i];
-		}
-
-		if (data->link_list != NULL) {
-			list_free(data->link_list, free);
-		}
-		data->link_list = table->link_list;
-
-		//freeFF frees table
+	case IPV4_SET_PARAM_DUAL:
+		PRINT_DEBUG("IPV4_SET_PARAM_DUAL");
+		module_set_param_dual(module, ff);
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
+		module_reply_fcf(module, ff, 0, 0);
 		break;
 	}
-
-	freeFinsFrame(ff);
 }
 
 void ipv4_exec(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	freeFinsFrame(ff);
+	module_reply_fcf(module, ff, 0, 0);
 }
 
 void ipv4_exec_reply(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
 	freeFinsFrame(ff);
 }
