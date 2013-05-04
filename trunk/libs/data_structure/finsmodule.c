@@ -29,10 +29,10 @@ int link_involved_test(struct link_record *link, uint32_t *index) {
 	}
 }
 
-struct link_record *link_copy(struct link_record *link) {
-	struct link_record *copy = (struct link_record *) secure_malloc(sizeof(struct link_record));
-	memcpy(copy, link, sizeof(struct link_record)); //would need to change if linked_list
-	return copy;
+struct link_record *link_clone(struct link_record *link) {
+	struct link_record *link_clone = (struct link_record *) secure_malloc(sizeof(struct link_record));
+	memcpy(link_clone, link, sizeof(struct link_record)); //would need to change if linked_list
+	return link_clone;
 }
 
 void module_create_structs(struct fins_module *module) {
@@ -162,13 +162,13 @@ int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t 
 		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	} else {
-		struct finsFrame *ff_copy;
+		struct finsFrame *ff_clone;
 
 		int i;
 		for (i = 1; i < link->dsts_num; i++) {
-			ff_copy = cloneFinsFrame(ff); //TODO Has problem if you're actually passing pointers, as it won't copy it
-			ff_copy->destinationID = link->dsts_index[i];
-			module_to_switch(module, ff_copy);
+			ff_clone = cloneFinsFrame(ff);
+			ff_clone->destinationID = link->dsts_index[i];
+			module_to_switch(module, ff_clone);
 		}
 
 		ff->destinationID = link->dsts_index[0];

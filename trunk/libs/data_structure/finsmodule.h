@@ -104,7 +104,7 @@ struct link_record {
 
 int link_id_test(struct link_record *link, uint32_t *id);
 int link_involved_test(struct link_record *link, uint32_t *index);
-struct link_record *link_copy(struct link_record *link);
+struct link_record *link_clone(struct link_record *link);
 
 struct fins_module_table {
 	//add max_flows? //as max number of flows

@@ -175,8 +175,8 @@ typedef int (*equal_type)(uint8_t *data);
 typedef int (*equal1_type)(uint8_t *data, uint8_t *param);
 typedef int (*equal2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
 
-//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
-typedef uint8_t *(*copy_type)(uint8_t *data);
+//<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
+typedef uint8_t *(*clone_type)(uint8_t *data);
 
 //<comparer> should return:
 //-1 = less than, goes before
@@ -252,10 +252,10 @@ int list_has_space(struct linked_list *list);
 //Return the number of elements the list can add before reaching max
 uint32_t list_space(struct linked_list *list);
 
-//Copy the list and return a new list
-//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
-#define list_copy(list, copy) list_copy_full(list, (copy_type)copy)
-struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(uint8_t *data));
+//Clone the list and return the new list
+//<clone> should return a pointer to a cloned version of an element, returning the same pointer is permissible but must be handled
+#define list_clone(list, clone) list_clone_full(list, (clone_type)clone)
+struct linked_list *list_clone_full(struct linked_list *list, uint8_t *(*clone)(uint8_t *data));
 
 //Append as many elements of <list2> to <list1> up to its max, return true if all of <list2> joined to <list1>
 int list_join(struct linked_list *list1, struct linked_list *list2);
@@ -334,18 +334,18 @@ void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 //<equal> should return:
 //1 if equal
 //0 if not
-//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
-#define list_filter(list, equal, copy) list_filter_full(list, (equal_type)equal, (copy_type)copy)
-struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*copy)(uint8_t *data));
+//<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
+#define list_filter(list, equal, clone) list_filter_full(list, (equal_type)equal, (clone_type)clone)
+struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*clone)(uint8_t *data));
 
 //See list_filter()
-#define list_filter1(list, equal, param, copy) list_filter1_full(list, (equal1_type)equal, (uint8_t *)param, (copy_type)copy)
-struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*copy)(uint8_t *data));
+#define list_filter1(list, equal, param, clone) list_filter1_full(list, (equal1_type)equal, (uint8_t *)param, (clone_type)clone)
+struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*clone)(uint8_t *data));
 
 //See list_filter()
-#define list_filter2(list, equal, param1, param2, copy) list_filter2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2, (copy_type)copy)
+#define list_filter2(list, equal, param1, param2, clone) list_filter2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2, (clone_type)clone)
 struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
-		uint8_t *(*copy)(uint8_t *data));
+		uint8_t *(*clone)(uint8_t *data));
 
 //Iterate and free the elements of <list>, afterwards free the list
 //<release> should free the data structure in the element as well as any subcomponents
@@ -403,7 +403,7 @@ struct addr_record { //for a particular address
 	struct sockaddr_storage bdc; //broadcast
 	struct sockaddr_storage dst; //end-to-end dst
 };
-struct addr_record *addr_copy(struct addr_record *addr);
+struct addr_record *addr_clone(struct addr_record *addr);
 int addr_is_v4(struct addr_record *addr);
 int addr_ipv4_test(struct addr_record *addr, uint32_t *ip);
 int addr_bdcv4_test(struct addr_record *addr, uint32_t *ip);
@@ -430,7 +430,7 @@ struct if_record { //for an interface
 
 	struct linked_list *addr_list;
 };
-struct if_record *ifr_copy(struct if_record *ifr);
+struct if_record *ifr_clone(struct if_record *ifr);
 int ifr_index_test(struct if_record *ifr, uint32_t *index);
 int ifr_ipv4_test(struct if_record *ifr, uint32_t *ip);
 int ifr_ipv6_test(struct if_record *ifr, uint32_t *ip); //TODO
@@ -448,7 +448,7 @@ struct route_record {
 };
 int route_is_addr4(struct route_record *route);
 int route_is_addr6(struct route_record *route);
-struct route_record *route_copy(struct route_record *route);
+struct route_record *route_clone(struct route_record *route);
 
 struct cache_record {
 	struct sockaddr_storage src;

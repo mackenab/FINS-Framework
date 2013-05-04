@@ -819,7 +819,7 @@ void core_main() {
 
 	for (i = 0; i < MAX_MODULES; i++) {
 		if (overall->modules[i] != NULL) {
-			link_subset_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_copy); //TODO is mem leak
+			link_subset_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_clone); //TODO is mem leak
 			PRINT_IMPORTANT("i=%d, link_subset_list=%p, len=%d", i, link_subset_list, link_subset_list->len);
 
 			meta_update = (metadata *) secure_malloc(sizeof(metadata));

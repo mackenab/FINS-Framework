@@ -20,7 +20,7 @@ FULL_INCS = $(sort $(LOCAL_INCS_DIRS) $(shell cat $(FULL_INCS_FILES) 2> /dev/nul
 CURR_INCS = $(shell cat $(LOCAL_INCS_FILE) 2> /dev/null)
 OTHER_INCS = $(filter-out $(LOCAL_DIR),$(CURR_INCS))
 
-INCLUDES = $(call filter_headers,$(CURR_INCS))
+INCLUDES = $(call filter_headers_path,$(CURR_INCS))
 CFLAGS += $(addprefix -I,$(CURR_INCS))
 CFLAGS += $(LOCAL_CFLAGS)
 
@@ -92,11 +92,11 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 endif
 
 $(LOCAL_EXEC_PATH):$(LOCAL_OBJS) $(OTHER_SO_PATHS) #$(LOCAL_OBJS_FILE)
-	@echo "test1='$(LOCAL_DIR)'"
+#	@echo "test1='$(LOCAL_DIR)'"
 	@LD_LIBRARY_PATH=$(OBJ_DIR) $(LD) $(LOCAL_OBJS) $(LDFLAGS) -o $(LOCAL_EXEC_PATH)
 
 %.o:%.c $(INCLUDES)
-	@echo "test3='$(LOCAL_DIR)'"
+#	@echo "test3='$(LOCAL_DIR)'"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(LOCAL_DIR)/%.o:%.c $(INCLUDES)

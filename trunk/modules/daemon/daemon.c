@@ -177,7 +177,6 @@ struct daemon_call *daemon_call_clone(struct daemon_call *call) {
 	PRINT_DEBUG("Entered: call=%p", call);
 
 	struct daemon_call *call_clone = (struct daemon_call *) secure_malloc(sizeof(struct daemon_call));
-
 	memcpy(call_clone, call, sizeof(struct daemon_call));
 	call_clone->alloc = 1;
 
@@ -781,7 +780,7 @@ void daemon_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		return;
 	}
-	daemon_call_clone();
+	//daemon_call_clone();
 
 	uint32_t call_id = md->daemon_calls[call_index].call_id;
 	uint32_t call_type = md->daemon_calls[call_index].call_type;

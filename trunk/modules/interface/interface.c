@@ -837,7 +837,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		md->flows[i] = flows[i];
 	}
 
-	md->if_list = list_copy(envi->if_list, ifr_copy);
+	md->if_list = list_clone(envi->if_list, ifr_clone);
 	if (md->if_list->len > INTERFACE_IF_LIST_MAX) {
 		PRINT_ERROR("todo");
 		struct linked_list *leftover = list_split(md->if_list, INTERFACE_IF_LIST_MAX - 1);

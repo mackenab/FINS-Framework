@@ -538,10 +538,10 @@ uint32_t list_space(struct linked_list *list) {
 	return list->max - list->len;
 }
 
-//Copy the list and return a new list
-//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
-struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, copy=%p", list, copy);
+//Clone the list and return the new list
+//<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
+struct linked_list *list_clone_full(struct linked_list *list, uint8_t *(*clone)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, clone=%p", list, clone);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -549,7 +549,7 @@ struct linked_list *list_copy_full(struct linked_list *list, uint8_t *(*copy)(ui
 	struct list_node *next;
 	while (comp) {
 		next = comp->next;
-		list_append(list_ret, copy(comp->data));
+		list_append(list_ret, clone(comp->data));
 		comp = next;
 	}
 
@@ -1005,9 +1005,9 @@ void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 //<equal> should return:
 //1 if equal
 //0 if not
-//<copy> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
-struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*copy)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, copy=%p", list, equal, copy);
+//<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
+struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*clone)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, clone=%p", list, equal, clone);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -1016,7 +1016,7 @@ struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data)) {
-			list_append(list_ret, copy(comp->data));
+			list_append(list_ret, clone(comp->data));
 		}
 		comp = next;
 	}
@@ -1028,8 +1028,8 @@ struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint
 }
 
 //See list_filter()
-struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*copy)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p, copy=%p", list, equal, param, copy);
+struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*clone)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p, clone=%p", list, equal, param, clone);
 
 	struct linked_list *list_ret = list_create(list->max);
 
@@ -1038,7 +1038,7 @@ struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uin
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param)) {
-			list_append(list_ret, copy(comp->data));
+			list_append(list_ret, clone(comp->data));
 		}
 		comp = next;
 	}
@@ -1051,8 +1051,8 @@ struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uin
 
 //See list_filter()
 struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
-		uint8_t *(*copy)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, copy=%p", list, equal, param1, param2, copy);
+		uint8_t *(*clone)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, clone=%p", list, equal, param1, param2, clone);
 
 	struct linked_list *list_ret = list_create(list->max);
 
@@ -1061,7 +1061,7 @@ struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uin
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
-			list_append(list_ret, copy(comp->data));
+			list_append(list_ret, clone(comp->data));
 		}
 		comp = next;
 	}
@@ -1648,13 +1648,13 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 	free(temp);
 }
 
-struct addr_record *addr_copy(struct addr_record *addr) {
+struct addr_record *addr_clone(struct addr_record *addr) {
 	PRINT_DEBUG("Entered: addr=%p", addr);
 
-	struct addr_record *addr_copy = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
-	memcpy(addr_copy, addr, sizeof(struct addr_record));
+	struct addr_record *addr_clone = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
+	memcpy(addr_clone, addr, sizeof(struct addr_record));
 
-	return addr_copy;
+	return addr_clone;
 }
 
 int addr_is_v4(struct addr_record *addr) {
@@ -1705,17 +1705,17 @@ uint8_t *addr6_get_addr(struct sockaddr_storage *addr) {
 	return NULL;
 }
 
-struct if_record *ifr_copy(struct if_record *ifr) {
+struct if_record *ifr_clone(struct if_record *ifr) {
 	PRINT_DEBUG("Entered: ifr=%p", ifr);
 
-	struct if_record *ifr_copy = (struct if_record *) secure_malloc(sizeof(struct if_record));
-	memcpy(ifr_copy, ifr, sizeof(struct if_record));
+	struct if_record *ifr_clone = (struct if_record *) secure_malloc(sizeof(struct if_record));
+	memcpy(ifr_clone, ifr, sizeof(struct if_record));
 
 	if (ifr->addr_list) {
-		ifr_copy->addr_list = list_copy(ifr->addr_list, addr_copy);
+		ifr_clone->addr_list = list_clone(ifr->addr_list, addr_clone);
 	}
 
-	return ifr_copy;
+	return ifr_clone;
 }
 
 int ifr_index_test(struct if_record *ifr, uint32_t *index) {
@@ -1752,11 +1752,11 @@ int route_is_addr6(struct route_record *route) {
 	return route->family == AF_INET6;
 }
 
-struct route_record *route_copy(struct route_record *route) {
+struct route_record *route_clone(struct route_record *route) {
 	PRINT_DEBUG("Entered: route=%p", route);
 
-	struct route_record *route_copy = (struct route_record *) secure_malloc(sizeof(struct route_record));
-	memcpy(route_copy, route, sizeof(struct route_record));
+	struct route_record *route_clone = (struct route_record *) secure_malloc(sizeof(struct route_record));
+	memcpy(route_clone, route, sizeof(struct route_record));
 
-	return route_copy;
+	return route_clone;
 }

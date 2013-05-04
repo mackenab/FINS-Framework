@@ -55,7 +55,7 @@ void ipv4_init_params(struct fins_module *module) {
 void ipv4_ifr_get_addr_func(struct if_record *ifr, struct linked_list *ret_list) {
 	if (ifr->flags & IFF_RUNNING) { //ifr->status ?
 		//struct linked_list *temp_list = list_find_all(ifr->addr_list, addr_is_v4);
-		struct linked_list *temp_list = list_filter(ifr->addr_list, addr_is_v4, addr_copy);
+		struct linked_list *temp_list = list_filter(ifr->addr_list, addr_is_v4, addr_clone);
 		if (list_join(ret_list, temp_list)) {
 			free(temp_list);
 		} else {
@@ -96,7 +96,7 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 		md->addr_main = (struct addr_record *) list_find(envi->if_main->addr_list, addr_is_v4);
 	}
 
-	md->route_list = list_filter(envi->route_list, route_is_addr4, route_copy);
+	md->route_list = list_filter(envi->route_list, route_is_addr4, route_clone);
 	if (md->route_list->len > IPV4_ROUTE_LIST_MAX) {
 		PRINT_ERROR("todo");
 		struct linked_list *leftover = list_split(md->route_list, IPV4_ROUTE_LIST_MAX - 1);
