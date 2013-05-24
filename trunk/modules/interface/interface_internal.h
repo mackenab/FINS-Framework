@@ -112,7 +112,7 @@ void interface_store_free(struct interface_store *store);
 #define INTERFACE_MAX_FLOWS 3
 #define INTERFACE_FLOW_IPV4 0
 #define INTERFACE_FLOW_ARP 	1
-#define INTERFACE_FLOW_IPV6	2
+#define INTERFACE_FLOW_IPV6	2 //TODO add eventually
 
 struct interface_data {
 	struct linked_list *link_list;

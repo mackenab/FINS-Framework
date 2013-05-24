@@ -452,7 +452,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -462,7 +462,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -518,7 +518,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -542,7 +542,7 @@ void arp_exec(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -626,6 +626,7 @@ int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 		list_free(leftover, free);
 	}
 	md->if_list->max = ARP_IF_LIST_MAX;
+	PRINT_IMPORTANT("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
 
 	//TODO extract cache_list from meta?
 	md->cache_list = list_create(ARP_CACHE_LIST_MAX);

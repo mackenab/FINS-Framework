@@ -53,8 +53,8 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 
 	metadata *meta = ff->metaData;
 	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
-	secure_metadata_readFromElement(meta, "recv_src_ip", &src_ip);
-	secure_metadata_readFromElement(meta, "recv_dst_ip", &dst_ip);
+	secure_metadata_readFromElement(meta, "recv_src_ipv4", &src_ip);
+	secure_metadata_readFromElement(meta, "recv_dst_ipv4", &dst_ip);
 
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */

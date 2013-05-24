@@ -127,7 +127,7 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -137,7 +137,7 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -156,7 +156,7 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -195,7 +195,7 @@ void switch_set_param(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }

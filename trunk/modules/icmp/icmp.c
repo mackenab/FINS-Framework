@@ -115,7 +115,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -164,7 +164,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 void icmp_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void icmp_set_param(struct fins_module *module, struct finsFrame *ff) {
@@ -185,7 +185,7 @@ void icmp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -193,7 +193,7 @@ void icmp_set_param(struct fins_module *module, struct finsFrame *ff) {
 void icmp_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
@@ -436,17 +436,17 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	metadata *meta = ff->metaData;
 
 	uint32_t src_ip;
-	secure_metadata_readFromElement(meta, "recv_src_ip", &src_ip);
+	secure_metadata_readFromElement(meta, "recv_src_ipv4", &src_ip);
 	uint32_t dst_ip;
-	secure_metadata_readFromElement(meta, "recv_dst_ip", &dst_ip);
+	secure_metadata_readFromElement(meta, "recv_dst_ipv4", &dst_ip);
 
 	metadata *meta_reply = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_reply);
 
 	uint32_t protocol = ICMP_PROTOCOL;
 	secure_metadata_writeToElement(meta_reply, "send_protocol", &protocol, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta_reply, "send_src_ip", &dst_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta_reply, "send_dst_ip", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta_reply, "send_src_ipv4", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta_reply, "send_dst_ipv4", &src_ip, META_TYPE_INT32);
 
 	struct finsFrame *ff_reply = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff_reply->dataOrCtrl = FF_DATA;

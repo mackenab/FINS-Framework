@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -222,93 +222,93 @@ int main(int argc, char *argv[]) {
 	//pID = fork();
 
 	/*
-	if (0) {
-		int len;
-		int ret;
-		int recv_bytes;
+	 if (0) {
+	 int len;
+	 int ret;
+	 int recv_bytes;
 
-		int i = 0;
-		int j;
-		int total = 0;
-		while (i < 20) {
-			//i++;
-			//printf("(%d) Input msg (q or Q to quit):", i);
-			//gets(send_data);
+	 int i = 0;
+	 int j;
+	 int total = 0;
+	 while (i < 20) {
+	 //i++;
+	 //printf("(%d) Input msg (q or Q to quit):", i);
+	 //gets(send_data);
 
-			//len = strlen(send_data);
-			//printf("\nlen=%d, str='%s'\n", len, send_data);
-			//fflush(stdout);
+	 //len = strlen(send_data);
+	 //printf("\nlen=%d, str='%s'\n", len, send_data);
+	 //fflush(stdout);
 
-			//memcpy(msg, send_data, len);
-			//len = 50;
-			len = 131072;
-			//len = 31072;
+	 //memcpy(msg, send_data, len);
+	 //len = 50;
+	 len = 131072;
+	 //len = 31072;
 
-			msg[len] = 'a';
+	 msg[len] = 'a';
 
-			//if (pID == 0)
-			//	sleep(1);
+	 //if (pID == 0)
+	 //	sleep(1);
 
-			//printf("\nDoing pID=%d\n", pID);
-			//fflush(stdout);
+	 //printf("\nDoing pID=%d\n", pID);
+	 //fflush(stdout);
 
-			if ((len > 0 && len < 1024) || 1) {
-				if (pID == 0) {
-					//ret = poll(fds, nfds, time);
-					//printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
-				}
-				if (ret || 1) {
-					if (0) {
-						printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
-						printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-								(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
-								(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
-								(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
-								(fds[ret].revents & POLLWRBAND) > 0);
-						fflush(stdout);
-					}
+	 if ((len > 0 && len < 1024) || 1) {
+	 if (pID == 0) {
+	 //ret = poll(fds, nfds, time);
+	 //printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
+	 }
+	 if (ret || 1) {
+	 if (0) {
+	 printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
+	 printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
+	 (fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+	 (fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+	 (fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+	 (fds[ret].revents & POLLWRBAND) > 0);
+	 fflush(stdout);
+	 }
 
-					if ((fds[ret].revents & (POLLOUT)) || 1) {
-						//numbytes = send(sock, send_data, strlen(send_data), 0);
-						//printf("\n sending: pID=%d", pID);
-						//fflush(stdout);
-						numbytes = send(sock, msg, len, 0);
-						//numbytes = send(sock, msg, len, MSG_DONTWAIT);
+	 if ((fds[ret].revents & (POLLOUT)) || 1) {
+	 //numbytes = send(sock, send_data, strlen(send_data), 0);
+	 //printf("\n sending: pID=%d", pID);
+	 //fflush(stdout);
+	 numbytes = send(sock, msg, len, 0);
+	 //numbytes = send(sock, msg, len, MSG_DONTWAIT);
 
-						//for (j = 0, numbytes = 0; j < len; j++) {
-						//	numbytes += send(sock, msg, 1, 0);
-						//}
+	 //for (j = 0, numbytes = 0; j < len; j++) {
+	 //	numbytes += send(sock, msg, 1, 0);
+	 //}
 
-						if (numbytes >= 0) {
-							total += numbytes;
+	 if (numbytes >= 0) {
+	 total += numbytes;
 
-							printf("\n frame=%d, len=%d, total=%d, pID=%d", ++i, numbytes, total, pID);
-							fflush(stdout);
+	 printf("\n frame=%d, len=%d, total=%d, pID=%d", ++i, numbytes, total, pID);
+	 fflush(stdout);
 
-							if (numbytes == 0) {
-								sleep(1);
-							}
-						}
-					} else {
-					}
-				}
-			} else {
-				printf("Error string len, len=%d\n", len);
-				fflush(stdout);
-			}
+	 if (numbytes == 0) {
+	 sleep(1);
+	 }
+	 }
+	 } else {
+	 }
+	 }
+	 } else {
+	 printf("Error string len, len=%d\n", len);
+	 fflush(stdout);
+	 }
 
-			if (0) {
-				if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
-					break;
-				}
-			} else {
-				if (send_data[0] == 'q' || send_data[0] == 'Q') {
-					break;
-				}
-			}
-		}
-	}
-	*/
+	 if (0) {
+	 if ((strcmp(send_data, "q") == 0) || strcmp(send_data, "Q") == 0) {
+	 break;
+	 }
+	 } else {
+	 if (send_data[0] == 'q' || send_data[0] == 'Q') {
+	 break;
+	 }
+	 }
+	 }
+	 }
+	 */
 
 	if (1) {
 		double total = 10;
@@ -327,11 +327,13 @@ int main(int argc, char *argv[]) {
 		struct timeval start, end;
 		gettimeofday(&start, 0);
 
-		//char temp_buff[100];
+		char temp_buff[100];
 
 		int i = 0;
 		while (1) {
-			//gets(temp_buff);
+			gets(temp_buff);
+			printf("sending=%d\n", i);
+			fflush(stdout);
 			*data = htonl(i);
 			numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			if (numbytes != len) {

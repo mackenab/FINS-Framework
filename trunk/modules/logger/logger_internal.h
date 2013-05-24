@@ -69,7 +69,6 @@ void logger_get_ff(struct fins_module *module);
 void logger_fcf(struct fins_module *module, struct finsFrame *ff);
 void logger_set_param(struct fins_module *module, struct finsFrame *ff);
 //void logger_exec(struct fins_module *module, struct finsFrame *ff);
-//void logger_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 //void logger_error(struct fins_module *module, struct finsFrame *ff);
 
 //void logger_in_fdf(struct fins_module *module, struct finsFrame *ff);

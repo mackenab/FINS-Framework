@@ -6,13 +6,13 @@
  */
 #include "daemon_internal.h"
 
-static call_out_type call_outs[] = { socket_out, bind_out, listen_out, connect_out, accept_out, getname_out, ioctl_out, sendmsg_out, recvmsg_out,
+static call_out_type call_outs[] = { NULL, socket_out, bind_out, listen_out, connect_out, accept_out, getname_out, ioctl_out, sendmsg_out, recvmsg_out,
 		getsockopt_out, setsockopt_out, release_out, poll_out, mmap_out, socketpair_out, shutdown_out, close_out, sendpage_out };
 
 void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, int msg_len) {
 	PRINT_DEBUG("Entered: hdr=%p, sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d, len=%d",
 			hdr, hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index, msg_len);
-	//struct daemon_data *md = (struct daemon_data *) module->data;
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	//############################### Debug
 #ifdef DEBUG
@@ -29,44 +29,44 @@ void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 #endif
 	//###############################
 
-	if (hdr->call_index < 0 || hdr->call_index > MAX_CALLS) {
+	if (hdr->call_index < 0 || hdr->call_index > DAEMON_MAX_CALLS) {
 		PRINT_ERROR("call_index out of range: call_index=%d", hdr->call_index);
 	} else {
-		if (hdr->call_type >= MAX_CALL_TYPES) {
-			PRINT_ERROR("call_index out of range: call_type=%u", hdr->call_type);
-			//TODO nack?
+		if (hdr->call_type == 0 || MAX_CALL_TYPES <= hdr->call_type) {
+			PRINT_ERROR("call_type out of range: call_type=%u", hdr->call_type);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		} else if (hdr->call_type == SOCKET_CALL) {
+			PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+			secure_sem_wait(&md->sockets_sem);
+
 			socket_out(module, hdr, msg_pt, msg_len);
+
+			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+			sem_post(&md->sockets_sem);
 		} else {
-			if (hdr->sock_index < 0 || hdr->sock_index > MAX_SOCKETS) {
+			if (hdr->sock_index < 0 || DAEMON_MAX_SOCKETS < hdr->sock_index) {
 				PRINT_ERROR("sock_index out of range: sock_index=%d", hdr->sock_index);
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EBADF);
 			} else {
-				//TODO update to system where use ops in daemon_socket struct
-				/*
 				PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-				secure_sem_wait(&md->daemon_sockets_sem);
-				if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+				secure_sem_wait(&md->sockets_sem);
+				if (md->sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 					PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
 							hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-					sem_post(&md->daemon_sockets_sem);
+					sem_post(&md->sockets_sem);
 
+					//TODO find error for synch issues between wedge/daemon
 					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					return;
 				}
 
-				//(md->daemon_sockets[hdr->sock_index].ops[hdr->call_type])(module, hdr, msg_pt, msg_len);
-
-				int type = md->daemon_sockets[hdr->sock_index].type;
-				int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
 				PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d",
-						md->daemon_calls[hdr->call_index].sock_id, md->daemon_calls[hdr->call_index].sock_index, type, protocol);
-				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-				sem_post(&md->daemon_sockets_sem);
-				*/
-
+						md->calls[hdr->call_index].sock_id, md->calls[hdr->call_index].sock_index, md->sockets[hdr->sock_index].type, md->sockets[hdr->sock_index].protocol);
 				(call_outs[hdr->call_type])(module, hdr, msg_pt, msg_len);
+
+				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+				sem_post(&md->sockets_sem);
 			}
 		}
 	}
@@ -74,7 +74,9 @@ void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 
 void socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
+
 	uint8_t *pt = buf;
+	//convert to: struct socket_call_hdr *hdr = (struct socket_call_hdr *)buf;
 
 	int domain = *(int *) pt;
 	pt += sizeof(int);
@@ -92,21 +94,22 @@ void socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	}
 
 	PRINT_DEBUG("domain=%d, type=%u, protocol=%d", domain, type, protocol);
-	if (domain != AF_INET) {
+	if (domain != AF_INET && domain != AF_INET6) {
 		PRINT_ERROR("Wrong domain, only AF_INET us supported");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
 
-	if (type == SOCK_RAW && (protocol == IPPROTO_ICMP || protocol == IPPROTO_IP)) {
-		socket_out_icmp(module, hdr, domain, SOCK_RAW, IPPROTO_ICMP);
-	} else if (type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP)) {
-		socket_out_tcp(module, hdr, domain, SOCK_STREAM, IPPROTO_TCP);
-	} else if (type == SOCK_DGRAM && (protocol == IPPROTO_UDP || protocol == IPPROTO_IP)) {
-		socket_out_udp(module, hdr, domain, SOCK_DGRAM, IPPROTO_UDP);
+	//change to list containing struct socket_type: has create(), equal() funcs?
+	if (socket_icmp_test(domain, type, protocol)) {
+		socket_out_icmp(module, hdr, domain);
+	} else if (socket_tcp_test(domain, type, protocol)) {
+		socket_out_tcp(module, hdr, domain);
+	} else if (socket_udp_test(domain, type, protocol)) {
+		socket_out_udp(module, hdr, domain);
 	} else {
 		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EACCES);
 	}
 }
 
@@ -115,7 +118,7 @@ void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	struct daemon_data *md = (struct daemon_data *) module->data;
 	uint8_t *pt = buf;
 
-	socklen_t addr_len = *(int *) pt;
+	int addr_len = *(int *) pt;
 	pt += sizeof(int);
 
 	if (addr_len <= 0) {
@@ -126,8 +129,8 @@ void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 		PRINT_DEBUG("addr_len=%d", addr_len);
 	}
 
-	struct sockaddr_in *addr = (struct sockaddr_in *) secure_malloc(addr_len);
-	memcpy(addr, pt, addr_len);
+	struct sockaddr_storage addr;
+	memcpy(&addr, pt, addr_len);
 	pt += addr_len;
 
 	int reuseaddr = *(int *) pt;
@@ -139,41 +142,13 @@ void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 		return;
 	}
 
-	PRINT_DEBUG("addr=%u/%d, family=%d, reuseaddr=%d", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, reuseaddr);
+	md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		free(addr);
-		return;
-	}
-
-	md->daemon_sockets[hdr->sock_index].sockopts.FSO_REUSEADDR |= reuseaddr; //TODO: when sockopts fully impelmented just set to '='
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d",
-			md->daemon_calls[hdr->call_index].sock_id, md->daemon_calls[hdr->call_index].sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) { //is proto==icmp needed?
-		bind_out_icmp(module, hdr, addr);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		bind_out_tcp(module, hdr, addr);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		bind_out_udp(module, hdr, addr);
+	if (md->sockets[hdr->sock_index].out_ops->bind_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->bind_out)(module, hdr, &addr);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		free(addr);
 	}
 }
 
@@ -197,33 +172,10 @@ void listen_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 
 	PRINT_DEBUG("backlog=%d", backlog);
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		listen_out_icmp(module, hdr, backlog);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		listen_out_tcp(module, hdr, backlog);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		listen_out_udp(module, hdr, backlog);
+	if (md->sockets[hdr->sock_index].out_ops->listen_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->listen_out)(module, hdr, backlog);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -233,7 +185,7 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	socklen_t addrlen;
-	struct sockaddr_in *addr;
+	struct sockaddr_storage addr;
 	int flags;
 	uint8_t *pt;
 
@@ -248,8 +200,7 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 		return;
 	}
 
-	addr = (struct sockaddr_in *) secure_malloc(addrlen);
-	memcpy(addr, pt, addrlen);
+	memcpy(&addr, pt, addrlen);
 	pt += addrlen;
 
 	flags = *(int *) pt;
@@ -258,42 +209,16 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		free(addr);
 		return;
 	}
 
-	PRINT_DEBUG("addr=%u/%d, family=%d, flags=0x%x", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, flags);
+	//PRINT_DEBUG("addr=%u/%d, family=%d, flags=0x%x", (addr->sin_addr).s_addr, ntohs(addr->sin_port), addr->sin_family, flags);
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		free(addr);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		connect_out_icmp(module, hdr, addr, flags);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		connect_out_tcp(module, hdr, addr, flags);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		connect_out_udp(module, hdr, addr, flags);
+	if (md->sockets[hdr->sock_index].out_ops->connect_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->connect_out)(module, hdr, &addr, flags);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		free(addr);
 	}
 }
 
@@ -324,33 +249,11 @@ void accept_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	}
 
 	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		accept_out_icmp(module, hdr, sock_id_new, sock_index_new, flags);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		accept_out_tcp(module, hdr, sock_id_new, sock_index_new, flags); //TODO finish
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		accept_out_udp(module, hdr, sock_id_new, sock_index_new, flags);
+	if (md->sockets[hdr->sock_index].out_ops->accept_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->accept_out)(module, hdr, sock_id_new, sock_index_new, flags);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -374,57 +277,38 @@ void getname_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	}
 
 	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		getname_out_icmp(module, hdr, peer);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		getname_out_tcp(module, hdr, peer);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		getname_out_udp(module, hdr, peer);
+	if (md->sockets[hdr->sock_index].out_ops->getname_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->getname_out)(module, hdr, peer);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
+}
+
+void ifr_total_test(struct if_record *ifr, uint32_t *total) {
+	*total = *total + ifr->addr_list->len;
 }
 
 void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, buf_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	//TODO fix here!!!!!!!!!!!!!!!!!! handle if_list stuff & addr_list
-
-	uint32_t cmd;
-	uint8_t *pt;
 	uint8_t *temp;
 	int len;
 	int msg_len = 0;
 	uint8_t *msg = NULL;
 	struct nl_daemon_to_wedge *hdr_ret;
-	struct sockaddr_in addr;
-	struct ifreq ifr;
-	int total = 0;
 
-	pt = buf;
+	int32_t total = 0;
+	struct if_record *ifr;
+	struct addr_record *addr;
+	struct sockaddr_in *addr4;
+	struct ifreq *if_req;
 
-	cmd = *(uint32_t *) pt;
+	uint8_t *pt = buf;
+
+	uint32_t cmd = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
 
 	switch (cmd) {
@@ -442,7 +326,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + 2 * sizeof(struct ifreq);
+		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + len;
 		msg = (uint8_t *) secure_malloc(msg_len);
 
 		hdr_ret = (struct nl_daemon_to_wedge *) msg;
@@ -457,42 +341,35 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		pt += sizeof(int);
 
 		//TODO implement a looped version of this that's taken from where interface/device info will be stored
+		//keep if_list sorted, go through list add ifr->addr_list->len to get size
 		total = 0;
-		if (total + sizeof(struct ifreq) <= len) {
-			strcpy(ifr.ifr_name, "lo");
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(loopback_ip_addr);
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
+		struct linked_list *running_list = list_find_all(md->if_list, ifr_running_test);
+		while (list_is_empty(running_list)) {
+			ifr = (struct if_record *) list_remove_front(running_list);
+			addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
+			if (addr != NULL) {
+				if (total + sizeof(struct ifreq) <= len) {
+					if_req = (struct ifreq *) pt;
+					strcpy(if_req->ifr_name, (char *) ifr->name);
 
-			memcpy(pt, &ifr, sizeof(struct ifreq));
-			pt += sizeof(struct ifreq);
-			total += sizeof(struct ifreq);
-		} else {
-			msg_len -= sizeof(struct ifreq);
+					addr4 = (struct sockaddr_in *) &if_req->ifr_addr;
+					addr4->sin_family = AF_INET;
+					addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
+					addr4->sin_port = 0;
+
+					pt += sizeof(struct ifreq);
+					total += sizeof(struct ifreq);
+				} else {
+					total = len;
+					break;
+				}
+			}
 		}
+		list_free(running_list, nop_func);
 
-		if (total + sizeof(struct ifreq) <= len) {
-			strcpy(ifr.ifr_name, (char *) my_host_if_name);
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_family = AF_INET;
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = htonl(my_host_ip_addr);
-			((struct sockaddr_in *) &ifr.ifr_addr)->sin_port = 0;
-
-			memcpy(pt, &ifr, sizeof(struct ifreq));
-			pt += sizeof(struct ifreq);
-			total += sizeof(struct ifreq);
-		} else {
-			msg_len -= sizeof(struct ifreq);
-		}
-
+		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + total;
 		*(int *) temp = total;
-		PRINT_DEBUG("total=%d (%d)", total, total/32);
-
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
+		PRINT_DEBUG("total=%d (%d)", total, total/sizeof(struct ifreq));
 		break;
 	case SIOCGIFADDR:
 		PRINT_DEBUG("SIOCGIFADDR=%d", cmd);
@@ -512,22 +389,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFADDR), len=%d, temp='%s'", cmd, len, temp);
 
-		//TODO get correct values from IP?
-		if (strcmp((char *) temp, (char *) my_host_if_name) == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
-			addr.sin_port = 0;
-		} else if (strcmp((char *) temp, "lo") == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(loopback_ip_addr);
-			addr.sin_port = 0;
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
+		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			return;
 		}
-
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -540,16 +407,22 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		addr4 = (struct sockaddr_in *) pt;
+		addr4->sin_family = AF_INET;
+		addr4->sin_port = 0;
+
+		addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
+		} else {
+			PRINT_ERROR("todo error");
+			addr4->sin_addr.s_addr = 0;
+		}
 		pt += sizeof(struct sockaddr_in);
 
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+
 		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
 		break;
 	case SIOCGIFDSTADDR:
 		PRINT_DEBUG("SIOCGIFDSTADDR=%d", cmd);
@@ -568,22 +441,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFDSTADDR), len=%d, temp='%s'", cmd, len, temp);
 
-		//TODO get correct values from IP?
-		if (strcmp((char *) temp, (char *) my_host_if_name) == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(my_host_ip_addr);
-			addr.sin_port = 0;
-		} else if (strcmp((char *) temp, "lo") == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(loopback_ip_addr);
-			addr.sin_port = 0;
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
+		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			return;
 		}
-
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -596,16 +459,22 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		addr4 = (struct sockaddr_in *) pt;
+		addr4->sin_family = AF_INET;
+		addr4->sin_port = 0;
+
+		addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
+		} else {
+			PRINT_ERROR("todo error");
+			addr4->sin_addr.s_addr = 0;
+		}
 		pt += sizeof(struct sockaddr_in);
 
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+
 		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
 		break;
 	case SIOCGIFBRDADDR:
 		PRINT_DEBUG("SIOCGIFBRDADDR=%d", cmd);
@@ -624,22 +493,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFBRDADDR), len=%d, temp='%s'", cmd, len, temp);
 
-		//TODO get correct values from IP?
-		if (strcmp((char *) temp, (char *) my_host_if_name) == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl((my_host_ip_addr & my_host_mask) | (~my_host_mask));
-			addr.sin_port = 0;
-		} else if (strcmp((char *) temp, "lo") == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(any_ip_addr);
-			addr.sin_port = 0;
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
+		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
-			//nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
-			//return;
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			return;
 		}
-
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -652,16 +511,22 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		addr4 = (struct sockaddr_in *) pt;
+		addr4->sin_family = AF_INET;
+		addr4->sin_port = 0;
+
+		addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->bdc));
+		} else {
+			PRINT_ERROR("todo error");
+			addr4->sin_addr.s_addr = 0;
+		}
 		pt += sizeof(struct sockaddr_in);
 
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+
 		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
 		break;
 	case SIOCGIFNETMASK:
 		PRINT_DEBUG("SIOCGIFNETMASK=%d", cmd);
@@ -680,22 +545,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFNETMASK), len=%d, temp='%s'", cmd, len, temp);
 
-		//TODO get correct values from IP?
-		if (strcmp((char *) temp, (char *) my_host_if_name) == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(my_host_mask);
-			addr.sin_port = 0;
-		} else if (strcmp((char *) temp, "lo") == 0) {
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(loopback_mask);
-			addr.sin_port = 0;
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
+		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
-			//nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
-			//return;
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			return;
 		}
-
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr.sin_addr), addr.sin_port);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -708,16 +563,20 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		memcpy(pt, &addr, sizeof(struct sockaddr_in));
+		addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			addr4 = (struct sockaddr_in *) pt;
+			addr4->sin_family = AF_INET;
+			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->mask));
+			addr4->sin_port = 0;
+		} else {
+			PRINT_ERROR("todo error");
+		}
 		pt += sizeof(struct sockaddr_in);
 
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+
 		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
 		break;
 	case FIONREAD:
 		PRINT_DEBUG("FIONREAD=%d", cmd);
@@ -746,16 +605,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFNAME), index=%d", cmd, total);
 
-		temp = (uint8_t *) secure_malloc(len);
-
-		//TODO get correct values from IP?
-		if (total == my_host_if_num) {
-			strcpy((char *) temp, (char *) my_host_if_name);
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_index_test, &total);
+		if (ifr == NULL) {
 			PRINT_ERROR("index=%d", total);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			return;
 		}
-
-		PRINT_DEBUG("index=%d, temp='%s'", total, temp);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + len;
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -768,16 +623,10 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		memcpy(pt, temp, len);
+		memcpy(pt, ifr->name, len);
 		pt += len;
 
-		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
+		PRINT_DEBUG("index=%d, name='%s'", total, ifr->name);
 		break;
 	case SIOCGIFFLAGS:
 		PRINT_DEBUG("SIOCGIFFLAGS=%d", cmd);
@@ -796,19 +645,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFFLAGS), len=%d, temp='%s'", cmd, len, temp);
 
-		//TODO get correct values from IP? ifr_flags
-		if (strcmp((char *) temp, (char *) my_host_if_name) == 0) {
-			total = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST; //TODO remove running if is interface but not connected
-		} else if (strcmp((char *) temp, "lo") == 0) {
-			total = IFF_UP | IFF_LOOPBACK | IFF_RUNNING;
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
+		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
-			total = IFF_UP | IFF_BROADCAST | IFF_MULTICAST;
-			//nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
-			//return;
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			return;
 		}
-
-		PRINT_DEBUG("temp='%s', ifr_flags=0x%x", temp, total);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -821,16 +663,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		*(int *) pt = total;
+		*(int *) pt = ifr->flags;
 		pt += sizeof(int);
 
+		PRINT_DEBUG("temp='%s', ifr_flags=0x%x", temp, ifr->flags);
+
 		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
 		break;
 	case SIOCSIFFLAGS:
 		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
@@ -853,18 +691,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFMTU), len=%d, temp='%s'", cmd, len, temp);
 
-		//TODO get correct values from IP? ifr_mtu
-		if (strcmp((char *) temp, (char *) my_host_if_name) == 0) {
-			total = 1500;
-		} else if (strcmp((char *) temp, "lo") == 0) {
-			total = 16436;
-		} else {
+		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
+		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
-			//nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
-			//return;
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			return;
 		}
-
-		PRINT_DEBUG("temp='%s', ifr_mtu=%d", temp, total);
 
 		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
 		msg = (uint8_t *) secure_malloc(msg_len);
@@ -877,16 +709,12 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-		*(int *) pt = total;
+		*(int *) pt = ifr->mtu;
 		pt += sizeof(int);
 
+		PRINT_DEBUG("temp='%s', ifr_mtu=%d", temp, ifr->mtu);
+
 		free(temp);
-		if (pt - msg != msg_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-			free(msg);
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
 		break;
 	case SIOCADDRT:
 		PRINT_DEBUG("SIOCADDRT=%d", cmd);
@@ -926,40 +754,24 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (msg_len) {
+	if (msg_len != 0) {
+		if (pt - msg != msg_len) {
+			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
+			free(msg);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			return;
+		}
+
 		if (send_wedge(module, msg, msg_len, 0)) {
 			PRINT_ERROR("Exiting, fail send_wedge: sock_id=%llu", hdr->sock_id);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 		free(msg);
 	} else {
-		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-		secure_sem_wait(&md->daemon_sockets_sem);
-		if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-			PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-			sem_post(&md->daemon_sockets_sem);
-
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-			return;
-		}
-
-		int type = md->daemon_sockets[hdr->sock_index].type;
-		int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-			ioctl_out_icmp(module, hdr, cmd, buf, buf_len);
-		} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-			ioctl_out_tcp(module, hdr, cmd, buf, buf_len);
-		} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-			ioctl_out_udp(module, hdr, cmd, buf, buf_len);
+		if (md->sockets[hdr->sock_index].out_ops->ioctl_out != NULL) {
+			(md->sockets[hdr->sock_index].out_ops->ioctl_out)(module, hdr, cmd, buf, buf_len);
 		} else {
-			PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+			PRINT_ERROR("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	}
@@ -972,7 +784,7 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	uint32_t sk_flags;
 	int timestamp;
 	int addr_len;
-	struct sockaddr_in *addr = NULL;
+	struct sockaddr_storage addr;
 	uint32_t msg_flags;
 	uint32_t msg_controllen;
 	void *msg_control = NULL;
@@ -989,20 +801,8 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	addr_len = *(int *) pt;
 	pt += sizeof(int);
 
-	if (addr_len > 0) {
-		if (addr_len >= sizeof(struct sockaddr_in)) {
-			addr = (struct sockaddr_in *) secure_malloc(addr_len);
-			memcpy(addr, pt, addr_len);
-			pt += addr_len;
-
-			PRINT_DEBUG("addr_len=%d, addr=%s/%d", addr_len, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
-		} else {
-			//TODO error?
-			PRINT_ERROR("todo error: addr_len=%d", addr_len);
-		}
-	} else {
-		PRINT_DEBUG("addr_len=%d", addr_len);
-	}
+	memcpy(&addr, pt, addr_len);
+	pt += addr_len;
 
 	msg_flags = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
@@ -1036,30 +836,7 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	}
 
 	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (msg_controllen)
-			free(msg_control);
-		if (msg_len)
-			free(msg);
-
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
+	md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
 	//#########################
 #ifdef DEBUG
@@ -1077,21 +854,19 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 #endif
 	//#########################
 
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		sendmsg_out_icmp(module, hdr, msg, msg_len, msg_flags, addr, addr_len);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		sendmsg_out_tcp(module, hdr, msg, msg_len, msg_flags, addr, addr_len);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		sendmsg_out_udp(module, hdr, msg, msg_len, msg_flags, addr, addr_len);
+	if (md->sockets[hdr->sock_index].out_ops->sendmsg_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->sendmsg_out)(module, hdr, msg, msg_len, msg_flags, &addr, addr_len);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (msg_len)
+		if (msg_len) {
 			free(msg);
+		}
 	}
 
-	if (msg_controllen)
+	if (msg_controllen) {
 		free(msg_control);
+	}
 }
 
 void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
@@ -1146,39 +921,12 @@ void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	/** Notice that send is only used with tcp connections since
 	 * the receiver is already known
 	 */
+	md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-		//if (msg_controllen) {
-		//	free(msg_control);
-		//}
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	md->daemon_sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		recvmsg_out_icmp(module, hdr, msg_len, msg_controllen, flags);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		recvmsg_out_tcp(module, hdr, msg_len, msg_controllen, flags);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		recvmsg_out_udp(module, hdr, msg_len, msg_controllen, flags);
+	if (md->sockets[hdr->sock_index].out_ops->recvmsg_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->recvmsg_out)(module, hdr, msg_len, msg_controllen, flags);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 
@@ -1217,44 +965,22 @@ void getsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (optlen > 0)
+		if (optlen > 0) {
 			free(optval);
+		}
 		return;
 	}
 
 	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
 
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (optlen > 0)
-			free(optval);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		getsockopt_out_icmp(module, hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		getsockopt_out_tcp(module, hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		getsockopt_out_udp(module, hdr, level, optname, optlen, optval);
+	if (md->sockets[hdr->sock_index].out_ops->getsockopt_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->getsockopt_out)(module, hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (optlen > 0)
+		if (optlen > 0) {
 			free(optval);
+		}
 	}
 }
 
@@ -1288,44 +1014,21 @@ void setsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	if (pt - buf != len) {
 		PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, len);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (optlen > 0)
+		if (optlen > 0) {
 			free(optval);
+		}
 		return;
 	}
 
 	PRINT_DEBUG("");
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (optlen > 0)
-			free(optval);
-		return;
-	}
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		setsockopt_out_icmp(module, hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		setsockopt_out_tcp(module, hdr, level, optname, optlen, optval);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		setsockopt_out_udp(module, hdr, level, optname, optlen, optval);
+	if (md->sockets[hdr->sock_index].out_ops->setsockopt_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->setsockopt_out)(module, hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		if (optlen > 0)
+		if (optlen > 0) {
 			free(optval);
+		}
 	}
 }
 
@@ -1343,34 +1046,10 @@ void release_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 		return;
 	}
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-	//daemonSockets[hdr->sock_index].threads = threads;
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		release_out_icmp(module, hdr);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		release_out_tcp(module, hdr);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		release_out_udp(module, hdr);
+	if (md->sockets[hdr->sock_index].out_ops->release_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->release_out)(module, hdr);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -1393,34 +1072,17 @@ void poll_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 		return;
 	}
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
+	//TODO remove!!! check if this is how it should be
+	if (md->sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
 				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL); //TODO check value?
 		return;
 	}
-	//daemonSockets[hdr->sock_index].threads = threads;
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		poll_out_icmp(module, hdr, events);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		poll_out_tcp(module, hdr, events);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		poll_out_udp(module, hdr, events);
+	if (md->sockets[hdr->sock_index].out_ops->poll_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->poll_out)(module, hdr, events);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, POLLERR);
 	}
 }
@@ -1438,40 +1100,12 @@ void mmap_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 		return;
 	}
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-	//daemonSockets[hdr->sock_index].threads = threads;
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		//mmap_tcp_icmp(hdr);
+	if (md->sockets[hdr->sock_index].out_ops->mmap_out != NULL) {
+		//(md->sockets[hdr->sock_index].out_ops->mmap_out)(module, hdr);
 		PRINT_DEBUG("implement mmap_icmp");
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		//mmap_tcp_out(hdr);
-		PRINT_DEBUG("implement mmap_tcp");
-		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		//mmap_out_udp(module, hdr);
-		PRINT_DEBUG("implement mmap_udp");
-		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -1499,56 +1133,20 @@ void shutdown_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 		return;
 	}
 
-	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-	//daemonSockets[hdr->sock_index].threads = threads;
-
-	int type = md->daemon_sockets[hdr->sock_index].type;
-	int protocol = md->daemon_sockets[hdr->sock_index].protocol;
-
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d", hdr->sock_id, hdr->sock_index, type, protocol);
-	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
-	sem_post(&md->daemon_sockets_sem);
-
-	if (type == SOCK_RAW && protocol == IPPROTO_ICMP) {
-		shutdown_out_icmp(module, hdr, how);
-	} else if (type == SOCK_STREAM && protocol == IPPROTO_TCP) {
-		shutdown_out_tcp(module, hdr, how);
-	} else if (type == SOCK_DGRAM && protocol == IPPROTO_UDP) {
-		shutdown_out_udp(module, hdr, how);
+	if (md->sockets[hdr->sock_index].out_ops->shutdown_out != NULL) {
+		(md->sockets[hdr->sock_index].out_ops->shutdown_out)(module, hdr, how);
 	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
+		PRINT_ERROR("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
 
 void close_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
-	struct daemon_data *md = (struct daemon_data *) module->data;
-
-	secure_sem_wait(&md->daemon_sockets_sem);
-	if (md->daemon_sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-		PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-				hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-		sem_post(&md->daemon_sockets_sem);
-
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
 
 	daemon_sockets_remove(module, hdr->sock_index);
 
 	PRINT_DEBUG("");
-	sem_post(&md->daemon_sockets_sem);
 
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 

@@ -55,7 +55,7 @@ endif
 
 
 .PHONY:all
-all:old $(LOCAL_NAME)
+all:$(LOCAL_NAME)
 	@echo "compiled[$(MAKELEVEL)]:'$(LOCAL_NAME)'\n"
 
 $(LOCAL_NAME):
@@ -64,6 +64,7 @@ ifdef BUILD_FOR_ANDROID_ARM
 else
 	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 endif
+	@cp -f fins_stack_wedge.ko ../../../obj/fins_stack_wedge.ko
 
 .PHONY:clean
 clean:
@@ -72,6 +73,7 @@ ifdef BUILD_FOR_ANDROID_ARM
 else
 	@make -I . -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 endif
+	@rm -f ../../../obj/fins_stack_wedge.ko
 
 .PHONY:install
 install:
@@ -80,7 +82,7 @@ ifdef BUILD_FOR_ANDROID_ARM
 else
 endif
 
-old:
+test:
 	@echo "CC='$(CC)'"
 	@echo "CFLAGS='$(CFLAGS)'"
 	@echo "LD='$(LD)'"

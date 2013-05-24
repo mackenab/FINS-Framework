@@ -16,7 +16,7 @@
 #define NETLINK_FINS 20
 
 //commenting stops debug printout
-//#define DEBUG
+#define DEBUG
 #define IMPORTANT
 #define ERROR
 
@@ -620,11 +620,11 @@ void nl_data_ready(struct sk_buff *skb) {
 				}
 				up(&wedge_sockets_sem);
 
-				if (wedge_sockets[hdr->sock_index].release_flag && (hdr->call_type != release_call)) { //TODO: may be unnecessary & can be removed (flag, etc)
+				if (wedge_sockets[hdr->sock_index].release_flag && (hdr->call_type != RELEASE_CALL)) { //TODO: may be unnecessary & can be removed (flag, etc)
 					PRINT_DEBUG("socket released, dropping for sock_index=%d, sock_id=%llu, type=%d", hdr->sock_index, hdr->sock_id, hdr->call_type);
 					//goto end; //TODO uncomment or remove
 				}
-			} else if (hdr->call_type == poll_event_call) {
+			} else if (hdr->call_type == POLL_EVENT_CALL) {
 				if (hdr->sock_index == -1 || hdr->sock_index > MAX_SOCKETS) {
 					PRINT_ERROR("invalid sock_index: sock_index=%d", hdr->sock_index);
 					goto end;
@@ -688,7 +688,7 @@ void nl_data_ready(struct sk_buff *skb) {
 			}
 		} else if (len == sizeof(u_int)) {
 			reply_call = *(u_int *) buf;
-			if (reply_call == daemon_start_call) {
+			if (reply_call == DAEMON_START_CALL) {
 				if (fins_daemon_pid != -1) {
 					PRINT_IMPORTANT("########## Daemon pID changed, old pid=%d", fins_daemon_pid);
 				}
@@ -709,7 +709,7 @@ void nl_data_ready(struct sk_buff *skb) {
 				}
 				wedge_calls_remove_all();
 				up(&wedge_calls_sem);
-			} else if (reply_call == daemon_stop_call) {
+			} else if (reply_call == DAEMON_STOP_CALL) {
 				PRINT_IMPORTANT("########## Daemon disconnected");
 				//fins_stack_passthrough_enabled = 0;
 				fins_daemon_pid = -1; //TODO expand this functionality

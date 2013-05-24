@@ -149,7 +149,8 @@ void capture_init(char *device) {
 	capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 0, 1000, errbuf);
 	if (capture_handle == NULL) {
 		PRINT_ERROR("Couldn't open device: dev='%s', err='%s', errno=%u, str='%s'", dev, errbuf, errno, strerror(errno));
-		while(1);
+		while (1)
+			;
 		exit(EXIT_FAILURE);
 	}
 	PRINT_IMPORTANT("capture_handle=%p", capture_handle);
@@ -158,7 +159,8 @@ void capture_init(char *device) {
 	int data_linkValue = pcap_datalink(capture_handle);
 	if (data_linkValue != DLT_EN10MB) {
 		PRINT_ERROR("'%s' is not an Ethernet", dev);
-				while(1);
+		while (1)
+			;
 		exit(EXIT_FAILURE);
 	}
 	PRINT_IMPORTANT("Datalink layer Description: '%s' (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
@@ -168,14 +170,16 @@ void capture_init(char *device) {
 	struct bpf_program fp; /* compiled filter program (expression) */
 	if (pcap_compile(capture_handle, &fp, filter_exp, 0, net) == -1) {
 		PRINT_ERROR("Couldn't parse filter '%s': '%s'", filter_exp, pcap_geterr(capture_handle));
-				while(1);
+		while (1)
+			;
 		exit(EXIT_FAILURE);
 	}
 
 	/* apply the compiled filter */
 	if (pcap_setfilter(capture_handle, &fp) == -1) {
 		PRINT_ERROR("Couldn't install filter '%s': '%s'", filter_exp, pcap_geterr(capture_handle));
-				while(1);
+		while (1)
+			;
 		exit(EXIT_FAILURE);
 	}
 
@@ -276,12 +280,14 @@ void inject_init(char *device) {
 		//print_hex_block((u_char *) frame, framelen);
 		//fflush(stdout);
 
-		numBytes = pcap_inject(inject_handle, frame, framelen);
-		if (numBytes == -1) {
-			PRINT_ERROR("Failed to inject the packet");
-		} else {
-			++server_inject_count;
-			PRINT_IMPORTANT("Packet injected: count=%d, size=%d ", server_inject_count, numBytes);
+		if (framelen > 0) {
+			numBytes = pcap_inject(inject_handle, frame, framelen);
+			if (numBytes == -1) {
+				PRINT_ERROR("Injection failed: framelen=%d, errno=%u, str='%s'", framelen, errno, strerror(errno));
+			} else {
+				++server_inject_count;
+				PRINT_IMPORTANT("Packet injected: count=%d, size=%d ", server_inject_count, numBytes);
+			}
 		}
 	} // end of while loop
 

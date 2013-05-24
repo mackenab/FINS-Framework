@@ -40,7 +40,7 @@ int interface_setBlocking(int fd) {
 
 //################ ARP/interface stuff //TODO move to common?
 int interface_request_ipv4_test(struct interface_request *request, uint32_t *src_ip) {
-	return addr4_get_addr(&request->src_ip) == *src_ip;
+	return addr4_get_ip(&request->src_ip) == *src_ip;
 }
 
 void interface_request_free(struct interface_request *request) {
@@ -54,11 +54,11 @@ void interface_request_free(struct interface_request *request) {
 }
 
 int interface_cache_ipv4_test(struct interface_cache *cache, uint32_t *ip) {
-	return cache->ip.ss_family == AF_INET && addr4_get_addr(&cache->ip) == *ip;
+	return cache->ip.ss_family == AF_INET && addr4_get_ip(&cache->ip) == *ip;
 }
 
 int interface_cache_ipv6_test(struct interface_cache *cache, uint8_t *ip) {
-	return cache->ip.ss_family == AF_INET6 && strcmp((char *) addr6_get_addr(&cache->ip), (char *) ip) == 0;
+	return cache->ip.ss_family == AF_INET6 && strcmp((char *) addr6_get_ip(&cache->ip), (char *) ip) == 0;
 }
 
 int interface_cache_non_seeking_test(struct interface_cache *cache) {
@@ -172,7 +172,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -220,7 +220,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 void interface_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
@@ -241,7 +241,7 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -249,7 +249,7 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 void interface_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
@@ -282,10 +282,10 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 		struct interface_cache *cache = store->cache;
 		struct interface_request *request = store->request;
 
-		if (ff->ctrlFrame.ret_val) {
+		if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 			uint64_t src_mac = request->src_mac;
-			uint32_t src_ip = addr4_get_addr(&request->src_ip);
-			uint32_t dst_ip = addr4_get_addr(&cache->ip);
+			uint32_t src_ip = addr4_get_ip(&request->src_ip);
+			uint32_t dst_ip = addr4_get_ip(&cache->ip);
 
 			uint64_t dst_mac;
 			secure_metadata_readFromElement(ff->metaData, "dst_mac", &dst_mac);
@@ -324,9 +324,9 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 		} else {
 			if (store->sent == 0) {
 				uint64_t src_mac = request->src_mac;
-				uint32_t src_ip = addr4_get_addr(&request->src_ip);
+				uint32_t src_ip = addr4_get_ip(&request->src_ip);
 				uint64_t dst_mac = 0;
-				uint32_t dst_ip = addr4_get_addr(&cache->ip);
+				uint32_t dst_ip = addr4_get_ip(&cache->ip);
 				PRINT_ERROR("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
 						ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 
@@ -412,149 +412,137 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 		secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
 		secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
 
-		struct addr_record *addr = (struct addr_record *) list_find1(ifr->addr_list, addr_ipv4_test, &src_ip);
-		if (addr != NULL) {
-			uint64_t dst_mac;
-			uint64_t src_mac = ifr->mac;
-			secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
-			PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip);
+		uint64_t dst_mac;
+		uint64_t src_mac = ifr->mac;
+		secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
+		PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip);
 
-			struct interface_cache *cache = (struct interface_cache *) list_find1(md->cache_list, interface_cache_ipv4_test, &dst_ip);
-			if (cache != NULL) {
-				if (cache->seeking) {
-					PRINT_DEBUG("cache seeking: cache=%p", cache);
+		struct interface_cache *cache = (struct interface_cache *) list_find1(md->cache_list, interface_cache_ipv4_test, &dst_ip);
+		if (cache != NULL) {
+			if (cache->seeking) {
+				PRINT_DEBUG("cache seeking: cache=%p", cache);
 
-					if (list_has_space(cache->request_list)) {
+				if (list_has_space(cache->request_list)) {
 
-						//TODO if src is first of unique in request_list, send FCF!
-
-						struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
-						addr4_set_addr(&request->src_ip, src_ip);
-						request->src_mac = src_mac;
-						request->ff = ff;
-						list_append(cache->request_list, request);
-
-						gettimeofday(&cache->updated_stamp, 0);
-					} else {
-						PRINT_ERROR("Error: request_list full, request_list->len=%u, ff=%p", cache->request_list->len, ff);
-						PRINT_ERROR("todo error");
-						freeFinsFrame(ff);
-					}
-				} else {
-					dst_mac = cache->mac;
-					PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
-
-					struct timeval current;
-					gettimeofday(&current, 0);
-
-					if (time_diff(&cache->updated_stamp, &current) <= INTERFACE_CACHE_TO_DEFAULT) {
-						PRINT_DEBUG("up to date cache: cache=%p", cache);
-
-						PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
-						if (interface_inject_pdu(md->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
-							//add interface statistics, injected++
-							freeFinsFrame(ff);
-						} else {
-							PRINT_ERROR("todo error");
-							exit(-1); //TODO change, send FCF?
-						}
-					} else {
-						PRINT_DEBUG("cache expired: cache=%p", cache);
-						if (list_has_space(cache->request_list) && list_has_space(md->store_list)) {
-							uint32_t serial_num = gen_control_serial_num();
-							int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
-							if (sent == -1 || sent == 0) {
-								PRINT_ERROR("todo erro");
-							}
-
-							struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
-							addr4_set_addr(&request->src_ip, src_ip);
-							request->src_mac = src_mac;
-							request->ff = ff;
-							list_append(cache->request_list, request);
-
-							struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
-							list_append(md->store_list, store);
-
-							cache->seeking = 1;
-							gettimeofday(&cache->updated_stamp, 0);
-						} else {
-							if (list_has_space(cache->request_list)) {
-								PRINT_ERROR("Error: no space, request_list->len=%u, ff=%p", cache->request_list->len, ff);
-							} else {
-								PRINT_ERROR("Error: no space, store_list full, ff=%p", ff);
-							}
-							freeFinsFrame(ff);
-						}
-					}
-				}
-			} else {
-				PRINT_DEBUG("create cache: start seeking");
-				if (list_has_space(md->store_list)) {
-					uint32_t serial_num = gen_control_serial_num();
-					int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
-					if (sent == -1 || sent == 0) {
-						PRINT_ERROR("todo erro");
-					}
-
-					//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
-					if (!list_has_space(md->cache_list)) {
-						PRINT_DEBUG("Making space in cache_list");
-
-						struct interface_cache *temp_cache = (struct interface_cache *) list_find(md->cache_list, interface_cache_non_seeking_test);
-						if (temp_cache != NULL) {
-							list_remove(md->cache_list, temp_cache);
-
-							struct interface_request *temp_request;
-							struct finsFrame *temp_ff;
-
-							while (!list_is_empty(temp_cache->request_list)) {
-								temp_request = (struct interface_request *) list_remove_front(temp_cache->request_list);
-								temp_ff = temp_request->ff;
-
-								temp_ff->destinationID = ff->ctrlFrame.sender_id;
-								temp_ff->ctrlFrame.sender_id = module->index;
-								temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-								temp_ff->ctrlFrame.ret_val = 0;
-
-								module_to_switch(module, temp_ff);
-
-								temp_request->ff = NULL;
-								interface_request_free(temp_request);
-							}
-
-							interface_cache_free(temp_cache);
-						} else {
-							PRINT_ERROR("todo error");
-							freeFinsFrame(ff);
-							return;
-						}
-					}
-
-					struct interface_cache *cache = (struct interface_cache *) secure_malloc(sizeof(struct interface_cache));
-					addr4_set_addr(&cache->ip, dst_ip);
-					cache->request_list = list_create(INTERFACE_REQUEST_LIST_MAX);
-					list_append(md->cache_list, cache);
+					//TODO if src is first of unique in request_list, send FCF!
 
 					struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
-					addr4_set_addr(&request->src_ip, src_ip);
+					addr4_set_ip(&request->src_ip, src_ip);
 					request->src_mac = src_mac;
 					request->ff = ff;
 					list_append(cache->request_list, request);
 
-					struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
-					list_append(md->store_list, store);
-
-					cache->seeking = 1;
 					gettimeofday(&cache->updated_stamp, 0);
 				} else {
-					PRINT_ERROR("Error: no space, store_list full, ff=%p", ff);
+					PRINT_ERROR("Error: request_list full, request_list->len=%u, ff=%p", cache->request_list->len, ff);
+					PRINT_ERROR("todo error");
 					freeFinsFrame(ff);
+				}
+			} else {
+				dst_mac = cache->mac;
+				PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+
+				struct timeval current;
+				gettimeofday(&current, 0);
+
+				if (time_diff(&cache->updated_stamp, &current) <= INTERFACE_CACHE_TO_DEFAULT) {
+					PRINT_DEBUG("up to date cache: cache=%p", cache);
+
+					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
+					if (interface_inject_pdu(md->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
+						//add interface statistics, injected++
+						freeFinsFrame(ff);
+					} else {
+						PRINT_ERROR("todo error");
+						exit(-1); //TODO change, send FCF?
+					}
+				} else {
+					PRINT_DEBUG("cache expired: cache=%p", cache);
+					if (list_has_space(cache->request_list) && list_has_space(md->store_list)) {
+						uint32_t serial_num = gen_control_serial_num();
+						int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
+						if (sent == -1 || sent == 0) {
+							PRINT_ERROR("todo erro");
+						}
+
+						struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
+						addr4_set_ip(&request->src_ip, src_ip);
+						request->src_mac = src_mac;
+						request->ff = ff;
+						list_append(cache->request_list, request);
+
+						struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
+						list_append(md->store_list, store);
+
+						cache->seeking = 1;
+						gettimeofday(&cache->updated_stamp, 0);
+					} else {
+						if (list_has_space(cache->request_list)) {
+							PRINT_ERROR("Error: no space, request_list->len=%u, ff=%p", cache->request_list->len, ff);
+						} else {
+							PRINT_ERROR("Error: no space, store_list full, ff=%p", ff);
+						}
+						freeFinsFrame(ff);
+					}
 				}
 			}
 		} else {
-			PRINT_ERROR("todo error");
-			freeFinsFrame(ff);
+			PRINT_DEBUG("create cache: start seeking");
+			if (list_has_space(md->store_list)) {
+				uint32_t serial_num = gen_control_serial_num();
+				int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
+				if (sent == -1 || sent == 0) {
+					PRINT_ERROR("todo erro");
+				}
+
+				//TODO change this remove 1 cache by order of: nonseeking then seeking, most retries, oldest timestamp
+				if (!list_has_space(md->cache_list)) {
+					PRINT_DEBUG("Making space in cache_list");
+
+					struct interface_cache *temp_cache = (struct interface_cache *) list_find(md->cache_list, interface_cache_non_seeking_test);
+					if (temp_cache != NULL) {
+						list_remove(md->cache_list, temp_cache);
+
+						struct interface_request *temp_request;
+						struct finsFrame *temp_ff;
+
+						while (!list_is_empty(temp_cache->request_list)) {
+							temp_request = (struct interface_request *) list_remove_front(temp_cache->request_list);
+							temp_ff = temp_request->ff;
+							module_reply_fcf(module, temp_ff, FCF_FALSE, 0);
+
+							temp_request->ff = NULL;
+							interface_request_free(temp_request);
+						}
+
+						interface_cache_free(temp_cache);
+					} else {
+						PRINT_ERROR("todo error");
+						freeFinsFrame(ff);
+						return;
+					}
+				}
+
+				struct interface_cache *cache = (struct interface_cache *) secure_malloc(sizeof(struct interface_cache));
+				addr4_set_ip(&cache->ip, dst_ip);
+				cache->request_list = list_create(INTERFACE_REQUEST_LIST_MAX);
+				list_append(md->cache_list, cache);
+
+				struct interface_request *request = (struct interface_request *) secure_malloc(sizeof(struct interface_request));
+				addr4_set_ip(&request->src_ip, src_ip);
+				request->src_mac = src_mac;
+				request->ff = ff;
+				list_append(cache->request_list, request);
+
+				struct interface_store *store = interface_store_create(serial_num, sent, cache, request);
+				list_append(md->store_list, store);
+
+				cache->seeking = 1;
+				gettimeofday(&cache->updated_stamp, 0);
+			} else {
+				PRINT_ERROR("Error: no space, store_list full, ff=%p", ff);
+				freeFinsFrame(ff);
+			}
 		}
 	} else {
 		PRINT_ERROR("todo error");
@@ -844,6 +832,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		list_free(leftover, free);
 	}
 	md->if_list->max = INTERFACE_IF_LIST_MAX;
+	PRINT_IMPORTANT("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
 
 	md->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
 	md->store_list = list_create(INTERFACE_STORE_LIST_MAX);

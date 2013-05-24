@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in *client_addr;
 
 #ifdef BUILD_FOR_ANDROID
-		port = 45454;
+	port = 45454;
 #else
 	if (argc > 1) {
 		port = atoi(argv[1]);
@@ -164,11 +164,18 @@ int main(int argc, char *argv[]) {
 
 	printf("Binding to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	fflush(stdout);
-	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
+	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in)) == -1) {
 		perror("Bind");
 		printf("Failure");
 		exit(1);
 	}
+
+	struct sockaddr_in client_addr2;
+	uint32_t socklen = sizeof(struct sockaddr_in);
+	int ret_val = getsockname(sock, (struct sockaddr *) &client_addr2, &socklen);
+	printf("\n UDPServer bound at family=%u, client_addr=%s/%d, netw=%u\n", client_addr2.sin_family, inet_ntoa(client_addr2.sin_addr),
+			ntohs(client_addr2.sin_port), client_addr2.sin_addr.s_addr);
+	fflush(stdout);
 
 	addr_len = sizeof(struct sockaddr);
 
@@ -252,7 +259,7 @@ int main(int argc, char *argv[]) {
 					//bytes_read = recv(sock,recv_data,1024,0);
 					if (bytes_read > 0) {
 						if (1) {
-							print_hex(3*4, (uint8_t *)recv_data);
+							print_hex(3 * 4, (uint8_t *) recv_data);
 						}
 						recv_data[bytes_read] = '\0';
 						printf("\n frame=%d, pID=%d, client=%s:%u: said='%s'\n", ++k, pID, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port),

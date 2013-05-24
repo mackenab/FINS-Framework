@@ -9,21 +9,23 @@
 #include <finsqueue.h>
 
 int ipv4_route_dst_test(struct route_record *route, uint32_t *dst) {
-	return ((addr4_get_addr(&route->dst) & addr4_get_addr(&route->mask)) == (*dst & addr4_get_addr(&route->mask)))
-			|| (addr4_get_addr(&route->dst) == IPV4_ADDR_ANY_IP);
+	return ((addr4_get_ip(&route->dst) & addr4_get_ip(&route->mask)) == (*dst & addr4_get_ip(&route->mask)))
+			|| (addr4_get_ip(&route->dst) == IPV4_ADDR_ANY_IP);
 }
 
 void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
-	uint32_t protocol;
-	uint32_t src_ip;
-	uint32_t dst_ip;
-
 	metadata *meta = ff->metaData;
+	uint32_t protocol;
 	secure_metadata_readFromElement(meta, "send_protocol", &protocol);
+	uint32_t family;
+	secure_metadata_readFromElement(meta, "send_family", &family);
+
+	uint32_t src_ip;
 	secure_metadata_readFromElement(meta, "send_src_ipv4", &src_ip);
+	uint32_t dst_ip;
 	secure_metadata_readFromElement(meta, "send_dst_ipv4", &dst_ip);
 	PRINT_DEBUG("protocol=%u, src_ip=%u, dst_ip=%u", protocol, src_ip, dst_ip);
 
@@ -44,12 +46,12 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	//keep routing table sorted (envi & local), search through routing table, find best match (last match)
 	struct route_record *route = (struct route_record *) list_find_last1(md->route_list, ipv4_route_dst_test, &dst_ip);
 	if (route != NULL) {
-		PRINT_DEBUG("next_hop: interface=%u, dst=%u, gw=%u", route->if_index, addr4_get_addr(&route->dst), addr4_get_addr(&route->gw));
+		PRINT_DEBUG("next_hop: interface=%d, dst=%u, gw=%u", route->if_index, addr4_get_ip(&route->dst), addr4_get_ip(&route->gw));
 		uint32_t address;
-		if (addr4_get_addr(&route->gw) == IPV4_ADDR_ANY_IP) { //dst in on our subnet, contact directly
-			address = addr4_get_addr(&route->dst);
+		if (addr4_get_ip(&route->gw) == IPV4_ADDR_ANY_IP) { //dst in on our subnet, contact directly
+			address = addr4_get_ip(&route->dst);
 		} else { //dst outside our subnet, contact via gw
-			address = addr4_get_addr(&route->gw);
+			address = addr4_get_ip(&route->gw);
 		}
 
 		uint32_t loopback = 0;
@@ -73,8 +75,9 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 			secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
 
 			secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "recv_src_ip", &src_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "recv_dst_ip", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_family", &family, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
 
 			if (send_ttl) {
 				secure_metadata_writeToElement(meta, "recv_ttl", &send_ttl, META_TYPE_INT32);

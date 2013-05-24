@@ -61,7 +61,7 @@ void ipv4_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -110,7 +110,7 @@ void ipv4_fcf(struct fins_module *module, struct finsFrame *ff) {
 void ipv4_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void ipv4_set_param(struct fins_module *module, struct finsFrame *ff) {
@@ -132,7 +132,7 @@ void ipv4_set_param(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -140,7 +140,7 @@ void ipv4_set_param(struct fins_module *module, struct finsFrame *ff) {
 void ipv4_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void ipv4_exec_reply(struct fins_module *module, struct finsFrame *ff) {

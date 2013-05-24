@@ -126,10 +126,11 @@ void icmp_sent_free(struct icmp_sent *sent);
 void icmp_sent_list_gc(struct linked_list *sent_list, double timeout);
 
 #define ICMP_LIB "icmp"
-#define ICMP_MAX_FLOWS 		3
+#define ICMP_MAX_FLOWS 		4
 #define ICMP_FLOW_IPV4		0
-#define ICMP_FLOW_UDP 		1
-#define ICMP_FLOW_DAEMON	2
+#define ICMP_FLOW_TCP 		1
+#define ICMP_FLOW_UDP 		2
+#define ICMP_FLOW_DAEMON	3
 
 struct icmp_data {
 	struct linked_list *link_list;

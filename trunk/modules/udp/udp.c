@@ -144,7 +144,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -194,7 +194,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 void udp_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_ERROR("todo");
-	module_reply_fcf(module, ff, 0, 0);
+	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
 void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
@@ -216,7 +216,7 @@ void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -244,7 +244,7 @@ void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }

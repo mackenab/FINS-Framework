@@ -112,7 +112,7 @@ int main() {
 	int numBytes;
 
 	while (1) {
-		printf("\n$:");
+		printf("\n(FINS) ");
 		fflush(stdout);
 
 		cmd_len = get_line(cmd_buf, &buf_size);

@@ -370,13 +370,13 @@ void rtm_get_ff(struct fins_module *module) {
 void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-//TODO when recv FCF, pull params from meta to figure out connection, send through socket
+	//TODO when recv FCF, pull params from meta to figure out connection, send through socket
 
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -386,7 +386,7 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
@@ -403,7 +403,7 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -424,7 +424,72 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 
 void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct rtm_data *md = (struct rtm_data *) module->data;
 
+	secure_sem_wait(&md->shared_sem);
+	struct rtm_command *cmd = (struct rtm_command *) list_find1(md->cmd_list, rtm_cmd_serial_test, &ff->ctrlFrame.serial_num);
+	if (cmd != NULL) {
+		list_remove(md->cmd_list, cmd);
+
+		struct rtm_console *console = (struct rtm_console *) list_find1(md->console_list, rtm_console_id_test, &cmd->console_id);
+		if (console != NULL) {
+			//TODO extract answer
+			if (ff->ctrlFrame.ret_val == FCF_TRUE) {
+				//cmd->param_id;
+				ff->metaData;
+				//send error
+
+				char temp[100];
+
+				int32_t val_int32;
+				int64_t val_int64;
+				float val_float;
+				char *val_str;
+
+				switch (cmd->param_type) {
+				case CONFIG_TYPE_INT:
+					secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
+					sprintf(temp, "'%s'=%d", cmd->param_str, val_int32);
+					break;
+				case CONFIG_TYPE_INT64:
+					secure_metadata_readFromElement(ff->metaData, "value", &val_int64);
+					sprintf(temp, "'%s'=%lld", cmd->param_str, val_int64);
+					break;
+				case CONFIG_TYPE_FLOAT:
+					secure_metadata_readFromElement(ff->metaData, "value", &val_float);
+					sprintf(temp, "'%s'=%f", cmd->param_str, val_float);
+					break;
+				case CONFIG_TYPE_STRING:
+					secure_metadata_readFromElement(ff->metaData, "value", &val_str);
+					sprintf(temp, "'%s'='%s'", cmd->param_str, val_str);
+					break;
+				default:
+					PRINT_ERROR("todo error");
+					exit(-1);
+				}
+
+				rtm_send_text(console->fd, temp);
+			} else {
+				//send error
+				uint32_t ret_msg;
+				secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+				char temp[100];
+				sprintf(temp, "unsuccessful, returned error=%u", ret_msg);
+				rtm_send_text(console->fd, temp);
+			}
+		} else {
+			PRINT_ERROR("todo error");
+		}
+		sem_post(&md->shared_sem);
+
+		free(cmd);
+	} else {
+		sem_post(&md->shared_sem);
+		PRINT_ERROR("todo error");
+		//TODO error, drop
+		freeFinsFrame(ff);
+	}
 }
 
 void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
@@ -446,7 +511,7 @@ void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
 		PRINT_ERROR("todo");
-		module_reply_fcf(module, ff, 0, 0);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -462,13 +527,16 @@ void rtm_set_param_reply(struct fins_module *module, struct finsFrame *ff) {
 
 		struct rtm_console *console = (struct rtm_console *) list_find1(md->console_list, rtm_console_id_test, &cmd->console_id);
 		if (console != NULL) {
-			//TODO extract answer
-			if (ff->ctrlFrame.ret_val) {
-				//send '' ?
+			if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 				rtm_send_text(console->fd, "successful");
 			} else {
 				//send error
-				rtm_send_text(console->fd, "unsuccessful");
+				uint32_t ret_msg;
+				secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+				char temp[100];
+				sprintf(temp, "unsuccessful, returned error=%u", ret_msg);
+				rtm_send_text(console->fd, temp);
 			}
 		} else {
 			PRINT_ERROR("todo error");

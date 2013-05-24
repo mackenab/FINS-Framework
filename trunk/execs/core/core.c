@@ -210,7 +210,7 @@ void core_main() {
 	}
 	list_num = config_setting_length(list_elem);
 
-	uint32_t if_index;
+	int32_t if_index;
 	uint8_t *name;
 	uint64_t mac;
 	uint32_t type;
@@ -285,6 +285,7 @@ void core_main() {
 			ifr->addr_list = list_create(MAX_FAMILIES);
 
 			if (list_has_space(overall->envi->if_list)) {
+				PRINT_IMPORTANT("Adding interface: ifr=%p, index=%u, name='%s', mac=0x%llx, type=%u", ifr, ifr->index, ifr->name, ifr->mac, ifr->type);
 				list_append(overall->envi->if_list, ifr);
 			} else {
 				//TODO error
@@ -300,6 +301,15 @@ void core_main() {
 			exit(-1);
 		}
 	}
+	PRINT_IMPORTANT("if_list: list=%p, max=%u, len=%u", overall->envi->if_list, overall->envi->if_list->max, overall->envi->if_list->len);
+
+	//############# if_loopback
+	PRINT_IMPORTANT("loopback interface");
+	if (overall->envi->if_loopback != NULL) {
+		PRINT_IMPORTANT("loopback: name='%s', addr_list->len=%u", overall->envi->if_loopback->name, overall->envi->if_loopback->addr_list->len);
+	} else {
+		PRINT_ERROR("todo");
+	}
 
 	//############# if_main
 	PRINT_IMPORTANT("main interface");
@@ -312,7 +322,9 @@ void core_main() {
 	}
 
 	overall->envi->if_main = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_main);
-	if (overall->envi->if_main == NULL) {
+	if (overall->envi->if_main != NULL) {
+		PRINT_IMPORTANT("main: name='%s', addr_list->len=%u", overall->envi->if_main->name, overall->envi->if_main->addr_list->len);
+	} else {
 		PRINT_ERROR("todo");
 	}
 
@@ -426,11 +438,11 @@ void core_main() {
 					addr->family = AF_INET;
 
 					if (family == AF_INET) {
-						addr4_set_addr(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
-						addr4_set_addr(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
-						addr4_set_addr(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
-						addr4_set_addr(&addr->bdc, IP4_ADR_P2H(bdc[0], bdc[1], bdc[2], bdc[3]));
-						addr4_set_addr(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
+						addr4_set_ip(&addr->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
+						addr4_set_ip(&addr->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
+						addr4_set_ip(&addr->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
+						addr4_set_ip(&addr->bdc, IP4_ADR_P2H(bdc[0], bdc[1], bdc[2], bdc[3]));
+						addr4_set_ip(&addr->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
 					} else if (family == AF_INET6) {
 						//TODO
 						//addr_set_addr6(&addr->ip, ip);
@@ -442,6 +454,7 @@ void core_main() {
 					}
 
 					if (list_has_space(ifr->addr_list)) {
+						PRINT_IMPORTANT("Adding address: ifr=%p, if_index=%d, family=%u", ifr, addr->if_index, addr->family);
 						list_append(ifr->addr_list, addr);
 					} else {
 						//TODO error
@@ -554,9 +567,9 @@ void core_main() {
 				route->family = family;
 
 				if (family == AF_INET) {
-					addr4_set_addr(&route->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
-					addr4_set_addr(&route->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
-					addr4_set_addr(&route->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
+					addr4_set_ip(&route->dst, IP4_ADR_P2H(dst[0], dst[1], dst[2], dst[3]));
+					addr4_set_ip(&route->mask, IP4_ADR_P2H(mask[0], mask[1], mask[2],mask[3]));
+					addr4_set_ip(&route->gw, IP4_ADR_P2H(gw[0], gw[1], gw[2], gw[3]));
 					//addr4_set_addr(&route->ip, IP4_ADR_P2H(ip[0], ip[1], ip[2],ip[3]));
 				} else if (family == AF_INET6) {
 					//TODO
@@ -569,6 +582,7 @@ void core_main() {
 				route->timeout = timeout;
 
 				if (list_has_space(overall->envi->route_list)) {
+					PRINT_IMPORTANT("Adding route: ifr=%p, if_index=%d, family=%u", ifr, route->if_index, route->family);
 					list_append(overall->envi->route_list, route);
 				} else {
 					//TODO error
@@ -581,6 +595,7 @@ void core_main() {
 			}
 		}
 	}
+	PRINT_IMPORTANT("route_list: list=%p, max=%u, len=%u", overall->envi->route_list, overall->envi->route_list->max, overall->envi->route_list->len);
 	metadata_destroy(meta_envi);
 
 	//######################################################################
@@ -681,6 +696,7 @@ void core_main() {
 			}
 
 			if (list_has_space(overall->lib_list)) {
+				PRINT_IMPORTANT("Adding library: library=%p, name='%s'", library, library->name);
 				list_append(overall->lib_list, library);
 			} else {
 				PRINT_ERROR("todo error");
@@ -702,6 +718,7 @@ void core_main() {
 			overall->modules[i] = module;
 
 			if (mod_admin != NULL) {
+				PRINT_IMPORTANT("Adding admin: module=%p, lib='%s', name='%s'", module, module->lib, module->name);
 				list_append(overall->admin_list, module);
 			}
 		} else {
@@ -799,6 +816,7 @@ void core_main() {
 		}
 
 		if (list_has_space(overall->link_list)) {
+			PRINT_IMPORTANT("Adding link: link=%p, id=%u, src_index=%u, dsts_num=%u", link, link->id, link->src_index, link->dsts_num);
 			list_append(overall->link_list, link);
 		} else {
 			//TODO error
@@ -991,7 +1009,7 @@ void core_main() {
 		module_to_switch(overall->modules[0], ff);
 	}
 
-	if (1) {
+	if (0) {
 		PRINT_DEBUG("Sending data");
 
 		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));

@@ -17,6 +17,7 @@ void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct i
 	}
 
 	uint32_t protocol = pheader->protocol; //TODO change to flow based
+	uint32_t family = AF_INET;
 	uint32_t src_ip = pheader->source; //ppacket->ip_src;
 	uint32_t dst_ip = pheader->destination; //ppacket->ip_dst;
 	uint32_t recv_ttl = pheader->ttl;
@@ -24,8 +25,9 @@ void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct i
 
 	metadata *meta = ff->metaData;
 	secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_src_ip", &src_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_dst_ip", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_family", &family, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(meta, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta, "recv_ttl", &recv_ttl, META_TYPE_INT32);
 
 	uint32_t flow;
@@ -73,8 +75,8 @@ void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct i
 	}
 }
 
-void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t address, uint32_t if_index) {
-	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p, ppacket=%p, address=%u, if_index=%u", module, ff, ff->metaData, ppacket, address, if_index);
+void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet* ppacket, uint32_t address, int32_t if_index) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p, ppacket=%p, address=%u, if_index=%d", module, ff, ff->metaData, ppacket, address, if_index);
 
 	uint32_t length = ff->dataFrame.pduLength;
 	uint8_t *pdu = ff->dataFrame.pdu;

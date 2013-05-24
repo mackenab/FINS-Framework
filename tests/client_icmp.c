@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 
 	printf("MY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
-	server_addr.sin_family = PF_INET;
+	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = 0; //htons(port);
 
 	server_addr.sin_addr.s_addr = xxx(192,168,1,20);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		client_port = 55555;
 	}
-	client_addr.sin_family = PF_INET;
+	client_addr.sin_family = AF_INET;
 	client_addr.sin_port = 0; //htons(client_port);
 
 	//client_addr.sin_addr.s_addr = xxx(127,0,0,1);

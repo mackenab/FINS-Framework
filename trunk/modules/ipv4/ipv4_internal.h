@@ -297,7 +297,7 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct ip4_header *pheader, struct ip4_packet *ppacket);
 
 void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff);
-void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet *ppacket, uint32_t address, uint32_t if_index);
+void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet *ppacket, uint32_t address, int32_t if_index);
 
 #define EXEC_ARP_GET_ADDR 0
 

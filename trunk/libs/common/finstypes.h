@@ -86,6 +86,8 @@ struct finsDataFrame {
 };
 
 //unsigned int ctrl_serial_count = 0;
+#define FCF_TRUE 1
+#define FCF_FALSE 0
 
 struct finsCtrlFrame {
 	/* only for FINS control frames */
@@ -174,6 +176,7 @@ void nop_func(uint8_t *data);
 typedef int (*equal_type)(uint8_t *data);
 typedef int (*equal1_type)(uint8_t *data, uint8_t *param);
 typedef int (*equal2_type)(uint8_t *data, uint8_t *param1, uint8_t *param2);
+typedef int (*equal4_type)(uint8_t *data, uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4);
 
 //<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
 typedef uint8_t *(*clone_type)(uint8_t *data);
@@ -286,6 +289,11 @@ uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 #define list_find2(list, equal, param1, param2) list_find2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2)
 uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2);
 
+//See list_find()
+#define list_find4(list, equal, param1, param2, param3, param4) list_find4_full(list, (equal4_type)equal, (uint8_t *)param1, (uint8_t *)param2, (uint8_t *)param3, (uint8_t *)param4)
+uint8_t *list_find4_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4),
+		uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4);
+
 //Creates a new list and returns the pointers for which <equal> returns true
 //<equal> should return:
 //1 if equal
@@ -351,6 +359,24 @@ struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uin
 //<release> should free the data structure in the element as well as any subcomponents
 #define list_free(list, release) list_free_full(list, (release_type)release)
 void list_free_full(struct linked_list *list, void (*release)(uint8_t *data));
+
+//Iterate and free the elements of <list> that equal returns true for
+//<equal> should return:
+//1 if equal
+//0 if not
+//<release> should free the data structure in the element as well as any subcomponents
+#define list_free_all(list, equal, release) list_free_all_full(list, (equal_type)equal, (release_type)release)
+void list_free_all_full(struct linked_list *list, int (*equal)(uint8_t *data), void (*release)(uint8_t *data));
+
+//See list_free_all()
+#define list_free_all1(list, equal, param, release) list_free_all1_full(list, (equal1_type)equal, (uint8_t *)param, (release_type)release)
+void list_free_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, void (*release)(uint8_t *data));
+
+//See list_free_all()
+#define list_free_all2(list, equal, param1, param2, release) list_free_all2_full(list, (equal2_type)equal, (uint8_t *)param1, (uint8_t *)param2, (release_type)release)
+void list_free_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
+		void (*release)(uint8_t *data));
+
 //^^^^^^^^^^^^^^^^^ End of linked_list data structure library
 
 uint32_t gen_control_serial_num(void);
@@ -395,7 +421,7 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt);
 #define MAX_ROUTES 1024
 
 struct addr_record { //for a particular address
-	uint32_t if_index;
+	int32_t if_index;
 	uint32_t family;
 	struct sockaddr_storage ip; //ip
 	struct sockaddr_storage mask; //network mask
@@ -411,14 +437,16 @@ int addr_is_v6(struct addr_record *addr);
 int addr_ipv6_test(struct addr_record *addr, uint32_t *ip); //TODO
 int addr_bdcv6_test(struct addr_record *addr, uint32_t *ip); //TODO
 
-void addr4_set_addr(struct sockaddr_storage *addr, uint32_t val);
-uint32_t addr4_get_addr(struct sockaddr_storage *addr);
-void addr6_set_addr(struct sockaddr_storage *addr, uint32_t val); //TODO
-uint8_t *addr6_get_addr(struct sockaddr_storage *addr); //TODO
+void addr4_set_ip(struct sockaddr_storage *addr, uint32_t ip);
+uint32_t addr4_get_ip(struct sockaddr_storage *addr);
+void addr4_set_port(struct sockaddr_storage *addr, uint16_t port);
+uint16_t addr4_get_port(struct sockaddr_storage *addr);
+void addr6_set_ip(struct sockaddr_storage *addr, uint32_t ip); //TODO
+uint8_t *addr6_get_ip(struct sockaddr_storage *addr); //TODO
 
 struct if_record { //for an interface
 	//inherent
-	uint32_t index;
+	int32_t index;
 	uint8_t name[IFNAMSIZ]; //SIOCGIFNAME
 	uint64_t mac; //SIOCGIFHWADDR
 	uint16_t type; //eth/Wifi
@@ -431,13 +459,16 @@ struct if_record { //for an interface
 	struct linked_list *addr_list;
 };
 struct if_record *ifr_clone(struct if_record *ifr);
-int ifr_index_test(struct if_record *ifr, uint32_t *index);
+int ifr_running_test(struct if_record *ifr);
+int ifr_index_test(struct if_record *ifr, int32_t *index);
+int ifr_name_test(struct if_record *ifr, uint8_t *name);
+void ifr_total_test(struct if_record *ifr, uint32_t *total);
 int ifr_ipv4_test(struct if_record *ifr, uint32_t *ip);
 int ifr_ipv6_test(struct if_record *ifr, uint32_t *ip); //TODO
 void ifr_free(struct if_record *ifr);
 
 struct route_record {
-	uint32_t if_index;
+	int32_t if_index;
 	uint32_t family;
 	struct sockaddr_storage dst; //end-to-end dst
 	struct sockaddr_storage mask; //network mask
@@ -454,7 +485,7 @@ struct cache_record {
 	struct sockaddr_storage src;
 	struct sockaddr_storage dst;
 	struct sockaddr_storage gw;
-	uint32_t if_index;
+	int32_t if_index;
 
 	uint32_t metric; //TODO remove?
 	uint32_t timeout; //TODO remove?

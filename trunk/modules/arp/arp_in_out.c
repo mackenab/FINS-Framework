@@ -21,7 +21,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 	ifr = (struct if_record *) list_find1(md->if_list, ifr_ipv4_test, &src_ip);
 	if (ifr != NULL) {
 		src_mac = ifr->mac;
-		PRINT_DEBUG("src: if_index=%u, mac=0x%llx, ip=%u", ifr->index, src_mac, src_ip);
+		PRINT_DEBUG("src: if_index=%d, mac=0x%llx, ip=%u", ifr->index, src_mac, src_ip);
 
 		secure_metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
 
@@ -34,13 +34,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 					list_append(cache->request_list, request);
 				} else {
 					PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
-
-					ff->destinationID = ff->ctrlFrame.sender_id;
-					ff->ctrlFrame.sender_id = module->index;
-					ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-					ff->ctrlFrame.ret_val = 0;
-
-					module_to_switch(module, ff);
+					module_reply_fcf(module, ff, FCF_FALSE, 0);
 				}
 			} else {
 				dst_mac = cache->mac;
@@ -57,7 +51,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 					ff->destinationID = ff->ctrlFrame.sender_id;
 					ff->ctrlFrame.sender_id = module->index;
 					ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-					ff->ctrlFrame.ret_val = 1;
+					ff->ctrlFrame.ret_val = FCF_TRUE;
 
 					module_to_switch(module, ff);
 				} else {
@@ -80,24 +74,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 							list_append(cache->request_list, request);
 						} else {
 							PRINT_ERROR("Error: request_list full, request_list->len=%d", cache->request_list->len);
-
-							ff->destinationID = ff->ctrlFrame.sender_id;
-							ff->ctrlFrame.sender_id = module->index;
-							ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-							ff->ctrlFrame.ret_val = 0;
-
-							module_to_switch(module, ff);
+							module_reply_fcf(module, ff, FCF_FALSE, 0);
 						}
 					} else {
 						PRINT_ERROR("switch send failed");
 						freeFinsFrame(ff_req);
-
-						ff->destinationID = ff->ctrlFrame.sender_id;
-						ff->ctrlFrame.sender_id = module->index;
-						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-						ff->ctrlFrame.ret_val = 0;
-
-						module_to_switch(module, ff);
+						module_reply_fcf(module, ff, FCF_FALSE, 0);
 					}
 				}
 			}
@@ -130,12 +112,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 							temp_request = (struct arp_request *) list_remove_front(temp_cache->request_list);
 							temp_ff = temp_request->ff;
 
-							temp_ff->destinationID = temp_ff->ctrlFrame.sender_id;
-							temp_ff->ctrlFrame.sender_id = module->index;
-							temp_ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-							temp_ff->ctrlFrame.ret_val = 0;
-
-							module_to_switch(module, temp_ff);
+							module_reply_fcf(module, temp_ff, FCF_FALSE, 0);
 
 							temp_request->ff = NULL;
 							arp_request_free(temp_request);
@@ -145,13 +122,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 						arp_cache_free(temp_cache);
 					} else {
 						PRINT_ERROR("Cache full");
-
-						ff->destinationID = ff->ctrlFrame.sender_id;
-						ff->ctrlFrame.sender_id = module->index;
-						ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-						ff->ctrlFrame.ret_val = 0;
-
-						module_to_switch(module, ff);
+						module_reply_fcf(module, ff, FCF_FALSE, 0);
 						return;
 					}
 				}
@@ -170,23 +141,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 				PRINT_DEBUG("switch send failed");
 				freeFinsFrame(ff_req);
 
-				ff->destinationID = ff->ctrlFrame.sender_id;
-				ff->ctrlFrame.sender_id = module->index;
-				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-				ff->ctrlFrame.ret_val = 0;
-
-				module_to_switch(module, ff);
+				module_reply_fcf(module, ff, FCF_FALSE, 0);
 			}
 		}
 	} else {
 		PRINT_ERROR("No corresponding interface: ff=%p, src_ip=%u", ff, src_ip);
-
-		ff->destinationID = ff->ctrlFrame.sender_id;
-		ff->ctrlFrame.sender_id = module->index;
-		ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-		ff->ctrlFrame.ret_val = 0;
-
-		module_to_switch(module, ff);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 	}
 }
 
@@ -246,7 +206,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 								ff_resp->destinationID = ff_resp->ctrlFrame.sender_id;
 								ff_resp->ctrlFrame.sender_id = module->index;
 								ff_resp->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-								ff_resp->ctrlFrame.ret_val = 1;
+								ff_resp->ctrlFrame.ret_val = FCF_TRUE;
 
 								module_to_switch(module, ff_resp);
 
@@ -328,13 +288,7 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 			while (!list_is_empty(cache->request_list)) {
 				request = (struct arp_request *) list_remove_front(cache->request_list);
 				ff = request->ff;
-
-				ff->destinationID = ff->ctrlFrame.sender_id;
-				ff->ctrlFrame.sender_id = module->index;
-				ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-				ff->ctrlFrame.ret_val = 0;
-
-				module_to_switch(module, ff);
+				module_reply_fcf(module, ff, FCF_FALSE, 0);
 
 				request->ff = NULL;
 				arp_request_free(request);

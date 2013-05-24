@@ -105,7 +105,7 @@ void rtm_process_help(struct fins_module *module, struct rtm_console *console, s
 	memset(msg, 0, 2000);
 	uint8_t *pt = msg;
 
-//TODO build better help, such as topics etc
+	//TODO build better help, such as topics etc
 
 	int i;
 	if (cmd->words_num == 1) {
@@ -209,12 +209,26 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 		free(cmd);
 		return;
 	}
+
+	int param_type;
+	status = config_setting_lookup_int(param, PARAM_TYPE, (int *) &param_type);
+	if (status == META_FALSE) {
+		sem_post(&md->overall->sem);
+		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Unknown parameter");
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
 	sem_post(&md->overall->sem);
 
 	cmd->mod = mod;
 	cmd->serial_num = gen_control_serial_num();
 	cmd->op = CTRL_EXEC;
 	cmd->param_id = param_id;
+	memcpy(cmd->param_str, cmd->words[path_end-1], strlen((char *)cmd->words[path_end-1]));
+	cmd->param_type = param_type;
 	PRINT_DEBUG("mod=%u, serial_num=%u, op=%u, param_id=%u", cmd->mod, cmd->serial_num, cmd->op, cmd->param_id);
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -292,12 +306,26 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 		free(cmd);
 		return;
 	}
+
+	int param_type;
+	status = config_setting_lookup_int(param, PARAM_TYPE, (int *) &param_type);
+	if (status == META_FALSE) {
+		sem_post(&md->overall->sem);
+		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Unknown parameter");
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
 	sem_post(&md->overall->sem);
 
 	cmd->mod = mod;
 	cmd->serial_num = gen_control_serial_num();
 	cmd->op = CTRL_READ_PARAM;
 	cmd->param_id = param_id;
+	memcpy(cmd->param_str, cmd->words[path_end-1], strlen((char *)cmd->words[path_end-1]));
+	cmd->param_type = param_type;
 	PRINT_DEBUG("mod=%u, serial_num=%u, op=%u, param_id=%u", cmd->mod, cmd->serial_num, cmd->op, cmd->param_id);
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -331,7 +359,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 		return;
 	}
 
-//TODO identify module
+	//TODO identify module
 	struct fins_module **modules = md->overall->modules;
 
 	secure_sem_wait(&md->overall->sem);
@@ -347,9 +375,9 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	}
 	PRINT_IMPORTANT("op=%u, mod=%u", cmd->op, cmd->mod);
 
-//TODO poll to get params or look at directly?
+	//TODO poll to get params or look at directly?
 
-//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
+	//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = cmd->words_num - 1;
 
 	metadata_element *param = match_params(modules[mod]->params, cmd->words, path_end);
@@ -392,6 +420,8 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	cmd->serial_num = gen_control_serial_num();
 	cmd->op = CTRL_SET_PARAM;
 	cmd->param_id = param_id;
+	memcpy(cmd->param_str, cmd->words[path_end-1], strlen((char *)cmd->words[path_end-1]));
+	cmd->param_type = param_type;
 	PRINT_DEBUG("mod=%u, serial_num=%u, op=%u, param_id=%u", cmd->mod, cmd->serial_num, cmd->op, cmd->param_id);
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -450,6 +480,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 		break;
 	default:
 		PRINT_ERROR("todo error");
+		exit(-1);
 		break;
 	}
 

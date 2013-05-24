@@ -30,8 +30,12 @@ int link_involved_test(struct link_record *link, uint32_t *index) {
 }
 
 struct link_record *link_clone(struct link_record *link) {
+	PRINT_DEBUG("Entered: link=%p", link);
+
 	struct link_record *link_clone = (struct link_record *) secure_malloc(sizeof(struct link_record));
 	memcpy(link_clone, link, sizeof(struct link_record)); //would need to change if linked_list
+
+	PRINT_DEBUG("Exited: link=%p, ret=%p", link, link_clone);
 	return link_clone;
 }
 
@@ -103,8 +107,7 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 void module_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, ret_val=%u, ret_msg=%u", module, ff, ret_val, ret_msg);
 
-	metadata *meta = ff->metaData;
-	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "ret_msg", &ret_msg, META_TYPE_INT32);
 
 	ff->destinationID = ff->ctrlFrame.sender_id;
 

@@ -10,7 +10,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module
 LOCAL_NAME := daemon
 LOCAL_LIBS := common data_structure
-LOCAL_OBJS := daemon.o daemon_out.o udpHandling.o tcpHandling.o icmpHandling.o
+LOCAL_OBJS := daemon.o daemon_out.o udpHandling.o icmpHandling.o tcpHandling.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
 LOCAL_LDFLAGS := -lc -lpthread

@@ -125,8 +125,8 @@
 #define OP_SET_USAGE "set <module> <param> [<subparam> [<subsubparam>]] <value>"
 #define OP_PAUSE_USAGE "pause [all|<module>]"
 #define OP_UNPAUSE_USAGE "unpause [all|<module>]"
-#define OP_LINK_USAGE "link"
-#define OP_UNLINK_USAGE "unlink"
+#define OP_LINK_USAGE "link" //link [add|remove|edit]
+#define OP_UNLINK_USAGE "unlink" //unlink [all|<module>]
 #define OP_LOAD_USAGE "load <library>"
 #define OP_UNLOAD_USAGE "unload <module>"
 #define OP_REPLACE_USAGE "replace <module>"
@@ -155,7 +155,11 @@ struct rtm_command {
 	uint32_t mod;
 	uint32_t serial_num;
 	uint32_t op;
+
+	//param values
 	uint32_t param_id;
+	uint8_t param_str[MAX_CMD_LEN];
+	uint32_t param_type;
 };
 int rtm_cmd_serial_test(struct rtm_command *cmd, uint32_t *serial_num);
 

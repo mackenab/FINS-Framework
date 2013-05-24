@@ -79,7 +79,7 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 	free(temp);
 }
 
-void *poll_thread(void *local) {
+void *tcp_poll_thread(void *local) {
 	/*
 	 int nfds = 1;
 	 struct pollfd fds[nfds];
@@ -96,6 +96,7 @@ void *poll_thread(void *local) {
 	 (fds[0].revents & POLLOUT) > 0, (fds[0].revents & POLLRDNORM) > 0, (fds[0].revents & POLLWRNORM) > 0);
 	 fflush(stdout);
 	 */
+	return NULL;
 }
 
 int main(int argc, char *argv[]) {
@@ -182,8 +183,8 @@ int main(int argc, char *argv[]) {
 
 	printf("Binding to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+		printf("Failure: errno=%u\n", errno);
 		perror("Bind");
-		printf("Failure");
 		exit(1);
 	}
 
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	while (1) {
-		sock_client = accept(sock, (struct sockaddr *) &client_addr, &addr_len);
+		sock_client = accept(sock, (struct sockaddr *) &client_addr, (socklen_t *)&addr_len);
 		if (sock_client > 0) {
 			break;
 		} else {
@@ -267,8 +268,8 @@ int main(int argc, char *argv[]) {
 	int total = 0;
 	int temp = 1;
 	while (i < 10000) {
-		//ret = poll(fds, nfds, time);
-		if (ret || 1) {
+		ret = poll(fds, nfds, time);
+		if (ret || 0) {
 			if (0) {
 				printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 				printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
@@ -279,7 +280,7 @@ int main(int argc, char *argv[]) {
 			}
 			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
 				if (pID || 1) {
-					if (temp) {
+					if (temp != 0) {
 						bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
 						//temp = 0;
 					} else {

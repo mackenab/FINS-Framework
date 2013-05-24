@@ -62,7 +62,7 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 }
 
 int main(int argc, char *argv[]) {
-	if (1) { //test assembly instructions (replaced in glue.h)
+	if (0) { //test assembly instructions (replaced in glue.h)
 		uint32_t test1 = 7;
 		uint32_t test2 = 2;
 		printf("test1=%u\n", test1 / test2);
@@ -125,7 +125,8 @@ int main(int argc, char *argv[]) {
 		perror("socket");
 		exit(1);
 	}
-	printf("here1\n");fflush(stdout);
+	printf("here1\n");
+	fflush(stdout);
 
 	int val = 0;
 	setsockopt(sock, SOL_IP, IP_MTU_DISCOVER, &val, sizeof(val));
@@ -135,7 +136,8 @@ int main(int argc, char *argv[]) {
 	setsockopt(sock, SOL_IP, IP_RECVTTL, &val, sizeof(val));
 	val = 1;
 	setsockopt(sock, SOL_IP, IP_RECVERR, &val, sizeof(val));
-	printf("here2\n");fflush(stdout);
+	printf("here2\n");
+	fflush(stdout);
 	//fcntl64(3, F_SETFL, O_RDONLY|O_NONBLOCK) = 0
 	//fstat64(1, {st_dev=makedev(0, 11), st_ino=3, st_mode=S_IFCHR|0620, st_nlink=1, st_uid=1000, st_gid=5, st_blksize=1024, st_blocks=0, st_rdev=makedev(136, 0), st_atime=2012/10/16-22:31:09, st_mtime=2012/10/16-22:31:09, st_ctime=2012/10/16-19:33:02}) = 0
 
@@ -159,7 +161,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,6);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -223,34 +225,34 @@ int main(int argc, char *argv[]) {
 	}
 
 	/*
-	int ret = 0;
+	 int ret = 0;
 
-	struct msghdr recv_msg;
-	int name_len = 64;
-	char name_buf[name_len];
-	struct iovec iov[1];
-	int recv_len = 1000;
-	char recv_buf[recv_len];
-	int control_len = 4000;
-	char control_buf[control_len];
-	iov[0].iov_len = recv_len;
-	iov[0].iov_base = recv_buf;
+	 struct msghdr recv_msg;
+	 int name_len = 64;
+	 char name_buf[name_len];
+	 struct iovec iov[1];
+	 int recv_len = 1000;
+	 char recv_buf[recv_len];
+	 int control_len = 4000;
+	 char control_buf[control_len];
+	 iov[0].iov_len = recv_len;
+	 iov[0].iov_base = recv_buf;
 
-	recv_msg.msg_namelen = name_len;
-	recv_msg.msg_name = name_buf;
+	 recv_msg.msg_namelen = name_len;
+	 recv_msg.msg_name = name_buf;
 
-	recv_msg.msg_iovlen = 1;
-	recv_msg.msg_iov = iov;
+	 recv_msg.msg_iovlen = 1;
+	 recv_msg.msg_iov = iov;
 
-	recv_msg.msg_controllen = control_len;
-	recv_msg.msg_control = control_buf;
+	 recv_msg.msg_controllen = control_len;
+	 recv_msg.msg_control = control_buf;
 
-	struct cmsghdr *cmsg;
-	int *ttlptr;
-	int received_ttl;
+	 struct cmsghdr *cmsg;
+	 int *ttlptr;
+	 int received_ttl;
 
-	struct timeval curr;
-	struct timeval *stamp;
+	 struct timeval curr;
+	 struct timeval *stamp;
 
 	 if (0) {
 	 int len;
@@ -433,6 +435,8 @@ int main(int argc, char *argv[]) {
 		int i = 0;
 		while (1) {
 			//gets(temp_buff);
+			printf("sending=%d\n", i);
+			fflush(stdout);
 			*data = htonl(i);
 			numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			if (numbytes != len) {

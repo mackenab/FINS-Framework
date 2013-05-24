@@ -118,7 +118,7 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 endif
 
 $(MOD_SO_PATHS):
-#	@echo "test6='$(LOCAL_DIR)'"
+	@echo "test6='$(LOCAL_DIR)'"
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@cd $(MODULES_DIR)/$(subst .so,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);
 endif

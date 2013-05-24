@@ -555,7 +555,7 @@ struct linked_list *list_clone_full(struct linked_list *list, uint8_t *(*clone)(
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p", list, list_ret);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
@@ -809,6 +809,29 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	while (comp) {
 		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
+			//list_check(list);
+			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
+			return comp->data;
+		} else {
+			comp = next;
+		}
+	}
+
+	//list_check(list);
+	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
+	return NULL;
+}
+
+//See list_find()
+uint8_t *list_find4_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4),
+		uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, param3=%p, param4=%p", list, equal, param1, param2, param3, param4);
+
+	struct list_node *comp = list->front;
+	struct list_node *next;
+	while (comp) {
+		next = comp->next;
+		if (equal(comp->data, param1, param2, param3, param4)) {
 			//list_check(list);
 			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
 			return comp->data;
@@ -1094,6 +1117,74 @@ void list_free_full(struct linked_list *list, void (*release)(uint8_t *data)) {
 		node = next;
 	}
 	free(list);
+}
+
+//Iterate and free the elements of <list> that equal returns true for
+//<equal> should return:
+//1 if equal
+//0 if not
+//<release> should free the data structure in the element as well as any subcomponents
+void list_free_all_full(struct linked_list *list, int (*equal)(uint8_t *data), void (*release)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, release=%p", list, equal, release);
+
+	//list_check(list);
+
+	struct list_node *next;
+
+	struct list_node *node = list->front;
+	while (node) {
+		next = node->next;
+		if (equal(node->data)) {
+			PRINT_DEBUG("Freeing: data=%p", node->data);
+			release(node->data);
+			PRINT_DEBUG("Freeing: node=%p", node);
+			free(node);
+		}
+		node = next;
+	}
+}
+
+//See list_free_all()
+void list_free_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, void (*release)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p, release=%p", list, equal, param, release);
+
+	//list_check(list);
+
+	struct list_node *next;
+
+	struct list_node *node = list->front;
+	while (node) {
+		next = node->next;
+		if (equal(node->data, param)) {
+			PRINT_DEBUG("Freeing: data=%p", node->data);
+			release(node->data);
+			PRINT_DEBUG("Freeing: node=%p", node);
+			free(node);
+		}
+		node = next;
+	}
+}
+
+//See list_free_all()
+void list_free_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
+		void (*release)(uint8_t *data)) {
+	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, release=%p", list, equal, param1, param2, release);
+
+	//list_check(list);
+
+	struct list_node *next;
+
+	struct list_node *node = list->front;
+	while (node) {
+		next = node->next;
+		if (equal(node->data, param1, param2)) {
+			PRINT_DEBUG("Freeing: data=%p", node->data);
+			release(node->data);
+			PRINT_DEBUG("Freeing: node=%p", node);
+			free(node);
+		}
+		node = next;
+	}
 }
 
 uint32_t gen_control_serial_num(void) {
@@ -1649,11 +1740,12 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 }
 
 struct addr_record *addr_clone(struct addr_record *addr) {
-	PRINT_DEBUG("Entered: addr=%p", addr);
+	PRINT_DEBUG("Entered: addr=%p, if_index=%u", addr, addr->if_index);
 
 	struct addr_record *addr_clone = (struct addr_record *) secure_malloc(sizeof(struct addr_record));
 	memcpy(addr_clone, addr, sizeof(struct addr_record));
 
+	PRINT_DEBUG("Exited: addr=%p, ret=%p", addr, addr_clone);
 	return addr_clone;
 }
 
@@ -1683,43 +1775,66 @@ int addr_bdcv6_test(struct addr_record *addr, uint32_t *ip) {
 	return 0;
 }
 
-void addr4_set_addr(struct sockaddr_storage *addr, uint32_t val) {
+void addr4_set_ip(struct sockaddr_storage *addr, uint32_t ip) {
 	struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
-	memset(addr4, 0, sizeof(struct sockaddr_in));
 	addr4->sin_family = AF_INET;
-	addr4->sin_addr.s_addr = val;
+	addr4->sin_addr.s_addr = ip;
 }
 
-uint32_t addr4_get_addr(struct sockaddr_storage *addr) {
+uint32_t addr4_get_ip(struct sockaddr_storage *addr) {
 	return ((uint32_t) ((struct sockaddr_in *) addr)->sin_addr.s_addr);
 }
 
-void addr6_set_addr(struct sockaddr_storage *addr, uint32_t val) {
+void addr4_set_port(struct sockaddr_storage *addr, uint16_t port) {
+	struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
+	addr4->sin_family = AF_INET;
+	addr4->sin_port = port;
+}
+
+uint16_t addr4_get_port(struct sockaddr_storage *addr) {
+	return ((uint16_t) ((struct sockaddr_in *) addr)->sin_port);
+}
+
+void addr6_set_ip(struct sockaddr_storage *addr, uint32_t ip) {
 	struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) addr;
 	memset(addr6, 0, sizeof(struct sockaddr_in6));
 	addr6->sin6_family = AF_INET6;
 	//addr6->sin6_addr.s_addr = val;
 }
 
-uint8_t *addr6_get_addr(struct sockaddr_storage *addr) {
+uint8_t *addr6_get_ip(struct sockaddr_storage *addr) {
 	return NULL;
 }
 
 struct if_record *ifr_clone(struct if_record *ifr) {
-	PRINT_DEBUG("Entered: ifr=%p", ifr);
+	PRINT_DEBUG("Entered: ifr=%p, name='%s'", ifr, ifr->name);
 
 	struct if_record *ifr_clone = (struct if_record *) secure_malloc(sizeof(struct if_record));
 	memcpy(ifr_clone, ifr, sizeof(struct if_record));
 
 	if (ifr->addr_list) {
+		PRINT_DEBUG("Cloning addr_list=%p", ifr_clone->addr_list);
 		ifr_clone->addr_list = list_clone(ifr->addr_list, addr_clone);
 	}
 
+	PRINT_DEBUG("Exited: ifr=%p, ret=%p", ifr, ifr_clone);
 	return ifr_clone;
 }
 
-int ifr_index_test(struct if_record *ifr, uint32_t *index) {
+int ifr_running_test(struct if_record *ifr) {
+	return ifr->flags & IFF_RUNNING;
+}
+
+int ifr_index_test(struct if_record *ifr, int32_t *index) {
 	return ifr->index == *index;
+}
+
+int ifr_name_test(struct if_record *ifr, uint8_t *name) {
+	return strcmp((char *) ifr->name, (char *) name) == 0;
+}
+
+void ifr_total_test(struct if_record *ifr, uint32_t *total) {
+	*total = *total + ifr->addr_list->len;
 }
 
 int ifr_ipv4_test(struct if_record *ifr, uint32_t *ip) {
@@ -1758,5 +1873,6 @@ struct route_record *route_clone(struct route_record *route) {
 	struct route_record *route_clone = (struct route_record *) secure_malloc(sizeof(struct route_record));
 	memcpy(route_clone, route, sizeof(struct route_record));
 
+	PRINT_DEBUG("Exited: route=%p, ret=%p", route, route_clone);
 	return route_clone;
 }
