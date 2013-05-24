@@ -435,10 +435,6 @@ void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 		if (console != NULL) {
 			//TODO extract answer
 			if (ff->ctrlFrame.ret_val == FCF_TRUE) {
-				//cmd->param_id;
-				ff->metaData;
-				//send error
-
 				char temp[100];
 
 				int32_t val_int32;
