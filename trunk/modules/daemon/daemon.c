@@ -144,13 +144,17 @@ int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint3
 	return ret == 0; //TODO change to ret_val ?
 }
 
-int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, metadata *meta, uint32_t msg_controllen, int flags, uint32_t *control_len,
+int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
 		uint8_t **control) {
+	PRINT_DEBUG("Entered: module=%p, hdr=%p, meta=%p, msg_controllen=%u, flags=0x%x, control_len=%p, control=%p", module, hdr, meta, msg_controllen, flags, control_len, control);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (msg_controllen > CONTROL_LEN_MAX) {
 		PRINT_ERROR("todo error");
 		//TODO send some error
+		*control_len = 0;
+		*control = NULL;
+		PRINT_DEBUG("Exited: module=%p, hdr=%p, meta=%p, control_len=%d, control=%p", module, hdr, meta, *control_len, *control);
 		return 0;
 	}
 
@@ -255,15 +259,18 @@ int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	if (control_pt - *control != *control_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", control_pt - *control, *control_len);
 		free(*control);
-		return 0;
+		exit(-1);
 	}
 
+	PRINT_DEBUG("Exited: module=%p, hdr=%p, meta=%p, control_len=%d, control=%p", module, hdr, meta, *control_len, *control);
 	return 1;
 }
 
-int send_wedge_recvmsg(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int addr_len, struct sockaddr_storage *addr, uint32_t data_len,
+int send_wedge_recvmsg(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
 		uint8_t *data, uint32_t control_len, uint8_t *control) {
-	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(int) + addr_len + data_len + control_len;
+	PRINT_DEBUG("Entered: module=%p, hdr=%p, addr_len=%u, addr=%p, data_len=%u, data=%p, control_len=%u, control=%p", module, hdr, addr_len, addr, data_len, data, control_len, control);
+
+	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(uint32_t) + addr_len + data_len + control_len;
 	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
 	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
@@ -274,23 +281,29 @@ int send_wedge_recvmsg(struct fins_module *module, struct nl_wedge_to_daemon *hd
 	hdr_ret->msg = 0; //TODO change to set msg_flags
 	uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
 
-	*(int *) pt = addr_len;
-	pt += sizeof(int);
+	*(uint32_t *) pt = addr_len;
+	pt += sizeof(uint32_t);
 
-	memcpy(pt, addr, addr_len);
-	pt += addr_len;
+	if (addr_len != 0) {
+		memcpy(pt, addr, addr_len);
+		pt += addr_len;
+	}
 
-	*(int *) pt = data_len;
-	pt += sizeof(int);
+	*(uint32_t *) pt = data_len;
+	pt += sizeof(uint32_t);
 
-	memcpy(pt, data, data_len);
-	pt += data_len;
+	if (data_len != 0) {
+		memcpy(pt, data, data_len);
+		pt += data_len;
+	}
 
-	*(int *) pt = control_len;
-	pt += sizeof(int);
+	*(uint32_t *) pt = control_len;
+	pt += sizeof(uint32_t);
 
-	memcpy(pt, control, control_len);
-	pt += control_len;
+	if (control_len != 0) {
+		memcpy(pt, control, control_len);
+		pt += control_len;
+	}
 
 	if (pt - msg != msg_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);

@@ -128,6 +128,8 @@ int main(int argc, char *argv[]) {
 	printf("here1\n");
 	fflush(stdout);
 
+	return;
+
 	int val = 0;
 	setsockopt(sock, SOL_IP, IP_MTU_DISCOVER, &val, sizeof(val));
 	val = 1;

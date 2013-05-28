@@ -599,7 +599,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	struct daemon_store *store = NULL;
-	int addr_len;
+	uint32_t addr_len;
 	struct sockaddr_in *addr4;
 	struct sockaddr_in6 *addr6;
 	uint32_t data_len = 0;
@@ -700,13 +700,9 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 #endif
 		//#######
 
-		uint32_t control_len = 0;
-		uint8_t *control = NULL;
+		int32_t control_len;
+		uint8_t *control;
 		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
-		if (!ret_val) {
-			control_len = 0;
-			control = NULL;
-		}
 
 		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, msg, control_len, control);
 		if (!ret) {
@@ -1397,7 +1393,7 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 		data_len = call_len;
 	}
 
-	int addr_len;
+	uint32_t addr_len;
 	if (addr->ss_family == AF_INET) {
 		addr_len = sizeof(struct sockaddr_in);
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
@@ -1425,13 +1421,9 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 #endif
 	//#######
 
-	uint32_t control_len;
+	int32_t control_len;
 	uint8_t *control;
 	int ret_val = recvmsg_control(module, (struct nl_wedge_to_daemon *) call, meta, msg_controllen, flags, &control_len, &control);
-	if (!ret_val) {
-		control_len = 0;
-		control = NULL;
-	}
 
 	int ret = send_wedge_recvmsg(module, (struct nl_wedge_to_daemon *) call, addr_len, addr, data_len, data, control_len, control);
 	if (!ret) {
@@ -1461,6 +1453,8 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 
 		addr4_set_port(src_addr, (uint16_t) src_port);
 		addr4_set_port(dst_addr, (uint16_t) dst_port);
+
+		PRINT_DEBUG("ff: src=%u/%u, dst=%u/%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 
 		sock_index = match_host_addr4_udp(module, dst_ip, (uint16_t) dst_port); //TODO change for multicast
 		if (sock_index == -1) {
@@ -1533,6 +1527,8 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 
 		addr4_set_port(src_addr, (uint16_t) src_port);
 		addr4_set_port(dst_addr, (uint16_t) dst_port);
+
+		PRINT_DEBUG("ff: src=%u/%u, dst=%u/%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 
 		sock_index = match_host_addr4_udp(module, src_ip, (uint16_t) src_port); //TODO change for multicast
 		if (sock_index == -1) {
