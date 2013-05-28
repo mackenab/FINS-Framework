@@ -847,7 +847,8 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		//prctl(PR_SET_PDEATHSIG, SIGHUP);
 
 		uint8_t *args[2 * INTERFACE_IF_LIST_MAX + 1];
-		args[0] = (uint8_t *) ("./capturer");
+		args[0] = (uint8_t *) secure_malloc(40);
+		sprintf((char *) args[0], "./capturer");
 
 		struct if_record *ifr;
 
@@ -857,9 +858,13 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 			ifr = (struct if_record *) list_look(md->if_list, i);
 			if (ifr_running_test(ifr) && ifr->mac != 0) {
 				args[j] = (uint8_t *) secure_malloc(IFNAMSIZ);
+				args[j][IFNAMSIZ - 1] = '\0';
 				sprintf((char *) args[j], "%s", ifr->name);
-				args[j + 1] = (uint8_t *) secure_malloc(IFHWADDRLEN);
-				sprintf((char *) args[j + 1], "%012llx", ifr->mac);
+
+				args[j + 1] = (uint8_t *) secure_malloc(2*IFHWADDRLEN+1);
+				args[j + 1][2 * IFHWADDRLEN] = '\0';
+				sprintf((charF *) args[j + 1], "%012llx", ifr->mac);
+
 				j += 2;
 			}
 		}
@@ -899,6 +904,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", md->client_capture_fd, errno, strerror(errno));
 		return 0;
 	}
+
 	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", md->client_capture_fd, addr.sun_path);
 
 	addr.sun_family = AF_UNIX;
@@ -915,6 +921,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", md->client_inject_fd, errno, strerror(errno));
 		return 0;
 	}
+
 	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", md->client_inject_fd, addr.sun_path);
 
 	PRINT_IMPORTANT("PCAP processes connected");
