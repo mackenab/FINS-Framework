@@ -863,7 +863,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 
 				args[j + 1] = (uint8_t *) secure_malloc(2*IFHWADDRLEN+1);
 				args[j + 1][2 * IFHWADDRLEN] = '\0';
-				sprintf((charF *) args[j + 1], "%012llx", ifr->mac);
+				sprintf((char *) args[j + 1], "%012llx", ifr->mac);
 
 				j += 2;
 			}
