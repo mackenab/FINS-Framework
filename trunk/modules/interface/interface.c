@@ -837,6 +837,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	md->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
 	md->store_list = list_create(INTERFACE_STORE_LIST_MAX);
 
+	/*
 	pid_t pID = 0;
 	pID = fork();
 	if (pID < 0) { // failed to fork
@@ -884,6 +885,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		PRINT_DEBUG("inject: pID=%d", (int)pID);
 		sleep(5);
 	}
+	*/
 
 	//TODO move to associated thread, so init() is nonblocking
 	struct sockaddr_un addr;

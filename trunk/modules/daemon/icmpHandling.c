@@ -497,7 +497,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	struct daemon_store *store = NULL;
-	int addr_len;
+	uint32_t addr_len;
 	struct sockaddr_in *addr4;
 	struct sockaddr_in6 *addr6;
 	uint32_t data_len = 0;
@@ -510,7 +510,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 				md->sockets[hdr->sock_index].error_buf--;
 
 				if (store->addr->ss_family == AF_INET) {
-					addr_len = sizeof(struct sockaddr_in);
+					addr_len = (uint32_t)sizeof(struct sockaddr_in);
 					addr4 = (struct sockaddr_in *) store->addr;
 
 					uint32_t dst_ip = addr4->sin_addr.s_addr;
@@ -518,7 +518,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 					addr4->sin_port = 0;
 					PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 				} else { //AF_INET6
-					addr_len = sizeof(struct sockaddr_in6);
+					addr_len = (uint32_t)sizeof(struct sockaddr_in6);
 					addr6 = (struct sockaddr_in6 *) store->addr;
 
 					PRINT_ERROR("todo");
@@ -547,7 +547,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 			if (store->addr->ss_family == AF_INET) {
-				addr_len = sizeof(struct sockaddr_in);
+				addr_len = (uint32_t)sizeof(struct sockaddr_in);
 				addr4 = (struct sockaddr_in *) store->addr;
 
 				uint32_t src_ip = addr4->sin_addr.s_addr;
@@ -555,7 +555,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 				addr4->sin_port = 0;
 				PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 			} else { //AF_INET6
-				addr_len = sizeof(struct sockaddr_in6);
+				addr_len = (uint32_t)sizeof(struct sockaddr_in6);
 				addr6 = (struct sockaddr_in6 *) store->addr;
 
 				PRINT_ERROR("todo");
@@ -594,13 +594,9 @@ void recvmsg_out_icmp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 #endif
 		//#######
 
-		uint32_t control_len = 0;
-		uint8_t *control = NULL;
+		int32_t control_len;
+		uint8_t *control;
 		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
-		if (!ret_val) {
-			control_len = 0;
-			control = NULL;
-		}
 
 		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, msg, control_len, control);
 		if (!ret) {
@@ -1263,9 +1259,9 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 		data_len = call_len;
 	}
 
-	int addr_len;
+	uint32_t addr_len;
 	if (addr->ss_family == AF_INET) {
-		addr_len = sizeof(struct sockaddr_in);
+		addr_len = (uint32_t)sizeof(struct sockaddr_in);
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 		addr4->sin_addr.s_addr = htonl(addr4->sin_addr.s_addr);
 		addr4->sin_port = 0;
@@ -1291,13 +1287,9 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 #endif
 	//#######
 
-	uint32_t control_len;
+	int32_t control_len;
 	uint8_t *control;
 	int ret_val = recvmsg_control(module, (struct nl_wedge_to_daemon *) call, meta, msg_controllen, flags, &control_len, &control);
-	if (!ret_val) {
-		control_len = 0;
-		control = NULL;
-	}
 
 	int ret = send_wedge_recvmsg(module, (struct nl_wedge_to_daemon *) call, addr_len, addr, data_len, data, control_len, control);
 	if (!ret) {

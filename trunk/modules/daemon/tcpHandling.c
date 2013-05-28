@@ -804,7 +804,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	}
 
 	struct daemon_store *store = NULL;
-	int addr_len;
+	uint32_t addr_len;
 	uint32_t data_len = 0;
 	uint8_t *data = NULL;
 	metadata *meta;
@@ -880,13 +880,9 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 #endif
 		//#######
 
-		uint32_t control_len = 0;
-		uint8_t *control = NULL;
+		int32_t control_len;
+		uint8_t *control;
 		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
-		if (!ret_val) {
-			control_len = 0;
-			control = NULL;
-		}
 
 		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, msg, control_len, control);
 		if (!ret) {
@@ -2041,7 +2037,7 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 		data_len = call_len;
 	}
 
-	int addr_len;
+	uint32_t addr_len;
 	if (addr->ss_family == AF_INET) {
 		addr_len = sizeof(struct sockaddr_in);
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
@@ -2069,13 +2065,9 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 #endif
 	//#######
 
-	uint32_t control_len;
+	int32_t control_len;
 	uint8_t *control;
 	int ret_val = recvmsg_control(module, (struct nl_wedge_to_daemon *) call, meta, msg_controllen, flags, &control_len, &control);
-	if (!ret_val) {
-		control_len = 0;
-		control = NULL;
-	}
 
 	int ret = send_wedge_recvmsg(module, (struct nl_wedge_to_daemon *) call, addr_len, addr, data_len, data, control_len, control);
 	if (!ret) {

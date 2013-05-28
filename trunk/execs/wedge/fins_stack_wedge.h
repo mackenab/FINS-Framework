@@ -17,6 +17,7 @@
 #include <linux/sockios.h>
 #include <linux/delay.h>	/* For sleep */
 #include <linux/if.h>		/* Needed for fins_ioctl */
+#include <linux/types.h>
 
 /*
  * NETLINK_FINS must match a corresponding constant in the userspace daemon program that is to talk to this module.  
@@ -68,6 +69,9 @@ typedef enum {
 #define MAX_CALLS 100
 //#define LOOP_LIMIT 10
 
+#define CONTROL_LEN_MAX 10240
+#define CONTROL_LEN_DEFAULT 1024
+
 /* Data for protocol registration */
 static struct proto_ops fins_proto_ops;
 static struct proto fins_proto;
@@ -102,96 +106,96 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags);
 
 /* FINS netlink functions*/
-int nl_send(int pid, void *buf, int len, int flags);
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int flags);
+__s32 nl_send(__s32 pid, void *buf, __u32 len, __s32 flags);
+__s32 nl_send_msg(__s32 pid, __u32 seq, __s32 type, void *buf, __s32 len, __s32 flags);
 void nl_data_ready(struct sk_buff *skb);
 
 // This function extracts a unique ID from the kernel-space perspective for each socket
-inline unsigned long long get_unique_sock_id(struct sock *sk);
+inline __u64 get_unique_sock_id(struct sock *sk);
 
 struct nl_wedge_to_daemon_hdr {
-	int msg_len;
-	int part_len;
-	int pos;
+	__u32 msg_len;
+	__s32 part_len;
+	__s32 pos;
 };
 
 struct nl_wedge_to_daemon {
-	unsigned long long sock_id;
-	int sock_index;
+	__u64 sock_id;
+	__s32 sock_index;
 
-	u_int call_type;
-	int call_pid;
+	__u32 call_type;
+	__s32 call_pid;
 
-	u_int call_id;
-	int call_index;
+	__u32 call_id;
+	__s32 call_index;
 };
 
 struct nl_daemon_to_wedge {
-	u_int call_type;
+	__u32 call_type;
 
 	union {
-		u_int call_id;
-		unsigned long long sock_id; //TODO currently unused, remove if never needed
+		__u32 call_id;
+		__u64 sock_id; //TODO currently unused, remove if never needed
 	};
 	union {
-		int call_index;
-		int sock_index; //TODO currently unused, remove if never needed
+		__s32 call_index;
+		__s32 sock_index; //TODO currently unused, remove if never needed
 	};
 
-	u_int ret;
-	u_int msg;
+	__u32 ret;
+	__u32 msg;
 };
 
 struct fins_wedge_call {
-	int running; //TODO remove?
+	__s32 running; //TODO remove?
 
-	u_int call_id;
-	u_int call_type;
+	__u32 call_id;
+	__u32 call_type;
 
-	unsigned long long sock_id;
-	int sock_index;
+	__u64 sock_id;
+	__s32 sock_index;
 	//TODO timestamp? so can remove after timeout/hit MAX_CALLS cap
 
 	//struct semaphore sem; //TODO remove? might be unnecessary
 	struct semaphore wait_sem;
 
-	u_char reply;
-	u_int ret;
-	u_int msg;
-	u_char *buf;
-	int len;
+	__u8 reply;
+	__u32 ret;
+	__u32 msg;
+	__u8 *buf;
+	__s32 len;
 };
 
 void wedge_calls_init(void);
-int wedge_calls_insert(u_int id, unsigned long long sock_id, int sock_index, u_int type);
-int wedge_calls_find(unsigned long long sock_id, int sock_index, u_int type);
-int wedge_calls_remove(u_int id);
+__s32 wedge_calls_insert(__u32 id, __u64 sock_id, __s32 sock_index, __u32 type);
+__s32 wedge_calls_find(__u64 sock_id, __s32 sock_index, __u32 type);
+__s32 wedge_calls_remove(__u32 id);
 void wedge_calls_remove_all(void);
 
 struct fins_wedge_socket {
-	int running; //TODO remove? merge with release_flag
+	__s32 running; //TODO remove? merge with release_flag
 
-	unsigned long long sock_id;
+	__u64 sock_id;
 	struct socket *sock;
 	struct sock *sk;
 
-	int threads[MAX_CALL_TYPES];
+	__s32 threads[MAX_CALL_TYPES];
 
-	int release_flag;
+	__s32 release_flag;
 	struct socket *sock_new;
 	struct sock *sk_new;
 };
 
 void wedge_sockets_init(void);
-int wedge_sockets_insert(unsigned long long sock_id, struct sock *sk);
-int wedge_sockets_find(unsigned long long sock_id);
-int wedge_sockets_remove(unsigned long long sock_id, int sock_index, u_int type);
+__s32 wedge_sockets_insert(__u64 sock_id, struct sock *sk);
+__s32 wedge_sockets_find(__u64 sock_id);
+__s32 wedge_sockets_remove(__u64 sock_id, __s32 sock_index, __u32 type);
 void wedge_socket_remove_all(void);
-int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltype);
-int checkConfirmation(int sock_index);
+__s32 wedge_sockets_wait(__u64 sock_id, __s32 sock_index, __u32 calltype);
+__s32 checkConfirmation(__s32 sock_index);
 
 /* This is a flag to enable or disable the FINS stack passthrough */
-//int fins_stack_passthrough_enabled;
+//__s32 fins_stack_passthrough_enabled;
 //EXPORT_SYMBOL (fins_stack_passthrough_enabled);
 
 #endif /* FINS_STACK_WEDGE_H_ */

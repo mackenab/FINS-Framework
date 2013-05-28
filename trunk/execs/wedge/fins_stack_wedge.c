@@ -44,16 +44,16 @@ struct semaphore wedge_sockets_sem;
 
 struct fins_wedge_call wedge_calls[MAX_CALLS];
 struct semaphore wedge_calls_sem; //TODO merge with sockets_sem?
-u_int call_count; //TODO fix eventual roll over problem
+__u32 call_count; //TODO fix eventual roll over problem
 
 // Data declarations
 /* Data for netlink sockets */
 struct sock *fins_nl_sk = NULL;
-int fins_daemon_pid; // holds the pid of the FINS daemon so we know who to send back to
+__s32 fins_daemon_pid; // holds the pid of the FINS daemon so we know who to send back to
 struct semaphore link_sem;
 
 void wedge_calls_init(void) {
-	int i;
+	__s32 i;
 	PRINT_DEBUG("Entered");
 
 	call_count = 0;
@@ -66,8 +66,8 @@ void wedge_calls_init(void) {
 	PRINT_DEBUG("Exited.");
 }
 
-int wedge_calls_insert(u_int call_id, unsigned long long sock_id, int sock_index, u_int call_type) { //TODO might not need sock
-	int i;
+__s32 wedge_calls_insert(__u32 call_id, __u64 sock_id, __s32 sock_index, __u32 call_type) { //TODO might not need sock
+	__s32 i;
 
 	PRINT_DEBUG("Entered: sock_id=%llu, sock_index=%d, call_id=%u, call_type=%u", sock_id, sock_index, call_id, call_type);
 
@@ -96,14 +96,14 @@ int wedge_calls_insert(u_int call_id, unsigned long long sock_id, int sock_index
 	return -1;
 }
 
-int wedge_calls_find(unsigned long long sock_id, int sock_index, u_int call_type) {
-	u_int i;
+__s32 wedge_calls_find(__u64 sock_id, __s32 sock_index, __u32 call_type) {
+	__u32 i;
 
 	PRINT_DEBUG("Entered: sock_id=%llu, sock_index=%d, call_type=%u", sock_id, sock_index, call_type);
 
 	for (i = 0; i < MAX_CALLS; i++) {
-		if (wedge_calls[i].call_id != -1 && wedge_calls[i].sock_id == sock_id && wedge_calls[i].sock_index == sock_index
-				&& wedge_calls[i].call_type == call_type) { //TODO remove sock_index? maybe unnecessary
+		if (wedge_calls[i].call_id != -1 && wedge_calls[i].sock_id == sock_id && wedge_calls[i].sock_index == sock_index && wedge_calls[i].call_type
+				== call_type) { //TODO remove sock_index? maybe unnecessary
 			PRINT_DEBUG("Exited: rc=%d", i);
 			return i;
 		}
@@ -113,8 +113,8 @@ int wedge_calls_find(unsigned long long sock_id, int sock_index, u_int call_type
 	return -1;
 }
 
-int wedge_calls_remove(u_int call_id) { //TODO remove? not used since id/index typicall tied, & removal doesn't need locking
-	int i;
+__s32 wedge_calls_remove(__u32 call_id) { //TODO remove? not used since id/index typicall tied, & removal doesn't need locking
+	__s32 i;
 
 	PRINT_DEBUG("Entered: call_id=%u", call_id);
 
@@ -137,7 +137,7 @@ int wedge_calls_remove(u_int call_id) { //TODO remove? not used since id/index t
 }
 
 void wedge_calls_remove_all(void) {
-	u_int i;
+	__u32 i;
 
 	PRINT_DEBUG("Entered");
 
@@ -151,7 +151,7 @@ void wedge_calls_remove_all(void) {
 }
 
 void wedge_sockets_init(void) {
-	int i;
+	__s32 i;
 
 	PRINT_DEBUG("Entered");
 
@@ -163,9 +163,9 @@ void wedge_sockets_init(void) {
 	//PRINT_DEBUG("Exited.");
 }
 
-int wedge_sockets_insert(unsigned long long sock_id, struct sock *sk) { //TODO might not need sock
-	int i;
-	int j;
+__s32 wedge_sockets_insert(__u64 sock_id, struct sock *sk) { //TODO might not need sock
+	__s32 i;
+	__s32 j;
 
 	PRINT_DEBUG("Entered: sock_id%llu, sk=%p", sock_id, sk);
 
@@ -194,8 +194,8 @@ int wedge_sockets_insert(unsigned long long sock_id, struct sock *sk) { //TODO m
 	//return -1;
 }
 
-int wedge_sockets_find(unsigned long long sock_id) {
-	int i;
+__s32 wedge_sockets_find(__u64 sock_id) {
+	__s32 i;
 
 	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
 
@@ -210,9 +210,9 @@ int wedge_sockets_find(unsigned long long sock_id) {
 	return -1;
 }
 
-int wedge_sockets_remove(unsigned long long sock_id, int sock_index, u_int call_type) {
-	u_int i;
-	int call_index;
+__s32 wedge_sockets_remove(__u64 sock_id, __s32 sock_index, __u32 call_type) {
+	__u32 i;
+	__s32 call_index;
 
 	PRINT_DEBUG("Entered: sock_id=%llu, sock_index=%d, call_type=%u", sock_id, sock_index, call_type);
 
@@ -249,9 +249,9 @@ int wedge_sockets_remove(unsigned long long sock_id, int sock_index, u_int call_
 }
 
 void wedge_socket_remove_all(void) {
-	u_int i;
-	u_int j;
-	int call_index;
+	__u32 i;
+	__u32 j;
+	__s32 call_index;
 
 	PRINT_DEBUG("Entered");
 
@@ -289,20 +289,20 @@ void wedge_socket_remove_all(void) {
 	}
 }
 
-int threads_incr(int sock_index, u_int call) {
-	//int ret = 1;
+__s32 threads_incr(__s32 sock_index, __u32 call) {
+	//__s32 ret = 1;
 	//return ret;
 	return 1;
 }
 
-int threads_decr(int sock_index, u_int call) {
-	//int ret = 0;
+__s32 threads_decr(__s32 sock_index, __u32 call) {
+	//__s32 ret = 0;
 	//return ret;
 	return 0;
 }
 
-int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltype) {
-	//int error = 0;
+__s32 wedge_sockets_wait(__u64 sock_id, __s32 sock_index, __u32 calltype) {
+	//__s32 error = 0;
 
 	PRINT_DEBUG("Entered for sock=%llu, sock_index=%d, call=%u", sock_id, sock_index, calltype);
 
@@ -310,7 +310,7 @@ int wedge_sockets_wait(unsigned long long sock_id, int sock_index, u_int calltyp
 	return 0;
 }
 
-int checkConfirmation(int call_index) {
+__s32 checkConfirmation(__s32 call_index) {
 	PRINT_DEBUG("Entered: call_index=%d", call_index);
 
 	//extract msg from reply in wedge_calls[sock_index]
@@ -343,17 +343,17 @@ int checkConfirmation(int call_index) {
 //assumes msg_buf is just the msg, does not have a prepended msg_len
 //break msg_buf into parts of size RECV_BUFFER_SIZE with a prepended header (header part of RECV...)
 //prepend msg header: total msg length, part length, part starting position
-int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int flags) {
+__s32 nl_send_msg(__s32 pid, __u32 seq, __s32 type, void *buf, __s32 len, __s32 flags) {
 	struct nlmsghdr *nlh;
 	struct sk_buff *skb;
-	int ret_val;
+	__s32 ret_val;
 
 	//#################### Debug
 #ifdef DEBUG
-	u_char *print_buf;
-	u_char *print_pt;
-	u_char *pt;
-	int i;
+	__u8 *print_buf;
+	__u8 *print_pt;
+	__u8 *pt;
+	__s32 i;
 #endif
 	//####################
 
@@ -362,7 +362,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int fla
 	//####################
 #ifdef DEBUG
 	if (0) {
-		print_buf = (u_char *) kmalloc(3 * len+1, GFP_KERNEL);
+		print_buf = (__u8 *) kmalloc(3 * len + 1, GFP_KERNEL);
 		if (print_buf == NULL) {
 			PRINT_ERROR("print_buf allocation fail");
 		} else {
@@ -396,7 +396,7 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int fla
 	}
 
 	// Load nlmsg header
-	// nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int payload, int flags)
+	// nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, __s32 type, __s32 payload, __s32 flags)
 	nlh = nlmsg_put(skb, KERNEL_PID, seq, type, len, flags);
 	NETLINK_CB(skb).dst_group = 0; // not in a multicast group
 
@@ -417,30 +417,27 @@ int nl_send_msg(int pid, unsigned int seq, int type, void *buf, int len, int fla
 	return 0;
 }
 
-int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
-	int ret;
+__s32 nl_send(__s32 pid, void *msg_buf, __u32 msg_len, __s32 flags) {
+	__s32 ret;
 	void *part_buf;
-	u_char *msg_pt;
-	int pos;
-	u_int seq;
+	__u8 *msg_pt;
+	__s32 pos;
+	__u32 seq;
 	struct nl_wedge_to_daemon_hdr *part_hdr;
-	//u_char *hdr_msg_len;
-	//u_char *hdr_part_len;
-	//u_char *hdr_pos;
-	u_char *msg_start;
-	int header_size;
-	int part_len;
+	__u8 *msg_start;
+	__s32 header_size;
+	__s32 part_len;
 
 	//#################### Debug
 #ifdef DEBUG
-	u_char *print_buf;
-	u_char *print_pt;
-	u_char *pt;
-	int i;
+	__u8 *print_buf;
+	__u8 *print_pt;
+	__u8 *pt;
+	__s32 i;
 #endif
 	//####################
 
-	PRINT_DEBUG("Entered: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x", pid, msg_buf, msg_len, flags);
+	PRINT_DEBUG("Entered: pid=%d, msg_buf=%p, msg_len=%u, flags=0x%x", pid, msg_buf, msg_len, flags);
 
 	if (down_interruptible(&link_sem)) {
 		PRINT_ERROR("link_sem acquire fail");
@@ -449,7 +446,7 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 	//#################### Debug
 #ifdef DEBUG
 	if (0) {
-		print_buf = (u_char *) kmalloc(3 * msg_len+1, GFP_KERNEL);
+		print_buf = (__u8 *) kmalloc(3 * msg_len + 1, GFP_KERNEL);
 		if (print_buf == NULL) {
 			PRINT_ERROR("print_buf allocation fail");
 		} else {
@@ -475,7 +472,7 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 #endif
 	//####################
 
-	part_buf = (u_char *) kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
+	part_buf = (__u8 *) kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
 	if (part_buf == NULL) {
 		PRINT_ERROR("part_buf allocation fail");
 		up(&link_sem);
@@ -487,25 +484,17 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 	seq = 0;
 
 	part_hdr = (struct nl_wedge_to_daemon_hdr *) part_buf;
-	//hdr_msg_len = part_buf;
-	//hdr_part_len = hdr_msg_len + sizeof(int);
-	//hdr_pos = hdr_part_len + sizeof(int);
-	//msg_start = hdr_pos + sizeof(int);
 	msg_start = part_buf + sizeof(struct nl_wedge_to_daemon_hdr);
 
-	//header_size = msg_start - hdr_msg_len;
 	header_size = sizeof(struct nl_wedge_to_daemon_hdr);
 	part_len = RECV_BUFFER_SIZE - header_size;
 
-	//*(int *) hdr_msg_len = msg_len;
-	//*(int *) hdr_part_len = part_len;
 	part_hdr->msg_len = msg_len;
 	part_hdr->part_len = part_len;
 
 	while (msg_len - pos > part_len) {
 		PRINT_DEBUG("pos=%d, seq=%d", pos, seq);
 
-		//*(int *) hdr_pos = pos;
 		part_hdr->pos = pos;
 
 		memcpy(msg_start, msg_pt, part_len);
@@ -514,7 +503,7 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 		if (ret < 0) {
 			PRINT_ERROR("netlink error sending seq %d to user", seq);
 			up(&link_sem);
-			PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
+			PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%u, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 			return -1;
 		}
 		//msleep(1);
@@ -527,8 +516,6 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 	PRINT_DEBUG("pos=%d, seq=%d", pos, seq);
 
 	part_len = msg_len - pos;
-	//*(int *) hdr_part_len = part_len;
-	//*(int *) hdr_pos = pos;
 	part_hdr->part_len = part_len;
 	part_hdr->pos = pos;
 
@@ -538,14 +525,14 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
 	if (ret < 0) {
 		PRINT_ERROR("netlink error sending seq %d to user", seq);
 		up(&link_sem);
-		PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
+		PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%u, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 		return -1;
 	}
 
 	kfree(part_buf);
 	up(&link_sem);
 
-	PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%d, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, 0);
+	PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%u, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, 0);
 	return 0;
 }
 
@@ -554,12 +541,12 @@ int nl_send(int pid, void *msg_buf, int msg_len, int flags) {
  */
 void nl_data_ready(struct sk_buff *skb) {
 	struct nlmsghdr *nlh;
-	u_char *buf; // Pointer to data in payload
-	int len; // Payload length
-	int pid; // pid of sending process
+	__u8 *buf; // Pointer to data in payload
+	__s32 len; // Payload length
+	__s32 pid; // pid of sending process
 	struct nl_daemon_to_wedge *hdr;
 
-	u_int reply_call; // a number corresponding to the type of socketcall this packet is in response to
+	__u32 reply_call; // a number corresponding to the type of socketcall this packet is in response to
 
 	PRINT_DEBUG("Entered: skb=%p", skb);
 
@@ -571,7 +558,7 @@ void nl_data_ready(struct sk_buff *skb) {
 	pid = nlh->nlmsg_pid; // get pid from the header
 
 	// Get a pointer to the start of the data in the buffer and the buffer (payload) length
-	buf = (u_char *) (NLMSG_DATA(nlh));
+	buf = (__u8 *) (NLMSG_DATA(nlh));
 	len = NLMSG_PAYLOAD(nlh, 0);
 
 	PRINT_DEBUG("nl_pid=%d, nl_len=%d", pid, len);
@@ -686,8 +673,8 @@ void nl_data_ready(struct sk_buff *skb) {
 				//TODO error
 				PRINT_ERROR("todo error");
 			}
-		} else if (len == sizeof(u_int)) {
-			reply_call = *(u_int *) buf;
+		} else if (len == sizeof(__u32 )) {
+			reply_call = *(__u32 *) buf;
 			if (reply_call == DAEMON_START_CALL) {
 				if (fins_daemon_pid != -1) {
 					PRINT_IMPORTANT("########## Daemon pID changed, old pid=%d", fins_daemon_pid);
@@ -749,7 +736,7 @@ void nl_data_ready(struct sk_buff *skb) {
  sk_refcnt_debug_dec(sk);
  }*/
 
-int fins_sk_create(struct net *net, struct socket *sock) {
+__s32 fins_sk_create(struct net *net, struct socket *sock) {
 	struct sock *sk;
 
 	sk = sk_alloc(net, PF_FINS, GFP_KERNEL, &fins_proto);
@@ -790,133 +777,133 @@ void fins_sk_destroy(struct socket *sock) {
 static int fins_create(struct net *net, struct socket *sock, int protocol, int kern) {
 	int rc = -ESOCKTNOSUPPORT;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = SOCKET_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = SOCKET_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
-		PRINT_ERROR("daemon not connected");
-		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -1);
-		return -1;
-	}
+				PRINT_ERROR("daemon not connected");
+				PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -1);
+				return -1;
+			}
 
-	// Required stuff for kernel side
-	rc = fins_sk_create(net, sock);
-	if (rc) {
-		PRINT_ERROR("allocation failed");
-		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, rc);
-		return rc;
-	}
+			// Required stuff for kernel side
+			rc = fins_sk_create(net, sock);
+			if (rc) {
+				PRINT_ERROR("allocation failed");
+				PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, rc);
+				return rc;
+			}
 
-	sk = sock->sk;
-	if (sk == NULL) {
-		PRINT_ERROR("sk null");
-		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -1);
-		return -1;
-	}
-	lock_sock(sk);
+			sk = sock->sk;
+			if (sk == NULL) {
+				PRINT_ERROR("sk null");
+				PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -1);
+				return -1;
+			}
+			lock_sock(sk);
 
-	sock_id = get_unique_sock_id(sk);
-	PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
+			sock_id = get_unique_sock_id(sk);
+			PRINT_DEBUG("Entered: sock_id=%llu", sock_id);
 
-	if (down_interruptible(&wedge_sockets_sem)) {
-		PRINT_ERROR("sockets_sem acquire fail");
-		//TODO error
-	}
-	sock_index = wedge_sockets_insert(sock_id, sk);
-	PRINT_DEBUG("insert: sock_id=%llu, sock_index=%d", sock_id, sock_index);
-	if (sock_index == -1) {
-		up(&wedge_sockets_sem);
-		fins_sk_destroy(sock);
-		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -ENOMEM);
-		return -ENOMEM;
-	}
+			if (down_interruptible(&wedge_sockets_sem)) {
+				PRINT_ERROR("sockets_sem acquire fail");
+				//TODO error
+			}
+			sock_index = wedge_sockets_insert(sock_id, sk);
+			PRINT_DEBUG("insert: sock_id=%llu, sock_index=%d", sock_id, sock_index);
+			if (sock_index == -1) {
+				up(&wedge_sockets_sem);
+				fins_sk_destroy(sock);
+				PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, -ENOMEM);
+				return -ENOMEM;
+			}
 
-	wedge_sockets[sock_index].threads[call_type]++;
-	up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
+			wedge_sockets[sock_index].threads[call_type]++;
+			up(&wedge_sockets_sem); //TODO move to later? lock_sock should guarantee
 
-	if (down_interruptible(&wedge_calls_sem)) {
-		PRINT_ERROR("calls_sem acquire fail");
-		//TODO error
-	}
-	call_id = call_count++;
-	call_index = wedge_calls_insert(call_id, sock_id, sock_index, call_type);
-	up(&wedge_calls_sem);
-	PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
-	if (call_index == -1) {
-		rc = -ENOMEM;
-		goto removeSocket;
-	}
+			if (down_interruptible(&wedge_calls_sem)) {
+				PRINT_ERROR("calls_sem acquire fail");
+				//TODO error
+			}
+			call_id = call_count++;
+			call_index = wedge_calls_insert(call_id, sock_id, sock_index, call_type);
+			up(&wedge_calls_sem);
+			PRINT_DEBUG("call_id=%u, call_index=%d", call_id, call_index);
+			if (call_index == -1) {
+				rc = -ENOMEM;
+				goto removeSocket;
+			}
 
-	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
-	if (buf == NULL) {
-		PRINT_ERROR("buffer allocation error");
-		wedge_calls[call_index].call_id = -1;
-		rc = -ENOMEM;
-		goto removeSocket;
-	}
+			// Build the message
+			buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(__s32);
+			buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
+			if (buf == NULL) {
+				PRINT_ERROR("buffer allocation error");
+				wedge_calls[call_index].call_id = -1;
+				rc = -ENOMEM;
+				goto removeSocket;
+			}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
-	hdr->sock_id = sock_id;
-	hdr->sock_index = sock_index;
-	hdr->call_type = call_type;
-	hdr->call_pid = call_pid;
-	hdr->call_id = call_id;
-	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+			hdr = (struct nl_wedge_to_daemon *) buf;
+			hdr->sock_id = sock_id;
+			hdr->sock_index = sock_index;
+			hdr->call_type = call_type;
+			hdr->call_pid = call_pid;
+			hdr->call_id = call_id;
+			hdr->call_index = call_index;
+			pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = AF_FINS; //~2, since this overrides AF_INET (39)
-	pt += sizeof(int);
+			*(__s32 *) pt = AF_FINS; //~2, since this overrides AF_INET (39)
+			pt += sizeof(__s32);
 
-	*(int *) pt = sock->type;
-	pt += sizeof(int);
+			*(__s32 *) pt = sock->type;
+			pt += sizeof(__s32);
 
-	*(int *) pt = protocol;
-	pt += sizeof(int);
+			*(__s32 *) pt = protocol;
+			pt += sizeof(__s32);
 
-	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
-		kfree(buf);
-		wedge_calls[call_index].call_id = -1;
-		rc = -1;
-		goto removeSocket;
-	}
+			if (pt - buf != buf_len) {
+				PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
+				kfree(buf);
+				wedge_calls[call_index].call_id = -1;
+				rc = -1;
+				goto removeSocket;
+			}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+			PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
-	// Send message to fins_daemon
-	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
-	kfree(buf);
-	if (ret) {
-		PRINT_ERROR("nl_send failed");
-		wedge_calls[call_index].call_id = -1;
-		rc = -1;
-		goto removeSocket;
-	}
-	//release_sock(sk); //no one else can use, since socket creates
+			// Send message to fins_daemon
+			ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
+			kfree(buf);
+			if (ret) {
+				PRINT_ERROR("nl_send failed");
+				wedge_calls[call_index].call_id = -1;
+				rc = -1;
+				goto removeSocket;
+			}
+			//release_sock(sk); //no one else can use, since socket creates
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
-	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
-		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
-	}PRINT_DEBUG("relocked my semaphore");
+			PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+			if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
+				PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
+			}PRINT_DEBUG("relocked my semaphore");
 
-	//lock_sock(sk); //no one else can use, since socket creates
-	//wedge_calls[call_index].sem
-	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%d",
-			wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len
+			//lock_sock(sk); //no one else can use, since socket creates
+			//wedge_calls[call_index].sem
+			PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%d",
+					wedge_calls[call_index].sock_id, wedge_calls[call_index].call_id, wedge_calls[call_index].reply, wedge_calls[call_index].ret, wedge_calls[call_index].msg, wedge_calls[call_index].len
 	);
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
@@ -956,19 +943,19 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = BIND_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = BIND_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -1018,8 +1005,8 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(int) + addr_len + sizeof(u_int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32) + addr_len + sizeof(__u32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -1036,24 +1023,24 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = addr_len;
-	pt += sizeof(int);
+	*(__s32 *) pt = addr_len;
+	pt += sizeof(__s32);
 
 	memcpy(pt, addr, addr_len);
 	pt += addr_len;
 
-	*(u_int *) pt = sk->sk_reuse;
-	pt += sizeof(u_int);
+	*(__u32 *) pt = sk->sk_reuse;
+	pt += sizeof(__u32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1100,19 +1087,19 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 static int fins_listen(struct socket *sock, int backlog) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = LISTEN_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = LISTEN_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -1162,8 +1149,8 @@ static int fins_listen(struct socket *sock, int backlog) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -1180,18 +1167,18 @@ static int fins_listen(struct socket *sock, int backlog) {
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = backlog;
-	pt += sizeof(int);
+	*(__s32 *) pt = backlog;
+	pt += sizeof(__s32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1238,19 +1225,19 @@ static int fins_listen(struct socket *sock, int backlog) {
 static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len, int flags) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = CONNECT_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = CONNECT_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -1300,8 +1287,8 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 2 * sizeof(int) + addr_len;
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + 2 * sizeof(__s32) + addr_len;
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -1318,24 +1305,24 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = addr_len;
-	pt += sizeof(int);
+	*(__s32 *) pt = addr_len;
+	pt += sizeof(__s32);
 
 	memcpy(pt, addr, addr_len);
 	pt += addr_len;
 
-	*(int *) pt = flags;
-	pt += sizeof(int);
+	*(__s32 *) pt = flags;
+	pt += sizeof(__s32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1382,19 +1369,19 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) { //TODO fix, two blocking accept calls
 	int rc;
 	struct sock *sk, *sk_new;
-	unsigned long long sock_id, sock_id_new;
-	int sock_index, index_new;
-	u_int call_type = ACCEPT_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id, sock_id_new;
+	__s32 sock_index, index_new;
+	__u32 call_type = ACCEPT_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -1501,8 +1488,8 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(unsigned long long) + 2 * sizeof(int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u64) + 2 * sizeof(__s32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -1519,24 +1506,24 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(unsigned long long *) pt = sock_id_new;
-	pt += sizeof(unsigned long long);
+	*(__u64 *) pt = sock_id_new;
+	pt += sizeof(__u64);
 
-	*(int *) pt = index_new;
-	pt += sizeof(int);
+	*(__s32 *) pt = index_new;
+	pt += sizeof(__s32);
 
-	*(int *) pt = flags;
-	pt += sizeof(int);
+	*(__s32 *) pt = flags;
+	pt += sizeof(__s32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1598,20 +1585,20 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, int peer) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
+	__u64 sock_id;
 	int sock_index;
-	u_int call_type = GETNAME_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u32 call_type = GETNAME_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 	struct sockaddr_in *addr_in;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -1661,8 +1648,8 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -1679,18 +1666,18 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = peer;
-	pt += sizeof(int);
+	*(__s32 *) pt = peer;
+	pt += sizeof(__s32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1717,11 +1704,11 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		if (wedge_calls[call_index].ret == ACK) {
 			PRINT_DEBUG("recv ACK");
 
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(int)) {
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(__s32)) {
 				pt = wedge_calls[call_index].buf;
 
-				*len = *(int *) pt;
-				pt += sizeof(int);
+				*len = *(__s32 *) pt;
+				pt += sizeof(__s32);
 
 				PRINT_DEBUG("len=%d", *len);
 				memset(addr, 0, sizeof(struct sockaddr));
@@ -1731,7 +1718,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 				//########
 				addr_in = (struct sockaddr_in *) addr;
 				//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
-				PRINT_DEBUG("address: %u/%d", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
+				PRINT_DEBUG("address: %u/%u", ntohl((addr_in->sin_addr).s_addr), ntohs(addr_in->sin_port));
 				//########
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
@@ -1774,24 +1761,24 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = SENDMSG_CALL;
-	u_int call_id;
-	int call_index;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = SENDMSG_CALL;
+	__u32 call_id;
+	__s32 call_index;
 
-	int i = 0;
-	u_int data_len = 0;
+	__s32 i = 0;
+	__u32 data_len = 0;
 	char *temp;
 
-	int buf_len;
-	u_char *buf;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -1845,9 +1832,9 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(int) + (msg->msg_namelen > 0 ? msg->msg_namelen : 0) + 3 * sizeof(u_int) + sizeof(unsigned long)
-			+ msg->msg_controllen + data_len;
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32) + (msg->msg_namelen > 0 ? msg->msg_namelen : 0) + 4 * sizeof(__u32)
+	+ msg->msg_controllen + data_len;
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -1864,29 +1851,29 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(unsigned long *) pt = sk->sk_flags;
-	pt += sizeof(unsigned long);
+	*(__u32 *) pt = sk->sk_flags;
+	pt += sizeof(__u32);
 
-	*(int *) pt = msg->msg_namelen;
-	pt += sizeof(int);
+	*(__s32 *) pt = msg->msg_namelen;
+	pt += sizeof(__s32);
 
 	if (msg->msg_namelen > 0) {
 		memcpy(pt, msg->msg_name, msg->msg_namelen);
 		pt += msg->msg_namelen;
 	}
 
-	*(u_int *) pt = msg->msg_flags; //stores sendmsg call flags
-	pt += sizeof(u_int);
+	*(__u32 *) pt = msg->msg_flags; //stores sendmsg call flags
+	pt += sizeof(__u32);
 
-	*(u_int *) pt = msg->msg_controllen;
-	pt += sizeof(u_int);
+	*(__u32 *) pt = msg->msg_controllen;
+	pt += sizeof(__u32);
 
 	memcpy(pt, msg->msg_control, msg->msg_controllen);
 	pt += msg->msg_controllen;
 	//Notice that the compiler takes  (msg->msg_iov[i]) as a struct not a pointer to struct
 
-	*(u_int *) pt = data_len;
-	pt += sizeof(u_int);
+	*(__u32 *) pt = data_len;
+	pt += sizeof(__u32);
 
 	temp = pt;
 
@@ -1910,10 +1897,10 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		//PRINT_DEBUG("current element %d , element length = %d", i ,(msg->msg_iov[i]).iov_len );
 	}
 
-	PRINT_DEBUG("msg_namelen=%d, data_buf_len=%d, msg_controllen=%u, msg_flags=0x%x, buf_len=%d", msg->msg_namelen, (int)len, msg->msg_controllen, msg->msg_flags, buf_len);
+	PRINT_DEBUG("msg_namelen=%u, data_buf_len=%d, msg_controllen=%u, msg_flags=0x%x, buf_len=%u", msg->msg_namelen, (__s32)len, msg->msg_controllen, msg->msg_flags, buf_len);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
@@ -1922,7 +1909,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	PRINT_DEBUG("data_len=%d", data_len);PRINT_DEBUG("data='%s'", temp);
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -1989,21 +1976,21 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg, size_t len, int flags) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = RECVMSG_CALL;
-	u_int call_id;
-	int call_index;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = RECVMSG_CALL;
+	__u32 call_id;
+	__s32 call_index;
 	struct sockaddr_in *addr_in;
-	int buf_len;
-	u_char *buf;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
-	int i;
+	__u8 *pt;
+	__s32 ret;
+	__s32 i;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -2053,8 +2040,8 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 2 * sizeof(int) + sizeof(u_int) + sizeof(unsigned long);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + 2 * sizeof(__s32) + 2*sizeof(__u32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -2071,38 +2058,38 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(unsigned long *) pt = sk->sk_flags;
-	pt += sizeof(unsigned long);
+	*(__u32 *) pt = sk->sk_flags;
+	pt += sizeof(__u32);
 
-	*(int *) pt = (int) len;
-	pt += sizeof(int);
+	*(__s32 *) pt = (__s32) len;
+	pt += sizeof(__s32);
 
-	*(u_int *) pt = msg->msg_controllen; //TODO send msg_controllen?
-	pt += sizeof(u_int);
+	*(__u32 *) pt = msg->msg_controllen; //TODO send msg_controllen?
+	pt += sizeof(__u32);
 
-	*(int *) pt = flags;
-	pt += sizeof(int);
+	*(__s32 *) pt = flags;
+	pt += sizeof(__s32);
 
 	//sk->sk_rcvtimeo;
 
-	PRINT_DEBUG("msg_namelen=%d, data_buf_len=%d, msg_controllen=%u, flags=0x%x, buf_len=%d", msg->msg_namelen, (int)len, msg->msg_controllen, flags, buf_len);
+	PRINT_DEBUG("msg_namelen=%u, data_buf_len=%d, msg_controllen=%u, flags=0x%x, buf_len=%u", msg->msg_namelen, (__s32)len, msg->msg_controllen, flags, buf_len);
 
 	/*
-	 *(u_int *) pt = msg->msg_flags; //always 0, set on return
-	 pt += sizeof(u_int);
+	 *(__u32 *) pt = msg->msg_flags; //always 0, set on return
+	 pt += sizeof(__u32);
 
 	 memcpy(pt, msg->msg_control, msg->msg_controllen); //0? would think set on return
 	 pt += msg->msg_controllen;
 	 */
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -2134,36 +2121,42 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				msg->msg_flags = wedge_calls[call_index].msg;
 
 				//TODO: find out if this is right! udpHandling writes sockaddr_in here
-				msg->msg_namelen = *(int *) pt; //reuse var since not needed anymore
-				pt += sizeof(int);
+				msg->msg_namelen = *(__u32 *) pt; //reuse var since not needed anymore
+				pt += sizeof(__u32);
 
 				PRINT_DEBUG("msg_namelen=%u, msg_name=%p", msg->msg_namelen, msg->msg_name);
-				if (msg->msg_name == NULL) {
-					msg->msg_name = (u_char *) kmalloc(msg->msg_namelen, GFP_KERNEL);
-					if (msg->msg_name == NULL) {
-						PRINT_ERROR("buffer allocation error");
-						wedge_calls[call_index].call_id = -1;
-						rc = -ENOMEM;
-						goto end;
-					}
+				if (msg->msg_namelen == 0) {
+					msg->msg_namelen = sizeof(struct sockaddr_in);
 				}
 
-				memcpy(msg->msg_name, pt, msg->msg_namelen);
-				pt += msg->msg_namelen;
+				if (msg->msg_namelen != 0) {
+					if (msg->msg_name == NULL) {
+						msg->msg_name = (__u8 *) kmalloc(msg->msg_namelen, GFP_KERNEL);
+						if (msg->msg_name == NULL) {
+							PRINT_ERROR("buffer allocation error");
+							wedge_calls[call_index].call_id = -1;
+							rc = -ENOMEM;
+							goto end;
+						}
+					}
+
+					memcpy(msg->msg_name, pt, msg->msg_namelen);
+					pt += msg->msg_namelen;
+				}
 
 				//########
 				addr_in = (struct sockaddr_in *) msg->msg_name;
 				//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
-				PRINT_DEBUG("address: %u/%u", (addr_in->sin_addr).s_addr, ntohs(addr_in->sin_port));
+				PRINT_DEBUG("address: %u/%u", ntohl((addr_in->sin_addr).s_addr), ntohs(addr_in->sin_port));
 				//########
 
-				buf_len = *(int *) pt; //reuse var since not needed anymore
-				pt += sizeof(int);
+				buf_len = *(__u32 *) pt; //reuse var since not needed anymore
+				pt += sizeof(__u32);
 
 				if (buf_len >= 0) {
 					//########
 #ifdef DEBUG
-					u_char *temp = (u_char *) kmalloc(buf_len + 1, GFP_KERNEL);
+					__u8 *temp = (__u8 *) kmalloc(buf_len + 1, GFP_KERNEL);
 					memcpy(temp, pt, buf_len);
 					temp[buf_len] = '\0';
 					PRINT_DEBUG("msg='%s'", temp);
@@ -2207,12 +2200,17 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 					rc = -1;
 				}
 
-				msg->msg_controllen = *(int *) pt; //reuse var since not needed anymore
-				pt += sizeof(int);
+				msg->msg_controllen = *(__u32 *) pt; //reuse var since not needed anymore
+				pt += sizeof(__u32);
+
+				if (msg->msg_controllen > CONTROL_LEN_MAX) {
+					PRINT_ERROR("Random corruption error: msg_controllen=%u", msg->msg_controllen);
+					msg->msg_controllen = 0;
+				}
 
 				PRINT_DEBUG("msg_controllen=%u, msg_control=%p", msg->msg_controllen, msg->msg_control);
 				if (msg->msg_control == NULL) {
-					msg->msg_control = (u_char *) kmalloc(msg->msg_controllen, GFP_KERNEL);
+					msg->msg_control = kmalloc(msg->msg_controllen, GFP_KERNEL);
 					if (msg->msg_control == NULL) {
 						PRINT_ERROR("buffer allocation error");
 						wedge_calls[call_index].call_id = -1;
@@ -2224,7 +2222,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				memcpy(msg->msg_control, pt, msg->msg_controllen);
 				pt += msg->msg_controllen;
 
-				msg->msg_control = ((u_char *) msg->msg_control) + msg->msg_controllen; //required for kernel
+				msg->msg_control = ((__u8 *) msg->msg_control) + msg->msg_controllen; //required for kernel
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
 					PRINT_ERROR("READING ERROR! diff=%d, len=%d", pt - wedge_calls[call_index].buf, wedge_calls[call_index].len);
@@ -2268,16 +2266,16 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
 	int rc = 0;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = IOCTL_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = IOCTL_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct ifconf ifc;
 	struct ifreq ifr;
@@ -2286,7 +2284,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	void __user
 	*arg_pt = (void __user *)arg;
 
-	int len;
+	__s32 len;
 	char __user
 	*pos;
 
@@ -2296,7 +2294,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	//http://lxr.linux.no/linux+v2.6.39.4/net/core/dev.c#L4905 - ioctl
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -2340,7 +2338,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	}
 
 	switch (cmd) {
-	case SIOCGIFCONF:
+		case SIOCGIFCONF:
 		PRINT_DEBUG("cmd=%d ==SIOCGIFCONF", cmd);
 
 		if (copy_from_user(&ifc, arg_pt, sizeof(struct ifconf))) {
@@ -2359,11 +2357,11 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		}
 		ifr_pt = ifc.ifc_req; //TODO figure out what this is used for
 
-		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (int)pos, (int)ifr_pt);
+		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (__s32)pos, (__s32)ifr_pt);
 
 		// Build the message
-		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int) + sizeof(int);
-		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32) + sizeof(__s32);
+		buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 		if (buf == NULL) {
 			PRINT_ERROR("buffer allocation error");
 			wedge_calls[call_index].call_id = -1;
@@ -2380,26 +2378,26 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		hdr->call_index = call_index;
 		pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-		*(u_int *) pt = cmd;
-		pt += sizeof(u_int);
+		*(__u32 *) pt = cmd;
+		pt += sizeof(__u32);
 
-		*(int *) pt = len;
-		pt += sizeof(int);
+		*(__s32 *) pt = len;
+		pt += sizeof(__s32);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
 			goto end;
 		}
 		break;
-	case SIOCGIFADDR:
-	case SIOCGIFDSTADDR:
-	case SIOCGIFBRDADDR:
-	case SIOCGIFNETMASK:
-	case SIOCGIFFLAGS:
-	case SIOCGIFMTU:
+		case SIOCGIFADDR:
+		case SIOCGIFDSTADDR:
+		case SIOCGIFBRDADDR:
+		case SIOCGIFNETMASK:
+		case SIOCGIFFLAGS:
+		case SIOCGIFMTU:
 		if (copy_from_user(&ifr, arg_pt, sizeof(struct ifreq))) {
 			PRINT_ERROR("ERROR: cmd=%d", cmd);
 			//TODO error
@@ -2411,8 +2409,8 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		PRINT_DEBUG("cmd=%d, name='%s'", cmd, ifr.ifr_name);
 
 		// Build the message
-		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int) + sizeof(int) + IFNAMSIZ;
-		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32) + sizeof(__s32) + IFNAMSIZ;
+		buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 		if (buf == NULL) {
 			PRINT_ERROR("buffer allocation error");
 			wedge_calls[call_index].call_id = -1;
@@ -2429,29 +2427,29 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		hdr->call_index = call_index;
 		pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-		*(u_int *) pt = cmd;
-		pt += sizeof(u_int);
+		*(__u32 *) pt = cmd;
+		pt += sizeof(__u32);
 
-		*(int *) pt = IFNAMSIZ;
-		pt += sizeof(int);
+		*(__s32 *) pt = IFNAMSIZ;
+		pt += sizeof(__s32);
 
 		memcpy(pt, ifr.ifr_name, IFNAMSIZ);
 		pt += IFNAMSIZ;
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
 			goto end;
 		}
 		break;
-	case FIONREAD:
+		case FIONREAD:
 		PRINT_DEBUG("cmd=FIONREAD");
 
 		// Build the message
-		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int);
-		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32);
+		buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 		if (buf == NULL) {
 			PRINT_ERROR("buffer allocation error");
 			wedge_calls[call_index].call_id = -1;
@@ -2468,18 +2466,18 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		hdr->call_index = call_index;
 		pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-		*(u_int *) pt = cmd;
-		pt += sizeof(u_int);
+		*(__u32 *) pt = cmd;
+		pt += sizeof(__u32);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
 			goto end;
 		}
 		break;
-	case SIOCGIFNAME:
+		case SIOCGIFNAME:
 		//ifreq.ifr_ifindex = x;
 		//if (ioctl(sock, SIOCGIFNAME, &ifreq) < 0)
 		//	perr_quit("ioctl");
@@ -2496,8 +2494,8 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		PRINT_DEBUG("cmd=%d, index='%d'", cmd, ifr.ifr_ifindex);
 
 		// Build the message
-		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int) + 2 * sizeof(int);
-		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32) + 2 * sizeof(__s32);
+		buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 		if (buf == NULL) {
 			PRINT_ERROR("buffer allocation error");
 			wedge_calls[call_index].call_id = -1;
@@ -2514,43 +2512,43 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		hdr->call_index = call_index;
 		pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-		*(u_int *) pt = cmd;
-		pt += sizeof(u_int);
+		*(__u32 *) pt = cmd;
+		pt += sizeof(__u32);
 
-		*(int *) pt = IFNAMSIZ;
-		pt += sizeof(int);
+		*(__s32 *) pt = IFNAMSIZ;
+		pt += sizeof(__s32);
 
-		*(int *) pt = ifr.ifr_ifindex;
-		pt += sizeof(int);
+		*(__s32 *) pt = ifr.ifr_ifindex;
+		pt += sizeof(__s32);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
 			goto end;
 		}
 		break;
-	case SIOCSIFFLAGS:
-	case TIOCOUTQ:
+		case SIOCSIFFLAGS:
+		case TIOCOUTQ:
 		//case TIOCINQ: //equiv to FIONREAD??
-	case SIOCADDRT:
-	case SIOCDELRT:
-	case SIOCSIFADDR:
+		case SIOCADDRT:
+		case SIOCDELRT:
+		case SIOCSIFADDR:
 		//case SIOCAIPXITFCRT:
 		//case SIOCAIPXPRISLT:
 		//case SIOCIPXCFGDATA:
 		//case SIOCIPXNCPCONN:
-	case SIOCGSTAMP:
-	case SIOCSIFDSTADDR:
-	case SIOCSIFBRDADDR:
-	case SIOCSIFNETMASK:
+		case SIOCGSTAMP:
+		case SIOCSIFDSTADDR:
+		case SIOCSIFBRDADDR:
+		case SIOCSIFNETMASK:
 		//TODO implement
 		PRINT_DEBUG("cmd=%d not implemented", cmd);
 
 		// Build the message
-		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(u_int);
-		buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32);
+		buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 		if (buf == NULL) {
 			PRINT_ERROR("buffer allocation error");
 			wedge_calls[call_index].call_id = -1;
@@ -2567,25 +2565,25 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		hdr->call_index = call_index;
 		pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-		*(u_int *) pt = cmd;
-		pt += sizeof(u_int);
+		*(__u32 *) pt = cmd;
+		pt += sizeof(__u32);
 
 		if (pt - buf != buf_len) {
-			PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+			PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 			kfree(buf);
 			wedge_calls[call_index].call_id = -1;
 			rc = -1;
 			goto end;
 		}
 		break;
-	default:
+		default:
 		PRINT_DEBUG("cmd=%d default", cmd);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -2618,13 +2616,13 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	if (wedge_calls[call_index].ret == ACK) {
 		PRINT_DEBUG("ioctl ACK");
 		switch (cmd) {
-		case SIOCGIFCONF:
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(int)) {
+			case SIOCGIFCONF:
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(__s32)) {
 				//values stored in ifr.ifr_addr
 				pt = wedge_calls[call_index].buf;
 
-				len = *(int *) pt;
-				pt += sizeof(int);
+				len = *(__s32 *) pt;
+				pt += sizeof(__s32);
 
 				PRINT_DEBUG("SIOCGIFCONF len=%d, ifc_len=%d", len, ifc.ifc_len);
 				ifc.ifc_len = len;
@@ -2657,7 +2655,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFADDR:
+			case SIOCGIFADDR:
 			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(struct sockaddr_in)) {
 				pt = wedge_calls[call_index].buf;
 
@@ -2667,7 +2665,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_addr;
 				//memcpy(addr, pt, sizeof(struct sockaddr));
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2686,7 +2684,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFDSTADDR:
+			case SIOCGIFDSTADDR:
 			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(struct sockaddr_in)) {
 				pt = wedge_calls[call_index].buf;
 
@@ -2695,7 +2693,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_dstaddr;
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2714,7 +2712,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFBRDADDR:
+			case SIOCGIFBRDADDR:
 			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(struct sockaddr_in)) {
 				pt = wedge_calls[call_index].buf;
 
@@ -2723,7 +2721,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_broadaddr;
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2742,7 +2740,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFNETMASK:
+			case SIOCGIFNETMASK:
 			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(struct sockaddr_in)) {
 				pt = wedge_calls[call_index].buf;
 
@@ -2751,7 +2749,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_addr;
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (int)addr, addr->sin_addr.s_addr, addr->sin_port);
+				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2770,7 +2768,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFNAME:
+			case SIOCGIFNAME:
 			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(struct sockaddr_in)) {
 				pt = wedge_calls[call_index].buf;
 
@@ -2799,18 +2797,18 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case FIONREAD:
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(int)) {
+			case FIONREAD:
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(__s32)) {
 				pt = wedge_calls[call_index].buf;
 
-				len = *(int *) pt;
-				pt += sizeof(int);
+				len = *(__s32 *) pt;
+				pt += sizeof(__s32);
 
 				//#################
 				PRINT_DEBUG("len=%d", len);
 				//#################
 
-				if (copy_to_user(arg_pt, &len, sizeof(int))) {
+				if (copy_to_user(arg_pt, &len, sizeof(__s32))) {
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
 					//TODO error
 					rc = -1;
@@ -2826,14 +2824,14 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFFLAGS:
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(int)) {
+			case SIOCGIFFLAGS:
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(__s32)) {
 				pt = wedge_calls[call_index].buf;
 
-				len = *(int *) pt; //ifr_flags
-				pt += sizeof(int);
+				len = *(__s32 *) pt; //ifr_flags
+				pt += sizeof(__s32);
 
-				ifr.ifr_flags = (short) len;
+				ifr.ifr_flags = (__s16) len;
 
 				//#################
 				PRINT_DEBUG("ifr_flags=0x%x", ifr.ifr_flags);
@@ -2855,12 +2853,12 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGIFMTU:
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(int)) {
+			case SIOCGIFMTU:
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len == sizeof(__s32)) {
 				pt = wedge_calls[call_index].buf;
 
-				ifr.ifr_mtu = *(int *) pt;
-				pt += sizeof(int);
+				ifr.ifr_mtu = *(__s32 *) pt;
+				pt += sizeof(__s32);
 
 				//#################
 				PRINT_DEBUG("ifr_mtu=%d", ifr.ifr_mtu);
@@ -2882,13 +2880,13 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		case SIOCGSTAMP:
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(int)) {
+			case SIOCGSTAMP:
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(__s32)) {
 				//values stored in ifr.ifr_addr
 				pt = wedge_calls[call_index].buf;
 
-				len = *(int *) pt;
-				pt += sizeof(int);
+				len = *(__s32 *) pt;
+				pt += sizeof(__s32);
 
 				if (copy_to_user(arg_pt, pt, len)) {
 					PRINT_ERROR("ERROR: cmd=%d", cmd);
@@ -2909,17 +2907,17 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			break;
 			//case TIOCINQ: //equiv to FIONREAD??
 			//-----------------------------------
-		case TIOCOUTQ:
-		case SIOCADDRT:
-		case SIOCDELRT:
-		case SIOCSIFADDR:
+			case TIOCOUTQ:
+			case SIOCADDRT:
+			case SIOCDELRT:
+			case SIOCSIFADDR:
 			//case SIOCAIPXITFCRT:
 			//case SIOCAIPXPRISLT:
 			//case SIOCIPXCFGDATA:
 			//case SIOCIPXNCPCONN:
-		case SIOCSIFDSTADDR:
-		case SIOCSIFBRDADDR:
-		case SIOCSIFNETMASK:
+			case SIOCSIFDSTADDR:
+			case SIOCSIFBRDADDR:
+			case SIOCSIFNETMASK:
 			//TODO implement cases above
 			if (wedge_calls[call_index].buf && (wedge_calls[call_index].len == 0)) {
 			} else {
@@ -2928,7 +2926,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				rc = -1;
 			}
 			break;
-		default:
+			default:
 			PRINT_DEBUG("cmd=%d default", cmd);
 			rc = -1;
 			break;
@@ -2967,19 +2965,19 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 static int fins_release(struct socket *sock) {
 	int rc = 0;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = RELEASE_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = RELEASE_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3039,7 +3037,7 @@ static int fins_release(struct socket *sock) {
 
 	// Build the message
 	buf_len = sizeof(struct nl_wedge_to_daemon);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -3057,14 +3055,14 @@ static int fins_release(struct socket *sock) {
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3110,20 +3108,20 @@ static int fins_release(struct socket *sock) {
 static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table *table) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = POLL_CALL;
-	u_int call_id;
-	int call_index;
-	int events;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = POLL_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__s32 events;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3181,8 +3179,8 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	}PRINT_DEBUG("events=0x%x", events);
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -3199,18 +3197,18 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = events;
-	pt += sizeof(int);
+	*(__s32 *) pt = events;
+	pt += sizeof(__s32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = 0;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3240,8 +3238,8 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 			if (wedge_calls[call_index].buf && (wedge_calls[call_index].len == 0)) {
 				//pt = wedge_calls[call_index].buf;
 
-				//rc = *(u_int *) pt;
-				//pt += sizeof(u_int);
+				//rc = *(__u32 *) pt;
+				//pt += sizeof(__u32);
 
 				rc = wedge_calls[call_index].msg;
 
@@ -3297,19 +3295,19 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 static int fins_shutdown(struct socket *sock, int how) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = SHUTDOWN_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = SHUTDOWN_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3359,8 +3357,8 @@ static int fins_shutdown(struct socket *sock, int how) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(int);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -3377,18 +3375,18 @@ static int fins_shutdown(struct socket *sock, int how) {
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = how;
-	pt += sizeof(int);
+	*(__s32 *) pt = how;
+	pt += sizeof(__s32);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3434,10 +3432,10 @@ static int fins_shutdown(struct socket *sock, int how) {
 
 static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 	struct sock *sk1, *sk2;
-	unsigned long long uniqueSockID1, uniqueSockID2;
+	__u64 uniqueSockID1, uniqueSockID2;
 	int ret;
 	char *buf; // used for test
-	int buffer_length; // used for test
+	__u32 buffer_length; // used for test
 
 	PRINT_IMPORTANT("Called");
 	return -1;
@@ -3478,19 +3476,19 @@ static int fins_socketpair(struct socket *sock1, struct socket *sock2) {
 static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_struct *vma) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = MMAP_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = MMAP_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3541,7 +3539,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 
 	// Build the message
 	buf_len = sizeof(struct nl_wedge_to_daemon);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -3559,14 +3557,14 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3613,19 +3611,19 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset, size_t size, int flags) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = SENDPAGE_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = SENDPAGE_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3676,7 +3674,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 
 	// Build the message
 	buf_len = sizeof(struct nl_wedge_to_daemon);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -3694,14 +3692,14 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3749,18 +3747,18 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	//static int fins_getsockopt(struct socket *sock, int level, int optname, char *optval, int *optlen) {
 	int rc = 0;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = GETSOCKOPT_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = GETSOCKOPT_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
-	int len;
+	__s32 len;
 
 	//SO_REUSEADDR
 	//SO_ERROR
@@ -3769,7 +3767,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	//SO_RCVBUF
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3791,7 +3789,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (down_interruptible(&wedge_sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-//TODO error
+		//TODO error
 	}
 	sock_index = wedge_sockets_find(sock_id);
 	PRINT_DEBUG("sock_index=%d", sock_index);
@@ -3807,7 +3805,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (down_interruptible(&wedge_calls_sem)) {
 		PRINT_ERROR("calls_sem acquire fail");
-//TODO error
+		//TODO error
 	}
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, call_type);
@@ -3818,15 +3816,15 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 		goto end;
 	}
 
-	ret = copy_from_user(&len, optlen, sizeof(int));
+	ret = copy_from_user(&len, optlen, sizeof(__s32));
 	if (ret) {
 		PRINT_ERROR("copy_from_user fail ret=%d", ret);
 		goto end;
 	}PRINT_DEBUG("len=%d", len);
 
-// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(int) + (len > 0 ? len : 0);
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	// Build the message
+	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(__s32) + (len > 0 ? len : 0);
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -3843,14 +3841,14 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = level;
-	pt += sizeof(int);
+	*(__s32 *) pt = level;
+	pt += sizeof(__s32);
 
-	*(int *) pt = optname;
-	pt += sizeof(int);
+	*(__s32 *) pt = optname;
+	pt += sizeof(__s32);
 
-	*(int *) pt = len;
-	pt += sizeof(int);
+	*(__s32 *) pt = len;
+	pt += sizeof(__s32);
 
 	if (len > 0) { //TODO prob don't need
 		ret = copy_from_user(pt, optval, len);
@@ -3865,16 +3863,16 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	}
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
-// Send message to fins_daemon
+	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -3888,7 +3886,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
-//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
+		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
@@ -3897,14 +3895,14 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	if (wedge_calls[call_index].reply) {
 		if (wedge_calls[call_index].ret == ACK) {
 			PRINT_DEBUG("recv ACK");
-			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(int)) {
+			if (wedge_calls[call_index].buf && wedge_calls[call_index].len >= sizeof(__s32)) {
 				pt = wedge_calls[call_index].buf;
 				rc = 0;
 
 				//re-using len var
-				len = *(int *) pt;
-				pt += sizeof(int);
-				ret = copy_to_user(optlen, &len, sizeof(int));
+				len = *(__s32 *) pt;
+				pt += sizeof(__s32);
+				ret = copy_to_user(optlen, &len, sizeof(__s32));
 				if (ret) {
 					PRINT_ERROR("copy_from_user fail ret=%d", ret);
 					rc = -1;
@@ -3943,7 +3941,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	end: //
 	if (down_interruptible(&wedge_sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-//TODO error
+		//TODO error
 	}
 	wedge_sockets[sock_index].threads[call_type]--;
 	PRINT_DEBUG("wedge_sockets[%d].threads[%u]=%u", sock_index, call_type, wedge_sockets[sock_index].threads[call_type]);
@@ -3958,19 +3956,19 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	//static int fins_setsockopt(struct socket *sock, int level, int optname, char *optval, unsigned int optlen) {
 	int rc;
 	struct sock *sk;
-	unsigned long long sock_id;
-	int sock_index;
-	u_int call_type = SETSOCKOPT_CALL;
-	u_int call_id;
-	int call_index;
-	int buf_len;
-	u_char *buf;
+	__u64 sock_id;
+	__s32 sock_index;
+	__u32 call_type = SETSOCKOPT_CALL;
+	__u32 call_id;
+	__s32 call_index;
+	__u32 buf_len;
+	__u8 *buf;
 	struct nl_wedge_to_daemon *hdr;
-	u_char *pt;
-	int ret;
+	__u8 *pt;
+	__s32 ret;
 
 	struct task_struct *curr = get_current();
-	int call_pid = (int) curr->pid;
+	__s32 call_pid = (__s32) curr->pid;
 	PRINT_IMPORTANT("Entered: call_pid=%d", call_pid);
 
 	if (fins_daemon_pid == -1) { // FINS daemon not connected, nowhere to send msg
@@ -3992,7 +3990,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (down_interruptible(&wedge_sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-//TODO error
+		//TODO error
 	}
 	sock_index = wedge_sockets_find(sock_id);
 	PRINT_DEBUG("sock_index=%d", sock_index);
@@ -4008,7 +4006,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 
 	if (down_interruptible(&wedge_calls_sem)) {
 		PRINT_ERROR("calls_sem acquire fail");
-//TODO error
+		//TODO error
 	}
 	call_id = call_count++;
 	call_index = wedge_calls_insert(call_id, sock_id, sock_index, call_type);
@@ -4020,8 +4018,8 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(int) + optlen;
-	buf = (u_char *) kmalloc(buf_len, GFP_KERNEL);
+	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(__s32) + optlen;
+	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
 		wedge_calls[call_index].call_id = -1;
@@ -4038,14 +4036,14 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	hdr->call_index = call_index;
 	pt = buf + sizeof(struct nl_wedge_to_daemon);
 
-	*(int *) pt = level;
-	pt += sizeof(int);
+	*(__s32 *) pt = level;
+	pt += sizeof(__s32);
 
-	*(int *) pt = optname;
-	pt += sizeof(int);
+	*(__s32 *) pt = optname;
+	pt += sizeof(__s32);
 
-	*(u_int *) pt = optlen;
-	pt += sizeof(u_int);
+	*(__u32 *) pt = optlen;
+	pt += sizeof(__u32);
 
 	ret = copy_from_user(pt, optval, optlen);
 	pt += optlen;
@@ -4058,16 +4056,16 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	}
 
 	if (pt - buf != buf_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt-buf, buf_len);
+		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
 		kfree(buf);
 		wedge_calls[call_index].call_id = -1;
 		rc = -1;
 		goto end;
 	}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%d", call_type, sock_id, buf_len);
+	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
-// Send message to fins_daemon
+	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
 	kfree(buf);
 	if (ret) {
@@ -4081,7 +4079,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
-//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
+		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}PRINT_DEBUG("relocked my semaphore");
 
 	lock_sock(sk);
@@ -4097,7 +4095,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	end: //
 	if (down_interruptible(&wedge_sockets_sem)) {
 		PRINT_ERROR("sockets_sem acquire fail");
-//TODO error
+		//TODO error
 	}
 	wedge_sockets[sock_index].threads[call_type]--;
 	PRINT_DEBUG("wedge_sockets[%d].threads[%u]=%u", sock_index, call_type, wedge_sockets[sock_index].threads[call_type]);
@@ -4137,26 +4135,28 @@ static struct proto_ops fins_proto_ops = { .owner = THIS_MODULE, .family = PF_FI
 		};
 
 /* Helper function to extract a unique socket ID from a given struct sock */
-inline unsigned long long get_unique_sock_id(struct sock *sk) {
-//	return (unsigned long long) &(sk->__sk_common); // Pointer to sock_common struct as unique ident
-	return (unsigned long) &(sk->__sk_common); // Pointer to sock_common struct as unique ident
+inline __u64 get_unique_sock_id(struct sock *sk) {
+	//	return (__u64) &(sk->__sk_common); // Pointer to sock_common struct as unique ident
+	return (__u32) &(sk->__sk_common); // Pointer to sock_common struct as unique ident
 }
 
 /* Functions to initialize and teardown the protocol */
 static void setup_fins_protocol(void) {
 	int rc; // used for reporting return value
 
-// Changing this value to 0 disables the FINS passthrough by default
-// Changing this value to 1 enables the FINS passthrough by default
-//fins_stack_passthrough_enabled = 1; //0; // Initialize kernel wide FINS data passthrough
+	// Changing this value to 0 disables the FINS passthrough by default
+	// Changing this value to 1 enables the FINS passthrough by default
+	//fins_stack_passthrough_enabled = 1; //0; // Initialize kernel wide FINS data passthrough
 
 	/* Call proto_register and report debugging info */
 	rc = proto_register(&fins_proto, 1);
-	PRINT_DEBUG("proto_register returned: %d", rc);PRINT_DEBUG("Made it through FINS proto_register()");
+	PRINT_DEBUG("proto_register returned: %d", rc);
+	PRINT_DEBUG("Made it through FINS proto_register()");
 
 	/* Call sock_register to register the handler with the socket layer */
 	rc = sock_register(&fins_net_proto);
-	PRINT_DEBUG("sock_register returned: %d", rc);PRINT_DEBUG("Made it through FINS sock_register()");
+	PRINT_DEBUG("sock_register returned: %d", rc);
+	PRINT_DEBUG("Made it through FINS sock_register()");
 }
 
 static void teardown_fins_protocol(void) {
@@ -4170,8 +4170,8 @@ static void teardown_fins_protocol(void) {
 }
 
 /* Functions to initialize and teardown the netlink socket */
-static int setup_fins_netlink(void) {
-// nl_data_ready is the name of the function to be called when the kernel receives a datagram on this netlink socket.
+static __s32 setup_fins_netlink(void) {
+	// nl_data_ready is the name of the function to be called when the kernel receives a datagram on this netlink socket.
 	fins_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, 0, nl_data_ready, NULL, THIS_MODULE);
 	if (fins_nl_sk == NULL) {
 		PRINT_ERROR("Error creating socket.");
@@ -4184,7 +4184,7 @@ static int setup_fins_netlink(void) {
 }
 
 static void teardown_fins_netlink(void) {
-// closes the netlink socket
+	// closes the netlink socket
 	if (fins_nl_sk != NULL) {
 		sock_release(fins_nl_sk->sk_socket);
 	}
@@ -4214,7 +4214,7 @@ static void __exit fins_stack_wedge_exit(void) {
 	teardown_fins_netlink();
 	teardown_fins_protocol();
 	PRINT_IMPORTANT("Made it through the fins_stack_wedge removal");
-//the system call wrapped by rmmod frees all memory that is allocated in the module
+	//the system call wrapped by rmmod frees all memory that is allocated in the module
 }
 
 /* Macros defining the init and exit functions */
