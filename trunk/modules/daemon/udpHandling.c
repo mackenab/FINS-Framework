@@ -137,6 +137,7 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
 			PRINT_DEBUG("old rem=%u/%u", addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr));
 		}
+
 		PRINT_DEBUG("dest address: family=%u, rem_ip=%u, rem_port=%u", AF_INET, rem_ip, rem_port);
 
 		md->sockets[hdr->sock_index].state = SS_CONNECTING;
@@ -170,6 +171,7 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			}
 			addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
 		}
+
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 	} else if (addr->ss_family == AF_INET6) {
@@ -593,8 +595,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
-			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0);
-	PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
+			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0); PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	struct daemon_store *store = NULL;
@@ -819,7 +820,7 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 					mask |= POLLERR;
 				}
 			} else {
-				PRINT_ERROR("todo: POLLERR");
+				PRINT_DEBUG("todo: POLLERR"); //TODO change back to error
 			}
 		}
 
@@ -885,7 +886,7 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 							mask |= POLLERR;
 						}
 					} else {
-						PRINT_ERROR("todo: POLLERR");
+						PRINT_DEBUG("todo: POLLERR"); //TODO change back to error
 					}
 				}
 
@@ -1458,9 +1459,12 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 		uint32_t src_ip = addr4_get_ip(src_addr);
 		uint32_t dst_ip = addr4_get_ip(dst_addr);
 
+		addr4_set_port(src_addr, (uint16_t) src_port);
+		addr4_set_port(dst_addr, (uint16_t) dst_port);
+
 		sock_index = match_host_addr4_udp(module, dst_ip, (uint16_t) dst_port); //TODO change for multicast
 		if (sock_index == -1) {
-			PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+			PRINT_DEBUG("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 			//TODO change back  to PRINT_ERROR
 			freeFinsFrame(ff);
 			return;
@@ -1527,6 +1531,9 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 		uint32_t src_ip = addr4_get_ip(src_addr);
 		uint32_t dst_ip = addr4_get_ip(dst_addr);
 
+		addr4_set_port(src_addr, (uint16_t) src_port);
+		addr4_set_port(dst_addr, (uint16_t) dst_port);
+
 		sock_index = match_host_addr4_udp(module, src_ip, (uint16_t) src_port); //TODO change for multicast
 		if (sock_index == -1) {
 			PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
@@ -1534,6 +1541,7 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 			freeFinsFrame(ff);
 			return;
 		}
+
 		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET

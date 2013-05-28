@@ -39,19 +39,19 @@
 #include <stdio.h>
 
 #ifdef DEBUG
-#define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)//;fflush(stdout)
 #else
 #define PRINT_DEBUG(format, args...)
 #endif
 
 #ifdef IMPORTANT
-#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)//;fflush(stdout)
 #else
 #define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR
-#define PRINT_ERROR(format, args...) printf("ERROR(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);
+#define PRINT_ERROR(format, args...) printf("ERROR(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)//;fflush(stdout)
 #else
 #define PRINT_ERROR(format, args...)
 #endif
