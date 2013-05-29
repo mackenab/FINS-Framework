@@ -149,6 +149,7 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		uint16_t host_port;
 
 		if (md->sockets[hdr->sock_index].family == AF_UNSPEC) {
+			PRINT_DEBUG("Auto binding");
 			md->sockets[hdr->sock_index].family = AF_INET;
 
 			//auto bind
@@ -439,6 +440,8 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		return;
 	}
 
+	PRINT_DEBUG("family=%u", addr->ss_family);
+
 	metadata *meta;
 	if (addr->ss_family == AF_INET) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET) {
@@ -549,6 +552,20 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 
 				secure_metadata_writeToElement(meta, "send_src_ipv4", &host_ip, META_TYPE_INT32);
 				secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
+
+				PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+						md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, host_ip, host_port, rem_ip, rem_port);
+
+				//########################
+#ifdef DEBUG
+				struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
+				temp->s_addr = htonl(host_ip);
+				PRINT_DEBUG("index=%d, host=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
+				temp->s_addr = htonl(rem_ip);
+				PRINT_DEBUG("index=%d, rem=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
+				free(temp);
+#endif
+				//########################
 			} else { //AF_INET6
 				PRINT_ERROR("todo error");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -595,7 +612,8 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
-			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0); PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
+			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0);
+	PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	struct daemon_store *store = NULL;
@@ -612,7 +630,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				md->sockets[hdr->sock_index].error_buf--;
 
 				if (store->addr->ss_family == AF_INET) {
-					addr_len = sizeof(struct sockaddr_in);
+					addr_len = (uint32_t) sizeof(struct sockaddr_in);
 					addr4 = (struct sockaddr_in *) store->addr;
 
 					uint32_t dst_ip = addr4->sin_addr.s_addr;
@@ -622,7 +640,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 					addr4->sin_port = htons(dst_port);
 					PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), dst_port, addr4->sin_addr.s_addr);
 				} else { //AF_INET6
-					addr_len = sizeof(struct sockaddr_in6);
+					addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 					addr6 = (struct sockaddr_in6 *) store->addr;
 
 					PRINT_ERROR("todo");
@@ -651,7 +669,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 			if (store->addr->ss_family == AF_INET) {
-				addr_len = sizeof(struct sockaddr_in);
+				addr_len = (uint32_t) sizeof(struct sockaddr_in);
 				addr4 = (struct sockaddr_in *) store->addr;
 
 				uint32_t src_ip = addr4->sin_addr.s_addr;
@@ -661,7 +679,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				addr4->sin_port = htons(src_port);
 				PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), src_port, addr4->sin_addr.s_addr);
 			} else { //AF_INET6
-				addr_len = sizeof(struct sockaddr_in6);
+				addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 				addr6 = (struct sockaddr_in6 *) store->addr;
 
 				PRINT_ERROR("todo");
@@ -1395,7 +1413,7 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 
 	uint32_t addr_len;
 	if (addr->ss_family == AF_INET) {
-		addr_len = sizeof(struct sockaddr_in);
+		addr_len = (uint32_t) sizeof(struct sockaddr_in);
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 		addr4->sin_addr.s_addr = htonl(addr4->sin_addr.s_addr);
 		addr4->sin_port = htons(addr4->sin_port);
