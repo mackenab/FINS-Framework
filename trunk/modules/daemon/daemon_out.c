@@ -52,8 +52,7 @@ void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 				secure_sem_wait(&md->sockets_sem);
 				if (md->sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 					PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-							hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
-					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+							hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 					sem_post(&md->sockets_sem);
 
 					//TODO find error for synch issues between wedge/daemon
@@ -62,7 +61,7 @@ void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 				}
 
 				PRINT_DEBUG("sock_id=%llu, sock_index=%d, type=%d, proto=%d",
-						md->calls[hdr->call_index].sock_id, md->calls[hdr->call_index].sock_index, md->sockets[hdr->sock_index].type, md->sockets[hdr->sock_index].protocol);
+						md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].type, md->sockets[hdr->sock_index].protocol);
 				(call_outs[hdr->call_type])(module, hdr, msg_pt, msg_len);
 
 				PRINT_DEBUG("post$$$$$$$$$$$$$$$");
