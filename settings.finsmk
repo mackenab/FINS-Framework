@@ -19,7 +19,7 @@ TARGET_PLATFORM := "Android arch-ARM"
 #LIBPATHS := -L/home/bucknell/android/out/target/product/crespo/system/lib
 
 NDK_PLATFORM_VER := 14
-ANDROID_NDK_ROOT := /opt/android/android-ndk-r8d
+ANDROID_NDK_ROOT := /opt/android/android-ndk-r8e
 USR := $(ANDROID_NDK_ROOT)/platforms/android-$(NDK_PLATFORM_VER)/arch-arm/usr
 #BIN := /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin
 BIN := $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin

@@ -9,7 +9,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 LOCAL_NAME := core
-LOCAL_LIBS := common data_structure #$(CORE_LIBS)
+LOCAL_LIBS := common data_structure
 LOCAL_MODS := switch interface ipv4 arp icmp udp daemon rtm logger tcp
 #LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
 #this code breaks if anything besides folders containing modules are in MODULES_DIR
