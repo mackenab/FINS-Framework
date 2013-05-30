@@ -61,9 +61,6 @@ struct intsem_to_thread_data {
 };
 void *intsem_to_thread(void *local);
 
-void stop_timer(int fd);
-void start_timer(int fd, double millis);
-
 struct to_timer_data {
 	void (*handler)(void *local);
 	timer_t tid;

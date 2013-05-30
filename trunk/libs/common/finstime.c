@@ -138,38 +138,6 @@ void *intsem_to_thread(void *local) {
 	return NULL;
 }
 
-#ifndef BUILD_FOR_ANDROID
-void stop_timer(int fd) {
-	PRINT_DEBUG("Entered: fd=%d", fd);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = 0;
-	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL)) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-
-void start_timer(int fd, double millis) {
-	PRINT_DEBUG("Entered: fd=%d, m=%f", fd, millis);
-
-	struct itimerspec its;
-	its.it_value.tv_sec = (long int) (millis / 1000);
-	its.it_value.tv_nsec = (long int) ((fmod(millis, 1000.0) * 1000000) + 0.5);
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
-	if (timerfd_settime(fd, 0, &its, NULL)) {
-		PRINT_ERROR("Error setting timer.");
-		exit(-1);
-	}
-}
-#endif
-
 void to_handler(int sig, siginfo_t *si, void *uc) {
 	PRINT_DEBUG("Entered: sig=%d, si=%p, uc=%p", sig, si, uc);
 

@@ -12,4 +12,4 @@ LOCAL_EXPORT_LDLIBS := -llog
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
 include $(BUILD_STATIC_LIBRARY)
 
-$(call import-module,trunk/libs/libconfig/lib)
+$(call import-module,trunk/libs/config/lib)

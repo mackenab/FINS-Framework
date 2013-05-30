@@ -9,10 +9,17 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #This is the Module name. This MUST be that same as the current directory!!!
 LOCAL_NAME := common
-LOCAL_LIBS := #config
 LOCAL_OBJS := getMAC_Address.o metadata.o finstypes.o finstime.o finsthreads.o
-LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
+
+ifdef BUILD_FOR_ANDROID_ARM
+LOCAL_LIBS := config
+LOCAL_INCS := . ../config/lib
+LOCAL_LDFLAGS := -lc -lm
+else
+LOCAL_LIBS := 
+LOCAL_INCS := .
 LOCAL_LDFLAGS := -lc -lm -lrt -lpthread -lconfig
+endif
 
 include $(LIBS_DIR)/make_library.finsmk

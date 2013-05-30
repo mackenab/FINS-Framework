@@ -140,7 +140,7 @@ void *controller_thread(void *local) {
 			}
 		}
 
-		start_timer(controller->fd, controller->period);
+		//start_timer(controller->fd, controller->period); //TODO uncomment/fix this by using alert timers
 		sem_post(&controller->pool->inactive_sem);
 	}
 
@@ -171,7 +171,7 @@ struct pool_controller *controller_create(struct thread_pool *pool) {
 	secure_pthread_create(&controller->thread, NULL, controller_thread, (void *) controller);
 	//pthread_detach(&controller->thread);
 
-	start_timer(controller->fd, 0.5);
+	//start_timer(controller->fd, 0.5);
 
 	return controller;
 }
@@ -180,7 +180,7 @@ void controller_shutdown(struct pool_controller *controller) {
 	PRINT_DEBUG("Entered: controller=%p", controller);
 
 	controller->running = 0;
-	start_timer(controller->fd, TO_MIN);
+	//start_timer(controller->fd, TO_MIN);
 
 	PRINT_DEBUG("joining controller thread: id=%u", controller->id);
 	pthread_join(controller->thread, NULL);

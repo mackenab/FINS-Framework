@@ -554,12 +554,11 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			addr4->sin_family = AF_INET;
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->mask));
 			addr4->sin_port = 0;
+			PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 		} else {
 			PRINT_ERROR("todo error");
 		}
 		pt += sizeof(struct sockaddr_in);
-
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 
 		free(temp);
 		break;
