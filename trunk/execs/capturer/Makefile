@@ -9,10 +9,10 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 LOCAL_NAME := capturer
-ifndef BUILD_FOR_ANDROID_ARM
-LOCAL_LIBS := 
-else
+ifdef BUILD_FOR_ANDROID_ARM
 LOCAL_LIBS := pcap
+else
+LOCAL_LIBS := 
 endif
 LOCAL_MODS := 
 LOCAL_OBJS := ethermod.o htoi.o wifistub.o

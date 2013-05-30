@@ -13,6 +13,10 @@ LOCAL_LIBS := common data_structure
 LOCAL_OBJS := create_ff.o udp.o UDP_checksum.o udp_in.o udp_out.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
+ifdef BUILD_FOR_ANDROID_ARM
+LOCAL_LDFLAGS := -lc
+else
 LOCAL_LDFLAGS := -lc -lpthread
+endif
 
 include $(MODULES_DIR)/make_module.finsmk

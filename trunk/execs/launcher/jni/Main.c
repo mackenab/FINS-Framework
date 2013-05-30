@@ -78,7 +78,7 @@ void android_main(struct android_app *state) {
 
 	__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: core_main()");
 	core_dummy();
-	core_main();
+	core_main("envi.cfg", "stack.cfg");
 	while (1)
 		;
 	//sleep(1);

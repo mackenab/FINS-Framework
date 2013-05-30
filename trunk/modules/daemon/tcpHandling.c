@@ -402,6 +402,7 @@ void accept_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	} else { //AF_INET6
 		PRINT_ERROR("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		return;
 	}
 
 	uint32_t family = md->sockets[hdr->sock_index].family;
@@ -965,7 +966,9 @@ void release_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr)
 			secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 		}
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
-
+		daemon_sockets_remove(module, hdr->sock_index);
+		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		return;
 	} else { //AF_UNSPEC
 		daemon_sockets_remove(module, hdr->sock_index);
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);

@@ -14,6 +14,10 @@ LOCAL_LIBS := common data_structure
 LOCAL_OBJS := ipv4.o ipv4_checksum.o ipv4_const_header.o ipv4_forward.o ipv4_in.o ipv4_out.o ipv4_send.o ipv4_receive.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
+ifdef BUILD_FOR_ANDROID_ARM
+LOCAL_LDFLAGS := -lc
+else
 LOCAL_LDFLAGS := -lc -lpthread
+endif
 
 include $(MODULES_DIR)/make_module.finsmk

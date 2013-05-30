@@ -1048,7 +1048,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	core_termination_handler(0);
 }
 
-#ifndef BUILD_FOR_ANDROID
+//#ifndef BUILD_FOR_ANDROID
 int main(int argc, char *argv[]) {
 	uint8_t envi_default = 1;
 	uint8_t envi_name[FILE_NAME_SIZE];
@@ -1178,4 +1178,4 @@ int main(int argc, char *argv[]) {
 	core_main(envi_name, stack_name);
 	return 0;
 }
-#endif
+//#endif
