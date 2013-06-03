@@ -264,7 +264,7 @@ void inject_init(char *device) {
 	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
 
 	/** Setup the Injection Interface */
-	if ((inject_handle = pcap_open_live((char *) dev, BUFSIZ, 1, -1, errbuf)) == NULL) {
+	if ((inject_handle = pcap_open_live((char *) dev, BUFSIZ, 0, -1, errbuf)) == NULL) {
 		PRINT_ERROR( "Error: '%s'", errbuf);
 		exit(1);
 	}

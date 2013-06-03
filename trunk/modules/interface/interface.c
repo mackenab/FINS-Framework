@@ -848,7 +848,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 
 		uint8_t *args[2 * INTERFACE_IF_LIST_MAX + 1];
 		args[0] = (uint8_t *) secure_malloc(40);
-		sprintf((char *) args[0], "./capturer");
+		sprintf((char *) args[0], "LD_LIBRARY_PATH=. ./capturer");
 
 		struct if_record *ifr;
 

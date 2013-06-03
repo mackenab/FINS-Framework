@@ -160,6 +160,15 @@ clean_temp_file:
 clean_exec:
 	@rm -f $(LOCAL_EXEC_PATH)
 
+.PHONY:install
+install:$(LOCAL_EXEC_PATH)
+ifdef BUILD_FOR_ANDROID_ARM
+	@adb push $(LOCAL_EXEC_PATH) $(INSTALL_DIR)
+	@$(foreach LIB,$(LOCAL_LIBS),adb push $(OBJ_DIR)/lib$(LIB).so $(INSTALL_DIR);)
+	@$(foreach MOD,$(LOCAL_MODS),adb push $(OBJ_DIR)/lib$(MOD).so $(INSTALL_DIR);)
+else
+endif
+
 .PHONY:temp
 temp:
 	@echo "CFLAGS='$(CFLAGS)'"

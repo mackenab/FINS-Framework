@@ -193,7 +193,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 
 	status = config_read_file(meta_envi, (char *) envi_name);
 	if (status == META_FALSE) {
-		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta_envi), config_error_line(meta_envi), config_error_text(meta_envi));
+		PRINT_ERROR("file='%s', %s:%d - %s\n", envi_name, config_error_file(meta_envi), config_error_line(meta_envi), config_error_text(meta_envi));
 		metadata_destroy(meta_envi);
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -605,7 +605,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 
 	status = config_read_file(meta_stack, (char *) stack_name);
 	if (status == META_FALSE) {
-		PRINT_ERROR("%s:%d - %s\n", config_error_file(meta_stack), config_error_line(meta_stack), config_error_text(meta_stack));
+		PRINT_ERROR("file='%s', %s:%d - %s\n", stack_name, config_error_file(meta_stack), config_error_line(meta_stack), config_error_text(meta_stack));
 		metadata_destroy(meta_stack);
 		PRINT_ERROR("todo error");
 		exit(-1);

@@ -13,7 +13,6 @@ LOCAL_LIBS :=
 LOCAL_MODS := 
 LOCAL_OBJS := 
 LOCAL_INCS := 
-LOCAL_TYPE := reference #exec
 
 #### TARGETS #####
 .PHONY:all
@@ -33,7 +32,7 @@ clean:
 	@ndk-build clean
 
 .PHONY:install
-install: $(LOCAL_NAME)
+install:$(LOCAL_NAME)
 	@adb install -r bin/fins_launcher-debug.apk
 	
 .PHONY:test

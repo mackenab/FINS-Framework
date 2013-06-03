@@ -150,7 +150,7 @@ void *console_to_rtm(void *local) {
 						if (console != NULL) {
 							if (poll_fds[i].revents & (POLLERR | POLLNVAL)) {
 								//TODO ??
-								PRINT_DEBUG("todo: kinda error case that needs to be handled");
+								PRINT_ERROR("todo: kinda error case that needs to be handled");
 							} else if (poll_fds[i].revents & (POLLHUP)) {
 								PRINT_IMPORTANT("Console closed: console=%p, id=%u", console, console->id);
 								list_remove(md->console_list, console);
