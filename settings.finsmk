@@ -14,6 +14,9 @@ BUILD_FOR_LINUX := "If uncommented, the FINS source will build for linux"
 ifdef BUILD_FOR_ANDROID_ARM
 TARGET_PLATFORM := "Android arch-ARM"
 
+FOLDER_LIST := trunk #tests
+EXECS_LIST := capturer console core wedge launcher
+
 #CC :=/home/bucknell/android-ndk/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc --sysroot=/home/bucknell/android-ndk/platforms/android-8/arch-arm
 #INCLS := -I/home/bucknell/android/external/libpcap -I/home/bucknell/android/external/libconfig-1.4.7/lib -I/home/bucknell/android/external/libpcap/pcap -I/home/bucknell/android/bionic/libc/include -I/home/bucknell/android/bionic/libc/arch-arm/include -I/home/bucknell/android/bionic/libc/ -I/home/bucknell/android/bionic/libc/kernel/common -I/home/bucknell/android/bionic/libc/kernel/arch-arm
 #LIBPATHS := -L/home/bucknell/android/out/target/product/crespo/system/lib
@@ -39,18 +42,9 @@ LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,--dynamic-linker=/system/bin/l
 LIBPATHS := -L$(USR)/lib 
 #LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3
 #LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.6
-LIBS := -lc -lgcc -llog -lm #-lc -lgcc #-lrt
+LIBS := -lc -lgcc -llog -lm
 
 GDB_CLIENT := $(BIN)/arm-eabi-gdb
-
-FOLDER_LIST := trunk #tests
-EXECS_LIST := capturer launcher wedge
-
-COMMON_LIBS := libconfig
-CAPTURER_LIBS := libglue libpcap
-LAUNCHER_LIBS := 
-WEDGE_LIBS :=
-
 INSTALL_DIR := /data/local/fins
 endif
 
@@ -59,8 +53,8 @@ endif
 
 ###### build for android x86 ######
 ifdef BUILD_FOR_ANDROID_X86
-
 TARGET_PLATFORM := "Android arch-x86"
+
 FOLDER_LIST := trunk examples tests
 EXECS_LIST := common libs capturer core 
 
@@ -81,6 +75,9 @@ endif
 ifdef BUILD_FOR_LINUX
 TARGET_PLATFORM := "Linux x86"
 
+FOLDER_LIST := trunk examples tests
+EXECS_LIST := capturer console core wedge
+
 CC := gcc
 CCOPTS := -g -O0 -Wall #flags for valgrind
 INCLS :=
@@ -88,18 +85,9 @@ INCLS :=
 LD := gcc
 LDOPTS := -g -O0 -Wall #flags for valgrind
 LIBPATHS :=
-#LIBS := -lpthread -lconfig -lpcap -lc -lm -lrt
-LIBS := #-lc -ldl -lpthread #-lm -lrt -lconfig -lpcap #added dl for auto config
+LIBS := 
 
 GDB_CLIENT := gdb
-
-FOLDER_LIST := trunk examples tests
-EXECS_LIST := capturer core wedge
-
-COMMON_LIBS := 
-CAPTURER_LIBS := common
-CORE_LIBS := common
-WEDGE_LIBS := 
 endif
 
 

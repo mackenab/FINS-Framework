@@ -89,6 +89,7 @@ void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct 
 	uint32_t ether_type = IP4_ETH_TYPE;
 	secure_metadata_writeToElement(ff->metaData, "send_ether_type", &ether_type, META_TYPE_INT32);
 	secure_metadata_writeToElement(ff->metaData, "send_if_index", &if_index, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "send_dst_ipv4", &address, META_TYPE_INT32);
 
 	if (!module_send_flow(module, ff, IPV4_FLOW_INTERFACE)) {
 		PRINT_ERROR("todo error");

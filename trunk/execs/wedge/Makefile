@@ -40,12 +40,12 @@ LDFLAGS :=
 #undefine LDFLAGS
 ARCH = arm
 
-COMPILER = /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+COMPILER = /opt/android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 #COMPILER = /opt/android/android-ndk-r8d/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin/arm-linux-androideabi-
 
 #KERNELDIR = /home/alex/jreed/android_source/omap #phone0
-KERNELDIR = /home/alex/jreed/android_source/msm #phone1
-#KERNELDIR = /home/alex/jreed/android_source/tegra #tablet1
+#KERNELDIR = /home/alex/jreed/android_source/msm #phone1
+KERNELDIR =  /home/fins1/FINS/android_source/tegra #tablet1
 else
 CC := gcc
 LD := ld

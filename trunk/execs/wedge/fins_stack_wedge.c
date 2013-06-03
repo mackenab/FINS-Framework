@@ -409,8 +409,7 @@ __s32 nl_send_msg(__s32 pid, __u32 seq, __s32 type, void *buf, __s32 len, __s32 
 	ret_val = netlink_unicast(fins_nl_sk, skb, pid, 0); //blocking
 
 	if (ret_val < 0) {
-		PRINT_ERROR("netlink error sending to user");
-
+		PRINT_ERROR("Exited: netlink error sending to user: nl_sk=%p, skb=%p, pid=%d, errno=%d", fins_nl_sk, skb, pid, -ret_val);
 		return -1;
 	}
 

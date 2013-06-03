@@ -60,13 +60,14 @@ void android_main(struct android_app *state) {
 	__android_log_print(ANDROID_LOG_INFO, "FINS", writeLocation);
 	__android_log_print(ANDROID_LOG_INFO, "FINS", "Forking into capturermain() and main()");
 
-	/*
+
 	 int ret;
 	 __android_log_print(ANDROID_LOG_INFO, "FINS", "Gaining su status");
-	 if ((ret = system("su"))) {
+	 //if ((ret = system("su"))) {
+	 if ((ret = system("touch output_ls.txt"))) {
 	 __android_log_print(ANDROID_LOG_ERROR, "FINS", "SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
 	 }
-	 */
+	 //*/
 	if (0) {
 		int i = 0;
 		while (i < 1000) {
@@ -78,7 +79,7 @@ void android_main(struct android_app *state) {
 
 	__android_log_print(ANDROID_LOG_INFO, "FINS", "Starting FINS: core_main()");
 	core_dummy();
-	core_main("envi.cfg", "stack.cfg");
+	core_main((uint8_t *)"envi.cfg", (uint8_t *)"stack.cfg");
 	while (1)
 		;
 	//sleep(1);

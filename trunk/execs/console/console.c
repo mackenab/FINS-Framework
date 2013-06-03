@@ -32,7 +32,7 @@
 #define UNIX_PATH_MAX 108
 #endif
 
-//ADDED mrd015 !!!!! (this crap really needs to be gathered into one header.)
+//TODO these definitions need to be gathered
 #ifdef BUILD_FOR_ANDROID
 //#define FINS_TMP_ROOT "/data/data/fins"
 #define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
@@ -93,16 +93,16 @@ int main() {
 
 	int console_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (console_fd < 0) {
-		printf("\nsocket error: capture_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
+		printf("\nsocket error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
 		return 0;
 	}
 
 	printf("\nconnecting to: addr='%s'", RTM_PATH);
 	if (connect(console_fd, (struct sockaddr *) &addr, size) != 0) {
-		printf("\nconnect error: capture_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
+		printf("\nconnect error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
 		return 0;
 	}
-	printf("\nconnected at: capture_fd=%d, addr='%s'", console_fd, addr.sun_path);
+	printf("\nconnected at: console_fd=%d, addr='%s'", console_fd, addr.sun_path);
 	//*/
 
 	//TODO fork for recv process that or do nonblocking read on STDIN
