@@ -77,7 +77,7 @@ struct ip4_settings {
 	uint32_t gateway;
 };
 
-struct ipv4_stats {
+struct ipv4_statistics {
 	/* Incomming direction */
 	uint16_t badhlen; /* packet with invalid IP header length 				*/
 	uint16_t badlen; /* packet with inconsistent IP header and data lengths 	*/
@@ -273,7 +273,7 @@ struct ipv4_data {
 	struct linked_list *route_list;
 	//struct ip4_reass_list *packet_list = NULL;
 
-	struct ipv4_stats stats;
+	struct ipv4_statistics stats;
 };
 
 int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);

@@ -42,8 +42,8 @@
 
 //TODO these definitions need to be gathered
 #ifdef BUILD_FOR_ANDROID
-//#define FINS_TMP_ROOT "/data/data/fins"
-#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
+#define FINS_TMP_ROOT "/data/local/fins"
+//#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif

@@ -52,7 +52,8 @@ void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 				secure_sem_wait(&md->sockets_sem);
 				if (md->sockets[hdr->sock_index].sock_id != hdr->sock_id) {
 					PRINT_DEBUG("invalid socket: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
-							hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index); PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+							hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
+					PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 					sem_post(&md->sockets_sem);
 
 					//TODO find error for synch issues between wedge/daemon
@@ -146,7 +147,7 @@ void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	if (md->sockets[hdr->sock_index].out_ops->bind_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->bind_out)(module, hdr, &addr);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -171,7 +172,7 @@ void listen_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	if (md->sockets[hdr->sock_index].out_ops->listen_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->listen_out)(module, hdr, backlog);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -210,7 +211,7 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	if (md->sockets[hdr->sock_index].out_ops->connect_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->connect_out)(module, hdr, &addr, flags);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -241,7 +242,7 @@ void accept_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	if (md->sockets[hdr->sock_index].out_ops->accept_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->accept_out)(module, hdr, sock_id_new, sock_index_new, flags);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -266,13 +267,9 @@ void getname_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	if (md->sockets[hdr->sock_index].out_ops->getname_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->getname_out)(module, hdr, peer);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
-}
-
-void ifr_total_test(struct if_record *ifr, uint32_t *total) {
-	*total = *total + ifr->addr_list->len;
 }
 
 void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
@@ -296,6 +293,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 	uint32_t cmd = *(uint32_t *) pt;
 	pt += sizeof(uint32_t);
 
+	//TODO Check if defaulting to 0.0.0.0 is correct when interface has no ipv4 address
 	switch (cmd) {
 	case SIOCGIFCONF:
 		PRINT_DEBUG("SIOCGIFCONF=%d", cmd);
@@ -331,23 +329,27 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		struct linked_list *running_list = list_find_all(md->if_list, ifr_running_test);
 		while (list_is_empty(running_list)) {
 			ifr = (struct if_record *) list_remove_front(running_list);
-			addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
-			if (addr != NULL) {
-				if (total + sizeof(struct ifreq) <= len) {
-					if_req = (struct ifreq *) pt;
-					strcpy(if_req->ifr_name, (char *) ifr->name);
 
-					addr4 = (struct sockaddr_in *) &if_req->ifr_addr;
-					addr4->sin_family = AF_INET;
+			if (total + sizeof(struct ifreq) <= len) {
+				if_req = (struct ifreq *) pt;
+				strcpy(if_req->ifr_name, (char *) ifr->name);
+
+				addr4 = (struct sockaddr_in *) &if_req->ifr_addr;
+				addr4->sin_family = AF_INET;
+				addr4->sin_port = 0;
+
+				addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
+				if (addr != NULL) {
 					addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
-					addr4->sin_port = 0;
-
-					pt += sizeof(struct ifreq);
-					total += sizeof(struct ifreq);
 				} else {
-					total = len;
-					break;
+					addr4->sin_addr.s_addr = 0;
 				}
+
+				pt += sizeof(struct ifreq);
+				total += sizeof(struct ifreq);
+			} else {
+				total = len;
+				break;
 			}
 		}
 		list_free(running_list, nop_func);
@@ -400,7 +402,6 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
 		} else {
-			PRINT_ERROR("todo error");
 			addr4->sin_addr.s_addr = 0;
 		}
 		pt += sizeof(struct sockaddr_in);
@@ -452,7 +453,6 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
 		} else {
-			PRINT_ERROR("todo error");
 			addr4->sin_addr.s_addr = 0;
 		}
 		pt += sizeof(struct sockaddr_in);
@@ -504,7 +504,6 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->bdc));
 		} else {
-			PRINT_ERROR("todo error");
 			addr4->sin_addr.s_addr = 0;
 		}
 		pt += sizeof(struct sockaddr_in);
@@ -548,16 +547,18 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct nl_daemon_to_wedge);
 
+		addr4 = (struct sockaddr_in *) pt;
+		addr4->sin_family = AF_INET;
+		addr4->sin_port = 0;
+
 		addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
 		if (addr != NULL) {
-			addr4 = (struct sockaddr_in *) pt;
-			addr4->sin_family = AF_INET;
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->mask));
-			addr4->sin_port = 0;
-			PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 		} else {
-			PRINT_ERROR("todo error");
+			addr4->sin_addr.s_addr = 0;
 		}
+		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+
 		pt += sizeof(struct sockaddr_in);
 
 		free(temp);
@@ -566,11 +567,11 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		PRINT_DEBUG("FIONREAD=%d", cmd);
 		msg_len = 0; //handle per socket/protocol
 
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case TIOCOUTQ:
 		PRINT_DEBUG("TIOCOUTQ=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 		//case TIOCINQ: //equiv to FIONREAD??
 	case SIOCGIFNAME:
@@ -656,7 +657,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		break;
 	case SIOCSIFFLAGS:
 		PRINT_DEBUG("SIOCSIFFLAGS=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case SIOCGIFMTU:
 		PRINT_DEBUG("SIOCGIFMTU=%d", cmd);
@@ -702,15 +703,15 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		break;
 	case SIOCADDRT:
 		PRINT_DEBUG("SIOCADDRT=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case SIOCDELRT:
 		PRINT_DEBUG("SIOCDELRT=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case SIOCSIFADDR:
 		PRINT_DEBUG("SIOCSIFADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 		//case SIOCAIPXITFCRT:
 		//case SIOCAIPXPRISLT:
@@ -718,19 +719,19 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		//case SIOCIPXNCPCONN:
 	case SIOCGSTAMP:
 		PRINT_DEBUG("SIOCGSTAMP=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case SIOCSIFDSTADDR:
 		PRINT_DEBUG("SIOCSIFDSTADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case SIOCSIFBRDADDR:
 		PRINT_DEBUG("SIOCSIFBRDADDR=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	case SIOCSIFNETMASK:
 		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		break;
 	default:
 		PRINT_ERROR("default: cmd=%d", cmd);
@@ -755,7 +756,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		if (md->sockets[hdr->sock_index].out_ops->ioctl_out != NULL) {
 			(md->sockets[hdr->sock_index].out_ops->ioctl_out)(module, hdr, cmd, buf, buf_len);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	}
@@ -834,7 +835,7 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	if (md->sockets[hdr->sock_index].out_ops->sendmsg_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->sendmsg_out)(module, hdr, msg_len, msg, msg_flags, &addr, addr_len);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (msg_len) {
 			free(msg);
@@ -896,7 +897,7 @@ void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	if (md->sockets[hdr->sock_index].out_ops->recvmsg_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->recvmsg_out)(module, hdr, msg_len, msg_controllen, flags);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 
@@ -941,7 +942,7 @@ void getsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	if (md->sockets[hdr->sock_index].out_ops->getsockopt_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->getsockopt_out)(module, hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0) {
 			free(optval);
@@ -984,7 +985,7 @@ void setsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	if (md->sockets[hdr->sock_index].out_ops->setsockopt_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->setsockopt_out)(module, hdr, level, optname, optlen, optval);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		if (optlen > 0) {
 			free(optval);
@@ -1007,7 +1008,7 @@ void release_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	if (md->sockets[hdr->sock_index].out_ops->release_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->release_out)(module, hdr);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -1037,7 +1038,7 @@ void poll_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	if (md->sockets[hdr->sock_index].out_ops->poll_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->poll_out)(module, hdr, events);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, POLLERR);
 	}
 }
@@ -1059,7 +1060,7 @@ void mmap_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 		PRINT_DEBUG("implement mmap_icmp");
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -1087,7 +1088,7 @@ void shutdown_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 	if (md->sockets[hdr->sock_index].out_ops->shutdown_out != NULL) {
 		(md->sockets[hdr->sock_index].out_ops->shutdown_out)(module, hdr, how);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }

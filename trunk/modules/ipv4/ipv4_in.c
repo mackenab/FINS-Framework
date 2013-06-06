@@ -89,7 +89,7 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("");
 
 	if (header.ttl == 0) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		//TODO discard packet & send TTL icmp to sender
 
 		freeFinsFrame(ff);
@@ -138,7 +138,7 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 		ipv4_send_fdf_in(module, ff, &header, ppacket);
 	} else {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		//TODO fix this!! convert to module based
 		PRINT_DEBUG("Packet ID %d is fragmented", header.id);
 		struct ip4_packet* ppacket_reassembled = NULL; //IP4_reass(&header, ppacket);

@@ -49,7 +49,9 @@ extern int server_capture_count;
 	//}
 
 	++server_capture_count;
-	PRINT_IMPORTANT("Packet captured: count=%d, size=%d", server_capture_count, dataLength);
+	if (server_capture_count % 100 == 0) {
+		PRINT_IMPORTANT("Packet captured: count=%d, size=%d", server_capture_count, dataLength);
+	}
 
 	//print_hex_block(packetReceived, dataLength);
 	//fflush(stdout);
@@ -103,8 +105,7 @@ void capture_init(char *device, int argc, char *argv[]) {
 		if (server_capture_fd < 0) {
 			PRINT_ERROR("accept error: capture_fd=%d, errno=%u, str='%s'", server_capture_fd, errno, strerror(errno));
 			return;
-		}
-		PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", server_capture_fd, addr.sun_path);
+		}PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", server_capture_fd, addr.sun_path);
 	}
 
 	sleep(2);
@@ -253,8 +254,7 @@ void inject_init(char *device) {
 	if (server_inject_fd < 0) {
 		PRINT_ERROR("accept error: inject_fd=%d, errno=%u, str='%s'", server_inject_fd, errno, strerror(errno));
 		return;
-	}
-	PRINT_DEBUG("accepted at: inject_fd=%d, addr='%s'", server_inject_fd, addr.sun_path);
+	}PRINT_DEBUG("accepted at: inject_fd=%d, addr='%s'", server_inject_fd, addr.sun_path);
 
 	sleep(2);
 
@@ -301,7 +301,9 @@ void inject_init(char *device) {
 				PRINT_ERROR("Injection failed: framelen=%d, errno=%u, str='%s'", framelen, errno, strerror(errno));
 			} else {
 				++server_inject_count;
-				PRINT_IMPORTANT("Packet injected: count=%d, size=%d ", server_inject_count, numBytes);
+				if (server_inject_count % 100 == 0) {
+					PRINT_IMPORTANT("Packet injected: count=%d, size=%d ", server_inject_count, numBytes);
+				}
 			}
 		}
 	} // end of while loop

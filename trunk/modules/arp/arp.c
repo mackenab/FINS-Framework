@@ -424,7 +424,7 @@ void arp_get_ff(struct fins_module *module) {
 				PRINT_DEBUG("");
 			} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 				//arp_out_fdf(ff); //TODO remove?
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 			} else {
 				PRINT_ERROR("todo error");
@@ -451,22 +451,22 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -475,7 +475,7 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -484,17 +484,16 @@ void arp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
 		exit(-1);
 		break;
 	}
@@ -580,20 +579,20 @@ void arp_init_params(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->params);
 	metadata_element *sub = config_setting_add(root, "test", CONFIG_TYPE_GROUP);
 	if (sub == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	metadata_element *elem = config_setting_add(sub, "key", CONFIG_TYPE_INT);
 	if (elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	uint32_t value = 10;
 	int status = config_setting_set_int(elem, *(int *) &value);
 	if (status == CONFIG_FALSE) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 }
@@ -609,7 +608,7 @@ int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	struct arp_data *md = (struct arp_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;
@@ -621,7 +620,7 @@ int arp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 
 	md->if_list = list_clone(envi->if_list, ifr_clone);
 	if (md->if_list->len > ARP_IF_LIST_MAX) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		struct linked_list *leftover = list_split(md->if_list, ARP_IF_LIST_MAX - 1);
 		list_free(leftover, free);
 	}

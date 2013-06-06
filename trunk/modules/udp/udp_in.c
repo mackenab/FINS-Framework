@@ -23,101 +23,57 @@
 void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	struct udp_data *md = (struct udp_data *) module->data;
 
-	/* read the FDF and make sure everything is correct*/
-	if (ff->dataOrCtrl != FF_DATA) {
-		// release FDF here
-		freeFinsFrame(ff);
-		return;
-	}
-	if (ff->dataFrame.directionFlag != DIR_UP) {
-		// release FDF here
-		freeFinsFrame(ff);
-		return;
-	}
-	if (ff->destinationID != module->index) { //TODO update to get from metadata??
-		// release FDF here
-		freeFinsFrame(ff);
-		return;
-	}
-
 	PRINT_DEBUG("UDP_in ff=%p", ff);
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;
 
 	uint32_t protocol;
+	secure_metadata_readFromElement(ff->metaData, "recv_protocol", &protocol);
 	uint32_t family;
+	secure_metadata_readFromElement(ff->metaData, "recv_family", &family);
 	uint32_t src_ip;
+	secure_metadata_readFromElement(ff->metaData, "recv_src_ipv4", &src_ip);
 	uint32_t dst_ip;
-	uint32_t src_port;
-	uint32_t dst_port;
-
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
-	secure_metadata_readFromElement(meta, "recv_family", &family);
-	secure_metadata_readFromElement(meta, "recv_src_ipv4", &src_ip);
-	secure_metadata_readFromElement(meta, "recv_dst_ipv4", &dst_ip);
+	secure_metadata_readFromElement(ff->metaData, "recv_dst_ipv4", &dst_ip);
 
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */
-	/**
-	 if (meta->u_pslen != packet->u_len) {
-	 data->udpStat.mismatchingLengths++;
-	 data->udpStat.totalBadDatagrams ++;
-	 PRINT_DEBUG("UDP_in");
+	uint32_t hlen = ntohs(packet->u_len);
+	if (ff->dataFrame.pduLength != hlen) {
+		md->stats.mismatchingLengths++;
+		md->stats.totalBadDatagrams++;
 
-	 return;
-	 }
-	 */
-	if (protocol != UDP_PROTOCOL) {
-		md->udpStat.wrongProtocol++;
-		md->udpStat.totalBadDatagrams++;
-		PRINT_ERROR("wrong proto=%d", protocol);
-
+		PRINT_DEBUG("UDP_in");
+		freeFinsFrame(ff);
 		return;
 	}
 
 	/* the packet is does have an "Ignore checksum" value and fails the checksum, it is thrown away */
-	/** TODO Correct the implementation of the function UDP_checksum
-	 * Now it will be called as a dummy function
-	 * */
-
 	uint16_t checksum = UDP_checksum((struct udp_packet*) packet, htonl(src_ip), htonl(dst_ip));
 
-	src_port = ntohs(packet->u_src);
-	dst_port = ntohs(packet->u_dst);
+	uint32_t src_port = ntohs(packet->u_src);
+	uint32_t dst_port = ntohs(packet->u_dst);
 
-	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
-	PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
+	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {
 		if (checksum != 0) {
-			md->udpStat.badChecksum++;
-			md->udpStat.totalBadDatagrams++;
+			md->stats.badChecksum++;
+			md->stats.totalBadDatagrams++;
 			PRINT_ERROR("bad checksum=0x%x, calc=0x%x", packet->u_cksum, checksum);
-
+			freeFinsFrame(ff);
 			return;
 		}
 	} else {
-		md->udpStat.noChecksum++;
-		PRINT_DEBUG("ignore checksum=%d", md->udpStat.noChecksum);
+		md->stats.noChecksum++;
+		PRINT_DEBUG("ignore checksum=%d", md->stats.noChecksum);
 	}
 
-	//metadata *udp_meta = (metadata *)fins_malloc (sizeof(metadata));
-	//metadata_create(udp_meta);
+	secure_metadata_writeToElement(ff->metaData, "recv_src_port", &src_port, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_dst_port", &dst_port, META_TYPE_INT32);
 
-	secure_metadata_writeToElement(meta, "recv_src_port", &src_port, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_dst_port", &dst_port, META_TYPE_INT32);
-
-	/* put the header into the meta data*/
-	//	meta->u_destPort = packet->u_dst;
-	//	meta->u_srcPort = packet->u_src;
-	/* construct a FDF to send to the sockets */
-
-	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength);
-	PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
-
-	//ff->dataFrame.pdu = ff->dataFrame.pdu + U_HEADER_LEN;
+	PRINT_DEBUG("PDU Length including UDP header %d", ff->dataFrame.pduLength);PRINT_DEBUG("PDU Length %d", (int)(ff->dataFrame.pduLength - U_HEADER_LEN));
 
 	int leng = ff->dataFrame.pduLength;
 	ff->dataFrame.pduLength = leng - U_HEADER_LEN;

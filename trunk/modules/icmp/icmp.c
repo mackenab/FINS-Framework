@@ -119,7 +119,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
@@ -128,7 +128,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -137,7 +137,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -146,12 +146,12 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
@@ -163,7 +163,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 
 void icmp_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
@@ -192,7 +192,7 @@ void icmp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 void icmp_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
@@ -245,7 +245,7 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		if (icmp_pkt->code == CODE_ECHO) {
 			//pass through to daemon
 			if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 			}
 		} else {
@@ -256,22 +256,22 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	case TYPE_DESTUNREACH:
 		PRINT_DEBUG("Destination unreachable");
 		if (icmp_pkt->code == CODE_NETUNREACH) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_HOSTUNREACH) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_PROTOUNREACH) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_PORTUNREACH) {
 			icmp_handle_error(module, ff, icmp_pkt, data_len, ERROR_ICMP_DEST_UNREACH);
 		} else if (icmp_pkt->code == CODE_FRAGNEEDED) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			//TODO use icmp_pkt->param_2 as Next-Hop MTU
 			freeFinsFrame(ff);
 		} else if (icmp_pkt->code == CODE_SRCROUTEFAIL) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else {
 			PRINT_ERROR("Unrecognized code. Dropping...");
@@ -292,7 +292,7 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		if (icmp_pkt->code == CODE_TTLEXCEEDED) {
 			icmp_handle_error(module, ff, icmp_pkt, data_len, ERROR_ICMP_TTL);
 		} else if (icmp_pkt->code == CODE_DEFRAGTIMEEXCEEDED) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else {
 			PRINT_ERROR("Error in ICMP packet code. Dropping...");
@@ -303,7 +303,7 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_DEBUG("default: type=%u", icmp_pkt->type);
 		//Simply pass up the stack,
 		if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			freeFinsFrame(ff);
 		}
 		break;
@@ -345,7 +345,7 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 		}
 
 		if (list_is_empty(md->sent_list)) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			//TODO drop
 		} else {
 			//TODO fix here
@@ -369,14 +369,14 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 				sent->ff->dataFrame.pdu = NULL;
 
 				if (!module_send_flow(module, ff_err, ICMP_FLOW_DAEMON)) {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 					freeFinsFrame(ff_err);
 				}
 
 				list_remove(md->sent_list, sent);
 				icmp_sent_free(sent);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				//TODO drop?
 			}
 		}
@@ -404,12 +404,12 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 		memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
 		if (!module_send_flow(module, ff_err, ICMP_FLOW_UDP)) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			freeFinsFrame(ff_err);
 		}
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		break;
 	}
 	freeFinsFrame(ff);
@@ -460,7 +460,7 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	ff_reply->dataFrame.pdu = pdu_reply;
 
 	if (!module_send_flow(module, ff_reply, ICMP_FLOW_IPV4)) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff_reply);
 	}
 
@@ -522,7 +522,7 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 		gettimeofday(&sent->stamp, 0);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 	}
 }
@@ -534,14 +534,14 @@ void icmp_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
@@ -550,7 +550,7 @@ void icmp_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
@@ -568,7 +568,7 @@ int icmp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 	struct icmp_data *md = (struct icmp_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;

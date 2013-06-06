@@ -251,7 +251,7 @@ int pool_execute(struct thread_pool *pool, void *(*work)(void *local), void *loc
 
 			return 1;
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			sem_post(&pool->inactive_sem);
 			//TODO shouldn't be possible
 

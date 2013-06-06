@@ -243,7 +243,7 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 	if (list_has_space(md->cmd_list)) {
 		list_append(md->cmd_list, cmd);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 
 //rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
@@ -339,7 +339,7 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 	if (list_has_space(md->cmd_list)) {
 		list_append(md->cmd_list, cmd);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 
 //rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);
@@ -489,7 +489,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	if (list_has_space(md->cmd_list)) {
 		list_append(md->cmd_list, cmd);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 
 //rtm_send_error(console->fd, "Correct so far", cmd_len, cmd_buf);

@@ -149,7 +149,7 @@ void interface_get_ff(struct fins_module *module) {
 	} else if (ff->dataOrCtrl == FF_DATA) {
 		if (ff->dataFrame.directionFlag == DIR_UP) {
 			//interface_in_fdf(module, ff); //TODO remove?
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			freeFinsFrame(ff);
 		} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 			interface_out_fdf(module, ff);
@@ -171,12 +171,12 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
@@ -185,7 +185,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -194,7 +194,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -207,7 +207,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
@@ -219,7 +219,7 @@ void interface_fcf(struct fins_module *module, struct finsFrame *ff) {
 
 void interface_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
@@ -248,7 +248,7 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 void interface_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
@@ -262,7 +262,7 @@ void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -301,7 +301,7 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 				while (!list_is_empty(cache->request_list)) {
 					request_resp = (struct interface_request *) list_remove_front(cache->request_list);
 
-					secure_metadata_writeToElement(request_resp->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
+					//secure_metadata_writeToElement(request_resp->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
 					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
 					if (!interface_inject_pdu(md->client_inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
@@ -407,20 +407,19 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 	struct if_record *ifr = (struct if_record *) list_find1(md->if_list, ifr_index_test, &if_index);
 	if (ifr != NULL) {
 		uint32_t src_ip;
-		uint32_t dst_ip;
-
 		secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
+		uint32_t dst_ip;
 		secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
 
 		uint64_t dst_mac;
 		uint64_t src_mac = ifr->mac;
-		secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
-		PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip);
+		//secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
+		PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip); PRINT_DEBUG("next hop: ip=%u", dst_ip);
 
 		struct interface_cache *cache = (struct interface_cache *) list_find1(md->cache_list, interface_cache_ipv4_test, &dst_ip);
 		if (cache != NULL) {
 			if (cache->seeking) {
-				PRINT_DEBUG("cache seeking: cache=%p", cache);
+				PRINT_DEBUG("cache seeking: cache=%p, ip=%u", cache, dst_ip);
 
 				if (list_has_space(cache->request_list)) {
 
@@ -435,12 +434,12 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 					gettimeofday(&cache->updated_stamp, 0);
 				} else {
 					PRINT_ERROR("Error: request_list full, request_list->len=%u, ff=%p", cache->request_list->len, ff);
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 					freeFinsFrame(ff);
 				}
 			} else {
 				dst_mac = cache->mac;
-				PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+				PRINT_DEBUG("next hop: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
 
 				struct timeval current;
 				gettimeofday(&current, 0);
@@ -487,7 +486,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 				}
 			}
 		} else {
-			PRINT_DEBUG("create cache: start seeking");
+			PRINT_DEBUG("create cache, start seeking: ip=%u", dst_ip);
 			if (list_has_space(md->store_list)) {
 				uint32_t serial_num = gen_control_serial_num();
 				int sent = interface_send_request(module, src_ip, dst_ip, serial_num);
@@ -517,7 +516,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 
 						interface_cache_free(temp_cache);
 					} else {
-						PRINT_ERROR("todo error");
+						PRINT_WARN("todo error");
 						freeFinsFrame(ff);
 						return;
 					}
@@ -545,7 +544,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 			}
 		}
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 	}
 }
@@ -571,7 +570,7 @@ void interface_out_arp(struct fins_module *module, struct finsFrame *ff) {
 
 void interface_out_ipv6(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 	freeFinsFrame(ff);
 }
 
@@ -603,7 +602,7 @@ int interface_inject_pdu(int fd, uint32_t pduLength, uint8_t *pdu, uint64_t dst_
 	} else if (ether_type == ETH_TYPE_IP4) {
 		hdr->ether_type = htons(ETH_TYPE_IP4);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		free(frame);
 		return 0;
 	}
@@ -781,14 +780,14 @@ void interface_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
@@ -797,7 +796,7 @@ void interface_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
@@ -815,7 +814,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	struct interface_data *md = (struct interface_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;
@@ -827,7 +826,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 
 	md->if_list = list_clone(envi->if_list, ifr_clone);
 	if (md->if_list->len > INTERFACE_IF_LIST_MAX) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		struct linked_list *leftover = list_split(md->if_list, INTERFACE_IF_LIST_MAX - 1);
 		list_free(leftover, free);
 	}
@@ -837,6 +836,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	md->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
 	md->store_list = list_create(INTERFACE_STORE_LIST_MAX);
 
+//#ifndef BUILD_FOR_ANDROID
 	pid_t pID = 0;
 	pID = fork();
 	if (pID < 0) { // failed to fork
@@ -844,7 +844,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		exit(-1);
 	} else if (pID == 0) { // child -- Capture process
 		PRINT_DEBUG("capture: pID=%d", (int)pID);
-		//prctl(PR_SET_PDEATHSIG, SIGHUP);
+		prctl(PR_SET_PDEATHSIG, SIGHUP);
 
 		uint8_t *args[2 * INTERFACE_IF_LIST_MAX + 1];
 		args[0] = (uint8_t *) secure_malloc(40);
@@ -870,8 +870,6 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		}
 		args[j] = NULL;
 
-		//int ret = system("./capturer");
-		//int ret = execl("./capturer", "./capturer", (char *) 0);
 		int ret = execv("./capturer", (char **) args);
 		if (ret) {
 			PRINT_ERROR("Failed capturer cmd: pid=%d, errno=%u, str='%s'", pID, errno, strerror(errno));
@@ -882,8 +880,9 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 			;
 	} else { // parent
 		PRINT_DEBUG("inject: pID=%d", (int)pID);
-		sleep(5);
+		sleep(2);
 	}
+	//#endif
 
 	//TODO move to associated thread, so init() is nonblocking
 	struct sockaddr_un addr;
@@ -963,6 +962,10 @@ int interface_shutdown(struct fins_module *module) {
 	struct interface_data *md = (struct interface_data *) module->data;
 
 	//TODO expand this
+	int ret;
+	if ((ret = system("killall capturer"))) {
+		PRINT_ERROR("Problem killing capturer: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	}
 
 	PRINT_IMPORTANT("Joining switch_to_interface_thread");
 	pthread_join(md->switch_to_interface_thread, NULL);

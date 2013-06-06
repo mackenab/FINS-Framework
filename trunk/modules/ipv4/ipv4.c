@@ -29,14 +29,14 @@ void ipv4_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
@@ -45,7 +45,7 @@ void ipv4_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
@@ -59,7 +59,7 @@ void ipv4_ifr_get_addr_func(struct if_record *ifr, struct linked_list *ret_list)
 		if (list_join(ret_list, temp_list)) {
 			free(temp_list);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			//list_free(temp_list, nop_func);
 			list_free(temp_list, free);
 		}
@@ -77,7 +77,7 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 	struct ipv4_data *md = (struct ipv4_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;
@@ -98,7 +98,7 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 
 	md->route_list = list_filter(envi->route_list, route_is_addr4, route_clone);
 	if (md->route_list->len > IPV4_ROUTE_LIST_MAX) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		struct linked_list *leftover = list_split(md->route_list, IPV4_ROUTE_LIST_MAX - 1);
 		list_free(leftover, free);
 	}
@@ -111,7 +111,7 @@ int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, m
 	//routing_table = IP4_get_routing_table();
 
 	PRINT_DEBUG("after ip4 sort route table");
-	memset(&md->stats, 0, sizeof(struct ipv4_stats));
+	memset(&md->stats, 0, sizeof(struct ipv4_statistics));
 
 	return 1;
 }

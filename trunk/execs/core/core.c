@@ -1,5 +1,5 @@
 /*
- * 		@file socketgeni.c
+ * 		@file core.c
  * *  	@date Nov 26, 2010
  *      @author Abdallah Abdallah
  *      @brief This is the FINS CORE including (the Daemon name pipes based
@@ -13,7 +13,6 @@
  *       descriptor, which read considers an error and indicates by returning –1.
  *       */
 #include <signal.h>
-#include <dlfcn.h>
 
 #include <finsdebug.h>
 #include <finstypes.h>
@@ -23,6 +22,19 @@
 #include <finsmodule.h>
 
 #include "core.h"
+
+#ifdef BUILD_FOR_ANDROID
+#include <switch.h>
+#include <interface.h>
+#include <arp.h>
+#include <ipv4.h>
+#include <icmp.h>
+#include <tcp.h>
+#include <udp.h>
+#include <daemon.h>
+#include <logger.h>
+#include <rtm.h>
+#endif
 
 extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
 
@@ -47,70 +59,68 @@ int write_configurations() {
 	return EXIT_SUCCESS;
 }
 
-void core_dummy(void) {
+#ifdef BUILD_FOR_ANDROID
+//TODO fix Android problems with dynamically loading shared libraries.
+// Can find the upperlayer .so's when placed in FINS_TMP_ROOT/files and referenced at /data/data/com.BU_VT.FINS/files;
+// However, the sub so's (common, data_structure) can't be found
 
+void library_dummies(void) {
+	switch_dummy();
+	interface_dummy();
+	arp_dummy();
+	ipv4_dummy();
+	icmp_dummy();
+	tcp_dummy();
+	udp_dummy();
+	daemon_dummy();
+	logger_dummy();
+	rtm_dummy();
 }
 
-typedef struct fins_module *(*mod_create_type)(uint32_t index, uint32_t id, uint8_t *name);
-struct fins_library {
-	uint8_t name[MOD_NAME_SIZE];
-	void *handle;
-	//struct fins_module *(*create)(uint32_t index, uint32_t id, uint8_t *name);
-	mod_create_type create;
-	uint32_t num_mods;
-//struct linked_list *mod_list;
-};
-
-struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
+struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
 	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s'", lib, base_path);
 
 	struct fins_library *library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
 	strcpy((char *) library->name, (char *) lib);
+	library->handle = NULL; //RTLD_LAZY | RTLD_GLOBAL?
 
-	uint8_t *error;
-	uint8_t lib_path[MAX_BASE_PATH + MOD_NAME_SIZE + 7]; // +7 for "/lib<>.so"
-	sprintf((char *) lib_path, "%s/lib%s.so", (char *) base_path, (char *) lib);
-	library->handle = dlopen((char *) lib_path, RTLD_NOW); //RTLD_LAZY | RTLD_GLOBAL?
-	if (library->handle == NULL) {
-		fputs(dlerror(), stderr);
-		PRINT_IMPORTANT("Entered: lib='%s', base_path='%s', library=%p", lib, base_path, NULL);
-		return NULL;
-	}
-
-	uint8_t lib_create[MOD_NAME_SIZE + 7]; // +7 for "_create"
+	uint8_t lib_create[MOD_NAME_SIZE + 7];// +7 for "_create"
 	sprintf((char *) lib_create, "%s_create", (char *) lib);
-	library->create = (mod_create_type) dlsym(library->handle, (char *) lib_create);
-	if ((error = (uint8_t *) dlerror()) != NULL) {
-		fputs((char *) error, stderr);
-		PRINT_IMPORTANT("Entered: lib='%s', base_path='%s', library=%p", lib, base_path, NULL);
-		return NULL;
+
+	if (strcmp((char *) lib_create, "switch_create") == 0) {
+		library->create = (mod_create_type) switch_create;
+	} else if (strcmp((char *) lib_create, "interface_create") == 0) {
+		library->create = (mod_create_type) interface_create;
+	} else if (strcmp((char *) lib_create, "arp_create") == 0) {
+		library->create = (mod_create_type) arp_create;
+	} else if (strcmp((char *) lib_create, "ipv4_create") == 0) {
+		library->create = (mod_create_type) ipv4_create;
+	} else if (strcmp((char *) lib_create, "icmp_create") == 0) {
+		library->create = (mod_create_type) icmp_create;
+	} else if (strcmp((char *) lib_create, "tcp_create") == 0) {
+		library->create = (mod_create_type) tcp_create;
+	} else if (strcmp((char *) lib_create, "udp_create") == 0) {
+		library->create = (mod_create_type) udp_create;
+	} else if (strcmp((char *) lib_create, "daemon_create") == 0) {
+		library->create = (mod_create_type) daemon_create;
+	} else if (strcmp((char *) lib_create, "logger_create") == 0) {
+		library->create = (mod_create_type) logger_create;
+	} else if (strcmp((char *) lib_create, "rtm_create") == 0) {
+		library->create = (mod_create_type) rtm_create;
+	} else {
+		PRINT_ERROR("default: unknown library: lib='%s'", lib);
+		exit(-1);
 	}
 
 	library->num_mods = 0;
 
-	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s', library=%p", lib, base_path, library);
+	PRINT_IMPORTANT("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
 	return library;
 }
+#endif
 
-int lib_name_test(struct fins_library *lib, uint8_t *name) {
-	return strcmp((char *) lib->name, (char *) name) == 0;
-}
+void core_dummy(void) {
 
-void register_all(struct fins_module *module) {
-	//struct fins_module_admin_ops *admin_ops = (struct fins_module_admin_ops *) module->ops;
-
-	int i;
-	for (i = 0; i < MAX_MODULES; i++) {
-		if (overall->modules[i] != NULL) {
-			//admin_ops->register_module(module, overall->modules[i]);
-		}
-	}
-}
-
-void assign_overall(struct fins_module *module, struct fins_overall *overall) {
-	struct fins_module_admin_ops *admin_ops = (struct fins_module_admin_ops *) module->ops;
-
-	admin_ops->pass_overall(module, overall);
 }
 
 void core_termination_handler(int sig) {
@@ -138,15 +148,7 @@ void core_termination_handler(int sig) {
 	list_free(overall->admin_list, nop_func);
 
 	PRINT_IMPORTANT("libraries: close");
-	struct fins_library *library;
-	while (!list_is_empty(overall->lib_list)) {
-		library = (struct fins_library *) list_remove_front(overall->lib_list);
-
-		PRINT_IMPORTANT("closing library: library=%p, name='%s'", library, library->name);
-		dlclose(library->handle);
-		free(library);
-	}
-	free(overall->lib_list);
+	list_free(overall->lib_list, library_free);
 
 	PRINT_IMPORTANT("Freeing links");
 	list_free(overall->link_list, free);
@@ -165,6 +167,10 @@ void core_termination_handler(int sig) {
 
 void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	PRINT_IMPORTANT("Entered");
+
+#ifdef BUILD_FOR_ANDROID
+	library_dummies();
+#endif
 
 	register_to_signal(SIGRTMIN);
 
@@ -308,7 +314,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	if (overall->envi->if_loopback != NULL) {
 		PRINT_IMPORTANT("loopback: name='%s', addr_list->len=%u", overall->envi->if_loopback->name, overall->envi->if_loopback->addr_list->len);
 	} else {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo error");
 	}
 
 	//############# if_main
@@ -325,7 +331,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	if (overall->envi->if_main != NULL) {
 		PRINT_IMPORTANT("main: name='%s', addr_list->len=%u", overall->envi->if_main->name, overall->envi->if_main->addr_list->len);
 	} else {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo error");
 	}
 
 	//############# addr_list
@@ -446,7 +452,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 					} else if (family == AF_INET6) {
 						//TODO
 						//addr_set_addr6(&addr->ip, ip);
-						PRINT_ERROR("todo");
+						PRINT_WARN("todo");
 					} else {
 						//TODO error?
 						PRINT_ERROR("todo error");
@@ -619,7 +625,12 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 
 	uint8_t base_path[100];
 	memset((char *) base_path, 0, 100);
+#ifdef BUILD_FOR_ANDROID
+	strcpy((char *) base_path, FINS_TMP_ROOT);
+	//strcpy((char *) base_path, ".");
+#else
 	strcpy((char *) base_path, ".");
+#endif
 
 	metadata_element *mods_elem = config_lookup(meta_stack, "stack.modules");
 	if (mods_elem == NULL) {
@@ -687,11 +698,15 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		PRINT_DEBUG("admin=%u", mod_admin != NULL);
 
 		//############
-		library = (struct fins_library *) list_find1(overall->lib_list, lib_name_test, mod_lib);
+		library = (struct fins_library *) list_find1(overall->lib_list, library_name_test, mod_lib);
 		if (library == NULL) {
+#ifdef BUILD_FOR_ANDROID
+			library = library_fake_load(mod_lib, base_path);
+#else
 			library = library_load(mod_lib, base_path);
+#endif
 			if (library == NULL) {
-				PRINT_ERROR("todo error");
+				PRINT_ERROR("Failed in loading library: lib='%s', base_path='%s'", mod_lib, base_path);
 				exit(-1);
 			}
 
@@ -699,7 +714,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 				PRINT_IMPORTANT("Adding library: library=%p, name='%s'", library, library->name);
 				list_append(overall->lib_list, library);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_ERROR("Failed in init sequence, too many libraries: lib_list->len=%u", overall->lib_list->len);
 				exit(-1);
 			}
 		}
@@ -707,7 +722,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		module = library->create(i, mod_id, mod_name);
 		if (module == NULL) {
 			//TODO error
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("Failed to create module: library=%p, index=%u, id=%u, name='%s'", library, i, mod_id, mod_name);
 			exit(-1);
 		}
 		library->num_mods++;
@@ -722,7 +737,8 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 				list_append(overall->admin_list, module);
 			}
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_ERROR("Initialization of module failed: module=%p, lib='%s', name='%s', flows_num=%u, flows=%p, params=%p, envi=%p",
+					module, module->lib, module->name, mod_flows_num, mod_flows, mod_params, overall->envi);
 			exit(-1);
 		}
 
@@ -731,7 +747,6 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	}
 
 	//############# admin_list //TODO change to admin_list?
-	//list_for_each(overall->admin_list, register_all);
 	list_for_each1(overall->admin_list, assign_overall, overall);
 
 	//############# linking_list
@@ -984,7 +999,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(meta);
 
-		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
+		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 4); //wlan0
 		uint32_t src_port = 6666;
 		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
 		uint32_t dst_port = 5555;
@@ -1009,15 +1024,17 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		module_to_switch(overall->modules[0], ff);
 	}
 
-	if (0) {
+	if (1) {
 		PRINT_DEBUG("Sending data");
 
 		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(meta);
 
-		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
-		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
+		uint32_t family = AF_INET;
+		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 15); //wlan0
+		uint32_t dst_ip = IP4_ADR_P2H(172, 168, 1, 1); //gw
 
+		secure_metadata_writeToElement(meta, "send_family", &family, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
 
@@ -1048,7 +1065,8 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	core_termination_handler(0);
 }
 
-//#ifndef BUILD_FOR_ANDROID
+//TODO replace this option system with getopt, can see in SuperSU code
+//#include <getopt.h>
 int main(int argc, char *argv[]) {
 	uint8_t envi_default = 1;
 	uint8_t envi_name[FILE_NAME_SIZE];
@@ -1178,4 +1196,3 @@ int main(int argc, char *argv[]) {
 	core_main(envi_name, stack_name);
 	return 0;
 }
-//#endif

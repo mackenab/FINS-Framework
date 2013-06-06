@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,3);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
 
 		int i = 0;
 		while (1) {
-			gets(temp_buff);
+			//gets(temp_buff);
 			printf("sending=%d\n", i);
 			fflush(stdout);
 			*data = htonl(i);
@@ -340,8 +340,9 @@ int main(int argc, char *argv[]) {
 				printf("error: len=%d, numbytes=%d\n", len, numbytes);
 				break;
 			}
+			i++;
 
-			if (0) {
+			if (1) {
 				gettimeofday(&end, 0);
 				diff = time_diff(&start, &end) / 1000;
 				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
@@ -353,9 +354,8 @@ int main(int argc, char *argv[]) {
 			}
 			//break;
 
-			i++;
 			usleep(use);
-			sleep(5);
+			//sleep(5);
 		}
 	}
 

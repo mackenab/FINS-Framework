@@ -118,7 +118,7 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	ff->dataFrame.pduLength = packet_length;
 	ff->dataFrame.pdu = udp_dataunit;
 
-	md->udpStat.totalSent++;
+	md->stats.totalSent++;
 
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 

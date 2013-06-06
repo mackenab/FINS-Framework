@@ -34,8 +34,8 @@
 
 //TODO these definitions need to be gathered
 #ifdef BUILD_FOR_ANDROID
-//#define FINS_TMP_ROOT "/data/data/fins"
-#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
+#define FINS_TMP_ROOT "/data/local/fins"
+//#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
@@ -93,16 +93,16 @@ int main() {
 
 	int console_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (console_fd < 0) {
-		printf("\nsocket error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
+		PRINT_ERROR("socket error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
 		return 0;
 	}
 
-	printf("\nconnecting to: addr='%s'", RTM_PATH);
+	PRINT_IMPORTANT("connecting to: addr='%s'", RTM_PATH);
 	if (connect(console_fd, (struct sockaddr *) &addr, size) != 0) {
-		printf("\nconnect error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
+		PRINT_ERROR("connect error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
 		return 0;
 	}
-	printf("\nconnected at: console_fd=%d, addr='%s'", console_fd, addr.sun_path);
+	PRINT_IMPORTANT("connected at: console_fd=%d, addr='%s'", console_fd, addr.sun_path);
 	//*/
 
 	//TODO fork for recv process that or do nonblocking read on STDIN
@@ -111,13 +111,14 @@ int main() {
 	char cmd_buf[MAX_REPLY_LEN + 1];
 	int numBytes;
 
+	PRINT_IMPORTANT("Enter 'quit' or 'q' to exit console.");
 	while (1) {
 		printf("\n(FINS) ");
 		fflush(stdout);
 
 		cmd_len = get_line(cmd_buf, &buf_size);
-		printf("\tcmd: len=%d, str='%s'", cmd_len, cmd_buf);
-		fflush(stdout);
+		//printf("\tcmd: len=%d, str='%s'", cmd_len, cmd_buf);
+		//fflush(stdout);
 
 		if (cmd_len > 0) {
 			if ((strcmp(cmd_buf, "quit") == 0) || strcmp(cmd_buf, "q") == 0) {
@@ -127,13 +128,13 @@ int main() {
 				//##### write
 				numBytes = write(console_fd, &cmd_len, sizeof(int));
 				if (numBytes <= 0) {
-					printf("\nerror write len: numBytes=%d", numBytes);
+					PRINT_ERROR("\nerror write len: numBytes=%d", numBytes);
 					return 0;
 				}
 
 				numBytes = write(console_fd, cmd_buf, cmd_len);
 				if (numBytes <= 0) {
-					printf("\nerror write buf: numBytes=%d", numBytes);
+					PRINT_ERROR("\nerror write buf: numBytes=%d", numBytes);
 					return 0;
 				}
 
@@ -141,23 +142,23 @@ int main() {
 					//##### read
 					numBytes = read(console_fd, &cmd_len, sizeof(int));
 					if (numBytes <= 0) {
-						printf("\nerror read len: numBytes=%d", numBytes);
+						PRINT_ERROR("\nerror read len: numBytes=%d", numBytes);
 						return 0;
 					}
 
 					numBytes = read(console_fd, cmd_buf, cmd_len);
 					if (numBytes <= 0) {
-						printf("\nerror read buf: numBytes=%d", numBytes);
+						PRINT_ERROR("\nerror read buf: numBytes=%d", numBytes);
 						return 0;
 					}
 
 					if (cmd_len != numBytes) {
-						printf("\nwrite len different: cmd_len=%d, numBytes=%d", cmd_len, numBytes);
+						PRINT_ERROR("\nwrite len different: cmd_len=%d, numBytes=%d", cmd_len, numBytes);
 						exit(-1);
 					}
 					cmd_buf[cmd_len] = '\0';
-					printf("\n\trecv: len=%u, buf='%s'", cmd_len, cmd_buf); //TODO remove
-					printf("\n%s", cmd_buf);
+					//printf("\n\trecv: len=%u, buf='%s'", cmd_len, cmd_buf); //TODO remove
+					printf("%s", cmd_buf);
 				}
 			}
 		} else if (cmd_len < 0) {

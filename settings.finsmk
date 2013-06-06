@@ -109,6 +109,6 @@ MAX_DEPTH := 10
 
 #COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)
 
-filter_headers = $(shell ls $(1) | grep \\.h)
-#filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(shell ls $(DIR) | grep \\.h)))
+filter_headers = $(shell ls $(1) | grep \\.h 2> /dev/null)
+#filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(shell ls $(DIR) | grep \\.h 2> /dev/null)))
 filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(call filter_headers,$(DIR))))

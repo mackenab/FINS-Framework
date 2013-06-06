@@ -7,7 +7,17 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-#define DEBUG
+//TODO add more levels:
+//verbose?
+//debug - white - for tracing function calls (Entered/Exited function)
+//info - blue - human readable text that doesn't need context (resolved/didn't resolve MAC address)
+//warn - yellow - potentially bad occurrances but not errors (poll not finding initial call)
+//alert/important - green - crucially important output (modules going up/down, console connecting)
+//error - red - fatal errors
+
+//#define DEBUG
+//#define INFO
+#define WARN
 #define IMPORTANT
 #define ERROR
 
@@ -21,6 +31,18 @@
 #define PRINT_DEBUG(format, args...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", "DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)
 #else
 #define PRINT_DEBUG(format, args...)
+#endif
+
+#ifdef INFO
+#define PRINT_INFO(format, args...) __android_log_print(ANDROID_LOG_INFO, "FINS", "INFO(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)
+#else
+#define PRINT_INFO(format, args...)
+#endif
+
+#ifdef WARN
+#define PRINT_WARN(format, args...) __android_log_print(ANDROID_LOG_WARN, "FINS", "WARN(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)
+#else
+#define PRINT_WARN(format, args...)
 #endif
 
 #ifdef IMPORTANT
@@ -39,19 +61,31 @@
 #include <stdio.h>
 
 #ifdef DEBUG
-#define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)//;fflush(stdout)
+#define PRINT_DEBUG(format, args...) printf("\033[01;37mDEBUG(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_DEBUG(format, args...)
 #endif
 
+#ifdef INFO
+#define PRINT_INFO(format, args...) printf("\033[01;34mINFO(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#else
+#define PRINT_INFO(format, args...)
+#endif
+
+#ifdef WARN
+#define PRINT_WARN(format, args...) printf("\033[01;33mWARN(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#else
+#define PRINT_WARN(format, args...)
+#endif
+
 #ifdef IMPORTANT
-#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)//;fflush(stdout)
+#define PRINT_IMPORTANT(format, args...) printf("\033[01;32mIMPORTANT(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR
-#define PRINT_ERROR(format, args...) printf("ERROR(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)//;fflush(stdout)
+#define PRINT_ERROR(format, args...) printf("\033[01;31mERROR(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_ERROR(format, args...)
 #endif

@@ -14,7 +14,7 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 	void *buf = malloc(len);
 	if (buf == NULL) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):malloc: len=%u\n", file, func, line, len);
+		printf("\033[01;31mERROR(%s, %s, %d):malloc: len=%u\n\033[01;37m", file, func, line, len);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -30,7 +30,7 @@ void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *s
 	if (ret != 0) {
 		//if (sem_wait(sem)) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):sem_wait prob: sem=%p\n", file, func, line, sem);
+		printf("\033[01;31mERROR(%s, %s, %d):sem_wait prob: sem=%p\n\033[01;37m", file, func, line, sem);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -40,7 +40,7 @@ void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *s
 void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *meta, const char *target, void *value) {
 	if (metadata_readFromElement(meta, target, value) == META_FALSE) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):metadata_readFromElement: meta=%p, target='%s', value=%p\n", file, func, line, meta, target, value);
+		printf("\033[01;31mERROR(%s, %s, %d):metadata_readFromElement: meta=%p, target='%s', value=%p\n\033[01;37m", file, func, line, meta, target, value);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -50,7 +50,7 @@ void secure_metadata_readFromElement_full(const char *file, const char *func, in
 void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *meta, char *target, void *value, int type) {
 	if (metadata_writeToElement(meta, target, value, type) == META_FALSE) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):metadata_writeToElement: meta=%p, target='%s', value=%p, type=%d\n", file, func, line, meta, target, value, type);
+		printf("\033[01;31mERROR(%s, %s, %d):metadata_writeToElement: meta=%p, target='%s', value=%p, type=%d\n\033[01;37m", file, func, line, meta, target, value, type);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -60,7 +60,7 @@ void secure_metadata_writeToElement_full(const char *file, const char *func, int
 void secure_pthread_create_full(const char *file, const char *func, int line, pthread_t *thread, pthread_attr_t *attr, void *(*routine)(void *), void *arg) {
 	if (pthread_create(thread, attr, routine, arg)) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n", file, func, line, thread, attr, routine, arg);
+		printf("\033[01;31mERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n\033[01;37m", file, func, line, thread, attr, routine, arg);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -217,7 +217,7 @@ int list_check(struct linked_list *list) { //TODO remove all references
 		count++;
 
 		if (prev != temp->prev) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			return LIST_FALSE;
 		}
 
@@ -1270,7 +1270,7 @@ void print_finsFrame(struct finsFrame *ff) {
 		print_hex(ff->ctrlFrame.data_len, ff->ctrlFrame.data);
 #endif
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 }
 
@@ -1305,7 +1305,7 @@ void copy_fins_to_fins(struct finsFrame *dst, struct finsFrame *src) {
 		dst->ctrlFrame.sender_id = src->ctrlFrame.sender_id;
 		dst->ctrlFrame.serial_num = src->ctrlFrame.serial_num;
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 }
 
@@ -1318,10 +1318,10 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	metadata *meta = ff->metaData;
 	if (meta != NULL) {
 		if (metadata_copy(meta, meta_clone) == META_FALSE) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 		}
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 
 	struct finsFrame *ff_clone = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
@@ -1735,7 +1735,7 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 		}
 	}
 	temp[3 * msg_len] = '\0';
-	PRINT_IMPORTANT("msg_len=%u, msg='%s'\n", msg_len, temp);
+	PRINT_IMPORTANT("msg_len=%u, msg='%s'", msg_len, temp);
 	free(temp);
 }
 

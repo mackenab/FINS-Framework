@@ -125,10 +125,6 @@ int main(int argc, char *argv[]) {
 		perror("socket");
 		exit(1);
 	}
-	printf("here1\n");
-	fflush(stdout);
-
-	return;
 
 	int val = 0;
 	setsockopt(sock, SOL_IP, IP_MTU_DISCOVER, &val, sizeof(val));
@@ -163,7 +159,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,5);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,9);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -417,7 +413,7 @@ int main(int argc, char *argv[]) {
 
 	if (1) {
 		double total = 10;
-		double speed = 200000; //bits per sec
+		double speed = 10000; //bits per sec
 		int len = 1000; //msg size
 
 		double time = 8 * len / speed * 1000000;
@@ -445,8 +441,9 @@ int main(int argc, char *argv[]) {
 				printf("error: len=%d, numbytes=%d\n", len, numbytes);
 				break;
 			}
+			i++;
 
-			if (0) {
+			if (1) {
 				gettimeofday(&end, 0);
 				diff = time_diff(&start, &end) / 1000;
 				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
@@ -458,9 +455,8 @@ int main(int argc, char *argv[]) {
 			}
 			//break;
 
-			i++;
 			usleep(use);
-			sleep(5);
+			//sleep(5);
 		}
 	}
 
