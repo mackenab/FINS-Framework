@@ -177,7 +177,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					struct finsFrame *ff_reply = arp_to_fdf(&arp_msg_reply);
 
 					if (!module_send_flow(module, ff_reply, ARP_FLOW_INTERFACE)) {
-						PRINT_ERROR("todo error");
+						PRINT_WARN("todo error");
 						freeFinsFrame(ff_reply);
 					}
 				} else {
@@ -252,7 +252,7 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 			uint32_t dst_ip = cache->ip;
 
 			if (list_is_empty(cache->request_list)) {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				//TODO retrans from default interface?
 				//TODO send error FCF ?
 			} else {
@@ -272,7 +272,7 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 					//gettimeofday(&cache->updated_stamp, 0);
 					timer_once_start(cache->to_data->tid, ARP_RETRANS_TO_DEFAULT);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 					freeFinsFrame(ff_req);
 
 					//TODO send error FCF

@@ -13,6 +13,6 @@ LOCAL_LIBS := common
 LOCAL_OBJS := queue.o finsqueue.o finsmodule.o
 LOCAL_INCS := .
 LOCAL_CFLAGS := -fpic
-LOCAL_LDFLAGS := -lc
+LOCAL_LDFLAGS := -lc -ldl
 
 include $(LIBS_DIR)/make_library.finsmk

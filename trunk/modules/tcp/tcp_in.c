@@ -89,7 +89,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 			conn->duplicate++; //TODO fix, creating duplicate from ACK or FIN ACK.
 			//check for FR
-			if (conn->duplicate == md->fast_duplicates) {
+			if (md->fast_enabled && conn->duplicate >= md->fast_duplicates) {
 				conn->duplicate = 0;
 
 				//RTT
@@ -875,7 +875,7 @@ int process_seg(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *
 			seg->data_len = 0;
 		} else {
 			//TODO big error
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			return 0;
 		}
 	}
@@ -902,7 +902,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		if (process_seg(conn, seg, &send_flags)) {
 			uint32_decrease(&conn->recv_win, seg->data_len);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			//TODO error
 		}
 		tcp_seg_free(seg);
@@ -941,7 +941,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 					PRINT_DEBUG("Connected to seqs=(%u, %u) (%u, %u), len=%d",
 							seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->seq_end-seg->seq_num);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 					//TODO error
 				}
 
@@ -1026,7 +1026,7 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 		PRINT_ERROR("todo fix");
 		if (conn->fin_sent) {
 			//TODO prob
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			PRINT_DEBUG("removing fin");
 			flags &= ~FLAG_FIN;
 		} else {
@@ -1103,10 +1103,12 @@ void *tcp_syn_thread(void *local) {
 	}
 
 	PRINT_DEBUG("");
-	secure_sem_wait(&md->conn_stub_list_sem);;
+	secure_sem_wait(&md->conn_stub_list_sem);
+	;
 	conn_stub->threads--;
 	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
-	sem_post(&md->conn_stub_list_sem);;
+	sem_post(&md->conn_stub_list_sem);
+	;
 
 	/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 	sem_post(&conn_stub->sem);
@@ -1173,9 +1175,9 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 	if (seg->flags & FLAG_RST) {
 		//acceptable if the ACK field acknowledges the SYN
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	} else if (seg->flags & FLAG_FIN) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	} else if (seg->flags & FLAG_SYN) {
 		if (seg->flags & FLAG_ACK) {
 			if (seg->ack_num == conn->send_seq_num + 1) {
@@ -1226,7 +1228,7 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 					module_reply_fcf(conn->module, conn->ff, FCF_TRUE, 0);
 					conn->ff = NULL;
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 			} else {
 				PRINT_DEBUG("Invalid SYN ACK: was not sent: ack=%u, host_seq_num=%u", seg->ack_num, conn->send_seq_num);
@@ -1304,10 +1306,10 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	if (seg->flags & FLAG_RST) {
 		//if RST, send -, LISTEN
 
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	} else if (seg->flags & FLAG_FIN) {
 		//drop
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 
 	} else if (seg->flags & FLAG_SYN) {
 		if (seg->flags & FLAG_ACK) {
@@ -1358,12 +1360,12 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 					tcp_conn_reply_fcf(conn, FCF_TRUE, 0); //accept needs rem ip/port
 					conn->ff = NULL;
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent.");
 				//TODO send RST?
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 		} else {
 			if (seg->opt_len) {
@@ -1445,12 +1447,12 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 					tcp_conn_reply_fcf(conn, FCF_TRUE, 0); //accept needs rem ip/port
 					conn->ff = NULL;
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent.");
 				//TODO send RST?
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 		} else {
 			PRINT_DEBUG("Invalid Seg: SYN_RECV & not ACK.");
@@ -1485,7 +1487,7 @@ void recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
 		}
 
 		if (seg->flags & FLAG_URG) {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 		}
 
 		uint16_t flags = handle_data(conn, seg);
@@ -1514,7 +1516,7 @@ void recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		if (seg->flags & FLAG_URG) {
 			//TODO implement
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 		}
 
 		flags = handle_data(conn, seg);
@@ -1535,7 +1537,7 @@ void recv_fin_wait_1_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 	//if ACK, send -, FIN_WAIT_2
 
 	if (seg->flags & FLAG_RST) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	}
 
 	if (seg->flags & FLAG_ACK) {
@@ -1559,7 +1561,7 @@ void recv_fin_wait_1_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 				conn->state = TS_FIN_WAIT_2;
 			} else {
 				//TODO RST?
-				PRINT_ERROR("todo");
+				PRINT_WARN("todo");
 			}
 		} else {
 			handle_ACK(conn, seg);
@@ -1612,7 +1614,7 @@ void recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		if (seg->flags & FLAG_URG) {
 			//TODO implement
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 		}
 
 		flags = handle_data(conn, seg); //change to process of some sort, since no data & only flags
@@ -1631,7 +1633,7 @@ void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 	if (seg->flags & FLAG_RST) {
 		//TODO handle
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	}
 
 	if (conn->fin_sent && conn->fin_sep && tcp_conn_is_finished(conn)) { //TODO remove, unnecessary w/handle_ACK changes
@@ -1661,7 +1663,7 @@ void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 			conn->to_gbn_flag = 0;
 		} else {
 			//TODO RST
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 		}
 	} else {
 		handle_ACK(conn, seg);
@@ -1694,7 +1696,7 @@ void recv_time_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		if (seg->flags & FLAG_URG) {
 			//TODO implement
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 		}
 
 		flags = handle_data(conn, seg); //change to process of some sort, since no data & only flags
@@ -1737,7 +1739,7 @@ void recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 
 		if (seg->flags & FLAG_URG) {
 			//TODO implement
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 		}
 
 		flags = handle_data(conn, seg); //change to process of some sort, since no data & only flags
@@ -1784,7 +1786,7 @@ void recv_last_ack_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 				tcp_conn_shutdown(conn);
 			} else {
 				//TODO RST
-				PRINT_ERROR("todo");
+				PRINT_WARN("todo");
 			}
 		} else {
 			handle_ACK(conn, seg);
@@ -1858,7 +1860,7 @@ void *tcp_recv_thread(void *local) {
 			default:
 				PRINT_ERROR( "Incorrect state: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p",
 						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg);
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				break;
 			}
 		} else {
@@ -1962,6 +1964,11 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					temp_seg->ack_num = seg->seq_end;
 
 					temp_seg->flags |= ((MIN_TCP_HEADER_WORDS + 0) << 12) & FLAG_DATAOFFSET;
+
+					if (conn->module == NULL) {
+						PRINT_ERROR("arrived here");
+						conn->module = module;
+					}
 					tcp_seg_send(conn->module, temp_seg);
 					tcp_seg_free(temp_seg);
 

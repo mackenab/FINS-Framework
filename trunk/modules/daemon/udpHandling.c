@@ -9,11 +9,11 @@
 #include <finstypes.h>
 
 struct daemon_socket_general_ops udp_general_ops = { .proto = IPPROTO_UDP, .socket_type_test = socket_udp_test, .socket_out = socket_out_udp, .daemon_in_fdf =
-daemon_in_fdf_udp, .daemon_in_error = daemon_in_error_udp, };
+		daemon_in_fdf_udp, .daemon_in_error = daemon_in_error_udp, };
 static struct daemon_socket_out_ops udp_out_ops = { .socket_out = socket_out_udp, .bind_out = bind_out_udp, .listen_out = listen_out_udp, .connect_out =
-connect_out_udp, .accept_out = accept_out_udp, .getname_out = getname_out_udp, .ioctl_out = ioctl_out_udp, .sendmsg_out = sendmsg_out_udp,
+		connect_out_udp, .accept_out = accept_out_udp, .getname_out = getname_out_udp, .ioctl_out = ioctl_out_udp, .sendmsg_out = sendmsg_out_udp,
 		.recvmsg_out = recvmsg_out_udp, .getsockopt_out = getsockopt_out_udp, .setsockopt_out = setsockopt_out_udp, .release_out = release_out_udp, .poll_out =
-		poll_out_udp, .mmap_out = mmap_out_udp, .socketpair_out = socketpair_out_udp, .shutdown_out = shutdown_out_udp, .close_out = close_out_udp,
+				poll_out_udp, .mmap_out = mmap_out_udp, .socketpair_out = socketpair_out_udp, .shutdown_out = shutdown_out_udp, .close_out = close_out_udp,
 		.sendpage_out = sendpage_out_udp, };
 static struct daemon_socket_in_ops udp_in_ops = { };
 static struct daemon_socket_other_ops udp_other_ops = { .recvmsg_timeout = recvmsg_timeout_udp, };
@@ -63,7 +63,7 @@ void bind_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, st
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->sockets[hdr->sock_index].family != AF_UNSPEC) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EINVAL); //22
 		return;
 	}
@@ -102,7 +102,7 @@ void listen_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->sockets[hdr->sock_index].family == AF_UNSPEC) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -126,7 +126,7 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 
 	if (addr->ss_family == AF_INET) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			return;
 		}
@@ -157,7 +157,7 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			if (address != NULL) {
 				host_ip = addr4_get_ip(&address->ip);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				host_ip = 0;
 			}
 
@@ -178,11 +178,11 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 	} else if (addr->ss_family == AF_INET6) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET6) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			return;
 		}
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	} else {
@@ -228,7 +228,7 @@ void getname_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				if (addr != NULL) {
 					addr_ip = addr4_get_ip(&addr->ip);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 			}
 		} else if (peer == 1) { //getpeername
@@ -248,7 +248,7 @@ void getname_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				addr_port = 0;
 			}
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			addr_ip = 0;
 			addr_port = 0;
 		}
@@ -446,7 +446,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	metadata *meta;
 	if (addr->ss_family == AF_INET) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			free(data);
 			return;
@@ -473,7 +473,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				if (address != NULL) {
 					host_ip = addr4_get_ip(&address->ip);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 			}
 		} else {
@@ -483,7 +483,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			if (address != NULL) {
 				host_ip = addr4_get_ip(&address->ip);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 
 			/**
@@ -522,13 +522,13 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		secure_metadata_writeToElement(meta, "send_dst_port", &rem_port, META_TYPE_INT32);
 	} else if (addr->ss_family == AF_INET6) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET6) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			free(data);
 			return;
 		}
 
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(data);
 		return;
@@ -544,7 +544,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				if (address != NULL) {
 					host_ip = addr4_get_ip(&address->ip);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 
 				uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
@@ -570,7 +570,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 #endif
 				//########################
 			} else { //AF_INET6
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				free(data);
 				return;
@@ -646,7 +646,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 					addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 					//addr6 = (struct sockaddr_in6 *) store->addr;
 
-					PRINT_ERROR("todo");
+					PRINT_WARN("todo");
 					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					return;
 				}
@@ -685,7 +685,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 				//addr6 = (struct sockaddr_in6 *) store->addr;
 
-				PRINT_ERROR("todo");
+				PRINT_WARN("todo");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
@@ -837,13 +837,14 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 					mask |= POLLERR;
 				}
 			} else {
-				PRINT_DEBUG("todo: POLLERR"); //TODO change back to error
+				PRINT_WARN("todo: POLLERR");
+				//TODO change back to error
 			}
 		}
 
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
-				mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+				mask |= POLLIN | POLLRDNORM | POLLPRI;
 			}
 		}
 
@@ -885,7 +886,7 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 			if (call->alloc) {
 				daemon_call_free(call);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 
 			uint32_t ret_mask = events & mask;
@@ -903,13 +904,14 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 							mask |= POLLERR;
 						}
 					} else {
-						PRINT_DEBUG("todo: POLLERR"); //TODO change back to error
+						PRINT_WARN("todo: POLLERR");
+						//TODO change back to error
 					}
 				}
 
 				if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 					if (md->sockets[hdr->sock_index].data_buf > 0) {
-						mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+						mask |= POLLIN | POLLRDNORM | POLLPRI;
 					}
 				}
 
@@ -938,7 +940,7 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 			}
 
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
-				mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+				mask |= POLLIN | POLLRDNORM | POLLPRI;
 			}
 
 			mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
@@ -953,12 +955,12 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 
 void mmap_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void socketpair_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void shutdown_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int how) {
@@ -973,12 +975,12 @@ void shutdown_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 
 void close_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void sendpage_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
@@ -1008,7 +1010,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FIP_TOS = *(int *) optval;
 				PRINT_DEBUG("FIP_TOS=%d", md->sockets[hdr->sock_index].sockopts.FIP_TOS);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case IP_RECVERR:
@@ -1016,7 +1018,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FIP_RECVERR = *(int *) optval;
 				PRINT_DEBUG("FIP_RECVERR=%d", md->sockets[hdr->sock_index].sockopts.FIP_RECVERR);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case IP_MTU_DISCOVER:
@@ -1028,7 +1030,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL = *(int *) optval;
 				PRINT_DEBUG("FIP_RECVTTL=%d", md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case IP_TTL:
@@ -1036,7 +1038,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FIP_TTL = *(int *) optval;
 				PRINT_DEBUG("FIP_TTL=%d", md->sockets[hdr->sock_index].sockopts.FIP_TTL);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		default:
@@ -1050,7 +1052,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FICMP_FILTER = *(int *) optval;
 				PRINT_DEBUG("FICMP_FILTER=%d", md->sockets[hdr->sock_index].sockopts.FICMP_FILTER);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		default:
@@ -1064,7 +1066,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY = *(int *) optval;
 				PRINT_DEBUG("FTCP_NODELAY=%d", md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		default:
@@ -1078,7 +1080,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FSO_DEBUG = *(int *) optval;
 				PRINT_DEBUG("FSO_DEBUG=%d", md->sockets[hdr->sock_index].sockopts.FSO_DEBUG);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_REUSEADDR:
@@ -1086,7 +1088,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR = *(int *) optval;
 				PRINT_DEBUG("FSO_REUSEADDR=%d", md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_TYPE:
@@ -1103,7 +1105,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF = *(int *) optval;
 				PRINT_DEBUG("FSO_SNDBUF=%d", md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_SNDBUFFORCE:
@@ -1113,7 +1115,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF = 2 * (*(int *) optval); //TODO add conditions
 				PRINT_DEBUG("FSO_RCVBUF=%d", md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_RCVBUFFORCE:
@@ -1129,7 +1131,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 				md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP = *(int *) optval;
 				PRINT_DEBUG("FSO_TIMESTAMP=%d", md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			break;
 #ifndef BUILD_FOR_ANDROID
@@ -1154,7 +1156,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 #endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			break;
 		default:
 			PRINT_ERROR("default=%d", optname);
@@ -1192,7 +1194,7 @@ void getsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 			break;
 		case IP_MTU_DISCOVER:
 			//TODO
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			break;
 		case IP_RECVTTL:
 			len = sizeof(int);
@@ -1289,7 +1291,7 @@ void getsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 #endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			break;
 		default:
 			PRINT_ERROR("default=%d", optname);
@@ -1362,7 +1364,7 @@ void poll_in_udp(struct daemon_call *call, struct fins_module *module, uint32_t 
 
 	if (*flags & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
-			mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+			mask |= POLLIN | POLLRDNORM | POLLPRI;
 		}
 	}
 
@@ -1422,7 +1424,7 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 		addr4->sin_port = htons(addr4->sin_port);
 		PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else { //AF_INET6
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, call->id, call->index, call->type, 1);
 		daemon_calls_remove(module, call->index);
 		return data_len;
@@ -1487,7 +1489,7 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -1562,7 +1564,7 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -1594,7 +1596,7 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 			daemon_store_free(store);
 		}
 	} else { //AF_INET
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 	}
 }
@@ -1613,7 +1615,7 @@ void recvmsg_timeout_udp(struct fins_module *module, struct daemon_call *call) {
 		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
 		break;
 	}

@@ -147,7 +147,7 @@ int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (msg_controllen > CONTROL_LEN_MAX) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		//TODO send some error
 		*control_len = 0;
 		*control = NULL;
@@ -185,7 +185,7 @@ int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 			*control_len += cmsg_space;
 			control_pt += cmsg_space;
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 		}
 	}
 
@@ -208,7 +208,7 @@ int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 				*control_len += cmsg_space;
 				control_pt += cmsg_space;
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 		} else {
 			PRINT_ERROR("no recv_ttl, meta=%p", meta);
@@ -249,13 +249,12 @@ int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 			*control_len += cmsg_space;
 			control_pt += cmsg_space;
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 		}
 	}
 
 	if (control_pt - *control != *control_len) {
 		PRINT_ERROR("write error: diff=%d, len=%d", control_pt - *control, *control_len);
-		free(*control);
 		exit(-1);
 	}
 

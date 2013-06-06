@@ -18,10 +18,10 @@ LOCAL_CFLAGS :=
 
 ifdef BUILD_FOR_ANDROID_ARM
 LOCAL_LIBS := common data_structure config
-LOCAL_LDFLAGS := -lc -ldl
+LOCAL_LDFLAGS := -lc
 else
 LOCAL_LIBS := common data_structure
-LOCAL_LDFLAGS := -lc -ldl -lpthread
+LOCAL_LDFLAGS := -lc -lpthread
 endif
 
 include $(EXECS_DIR)/make_executable.finsmk

@@ -63,14 +63,14 @@ void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct i
 		free(pdu);
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		//exit(-1);
 		return;
 	}
 
 	if (!module_send_flow(module, ff, flow)) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 	}
 }
@@ -92,7 +92,7 @@ void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct 
 	secure_metadata_writeToElement(ff->metaData, "send_dst_ipv4", &address, META_TYPE_INT32);
 
 	if (!module_send_flow(module, ff, IPV4_FLOW_INTERFACE)) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 	}
 

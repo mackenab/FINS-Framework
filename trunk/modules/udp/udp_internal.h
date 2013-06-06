@@ -142,7 +142,7 @@ struct udp_data {
 
 	pthread_t switch_to_udp_thread;
 
-	struct udp_statistics udpStat;
+	struct udp_statistics stats;
 	struct linked_list *sent_packet_list;
 };
 

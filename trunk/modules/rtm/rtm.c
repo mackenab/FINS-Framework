@@ -163,11 +163,11 @@ void *console_to_rtm(void *local) {
 									cmd_buf[cmd_len] = '\0';
 									rtm_process_cmd(module, console, cmd_len, cmd_buf);
 								} else {
-									PRINT_ERROR("todo error");
+									PRINT_WARN("todo error");
 								}
 							}
 						} else {
-							PRINT_ERROR("todo error");
+							PRINT_WARN("todo error");
 							//console removed after poll started, before it returned, remove?
 						}
 					}
@@ -196,7 +196,7 @@ int rtm_recv_fd(int fd, uint32_t buf_len, uint8_t *buf) {
 	}
 
 	if (numBytes != sizeof(uint32_t) || msg_len > buf_len) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, -1);
 		return -1;
 	}
@@ -208,7 +208,7 @@ int rtm_recv_fd(int fd, uint32_t buf_len, uint8_t *buf) {
 	}
 
 	if (msg_len != (uint32_t) numBytes) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, -1);
 		return -1;
 	}
@@ -227,7 +227,7 @@ int rtm_send_fd(int fd, uint32_t buf_len, uint8_t *buf) {
 	}
 
 	if (numBytes != sizeof(uint32_t)) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, -1);
 		return -1;
 	}
@@ -239,7 +239,7 @@ int rtm_send_fd(int fd, uint32_t buf_len, uint8_t *buf) {
 	}
 
 	if (buf_len != (uint32_t) numBytes) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, -1);
 		return -1;
 	}
@@ -343,11 +343,11 @@ void rtm_get_ff(struct fins_module *module) {
 		} else if (ff->dataOrCtrl == FF_DATA) {
 			if (ff->dataFrame.directionFlag == DIR_UP) {
 				//rtm_in_fdf(module, ff);
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 			} else if (ff->dataFrame.directionFlag == DIR_DOWN) {
 				//rtm_out_fdf(module, ff);
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 			} else {
 				PRINT_ERROR("todo error");
@@ -375,17 +375,17 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
@@ -402,7 +402,7 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_EXEC_REPLY:
@@ -411,12 +411,11 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
 		exit(-1);
 		break;
 	}
@@ -475,14 +474,14 @@ void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 				rtm_send_text(console->fd, temp);
 			}
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 		}
 		sem_post(&md->shared_sem);
 
 		free(cmd);
 	} else {
 		sem_post(&md->shared_sem);
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		//TODO error, drop
 		freeFinsFrame(ff);
 	}
@@ -506,7 +505,7 @@ void rtm_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -535,14 +534,14 @@ void rtm_set_param_reply(struct fins_module *module, struct finsFrame *ff) {
 				rtm_send_text(console->fd, temp);
 			}
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 		}
 		sem_post(&md->shared_sem);
 
 		free(cmd);
 	} else {
 		sem_post(&md->shared_sem);
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		//TODO error, drop
 		freeFinsFrame(ff);
 	}
@@ -564,38 +563,38 @@ void rtm_init_params(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->params);
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	metadata_element *sub = config_setting_add(exec_elem, "test", CONFIG_TYPE_GROUP);
 	if (sub == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	metadata_element *elem = config_setting_add(sub, "key", CONFIG_TYPE_INT);
 	if (elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	uint32_t value = 10;
 	int status = config_setting_set_int(elem, *(int *) &value);
 	if (status == CONFIG_FALSE) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 }
@@ -611,7 +610,7 @@ int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	struct rtm_data *md = (struct rtm_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;
@@ -725,7 +724,7 @@ int rtm_register_module(struct fins_module *module, struct fins_module *new_mod)
 	struct rtm_data *md = (struct rtm_data *) module->data;
 
 	if (new_mod->index >= MAX_MODULES) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return -1;
 	}
 
@@ -745,7 +744,7 @@ int rtm_unregister_module(struct fins_module *module, int index) {
 	struct rtm_data *md = (struct rtm_data *) module->data;
 
 	if (index < 0 || index > MAX_MODULES) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 

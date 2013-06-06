@@ -63,8 +63,8 @@
 
 //TODO change this macro to an extern in core? expect all exec apps to define FINS_TMP_ROOT
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
-//#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS"
+#define FINS_TMP_ROOT "/data/local/fins"
+//#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
@@ -105,7 +105,7 @@
 #define OP_HELP_MSG "Available operations:"
 
 //TODO finish
-#define OP_HELP_INFO ""
+#define OP_HELP_INFO "Documentation on available operations and their usage."
 #define OP_EXEC_INFO "Execute a procedure for one or all of the modules."
 #define OP_GET_INFO "Get the value of a parameter or sub-parameter for a module."
 #define OP_SET_INFO "Set the value of a parameter or sub-parameter for a module."

@@ -9,6 +9,7 @@
 #define FINSMODULE_H_
 
 //#include <arpa/inet.h>
+#include <dlfcn.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
@@ -72,6 +73,18 @@ struct fins_module_ops {
 	int (*release)(struct fins_module *module);
 };
 
+typedef struct fins_module *(*mod_create_type)(uint32_t index, uint32_t id, uint8_t *name);
+struct fins_library {
+	uint8_t name[MOD_NAME_SIZE];
+	void *handle;
+	mod_create_type create;
+	uint32_t num_mods;
+//struct linked_list *mod_list;
+};
+struct fins_library *library_load(uint8_t *lib, uint8_t *base_path);
+int library_name_test(struct fins_library *lib, uint8_t *name);
+void library_free(struct fins_library *lib);
+
 struct fins_overall {
 	sem_t sem;
 	struct envi_record *envi;
@@ -92,8 +105,7 @@ struct fins_module_admin_ops {
 	int (*release)(struct fins_module *module);
 	int (*pass_overall)(struct fins_module *module, struct fins_overall *overall);
 };
-//int (*register_module)(struct fins_module *module, struct fins_module *new_mod); //TODO remove?
-//int (*unregister_module)(struct fins_module *module, int index); //TODO remove?
+void assign_overall(struct fins_module *module, struct fins_overall *overall);
 
 struct link_record {
 	uint32_t id;
@@ -124,6 +136,11 @@ int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t 
 void module_set_param_flows(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_links(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_dual(struct fins_module *module, struct finsFrame *ff);
+
+void module_get_param_flows(struct fins_module *module, struct finsFrame *ff);
+void module_get_param_links(struct fins_module *module, struct finsFrame *ff);
+void module_get_param_dual(struct fins_module *module, struct finsFrame *ff);
+
 
 //SET_PARAM / GET_PARAM
 #define MOD_GET_PARAM_FLOWS 0

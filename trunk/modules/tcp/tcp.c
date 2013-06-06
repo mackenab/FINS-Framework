@@ -857,7 +857,7 @@ void main_established(struct tcp_connection *conn) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
 			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
-				//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
+			//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -1088,7 +1088,7 @@ void main_fin_wait_1(struct tcp_connection *conn) {
 			//if (conn->send_win_ack + conn->send_win > conn->send_seq_end && flight_size < (uint32_t) conn->send_max_win && cong_space >= (double) conn->MSS) {
 			PRINT_DEBUG("write_space=%u, recv_space=%f, cong_space=%f", write_space, recv_space, cong_space);
 			if (write_space > 0 && recv_space > 1 && cong_space > 1) { //TODO make sure is right!
-				//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
+			//if (write_space > 0 && recv_space > 1) { //TODO remove, ignores cc
 				PRINT_DEBUG("sending packet");
 
 				if (write_space > (uint32_t) conn->MSS) {
@@ -2205,7 +2205,7 @@ void tcp_seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16
 	case TS_FIN_WAIT_1:
 		tcp_seg_delayed_ack(seg, conn);
 		if (conn->fin_sent && !conn->fin_sep && seg->seq_num + seg->data_len == conn->send_seq_end) { //TODO remove?
-			//send fin
+		//send fin
 			PRINT_DEBUG("add FIN");
 			seg->flags |= FLAG_FIN;
 		}
@@ -2368,8 +2368,8 @@ int tcp_seg_send(struct fins_module *module, struct tcp_segment *seg) {
 	 //###############################*/
 
 	if (ff) {
+		PRINT_DEBUG("seg=%p, ff=%p, meta=%p", seg, ff, ff->metaData);
 		if (module_send_flow(module, ff, TCP_FLOW_IPV4)) {
-			PRINT_DEBUG("Exited, normal: seg=%p, ff=%p, meta=%p", seg, ff, ff->metaData);
 			return 1;
 		} else {
 			PRINT_ERROR("Exited, failed: seg=%p, ff=%p, meta=%p", seg, ff, ff->metaData);
@@ -2391,7 +2391,7 @@ void tcp_seg_free(struct tcp_segment *seg) {
 
 	if (seg->opt_len && seg->options) {
 		//free(seg->options); //TODO change when have options object
-		//PRINT_ERROR("todo error");
+		//PRINT_WARN("todo error");
 	}
 	free(seg);
 }
@@ -2697,12 +2697,12 @@ void tcp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
@@ -2711,7 +2711,7 @@ void tcp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -2720,7 +2720,7 @@ void tcp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -2729,7 +2729,7 @@ void tcp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
@@ -2738,7 +2738,6 @@ void tcp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
 		exit(-1);
 		break;
 	}
@@ -2839,7 +2838,7 @@ void tcp_error(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
 		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 
 		//TODO finish for
 		//if (ff->ctrlFrame.para)
@@ -2847,7 +2846,7 @@ void tcp_error(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case ERROR_ICMP_DEST_UNREACH:
 		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 
 		//TODO finish
 		freeFinsFrame(ff);
@@ -2867,27 +2866,29 @@ void tcp_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	elem_add_param(get_elem, TCP_GET_FAST_ENABLED__str, TCP_GET_FAST_ENABLED__id, TCP_GET_FAST_ENABLED__type);
 	elem_add_param(get_elem, TCP_GET_FAST_DUPLICATES__str, TCP_GET_FAST_DUPLICATES__id, TCP_GET_FAST_DUPLICATES__type);
+	elem_add_param(get_elem, TCP_GET_FAST_RETRANSMITS__str, TCP_GET_FAST_RETRANSMITS__id, TCP_GET_FAST_RETRANSMITS__type);
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	elem_add_param(set_elem, TCP_SET_FAST_ENABLED__str, TCP_SET_FAST_ENABLED__id, TCP_SET_FAST_ENABLED__type);
 	elem_add_param(set_elem, TCP_SET_FAST_DUPLICATES__str, TCP_SET_FAST_DUPLICATES__id, TCP_SET_FAST_DUPLICATES__type);
+	elem_add_param(set_elem, TCP_SET_FAST_RETRANSMITS__str, TCP_SET_FAST_RETRANSMITS__id, TCP_SET_FAST_RETRANSMITS__type);
 }
 
 int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
@@ -2901,7 +2902,7 @@ int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;
@@ -2966,7 +2967,7 @@ int tcp_shutdown(struct fins_module *module) {
 	/*#*/PRINT_DEBUG("");
 	secure_sem_wait(&md->conn_list_sem);
 
-	list_for_each(md->conn_list, tcp_conn_shutdown);
+	//list_for_each(md->conn_list, tcp_conn_shutdown);
 	/*
 	 struct tcp_connection *conn = md->conn_list;
 	 struct tcp_connection *old_conn;
@@ -2985,7 +2986,7 @@ int tcp_shutdown(struct fins_module *module) {
 	/*#*/PRINT_DEBUG("");
 	secure_sem_wait(&md->conn_stub_list_sem);
 
-	list_for_each(md->conn_stub_list, tcp_conn_stub_shutdown);
+	//list_for_each(md->conn_stub_list, tcp_conn_stub_shutdown);
 	/*
 	 struct tcp_connection_stub *conn_stub = md->conn_stub_list;
 	 //struct tcp_connection_stub *old_conn_stub;
@@ -3012,9 +3013,9 @@ int tcp_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	struct tcp_data *md = (struct tcp_data *) module->data;
-	list_free(md->conn_stub_list, tcp_conn_stub_free);
+	//list_free(md->conn_stub_list, tcp_conn_stub_free);
 	sem_destroy(&md->conn_stub_list_sem);
-	list_free(md->conn_list, tcp_conn_free);
+	//list_free(md->conn_list, tcp_conn_free);
 	sem_destroy(&md->conn_list_sem);
 
 	if (md->link_list != NULL) {
@@ -3031,7 +3032,7 @@ void tcp_dummy(void) {
 }
 
 static struct fins_module_ops tcp_ops = { .init = tcp_init, .run = tcp_run, .pause = tcp_pause, .unpause = tcp_unpause, .shutdown = tcp_shutdown, .release =
-tcp_release, };
+		tcp_release, };
 
 struct fins_module *tcp_create(uint32_t index, uint32_t id, uint8_t *name) {
 	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);

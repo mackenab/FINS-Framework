@@ -163,7 +163,7 @@ struct fins_wedge_call {
 	__u32 ret;
 	__u32 msg;
 	__u8 *buf;
-	__s32 len;
+	__u32 len;
 };
 
 void wedge_calls_init(void);

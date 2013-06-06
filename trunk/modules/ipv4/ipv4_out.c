@@ -42,12 +42,12 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	}
 
 	//keep routing table sorted (envi & local), search through routing table, find best match (last match)
-	struct route_record *route = (struct route_record *) list_find_last1(md->route_list, ipv4_route_dst_test, &dst_ip);
+	struct route_record *route = (struct route_record *) list_find1(md->route_list, ipv4_route_dst_test, &dst_ip);
 	if (route != NULL) {
 		PRINT_DEBUG("next_hop: interface=%d, dst=%u, gw=%u", route->if_index, addr4_get_ip(&route->dst), addr4_get_ip(&route->gw));
 		uint32_t address;
 		if (addr4_get_ip(&route->gw) == IPV4_ADDR_ANY_IP) { //dst in on our subnet, contact directly
-			address = addr4_get_ip(&route->dst);
+			address = dst_ip;
 		} else { //dst outside our subnet, contact via gw
 			address = addr4_get_ip(&route->gw);
 		}
@@ -114,14 +114,14 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 				flow = IPV4_FLOW_UDP;
 				break;
 			default:
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 				//exit(-1);
 				return;
 			}
 
 			if (!module_send_flow(module, ff, flow)) {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 			}
 		} else {
@@ -172,7 +172,7 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 			ipv4_send_fdf_out(module, ff, pkt_buf, address, route->if_index);
 		}
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		//no route to send FDF, send error FCF?
 	}
 }

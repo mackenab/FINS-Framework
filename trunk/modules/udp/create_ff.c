@@ -44,7 +44,7 @@ struct finsFrame* create_ff(int dataOrCtrl, int direction, int destID, int PDU_l
 		ff->metaData = meta;
 		// fill the important FCF data in here
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 	//print_finsFrame(ff);
 	return ff;

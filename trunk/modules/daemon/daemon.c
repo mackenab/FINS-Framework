@@ -81,7 +81,7 @@ void daemon_call_free(struct daemon_call *call) {
 			timer_stop(call->to_data->tid);
 			call->to_flag = 0;
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 		}
 	}
 }
@@ -291,7 +291,7 @@ int daemon_sockets_remove(struct fins_module *module, int sock_index) {
 				}
 			}
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			break;
 		}
 	}
@@ -449,7 +449,7 @@ void daemon_get_ff(struct fins_module *module) {
 				daemon_in_fdf(module, ff);
 				PRINT_DEBUG("");
 			} else if (ff->dataFrame.directionFlag == DIR_DOWN) { //directionFlag==DIR_DOWN
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
 			} else {
 				PRINT_ERROR("todo error");
@@ -464,7 +464,7 @@ void daemon_get_ff(struct fins_module *module) {
 
 		daemon_interrupt(module);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 }
 
@@ -475,17 +475,17 @@ void daemon_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
@@ -514,7 +514,6 @@ void daemon_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
 		exit(-1);
 		break;
 	}
@@ -560,7 +559,7 @@ void daemon_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 		if (md->sockets[call->sock_index].in_ops->getsockopt_in != NULL) {
 			(md->sockets[call->sock_index].in_ops->getsockopt_in)(module, ff, call); //CTRL_READ_PARAM_REPLY
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
 			daemon_call_free(call);
 			freeFinsFrame(ff);
@@ -637,7 +636,7 @@ void daemon_set_param_reply(struct fins_module *module, struct finsFrame *ff) { 
 		if (md->sockets[call->sock_index].in_ops->setsockopt_in != NULL) {
 			(md->sockets[call->sock_index].in_ops->setsockopt_in)(module, ff, call); //CTRL_SET_PARAM_REPLY
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
 			daemon_call_free(call);
 			freeFinsFrame(ff);
@@ -670,14 +669,14 @@ void daemon_exec(struct fins_module *module, struct finsFrame *ff) {
 		switch (protocol) {
 		case IPPROTO_ICMP:
 			//daemon_in_poll_icmp(module, ff, ret_msg);
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			break;
 		case IPPROTO_TCP:
 			daemon_in_poll_tcp(module, ff, ret_msg);
 			break;
 		case IPPROTO_UDP:
 			//daemon_in_poll_udp(module, ff, ret_msg);
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			break;
 		default:
 			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -717,7 +716,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].other_ops->connect_expired != NULL) {
 				(md->sockets[call->sock_index].other_ops->connect_expired)(module, ff, call, 0); //TODO include data? or don't post until after?
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -727,7 +726,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].other_ops->accept_expired != NULL) {
 				(md->sockets[call->sock_index].other_ops->accept_expired)(module, ff, call, 0); //TODO include data? or don't post until after?
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -774,7 +773,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].in_ops->connect_in != NULL) {
 				(md->sockets[call->sock_index].in_ops->connect_in)(module, ff, call); //TODO include data? or don't post until after?
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -784,7 +783,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].in_ops->accept_in != NULL) {
 				(md->sockets[call->sock_index].in_ops->accept_in)(module, ff, call);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -794,7 +793,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].in_ops->sendmsg_in != NULL) {
 				(md->sockets[call->sock_index].in_ops->sendmsg_in)(module, ff, call); //FDF, so get EXEC? //atm CTRL_EXEC_REPLY
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -804,7 +803,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].in_ops->release_in != NULL) {
 				(md->sockets[call->sock_index].in_ops->release_in)(module, ff, call);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -814,7 +813,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			if (md->sockets[call->sock_index].in_ops->poll_in != NULL) {
 				(md->sockets[call->sock_index].in_ops->poll_in)(module, ff, call); //CTRL_EXEC_REPLY
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
 				daemon_call_free(call);
 				freeFinsFrame(ff);
@@ -849,7 +848,7 @@ void daemon_error(struct fins_module *module, struct finsFrame *ff) { //TODO exp
 		secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
 		addr4_set_ip(&dst_addr, dst_ip);
 	} else if (family == AF_INET6) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	} else {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -924,7 +923,7 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 #endif
 		//##############################################
 	} else if (family == AF_INET6) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 	} else {
 		PRINT_ERROR("todo error: family=%u", family);
 		exit(-1);
@@ -985,7 +984,7 @@ void daemon_handle_to(struct fins_module *module, struct daemon_call *call) {
 		if (md->sockets[call->sock_index].other_ops->connect_timeout != NULL) {
 			(md->sockets[call->sock_index].other_ops->connect_timeout)(module, call);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
 			daemon_calls_remove(module, call->index);
 		}
@@ -994,7 +993,7 @@ void daemon_handle_to(struct fins_module *module, struct daemon_call *call) {
 		if (md->sockets[call->sock_index].other_ops->accept_timeout != NULL) {
 			(md->sockets[call->sock_index].other_ops->accept_timeout)(module, call);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
 			daemon_calls_remove(module, call->index);
 		}
@@ -1003,7 +1002,7 @@ void daemon_handle_to(struct fins_module *module, struct daemon_call *call) {
 		if (md->sockets[call->sock_index].other_ops->recvmsg_timeout != NULL) {
 			(md->sockets[call->sock_index].other_ops->recvmsg_timeout)(module, call);
 		} else {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
 			daemon_calls_remove(module, call->index);
 		}
@@ -1103,7 +1102,7 @@ void *wedge_to_daemon(void *local) {
 
 				PRINT_DEBUG("nl_len=%d", nl_len);
 				if (nl_len < sizeof(struct nl_wedge_to_daemon_hdr)) {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 				}
 
 				msg_hdr = (struct nl_wedge_to_daemon_hdr *) nl_buf;
@@ -1179,7 +1178,7 @@ void *wedge_to_daemon(void *local) {
 		if (doneFlag) {
 			if (msg_len < sizeof(struct nl_wedge_to_daemon)) {
 				//TODOD error
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 
 			hdr = (struct nl_wedge_to_daemon *) msg_buf;
@@ -1212,14 +1211,14 @@ void daemon_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
@@ -1228,7 +1227,7 @@ void daemon_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
@@ -1246,7 +1245,7 @@ int daemon_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows,
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;
@@ -1277,7 +1276,7 @@ int daemon_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows,
 
 	md->if_list = list_clone(envi->if_list, ifr_clone);
 	if (md->if_list->len > DAEMON_IF_LIST_MAX) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		struct linked_list *leftover = list_split(md->if_list, DAEMON_IF_LIST_MAX - 1);
 		list_free(leftover, free);
 	}
@@ -1344,7 +1343,7 @@ int daemon_shutdown(struct fins_module *module) {
 	int daemoncode = DAEMON_STOP_CALL;
 	int ret = send_wedge(module, (uint8_t *) &daemoncode, sizeof(int), 0);
 	if (ret) {
-		PRINT_DEBUG("send_wedge failure");
+		PRINT_ERROR("send_wedge failure");
 		//perror("sendfins() caused an error");
 		exit(-1);
 	}

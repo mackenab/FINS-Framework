@@ -114,8 +114,8 @@ void udp_get_ff(struct fins_module *module) {
 		exit(-1);
 	}
 
-	md->udpStat.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", md->udpStat.totalRecieved, ff, ff->metaData);
+	md->stats.totalRecieved++;
+	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", md->stats.totalRecieved, ff, ff->metaData);
 	if (ff->dataOrCtrl == FF_CONTROL) {
 		udp_fcf(module, ff);
 		PRINT_DEBUG("");
@@ -143,12 +143,12 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
@@ -157,7 +157,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		//daemon_read_param_reply(ff);
 		freeFinsFrame(ff);
 		break;
@@ -167,7 +167,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
@@ -176,7 +176,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
@@ -185,7 +185,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -193,7 +193,7 @@ void udp_fcf(struct fins_module *module, struct finsFrame *ff) {
 
 void udp_read_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 	module_reply_fcf(module, ff, FCF_FALSE, 0);
 }
 
@@ -215,7 +215,7 @@ void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -243,7 +243,7 @@ void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -290,7 +290,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 
 		//if recv_dst_ip==send_src_ip, recv_dst_port==send_src_port, recv_udp_len==, recv_checksum==,  \\should be unique!
 		if (list_is_empty(md->sent_packet_list)) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			//TODO drop
 			freeFinsFrame(ff);
 		} else {
@@ -308,7 +308,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 					sent->ff->dataFrame.pdu = NULL;
 
 					if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
-						PRINT_ERROR("todo error");
+						PRINT_WARN("todo error");
 						freeFinsFrame(ff);
 					}
 
@@ -317,12 +317,12 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 					PRINT_DEBUG("Freeing: pdu=%p", pdu);
 					free(pdu);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 					freeFinsFrame(ff);
 					//TODO drop?
 				}
 			} else {
-				PRINT_ERROR("todo");
+				PRINT_WARN("todo");
 				freeFinsFrame(ff);
 			}
 		}
@@ -331,7 +331,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
 
 		if (list_is_empty(md->sent_packet_list)) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			//TODO drop
 			freeFinsFrame(ff);
 		} else {
@@ -349,7 +349,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 					sent->ff->dataFrame.pdu = NULL;
 
 					if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
-						PRINT_ERROR("todo error");
+						PRINT_WARN("todo error");
 						freeFinsFrame(ff);
 					}
 
@@ -358,19 +358,19 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 					PRINT_DEBUG("Freeing: pdu=%p", pdu);
 					free(md);
 				} else {
-					PRINT_ERROR("todo error");
+					PRINT_WARN("todo error");
 					//TODO drop?
 					freeFinsFrame(ff);
 				}
 			} else {
-				PRINT_ERROR("todo");
+				PRINT_WARN("todo");
 				freeFinsFrame(ff);
 			}
 		}
 		break;
 	default:
 		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		break;
 	}
@@ -383,14 +383,14 @@ void udp_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(get_elem, UDP_GET_INTERVAL__str, UDP_GET_INTERVAL__id, UDP_GET_INTERVAL__type);
@@ -399,7 +399,7 @@ void udp_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	//elem_add_param(set_elem, UDP_SET_INTERVAL__str, UDP_SET_INTERVAL__id, UDP_SET_INTERVAL__type);
@@ -417,7 +417,7 @@ int udp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	struct udp_data *md = (struct udp_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;

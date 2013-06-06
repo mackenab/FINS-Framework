@@ -1,4 +1,3 @@
-
 //#include <signal.h>
 //#include <stddef.h>
 //#include <sys/prctl.h>
@@ -45,49 +44,63 @@
 #define PRINT_ERROR(format, args...)
 #endif
 
+#include <sys/stat.h>
 int main(int argc, char *argv[]) {
 	PRINT_IMPORTANT("Entered");
 
 	int ret;
+	if ((ret = mkdir("/data/local/fins/test_mkdir", 0770))) {
+		PRINT_ERROR("mkdir failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	}
+	if ((ret = system("mkdir /data/local/fins/test_sys_mkdir"))) {
+		PRINT_ERROR("sysmkdir failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	}
+	if (0) {
+		if ((ret = system("su -c mkdir /data/local/fins/test_su_mkdir"))) {
+			PRINT_ERROR("SU mkdir failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+		}
+	}
 
-	PRINT_IMPORTANT("Gaining su status");
-	if ((ret = system("su"))) {
-		PRINT_ERROR("SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+	if (0) {
+		PRINT_IMPORTANT("Gaining su status");
+		if ((ret = system("su"))) {
+			PRINT_ERROR("SU failure: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
+		}
 	}
 
 	if (1) { //tests socket creation
-		char recv_data[4000];
-		while (1) {
-			gets(recv_data);
-			//sleep(15);
-			errno = 0;
-			int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-			PRINT_IMPORTANT("fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
-			int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
-			PRINT_IMPORTANT("fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
-			int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
-			PRINT_IMPORTANT("fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
-			int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
-			PRINT_IMPORTANT("fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
-			int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
-			PRINT_IMPORTANT("fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
-			int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-			PRINT_IMPORTANT("fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
-			int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
-			PRINT_IMPORTANT("fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
-			int fd8 = socket(PF_INET, SOCK_STREAM, 0);
-			PRINT_IMPORTANT("fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
-			int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-			PRINT_IMPORTANT("fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
-			int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
-			PRINT_IMPORTANT("fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
-			int fd11 = socket(PF_INET, SOCK_RAW, 0);
-			PRINT_IMPORTANT("fd11=%d, errno=%u, str='%s'", fd11, errno, strerror(errno));
-			int fd12 = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
-			PRINT_IMPORTANT("fd12=%d, errno=%u, str='%s'", fd12, errno, strerror(errno));
-			int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
-			PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
-		}
+		//char recv_data[4000];
+		//while (1) {
+		//gets(recv_data);
+		//sleep(15);
+		errno = 0;
+		int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+		PRINT_IMPORTANT("fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
+		int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
+		PRINT_IMPORTANT("fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
+		int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
+		PRINT_IMPORTANT("fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
+		int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
+		PRINT_IMPORTANT("fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
+		int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
+		PRINT_IMPORTANT("fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
+		int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		PRINT_IMPORTANT("fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
+		int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
+		PRINT_IMPORTANT("fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
+		int fd8 = socket(PF_INET, SOCK_STREAM, 0);
+		PRINT_IMPORTANT("fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
+		int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+		PRINT_IMPORTANT("fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
+		int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
+		PRINT_IMPORTANT("fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
+		int fd11 = socket(PF_INET, SOCK_RAW, 0);
+		PRINT_IMPORTANT("fd11=%d, errno=%u, str='%s'", fd11, errno, strerror(errno));
+		int fd12 = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+		PRINT_IMPORTANT("fd12=%d, errno=%u, str='%s'", fd12, errno, strerror(errno));
+		int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
+		PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
+		//}
 	}
 
 	if (0) { //test assembly instructions (replaced in glue.h)
@@ -140,5 +153,5 @@ int main(int argc, char *argv[]) {
 			;
 		return 0;
 	}
-	return 0;
+	return 1;
 }

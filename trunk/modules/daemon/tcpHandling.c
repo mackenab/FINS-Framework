@@ -95,7 +95,7 @@ void bind_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, st
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->sockets[hdr->sock_index].family != AF_UNSPEC) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EINVAL); //22
 		return;
 	}
@@ -116,7 +116,7 @@ void bind_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, st
 			if (address != NULL) {
 				host_ip = addr4_get_ip(&address->ip);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 		}
 
@@ -143,7 +143,7 @@ void listen_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->sockets[hdr->sock_index].family == AF_UNSPEC) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -170,7 +170,7 @@ void listen_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 		secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 	} else { //AF_INET6
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -222,7 +222,7 @@ void connect_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		} else {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO EADDRINUSE, check?
 		}
 		return;
@@ -230,7 +230,7 @@ void connect_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EISCONN);
 		return;
 	default:
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO EADDRINUSE, check?
 		return;
 	}
@@ -238,7 +238,7 @@ void connect_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	metadata *meta;
 	if (addr->ss_family == AF_INET) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			return;
 		}
@@ -266,7 +266,7 @@ void connect_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			if (address != NULL) {
 				host_ip = addr4_get_ip(&address->ip);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 			addr4_set_ip(&md->sockets[hdr->sock_index].host_addr, host_ip);
 
@@ -297,11 +297,11 @@ void connect_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 	} else if (addr->ss_family == AF_INET6) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET6) {
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
 			return;
 		}
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	} else {
@@ -376,12 +376,12 @@ void accept_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		} else {
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //TODO EADDRINUSE, check?
 		}
 		return;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -400,7 +400,7 @@ void accept_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 		secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 	} else { //AF_INET6
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -476,7 +476,7 @@ void getname_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			}
 		} else {
 			//TODO error
-			PRINT_ERROR("todo error");
+			PRINT_WARN("todo error");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //remove
 			return;
 		}
@@ -488,13 +488,13 @@ void getname_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		addr4->sin_port = htons(addr_port);
 		PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		//TODO
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	} else {
 		//AF_UNSPEC, only occurs when not bound
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 
 		//returns struct sockaddr with just family filled out
 		//Family defaults to AF_INET, probably because of the main address of main interface
@@ -649,7 +649,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 
 	switch (md->sockets[hdr->sock_index].state) {
 	case SS_UNCONNECTED:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		//TODO buffer data & send ACK
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(data);
@@ -658,12 +658,12 @@ void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	case SS_CONNECTED:
 		break;
 	case SS_DISCONNECTING:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(data);
 		return;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(data);
 		return;
@@ -691,7 +691,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			if (address != NULL) {
 				host_ip = addr4_get_ip(&address->ip);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 
 			/**
@@ -729,7 +729,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 		secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_dst_port", &rem_port, META_TYPE_INT32);
 	} else {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		free(data);
 		return;
@@ -787,7 +787,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 
 	switch (md->sockets[hdr->sock_index].state) {
 	case SS_UNCONNECTED:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		//TODO buffer data & send ACK
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
@@ -795,11 +795,11 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	case SS_CONNECTED:
 		break;
 	case SS_DISCONNECTING:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -812,7 +812,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 
 	if (flags & MSG_ERRQUEUE) {
 		//TODO no error queue for TCP
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	}
@@ -846,7 +846,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 			addr_len = sizeof(struct sockaddr_in6);
 			//struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) store->addr;
 
-			PRINT_ERROR("todo");
+			PRINT_WARN("todo");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
@@ -1017,7 +1017,7 @@ void poll_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
-				mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+				mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 			}
 		}
 
@@ -1121,7 +1121,7 @@ void poll_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 			if (call->alloc) {
 				daemon_call_free(call);
 			} else {
-				PRINT_ERROR("todo error");
+				PRINT_WARN("todo error");
 			}
 
 			uint32_t ret_mask = events & mask;
@@ -1139,7 +1139,7 @@ void poll_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 
 				if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 					if (md->sockets[hdr->sock_index].data_buf > 0) {
-						mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+						mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 					}
 				}
 
@@ -1220,7 +1220,7 @@ void poll_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 			//if (md->daemon_sockets[hdr->sock_index].error_buf > 0) {mask |= POLLERR;}
 
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
-				mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+				mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 			}
 
 			//mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
@@ -1293,11 +1293,11 @@ void poll_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 
 void mmap_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 void socketpair_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void shutdown_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int how) {
@@ -1312,12 +1312,12 @@ void shutdown_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 
 void close_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void sendpage_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
-	PRINT_ERROR("todo");
+	PRINT_WARN("todo");
 }
 
 void getsockopt_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
@@ -1554,10 +1554,10 @@ void setsockopt_out_tcp(struct fins_module *module, struct nl_wedge_to_daemon *h
 
 	switch (level) {
 	case SOL_IP:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		break;
 	case SOL_RAW:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		break;
 	case SOL_TCP:
 		switch (optname) {
@@ -1985,7 +1985,7 @@ void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint3
 	}
 
 	if (*flags & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
-		mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+		mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 	}
 
 	if (*flags & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
@@ -2048,7 +2048,7 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 		addr4->sin_port = htons(addr4->sin_port);
 		PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else { //AF_INET6
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		nack_send(module, call->id, call->index, call->type, 1);
 		daemon_calls_remove(module, call->index);
 		return data_len;
@@ -2144,7 +2144,7 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -2222,7 +2222,7 @@ void daemon_in_error_tcp(struct fins_module *module, struct finsFrame *ff, uint3
 		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -2238,7 +2238,7 @@ void daemon_in_error_tcp(struct fins_module *module, struct finsFrame *ff, uint3
 
 		freeFinsFrame(ff);
 	} else {
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 	}
 }
@@ -2305,7 +2305,7 @@ void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 		ack_send(module, call->id, call->index, call->type, 0);
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
 		break;
 	}
@@ -2344,7 +2344,7 @@ void accept_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 		}
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
 		break;
 	}
@@ -2360,18 +2360,18 @@ void recvmsg_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 
 	switch (md->sockets[call->sock_index].state) {
 	case SS_UNCONNECTED:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
 		break;
 	case SS_CONNECTING:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
 		break;
 	case SS_CONNECTED:
 		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	default:
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
 		break;
 	}

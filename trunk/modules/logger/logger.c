@@ -77,7 +77,7 @@ void logger_get_ff(struct fins_module *module) {
 
 		logger_interrupt(module);
 	} else {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 	}
 }
 
@@ -88,22 +88,22 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_READ_PARAM:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM (%d)", CTRL_READ_PARAM);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_READ_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_READ_PARAM_REPLY (%d)", CTRL_READ_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_SET_PARAM:
@@ -112,27 +112,26 @@ void logger_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_SET_PARAM_REPLY:
 		PRINT_DEBUG("opcode=CTRL_SET_PARAM_REPLY (%d)", CTRL_SET_PARAM_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		freeFinsFrame(ff);
 		break;
 	default:
-		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
-		PRINT_ERROR("todo");
+		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
 		exit(-1);
 		break;
 	}
@@ -156,17 +155,17 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case LOGGER_SET_INTERVAL__id:
 		PRINT_DEBUG("LOGGER_SET_INTERVAL");
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case LOGGER_SET_REPEATS__id:
 		PRINT_DEBUG("LOGGER_SET_REPEATS");
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
-		PRINT_ERROR("todo");
+		PRINT_WARN("todo");
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -215,14 +214,14 @@ void logger_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
@@ -231,7 +230,7 @@ void logger_init_params(struct fins_module *module) {
 	//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
-		PRINT_DEBUG("todo error");
+		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
@@ -249,7 +248,7 @@ int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows,
 	struct logger_data *md = (struct logger_data *) module->data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		return 0;
 	}
 	md->flows_num = flows_num;

@@ -11,6 +11,60 @@ int mod_id_test(struct fins_module *mod, uint32_t *id) {
 	return mod->id == *id;
 }
 
+struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
+	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s'", lib, base_path);
+
+	struct fins_library *library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
+	strcpy((char *) library->name, (char *) lib);
+
+	uint8_t *error;
+	uint8_t lib_path[MAX_BASE_PATH + MOD_NAME_SIZE + 7]; // +7 for "/lib<>.so"
+	sprintf((char *) lib_path, "%s/lib%s.so", (char *) base_path, (char *) lib);
+	library->handle = dlopen((char *) lib_path, RTLD_NOW); //RTLD_LAZY | RTLD_GLOBAL?
+	if (library->handle == NULL) {
+		error = (uint8_t *) dlerror();
+		free(library);
+		PRINT_ERROR("Exited: unable to open library: lib='%s', base_path='%s', error='%s'", lib, base_path, error);
+		return NULL;
+	}
+
+	uint8_t lib_create[MOD_NAME_SIZE + 7]; // +7 for "_create"
+	sprintf((char *) lib_create, "%s_create", (char *) lib);
+	library->create = (mod_create_type) dlsym(library->handle, (char *) lib_create);
+	error = (uint8_t *) dlerror();
+	if (error != NULL) {
+		dlclose(library->handle);
+		free(library);
+		PRINT_ERROR("Exited: unable to grab create() function: lib='%s', base_path='%s', error='%s'", lib, base_path, error);
+		return NULL;
+	}
+
+	library->num_mods = 0;
+
+	PRINT_IMPORTANT("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
+	return library;
+}
+
+int library_name_test(struct fins_library *lib, uint8_t *name) {
+	return strcmp((char *) lib->name, (char *) name) == 0;
+}
+
+void library_free(struct fins_library *lib) {
+	PRINT_IMPORTANT("Entered: library=%p, name='%s'", lib, lib->name);
+
+	if (lib->handle != NULL) {
+		dlclose(lib->handle);
+	}
+
+	free(lib);
+}
+
+void assign_overall(struct fins_module *module, struct fins_overall *overall) {
+	struct fins_module_admin_ops *admin_ops = (struct fins_module_admin_ops *) module->ops;
+
+	admin_ops->pass_overall(module, overall);
+}
+
 int link_id_test(struct link_record *link, uint32_t *id) {
 	return link->id == *id;
 }
@@ -84,7 +138,7 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 		;
 	if (ret != 0) {
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n", file, func, line, module, module->id,
+		printf("\033[01;31mERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n\033[01;37m", file, func, line, module, module->id,
 				module->name, ff, ff->metaData, ret);
 		fflush(stdout);
 #endif
@@ -97,7 +151,7 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 	} else {
 		sem_post(module->output_sem);
 #ifdef ERROR
-		printf("ERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n", file, func, line, module, module->id, module->name, ff);
+		printf("\033[01;31mERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n\033[01;37m", file, func, line, module, module->id, module->name, ff);
 		fflush(stdout);
 #endif
 		exit(-1);
@@ -190,7 +244,7 @@ void module_set_param_flows(struct fins_module *module, struct finsFrame *ff) {
 	uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
 
 	if (module->flows_max < flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -210,7 +264,7 @@ void module_set_param_links(struct fins_module *module, struct finsFrame *ff) {
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 
 	if (ff->ctrlFrame.data_len != sizeof(struct linked_list)) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -229,14 +283,14 @@ void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 
 	if (ff->ctrlFrame.data_len != sizeof(struct fins_module_table)) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		return;
 	}
 	struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
 
 	if (module->flows_max < table->flows_num) {
-		PRINT_ERROR("todo error");
+		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -254,4 +308,63 @@ void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
 
 	//freeFF frees table
 	freeFinsFrame(ff);
+}
+
+void module_get_param_flows(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct fins_module_table *mt = (struct fins_module_table *) module->data;
+
+	ff->ctrlFrame.data_len = mt->flows_num * sizeof(uint32_t);
+	if (mt->flows_num != 0) {
+		ff->ctrlFrame.data = (uint8_t *) secure_malloc(ff->ctrlFrame.data_len);
+		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+
+		int i;
+		for (i = 0; i < mt->flows_num; i++) {
+			flows[i] = mt->flows[i];
+		}
+	} else {
+		ff->ctrlFrame.data = NULL;
+	}
+
+	module_reply_fcf(module, ff, FCF_TRUE, 0);
+}
+
+void module_get_param_links(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct fins_module_table *mt = (struct fins_module_table *) module->data;
+
+	if (mt->link_list != NULL) {
+		ff->ctrlFrame.data_len = sizeof(struct linked_list);
+		ff->ctrlFrame.data = (uint8_t *) list_clone(mt->link_list, link_clone);
+	} else {
+		ff->ctrlFrame.data_len = 0;
+		ff->ctrlFrame.data = NULL;
+	}
+
+	module_reply_fcf(module, ff, FCF_TRUE, 0);
+}
+
+void module_get_param_dual(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct fins_module_table *mt = (struct fins_module_table *) module->data;
+
+	ff->ctrlFrame.data_len = sizeof(struct fins_module_table);
+	ff->ctrlFrame.data = (uint8_t *) secure_malloc(ff->ctrlFrame.data_len);
+
+	struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
+	if (mt->link_list != NULL) {
+		table->link_list = list_clone(mt->link_list, link_clone);
+	} else {
+		table->link_list = NULL;
+	}
+
+	table->flows_num = mt->flows_num;
+
+	int i;
+	for (i = 0; i < table->flows_num; i++) {
+		table->flows[i] = mt->flows[i];
+	}
+
+	module_reply_fcf(module, ff, FCF_TRUE, 0);
 }

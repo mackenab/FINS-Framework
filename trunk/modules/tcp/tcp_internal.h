@@ -467,7 +467,8 @@ struct tcp_thread_data {
 };
 
 //General functions for dealing with the incoming and outgoing frames
-int tcp_fcf_to_daemon(struct fins_module *module, uint32_t status, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port, uint32_t ret_val);
+int tcp_fcf_to_daemon(struct fins_module *module, uint32_t status, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port,
+		uint32_t ret_val);
 int tcp_fdf_to_daemon(struct fins_module *module, uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
@@ -529,6 +530,18 @@ int tcp_process_options(struct tcp_connection *conn, struct tcp_segment *seg);
 #endif
 //---------------------------------------------------
 
+struct tcp_statistics {
+	uint16_t badChecksum; /* total number of segments that have a bad checksum*/
+	uint16_t noChecksum; /* total number of segments with no checksum */
+	uint16_t mismatchingLengths; /* total number of segments with mismatching segment lengths from the header and pseudoheader */
+	uint32_t totalBadSegments; /* total number of segments that were thrown away */
+	uint32_t totalRecieved; /* total number of incoming TCDP segments */
+	uint32_t totalSent; /* total number of outgoing TCP segments */
+	uint32_t totalACKs; /* total number of outgoing TCP segments */
+	uint32_t totalFast; /* total number of fast retransmits */
+	uint32_t totalGBN; /* total number of GBN */
+};
+
 #define TCP_LIB "tcp"
 #define TCP_MAX_FLOWS 	3
 #define TCP_FLOW_IPV4 	0
@@ -553,8 +566,10 @@ struct tcp_data {
 
 	uint8_t fast_enabled;
 	uint32_t fast_duplicates;
+	uint32_t fast_retransmits;
 
-//struct linked_list *if_list;
+	struct tcp_statistics stats;
+	//struct linked_list *if_list;
 };
 
 int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
@@ -586,6 +601,9 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_GET_FAST_DUPLICATES__id 6
 #define TCP_GET_FAST_DUPLICATES__str "fast_duplicates"
 #define TCP_GET_FAST_DUPLICATES__type CONFIG_TYPE_INT
+#define TCP_GET_FAST_RETRANSMITS__id 7
+#define TCP_GET_FAST_RETRANSMITS__str "fast_retransmits"
+#define TCP_GET_FAST_RETRANSMITS__type CONFIG_TYPE_INT
 
 #define TCP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define TCP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
@@ -598,5 +616,8 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_SET_FAST_DUPLICATES__id 6
 #define TCP_SET_FAST_DUPLICATES__str "fast_duplicates"
 #define TCP_SET_FAST_DUPLICATES__type CONFIG_TYPE_INT
+#define TCP_SET_FAST_RETRANSMITS__id 7
+#define TCP_SET_FAST_RETRANSMITS__str "fast_retransmits"
+#define TCP_SET_FAST_RETRANSMITS__type CONFIG_TYPE_INT
 
 #endif /* TCP_INTERNAL_H_ */
