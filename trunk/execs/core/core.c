@@ -13,6 +13,7 @@
  *       descriptor, which read considers an error and indicates by returning –1.
  *       */
 #include <signal.h>
+//#include <libconfig.h>
 
 #include <finsdebug.h>
 #include <finstypes.h>
@@ -291,7 +292,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			ifr->addr_list = list_create(MAX_FAMILIES);
 
 			if (list_has_space(overall->envi->if_list)) {
-				PRINT_IMPORTANT("Adding interface: ifr=%p, index=%u, name='%s', mac=0x%llx, type=%u", ifr, ifr->index, ifr->name, ifr->mac, ifr->type);
+				PRINT_IMPORTANT("Adding interface: ifr=%p, index=%u, name='%s', mac=0x%012llx, type=%u", ifr, ifr->index, ifr->name, ifr->mac, ifr->type);
 				list_append(overall->envi->if_list, ifr);
 			} else {
 				//TODO error
@@ -894,12 +895,13 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	}
 
 	//############ mini test
-	//sleep(5);
 	char recv_data[4000];
 
 	//while (1) {
 	PRINT_IMPORTANT("waiting...");
-	gets(recv_data);
+	sleep(10);
+	//gets(recv_data);
+	PRINT_IMPORTANT("active");
 
 	if (0) {
 		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1053,13 +1055,10 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		module_to_switch(overall->modules[0], ff);
 	}
 
-	while (1)
-		;
-
-	sleep(5);
-	PRINT_IMPORTANT("waiting...");
-	char recv_data2[4000];
-	gets(recv_data2);
+	PRINT_IMPORTANT("while (1) looping...");
+	while (1) {
+		sleep(1);
+	}
 
 	//############ terminating
 	core_termination_handler(0);
@@ -1068,6 +1067,20 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 //TODO replace this option system with getopt, can see in SuperSU code
 //#include <getopt.h>
 int main(int argc, char *argv[]) {
+	PRINT_IMPORTANT("argc=%u", argc);
+
+	int i;
+#ifdef BUILD_FOR_ANDROID
+	for (i = 0; i < 3; i++) {
+		PRINT_IMPORTANT("argv[%d]='%s'", i, argv[i]);
+	}
+
+	core_main((uint8_t *)("envi.cfg"), (uint8_t *)("stack.cfg"));
+#else
+	for (i = 0; i < argc; i++) {
+		PRINT_IMPORTANT("argv[%d]='%s'", i, argv[i]);
+	}
+
 	uint8_t envi_default = 1;
 	uint8_t envi_name[FILE_NAME_SIZE];
 	memset((char *) envi_name, 0, FILE_NAME_SIZE);
@@ -1084,7 +1097,6 @@ int main(int argc, char *argv[]) {
 	uint8_t core_name[FILE_NAME_SIZE];
 	memset((char *) core_name, 0, FILE_NAME_SIZE);
 
-	int i;
 	int j;
 	uint32_t len;
 	uint8_t ch;
@@ -1194,5 +1206,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	core_main(envi_name, stack_name);
+#endif
+
 	return 0;
 }

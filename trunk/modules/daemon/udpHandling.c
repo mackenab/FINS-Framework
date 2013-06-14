@@ -45,7 +45,7 @@ int socket_udp_test(int domain, int type, int protocol) {
 	return type == SOCK_DGRAM && (protocol == IPPROTO_UDP || protocol == IPPROTO_IP);
 }
 
-void socket_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int domain) {
+void socket_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain) {
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d", hdr, domain);
 
 	int ret = daemon_sockets_insert(module, hdr->sock_id, hdr->sock_index, SOCK_DGRAM, IPPROTO_UDP, &udp_out_ops, &udp_in_ops, &udp_other_ops);
@@ -58,7 +58,7 @@ void socket_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	}
 }
 
-void bind_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct sockaddr_storage *addr) {
+void bind_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -97,7 +97,7 @@ void bind_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, st
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void listen_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int backlog) {
+void listen_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int backlog) {
 	PRINT_DEBUG("Entered: hdr=%p, backlog=%d", hdr, backlog);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -113,7 +113,7 @@ void listen_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct sockaddr_storage *addr, int flags) {
+void connect_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, flags=%d", hdr, flags);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -194,7 +194,7 @@ void connect_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void accept_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint64_t sock_id_new, int sock_index_new, int flags) {
+void accept_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint64_t sock_id_new, int sock_index_new, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, sock_id_new=%llu, index_new=%d, flags=%d", hdr, sock_id_new, sock_index_new, flags);
 
 	PRINT_DEBUG("SOCK_NONBLOCK=%d (%d), SOCK_CLOEXEC=%d (%d), O_NONBLOCK=%d (%d), O_ASYNC=%d (%d)",
@@ -205,7 +205,7 @@ void accept_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void getname_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int peer) {
+void getname_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int peer) {
 	PRINT_DEBUG("Entered: hdr=%p, peer=%d", hdr, peer);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -299,16 +299,16 @@ void getname_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	address.ss_family = md->sockets[hdr->sock_index].family;
 
 	//send msg to wedge
-	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + address_len;
+	int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + address_len;
 	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
-	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
+	struct daemon_to_wedge_hdr *hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 	hdr_ret->call_type = hdr->call_type;
 	hdr_ret->call_id = hdr->call_id;
 	hdr_ret->call_index = hdr->call_index;
 	hdr_ret->ret = ACK;
 	hdr_ret->msg = 0;
-	uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
+	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 	*(int *) pt = address_len;
 	pt += sizeof(int);
@@ -333,7 +333,7 @@ void getname_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	free(msg);
 }
 
-void ioctl_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
+void ioctl_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -341,7 +341,7 @@ void ioctl_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 	//uint8_t *val;
 	int msg_len;
 	uint8_t *msg = NULL;
-	struct nl_daemon_to_wedge *hdr_ret;
+	struct daemon_to_wedge_hdr *hdr_ret;
 	uint8_t *pt;
 
 	switch (cmd) {
@@ -350,16 +350,16 @@ void ioctl_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 		//figure out buffered data
 
 		//send msg to wedge
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(uint32_t);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		*(uint32_t *) pt = md->sockets[hdr->sock_index].data_buf;
 		pt += sizeof(uint32_t);
@@ -378,16 +378,16 @@ void ioctl_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 		//val = &md->daemon_sockets[hdr->sock_index].latest;
 
 		//send msg to wedge
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(uint32_t) + len;
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(uint32_t) + len;
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		*(uint32_t *) pt = len;
 		pt += sizeof(uint32_t);
@@ -424,7 +424,7 @@ void ioctl_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, u
 	free(msg);
 }
 
-void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
+void sendmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 		struct sockaddr_storage *addr, int addr_len) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -610,7 +610,7 @@ void sendmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
  *	Note this method is coded to be thread safe since UDPreadFrom_fins mimics blocking and needs to be threaded.
  *
  */
-void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int buf_len, uint32_t msg_controllen, int flags) {
+void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int buf_len, uint32_t msg_controllen, int flags) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, msg_controllen=%u, flags=%d", hdr, buf_len, msg_controllen, flags);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -769,7 +769,7 @@ void recvmsg_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr,
 	}
 }
 
-void release_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
+void release_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -814,7 +814,7 @@ void release_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr)
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t events) {
+void poll_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t events) {
 	PRINT_DEBUG("Entered: hdr=%p, events=0x%x", hdr, events);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -928,7 +928,7 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			}
 		} else {
-			PRINT_ERROR("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 
 			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
@@ -936,7 +936,7 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 					mask |= POLLERR;
 				}
 			} else {
-				PRINT_ERROR("todo: POLLERR");
+				PRINT_WARN("todo: POLLERR");
 			}
 
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
@@ -953,17 +953,17 @@ void poll_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 	}
 }
 
-void mmap_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
+void mmap_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_WARN("todo");
 }
 
-void socketpair_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
+void socketpair_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_WARN("todo");
 }
 
-void shutdown_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int how) {
+void shutdown_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int how) {
 	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
 
 	/**
@@ -973,17 +973,17 @@ void shutdown_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 }
 
-void close_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
+void close_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_WARN("todo");
 }
 
-void sendpage_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr) {
+void sendpage_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr) {
 	PRINT_DEBUG("Entered: hdr=%p", hdr);
 	PRINT_WARN("todo");
 }
 
-void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
+void setsockopt_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval) {
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -1174,7 +1174,7 @@ void setsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 	}
 }
 
-void getsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval) {
+void getsockopt_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval) {
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -1304,16 +1304,16 @@ void getsockopt_out_udp(struct fins_module *module, struct nl_wedge_to_daemon *h
 
 	//if (len) {
 	//send msg to wedge
-	int msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + (len > 0 ? len : 0);
+	int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + (len > 0 ? len : 0);
 	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
-	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
+	struct daemon_to_wedge_hdr *hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 	hdr_ret->call_type = hdr->call_type;
 	hdr_ret->call_id = hdr->call_id;
 	hdr_ret->call_index = hdr->call_index;
 	hdr_ret->ret = ACK;
 	hdr_ret->msg = 0;
-	uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
+	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 	*(int *) pt = len;
 	pt += sizeof(int);
@@ -1372,16 +1372,16 @@ void poll_in_udp(struct daemon_call *call, struct fins_module *module, uint32_t 
 	PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
 	if (ret_mask) {
 		//send msg to wedge
-		int msg_len = sizeof(struct nl_daemon_to_wedge);
+		int msg_len = sizeof(struct daemon_to_wedge_hdr);
 		uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
-		struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		struct daemon_to_wedge_hdr *hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = POLL_EVENT_CALL;
 		hdr_ret->sock_id = call->sock_id;
 		hdr_ret->sock_index = call->sock_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = ret_mask;
-		uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
+		uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		if (pt - msg != msg_len) {
 			PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
@@ -1446,9 +1446,9 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 
 	int32_t control_len;
 	uint8_t *control;
-	int ret_val = recvmsg_control(module, (struct nl_wedge_to_daemon *) call, meta, msg_controllen, flags, &control_len, &control);
+	int ret_val = recvmsg_control(module, (struct wedge_to_daemon_hdr *) call, meta, msg_controllen, flags, &control_len, &control);
 
-	int ret = send_wedge_recvmsg(module, (struct nl_wedge_to_daemon *) call, addr_len, addr, data_len, data, control_len, control);
+	int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, addr_len, addr, data_len, data, control_len, control);
 	if (!ret) {
 		nack_send(module, call->id, call->index, call->type, 1);
 	}

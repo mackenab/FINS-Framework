@@ -1369,6 +1369,7 @@ void *tcp_main_thread(void *local) {
 
 struct tcp_connection *tcp_conn_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: module=%p, host=%u/%u, rem=%u/%u", module, host_ip, host_port, rem_ip, rem_port);
+	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	struct tcp_connection *conn = (struct tcp_connection *) secure_malloc(sizeof(struct tcp_connection));
 	conn->module = module;
@@ -1448,7 +1449,7 @@ struct tcp_connection *tcp_conn_create(struct fins_module *module, uint32_t host
 	//conn->recv_seq_num = 0;
 	conn->recv_seq_end = conn->recv_seq_num + conn->recv_max_win;
 
-	conn->MSS = TCP_MSS_DEFAULT_LARGE;
+	conn->MSS = md->mss;
 	conn->cong_state = RENO_SLOWSTART;
 	conn->cong_window = conn->MSS;
 	//conn->threshhold = 0;
@@ -2864,14 +2865,14 @@ void tcp_init_params(struct fins_module *module) {
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -2879,9 +2880,10 @@ void tcp_init_params(struct fins_module *module) {
 	elem_add_param(get_elem, TCP_GET_FAST_ENABLED__str, TCP_GET_FAST_ENABLED__id, TCP_GET_FAST_ENABLED__type);
 	elem_add_param(get_elem, TCP_GET_FAST_DUPLICATES__str, TCP_GET_FAST_DUPLICATES__id, TCP_GET_FAST_DUPLICATES__type);
 	elem_add_param(get_elem, TCP_GET_FAST_RETRANSMITS__str, TCP_GET_FAST_RETRANSMITS__id, TCP_GET_FAST_RETRANSMITS__type);
+	elem_add_param(get_elem, TCP_GET_MSS__str, TCP_GET_MSS__id, TCP_GET_MSS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -2889,6 +2891,7 @@ void tcp_init_params(struct fins_module *module) {
 	elem_add_param(set_elem, TCP_SET_FAST_ENABLED__str, TCP_SET_FAST_ENABLED__id, TCP_SET_FAST_ENABLED__type);
 	elem_add_param(set_elem, TCP_SET_FAST_DUPLICATES__str, TCP_SET_FAST_DUPLICATES__id, TCP_SET_FAST_DUPLICATES__type);
 	elem_add_param(set_elem, TCP_SET_FAST_RETRANSMITS__str, TCP_SET_FAST_RETRANSMITS__id, TCP_SET_FAST_RETRANSMITS__type);
+	elem_add_param(set_elem, TCP_SET_MSS__str, TCP_SET_MSS__id, TCP_SET_MSS__type);
 }
 
 int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
@@ -2923,6 +2926,8 @@ int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 
 	md->fast_enabled = 1;
 	md->fast_duplicates = 3;
+	md->mss = TCP_MSS_DEFAULT_LARGE;
+
 	tcp_srand();
 
 	return 1;

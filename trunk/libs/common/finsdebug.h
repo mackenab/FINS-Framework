@@ -1,31 +1,26 @@
 /*
  * finsdebug.h
  *
- *
+ * add verbose level?
+ * debug - white - for tracing function calls (Entered/Exited function)
+ * info - blue - human readable text that doesn't need context (resolved/didn't resolve MAC address)
+ * warn - yellow - potentially bad occurrances but not errors (poll not finding initial call)
+ * important - green - crucially important output (modules going up/down, console connecting)
+ * error - red - fatal errors
  */
 
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-//TODO add more levels:
-//verbose?
-//debug - white - for tracing function calls (Entered/Exited function)
-//info - blue - human readable text that doesn't need context (resolved/didn't resolve MAC address)
-//warn - yellow - potentially bad occurrances but not errors (poll not finding initial call)
-//alert/important - green - crucially important output (modules going up/down, console connecting)
-//error - red - fatal errors
-
-//#define DEBUG
-//#define INFO
+#define DEBUG
+#define INFO
 #define WARN
 #define IMPORTANT
 #define ERROR
 
 #ifdef BUILD_FOR_ANDROID
 #include <android/log.h>
-
 //#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", __VA_ARGS__);
-//#define perror(...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", __VA_ARGS__);
 
 #ifdef DEBUG
 #define PRINT_DEBUG(format, args...) __android_log_print(ANDROID_LOG_DEBUG, "FINS", "DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args)
@@ -57,7 +52,7 @@
 #define PRINT_ERROR(format, args...)
 #endif
 
-#else /* BUILD_FOR_ANDROID */
+#else //!BUILD_FOR_ANDROID
 #include <stdio.h>
 
 #ifdef DEBUG
@@ -90,6 +85,5 @@
 #define PRINT_ERROR(format, args...)
 #endif
 
-#endif /* BUILD_FOR_ANDROID */
-
-#endif /* FINSDEBUG_H_ */
+#endif //BUILD_FOR_ANDROID
+#endif //FINSDEBUG_H_

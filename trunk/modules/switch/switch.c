@@ -201,21 +201,32 @@ void switch_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 void switch_init_params(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->params);
-	metadata_element *sub = config_setting_add(root, "test", CONFIG_TYPE_GROUP);
-	if (sub == NULL) {
-		PRINT_DEBUG("todo error");
+	//int status;
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	if (exec_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
 	}
 
-	metadata_element *elem = config_setting_add(sub, "key", CONFIG_TYPE_INT);
-	if (elem == NULL) {
-		PRINT_DEBUG("todo error");
+	//-------------------------------------------------------------------------------------------
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	if (get_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
 	}
+	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
+	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
-	uint32_t value = 10;
-	int status = config_setting_set_int(elem, *(int *) &value);
-	if (status == CONFIG_FALSE) {
-		PRINT_DEBUG("todo error");
+	//-------------------------------------------------------------------------------------------
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	if (set_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
 	}
+	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
 int switch_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {

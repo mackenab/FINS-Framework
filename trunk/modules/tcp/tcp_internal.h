@@ -365,7 +365,7 @@ struct tcp_connection {
 #define TCP_DELAYED_TO_DEFAULT 200
 #define TCP_MAX_SEQ_NUM 4294967295.0
 #define TCP_MAX_WINDOW_DEFAULT 65535//8191
-#define TCP_MSS_DEFAULT_LARGE 1460 //also said to be, 536
+#define TCP_MSS_DEFAULT_LARGE 1460 //also said to be, 536 //Headers + MSS ≤ MTU
 #define TCP_MSS_DEFAULT_SMALL 536 //also said to be, 536
 #define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO
 #define TCP_KA_TO_DEFAULT 7200000 //keep alive TO
@@ -568,8 +568,10 @@ struct tcp_data {
 	uint32_t fast_duplicates;
 	uint32_t fast_retransmits;
 
+	uint32_t mss;
+
 	struct tcp_statistics stats;
-	//struct linked_list *if_list;
+//struct linked_list *if_list;
 };
 
 int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
@@ -604,6 +606,9 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_GET_FAST_RETRANSMITS__id 7
 #define TCP_GET_FAST_RETRANSMITS__str "fast_retransmits"
 #define TCP_GET_FAST_RETRANSMITS__type CONFIG_TYPE_INT
+#define TCP_GET_MSS__id 8
+#define TCP_GET_MSS__str "mss"
+#define TCP_GET_MSS__type CONFIG_TYPE_INT
 
 #define TCP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define TCP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
@@ -619,5 +624,8 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_SET_FAST_RETRANSMITS__id 7
 #define TCP_SET_FAST_RETRANSMITS__str "fast_retransmits"
 #define TCP_SET_FAST_RETRANSMITS__type CONFIG_TYPE_INT
+#define TCP_SET_MSS__id 8
+#define TCP_SET_MSS__str "mss"
+#define TCP_SET_MSS__type CONFIG_TYPE_INT
 
 #endif /* TCP_INTERNAL_H_ */

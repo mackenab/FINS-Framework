@@ -31,6 +31,10 @@ $(LOCAL_NAME):
 clean:
 	@ndk-build clean
 
+.PHONY:clean_full
+clean_full:
+	@ndk-build clean
+
 .PHONY:install
 install:$(LOCAL_NAME)
 	@adb install -r bin/fins_launcher-debug.apk
