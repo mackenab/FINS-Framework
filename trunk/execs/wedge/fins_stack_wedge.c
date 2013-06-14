@@ -549,7 +549,7 @@ void nl_data_ready(struct sk_buff *skb) {
 	__u8 *buf; // Pointer to data in payload
 	__u32 len; // Payload length
 	__s32 pid; // pid of sending process
-	struct nl_daemon_to_wedge *hdr;
+	struct daemon_to_wedge_hdr *hdr;
 
 	__u32 reply_call; // a number corresponding to the type of socketcall this packet is in response to
 
@@ -575,9 +575,9 @@ void nl_data_ready(struct sk_buff *skb) {
 		// Print what we received
 		PRINT_DEBUG("No msg pID, received='%p'", buf);
 	} else {
-		if (len >= sizeof(struct nl_daemon_to_wedge)) {
-			hdr = (struct nl_daemon_to_wedge *) buf;
-			len -= sizeof(struct nl_daemon_to_wedge);
+		if (len >= sizeof(struct daemon_to_wedge_hdr)) {
+			hdr = (struct daemon_to_wedge_hdr *) buf;
+			len -= sizeof(struct daemon_to_wedge_hdr);
 
 			/*
 			 * extract common values and pass rest to shared buffer
@@ -670,7 +670,7 @@ void nl_data_ready(struct sk_buff *skb) {
 							PRINT_ERROR("buffer allocation error, len=%d", len);
 							wedge_calls[hdr->call_index].reply = 0;
 						} else {
-							memcpy(wedge_calls[hdr->call_index].buf, buf + sizeof(struct nl_daemon_to_wedge), len);
+							memcpy(wedge_calls[hdr->call_index].buf, buf + sizeof(struct daemon_to_wedge_hdr), len);
 							PRINT_DEBUG("shared created: sock_id=%llu, call_id=%d, ret=%u, msg=%u, len=%u, buf=%p",
 									wedge_calls[hdr->call_index].sock_id, wedge_calls[hdr->call_index].call_id, wedge_calls[hdr->call_index].ret, wedge_calls[hdr->call_index].msg, wedge_calls[hdr->call_index].len, wedge_calls[hdr->call_index].buf);
 						}
@@ -740,7 +740,7 @@ void nl_data_ready(struct sk_buff *skb) {
 		} else {
 			//TODO error
 			PRINT_ERROR("todo error");
-			PRINT_DEBUG("Exiting: len too small: len=%d, hdr=%d", len, sizeof(struct nl_daemon_to_wedge));
+			PRINT_DEBUG("Exiting: len too small: len=%d, hdr=%d", len, sizeof(struct daemon_to_wedge_hdr));
 		}
 	}
 
@@ -803,7 +803,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -866,7 +866,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(__s32 );
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + 3 * sizeof(__s32 );
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -875,14 +875,14 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 		goto removeSocket;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = AF_FINS; //~2, since this overrides AF_INET (39)
 	pt += sizeof(__s32 );
@@ -969,7 +969,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -1024,7 +1024,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32) + addr_len + sizeof(__u32);
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__s32) + addr_len + sizeof(__u32);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -1033,14 +1033,14 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = addr_len;
 	pt += sizeof(__s32 );
@@ -1113,7 +1113,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -1168,7 +1168,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32 );
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__s32 );
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -1177,14 +1177,14 @@ static int fins_listen(struct socket *sock, int backlog) {
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = backlog;
 	pt += sizeof(__s32 );
@@ -1251,7 +1251,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -1306,7 +1306,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 2 * sizeof(__s32) + addr_len;
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + 2 * sizeof(__s32) + addr_len;
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -1315,14 +1315,14 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = addr_len;
 	pt += sizeof(__s32 );
@@ -1395,7 +1395,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -1507,7 +1507,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u64) + 2 * sizeof(__s32);
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__u64) + 2 * sizeof(__s32);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -1516,14 +1516,14 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__u64 *) pt = sock_id_new;
 	pt += sizeof(__u64 );
@@ -1611,7 +1611,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 	struct sockaddr_in *addr_in;
@@ -1667,7 +1667,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32 );
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__s32 );
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -1676,14 +1676,14 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = peer;
 	pt += sizeof(__s32 );
@@ -1795,7 +1795,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -1854,7 +1854,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32) + (msg->msg_namelen > 0 ? msg->msg_namelen : 0) + 4 * sizeof(__u32)
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__s32) + (msg->msg_namelen > 0 ? msg->msg_namelen : 0) + 4 * sizeof(__u32)
 	+ msg->msg_controllen + data_len;
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
@@ -1864,14 +1864,14 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__u32 *) pt = sk->sk_flags;
 	pt += sizeof(__u32 );
@@ -2009,7 +2009,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	struct sockaddr_in *addr_in;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 	__s32 i;
@@ -2065,7 +2065,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 2 * sizeof(__s32) + 2*sizeof(__u32);
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + 2 * sizeof(__s32) + 2*sizeof(__u32);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -2074,14 +2074,14 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__u32 *) pt = sk->sk_flags;
 	pt += sizeof(__u32 );
@@ -2315,7 +2315,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -2402,7 +2402,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 		PRINT_DEBUG("len=%d, pos=%d, ifr=%d", len, (__s32)pos, (__s32)ifr_pt);
 
 		// Build the message
-		buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32) + sizeof(__s32);
+		buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__u32) + sizeof(__s32);
 		buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 		if (buf == NULL) {
 			PRINT_ERROR("buffer allocation error");
@@ -2411,14 +2411,14 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			goto end;
 		}
 
-		hdr = (struct nl_wedge_to_daemon *) buf;
+		hdr = (struct wedge_to_daemon_hdr *) buf;
 		hdr->sock_id = sock_id;
 		hdr->sock_index = sock_index;
 		hdr->call_type = call_type;
 		hdr->call_pid = call_pid;
 		hdr->call_id = call_id;
 		hdr->call_index = call_index;
-		pt = buf + sizeof(struct nl_wedge_to_daemon);
+		pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 		*(__u32 *) pt = cmd;
 		pt += sizeof(__u32);
@@ -2451,7 +2451,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_DEBUG("cmd=%d, name='%s'", cmd, ifr.ifr_name);
 
 			// Build the message
-			buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32) + sizeof(__s32) + IFNAMSIZ;
+			buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__u32) + sizeof(__s32) + IFNAMSIZ;
 			buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 			if (buf == NULL) {
 				PRINT_ERROR("buffer allocation error");
@@ -2460,14 +2460,14 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				goto end;
 			}
 
-			hdr = (struct nl_wedge_to_daemon *) buf;
+			hdr = (struct wedge_to_daemon_hdr *) buf;
 			hdr->sock_id = sock_id;
 			hdr->sock_index = sock_index;
 			hdr->call_type = call_type;
 			hdr->call_pid = call_pid;
 			hdr->call_id = call_id;
 			hdr->call_index = call_index;
-			pt = buf + sizeof(struct nl_wedge_to_daemon);
+			pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 			*(__u32 *) pt = cmd;
 			pt += sizeof(__u32);
@@ -2490,7 +2490,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_DEBUG("cmd=FIONREAD");
 
 			// Build the message
-			buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32);
+			buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__u32);
 			buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 			if (buf == NULL) {
 				PRINT_ERROR("buffer allocation error");
@@ -2499,14 +2499,14 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				goto end;
 			}
 
-			hdr = (struct nl_wedge_to_daemon *) buf;
+			hdr = (struct wedge_to_daemon_hdr *) buf;
 			hdr->sock_id = sock_id;
 			hdr->sock_index = sock_index;
 			hdr->call_type = call_type;
 			hdr->call_pid = call_pid;
 			hdr->call_id = call_id;
 			hdr->call_index = call_index;
-			pt = buf + sizeof(struct nl_wedge_to_daemon);
+			pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 			*(__u32 *) pt = cmd;
 			pt += sizeof(__u32);
@@ -2536,7 +2536,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_DEBUG("cmd=%d, index='%d'", cmd, ifr.ifr_ifindex);
 
 			// Build the message
-			buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32) + 2 * sizeof(__s32);
+			buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__u32) + 2 * sizeof(__s32);
 			buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 			if (buf == NULL) {
 				PRINT_ERROR("buffer allocation error");
@@ -2545,14 +2545,14 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				goto end;
 			}
 
-			hdr = (struct nl_wedge_to_daemon *) buf;
+			hdr = (struct wedge_to_daemon_hdr *) buf;
 			hdr->sock_id = sock_id;
 			hdr->sock_index = sock_index;
 			hdr->call_type = call_type;
 			hdr->call_pid = call_pid;
 			hdr->call_id = call_id;
 			hdr->call_index = call_index;
-			pt = buf + sizeof(struct nl_wedge_to_daemon);
+			pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 			*(__u32 *) pt = cmd;
 			pt += sizeof(__u32);
@@ -2589,7 +2589,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			PRINT_DEBUG("cmd=%d not implemented", cmd);
 
 			// Build the message
-			buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__u32);
+			buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__u32);
 			buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 			if (buf == NULL) {
 				PRINT_ERROR("buffer allocation error");
@@ -2598,14 +2598,14 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				goto end;
 			}
 
-			hdr = (struct nl_wedge_to_daemon *) buf;
+			hdr = (struct wedge_to_daemon_hdr *) buf;
 			hdr->sock_id = sock_id;
 			hdr->sock_index = sock_index;
 			hdr->call_type = call_type;
 			hdr->call_pid = call_pid;
 			hdr->call_id = call_id;
 			hdr->call_index = call_index;
-			pt = buf + sizeof(struct nl_wedge_to_daemon);
+			pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 			*(__u32 *) pt = cmd;
 			pt += sizeof(__u32);
@@ -3017,7 +3017,7 @@ static int fins_release(struct socket *sock) {
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -3081,7 +3081,7 @@ static int fins_release(struct socket *sock) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon);
+	buf_len = sizeof(struct wedge_to_daemon_hdr);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -3090,14 +3090,14 @@ static int fins_release(struct socket *sock) {
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	if (pt - buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
@@ -3161,7 +3161,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	__s32 events;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -3225,7 +3225,7 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	PRINT_DEBUG("events=0x%x", events);
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32 );
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__s32 );
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -3234,14 +3234,14 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = events;
 	pt += sizeof(__s32 );
@@ -3349,7 +3349,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -3404,7 +3404,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + sizeof(__s32 );
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + sizeof(__s32 );
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -3413,14 +3413,14 @@ static int fins_shutdown(struct socket *sock, int how) {
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = how;
 	pt += sizeof(__s32 );
@@ -3530,7 +3530,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -3585,7 +3585,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon);
+	buf_len = sizeof(struct wedge_to_daemon_hdr);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -3594,14 +3594,14 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	if (pt - buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
@@ -3665,7 +3665,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -3720,7 +3720,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon);
+	buf_len = sizeof(struct wedge_to_daemon_hdr);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -3729,14 +3729,14 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	if (pt - buf != buf_len) {
 		PRINT_ERROR("write error: diff=%d, len=%u", pt-buf, buf_len);
@@ -3801,7 +3801,7 @@ static int fins_getsockopt(struct socket *sock, int level, int optname, char __u
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -3870,7 +3870,7 @@ goto end;
 	}PRINT_DEBUG("len=%d", len);
 
 // Build the message
-buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(__s32) + (len > 0 ? len : 0);
+buf_len = sizeof(struct wedge_to_daemon_hdr) + 3 * sizeof(__s32) + (len > 0 ? len : 0);
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -3879,14 +3879,14 @@ wedge_calls[call_index].call_id = -1;
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = level;
 	pt += sizeof(__s32);
@@ -4013,7 +4013,7 @@ static int fins_setsockopt(struct socket *sock, int level, int optname, char __u
 	__s32 call_index;
 	__u32 buf_len;
 	__u8 *buf;
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	__u8 *pt;
 	__s32 ret;
 
@@ -4068,7 +4068,7 @@ if (call_index == -1) {
 	}
 
 	// Build the message
-	buf_len = sizeof(struct nl_wedge_to_daemon) + 3 * sizeof(__s32) + optlen;
+	buf_len = sizeof(struct wedge_to_daemon_hdr) + 3 * sizeof(__s32) + optlen;
 	buf = (__u8 *) kmalloc(buf_len, GFP_KERNEL);
 	if (buf == NULL) {
 		PRINT_ERROR("buffer allocation error");
@@ -4077,14 +4077,14 @@ wedge_calls[call_index].call_id = -1;
 		goto end;
 	}
 
-	hdr = (struct nl_wedge_to_daemon *) buf;
+	hdr = (struct wedge_to_daemon_hdr *) buf;
 	hdr->sock_id = sock_id;
 	hdr->sock_index = sock_index;
 	hdr->call_type = call_type;
 	hdr->call_pid = call_pid;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
-	pt = buf + sizeof(struct nl_wedge_to_daemon);
+	pt = buf + sizeof(struct wedge_to_daemon_hdr);
 
 	*(__s32 *) pt = level;
 	pt += sizeof(__s32);

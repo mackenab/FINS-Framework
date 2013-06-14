@@ -9,7 +9,7 @@
 static call_out_type call_outs[] = { NULL, socket_out, bind_out, listen_out, connect_out, accept_out, getname_out, ioctl_out, sendmsg_out, recvmsg_out,
 		getsockopt_out, setsockopt_out, release_out, poll_out, mmap_out, socketpair_out, shutdown_out, close_out, sendpage_out };
 
-void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, int msg_len) {
+void daemon_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *msg_pt, int msg_len) {
 	PRINT_DEBUG("Entered: hdr=%p, sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d, len=%d",
 			hdr, hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index, msg_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -72,7 +72,7 @@ void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	}
 }
 
-void socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	uint8_t *pt = buf;
@@ -113,7 +113,7 @@ void socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	}
 }
 
-void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void bind_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 	uint8_t *pt = buf;
@@ -152,7 +152,7 @@ void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	}
 }
 
-void listen_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void listen_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -177,7 +177,7 @@ void listen_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	}
 }
 
-void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void connect_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -216,7 +216,7 @@ void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	}
 }
 
-void accept_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void accept_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -247,7 +247,7 @@ void accept_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint
 	}
 }
 
-void getname_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void getname_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -272,7 +272,7 @@ void getname_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	}
 }
 
-void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int buf_len) {
+void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int buf_len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, buf_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -280,7 +280,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 	int len;
 	int msg_len = 0;
 	uint8_t *msg = NULL;
-	struct nl_daemon_to_wedge *hdr_ret;
+	struct daemon_to_wedge_hdr *hdr_ret;
 
 	int32_t total = 0;
 	struct if_record *ifr;
@@ -309,16 +309,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 
 		PRINT_DEBUG("cmd=%d (SIOCGIFCONF), len=%d", cmd, len);
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + len;
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + len;
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		temp = pt; //store ptr to where total should be stored
 		pt += sizeof(int);
@@ -354,7 +354,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 		}
 		list_free(running_list, nop_func);
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int) + total;
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + total;
 		*(int *) temp = total;
 		PRINT_DEBUG("total=%d (%d)", total, total/sizeof(struct ifreq));
 		break;
@@ -383,16 +383,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		addr4 = (struct sockaddr_in *) pt;
 		addr4->sin_family = AF_INET;
@@ -434,16 +434,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		addr4 = (struct sockaddr_in *) pt;
 		addr4->sin_family = AF_INET;
@@ -485,16 +485,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		addr4 = (struct sockaddr_in *) pt;
 		addr4->sin_family = AF_INET;
@@ -536,16 +536,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(struct sockaddr_in);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(struct sockaddr_in);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		addr4 = (struct sockaddr_in *) pt;
 		addr4->sin_family = AF_INET;
@@ -597,16 +597,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + len;
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + len;
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		memcpy(pt, ifr->name, len);
 		pt += len;
@@ -637,16 +637,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		*(int *) pt = ifr->flags;
 		pt += sizeof(int);
@@ -683,16 +683,16 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 			return;
 		}
 
-		msg_len = sizeof(struct nl_daemon_to_wedge) + sizeof(int);
+		msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int);
 		msg = (uint8_t *) secure_malloc(msg_len);
 
-		hdr_ret = (struct nl_daemon_to_wedge *) msg;
+		hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
 		hdr_ret->ret = ACK;
 		hdr_ret->msg = 0;
-		pt = msg + sizeof(struct nl_daemon_to_wedge);
+		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		*(int *) pt = ifr->mtu;
 		pt += sizeof(int);
@@ -762,7 +762,7 @@ void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 	}
 }
 
-void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void sendmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -847,7 +847,7 @@ void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	}
 }
 
-void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void recvmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -906,7 +906,7 @@ void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	//}
 }
 
-void getsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void getsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -950,7 +950,7 @@ void getsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	}
 }
 
-void setsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void setsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -993,7 +993,7 @@ void setsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	}
 }
 
-void release_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void release_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -1013,7 +1013,7 @@ void release_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uin
 	}
 }
 
-void poll_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void poll_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -1043,7 +1043,7 @@ void poll_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	}
 }
 
-void mmap_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void mmap_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -1065,12 +1065,12 @@ void mmap_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_
 	}
 }
 
-void socketpair_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void socketpair_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 }
 
-void shutdown_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void shutdown_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -1093,7 +1093,7 @@ void shutdown_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, ui
 	}
 }
 
-void close_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void close_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 
 	daemon_sockets_remove(module, hdr->sock_index);
@@ -1108,7 +1108,7 @@ void close_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8
 	 */
 }
 
-void sendpage_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len) {
+void sendpage_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len) {
 
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
 

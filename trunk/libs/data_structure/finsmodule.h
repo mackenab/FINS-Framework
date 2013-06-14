@@ -133,6 +133,20 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 void module_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t flow);
 
+//operations - must match or be a subset of those in RTM
+#define OP_HELP_STR "help"
+#define OP_EXEC_STR "exec"
+#define OP_GET_STR "get"
+#define OP_SET_STR "set"
+#define OP_PAUSE_STR "pause"
+#define OP_UNPAUSE_STR "unpause"
+#define OP_LINK_STR "link"
+#define OP_UNLINK_STR "unlink"
+#define OP_LOAD_STR "load"
+#define OP_UNLOAD_STR "unload"
+#define OP_REPLACE_STR "replace"
+#define OP_SHUTDOWN_STR "shutdown"
+
 void module_set_param_flows(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_links(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_dual(struct fins_module *module, struct finsFrame *ff);
@@ -140,7 +154,6 @@ void module_set_param_dual(struct fins_module *module, struct finsFrame *ff);
 void module_get_param_flows(struct fins_module *module, struct finsFrame *ff);
 void module_get_param_links(struct fins_module *module, struct finsFrame *ff);
 void module_get_param_dual(struct fins_module *module, struct finsFrame *ff);
-
 
 //SET_PARAM / GET_PARAM
 #define MOD_GET_PARAM_FLOWS 0

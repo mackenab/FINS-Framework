@@ -1046,7 +1046,7 @@ void *wedge_to_daemon(void *local) {
 	int msg_len = -1;
 	uint8_t *msg_pt = NULL;
 
-	struct nl_wedge_to_daemon *hdr;
+	struct wedge_to_daemon_hdr *hdr;
 	int okFlag, doneFlag = 0;
 
 	PRINT_DEBUG("Waiting for message from kernel");
@@ -1176,14 +1176,14 @@ void *wedge_to_daemon(void *local) {
 		}
 
 		if (doneFlag) {
-			if (msg_len < sizeof(struct nl_wedge_to_daemon)) {
+			if (msg_len < sizeof(struct wedge_to_daemon_hdr)) {
 				//TODOD error
 				PRINT_WARN("todo error");
 			}
 
-			hdr = (struct nl_wedge_to_daemon *) msg_buf;
-			msg_pt = msg_buf + sizeof(struct nl_wedge_to_daemon);
-			msg_len -= sizeof(struct nl_wedge_to_daemon);
+			hdr = (struct wedge_to_daemon_hdr *) msg_buf;
+			msg_pt = msg_buf + sizeof(struct wedge_to_daemon_hdr);
+			msg_len -= sizeof(struct wedge_to_daemon_hdr);
 
 			daemon_out(module, hdr, msg_pt, msg_len);
 
@@ -1209,14 +1209,14 @@ void daemon_init_params(struct fins_module *module) {
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -1225,7 +1225,7 @@ void daemon_init_params(struct fins_module *module) {
 	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);

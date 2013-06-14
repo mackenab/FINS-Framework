@@ -9,7 +9,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 LOCAL_NAME := core
-LOCAL_MODS := switch interface ipv4 arp icmp udp daemon rtm logger tcp
+LOCAL_MODS := switch interface ipv4 arp icmp tcp udp daemon logger rtm
 #LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
 #this code breaks if anything besides folders containing modules are in MODULES_DIR
 LOCAL_OBJS := core.o
@@ -17,7 +17,7 @@ LOCAL_INCS := .
 LOCAL_CFLAGS :=
 
 ifdef BUILD_FOR_ANDROID_ARM
-LOCAL_LIBS := common data_structure config
+LOCAL_LIBS := config common data_structure #problem is data_structure not including common, & common not config, etc
 LOCAL_LDFLAGS := -lc
 else
 LOCAL_LIBS := common data_structure

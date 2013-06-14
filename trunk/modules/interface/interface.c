@@ -228,15 +228,15 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case INTERFACE_SET_PARAM_FLOWS:
-		PRINT_DEBUG("INTERFACE_GET_PARAM_FLOWS");
+		PRINT_DEBUG("INTERFACE_SET_PARAM_FLOWS");
 		module_set_param_flows(module, ff);
 		break;
 	case INTERFACE_SET_PARAM_LINKS:
-		PRINT_DEBUG("INTERFACE_GET_PARAM_LINKS");
+		PRINT_DEBUG("INTERFACE_SET_PARAM_LINKS");
 		module_set_param_links(module, ff);
 		break;
 	case INTERFACE_SET_PARAM_DUAL:
-		PRINT_DEBUG("INTERFACE_GET_PARAM_DUAL");
+		PRINT_DEBUG("INTERFACE_SET_PARAM_DUAL");
 		module_set_param_dual(module, ff);
 		break;
 	default:
@@ -291,7 +291,7 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 			secure_metadata_readFromElement(ff->metaData, "dst_mac", &dst_mac);
 
 			if (cache->seeking) {
-				PRINT_DEBUG("Updating host: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+				PRINT_DEBUG("Updating host: cache=%p, mac=0x%012llx, ip=%u", cache, dst_mac, dst_ip);
 				cache->mac = dst_mac;
 
 				cache->seeking = 0;
@@ -304,7 +304,7 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 					//secure_metadata_writeToElement(request_resp->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
 					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
-					if (!interface_inject_pdu(md->client_inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
+					if (!interface_inject_pdu(md->inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
 							ETH_TYPE_IP4)) {
 						PRINT_ERROR("todo error");
 						exit(-1); //TODO change, send FCF?
@@ -327,7 +327,7 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 				uint32_t src_ip = addr4_get_ip(&request->src_ip);
 				uint64_t dst_mac = 0;
 				uint32_t dst_ip = addr4_get_ip(&cache->ip);
-				PRINT_ERROR("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
+				PRINT_WARN("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
 						ff, src_mac, src_ip, dst_mac, dst_ip, cache);
 
 				//TODO remove all requests from same source //split cache into (src,dst) tuples?
@@ -414,7 +414,8 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 		uint64_t dst_mac;
 		uint64_t src_mac = ifr->mac;
 		//secure_metadata_writeToElement(ff->metaData, "send_src_mac", &src_mac, META_TYPE_INT64);
-		PRINT_DEBUG("src: ifr=%p, mac=0x%llx, ip=%u", ifr, src_mac, src_ip); PRINT_DEBUG("next hop: ip=%u", dst_ip);
+		PRINT_DEBUG("src: ifr=%p, mac=0x%012llx, ip=%u", ifr, src_mac, src_ip);
+		PRINT_DEBUG("next hop: ip=%u", dst_ip);
 
 		struct interface_cache *cache = (struct interface_cache *) list_find1(md->cache_list, interface_cache_ipv4_test, &dst_ip);
 		if (cache != NULL) {
@@ -439,7 +440,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 				}
 			} else {
 				dst_mac = cache->mac;
-				PRINT_DEBUG("next hop: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+				PRINT_DEBUG("next hop: cache=%p, mac=0x%012llx, ip=%u", cache, dst_mac, dst_ip);
 
 				struct timeval current;
 				gettimeofday(&current, 0);
@@ -448,7 +449,7 @@ void interface_out_ipv4(struct fins_module *module, struct finsFrame *ff) {
 					PRINT_DEBUG("up to date cache: cache=%p", cache);
 
 					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
-					if (interface_inject_pdu(md->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
+					if (interface_inject_pdu(md->inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_IP4)) {
 						//add interface statistics, injected++
 						freeFinsFrame(ff);
 					} else {
@@ -559,7 +560,7 @@ void interface_out_arp(struct fins_module *module, struct finsFrame *ff) {
 	secure_metadata_readFromElement(ff->metaData, "send_src_mac", &src_mac);
 
 	PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_ARP);
-	if (interface_inject_pdu(md->client_inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_ARP)) {
+	if (interface_inject_pdu(md->inject_fd, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_mac, src_mac, ETH_TYPE_ARP)) {
 		//add interface statistics, injected++
 		freeFinsFrame(ff);
 	} else {
@@ -661,7 +662,7 @@ void *capturer_to_interface(void *local) {
 	int size_len = sizeof(int);
 	int numBytes;
 	int frame_len;
-	uint8_t frame[10 * ETH_FRAME_LEN_MAX];
+	uint8_t frame[ETH_FRAME_LEN_MAX];
 	struct sniff_ethernet *hdr = (struct sniff_ethernet *) frame;
 
 	uint64_t dst_mac;
@@ -675,10 +676,11 @@ void *capturer_to_interface(void *local) {
 	while (module->state == FMS_RUNNING) {
 		//works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		do {
-			numBytes = read(md->client_capture_fd, &frame_len, size_len);
+			numBytes = read(md->capture_fd, &frame_len, size_len);
 			if (numBytes <= 0) {
 				PRINT_ERROR("numBytes=%d", numBytes);
-				break;
+				exit(-1);
+				//break;
 			}
 		} while (module->state == FMS_RUNNING && numBytes <= 0);
 
@@ -688,13 +690,15 @@ void *capturer_to_interface(void *local) {
 
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading size: numBytes=%d", numBytes);
-			break;
+			exit(-1);
+			//break;
 		}
 
-		numBytes = read(md->client_capture_fd, frame, frame_len);
+		numBytes = read(md->capture_fd, frame, frame_len);
 		if (numBytes <= 0) {
 			PRINT_ERROR("error reading frame: numBytes=%d", numBytes);
-			break;
+			exit(-1);
+			//break;
 		}
 
 		if (numBytes != frame_len) {
@@ -778,14 +782,14 @@ void interface_init_params(struct fins_module *module) {
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -794,7 +798,7 @@ void interface_init_params(struct fins_module *module) {
 	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -836,92 +840,79 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	md->cache_list = list_create(INTERFACE_CACHE_LIST_MAX);
 	md->store_list = list_create(INTERFACE_STORE_LIST_MAX);
 
-//#ifndef BUILD_FOR_ANDROID
-	pid_t pID = 0;
-	pID = fork();
-	if (pID < 0) { // failed to fork
-		PRINT_ERROR("Fork error: pid=%d, errno=%u, str='%s'", pID, errno, strerror(errno));
-		exit(-1);
-	} else if (pID == 0) { // child -- Capture process
-		PRINT_DEBUG("capture: pID=%d", (int)pID);
-		prctl(PR_SET_PDEATHSIG, SIGHUP);
-
-		uint8_t *args[2 * INTERFACE_IF_LIST_MAX + 1];
-		args[0] = (uint8_t *) secure_malloc(40);
-		sprintf((char *) args[0], "LD_LIBRARY_PATH=. ./capturer");
-
-		struct if_record *ifr;
-
-		PRINT_DEBUG("Creating arg list");
-		int i, j;
-		for (i = 0, j = 1; i < md->if_list->len && j < INTERFACE_IF_LIST_MAX; i++) {
-			ifr = (struct if_record *) list_look(md->if_list, i);
-			if (ifr_running_test(ifr) && ifr->mac != 0) {
-				args[j] = (uint8_t *) secure_malloc(IFNAMSIZ);
-				args[j][IFNAMSIZ - 1] = '\0';
-				sprintf((char *) args[j], "%s", ifr->name);
-
-				args[j + 1] = (uint8_t *) secure_malloc(2*IFHWADDRLEN+1);
-				args[j + 1][2 * IFHWADDRLEN] = '\0';
-				sprintf((char *) args[j + 1], "%012llx", ifr->mac);
-
-				j += 2;
-			}
-		}
-		args[j] = NULL;
-
-		int ret = execv("./capturer", (char **) args);
-		if (ret) {
-			PRINT_ERROR("Failed capturer cmd: pid=%d, errno=%u, str='%s'", pID, errno, strerror(errno));
-			exit(-1);
-		}
-
-		while (1)
-			;
-	} else { // parent
-		PRINT_DEBUG("inject: pID=%d", (int)pID);
-		sleep(2);
-	}
-	//#endif
-
 	//TODO move to associated thread, so init() is nonblocking
 	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	int32_t size = sizeof(addr);
 
 	addr.sun_family = AF_UNIX;
-	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
-
-	md->client_capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (md->client_capture_fd < 0) {
-		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", md->client_capture_fd, errno, strerror(errno));
-		return 0;
-	}
-
-	PRINT_DEBUG("connecting to: addr='%s'", CAPTURE_PATH);
-	if (connect(md->client_capture_fd, (struct sockaddr *) &addr, size) != 0) {
-		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", md->client_capture_fd, errno, strerror(errno));
-		return 0;
-	}
-
-	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", md->client_capture_fd, addr.sun_path);
-
-	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
 
-	md->client_inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (md->client_inject_fd < 0) {
-		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", md->client_inject_fd, errno, strerror(errno));
+	md->inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (md->inject_fd < 0) {
+		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", md->inject_fd, errno, strerror(errno));
 		return 0;
 	}
 
 	PRINT_DEBUG("connecting to: addr='%s'", INJECT_PATH);
-	if (connect(md->client_inject_fd, (struct sockaddr *) &addr, size) != 0) {
-		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", md->client_inject_fd, errno, strerror(errno));
+	if (connect(md->inject_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: inject_fd=%d, errno=%u, str='%s'", md->inject_fd, errno, strerror(errno));
+		return 0;
+	}
+	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", md->inject_fd, addr.sun_path);
+
+	PRINT_DEBUG("Creating dev/mac list");
+	//TODO send device/mac info
+	struct if_record *ifr;
+
+	uint8_t buf[ETH_FRAME_LEN_MAX];
+	memset(&buf, 0, ETH_FRAME_LEN_MAX);
+	struct interface_to_inject_hdr *hdr = (struct interface_to_inject_hdr *) buf;
+
+	int j;
+	for (i = 0, j = 0; i < md->if_list->len; i++) {
+		ifr = (struct if_record *) list_look(md->if_list, i);
+		if (ifr_running_test(ifr) && ifr->mac != 0) {
+			memcpy(hdr->iis[j].name, ifr->name, IFNAMSIZ);
+			//hdr->iis[j].mac = ifr->mac;
+			snprintf((char *) hdr->iis[j].mac, 2 * MAC_ADDR_LEN + 1, "%012llx", ifr->mac);
+
+			//PRINT_IMPORTANT("iis[%d]: name='%s', mac=0x%012llx", j, hdr->iis[j].name, hdr->iis[j].mac);
+			PRINT_IMPORTANT("iis[%d]: name='%s', mac='%s'", j, hdr->iis[j].name, hdr->iis[j].mac);
+			j++;
+		}
+	}
+	hdr->ii_num = (uint32_t) j;
+	uint32_t buf_len = INTERFACE_INFO_SIZE(hdr->ii_num);
+
+	int numBytes = write(md->inject_fd, &buf_len, sizeof(uint32_t));
+	if (numBytes <= 0) {
+		PRINT_ERROR("numBytes=%d", numBytes);
 		return 0;
 	}
 
-	PRINT_DEBUG("connected at: inject_fd=%d, addr='%s'", md->client_inject_fd, addr.sun_path);
+	numBytes = write(md->inject_fd, buf, buf_len);
+	if (numBytes <= 0) {
+		PRINT_ERROR("numBytes=%d", numBytes);
+		return 0;
+	}
+	sleep(1);
+
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
+
+	md->capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (md->capture_fd < 0) {
+		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", md->capture_fd, errno, strerror(errno));
+		return 0;
+	}
+
+	PRINT_DEBUG("connecting to: addr='%s'", CAPTURE_PATH);
+	if (connect(md->capture_fd, (struct sockaddr *) &addr, size) != 0) {
+		PRINT_ERROR("connect error: capture_fd=%d, errno=%u, str='%s'", md->capture_fd, errno, strerror(errno));
+		return 0;
+	}
+	PRINT_DEBUG("connected at: capture_fd=%d, addr='%s'", md->capture_fd, addr.sun_path);
 
 	PRINT_IMPORTANT("PCAP processes connected");
 	return 1;
@@ -960,12 +951,7 @@ int interface_shutdown(struct fins_module *module) {
 	sem_post(module->event_sem);
 
 	struct interface_data *md = (struct interface_data *) module->data;
-
 	//TODO expand this
-	int ret;
-	if ((ret = system("killall capturer"))) {
-		PRINT_ERROR("Problem killing capturer: ret=%d, errno=%u, str='%s'", ret, errno, strerror(errno));
-	}
 
 	PRINT_IMPORTANT("Joining switch_to_interface_thread");
 	pthread_join(md->switch_to_interface_thread, NULL);

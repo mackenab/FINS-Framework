@@ -49,3 +49,7 @@ install:
 .PHONY:clean
 clean:
 	@$(foreach exec,$(EXECS_LIST), cd execs/$(exec); $(MAKE) clean; cd $(LOCAL_DIR);)
+
+.PHONY:clean_full
+clean_full:
+	@$(foreach exec,$(EXECS_LIST), cd execs/$(exec); $(MAKE) clean_full; cd $(LOCAL_DIR);)

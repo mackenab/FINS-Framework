@@ -223,7 +223,7 @@ struct nl_wedge_to_daemon_hdr {
 	int32_t pos;
 };
 
-struct nl_wedge_to_daemon {
+struct wedge_to_daemon_hdr {
 	uint64_t sock_id;
 	int32_t sock_index;
 
@@ -234,7 +234,7 @@ struct nl_wedge_to_daemon {
 	int32_t call_index;
 };
 
-struct nl_daemon_to_wedge {
+struct daemon_to_wedge_hdr {
 	uint32_t call_type;
 
 	union {
@@ -255,9 +255,9 @@ int init_fins_nl(struct fins_module *module);
 int send_wedge(struct fins_module *module, uint8_t *buf, size_t len, int flags);
 int nack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
 int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
-int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
+int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
 		uint8_t **control);
-int send_wedge_recvmsg(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
+int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
 		uint8_t *data, uint32_t control_len, uint8_t *control);
 
 struct daemon_store {
@@ -465,33 +465,33 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void daemon_interrupt(struct fins_module *module);
 void daemon_handle_to(struct fins_module *module, struct daemon_call *call);
 
-void daemon_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *msg_pt, int msg_len);
-typedef void (*call_out_type)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void daemon_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *msg_pt, int msg_len);
+typedef void (*call_out_type)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
 
 /** calls handling functions */
-void socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void bind_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void listen_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void connect_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void accept_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void getname_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void ioctl_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void sendmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void recvmsg_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void getsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void setsockopt_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void release_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void poll_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void mmap_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void socketpair_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void shutdown_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void close_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
-void sendpage_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint8_t *buf, int len);
+void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void bind_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void listen_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void connect_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void accept_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void getname_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void sendmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void recvmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void getsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void setsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void release_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void poll_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void mmap_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void socketpair_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void shutdown_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void close_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void sendpage_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
 
 struct daemon_socket_general_ops {
 	uint32_t proto;
 	int (*socket_type_test)(int domain, int type, int protocol);
-	void (*socket_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int domain);
+	void (*socket_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
 	void (*daemon_in_fdf)(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
 			struct sockaddr_storage *dst_addr);
 	void (*daemon_in_error)(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
@@ -501,25 +501,25 @@ struct daemon_socket_general_ops {
 
 struct daemon_socket_out_ops {
 	//convert to socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct socket_out_hdr *shdr);
-	void (*socket_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int domain);
-	void (*bind_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct sockaddr_storage *addr);
-	void (*listen_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int backlog);
-	void (*connect_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct sockaddr_storage *addr, int flags);
-	void (*accept_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint64_t uniqueSockID_new, int index_new, int flags);
-	void (*getname_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int peer);
-	void (*ioctl_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
-	void (*sendmsg_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
+	void (*socket_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
+	void (*bind_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr);
+	void (*listen_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int backlog);
+	void (*connect_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr, int flags);
+	void (*accept_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint64_t uniqueSockID_new, int index_new, int flags);
+	void (*getname_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int peer);
+	void (*ioctl_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
+	void (*sendmsg_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
 			struct sockaddr_storage *dest_addr, int addr_len);
-	void (*recvmsg_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int data_len, uint32_t msg_controllen, int flags);
-	void (*getsockopt_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval);
-	void (*setsockopt_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int level, int optname, int optlen, uint8_t *optval);
-	void (*release_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr);
-	void (*poll_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t events);
-	void (*mmap_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr);
-	void (*socketpair_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr);
-	void (*shutdown_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr, int how);
-	void (*close_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr);
-	void (*sendpage_out)(struct fins_module *module, struct nl_wedge_to_daemon *hdr);
+	void (*recvmsg_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int data_len, uint32_t msg_controllen, int flags);
+	void (*getsockopt_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);
+	void (*setsockopt_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);
+	void (*release_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr);
+	void (*poll_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t events);
+	void (*mmap_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr);
+	void (*socketpair_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr);
+	void (*shutdown_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int how);
+	void (*close_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr);
+	void (*sendpage_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr);
 };
 
 typedef void (*call_in_type)(struct fins_module *module, struct daemon_call *call);

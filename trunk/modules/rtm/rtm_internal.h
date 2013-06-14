@@ -23,6 +23,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
@@ -55,6 +56,10 @@
 #ifndef SOCK_NONBLOCK
 #include <fcntl.h>
 #define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
+#ifndef ALLPERMS
+#define ALLPERMS (S_ISUID|S_ISGID|S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO)/* 07777 */
 #endif
 
 #ifndef UNIX_PATH_MAX

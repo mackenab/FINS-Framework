@@ -10,7 +10,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #Name of the module
 LOCAL_NAME := capturer
 ifdef BUILD_FOR_ANDROID_ARM
-LOCAL_LIBS := pcap
+LOCAL_LIBS := glue pcap
 else
 LOCAL_LIBS := 
 endif

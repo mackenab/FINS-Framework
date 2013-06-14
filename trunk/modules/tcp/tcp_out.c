@@ -1269,6 +1269,14 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
+	case TCP_GET_MSS__id:
+		PRINT_DEBUG("TCP_GET_MSS");
+
+		val_int32 = (uint32_t) md->mss;
+		secure_metadata_writeToElement(ff->metaData, "value", &val_int32, META_TYPE_INT32);
+
+		module_reply_fcf(module, ff, FCF_TRUE, 0);
+		break;
 	default:
 		break;
 	}
@@ -1559,6 +1567,14 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
 		md->fast_retransmits = (uint32_t) val_int32;
+
+		module_reply_fcf(module, ff, FCF_TRUE, 0);
+		break;
+	case TCP_SET_MSS__id:
+		PRINT_DEBUG("TCP_SET_MSS");
+
+		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
+		md->mss = (uint32_t) val_int32;
 
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;

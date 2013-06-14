@@ -14,7 +14,7 @@ LS_C=$(subst $(1)/,,$(wildcard $(1)/*.c))
 LOCAL_SRC_FILES := $(call LS_C,$(LOCAL_DIR)/lib)
 #LOCAL_OBJS := $(subst .c,.o,$(LOCAL_SRC_FILES))
 LOCAL_OBJS := lib/grammar.o lib/libconfig.o lib/scanctx.o lib/scanner.o lib/strbuf.o
-LOCAL_INCS := .
+LOCAL_INCS := . lib/.
 LOCAL_CFLAGS := -fpic
 LOCAL_LDFLAGS := -lc -lz
 

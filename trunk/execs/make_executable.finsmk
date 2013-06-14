@@ -167,6 +167,7 @@ ifdef BUILD_FOR_ANDROID_ARM
 	@$(foreach LIB,$(LOCAL_LIBS),adb push $(OBJ_DIR)/lib$(LIB).so $(INSTALL_DIR);)
 	@$(foreach MOD,$(LOCAL_MODS),adb push $(OBJ_DIR)/lib$(MOD).so $(INSTALL_DIR);)
 else
+	@echo "" > /dev/null
 endif
 
 .PHONY:temp

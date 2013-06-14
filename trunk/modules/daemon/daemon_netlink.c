@@ -106,10 +106,10 @@ int send_wedge(struct fins_module *module, uint8_t *buf, size_t len, int flags) 
 int nack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra meta
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%u, call_type=%u, msg=%u, nack=%d", call_id, call_index, call_type, msg, NACK);
 
-	int buf_len = sizeof(struct nl_daemon_to_wedge);
+	int buf_len = sizeof(struct daemon_to_wedge_hdr);
 	uint8_t *buf = (uint8_t *) secure_malloc(buf_len);
 
-	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
+	struct daemon_to_wedge_hdr *hdr = (struct daemon_to_wedge_hdr *) buf;
 	hdr->call_type = call_type;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
@@ -125,10 +125,10 @@ int nack_send(struct fins_module *module, uint32_t call_id, int call_index, uint
 int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg) { //TODO remove extra meta
 	PRINT_DEBUG("Entered: call_id=%u, call_index=%u, call_type=%u, msg=%u, ack=%d", call_id, call_index, call_type, msg, ACK);
 
-	int buf_len = sizeof(struct nl_daemon_to_wedge);
+	int buf_len = sizeof(struct daemon_to_wedge_hdr);
 	uint8_t *buf = (uint8_t *) secure_malloc(buf_len);
 
-	struct nl_daemon_to_wedge *hdr = (struct nl_daemon_to_wedge *) buf;
+	struct daemon_to_wedge_hdr *hdr = (struct daemon_to_wedge_hdr *) buf;
 	hdr->call_type = call_type;
 	hdr->call_id = call_id;
 	hdr->call_index = call_index;
@@ -141,7 +141,7 @@ int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint3
 	return ret == 0; //TODO change to ret_val ?
 }
 
-int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
+int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
 		uint8_t **control) {
 	PRINT_DEBUG("Entered: module=%p, hdr=%p, meta=%p, msg_controllen=%u, flags=0x%x, control_len=%p, control=%p", module, hdr, meta, msg_controllen, flags, control_len, control);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -262,20 +262,20 @@ int recvmsg_control(struct fins_module *module, struct nl_wedge_to_daemon *hdr, 
 	return 1;
 }
 
-int send_wedge_recvmsg(struct fins_module *module, struct nl_wedge_to_daemon *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
+int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
 		uint8_t *data, uint32_t control_len, uint8_t *control) {
 	PRINT_DEBUG("Entered: module=%p, hdr=%p, addr_len=%u, addr=%p, data_len=%u, data=%p, control_len=%u, control=%p", module, hdr, addr_len, addr, data_len, data, control_len, control);
 
-	int msg_len = sizeof(struct nl_daemon_to_wedge) + 3 * sizeof(uint32_t) + addr_len + data_len + control_len;
+	int msg_len = sizeof(struct daemon_to_wedge_hdr) + 3 * sizeof(uint32_t) + addr_len + data_len + control_len;
 	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
-	struct nl_daemon_to_wedge *hdr_ret = (struct nl_daemon_to_wedge *) msg;
+	struct daemon_to_wedge_hdr *hdr_ret = (struct daemon_to_wedge_hdr *) msg;
 	hdr_ret->call_type = hdr->call_type;
 	hdr_ret->call_id = hdr->call_id;
 	hdr_ret->call_index = hdr->call_index;
 	hdr_ret->ret = ACK;
 	hdr_ret->msg = 0; //TODO change to set msg_flags
-	uint8_t *pt = msg + sizeof(struct nl_daemon_to_wedge);
+	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 	*(uint32_t *) pt = addr_len;
 	pt += sizeof(uint32_t);

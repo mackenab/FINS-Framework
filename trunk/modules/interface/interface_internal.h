@@ -48,8 +48,8 @@
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
-#define CAPTURE_PATH FINS_TMP_ROOT "/fins_capture"
 #define INJECT_PATH FINS_TMP_ROOT "/fins_inject"
+#define CAPTURE_PATH FINS_TMP_ROOT "/fins_capture"
 
 /* ethernet headers are always exactly 14 bytes [1] */
 #define SIZE_ETHERNET 14
@@ -61,8 +61,7 @@
 #define ETH_TYPE_ARP  0x0806
 #define ETH_TYPE_IP6  0x86dd
 
-#define ETH_FRAME_LEN_MAX 1538
-
+#define ETH_FRAME_LEN_MAX 10000 //1538
 /* Ethernet header */
 struct sniff_ethernet {
 	uint8_t ether_dhost[ETHER_ADDR_LEN]; /* destination host address */
@@ -112,6 +111,23 @@ int interface_store_request_test(struct interface_store *store, struct interface
 void interface_store_free(struct interface_store *store);
 //^^^^^^^^^^^^^^^^^^ ARP/interface stuff
 
+#define MAC_ADDR_LEN (6)
+#define MAC_STR_LEN (6*2+5)
+
+struct interface_interface_info {
+	uint8_t name[IFNAMSIZ];
+	uint8_t mac[2*MAC_ADDR_LEN];
+	//uint64_t mac; //should work but doesn't
+};
+
+#define INTERFACE_INFO_MIN_SIZE (sizeof(uint32_t))
+#define INTERFACE_INFO_SIZE(ii_num) (sizeof(uint32_t) + ii_num * sizeof(struct interface_interface_info))
+
+struct interface_to_inject_hdr {
+	uint32_t ii_num;
+	struct interface_interface_info iis[INTERFACE_IF_LIST_MAX];
+};
+
 #define INTERFACE_LIB "interface"
 #define INTERFACE_MAX_FLOWS 3
 #define INTERFACE_FLOW_IPV4 0
@@ -125,8 +141,8 @@ struct interface_data {
 	pthread_t switch_to_interface_thread;
 	pthread_t capturer_to_interface_thread;
 
-	int client_capture_fd;
-	int client_inject_fd;
+	int capture_fd;
+	int inject_fd;
 
 	struct linked_list *if_list;
 	struct if_record *if_loopback;

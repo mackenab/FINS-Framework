@@ -14,7 +14,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #TEST = $(wildcard $(FULL_LIBRARY_LIST))
 #DIRS := $(foreach dir,$(dirs),$(wildcard $(dir)/*))
 
-FULL_LIBRARY_LIST = common data_structure libconfig libglue libpcap
+FULL_LIBRARY_LIST = common data_structure config glue pcap
 #TEST := $(subst /,,$(subst $(LIBS_DIR)/,,$(wildcard $(LIBS_DIR)/*/)))
 #TEST := $(wildcard $(LIBS_DIR)/*/)
 

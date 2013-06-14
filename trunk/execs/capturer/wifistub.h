@@ -14,6 +14,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <linux/if_ether.h>
+#include <net/if.h>
 #include <pcap.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,28 +26,41 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-
 #ifdef BUILD_FOR_ANDROID
 #include <stdio.h>
 
-//#define DEBUG
+#define DEBUG
+#define INFO
+#define WARN
 #define IMPORTANT
 #define ERROR
 
 #ifdef DEBUG
-#define PRINT_DEBUG(format, args...) printf("DEBUG(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#define PRINT_DEBUG(format, args...) printf("\033[01;37mDEBUG(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_DEBUG(format, args...)
 #endif
 
+#ifdef INFO
+#define PRINT_INFO(format, args...) printf("\033[01;34mINFO(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#else
+#define PRINT_INFO(format, args...)
+#endif
+
+#ifdef WARN
+#define PRINT_WARN(format, args...) printf("\033[01;33mWARN(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#else
+#define PRINT_WARN(format, args...)
+#endif
+
 #ifdef IMPORTANT
-#define PRINT_IMPORTANT(format, args...) printf("IMPORTANT(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#define PRINT_IMPORTANT(format, args...) printf("\033[01;32mIMPORTANT(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_IMPORTANT(format, args...)
 #endif
 
 #ifdef ERROR
-#define PRINT_ERROR(format, args...) printf("ERROR(%s, %s, %d):"format"\n",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
+#define PRINT_ERROR(format, args...) printf("\033[01;31mERROR(%s, %s, %d):"format"\n\033[01;37m",__FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_ERROR(format, args...)
 #endif
@@ -55,26 +69,31 @@
 
 #include <finsdebug.h>
 #endif
-//#include <getMAC_Address.h>
+
+#ifndef ALLPERMS
+# define ALLPERMS (S_ISUID|S_ISGID|S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO)/* 07777 */
+#endif
 
 /* default snap length (maximum bytes per packet to capture) */
 //#define SNAP_LEN 1518
 #define SNAP_LEN 8192//4096
-/* packet inject handle */
-extern pcap_t *inject_handle;
-
-/* packet capture handle */
-extern pcap_t *capture_handle;
-
 /** The structure of the data to be written to the CAPTURE_PIPE */
 struct data_to_pass {
 	u_int frameLength;
 	uint8_t *frame;
 };
 
-/** The Buffering pipes between the Incoming Handlers and FINS Space */
-extern int server_capture_fd;
-extern int server_inject_fd;
+struct processes_shared {
+	uint8_t running_flag;
+
+	int capture_fd;
+	pcap_t *capture_handle;
+	int capture_count;
+
+	int inject_fd;
+	pcap_t *inject_handle;
+	int inject_count;
+};
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 108
@@ -90,17 +109,38 @@ extern int server_inject_fd;
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
-//"com.whoever.xfer/fins_capture"
 #define CAPTURE_PATH FINS_TMP_ROOT "/fins_capture"
 #define INJECT_PATH FINS_TMP_ROOT "/fins_inject"
 
-/** Functions prototypes fully defined in wifistub.c */
+#define MAC_ADDR_LEN (6)
+#define MAC_STR_LEN (6*2+5)
 
-void capture_init(char *device, int argc, char *argv[]);
-void inject_init(char *device);
-void wifi_terminate();
-void close_pipes();
+#define ETH_FRAME_LEN_MAX 10000 //1538
+
+struct interface_interface_info {
+	uint8_t name[IFNAMSIZ];
+	uint8_t mac[2*MAC_ADDR_LEN];
+	//uint64_t mac; //should work but doesn't
+};
+
+
+#define INTERFACE_INFO_MIN_SIZE sizeof(uint32_t)
+#define INTERFACE_INFO_SIZE(ii_num) (sizeof(uint32_t) + ii_num * sizeof(struct interface_interface_info))
+#define INTERFACE_IF_LIST_MAX 256
+
+struct interface_to_inject_hdr {
+	uint32_t ii_num;
+	struct interface_interface_info iis[INTERFACE_IF_LIST_MAX];
+};
+
+void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared);
 void /*int*/got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packetReceived);
+
+void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared);
+
+void close_pipes(struct processes_shared *shared);
+
+void wifi_terminate();
 int wifi_inject(char *frameToSend, int frameLength);
 
 #endif /* WIFISTUB_H_ */

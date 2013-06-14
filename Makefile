@@ -43,3 +43,8 @@ install:
 .PHONY:clean
 clean:
 	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) clean; cd ../;)
+
+.PHONY:clean_full
+clean_full:
+	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) clean_full; cd ../;)
+	

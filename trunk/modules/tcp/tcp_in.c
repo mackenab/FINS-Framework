@@ -1964,12 +1964,7 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					temp_seg->ack_num = seg->seq_end;
 
 					temp_seg->flags |= ((MIN_TCP_HEADER_WORDS + 0) << 12) & FLAG_DATAOFFSET;
-
-					if (conn->module == NULL) {
-						PRINT_ERROR("arrived here");
-						conn->module = module;
-					}
-					tcp_seg_send(conn->module, temp_seg);
+					tcp_seg_send(module, temp_seg);
 					tcp_seg_free(temp_seg);
 
 					tcp_seg_free(seg);
@@ -1994,7 +1989,7 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 						temp_seg->ack_num = seg->seq_end;
 					}
 					temp_seg->flags |= ((MIN_TCP_HEADER_WORDS + 0) << 12) & FLAG_DATAOFFSET;
-					tcp_seg_send(conn->module, temp_seg);
+					tcp_seg_send(module, temp_seg);
 					tcp_seg_free(temp_seg);
 				}
 

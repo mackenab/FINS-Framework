@@ -21,7 +21,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 	ifr = (struct if_record *) list_find1(md->if_list, ifr_ipv4_test, &src_ip);
 	if (ifr != NULL) {
 		src_mac = ifr->mac;
-		PRINT_DEBUG("src: if_index=%d, mac=0x%llx, ip=%u", ifr->index, src_mac, src_ip);
+		PRINT_DEBUG("src: if_index=%d, mac=0x%012llx, ip=%u", ifr->index, src_mac, src_ip);
 
 		secure_metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
 
@@ -38,7 +38,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 				}
 			} else {
 				dst_mac = cache->mac;
-				PRINT_DEBUG("dst: cache=%p, mac=0x%llx, ip=%u", cache, dst_mac, dst_ip);
+				PRINT_DEBUG("dst: cache=%p, mac=0x%012llx, ip=%u", cache, dst_mac, dst_ip);
 
 				struct timeval current;
 				gettimeofday(&current, 0);
@@ -186,7 +186,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					struct arp_cache *cache = (struct arp_cache *) list_find1(md->cache_list, arp_cache_ip_test, &src_ip);
 					if (cache != NULL) {
 						if (cache->seeking != 0) {
-							PRINT_DEBUG("Updating host: cache=%p, mac=0x%llx, ip=%u", cache, src_mac, src_ip);
+							PRINT_DEBUG("Updating host: cache=%p, mac=0x%012llx, ip=%u", cache, src_mac, src_ip);
 							timer_stop(cache->to_data->tid);
 							cache->to_flag = 0;
 							gettimeofday(&cache->updated_stamp, 0); //use this as time cache confirmed
@@ -222,8 +222,7 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					}
 				}
 			} else {
-				PRINT_IMPORTANT("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip);
-				//TODO change to PRINT_ERROR
+				PRINT_WARN("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip);
 			}
 		} else {
 			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);

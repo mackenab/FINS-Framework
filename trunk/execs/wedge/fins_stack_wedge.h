@@ -119,7 +119,7 @@ struct nl_wedge_to_daemon_hdr {
 	__s32 pos;
 };
 
-struct nl_wedge_to_daemon {
+struct wedge_to_daemon_hdr {
 	__u64 sock_id;
 	__s32 sock_index;
 
@@ -130,7 +130,7 @@ struct nl_wedge_to_daemon {
 	__s32 call_index;
 };
 
-struct nl_daemon_to_wedge {
+struct daemon_to_wedge_hdr {
 	__u32 call_type;
 
 	union {

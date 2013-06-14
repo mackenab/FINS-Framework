@@ -35,3 +35,9 @@ all: $(EXECUTABLES)
 clean:
 	@rm -f *.o 
 	@rm -f $(EXECUTABLES) 
+
+.PHONY:clean_full
+clean_full:
+	@rm -f *.o 
+	@rm -f $(EXECUTABLES) 
+	

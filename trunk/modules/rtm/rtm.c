@@ -112,8 +112,7 @@ void *console_to_rtm(void *local) {
 	for (i = 0; i < MAX_CONSOLES; i++) {
 		poll_fds[i].events = POLLIN | POLLPRI | POLLRDNORM;
 		//poll_fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
-	}
-	PRINT_DEBUG("events=0x%x", poll_fds[0].events);
+	}PRINT_DEBUG("events=0x%x", poll_fds[0].events);
 
 	uint32_t cmd_len;
 	uint8_t cmd_buf[MAX_CMD_LEN + 1];
@@ -561,19 +560,19 @@ void rtm_interrupt(struct fins_module *module) {
 
 void rtm_init_params(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->params);
-	metadata_element *exec_elem = config_setting_add(root, "exec", CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
-	metadata_element *get_elem = config_setting_add(root, "get", CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
-	metadata_element *set_elem = config_setting_add(root, "set", CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -633,12 +632,21 @@ int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
 		return 0;
 	}
-
-	PRINT_DEBUG("binding to: addr='%s'", RTM_PATH);
-	if (bind(md->server_fd, (struct sockaddr *) &addr, size) < 0) {
-		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
+	if (fchmod(md->server_fd, ACCESSPERMS) < 0) {
+		PRINT_ERROR("fchmod rtm: rtm_path='%s', errno=%u, str='%s'", RTM_PATH, errno, strerror(errno));
+		close(md->server_fd);
 		return 0;
 	}
+
+	mode_t old_mask = umask(0);
+	PRINT_IMPORTANT("binding to: addr='%s'", RTM_PATH);
+	if (bind(md->server_fd, (struct sockaddr *) &addr, size) < 0) {
+		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
+		close(md->server_fd);
+		return 0;
+	}
+	umask(old_mask);
+
 	if (listen(md->server_fd, 10) < 0) {
 		PRINT_ERROR("listen error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
 		return 0;

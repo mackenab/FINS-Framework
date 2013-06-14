@@ -10,21 +10,36 @@ BUILD_FOR_LINUX := "If uncommented, the FINS source will build for linux"
 
 
 
+###### Common stuff ######
+TRUNK_DIR := $(FINS_ROOT_DIR)/trunk
+OBJ_DIR := $(FINS_ROOT_DIR)/obj
+
+EXECS_DIR := $(TRUNK_DIR)/execs
+LIBS_DIR := $(TRUNK_DIR)/libs
+MODULES_DIR := $(TRUNK_DIR)/modules
+
+MAX_DEPTH := 10
+
+filter_headers = $(shell ls $(1) 2> /dev/null | grep \\.h)
+filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(call filter_headers,$(DIR))))
+
+
+
+
 ###### build for android (arch arm) ######
 ifdef BUILD_FOR_ANDROID_ARM
 TARGET_PLATFORM := "Android arch-ARM"
 
 FOLDER_LIST := trunk #tests
-EXECS_LIST := capturer console core wedge launcher
-
-#CC :=/home/bucknell/android-ndk/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc --sysroot=/home/bucknell/android-ndk/platforms/android-8/arch-arm
-#INCLS := -I/home/bucknell/android/external/libpcap -I/home/bucknell/android/external/libconfig-1.4.7/lib -I/home/bucknell/android/external/libpcap/pcap -I/home/bucknell/android/bionic/libc/include -I/home/bucknell/android/bionic/libc/arch-arm/include -I/home/bucknell/android/bionic/libc/ -I/home/bucknell/android/bionic/libc/kernel/common -I/home/bucknell/android/bionic/libc/kernel/arch-arm
-#LIBPATHS := -L/home/bucknell/android/out/target/product/crespo/system/lib
+EXECS_LIST := capturer console wedge launcher 
+#core can compile/run but doesn't work, stops when main thread loses focus?
 
 NDK_PLATFORM_VER := 14
 ANDROID_NDK_ROOT := /opt/android/android-ndk-r8e
+PREBUILT_ROOT := /opt/android/prebuilt 
+
 USR := $(ANDROID_NDK_ROOT)/platforms/android-$(NDK_PLATFORM_VER)/arch-arm/usr
-#BIN := /home/alex/jreed/android_source/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin
+#BIN := $(PREBUILT_ROOT)/linux-x86/toolchain/arm-eabi-4.4.3/bin
 BIN := $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin
 
 #CC := $(BIN)/arm-eabi-gcc
@@ -37,6 +52,8 @@ INCLS := -I$(USR)/include
 LD := $(BIN)/arm-linux-androideabi-gcc
 LDOPTS := -g -O2 -Wall #flags for valgrind
 LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
+#LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,-rpath=/data/local/fins,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
+LDOPTS += 
 #LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcc.a
 #LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcov.a
 LIBPATHS := -L$(USR)/lib 
@@ -88,27 +105,12 @@ LIBPATHS :=
 LIBS := 
 
 GDB_CLIENT := gdb
+INSTALL_DIR := /lib/modules/$(shell uname -r)/kernel/fins
 endif
 
 
 
 
-###### Common stuff ######
-#needs to be deferred
+###### Deferred Common stuff ######
 CFLAGS = $(CCOPTS) $(INCLS)
 LDFLAGS = $(LDOPTS) $(LIBPATHS) $(LIBS)
-
-TRUNK_DIR := $(FINS_ROOT_DIR)/trunk
-OBJ_DIR := $(FINS_ROOT_DIR)/obj
-
-EXECS_DIR := $(TRUNK_DIR)/execs
-LIBS_DIR := $(TRUNK_DIR)/libs
-MODULES_DIR := $(TRUNK_DIR)/modules
-
-MAX_DEPTH := 10
-
-#COMMON_OBJS = $(hide)$(shell cat $(FINS_ROOT_DIR)/trunk/common/OBJS.finsmk)
-
-filter_headers = $(shell ls $(1) | grep \\.h 2> /dev/null)
-#filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(shell ls $(DIR) | grep \\.h 2> /dev/null)))
-filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(call filter_headers,$(DIR))))
