@@ -253,6 +253,7 @@ void capturer_main(void) {
 
 	int inject_fd;
 	while (1) {
+		PRINT_IMPORTANT("Waiting connection...");
 		inject_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
 		if (inject_fd < 0) {
 			PRINT_ERROR("accept error: inject_fd=%d, errno=%u, str='%s'", inject_fd, errno, strerror(errno));

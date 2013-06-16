@@ -26,6 +26,9 @@
 
 void core_dummy(void);
 void core_main(uint8_t *envi_name, uint8_t *stack_name);
+void core_termination_handler(int sig);
+
+void core_tests(void); //For random testing purposes
 
 #endif /* CORE_H_ */
 

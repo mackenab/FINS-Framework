@@ -444,7 +444,7 @@ struct daemon_data {
 	struct linked_list *store_list; //Stored FDF waiting to send
 };
 
-int daemon_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int daemon_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int daemon_run(struct fins_module *module, pthread_attr_t *attr);
 int daemon_pause(struct fins_module *module);
 int daemon_unpause(struct fins_module *module);

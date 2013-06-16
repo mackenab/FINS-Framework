@@ -124,50 +124,8 @@ void core_dummy(void) {
 
 }
 
-void core_termination_handler(int sig) {
-	PRINT_IMPORTANT("**********Terminating *******");
-
-	int i;
-
-	//shutdown all module threads in backwards order of startup
-	PRINT_IMPORTANT("modules: shutdown");
-	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (overall->modules[i] != NULL) {
-			overall->modules[i]->ops->shutdown(overall->modules[i]);
-		}
-	}
-
-	//have each module free data & que/sem //TODO finish each of these
-	PRINT_IMPORTANT("modules: release");
-	for (i = MAX_MODULES - 1; i >= 0; i--) {
-		if (overall->modules[i] != NULL) {
-			overall->modules[i]->ops->release(overall->modules[i]);
-		}
-	}
-
-	PRINT_IMPORTANT("admin: free");
-	list_free(overall->admin_list, nop_func);
-
-	PRINT_IMPORTANT("libraries: close");
-	list_free(overall->lib_list, library_free);
-
-	PRINT_IMPORTANT("Freeing links");
-	list_free(overall->link_list, free);
-
-	PRINT_IMPORTANT("Freeing environment");
-	list_free(overall->envi->if_list, ifr_free);
-	list_free(overall->envi->route_list, free);
-	free(overall->envi);
-
-	free(overall);
-	sem_destroy(&control_serial_sem);
-
-	PRINT_IMPORTANT("FIN");
-	exit(-1);
-}
-
 void core_main(uint8_t *envi_name, uint8_t *stack_name) {
-	PRINT_IMPORTANT("Entered");
+	PRINT_IMPORTANT("Core Initiation: Starting ************");
 
 #ifdef BUILD_FOR_ANDROID
 	library_dummies();
@@ -220,8 +178,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	int32_t if_index;
 	uint8_t *name;
 	uint64_t mac;
-	uint32_t type;
-	uint32_t if_status;
+	uint32_t mode;
 	uint32_t mtu;
 	uint32_t flags;
 
@@ -252,13 +209,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			exit(-1);
 		}
 
-		status = config_setting_lookup_int(elem, "type", (int *) &type);
-		if (status == META_FALSE) {
-			PRINT_ERROR("todo error");
-			exit(-1);
-		}
-
-		status = config_setting_lookup_int(elem, "status", (int *) &if_status);
+		status = config_setting_lookup_int(elem, "mode", (int *) &mode);
 		if (status == META_FALSE) {
 			PRINT_ERROR("todo error");
 			exit(-1);
@@ -283,16 +234,15 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			ifr->index = if_index;
 			strcpy((char *) ifr->name, (char *) name);
 			ifr->mac = mac;
-			ifr->type = (uint16_t) type;
 
-			ifr->status = (uint8_t) if_status;
+			ifr->mode = (uint8_t) mode;
 			ifr->mtu = mtu;
 			ifr->flags = flags;
 
 			ifr->addr_list = list_create(MAX_FAMILIES);
 
 			if (list_has_space(overall->envi->if_list)) {
-				PRINT_IMPORTANT("Adding interface: ifr=%p, index=%u, name='%s', mac=0x%012llx, type=%u", ifr, ifr->index, ifr->name, ifr->mac, ifr->type);
+				PRINT_IMPORTANT("Adding interface: ifr=%p, index=%u, name='%s', mac=0x%012llx", ifr, ifr->index, ifr->name, ifr->mac);
 				list_append(overall->envi->if_list, ifr);
 			} else {
 				//TODO error
@@ -551,7 +501,6 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		for (j = 0; j < ip_num; j++) {
 			gw[j] = (uint32_t) config_setting_get_int_elem(ip_elem, j);
 		}
-		////ip = IP4_ADR_P2H(192,168,1,5);
 
 		status = config_setting_lookup_int(elem, "metric", (int *) &metric);
 		if (status == META_FALSE) {
@@ -623,6 +572,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	overall->lib_list = list_create(MAX_MODULES);
 	memset(overall->modules, 0, MAX_MODULES * sizeof(struct fins_module *));
 	overall->admin_list = list_create(MAX_MODULES);
+	struct linked_list *mt_list = list_create(MAX_MODULES);
 
 	uint8_t base_path[100];
 	memset((char *) base_path, 0, 100);
@@ -652,6 +602,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 
 	struct fins_library *library;
 	struct fins_module *module;
+	struct fins_module_table *mt;
 
 	for (i = 0; i < mods_num; i++) {
 		mod_elem = config_setting_get_elem(mods_elem, i);
@@ -729,9 +680,19 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		library->num_mods++;
 
 		//TODO move flow to update? or links here?
-		status = module->ops->init(module, mod_flows_num, mod_flows, mod_params, overall->envi); //TODO merge init into create?
+		status = module->ops->init(module, mod_params, overall->envi); //TODO merge init into create?
 		if (status != 0) {
 			overall->modules[i] = module;
+
+			if (module->flows_max < mod_flows_num) {
+				PRINT_ERROR("todo error");
+				exit(-1);
+			}
+
+			mt = (struct fins_module_table *) secure_malloc(sizeof(struct fins_module_table));
+			mt->flows_num = mod_flows_num;
+			memcpy(mt->flows, mod_flows, mod_flows_num * sizeof(uint32_t));
+			list_append(mt_list, mt);
 
 			if (mod_admin != NULL) {
 				PRINT_IMPORTANT("Adding admin: module=%p, lib='%s', name='%s'", module, module->lib, module->name);
@@ -847,21 +808,17 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	//send out subset of linking table to each module as update
 	//TODO table subset update
 
-	struct linked_list *link_subset_list;
 	metadata *meta_update;
 	struct finsFrame *ff_update;
 
 	for (i = 0; i < MAX_MODULES; i++) {
 		if (overall->modules[i] != NULL) {
-			link_subset_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_clone); //TODO is mem leak
-			PRINT_IMPORTANT("i=%d, link_subset_list=%p, len=%d", i, link_subset_list, link_subset_list->len);
+			mt = (struct fins_module_table *) list_remove_front(mt_list);
+			mt->link_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_clone); //TODO is mem leak
+			PRINT_IMPORTANT("subset: i=%d, link_list=%p, len=%d", i, mt->link_list, mt->link_list->len);
 
 			meta_update = (metadata *) secure_malloc(sizeof(metadata));
 			metadata_create(meta_update);
-
-			//TODO decide on metadata params?
-			//uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
-			//secure_metadata_writeToElement(meta_update, "send_src_ip", &host_ip, META_TYPE_INT32);
 
 			ff_update = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 			ff_update->dataOrCtrl = FF_CONTROL;
@@ -871,14 +828,15 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			ff_update->ctrlFrame.sender_id = 0;
 			ff_update->ctrlFrame.serial_num = gen_control_serial_num();
 			ff_update->ctrlFrame.opcode = CTRL_SET_PARAM;
-			ff_update->ctrlFrame.param_id = MOD_SET_PARAM_LINKS;
+			ff_update->ctrlFrame.param_id = MOD_SET_PARAM_DUAL;
 
-			ff_update->ctrlFrame.data_len = sizeof(struct linked_list);
-			ff_update->ctrlFrame.data = (uint8_t *) link_subset_list;
+			ff_update->ctrlFrame.data_len = sizeof(struct fins_module_table);
+			ff_update->ctrlFrame.data = (uint8_t *) mt;
 
 			module_to_switch(overall->modules[0], ff_update);
 		}
 	}
+	list_free(mt_list, free);
 
 	//############ say by this point envi var completely init'd
 	//assumed always connect/init to switch first
@@ -894,174 +852,213 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		}
 	}
 
-	//############ mini test
+	PRINT_IMPORTANT("Core Initiation: Finished ************");
+}
+
+void core_termination_handler(int sig) {
+	PRINT_IMPORTANT("**********Terminating *******");
+
+	int i;
+
+	//shutdown all module threads in backwards order of startup
+	PRINT_IMPORTANT("modules: shutdown");
+	for (i = MAX_MODULES - 1; i >= 0; i--) {
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->shutdown(overall->modules[i]);
+		}
+	}
+
+	//have each module free data & que/sem //TODO finish each of these
+	PRINT_IMPORTANT("modules: release");
+	for (i = MAX_MODULES - 1; i >= 0; i--) {
+		if (overall->modules[i] != NULL) {
+			overall->modules[i]->ops->release(overall->modules[i]);
+		}
+	}
+
+	PRINT_IMPORTANT("admin: free");
+	list_free(overall->admin_list, nop_func);
+
+	PRINT_IMPORTANT("libraries: close");
+	list_free(overall->lib_list, library_free);
+
+	PRINT_IMPORTANT("Freeing links");
+	list_free(overall->link_list, free);
+
+	PRINT_IMPORTANT("Freeing environment");
+	list_free(overall->envi->if_list, ifr_free);
+	list_free(overall->envi->route_list, free);
+	free(overall->envi);
+
+	free(overall);
+	sem_destroy(&control_serial_sem);
+
+	PRINT_IMPORTANT("FIN");
+	exit(-1);
+}
+
+void core_tests(void) {
 	char recv_data[4000];
 
-	//while (1) {
-	PRINT_IMPORTANT("waiting...");
-	sleep(10);
-	//gets(recv_data);
-	PRINT_IMPORTANT("active");
-
-	if (0) {
-		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta);
-
-		uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
-		uint32_t host_port = 55454;
-		uint32_t dst_ip = IP4_ADR_P2H(192,168,1,3);
-		uint32_t dst_port = 44444;
-		uint32_t ttl = 64;
-		uint32_t tos = 64;
-
-		secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
-
-		struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = FF_DATA;
-		ff->destinationID = 1;
-		ff->metaData = meta;
-
-		ff->dataFrame.directionFlag = DIR_UP;
-		ff->dataFrame.pduLength = 10;
-		ff->dataFrame.pdu = (uint8_t *) secure_malloc(10);
-
-		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[1]->name);
-		module_to_switch(overall->modules[0], ff);
-	}
-
-	if (0) {
-		PRINT_DEBUG("Sending ARP req");
-
-		metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta_req);
-
-		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1);
-		//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 54, 169);
-		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
-		//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
-
-		secure_metadata_writeToElement(meta_req, "dst_ip", &dst_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
-
-		struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-		ff_req->dataOrCtrl = FF_CONTROL;
-		ff_req->destinationID = 1; //arp
-		ff_req->metaData = meta_req;
-
-		ff_req->ctrlFrame.sender_id = 4; //ipv4
-		ff_req->ctrlFrame.serial_num = gen_control_serial_num();
-		ff_req->ctrlFrame.opcode = CTRL_EXEC;
-		ff_req->ctrlFrame.param_id = 0; //EXEC_ARP_GET_ADDR;
-
-		ff_req->ctrlFrame.data_len = 0;
-		ff_req->ctrlFrame.data = NULL;
-
-		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff_req, meta_req, overall->modules[0]->name, overall->modules[1]->name);
-		module_to_switch(overall->modules[0], ff_req);
-	}
-
-	if (0) {
-		PRINT_DEBUG("Sending data");
-
-		metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta_req);
-
-		uint32_t ether_type = 0x0800; //ipv4
-		if_index = 3; //wlan0
-		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
-		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
-
-		secure_metadata_writeToElement(meta_req, "send_ether_type", &ether_type, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta_req, "send_if_index", &if_index, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta_req, "send_src_ipv4", &src_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta_req, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
-
-		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = FF_DATA;
-		ff->destinationID = 1; //arp
-		ff->metaData = meta_req;
-
-		ff->dataFrame.directionFlag = DIR_DOWN;
-		ff->dataFrame.pduLength = 100;
-		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
-		memset(ff->dataFrame.pdu, 59, ff->dataFrame.pduLength);
-
-		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta_req, overall->modules[0]->name, overall->modules[1]->name);
-		module_to_switch(overall->modules[0], ff);
-	}
-
-	if (0) {
-		PRINT_DEBUG("Sending data");
-
-		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta);
-
-		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 4); //wlan0
-		uint32_t src_port = 6666;
-		uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
-		uint32_t dst_port = 5555;
-
-		secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_src_port", &src_port, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
-
-		uint32_t dst_index = 4;
-		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = FF_DATA;
-		ff->destinationID = dst_index; //arp
-		ff->metaData = meta;
-
-		ff->dataFrame.directionFlag = DIR_DOWN;
-		ff->dataFrame.pduLength = 10;
-		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
-		memset(ff->dataFrame.pdu, 65, ff->dataFrame.pduLength);
-
-		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
-		module_to_switch(overall->modules[0], ff);
-	}
-
-	if (1) {
-		PRINT_DEBUG("Sending data");
-
-		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta);
-
-		uint32_t family = AF_INET;
-		uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 15); //wlan0
-		uint32_t dst_ip = IP4_ADR_P2H(172, 168, 1, 1); //gw
-
-		secure_metadata_writeToElement(meta, "send_family", &family, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
-
-		uint32_t dst_index = 4;
-		struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = FF_DATA;
-		ff->destinationID = dst_index;
-		ff->metaData = meta;
-
-		ff->dataFrame.directionFlag = DIR_DOWN;
-		ff->dataFrame.pduLength = 10;
-		ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
-		memset(ff->dataFrame.pdu, 65, ff->dataFrame.pduLength);
-
-		PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
-		module_to_switch(overall->modules[0], ff);
-	}
-
-	PRINT_IMPORTANT("while (1) looping...");
 	while (1) {
-		sleep(1);
-	}
+		PRINT_IMPORTANT("waiting...");
+		//sleep(10);
+		gets(recv_data);
+		PRINT_IMPORTANT("active");
 
-	//############ terminating
-	core_termination_handler(0);
+		if (0) {
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
+
+			uint32_t host_ip = IP4_ADR_P2H(192,168,1,8);
+			uint32_t host_port = 55454;
+			uint32_t dst_ip = IP4_ADR_P2H(192,168,1,3);
+			uint32_t dst_port = 44444;
+			uint32_t ttl = 64;
+			uint32_t tos = 64;
+
+			secure_metadata_writeToElement(meta, "send_src_ip", &host_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_dst_ip", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
+
+			struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+			ff->dataOrCtrl = FF_DATA;
+			ff->destinationID = 1;
+			ff->metaData = meta;
+
+			ff->dataFrame.directionFlag = DIR_UP;
+			ff->dataFrame.pduLength = 10;
+			ff->dataFrame.pdu = (uint8_t *) secure_malloc(10);
+
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[1]->name);
+			module_to_switch(overall->modules[0], ff);
+		}
+
+		if (0) {
+			PRINT_DEBUG("Sending ARP req");
+
+			metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta_req);
+
+			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1);
+			//uint32_t dst_ip = IP4_ADR_P2H(172, 31, 54, 169);
+			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 20);
+			//uint32_t src_ip = IP4_ADR_P2H(172, 31, 50, 160);
+
+			secure_metadata_writeToElement(meta_req, "dst_ip", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta_req, "src_ip", &src_ip, META_TYPE_INT32);
+
+			struct finsFrame *ff_req = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+			ff_req->dataOrCtrl = FF_CONTROL;
+			ff_req->destinationID = 1; //arp
+			ff_req->metaData = meta_req;
+
+			ff_req->ctrlFrame.sender_id = 4; //ipv4
+			ff_req->ctrlFrame.serial_num = gen_control_serial_num();
+			ff_req->ctrlFrame.opcode = CTRL_EXEC;
+			ff_req->ctrlFrame.param_id = 0; //EXEC_ARP_GET_ADDR;
+
+			ff_req->ctrlFrame.data_len = 0;
+			ff_req->ctrlFrame.data = NULL;
+
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff_req, meta_req, overall->modules[0]->name, overall->modules[1]->name);
+			module_to_switch(overall->modules[0], ff_req);
+		}
+
+		if (0) {
+			PRINT_DEBUG("Sending data");
+
+			metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta_req);
+
+			uint32_t ether_type = 0x0800; //ipv4
+			int32_t if_index = 3; //wlan0
+			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
+			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
+
+			secure_metadata_writeToElement(meta_req, "send_ether_type", &ether_type, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta_req, "send_if_index", &if_index, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta_req, "send_src_ipv4", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta_req, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
+
+			struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+			ff->dataOrCtrl = FF_DATA;
+			ff->destinationID = 1; //arp
+			ff->metaData = meta_req;
+
+			ff->dataFrame.directionFlag = DIR_DOWN;
+			ff->dataFrame.pduLength = 100;
+			ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+			memset(ff->dataFrame.pdu, 59, ff->dataFrame.pduLength);
+
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta_req, overall->modules[0]->name, overall->modules[1]->name);
+			module_to_switch(overall->modules[0], ff);
+		}
+
+		if (0) {
+			PRINT_DEBUG("Sending data");
+
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
+
+			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 4); //wlan0
+			uint32_t src_port = 6666;
+			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
+			uint32_t dst_port = 5555;
+
+			secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_src_port", &src_port, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_dst_port", &dst_port, META_TYPE_INT32);
+
+			uint32_t dst_index = 8;
+			struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+			ff->dataOrCtrl = FF_DATA;
+			ff->destinationID = dst_index; //arp
+			ff->metaData = meta;
+
+			ff->dataFrame.directionFlag = DIR_DOWN;
+			ff->dataFrame.pduLength = 10;
+			ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+			memset(ff->dataFrame.pdu, 65, ff->dataFrame.pduLength);
+
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
+			module_to_switch(overall->modules[0], ff);
+		}
+
+		if (0) {
+			PRINT_DEBUG("Sending data");
+
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
+
+			uint32_t family = AF_INET;
+			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 15); //wlan0
+			uint32_t dst_ip = IP4_ADR_P2H(172, 168, 1, 1); //gw
+
+			secure_metadata_writeToElement(meta, "send_family", &family, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_src_ipv4", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(meta, "send_dst_ipv4", &dst_ip, META_TYPE_INT32);
+
+			uint32_t dst_index = 4;
+			struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
+			ff->dataOrCtrl = FF_DATA;
+			ff->destinationID = dst_index;
+			ff->metaData = meta;
+
+			ff->dataFrame.directionFlag = DIR_DOWN;
+			ff->dataFrame.pduLength = 10;
+			ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
+			memset(ff->dataFrame.pdu, 65, ff->dataFrame.pduLength);
+
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
+			module_to_switch(overall->modules[0], ff);
+		}
+		break;
+	}
 }
 
 //TODO replace this option system with getopt, can see in SuperSU code
@@ -1207,6 +1204,16 @@ int main(int argc, char *argv[]) {
 
 	core_main(envi_name, stack_name);
 #endif
+
+	//core_tests(); //For random testing purposes
+
+	PRINT_IMPORTANT("while (1) looping...");
+	while (1) {
+		sleep(1000000);
+	}
+
+	//############ terminating
+	//core_termination_handler(0);
 
 	return 0;
 }

@@ -95,8 +95,8 @@ int daemon_calls_insert(struct fins_module *module, uint32_t call_id, int call_i
 		PRINT_ERROR("Error, call_index in use: daemon_calls[%d].call_id=%u", call_index, md->calls[call_index].id);
 		PRINT_ERROR("Overwriting with: daemon_calls[%d].call_id=%u", call_index, call_id);
 
-		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id && (md->calls[call_index].type == POLL_CALL
-				|| md->calls[call_index].type == RECVMSG_CALL)) {
+		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id
+				&& (md->calls[call_index].type == POLL_CALL || md->calls[call_index].type == RECVMSG_CALL)) {
 			list_remove(md->sockets[md->calls[call_index].sock_index].call_list, &md->calls[call_index]);
 		}
 
@@ -569,7 +569,8 @@ void daemon_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_ERROR("Not supported dropping: call_type=%d", call->type);
 		exit(-1);
 		break;
-	} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	}
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
 }
 
@@ -646,7 +647,8 @@ void daemon_set_param_reply(struct fins_module *module, struct finsFrame *ff) { 
 		PRINT_ERROR("Not supported dropping: call_type=%d", call->type);
 		exit(-1);
 		break;
-	} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	}
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
 }
 
@@ -736,7 +738,8 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			PRINT_ERROR("Not supported dropping: call_type=%d", call->type);
 			exit(1);
 			break;
-		} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		}
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&md->sockets_sem);
 	} else {
 		int call_index = daemon_calls_find(module, ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
@@ -823,7 +826,8 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			PRINT_ERROR("Not supported dropping: call_type=%d", call->type);
 			exit(-1);
 			break;
-		} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		}
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&md->sockets_sem);
 	}
 }
@@ -870,7 +874,8 @@ void daemon_error(struct fins_module *module, struct finsFrame *ff) { //TODO exp
 		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
 		exit(-1);
 		break;
-	} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	}
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
 }
 
@@ -945,7 +950,8 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
 		exit(-1);
 		break;
-	} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	}
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
 }
 
@@ -963,7 +969,8 @@ void daemon_interrupt(struct fins_module *module) {
 
 			daemon_handle_to(module, &md->calls[i]);
 		}
-	} PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+	}
+	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
 }
 
@@ -1204,19 +1211,19 @@ void *wedge_to_daemon(void *local) {
 	return NULL;
 }
 
-void daemon_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
+void daemon_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -1225,7 +1232,7 @@ void daemon_init_params(struct fins_module *module) {
 	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -1234,28 +1241,18 @@ void daemon_init_params(struct fins_module *module) {
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
-int daemon_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int daemon_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	daemon_init_params(module);
+	daemon_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct daemon_data));
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
-
 	sem_init(&md->sockets_sem, 0, 1);
+	int i;
 	for (i = 0; i < DAEMON_MAX_SOCKETS; i++) {
 		md->sockets[i].sock_id = -1;
 		md->sockets[i].state = SS_FREE;
@@ -1312,6 +1309,7 @@ int daemon_run(struct fins_module *module, pthread_attr_t *attr) {
 
 	struct daemon_data *md = (struct daemon_data *) module->data;
 	secure_pthread_create(&md->switch_to_daemon_thread, attr, switch_to_daemon, module);
+	usleep(1000);
 	secure_pthread_create(&md->wedge_to_daemon_thread, attr, wedge_to_daemon, module);
 
 	return 1;
@@ -1394,7 +1392,7 @@ void daemon_dummy(void) {
 }
 
 static struct fins_module_ops daemon_ops = { .init = daemon_init, .run = daemon_run, .pause = daemon_pause, .unpause = daemon_unpause, .shutdown =
-daemon_shutdown, .release = daemon_release, };
+		daemon_shutdown, .release = daemon_release, };
 
 struct fins_module *daemon_create(uint32_t index, uint32_t id, uint8_t *name) {
 	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);

@@ -31,6 +31,7 @@
 
 #define LOGGER_LIB "logger"
 #define LOGGER_MAX_FLOWS 0
+//#define LOGGER_FLOW_RTM  0 //TODO remove
 
 struct logger_data {
 	struct linked_list *link_list;
@@ -57,7 +58,7 @@ struct logger_data {
 	uint8_t logger_flag;
 };
 
-int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int logger_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int logger_run(struct fins_module *module, pthread_attr_t *attr);
 int logger_pause(struct fins_module *module);
 int logger_unpause(struct fins_module *module);
@@ -88,19 +89,26 @@ void logger_interrupt(struct fins_module *module);
 #define LOGGER_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
 #define LOGGER_GET_INTERVAL__id 3
 #define LOGGER_GET_INTERVAL__str "interval"
-#define LOGGER_GET_INTERVAL__type CONFIG_TYPE_FLOAT
+#define LOGGER_GET_INTERVAL__type META_TYPE_FLOAT
 #define LOGGER_GET_REPEATS__id 4
 #define LOGGER_GET_REPEATS__str "repeats"
-#define LOGGER_GET_REPEATS__type CONFIG_TYPE_INT
+#define LOGGER_GET_REPEATS__type META_TYPE_INT32
 
 #define LOGGER_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define LOGGER_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define LOGGER_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
 #define LOGGER_SET_INTERVAL__id 3
 #define LOGGER_SET_INTERVAL__str "interval"
-#define LOGGER_SET_INTERVAL__type CONFIG_TYPE_FLOAT
+#define LOGGER_SET_INTERVAL__type META_TYPE_FLOAT
 #define LOGGER_SET_REPEATS__id 4
 #define LOGGER_SET_REPEATS__str "repeats"
-#define LOGGER_SET_REPEATS__type CONFIG_TYPE_INT
+#define LOGGER_SET_REPEATS__type META_TYPE_INT32
+
+#define LOGGER_ALERT_FLOWS MOD_ALERT_FLOWS
+#define LOGGER_ALERT_LINKS MOD_ALERT_LINKS
+#define LOGGER_ALERT_DUAL MOD_ALERT_DUAL
+#define LOGGER_ALERT_UPDATE__id 3
+#define LOGGER_ALERT_UPDATE__str "update"
+#define LOGGER_ALERT_UPDATE__type META_TYPE_STRING
 
 #endif /* LOGGER_INTERNAL_H_ */

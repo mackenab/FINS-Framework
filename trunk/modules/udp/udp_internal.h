@@ -146,7 +146,7 @@ struct udp_data {
 	struct linked_list *sent_packet_list;
 };
 
-int udp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int udp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int udp_run(struct fins_module *module, pthread_attr_t *attr);
 int udp_pause(struct fins_module *module);
 int udp_unpause(struct fins_module *module);

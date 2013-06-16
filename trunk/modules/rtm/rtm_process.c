@@ -7,13 +7,14 @@
 #include "rtm_internal.h"
 
 static char *op_strs[] = { OP_HELP_STR, OP_EXEC_STR, OP_GET_STR, OP_SET_STR, OP_PAUSE_STR, OP_UNPAUSE_STR, OP_LINK_STR, OP_UNLINK_STR, OP_LOAD_STR,
-		OP_UNLOAD_STR, OP_REPLACE_STR, OP_SHUTDOWN_STR };
+		OP_UNLOAD_STR, OP_REPLACE_STR, OP_SHUTDOWN_STR, OP_LISTEN_STR, OP_CONSOLE_STR };
 static char *op_info[] = { OP_HELP_INFO, OP_EXEC_INFO, OP_GET_INFO, OP_SET_INFO, OP_PAUSE_INFO, OP_UNPAUSE_INFO, OP_LINK_INFO, OP_UNLINK_INFO, OP_LOAD_INFO,
-		OP_UNLOAD_INFO, OP_REPLACE_INFO, OP_SHUTDOWN_INFO };
+		OP_UNLOAD_INFO, OP_REPLACE_INFO, OP_SHUTDOWN_INFO, OP_LISTEN_INFO, OP_CONSOLE_INFO };
 static char *op_usages[] = { OP_HELP_USAGE, OP_EXEC_USAGE, OP_GET_USAGE, OP_SET_USAGE, OP_PAUSE_USAGE, OP_UNPAUSE_USAGE, OP_LINK_USAGE, OP_UNLINK_USAGE,
-		OP_LOAD_USAGE, OP_UNLOAD_USAGE, OP_REPLACE_USAGE, OP_SHUTDOWN_USAGE };
+		OP_LOAD_USAGE, OP_UNLOAD_USAGE, OP_REPLACE_USAGE, OP_SHUTDOWN_USAGE, OP_LISTEN_USAGE, OP_CONSOLE_USAGE };
 static process_op_type op_funcs[] = { rtm_process_help, rtm_process_exec, rtm_process_get, rtm_process_set, rtm_process_pause, rtm_process_unpause,
-		rtm_process_link, rtm_process_unlink, rtm_process_load, rtm_process_unload, rtm_process_replace, rtm_process_shutdown };
+		rtm_process_link, rtm_process_unlink, rtm_process_load, rtm_process_unload, rtm_process_replace, rtm_process_shutdown, rtm_process_listen,
+		rtm_process_console };
 
 int match_module(struct fins_module **modules, uint8_t *word) {
 	if (strcmp((char *) word, MOD_ALL) == 0) {
@@ -187,7 +188,7 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 //TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = INDEX_PARAM + 1;
 
-	metadata_element *param = match_params(modules[mod]->params, cmd->words, path_end);
+	metadata_element *param = match_params(modules[mod]->knobs, cmd->words, path_end);
 	if (param == NULL) {
 		sem_post(&md->overall->sem);
 		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
@@ -202,24 +203,22 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 	int status = config_setting_lookup_int(param, PARAM_ID, (int *) &param_id);
 	if (status == META_FALSE) {
 		sem_post(&md->overall->sem);
-		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
-		rtm_send_text(console->fd, "Unknown parameter");
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
-		free(cmd);
-		return;
+		rtm_send_text(console->fd, "error");
+
+		PRINT_ERROR("Module Knobs Improperly formed");
+		exit(-1);
 	}
 
 	int param_type;
 	status = config_setting_lookup_int(param, PARAM_TYPE, (int *) &param_type);
 	if (status == META_FALSE) {
 		sem_post(&md->overall->sem);
-		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
-		rtm_send_text(console->fd, "Unknown parameter");
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
-		free(cmd);
-		return;
+		rtm_send_text(console->fd, "error");
+
+		PRINT_ERROR("Module Knobs Improperly formed");
+		exit(-1);
 	}
 	sem_post(&md->overall->sem);
 
@@ -227,7 +226,7 @@ void rtm_process_exec(struct fins_module *module, struct rtm_console *console, s
 	cmd->serial_num = gen_control_serial_num();
 	cmd->op = CTRL_EXEC;
 	cmd->param_id = param_id;
-	memcpy(cmd->param_str, cmd->words[path_end-1], strlen((char *)cmd->words[path_end-1]));
+	memcpy(cmd->param_str, cmd->words[path_end - 1], strlen((char *) cmd->words[path_end - 1]));
 	cmd->param_type = param_type;
 	PRINT_DEBUG("mod=%u, serial_num=%u, op=%u, param_id=%u", cmd->mod, cmd->serial_num, cmd->op, cmd->param_id);
 
@@ -284,7 +283,7 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 //TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = cmd->words_num;
 
-	metadata_element *param = match_params(modules[mod]->params, cmd->words, path_end);
+	metadata_element *param = match_params(modules[mod]->knobs, cmd->words, path_end);
 	if (param == NULL) {
 		sem_post(&md->overall->sem);
 		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
@@ -299,24 +298,22 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 	int status = config_setting_lookup_int(param, PARAM_ID, (int *) &param_id);
 	if (status == META_FALSE) {
 		sem_post(&md->overall->sem);
-		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
-		rtm_send_text(console->fd, "Unknown parameter");
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
-		free(cmd);
-		return;
+		rtm_send_text(console->fd, "error");
+
+		PRINT_ERROR("Module Knobs Improperly formed");
+		exit(-1);
 	}
 
 	int param_type;
 	status = config_setting_lookup_int(param, PARAM_TYPE, (int *) &param_type);
 	if (status == META_FALSE) {
 		sem_post(&md->overall->sem);
-		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
-		rtm_send_text(console->fd, "Unknown parameter");
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
-		free(cmd);
-		return;
+		rtm_send_text(console->fd, "error");
+
+		PRINT_ERROR("Module Knobs Improperly formed");
+		exit(-1);
 	}
 	sem_post(&md->overall->sem);
 
@@ -324,7 +321,7 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 	cmd->serial_num = gen_control_serial_num();
 	cmd->op = CTRL_READ_PARAM;
 	cmd->param_id = param_id;
-	memcpy(cmd->param_str, cmd->words[path_end-1], strlen((char *)cmd->words[path_end-1]));
+	memcpy(cmd->param_str, cmd->words[path_end - 1], strlen((char *) cmd->words[path_end - 1]));
 	cmd->param_type = param_type;
 	PRINT_DEBUG("mod=%u, serial_num=%u, op=%u, param_id=%u", cmd->mod, cmd->serial_num, cmd->op, cmd->param_id);
 
@@ -380,7 +377,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
 	uint32_t path_end = cmd->words_num - 1;
 
-	metadata_element *param = match_params(modules[mod]->params, cmd->words, path_end);
+	metadata_element *param = match_params(modules[mod]->knobs, cmd->words, path_end);
 	if (param == NULL) {
 		sem_post(&md->overall->sem);
 		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
@@ -395,24 +392,22 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	int status = config_setting_lookup_int(param, PARAM_ID, (int *) &param_id);
 	if (status == META_FALSE) {
 		sem_post(&md->overall->sem);
-		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
-		rtm_send_text(console->fd, "Unknown parameter");
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
-		free(cmd);
-		return;
+		rtm_send_text(console->fd, "error");
+
+		PRINT_ERROR("Module Knobs Improperly formed");
+		exit(-1);
 	}
 
 	int param_type;
 	status = config_setting_lookup_int(param, PARAM_TYPE, (int *) &param_type);
 	if (status == META_FALSE) {
 		sem_post(&md->overall->sem);
-		PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
-		rtm_send_text(console->fd, "Unknown parameter");
 
-		PRINT_DEBUG("Freeing cmd=%p", cmd);
-		free(cmd);
-		return;
+		rtm_send_text(console->fd, "error");
+
+		PRINT_ERROR("Module Knobs Improperly formed");
+		exit(-1);
 	}
 	sem_post(&md->overall->sem);
 
@@ -420,7 +415,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	cmd->serial_num = gen_control_serial_num();
 	cmd->op = CTRL_SET_PARAM;
 	cmd->param_id = param_id;
-	memcpy(cmd->param_str, cmd->words[path_end-1], strlen((char *)cmd->words[path_end-1]));
+	memcpy(cmd->param_str, cmd->words[path_end - 1], strlen((char *) cmd->words[path_end - 1]));
 	cmd->param_type = param_type;
 	PRINT_DEBUG("mod=%u, serial_num=%u, op=%u, param_id=%u", cmd->mod, cmd->serial_num, cmd->op, cmd->param_id);
 
@@ -432,7 +427,7 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 	float val_float;
 
 	switch (param_type) {
-	case CONFIG_TYPE_INT:
+	case META_TYPE_INT32:
 		status = sscanf((char *) cmd->words[cmd->words_num - 1], "%d", &val_int32);
 		if (status <= 0) {
 			PRINT_IMPORTANT("Incorrect value format: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
@@ -444,9 +439,9 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 			return;
 		}
 		PRINT_DEBUG("value=%d", val_int32);
-		secure_metadata_writeToElement(meta, "value", &val_int32, CONFIG_TYPE_INT);
+		secure_metadata_writeToElement(meta, "value", &val_int32, META_TYPE_INT32);
 		break;
-	case CONFIG_TYPE_INT64:
+	case META_TYPE_INT64:
 		status = sscanf((char *) cmd->words[cmd->words_num - 1], "%lld", &val_int64);
 		if (status <= 0) {
 			PRINT_IMPORTANT("Incorrect value format: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
@@ -458,9 +453,9 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 			return;
 		}
 		PRINT_DEBUG("value=%lld", val_int64);
-		secure_metadata_writeToElement(meta, "value", &val_int64, CONFIG_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "value", &val_int64, META_TYPE_INT64);
 		break;
-	case CONFIG_TYPE_FLOAT:
+	case META_TYPE_FLOAT:
 		status = sscanf((char *) cmd->words[cmd->words_num - 1], "%f", &val_float);
 		if (status <= 0) {
 			PRINT_IMPORTANT("Incorrect value format: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
@@ -472,11 +467,11 @@ void rtm_process_set(struct fins_module *module, struct rtm_console *console, st
 			return;
 		}
 		PRINT_DEBUG("value=%f", val_float);
-		secure_metadata_writeToElement(meta, "value", &val_float, CONFIG_TYPE_FLOAT);
+		secure_metadata_writeToElement(meta, "value", &val_float, META_TYPE_FLOAT);
 		break;
-	case CONFIG_TYPE_STRING:
+	case META_TYPE_STRING:
 		PRINT_DEBUG("value='%s'", cmd->words[cmd->words_num - 1]);
-		secure_metadata_writeToElement(meta, "value", &cmd->words[cmd->words_num - 1], CONFIG_TYPE_STRING);
+		secure_metadata_writeToElement(meta, "value", &cmd->words[cmd->words_num - 1], META_TYPE_STRING);
 		break;
 	default:
 		PRINT_ERROR("todo error");
@@ -549,5 +544,150 @@ void rtm_process_shutdown(struct fins_module *module, struct rtm_console *consol
 	PRINT_DEBUG("Entered: module=%p, console=%p, cmd=%p", module, console, cmd);
 	rtm_send_text(console->fd, "todo");
 	PRINT_DEBUG("Freeing cmd=%p", cmd);
+	free(cmd);
+}
+
+void rtm_process_listen(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {
+	PRINT_DEBUG("Entered: module=%p, console=%p, cmd=%p", module, console, cmd);
+	struct rtm_data *md = (struct rtm_data *) module->data;
+
+	if (cmd->words_num < 4) {
+		PRINT_IMPORTANT("Incorrect usage: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Incorrect usage:" OP_LISTEN_USAGE);
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+
+	//TODO identify module
+	struct fins_module **modules = md->overall->modules;
+
+	secure_sem_wait(&md->overall->sem);
+	int mod = match_module(modules, cmd->words[INDEX_MOD]);
+	if (mod == -1) {
+		sem_post(&md->overall->sem);
+		PRINT_IMPORTANT("Module unsupported: console=%p, id=%u, mod='%s'", console, console->id, cmd->words[INDEX_MOD]);
+		rtm_send_error(console->fd, "Unknown module", (uint32_t) strlen((char *) cmd->words[INDEX_MOD]), cmd->words[INDEX_MOD]);
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+	PRINT_IMPORTANT("op=%u, mod=%u", cmd->op, cmd->mod);
+
+	//TODO poll to get params or look at directly?
+
+	int param_id;
+	int status;
+	if (strcmp((char *) cmd->words[INDEX_PARAM], PARAM_ALL) == 0) {
+		param_id = -1;
+	} else {
+		//TODO change so that it's only the first procedure name and then afterwards anything that's <key>=<value> is used as meta params
+		uint32_t path_end = cmd->words_num - 1;
+
+		metadata_element *param = match_params(modules[mod]->knobs, cmd->words, path_end);
+		if (param == NULL) {
+			sem_post(&md->overall->sem);
+			PRINT_IMPORTANT("Unknown parameter: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+			rtm_send_text(console->fd, "Unknown parameter");
+
+			PRINT_DEBUG("Freeing cmd=%p", cmd);
+			free(cmd);
+			return;
+		}
+
+		status = config_setting_lookup_int(param, PARAM_ID, (int *) &param_id);
+		if (status == META_FALSE) {
+			sem_post(&md->overall->sem);
+
+			rtm_send_text(console->fd, "error");
+
+			PRINT_ERROR("Module Knobs Improperly formed");
+			exit(-1);
+		}
+	}
+	sem_post(&md->overall->sem);
+
+	int32_t val_int32;
+	status = sscanf((char *) cmd->words[cmd->words_num - 1], "%d", &val_int32);
+	if (status <= 0) {
+		PRINT_IMPORTANT("Incorrect value format: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Incorrect value format, expected int32_t");
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+
+	if (val_int32 != VALUE_TRUE && val_int32 != VALUE_FALSE) {
+		PRINT_IMPORTANT("Incorrect value: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Incorrect value: expected 1 (enabled) or 0 (disabled)");
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+
+	PRINT_DEBUG("value=%d", val_int32);
+	uint8_t buf[500];
+	sprintf((char *) buf, "l%u_%d", mod, param_id);
+	secure_metadata_writeToElement(console->listeners, (char *)buf, &val_int32, META_TYPE_INT32);
+
+	rtm_send_text(console->fd, "successful");
+	free(cmd);
+}
+
+void rtm_process_console(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {
+	PRINT_DEBUG("Entered: module=%p, console=%p, cmd=%p", module, console, cmd);
+	struct rtm_data *md = (struct rtm_data *) module->data;
+
+	if (cmd->words_num < 3) {
+		PRINT_IMPORTANT("Incorrect usage: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Incorrect usage:" OP_CONSOLE_USAGE);
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+
+	//TODO identify attribute
+	if (strcmp((char *) cmd->words[INDEX_MOD], RTM_TYPE_STR) == 0) {
+		cmd->mod = RTM_TYPE_ID;
+	} else if (strcmp((char *) cmd->words[INDEX_MOD], RTM_TYPE_STR) == 0) {
+		//TODO other attributes about the console
+	} else {
+		PRINT_IMPORTANT("Attribute unsupported: console=%p, id=%u, attr='%s'", console, console->id, cmd->words[INDEX_MOD]);
+		rtm_send_error(console->fd, "Unknown attribute", (uint32_t) strlen((char *) cmd->words[INDEX_MOD]), cmd->words[INDEX_MOD]);
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+	PRINT_IMPORTANT("op=%u, attr=%u", cmd->op, cmd->mod);
+
+	int32_t val_int32;
+	int status = sscanf((char *) cmd->words[cmd->words_num - 1], "%d", &val_int32);
+	if (status <= 0) {
+		PRINT_IMPORTANT("Incorrect value format: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Incorrect value format, expected int32_t");
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+
+	if (val_int32 != RTM_TYPE_CONSOLE && val_int32 != RTM_TYPE_LISTENER && val_int32 != RTM_TYPE_DUAL) {
+		PRINT_IMPORTANT("Incorrect value: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
+		rtm_send_text(console->fd, "Incorrect value: expected 1 (console), 2 (listener), or 3 (dual)");
+
+		PRINT_DEBUG("Freeing cmd=%p", cmd);
+		free(cmd);
+		return;
+	}
+
+	console->type = val_int32;
+
+	rtm_send_text(console->fd, "successful");
 	free(cmd);
 }

@@ -52,4 +52,6 @@ clean:
 
 .PHONY:clean_full
 clean_full:
-	@$(foreach exec,$(EXECS_LIST), cd execs/$(exec); $(MAKE) clean_full; cd $(LOCAL_DIR);)
+	@cd $(EXECS_DIR); $(MAKE) clean_full; cd $(LOCAL_DIR);
+	@cd $(LIBS_DIR); $(MAKE) clean_full; cd $(LOCAL_DIR);
+	@cd $(MODULES_DIR); $(MAKE) clean_full; cd $(LOCAL_DIR);

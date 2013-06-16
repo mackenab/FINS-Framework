@@ -187,6 +187,33 @@ void logger_interrupt(struct fins_module *module) {
 		double diff_through = 8.0 * diff_bytes / diff_period;
 		PRINT_IMPORTANT("period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f", md->logger_saved_curr, diff_curr, diff_packets, diff_bytes, diff_through);
 
+		if (0) {
+			//TODO remove this test code for module pushing to RTM
+			uint32_t serial_num = gen_control_serial_num();
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
+
+			struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+			ff->dataOrCtrl = FF_CONTROL;
+			ff->metaData = meta;
+
+			ff->ctrlFrame.sender_id = module->index;
+			ff->ctrlFrame.serial_num = serial_num;
+			ff->ctrlFrame.opcode = CTRL_ALERT;
+			ff->ctrlFrame.param_id = LOGGER_ALERT_UPDATE__id;
+
+			ff->ctrlFrame.data = (uint8_t *) secure_malloc(500);
+			sprintf((char *) ff->ctrlFrame.data, "period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f\n", md->logger_saved_curr, diff_curr, diff_packets,
+					diff_bytes, diff_through);
+			PRINT_DEBUG("value='%s'", ff->ctrlFrame.data);
+			ff->ctrlFrame.data_len = strlen((char *) ff->ctrlFrame.data);
+
+			int sent = module_send_flow(module, ff, 0/*LOGGER_FLOW_RTM*/);
+			if (sent == 0) {
+				freeFinsFrame(ff);
+			}
+		}
+
 		md->logger_saved_packets = md->logger_packets;
 		md->logger_saved_bytes = md->logger_bytes;
 		md->logger_saved_curr = diff_curr;
@@ -207,19 +234,19 @@ void logger_interrupt(struct fins_module *module) {
 	}
 }
 
-void logger_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
+void logger_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -228,35 +255,32 @@ void logger_init_params(struct fins_module *module) {
 	elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 	elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
 	elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *alert_elem = config_setting_add(root, OP_LISTEN_STR, META_TYPE_GROUP);
+	if (alert_elem == NULL) {
+		PRINT_ERROR("todo error");
+		exit(-1);
+	}
+	elem_add_param(alert_elem, LOGGER_ALERT_UPDATE__str, LOGGER_ALERT_UPDATE__id, LOGGER_ALERT_UPDATE__type); //test
 }
 
-int logger_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int logger_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	logger_init_params(module);
+	logger_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct logger_data));
 	struct logger_data *md = (struct logger_data *) module->data;
-
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
 
 	//TODO extract this from meta?
 	md->logger_started = 0;

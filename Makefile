@@ -11,6 +11,8 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #echo "test"
 #export FINS_ROOT_DIR
 
+FOLDER_LIST_ALL := trunk examples tests
+
 #### TARGETS ####
 .PHONY:all
 all:
@@ -46,5 +48,5 @@ clean:
 
 .PHONY:clean_full
 clean_full:
-	@$(foreach folder,$(FOLDER_LIST), cd $(folder); $(MAKE) clean_full; cd ../;)
+	@$(foreach folder,$(FOLDER_LIST_ALL), cd $(folder); $(MAKE) clean_full; cd ../;)
 	

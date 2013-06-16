@@ -59,7 +59,7 @@ void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *
 	}
 	PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
 
-	sleep(2);
+	sleep(5);
 
 	char filter_exp[MAX_FILTER_LEN];
 	memset(filter_exp, 0, MAX_FILTER_LEN);
@@ -284,7 +284,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared) {
 	PRINT_IMPORTANT("Entered: hdr=%p, ii_num=%u, shared=%p", hdr, hdr->ii_num, shared);
 
-	sleep(2);
+	sleep(5);
 
 	//TODO eventually remove both of these
 	if (hdr->ii_num != 1) {

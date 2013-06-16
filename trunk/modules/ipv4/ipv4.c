@@ -22,19 +22,19 @@ void *switch_to_ipv4(void *local) {
 }
 
 //####################################### autoconfig
-void ipv4_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
+void ipv4_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -43,7 +43,7 @@ void ipv4_init_params(struct fins_module *module) {
 	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -66,26 +66,15 @@ void ipv4_ifr_get_addr_func(struct if_record *ifr, struct linked_list *ret_list)
 	}
 }
 
-int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int ipv4_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	ipv4_init_params(module);
+	ipv4_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct ipv4_data));
 	struct ipv4_data *md = (struct ipv4_data *) module->data;
-
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
 
 	md->addr_list = list_create(IPV4_ADDRESS_LIST_MAX);
 	list_for_each1(envi->if_list, ipv4_ifr_get_addr_func, md->addr_list);
@@ -122,6 +111,7 @@ int ipv4_run(struct fins_module *module, pthread_attr_t *attr) {
 
 	struct ipv4_data *md = (struct ipv4_data *) module->data;
 	secure_pthread_create(&md->switch_to_ipv4_thread, attr, switch_to_ipv4, module);
+
 	return 1;
 }
 

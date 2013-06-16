@@ -574,7 +574,7 @@ struct tcp_data {
 //struct linked_list *if_list;
 };
 
-int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int tcp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int tcp_run(struct fins_module *module, pthread_attr_t *attr);
 int tcp_pause(struct fins_module *module);
 int tcp_unpause(struct fins_module *module);
@@ -599,16 +599,16 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_GET_SOCK_OPT 	4
 #define TCP_GET_FAST_ENABLED__id 5
 #define TCP_GET_FAST_ENABLED__str "fast_enabled"
-#define TCP_GET_FAST_ENABLED__type CONFIG_TYPE_INT
+#define TCP_GET_FAST_ENABLED__type META_TYPE_INT32
 #define TCP_GET_FAST_DUPLICATES__id 6
 #define TCP_GET_FAST_DUPLICATES__str "fast_duplicates"
-#define TCP_GET_FAST_DUPLICATES__type CONFIG_TYPE_INT
+#define TCP_GET_FAST_DUPLICATES__type META_TYPE_INT32
 #define TCP_GET_FAST_RETRANSMITS__id 7
 #define TCP_GET_FAST_RETRANSMITS__str "fast_retransmits"
-#define TCP_GET_FAST_RETRANSMITS__type CONFIG_TYPE_INT
+#define TCP_GET_FAST_RETRANSMITS__type META_TYPE_INT32
 #define TCP_GET_MSS__id 8
 #define TCP_GET_MSS__str "mss"
-#define TCP_GET_MSS__type CONFIG_TYPE_INT
+#define TCP_GET_MSS__type META_TYPE_INT32
 
 #define TCP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define TCP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
@@ -617,15 +617,15 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_SET_SOCK_OPT 	4
 #define TCP_SET_FAST_ENABLED__id 5
 #define TCP_SET_FAST_ENABLED__str "fast_enabled"
-#define TCP_SET_FAST_ENABLED__type CONFIG_TYPE_INT
+#define TCP_SET_FAST_ENABLED__type META_TYPE_INT32
 #define TCP_SET_FAST_DUPLICATES__id 6
 #define TCP_SET_FAST_DUPLICATES__str "fast_duplicates"
-#define TCP_SET_FAST_DUPLICATES__type CONFIG_TYPE_INT
+#define TCP_SET_FAST_DUPLICATES__type META_TYPE_INT32
 #define TCP_SET_FAST_RETRANSMITS__id 7
 #define TCP_SET_FAST_RETRANSMITS__str "fast_retransmits"
-#define TCP_SET_FAST_RETRANSMITS__type CONFIG_TYPE_INT
+#define TCP_SET_FAST_RETRANSMITS__type META_TYPE_INT32
 #define TCP_SET_MSS__id 8
 #define TCP_SET_MSS__str "mss"
-#define TCP_SET_MSS__type CONFIG_TYPE_INT
+#define TCP_SET_MSS__type META_TYPE_INT32
 
 #endif /* TCP_INTERNAL_H_ */
