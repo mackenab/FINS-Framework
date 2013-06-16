@@ -18,12 +18,48 @@ int rtm_console_fd_test(struct rtm_console *console, int *fd) {
 	return console->fd == *fd;
 }
 
+int rtm_console_listening_test(struct rtm_console *console, uint32_t *index, uint32_t *param_id) {
+	if (console->type == RTM_TYPE_CONSOLE) {
+		return 0;
+	}
+
+	uint8_t buf[500];
+	memset(buf, 0, 500);
+	sprintf((char *) buf, "l%u_%d", *index, *param_id);
+
+	int32_t val;
+	if (metadata_readFromElement(console->listeners, (char *) buf, &val) == META_TRUE) {
+		return val == VALUE_TRUE;
+	}
+
+	sprintf((char *) buf, "l%u_%d", *index, -1);
+	if (metadata_readFromElement(console->listeners, (char *) buf, &val) == META_TRUE) {
+		return val == VALUE_TRUE;
+	}
+
+	sprintf((char *) buf, "l%u_%d", 32, *param_id);
+	if (metadata_readFromElement(console->listeners, (char *) buf, &val) == META_TRUE) {
+		return val == VALUE_TRUE;
+	}
+
+	sprintf((char *) buf, "l%u_%d", 32, -1);
+	if (metadata_readFromElement(console->listeners, (char *) buf, &val) == META_TRUE) {
+		return val == VALUE_TRUE;
+	}
+
+	return 0;
+}
+
 void console_free(struct rtm_console *console) {
 	PRINT_DEBUG("Entered: console=%p", console);
 
 	if (console->addr != NULL) {
 		PRINT_DEBUG("Freeing: addr=%p", console->addr);
 		free(console->addr);
+	}
+
+	if (console->listeners) {
+		metadata_destroy(console->listeners);
 	}
 
 	free(console);
@@ -74,8 +110,11 @@ void *accept_console(void *local) {
 			console->id = md->console_counter++;
 			console->fd = console_fd;
 			console->addr = addr;
+			console->type = RTM_TYPE_DEFAULT;
+			console->listeners = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(console->listeners);
 
-			PRINT_IMPORTANT("Console created: id=%u, fd=%d, addr='%s'", console->id, console->fd, console->addr->sun_path);
+			PRINT_IMPORTANT("Console created: id=%u, fd=%d, addr='%s', type=%u", console->id, console->fd, console->addr->sun_path, console->type);
 			list_append(md->console_list, console);
 
 			for (i = 0; i < MAX_CONSOLES; i++) {
@@ -112,7 +151,8 @@ void *console_to_rtm(void *local) {
 	for (i = 0; i < MAX_CONSOLES; i++) {
 		poll_fds[i].events = POLLIN | POLLPRI | POLLRDNORM;
 		//poll_fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
-	}PRINT_DEBUG("events=0x%x", poll_fds[0].events);
+	}
+	PRINT_DEBUG("events=0x%x", poll_fds[0].events);
 
 	uint32_t cmd_len;
 	uint8_t cmd_buf[MAX_CMD_LEN + 1];
@@ -150,6 +190,10 @@ void *console_to_rtm(void *local) {
 							if (poll_fds[i].revents & (POLLERR | POLLNVAL)) {
 								//TODO ??
 								PRINT_ERROR("todo: kinda error case that needs to be handled");
+								list_remove(md->console_list, console);
+								console_free(console);
+
+								md->console_fds[i] = 0;
 							} else if (poll_fds[i].revents & (POLLHUP)) {
 								PRINT_IMPORTANT("Console closed: console=%p, id=%u", console, console->id);
 								list_remove(md->console_list, console);
@@ -185,30 +229,30 @@ void *console_to_rtm(void *local) {
 }
 
 int rtm_recv_fd(int fd, uint32_t buf_len, uint8_t *buf) {
-	PRINT_DEBUG("Entered: fd=%d, buf_len=%u, buf='%s'", fd, buf_len, buf);
+	PRINT_DEBUG("Entered: fd=%d, buf_len=%u, buf=%p", fd, buf_len, buf);
 
 	uint32_t msg_len;
 	int numBytes = read(fd, &msg_len, sizeof(uint32_t));
 	if (numBytes <= 0) {
-		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, numBytes);
+		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf=%p, %d", fd, buf_len, buf, numBytes);
 		return numBytes;
 	}
 
 	if (numBytes != sizeof(uint32_t) || msg_len > buf_len) {
 		PRINT_WARN("todo error");
-		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, -1);
+		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf=%p, %d", fd, buf_len, buf, -1);
 		return -1;
 	}
 
 	numBytes = read(fd, buf, msg_len);
 	if (numBytes <= 0) {
-		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, numBytes);
+		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf=%p, %d", fd, buf_len, buf, numBytes);
 		return numBytes;
 	}
 
 	if (msg_len != (uint32_t) numBytes) {
 		PRINT_WARN("todo error");
-		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf='%s', %d", fd, buf_len, buf, -1);
+		PRINT_DEBUG("Exited: fd=%d, buf_len=%u, buf=%p, %d", fd, buf_len, buf, -1);
 		return -1;
 	}
 
@@ -374,8 +418,7 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_WARN("todo");
-		module_reply_fcf(module, ff, FCF_FALSE, 0);
+		rtm_alert(module, ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -420,6 +463,28 @@ void rtm_fcf(struct fins_module *module, struct finsFrame *ff) {
 	}
 }
 
+void rtm_alert(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct rtm_data *md = (struct rtm_data *) module->data;
+
+	//Get from fcf: module index, opcode==CTRL_ALERT, param_id
+
+	secure_sem_wait(&md->shared_sem);
+	//search for consoles with type==listener/dual, & registered for module index / param_id
+	struct linked_list *listening_list = list_find_all2(md->console_list, rtm_console_listening_test, &ff->ctrlFrame.sender_id, &ff->ctrlFrame.param_id);
+
+	//for each console push the traffic
+	struct rtm_console *console;
+	while (!list_is_empty(listening_list)) {
+		console = (struct rtm_console *) list_remove_front(listening_list);
+		rtm_send_fd(console->fd, ff->ctrlFrame.data_len, ff->ctrlFrame.data);
+	}
+	sem_post(&md->shared_sem);
+	free(listening_list);
+
+	freeFinsFrame(ff);
+}
+
 void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct rtm_data *md = (struct rtm_data *) module->data;
@@ -441,19 +506,19 @@ void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 				char *val_str;
 
 				switch (cmd->param_type) {
-				case CONFIG_TYPE_INT:
+				case META_TYPE_INT32:
 					secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
 					sprintf(temp, "'%s'=%d", cmd->param_str, val_int32);
 					break;
-				case CONFIG_TYPE_INT64:
+				case META_TYPE_INT64:
 					secure_metadata_readFromElement(ff->metaData, "value", &val_int64);
 					sprintf(temp, "'%s'=%lld", cmd->param_str, val_int64);
 					break;
-				case CONFIG_TYPE_FLOAT:
+				case META_TYPE_FLOAT:
 					secure_metadata_readFromElement(ff->metaData, "value", &val_float);
 					sprintf(temp, "'%s'=%f", cmd->param_str, val_float);
 					break;
-				case CONFIG_TYPE_STRING:
+				case META_TYPE_STRING:
 					secure_metadata_readFromElement(ff->metaData, "value", &val_str);
 					sprintf(temp, "'%s'='%s'", cmd->param_str, val_str);
 					break;
@@ -558,73 +623,54 @@ void rtm_interrupt(struct fins_module *module) {
 	}
 }
 
-void rtm_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+void rtm_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
+
+	//-------------------------------------------------------------------------------------------
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	//-------------------------------------------------------------------------------------------
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	//-------------------------------------------------------------------------------------------
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
-	metadata_element *sub = config_setting_add(exec_elem, "test", CONFIG_TYPE_GROUP);
-	if (sub == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-
-	metadata_element *elem = config_setting_add(sub, "key", CONFIG_TYPE_INT);
-	if (elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-
-	uint32_t value = 10;
-	int status = config_setting_set_int(elem, *(int *) &value);
-	if (status == CONFIG_FALSE) {
+	//-------------------------------------------------------------------------------------------
+	metadata_element *listen_elem = config_setting_add(root, OP_LISTEN_STR, META_TYPE_GROUP);
+	if (listen_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 }
 
-int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int rtm_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	rtm_init_params(module);
+	rtm_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct rtm_data));
 	struct rtm_data *md = (struct rtm_data *) module->data;
-
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
 
 	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	int32_t size = sizeof(addr);
 
 	addr.sun_family = AF_UNIX;
-	snprintf(addr.sun_path, UNIX_PATH_MAX, RTM_PATH);
+	snprintf(addr.sun_path, UNIX_PATH_MAX, CONSOLE_PATH);
 	unlink(addr.sun_path);
 
 	md->server_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -633,13 +679,13 @@ int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 		return 0;
 	}
 	if (fchmod(md->server_fd, ACCESSPERMS) < 0) {
-		PRINT_ERROR("fchmod rtm: rtm_path='%s', errno=%u, str='%s'", RTM_PATH, errno, strerror(errno));
+		PRINT_ERROR("fchmod rtm: console_path='%s', errno=%u, str='%s'", CONSOLE_PATH, errno, strerror(errno));
 		close(md->server_fd);
 		return 0;
 	}
 
 	mode_t old_mask = umask(0);
-	PRINT_IMPORTANT("binding to: addr='%s'", RTM_PATH);
+	PRINT_IMPORTANT("binding to: addr='%s'", CONSOLE_PATH);
 	if (bind(md->server_fd, (struct sockaddr *) &addr, size) < 0) {
 		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
 		close(md->server_fd);
@@ -653,6 +699,7 @@ int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, me
 	}
 
 	sem_init(&md->shared_sem, 0, 1);
+	int i;
 	for (i = 0; i < MAX_CONSOLES; i++) {
 		md->console_fds[i] = 0;
 	}
@@ -671,9 +718,11 @@ int rtm_run(struct fins_module *module, pthread_attr_t *attr) {
 	module->state = FMS_RUNNING;
 
 	struct rtm_data *md = (struct rtm_data *) module->data;
+	secure_pthread_create(&md->switch_to_rtm_thread, attr, switch_to_rtm, module);
+	usleep(1000);
 	secure_pthread_create(&md->accept_console_thread, attr, accept_console, module);
 	secure_pthread_create(&md->console_to_rtm_thread, attr, console_to_rtm, module);
-	secure_pthread_create(&md->switch_to_rtm_thread, attr, switch_to_rtm, module);
+
 	return 1;
 }
 

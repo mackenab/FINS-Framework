@@ -14,18 +14,22 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #TEST = $(wildcard $(FULL_LIBRARY_LIST))
 #DIRS := $(foreach dir,$(dirs),$(wildcard $(dir)/*))
 
-FULL_LIBRARY_LIST = common data_structure config glue pcap
+LIBS_LIST_ALL = common data_structure config glue pcap
 #TEST := $(subst /,,$(subst $(LIBS_DIR)/,,$(wildcard $(LIBS_DIR)/*/)))
 #TEST := $(wildcard $(LIBS_DIR)/*/)
 
 #### TARGETS ####
 .PHONY:all
 all:
-	@$(foreach lib,$(FULL_LIBRARY_LIST), cd $(lib); $(MAKE) all; cd $(LOCAL_DIR);)
+	@$(foreach lib,$(LIBS_LIST_ALL), cd $(lib); $(MAKE) all; cd $(LOCAL_DIR);)
 
 .PHONY:clean
 clean:
-	@$(foreach lib,$(FULL_LIBRARY_LIST), cd $(lib); $(MAKE) clean; cd $(LOCAL_DIR);)
+	@$(foreach lib,$(LIBS_LIST_ALL), cd $(lib); $(MAKE) clean; cd $(LOCAL_DIR);)
+
+.PHONY:clean_full
+clean_full:
+	@$(foreach lib,$(LIBS_LIST_ALL), cd $(lib); $(MAKE) clean_full; cd $(LOCAL_DIR);)
 	
 test:
 	@echo "TEST='$(TEST)'"

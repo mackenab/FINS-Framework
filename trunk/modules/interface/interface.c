@@ -678,9 +678,12 @@ void *capturer_to_interface(void *local) {
 		do {
 			numBytes = read(md->capture_fd, &frame_len, size_len);
 			if (numBytes <= 0) {
-				PRINT_ERROR("numBytes=%d", numBytes);
-				exit(-1);
-				//break;
+				if (module->state == FMS_RUNNING) {
+					PRINT_ERROR("numBytes=%d", numBytes);
+					exit(-1);
+				} else {
+					break;
+				}
 			}
 		} while (module->state == FMS_RUNNING && numBytes <= 0);
 
@@ -755,7 +758,9 @@ void *capturer_to_interface(void *local) {
 		case ETH_TYPE_IP6:
 			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
 			flow = INTERFACE_FLOW_IPV6;
+			freeFinsFrame(ff); //TODO remove when have ipv6
 			continue;
+			//break;
 		default:
 			PRINT_DEBUG("default: proto=0x%x (%u)", ether_type, ether_type);
 			freeFinsFrame(ff);
@@ -777,19 +782,19 @@ void *capturer_to_interface(void *local) {
 	return NULL;
 }
 
-void interface_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
+void interface_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -798,7 +803,7 @@ void interface_init_params(struct fins_module *module) {
 	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -807,26 +812,15 @@ void interface_init_params(struct fins_module *module) {
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
-int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int interface_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	interface_init_params(module);
+	interface_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct interface_data));
 	struct interface_data *md = (struct interface_data *) module->data;
-
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
 
 	md->if_list = list_clone(envi->if_list, ifr_clone);
 	if (md->if_list->len > INTERFACE_IF_LIST_MAX) {
@@ -869,7 +863,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 	memset(&buf, 0, ETH_FRAME_LEN_MAX);
 	struct interface_to_inject_hdr *hdr = (struct interface_to_inject_hdr *) buf;
 
-	int j;
+	int i, j;
 	for (i = 0, j = 0; i < md->if_list->len; i++) {
 		ifr = (struct if_record *) list_look(md->if_list, i);
 		if (ifr_running_test(ifr) && ifr->mac != 0) {
@@ -896,7 +890,7 @@ int interface_init(struct fins_module *module, uint32_t flows_num, uint32_t *flo
 		PRINT_ERROR("numBytes=%d", numBytes);
 		return 0;
 	}
-	sleep(1);
+	sleep(1); //wait for Capturer to receive & setup capture socket
 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
@@ -924,6 +918,7 @@ int interface_run(struct fins_module *module, pthread_attr_t *attr) {
 
 	struct interface_data *md = (struct interface_data *) module->data;
 	secure_pthread_create(&md->switch_to_interface_thread, attr, switch_to_interface, module);
+	usleep(1000);
 	secure_pthread_create(&md->capturer_to_interface_thread, attr, capturer_to_interface, module);
 
 	return 1;
@@ -952,6 +947,10 @@ int interface_shutdown(struct fins_module *module) {
 
 	struct interface_data *md = (struct interface_data *) module->data;
 	//TODO expand this
+	shutdown(md->capture_fd, SHUT_RDWR);
+	close(md->capture_fd);
+	shutdown(md->inject_fd, SHUT_RDWR);
+	close(md->inject_fd);
 
 	PRINT_IMPORTANT("Joining switch_to_interface_thread");
 	pthread_join(md->switch_to_interface_thread, NULL);

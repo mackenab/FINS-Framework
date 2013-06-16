@@ -58,6 +58,10 @@
 #define SOCK_NONBLOCK O_NONBLOCK
 #endif
 
+#ifndef ACCESSPERMS
+# define ACCESSPERMS (S_IRWXU|S_IRWXG|S_IRWXO) /* 0777 */
+#endif
+
 #ifndef ALLPERMS
 #define ALLPERMS (S_ISUID|S_ISGID|S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO)/* 07777 */
 #endif
@@ -74,7 +78,8 @@
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif
 
-#define RTM_PATH FINS_TMP_ROOT "/fins_rtm"
+#define CONSOLE_PATH FINS_TMP_ROOT "/fins_console"
+#define LISTENER_PATH FINS_TMP_ROOT "/fins_listener"
 
 #define MAX_CONSOLES 20
 #define MAX_COMMANDS 40
@@ -102,6 +107,8 @@
 #define OP_UNLOAD_STR "unload"
 #define OP_REPLACE_STR "replace"
 #define OP_SHUTDOWN_STR "shutdown"
+#define OP_LISTEN_STR "listen"
+#define OP_CONSOLE_STR "console"
 //display params?
 //help options, operations --help
 //tab complete?
@@ -122,6 +129,8 @@
 #define OP_UNLOAD_INFO "todo"
 #define OP_REPLACE_INFO "todo"
 #define OP_SHUTDOWN_INFO "todo"
+#define OP_LISTEN_INFO "Register/unregister to listen for alerts and push them to the console."
+#define OP_CONSOLE_INFO "todo" //Change behavior of the console
 
 //TODO finish
 #define OP_HELP_USAGE "help <operation>"
@@ -136,15 +145,20 @@
 #define OP_UNLOAD_USAGE "unload <module>"
 #define OP_REPLACE_USAGE "replace <module>"
 #define OP_SHUTDOWN_USAGE "shutdown"
+#define OP_LISTEN_USAGE "listen [all|<module>] [all|<param>] [0|1]"
+#define OP_CONSOLE_USAGE "console <attribute> <value>"
 
 typedef enum {
-	OP_HELP = 0, OP_EXEC, OP_GET, OP_SET, OP_PAUSE, OP_UNPAUSE, OP_LINK, OP_UNLINK, OP_LOAD, OP_UNLOAD, OP_REPLACE, OP_SHUTDOWN, OP_MAX
+	OP_HELP = 0, OP_EXEC, OP_GET, OP_SET, OP_PAUSE, OP_UNPAUSE, OP_LINK, OP_UNLINK, OP_LOAD, OP_UNLOAD, OP_REPLACE, OP_SHUTDOWN, OP_LISTEN, OP_CONSOLE, OP_MAX
 } operations;
 
 //modules
 #define MOD_ALL "all"
-//TODO remove?
 #define MOD_NONE "none"
+#define PARAM_ALL "all"
+
+#define VALUE_TRUE 1
+#define VALUE_FALSE 0
 
 struct rtm_command {
 	uint32_t id;
@@ -168,13 +182,23 @@ struct rtm_command {
 };
 int rtm_cmd_serial_test(struct rtm_command *cmd, uint32_t *serial_num);
 
+#define RTM_TYPE_STR "type"
+#define RTM_TYPE_ID 0
+#define RTM_TYPE_CONSOLE	1 //console does requests & waits for response
+#define RTM_TYPE_LISTENER	2 //listener typically receives events from stack
+#define RTM_TYPE_DUAL 		3 //does both using split screen or separated cmd line //TODO eventually implement
+#define RTM_TYPE_DEFAULT	RTM_TYPE_CONSOLE
+
 struct rtm_console {
 	uint32_t id;
 	int fd;
 	struct sockaddr_un *addr;
+	uint8_t type;
+	metadata *listeners;
 };
 int rtm_console_id_test(struct rtm_console *console, uint32_t *id);
 int rtm_console_fd_test(struct rtm_console *console, int *fd);
+int rtm_console_listening_test(struct rtm_console *console, uint32_t *index, uint32_t *param_id);
 void console_free(struct rtm_console *console);
 
 int rtm_recv_fd(int fd, uint32_t buf_len, uint8_t *buf);
@@ -204,6 +228,8 @@ void rtm_process_load(struct fins_module *module, struct rtm_console *console, s
 void rtm_process_unload(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 void rtm_process_replace(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 void rtm_process_shutdown(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
+void rtm_process_listen(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
+void rtm_process_console(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd);
 
 #define RTM_LIB "rtm"
 #define RTM_MAX_FLOWS 0
@@ -231,7 +257,7 @@ struct rtm_data {
 	uint32_t cmd_counter;
 };
 
-int rtm_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int rtm_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int rtm_run(struct fins_module *module, pthread_attr_t *attr);
 int rtm_pause(struct fins_module *module);
 int rtm_unpause(struct fins_module *module);
@@ -243,6 +269,7 @@ int rtm_pass_overall(struct fins_module *module, struct fins_overall *overall);
 
 void rtm_get_ff(struct fins_module *module);
 void rtm_fcf(struct fins_module *module, struct finsFrame *ff);
+void rtm_alert(struct fins_module *module, struct finsFrame *ff);
 void rtm_read_param_reply(struct fins_module *module, struct finsFrame *ff);
 void rtm_set_param(struct fins_module *module, struct finsFrame *ff);
 void rtm_set_param_reply(struct fins_module *module, struct finsFrame *ff);

@@ -2860,19 +2860,19 @@ void tcp_error(struct fins_module *module, struct finsFrame *ff) {
 	}
 }
 
-void tcp_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
+void tcp_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -2883,7 +2883,7 @@ void tcp_init_params(struct fins_module *module) {
 	elem_add_param(get_elem, TCP_GET_MSS__str, TCP_GET_MSS__id, TCP_GET_MSS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -2894,26 +2894,15 @@ void tcp_init_params(struct fins_module *module) {
 	elem_add_param(set_elem, TCP_SET_MSS__str, TCP_SET_MSS__id, TCP_SET_MSS__type);
 }
 
-int tcp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int tcp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	tcp_init_params(module);
+	tcp_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct tcp_data));
 	struct tcp_data *md = (struct tcp_data *) module->data;
-
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
 
 	md->thread_id_num = 0;
 	sem_init(&md->thread_id_sem, 0, 1);
@@ -3018,9 +3007,11 @@ int tcp_release(struct fins_module *module) {
 	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	struct tcp_data *md = (struct tcp_data *) module->data;
-	//list_free(md->conn_stub_list, tcp_conn_stub_free);
+	//list_free(md->conn_stub_list, tcp_conn_stub_free); //TODO uncomment/fix
+	list_free(md->conn_stub_list, nop_func);
 	sem_destroy(&md->conn_stub_list_sem);
-	//list_free(md->conn_list, tcp_conn_free);
+	//list_free(md->conn_list, tcp_conn_free); //TODO uncomment/fix
+	list_free(md->conn_list, nop_func);
 	sem_destroy(&md->conn_list_sem);
 
 	if (md->link_list != NULL) {

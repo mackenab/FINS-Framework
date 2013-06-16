@@ -449,10 +449,9 @@ struct if_record { //for an interface
 	int32_t index;
 	uint8_t name[IFNAMSIZ]; //SIOCGIFNAME
 	uint64_t mac; //SIOCGIFHWADDR
-	uint16_t type; //1=eth, 2=Wifi
 
 	//changeable
-	uint8_t status; //1=infrastructure, 2=adhoc modes //TODO rename to mode
+	uint8_t mode; //1=infrastructure, 2=adhoc modes //TODO rename to mode
 	uint32_t mtu; //SIOCGIFMTU
 	uint32_t flags; //TODO use? //SIOCGIFFLAGS
 

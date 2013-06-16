@@ -57,7 +57,7 @@ struct fins_module {
 	sem_t *event_sem;
 
 	//private & dependent on the module
-	metadata *params;
+	metadata *knobs; //TODO rename to knobs
 	uint8_t *data;
 };
 
@@ -65,7 +65,7 @@ int mod_id_test(struct fins_module *mod, uint32_t *id);
 
 struct fins_module_ops {
 	//struct fins_module *owner; //TODO remove?
-	int (*init)(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+	int (*init)(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 	int (*run)(struct fins_module *module, pthread_attr_t *fins_pthread_attr);
 	int (*pause)(struct fins_module *module);
 	int (*unpause)(struct fins_module *module);
@@ -97,7 +97,7 @@ struct fins_overall {
 };
 
 struct fins_module_admin_ops {
-	int (*init)(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+	int (*init)(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 	int (*run)(struct fins_module *module, pthread_attr_t *fins_pthread_attr);
 	int (*pause)(struct fins_module *module);
 	int (*unpause)(struct fins_module *module);
@@ -117,6 +117,7 @@ struct link_record {
 int link_id_test(struct link_record *link, uint32_t *id);
 int link_involved_test(struct link_record *link, uint32_t *index);
 struct link_record *link_clone(struct link_record *link);
+void link_print(struct link_record *link);
 
 struct fins_module_table {
 	//add max_flows? //as max number of flows
@@ -146,6 +147,7 @@ int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t 
 #define OP_UNLOAD_STR "unload"
 #define OP_REPLACE_STR "replace"
 #define OP_SHUTDOWN_STR "shutdown"
+#define OP_LISTEN_STR "listen"
 
 void module_set_param_flows(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_links(struct fins_module *module, struct finsFrame *ff);
@@ -163,6 +165,10 @@ void module_get_param_dual(struct fins_module *module, struct finsFrame *ff);
 #define MOD_SET_PARAM_FLOWS 0
 #define MOD_SET_PARAM_LINKS 1
 #define MOD_SET_PARAM_DUAL 2
+
+#define MOD_ALERT_FLOWS 0
+#define MOD_ALERT_LINKS 1
+#define MOD_ALERT_DUAL 2
 
 sem_t *switch_event_sem;
 

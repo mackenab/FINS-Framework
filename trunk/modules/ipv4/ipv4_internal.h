@@ -276,7 +276,7 @@ struct ipv4_data {
 	struct ipv4_statistics stats;
 };
 
-int ipv4_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int ipv4_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int ipv4_run(struct fins_module *module, pthread_attr_t *attr);
 int ipv4_pause(struct fins_module *module);
 int ipv4_unpause(struct fins_module *module);

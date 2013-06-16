@@ -23,27 +23,28 @@ MAX_DEPTH := 10
 filter_headers = $(shell ls $(1) 2> /dev/null | grep \\.h)
 filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(call filter_headers,$(DIR))))
 
-
-
-
 ###### build for android (arch arm) ######
 ifdef BUILD_FOR_ANDROID_ARM
 TARGET_PLATFORM := "Android arch-ARM"
+ARCH := arm
 
 FOLDER_LIST := trunk #tests
-EXECS_LIST := capturer console wedge launcher 
+EXECS_LIST := capturer console launcher wedge 
 #core can compile/run but doesn't work, stops when main thread loses focus?
 
 NDK_PLATFORM_VER := 14
 ANDROID_NDK_ROOT := /opt/android/android-ndk-r8e
-PREBUILT_ROOT := /opt/android/prebuilt 
+PREBUILT_ROOT := /opt/android/prebuilt
 
 USR := $(ANDROID_NDK_ROOT)/platforms/android-$(NDK_PLATFORM_VER)/arch-arm/usr
 #BIN := $(PREBUILT_ROOT)/linux-x86/toolchain/arm-eabi-4.4.3/bin
 BIN := $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin
 
+#signals using a different system & not to set the values of CC, LD, CFLAGS, LDFLAGS
+ifndef ALTERNATIVE_BUILD
 #CC := $(BIN)/arm-eabi-gcc
 CC := $(BIN)/arm-linux-androideabi-gcc
+
 CCOPTS := -DBUILD_FOR_ANDROID
 CCOPTS += -g -O2 -Wall #flags for valgrind
 INCLS := -I$(USR)/include
@@ -60,6 +61,7 @@ LIBPATHS := -L$(USR)/lib
 #LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3
 #LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.6
 LIBS := -lc -lgcc -llog -lm
+endif
 
 GDB_CLIENT := $(BIN)/arm-eabi-gdb
 INSTALL_DIR := /data/local/fins
@@ -91,10 +93,13 @@ endif
 ###### build for linux ######
 ifdef BUILD_FOR_LINUX
 TARGET_PLATFORM := "Linux x86"
+ARCH := x86
 
 FOLDER_LIST := trunk examples tests
 EXECS_LIST := capturer console core wedge
 
+#signals using a different system & not to set the values of CC, LD, CFLAGS, LDFLAGS
+ifndef ALTERNATIVE_BUILD
 CC := gcc
 CCOPTS := -g -O0 -Wall #flags for valgrind
 INCLS :=
@@ -103,6 +108,7 @@ LD := gcc
 LDOPTS := -g -O0 -Wall #flags for valgrind
 LIBPATHS :=
 LIBS := 
+endif
 
 GDB_CLIENT := gdb
 INSTALL_DIR := /lib/modules/$(shell uname -r)/kernel/fins
@@ -112,5 +118,5 @@ endif
 
 
 ###### Deferred Common stuff ######
-CFLAGS = $(CCOPTS) $(INCLS)
-LDFLAGS = $(LDOPTS) $(LIBPATHS) $(LIBS)
+CFLAGS = $(strip $(CCOPTS) $(INCLS))
+LDFLAGS = $(strip $(LDOPTS) $(LIBPATHS) $(LIBS))

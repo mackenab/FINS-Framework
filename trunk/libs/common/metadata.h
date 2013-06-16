@@ -18,6 +18,7 @@
 
 /* over riding the original types of the Config library */
 
+#define META_TYPE_GROUP 	CONFIG_TYPE_GROUP
 #define META_TYPE_INT32 	CONFIG_TYPE_INT
 #define META_TYPE_INT64 	CONFIG_TYPE_INT64
 #define META_TYPE_FLOAT 	CONFIG_TYPE_FLOAT

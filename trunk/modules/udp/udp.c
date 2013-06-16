@@ -376,19 +376,19 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 	}
 }
 
-void udp_init_params(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->params);
+void udp_init_knobs(struct fins_module *module) {
+	metadata_element *root = config_root_setting(module->knobs);
 	//int status;
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, CONFIG_TYPE_GROUP);
+	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -397,7 +397,7 @@ void udp_init_params(struct fins_module *module) {
 	//elem_add_param(get_elem, UDP_GET_REPEATS__str, UDP_GET_REPEATS__id, UDP_GET_REPEATS__type);
 
 	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, CONFIG_TYPE_GROUP);
+	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
@@ -406,26 +406,15 @@ void udp_init_params(struct fins_module *module) {
 	//elem_add_param(set_elem, UDP_SET_REPEATS__str, UDP_SET_REPEATS__id, UDP_SET_REPEATS__type);
 }
 
-int udp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi) {
+int udp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
 	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	udp_init_params(module);
+	udp_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct udp_data));
 	struct udp_data *md = (struct udp_data *) module->data;
-
-	if (module->flows_max < flows_num) {
-		PRINT_WARN("todo error");
-		return 0;
-	}
-	md->flows_num = flows_num;
-
-	int i;
-	for (i = 0; i < flows_num; i++) {
-		md->flows[i] = flows[i];
-	}
 
 	//TODO extract this from meta?
 	md->sent_packet_list = list_create(UDP_SENT_LIST_MAX);

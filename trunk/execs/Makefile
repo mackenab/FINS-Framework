@@ -7,6 +7,8 @@ endif
 # fins.mk contains the compiler and linker options for each target platform
 include $(FINS_ROOT_DIR)/settings.finsmk
 
+EXECS_LIST_ALL := capturer console core launcher wedge
+
 #### TARGETS ####
 .PHONY:all
 all:
@@ -45,4 +47,4 @@ clean:
 
 .PHONY:clean_full
 clean_full:
-	@$(foreach exec,$(EXECS_LIST), cd $(exec); $(MAKE) clean_full; cd $(LOCAL_DIR);)
+	@$(foreach exec,$(EXECS_LIST_ALL), cd $(exec); $(MAKE) clean_full; cd $(LOCAL_DIR);)

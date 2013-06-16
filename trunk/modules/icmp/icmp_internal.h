@@ -142,7 +142,7 @@ struct icmp_data {
 	struct linked_list *sent_list;
 };
 
-int icmp_init(struct fins_module *module, uint32_t flows_num, uint32_t *flows, metadata_element *params, struct envi_record *envi);
+int icmp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
 int icmp_run(struct fins_module *module, pthread_attr_t *attr);
 int icmp_pause(struct fins_module *module);
 int icmp_unpause(struct fins_module *module);
