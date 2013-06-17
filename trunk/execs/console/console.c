@@ -204,7 +204,7 @@ int main() {
 			}
 			cmd_buf[cmd_len] = '\0';
 			//printf("\n\trecv: len=%u, buf='%s'", cmd_len, cmd_buf); //TODO remove
-			printf("%s", cmd_buf);
+			printf("\n%s", cmd_buf);
 			fflush(stdout);
 		} else if (type == 3) {
 
