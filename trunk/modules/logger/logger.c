@@ -203,7 +203,7 @@ void logger_interrupt(struct fins_module *module) {
 			ff->ctrlFrame.param_id = LOGGER_ALERT_UPDATE__id;
 
 			ff->ctrlFrame.data = (uint8_t *) secure_malloc(500);
-			sprintf((char *) ff->ctrlFrame.data, "period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f\n", md->logger_saved_curr, diff_curr, diff_packets,
+			sprintf((char *) ff->ctrlFrame.data, "period=%f-%f,\t packets=%d,\t bytes=%d,\t through=%f", md->logger_saved_curr, diff_curr, diff_packets,
 					diff_bytes, diff_through);
 			PRINT_DEBUG("value='%s'", ff->ctrlFrame.data);
 			ff->ctrlFrame.data_len = strlen((char *) ff->ctrlFrame.data);
