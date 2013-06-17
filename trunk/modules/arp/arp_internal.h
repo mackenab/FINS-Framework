@@ -120,7 +120,7 @@ int arp_cache_non_seeking_test(struct arp_cache *cache);
 void arp_cache_shutdown(struct arp_cache *cache);
 void arp_cache_free(struct arp_cache *cache);
 
-void print_msgARP(struct arp_message *);
+void print_msgARP(struct arp_message *msg);
 void print_neighbors(struct linked_list *ptr_to_cache);
 void print_IP_addrs(uint32_t addr_ip);
 void print_MAC_addrs(uint64_t addr_mac);

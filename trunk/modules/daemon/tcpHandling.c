@@ -9,16 +9,16 @@
 #include <finstypes.h>
 
 struct daemon_socket_general_ops tcp_general_ops = { .proto = IPPROTO_TCP, .socket_type_test = socket_tcp_test, .socket_out = socket_out_tcp, .daemon_in_fdf =
-daemon_in_fdf_tcp, .daemon_in_error = daemon_in_error_tcp, .daemon_in_poll = daemon_in_poll_tcp };
+		daemon_in_fdf_tcp, .daemon_in_error = daemon_in_error_tcp, .daemon_in_poll = daemon_in_poll_tcp };
 static struct daemon_socket_out_ops tcp_out_ops = { .socket_out = socket_out_tcp, .bind_out = bind_out_tcp, .listen_out = listen_out_tcp, .connect_out =
-connect_out_tcp, .accept_out = accept_out_tcp, .getname_out = getname_out_tcp, .ioctl_out = ioctl_out_tcp, .sendmsg_out = sendmsg_out_tcp,
+		connect_out_tcp, .accept_out = accept_out_tcp, .getname_out = getname_out_tcp, .ioctl_out = ioctl_out_tcp, .sendmsg_out = sendmsg_out_tcp,
 		.recvmsg_out = recvmsg_out_tcp, .getsockopt_out = getsockopt_out_tcp, .setsockopt_out = setsockopt_out_tcp, .release_out = release_out_tcp, .poll_out =
-		poll_out_tcp, .mmap_out = mmap_out_tcp, .socketpair_out = socketpair_out_tcp, .shutdown_out = shutdown_out_tcp, .close_out = close_out_tcp,
+				poll_out_tcp, .mmap_out = mmap_out_tcp, .socketpair_out = socketpair_out_tcp, .shutdown_out = shutdown_out_tcp, .close_out = close_out_tcp,
 		.sendpage_out = sendpage_out_tcp, };
 static struct daemon_socket_in_ops tcp_in_ops = { .connect_in = connect_in_tcp, .accept_in = accept_in_tcp, .sendmsg_in = sendmsg_in_tcp, .getsockopt_in =
-getsockopt_in_tcp, .setsockopt_in = setsockopt_in_tcp, .release_in = release_in_tcp, .poll_in = poll_in_tcp_fcf, };
+		getsockopt_in_tcp, .setsockopt_in = setsockopt_in_tcp, .release_in = release_in_tcp, .poll_in = poll_in_tcp_fcf, };
 static struct daemon_socket_other_ops tcp_other_ops = { .connect_timeout = connect_timeout_tcp, .connect_expired = connect_expired_tcp, .accept_timeout =
-accept_timeout_tcp, .accept_expired = accept_expired_tcp, .recvmsg_timeout = recvmsg_timeout_tcp, };
+		accept_timeout_tcp, .accept_expired = accept_expired_tcp, .recvmsg_timeout = recvmsg_timeout_tcp, };
 
 int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port) {
 	PRINT_DEBUG("Entered: module=%p, host=%u/%u", module, host_ip, host_port);
@@ -62,8 +62,8 @@ int match_conn_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t 
 			test_rem_ip = addr4_get_ip(&md->sockets[i].rem_addr);
 			test_rem_port = addr4_get_port(&md->sockets[i].rem_addr);
 
-			if (test_host_port == host_port && test_rem_port == rem_port && (test_host_ip == INADDR_ANY || test_host_ip == host_ip) && (test_rem_ip
-					== INADDR_ANY || test_rem_ip == rem_ip)) {
+			if (test_host_port == host_port && test_rem_port == rem_port && (test_host_ip == INADDR_ANY || test_host_ip == host_ip)
+					&& (test_rem_ip == INADDR_ANY || test_rem_ip == rem_ip)) {
 				return i;
 			}
 		}
@@ -820,7 +820,11 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	PRINT_DEBUG("before: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 	if (md->sockets[hdr->sock_index].data_buf > 0) {
 		store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].data_list);
-		md->sockets[hdr->sock_index].data_buf -= store->ff->dataFrame.pduLength - store->pos;
+		data_len = store->ff->dataFrame.pduLength;
+		data = store->ff->dataFrame.pdu;
+		PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+
+		md->sockets[hdr->sock_index].data_buf -= data_len - store->pos;
 		PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 		if (store->addr->ss_family == AF_INET) {
@@ -850,9 +854,6 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
-
-		data_len = store->ff->dataFrame.pduLength;
-		data = store->ff->dataFrame.pdu;
 	}
 
 	if (store != NULL) {
@@ -896,8 +897,10 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			if (flags & MSG_ERRQUEUE) {
 				daemon_store_free(store);
 			} else {
+				store->pos += msg_len;
+				PRINT_DEBUG("prepending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 				list_prepend(md->sockets[hdr->sock_index].data_list, store);
-				md->sockets[hdr->sock_index].data_buf += store->ff->dataFrame.pduLength - store->pos;
+				md->sockets[hdr->sock_index].data_buf += data_len - store->pos;
 			}
 		}
 
@@ -2158,6 +2161,8 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 	uint32_t flags = POLLIN;
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &flags);
 
+	uint32_t data_len = ff->dataFrame.pduLength;
+	uint8_t *data = ff->dataFrame.pdu;
 	uint32_t data_pos = 0;
 	flags = 0;
 	struct daemon_call *call;
@@ -2165,7 +2170,7 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 	while (1) {
 		call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
 		if (call != NULL) {
-			data_pos += recvmsg_in_tcp_fdf(call, module, ff->metaData, ff->dataFrame.pduLength - data_pos, ff->dataFrame.pdu + data_pos, dst_addr, 0);
+			data_pos += recvmsg_in_tcp_fdf(call, module, ff->metaData, data_len - data_pos, data + data_pos, dst_addr, 0);
 			list_remove(md->sockets[sock_index].call_list, call);
 
 			if (data_pos == ff->dataFrame.pduLength) {
@@ -2184,8 +2189,9 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 	store->pos = data_pos;
 
 	if (list_has_space(md->sockets[sock_index].data_list)) {
+		PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 		list_append(md->sockets[sock_index].data_list, store);
-		md->sockets[sock_index].data_buf += ff->dataFrame.pduLength;
+		md->sockets[sock_index].data_buf += data_len - store->pos;
 		PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, ff->metaData, md->sockets[sock_index].data_buf);
 	} else {
 		PRINT_ERROR("data_list full: sock_index=%d, ff=%p", sock_index, ff);

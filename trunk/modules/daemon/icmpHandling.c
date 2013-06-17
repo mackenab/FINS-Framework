@@ -11,10 +11,10 @@
 struct daemon_socket_general_ops icmp_general_ops = { .proto = IPPROTO_ICMP, .socket_type_test = socket_icmp_test, .socket_out = socket_out_icmp,
 		.daemon_in_fdf = daemon_in_fdf_icmp, .daemon_in_error = daemon_in_error_icmp, };
 static struct daemon_socket_out_ops icmp_out_ops = { .socket_out = socket_out_icmp, .bind_out = bind_out_icmp, .listen_out = listen_out_icmp, .connect_out =
-connect_out_icmp, .accept_out = accept_out_icmp, .getname_out = getname_out_icmp, .ioctl_out = ioctl_out_icmp, .sendmsg_out = sendmsg_out_icmp,
+		connect_out_icmp, .accept_out = accept_out_icmp, .getname_out = getname_out_icmp, .ioctl_out = ioctl_out_icmp, .sendmsg_out = sendmsg_out_icmp,
 		.recvmsg_out = recvmsg_out_icmp, .getsockopt_out = getsockopt_out_icmp, .setsockopt_out = setsockopt_out_icmp, .release_out = release_out_icmp,
 		.poll_out = poll_out_icmp, .mmap_out = mmap_out_icmp, .socketpair_out = socketpair_out_icmp, .shutdown_out = shutdown_out_icmp, .close_out =
-		close_out_icmp, .sendpage_out = sendpage_out_icmp, };
+				close_out_icmp, .sendpage_out = sendpage_out_icmp, };
 static struct daemon_socket_in_ops icmp_in_ops = { };
 static struct daemon_socket_other_ops icmp_other_ops = { .recvmsg_timeout = recvmsg_timeout_icmp, };
 
@@ -527,7 +527,12 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
 			if (md->sockets[hdr->sock_index].error_buf > 0) {
 				store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].error_list);
+				data_len = store->ff->ctrlFrame.data_len;
+				data = store->ff->ctrlFrame.data;
+				PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+
 				md->sockets[hdr->sock_index].error_buf--;
+				PRINT_DEBUG("after: sock_index=%d, error_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].error_buf);
 
 				if (store->addr->ss_family == AF_INET) {
 					addr_len = (uint32_t) sizeof(struct sockaddr_in);
@@ -545,9 +550,6 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					return;
 				}
-
-				data_len = store->ff->ctrlFrame.data_len;
-				data = store->ff->ctrlFrame.data;
 			} else {
 				//NACK
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
@@ -563,7 +565,11 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		PRINT_DEBUG("before: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 		if (md->sockets[hdr->sock_index].data_buf > 0) {
 			store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].data_list);
-			md->sockets[hdr->sock_index].data_buf -= store->ff->dataFrame.pduLength - store->pos;
+			data_len = store->ff->dataFrame.pduLength;
+			data = store->ff->dataFrame.pdu;
+			PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+
+			md->sockets[hdr->sock_index].data_buf -= data_len - store->pos;
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 			if (store->addr->ss_family == AF_INET) {
@@ -582,9 +588,6 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
-
-			data_len = store->ff->dataFrame.pduLength;
-			data = store->ff->dataFrame.pdu;
 		}
 	}
 
@@ -629,8 +632,10 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 			if (flags & MSG_ERRQUEUE) {
 				daemon_store_free(store);
 			} else {
+				store->pos += msg_len;
+				PRINT_DEBUG("prepending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 				list_prepend(md->sockets[hdr->sock_index].data_list, store);
-				md->sockets[hdr->sock_index].data_buf += store->ff->dataFrame.pduLength - store->pos;
+				md->sockets[hdr->sock_index].data_buf += data_len - store->pos;
 			}
 		}
 
@@ -1329,6 +1334,8 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 
 	int i;
 	uint32_t flags;
+	uint32_t data_len;
+	uint8_t *data;
 	uint32_t data_pos;
 	struct daemon_call *call;
 	struct daemon_store *store;
@@ -1349,23 +1356,24 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 					flags = POLLIN;
 					list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
 
+					data_len = ff->dataFrame.pduLength;
+					data = ff->dataFrame.pdu;
 					data_pos = 0;
 					while (1) {
 						flags = 0;
 						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
 						if (call != NULL) {
-							data_pos += recvmsg_in_icmp(call, module, ff->metaData, ff->dataFrame.pduLength - data_pos, ff->dataFrame.pdu + data_pos, src_addr,
-									0);
+							data_pos += recvmsg_in_icmp(call, module, ff->metaData, data_len - data_pos, data + data_pos, src_addr, 0);
 							list_remove(md->sockets[i].call_list, call);
 
-							if (data_pos == ff->dataFrame.pduLength) {
+							if (data_pos == data_len) {
 								break;
 							}
 						} else {
 							break;
 						}
 					}
-					if (data_pos == ff->dataFrame.pduLength) {
+					if (data_pos == data_len) {
 						continue;
 					}
 
@@ -1376,8 +1384,9 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 					store->pos = data_pos;
 
 					if (list_has_space(md->sockets[i].data_list)) {
+						PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 						list_append(md->sockets[i].data_list, store);
-						md->sockets[i].data_buf += store->ff->dataFrame.pduLength;
+						md->sockets[i].data_buf += data_len - store->pos;
 						PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", i, store->ff, ff->metaData, md->sockets[i].data_buf);
 					} else {
 						PRINT_ERROR("data_list full: sock_index=%d, ff=%p", i, store->ff);

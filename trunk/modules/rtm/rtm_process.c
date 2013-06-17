@@ -640,7 +640,6 @@ void rtm_process_listen(struct fins_module *module, struct rtm_console *console,
 
 void rtm_process_console(struct fins_module *module, struct rtm_console *console, struct rtm_command *cmd) {
 	PRINT_DEBUG("Entered: module=%p, console=%p, cmd=%p", module, console, cmd);
-	struct rtm_data *md = (struct rtm_data *) module->data;
 
 	if (cmd->words_num < 3) {
 		PRINT_IMPORTANT("Incorrect usage: console=%p, id=%u, cmd='%s'", console, console->id, cmd->cmd_buf);
