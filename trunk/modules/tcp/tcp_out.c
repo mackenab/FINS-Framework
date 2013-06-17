@@ -8,7 +8,7 @@
 void *tcp_write_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
+	struct tcp_conn *conn = thread_data->conn;
 	uint8_t *called_data = thread_data->data_raw;
 	uint32_t called_len = thread_data->data_len;
 	uint32_t flags = thread_data->flags;
@@ -158,10 +158,10 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	/*#*/PRINT_DEBUG("");
 	secure_sem_wait(&md->conn_list_sem);
-	//struct tcp_connection *conn = conn_list_find(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port); //TODO check if right
+	//struct tcp_conn *conn = conn_list_find(src_ip, (uint16_t) src_port, dst_ip, (uint16_t) dst_port); //TODO check if right
 	uint16_t test_src_port = (uint16_t) src_port;
 	uint16_t test_dst_port = (uint16_t) dst_port;
-	struct tcp_connection *conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &src_ip, &test_src_port, &dst_ip, &test_dst_port); //TODO check if right
+	struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &src_ip, &test_src_port, &dst_ip, &test_dst_port); //TODO check if right
 	int start = (conn->threads < TCP_THREADS_MAX) ? ++conn->threads : 0;
 	//if (start) {conn->write_threads++;}
 	/*#*/PRINT_DEBUG("");
@@ -198,11 +198,11 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 void *tcp_close_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
+	struct tcp_conn *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
 	free(thread_data);
 
-	struct tcp_segment *seg;
+	struct tcp_seg *seg;
 
 	PRINT_DEBUG("Entered: id=%u", id);
 	struct tcp_data *md = (struct tcp_data *) conn->module->data;
@@ -318,7 +318,7 @@ void tcp_exec_close(struct fins_module *module, struct finsFrame *ff, uint32_t h
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	secure_sem_wait(&md->conn_list_sem);
-	struct tcp_connection *conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
+	struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
 	if (conn) {
 		if (conn->threads < TCP_THREADS_MAX) {
 			conn->threads++;
@@ -348,7 +348,7 @@ void tcp_exec_close(struct fins_module *module, struct finsFrame *ff, uint32_t h
 void *tcp_close_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_conn_stub *conn_stub = thread_data->conn_stub;
 	//uint32_t send_ack = thread_data->flags;
 	struct finsFrame *ff = thread_data->ff;
 	free(thread_data);
@@ -384,7 +384,7 @@ void tcp_exec_close_stub(struct fins_module *module, struct finsFrame *ff, uint3
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	secure_sem_wait(&md->conn_stub_list_sem);
-	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+	struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 	if (conn_stub) {
 		list_remove(md->conn_stub_list, conn_stub);
 		if (conn_stub->threads < TCP_THREADS_MAX) {
@@ -419,7 +419,7 @@ void tcp_exec_listen(struct fins_module *module, struct finsFrame *ff, uint32_t 
 
 	secure_sem_wait(&md->conn_stub_list_sem);
 	//TODO change from conn_stub to conn in listen
-	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+	struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 	if (conn_stub == NULL) {
 		if (list_has_space(md->conn_stub_list)) {
 			conn_stub = tcp_conn_stub_create(module, host_ip, host_port, backlog);
@@ -445,16 +445,16 @@ void tcp_exec_listen(struct fins_module *module, struct finsFrame *ff, uint32_t 
 void *tcp_accept_thread(void *local) { //this will need to be changed
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_conn_stub *conn_stub = thread_data->conn_stub;
 	uint32_t flags = thread_data->flags;
 	struct finsFrame *ff = thread_data->ff;
 	free(thread_data);
 
 	struct tcp_node *node;
-	struct tcp_segment *seg;
-	struct tcp_connection *conn;
+	struct tcp_seg *seg;
+	struct tcp_conn *conn;
 	//int start;
-	struct tcp_segment *temp_seg;
+	struct tcp_seg *temp_seg;
 
 	PRINT_DEBUG("Entered: id=%u", id);
 	struct tcp_data *md = (struct tcp_data *) conn_stub->module->data;
@@ -467,11 +467,11 @@ void *tcp_accept_thread(void *local) { //this will need to be changed
 			/*#*/PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
 			sem_post(&conn_stub->sem);
 
-			seg = (struct tcp_segment *) node->data;
+			seg = (struct tcp_seg *) node->data;
 
 			/*#*/PRINT_DEBUG("");
 			secure_sem_wait(&md->conn_list_sem);
-			conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &seg->dst_ip, &seg->dst_port, &seg->src_ip, &seg->src_port);
+			conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &seg->dst_ip, &seg->dst_port, &seg->src_ip, &seg->src_port);
 			if (conn == NULL) {
 				if (list_has_space(md->conn_list)) {
 					conn = tcp_conn_create(conn_stub->module, seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
@@ -594,7 +594,7 @@ void tcp_exec_accept(struct fins_module *module, struct finsFrame *ff, uint32_t 
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	secure_sem_wait(&md->conn_stub_list_sem);
-	struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+	struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 	if (conn_stub != NULL) {
 		if (conn_stub->threads < TCP_THREADS_MAX) {
 			conn_stub->threads++;
@@ -631,12 +631,12 @@ void *tcp_connect_thread(void *local) {
 	//this will need to be changed
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
+	struct tcp_conn *conn = thread_data->conn;
 	uint32_t flags = thread_data->flags;
 	struct finsFrame *ff = thread_data->ff;
 	free(thread_data);
 
-	struct tcp_segment *temp_seg;
+	struct tcp_seg *temp_seg;
 
 	PRINT_DEBUG("Entered: id=%u", id);
 	struct tcp_data *md = (struct tcp_data *) conn->module->data;
@@ -709,7 +709,7 @@ void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	secure_sem_wait(&md->conn_list_sem);
-	struct tcp_connection *conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
+	struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
 	if (conn == NULL) {
 		if (list_has_space(md->conn_list)) {
 			conn = tcp_conn_create(module, host_ip, host_port, rem_ip, rem_port);
@@ -723,7 +723,7 @@ void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t
 			//if listening stub remove
 			/*#*/PRINT_DEBUG("");
 			secure_sem_wait(&md->conn_stub_list_sem);
-			struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+			struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 			if (conn_stub) {
 				list_remove(md->conn_stub_list, conn_stub);
 				if (conn_stub->threads < TCP_THREADS_MAX) {
@@ -776,7 +776,7 @@ void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t
 void *tcp_poll_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
+	struct tcp_conn *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
 	uint32_t initial = thread_data->data_len;
 	uint32_t events = thread_data->flags;
@@ -853,7 +853,7 @@ void *tcp_poll_thread(void *local) {
 void *tcp_poll_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_conn_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
 	uint32_t initial = thread_data->data_len;
 	uint32_t events = thread_data->flags;
@@ -930,7 +930,7 @@ void tcp_exec_poll(struct fins_module *module, struct finsFrame *ff, socket_stat
 	if (state > SS_UNCONNECTED) {
 		PRINT_DEBUG("Entered: state=%u, host=%u/%u, rem=%u/%u, initial=%u, events=0x%x", state, host_ip, host_port, rem_ip, rem_port, initial, flags);
 		secure_sem_wait(&md->conn_list_sem);
-		struct tcp_connection *conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
+		struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
 		if (conn) {
 			if (conn->threads < TCP_THREADS_MAX) {
 				conn->threads++;
@@ -963,7 +963,7 @@ void tcp_exec_poll(struct fins_module *module, struct finsFrame *ff, socket_stat
 	} else {
 		PRINT_DEBUG("Entered: state=%u, host=%u/%u, initial=%u, flags=%u", state, host_ip, host_port, initial, flags);
 		secure_sem_wait(&md->conn_stub_list_sem);
-		struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+		struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 		if (conn_stub) {
 			if (conn_stub->threads < TCP_THREADS_MAX) {
 				conn_stub->threads++;
@@ -999,7 +999,7 @@ void tcp_exec_poll(struct fins_module *module, struct finsFrame *ff, socket_stat
 void *tcp_read_param_conn_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
+	struct tcp_conn *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
 	//socket_state state = thread_data->flags;
 	free(thread_data);
@@ -1069,7 +1069,7 @@ void *tcp_read_param_conn_thread(void *local) {
 void *tcp_read_param_conn_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_conn_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
 	//socket_state state = thread_data->flags;
 	free(thread_data);
@@ -1177,8 +1177,8 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		uint32_t rem_ip;
 		uint16_t rem_port;
 
-		struct tcp_connection *conn;
-		struct tcp_connection_stub *conn_stub;
+		struct tcp_conn *conn;
+		struct tcp_conn_stub *conn_stub;
 		//pthread_t thread;
 		struct tcp_thread_data *thread_data;
 
@@ -1188,7 +1188,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		if (state > SS_UNCONNECTED) {
 			PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 			secure_sem_wait(&md->conn_list_sem);
-			conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
+			conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
 			if (conn) {
 				if (conn->threads < TCP_THREADS_MAX) {
 					conn->threads++;
@@ -1217,7 +1217,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
 			secure_sem_wait(&md->conn_stub_list_sem);
-			conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+			conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 			if (conn_stub) {
 				if (conn_stub->threads < TCP_THREADS_MAX) {
 					conn_stub->threads++;
@@ -1264,7 +1264,8 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 	case TCP_GET_FAST_RETRANSMITS__id:
 		PRINT_DEBUG("TCP_GET_FAST_RETRANSMITS");
 
-		val_int32 = (uint32_t) md->fast_retransmits;
+		//fast_retransmits
+		val_int32 = (uint32_t) md->total_conn_stats.fast;
 		secure_metadata_writeToElement(ff->metaData, "value", &val_int32, META_TYPE_INT32);
 
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
@@ -1285,7 +1286,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 void *tcp_set_param_conn_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
+	struct tcp_conn *conn = thread_data->conn;
 	struct finsFrame *ff = thread_data->ff;
 	//socket_state state = thread_data->flags;
 	free(thread_data);
@@ -1368,7 +1369,7 @@ void *tcp_set_param_conn_thread(void *local) {
 void *tcp_set_param_conn_stub_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	uint32_t id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_conn_stub *conn_stub = thread_data->conn_stub;
 	struct finsFrame *ff = thread_data->ff;
 	//socket_state state = thread_data->flags;
 	free(thread_data);
@@ -1485,7 +1486,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		if (state > SS_UNCONNECTED) {
 			PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
 			secure_sem_wait(&md->conn_list_sem);
-			struct tcp_connection *conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
+			struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
 			if (conn) {
 				if (conn->threads < TCP_THREADS_MAX) {
 					conn->threads++;
@@ -1516,7 +1517,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
 			secure_sem_wait(&md->conn_stub_list_sem);
-			struct tcp_connection_stub *conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+			struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
 			if (conn_stub) {
 				if (conn_stub->threads < TCP_THREADS_MAX) {
 					conn_stub->threads++;
@@ -1566,7 +1567,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_DEBUG("TCP_SET_FAST_RETRANSMITS");
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
-		md->fast_retransmits = (uint32_t) val_int32;
+		md->total_conn_stats.fast = (uint32_t) val_int32;
 
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;

@@ -136,9 +136,19 @@ int tcp_queue_is_full(struct tcp_queue *queue);
 int tcp_queue_has_space(struct tcp_queue *queue, uint32_t len);
 void tcp_queue_free(struct tcp_queue *queue);
 
-struct tcp_connection_stub {
+struct tcp_conn_stub_stats { //Per connection & have one for totals for entire module
+	uint16_t bad_checksum; /* total number of segments that have a bad checksum */
+	uint16_t no_checksum; /* total number of segments with no checksum */
+	uint16_t mismatching_lengths; /* total number of segments with mismatching segment lengths from the header and pseudoheader */
+	uint32_t bad_segments; /* total number of segments that were thrown away */
+	uint32_t received; /* total number of incoming TCP segments */
+	uint32_t sent; /* total number of outgoing TCP segments */
+//RSTs?
+};
+
+struct tcp_conn_stub {
 	//## protected by conn_stub_list_sem
-	//struct tcp_connection_stub *next;
+	//struct tcp_conn_stub *next;
 	uint32_t threads;
 	//##
 
@@ -160,15 +170,17 @@ struct tcp_connection_stub {
 	sem_t accept_wait_sem;
 
 	uint8_t running_flag;
-//uint32_t backlog; //TODO ?
+	//uint32_t backlog; //TODO ?
+
+	struct tcp_conn_stub_stats stats;
 };
 
-struct tcp_connection_stub *tcp_conn_stub_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t backlog);
-int tcp_conn_stub_addr_test(struct tcp_connection_stub *conn_stub, uint32_t *host_ip, uint16_t *host_port);
-//int conn_stub_send_jinni(struct tcp_connection_stub *conn_stub, uint32_t param_id, uint32_t ret_val);
-int tcp_conn_stub_send_daemon(struct tcp_connection_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-void tcp_conn_stub_shutdown(struct tcp_connection_stub *conn_stub);
-void tcp_conn_stub_free(struct tcp_connection_stub *conn_stub);
+struct tcp_conn_stub *tcp_conn_stub_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t backlog);
+int tcp_conn_stub_addr_test(struct tcp_conn_stub *conn_stub, uint32_t *host_ip, uint16_t *host_port);
+//int conn_stub_send_jinni(struct tcp_conn_stub *conn_stub, uint32_t param_id, uint32_t ret_val);
+int tcp_conn_stub_send_daemon(struct tcp_conn_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+void tcp_conn_stub_shutdown(struct tcp_conn_stub *conn_stub);
+void tcp_conn_stub_free(struct tcp_conn_stub *conn_stub);
 //int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 typedef enum {
@@ -221,10 +233,56 @@ struct tcp_packet2 {
 	uint8_t options[MAX_TCP_OPTIONS_BYTES]; //Options for the TCP segment (If Data Offset > 5) //TODO iron out full options mechanism
 };
 
+struct tcp_conn_stats { //Per connection & have one for totals for entire module
+	uint32_t sent_segs; /* total number of outgoing TCP segments */
+	uint32_t fast; /* total number of fast retransmits */
+	uint32_t gbn; /* total number of GBN */
+
+	uint16_t mismatching_lengths; /* total number of segments with mismatching segment lengths from the header and pseudoheader */
+	uint32_t recv_segs; /* total number of received TCP segments */
+	uint16_t no_checksum; /* total number of segments with no checksum */
+	uint16_t bad_checksum; /* total number of segments that have a bad checksum */
+
+	uint32_t drop_segs; /* total number of segments that were thrown away because of incorrect states, etc*/
+	uint32_t in_order_segs; /* total number of in order TCP segments */
+	uint32_t out_order_segs; /* total number of out of order TCP segments */
+	uint32_t dup_segs; /* total number of duplicate segments */
+
+	uint32_t recv_acks; /* total number of received ACKs */
+	uint32_t bad_acks; /* total number of bad ACKs */
+	uint32_t dup_acks; /* total number of duplicate ACKs */
+
+	uint64_t throughput; /* total number of byes received */
+
+	uint32_t recv_data_len_total; /* total recv data_len */
+	uint32_t recv_data_len_count; /* count recv data_len */
+
+	double rtt_est_total; /* total RTT estimate */
+	uint32_t rtt_est_count; /* count RTT estimate */
+
+	double rtt_dev_total; /* total RTT deviation */
+	uint32_t rtt_dev_count; /* count RTT deviation */
+
+	double timeout_total; /* total timeout */
+	uint32_t timeout_count; /* count timeout */
+
+	double cong_window_total; /* total congestion window */
+	uint32_t cong_window_count; /* count congestion window */
+
+	double threshhold_total; /* total threshhold */
+	uint32_t threshhold_count; /* count threshhold */
+
+//Need to determine when to calculate this
+//uint32_t send_win_total; /* total send window */
+//uint32_t send_win_count; /* count send window */
+//uint32_t recv_win_total; /* total recv window */
+//uint32_t recv_win_count; /* count recv window */
+};
+
 //Structure for TCP connections that we have open at the moment
-struct tcp_connection {
+struct tcp_conn {
 	//## protected by conn_list_sem
-	//struct tcp_connection *next; //Next item in the list of TCP connections //TODO remove when change conn_list to circular array of ptrs
+	//struct tcp_conn *next; //Next item in the list of TCP connections //TODO remove when change conn_list to circular array of ptrs
 	uint32_t threads; //Number of threads accessing this obj
 	uint32_t write_threads;
 	//##
@@ -319,6 +377,8 @@ struct tcp_connection {
 	uint8_t active_open;
 	struct finsFrame *ff;
 
+	struct tcp_conn_stats stats;
+
 	//some type of options state
 	uint8_t tsopt_attempt; //attempt time stamp option
 	uint8_t tsopt_enabled; //time stamp option enabled
@@ -397,21 +457,21 @@ struct tcp_connection {
 #define TCP_OPT_TS 8
 #define TCP_OPT_TS_BYTES 10
 
-struct tcp_connection *tcp_conn_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
-int tcp_conn_addr_test(struct tcp_connection *conn, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
-//int conn_send_jinni(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val);
-int tcp_conn_send_exec(struct tcp_connection *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-int tcp_conn_send_fcf(struct tcp_connection *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-int tcp_conn_reply_fcf(struct tcp_connection *conn, uint32_t ret_val, uint32_t ret_msg);
-int tcp_conn_is_finished(struct tcp_connection *conn);
-void tcp_conn_shutdown(struct tcp_connection *conn);
-void tcp_conn_stop(struct tcp_connection *conn); //TODO remove, move above tcp_main_thread, makes private
-void tcp_conn_free(struct tcp_connection *conn);
+struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_conn_addr_test(struct tcp_conn *conn, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
+//int conn_send_jinni(struct tcp_conn *conn, uint32_t param_id, uint32_t ret_val);
+int tcp_conn_send_exec(struct tcp_conn *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_send_fcf(struct tcp_conn *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_reply_fcf(struct tcp_conn *conn, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_is_finished(struct tcp_conn *conn);
+void tcp_conn_shutdown(struct tcp_conn *conn);
+void tcp_conn_stop(struct tcp_conn *conn); //TODO remove, move above tcp_main_thread, makes private
+void tcp_conn_free(struct tcp_conn *conn);
 
-void tcp_handle_requests(struct tcp_connection *conn);
+void tcp_handle_requests(struct tcp_conn *conn);
 
 //Object for TCP segments all values are in host format
-struct tcp_segment {
+struct tcp_seg {
 	uint16_t src_port; //Source port
 	uint16_t dst_port; //Destination port
 	uint32_t seq_num; //Sequence number
@@ -439,26 +499,26 @@ void tcp_srand(void); //Seed the random number generator
 int tcp_rand(void); //Get a random number
 uint32_t tcp_gen_thread_id(struct fins_module *module);
 
-struct finsFrame *tcp_to_fdf(struct tcp_segment *tcp);
-struct tcp_segment *fdf_to_tcp(struct finsFrame *ff);
+struct finsFrame *tcp_to_fdf(struct tcp_seg *tcp);
+struct tcp_seg *fdf_to_tcp(struct finsFrame *ff);
 
-struct tcp_segment *tcp_seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port, uint32_t seq_num, uint32_t seq_end);
-uint32_t tcp_seg_add_data(struct tcp_segment *seg, struct tcp_queue *queue, uint32_t index, int data_len);
-uint16_t tcp_seg_checksum(struct tcp_segment *seg);
-int tcp_seg_send(struct fins_module *module, struct tcp_segment *seg);
-void tcp_seg_free(struct tcp_segment *seg);
+struct tcp_seg *tcp_seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port, uint32_t seq_num, uint32_t seq_end);
+uint32_t tcp_seg_add_data(struct tcp_seg *seg, struct tcp_queue *queue, uint32_t index, int data_len);
+uint16_t tcp_seg_checksum(struct tcp_seg *seg);
+int tcp_seg_send(struct fins_module *module, struct tcp_seg *seg);
+void tcp_seg_free(struct tcp_seg *seg);
 
-void tcp_seg_update(struct tcp_segment *seg, struct tcp_connection *conn, uint16_t flags);
-void tcp_seg_delayed_ack(struct tcp_segment *seg, struct tcp_connection *conn);
+void tcp_seg_update(struct tcp_seg *seg, struct tcp_conn *conn, uint16_t flags);
+void tcp_seg_delayed_ack(struct tcp_seg *seg, struct tcp_conn *conn);
 
 int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 int tcp_in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
 struct tcp_thread_data {
 	uint32_t id;
-	struct tcp_connection *conn; //TODO change conn/conn_stub to union?
-	struct tcp_connection_stub *conn_stub;
-	struct tcp_segment *seg; //TODO change seg/raw to union?
+	struct tcp_conn *conn; //TODO change conn/conn_stub to union?
+	struct tcp_conn_stub *conn_stub;
+	struct tcp_seg *seg; //TODO change seg/raw to union?
 	uint8_t *data_raw;
 	uint32_t data_len;
 	uint32_t flags;
@@ -500,7 +560,7 @@ void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t
 void tcp_exec_poll(struct fins_module *module, struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip,
 		uint16_t rem_port, uint32_t initial, uint32_t flags);
 
-int tcp_process_options(struct tcp_connection *conn, struct tcp_segment *seg);
+int tcp_process_options(struct tcp_conn *conn, struct tcp_seg *seg);
 
 /*
  void tcp_read_param_host_window(struct finsFrame *ff);
@@ -530,18 +590,6 @@ int tcp_process_options(struct tcp_connection *conn, struct tcp_segment *seg);
 #endif
 //---------------------------------------------------
 
-struct tcp_statistics {
-	uint16_t badChecksum; /* total number of segments that have a bad checksum*/
-	uint16_t noChecksum; /* total number of segments with no checksum */
-	uint16_t mismatchingLengths; /* total number of segments with mismatching segment lengths from the header and pseudoheader */
-	uint32_t totalBadSegments; /* total number of segments that were thrown away */
-	uint32_t totalRecieved; /* total number of incoming TCDP segments */
-	uint32_t totalSent; /* total number of outgoing TCP segments */
-	uint32_t totalACKs; /* total number of outgoing TCP segments */
-	uint32_t totalFast; /* total number of fast retransmits */
-	uint32_t totalGBN; /* total number of GBN */
-};
-
 #define TCP_LIB "tcp"
 #define TCP_MAX_FLOWS 	3
 #define TCP_FLOW_IPV4 	0
@@ -564,13 +612,14 @@ struct tcp_data {
 	uint32_t thread_id_num;
 	sem_t thread_id_sem;
 
+	//module values
 	uint8_t fast_enabled;
 	uint32_t fast_duplicates;
-	uint32_t fast_retransmits;
 
 	uint32_t mss;
 
-	struct tcp_statistics stats;
+	struct tcp_conn_stub_stats total_conn_stub_stats;
+	struct tcp_conn_stats total_conn_stats;
 //struct linked_list *if_list;
 };
 

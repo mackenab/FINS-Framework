@@ -5,7 +5,7 @@
  */
 #include "tcp_internal.h"
 
-void calcRTT(struct tcp_connection *conn) {
+void calcRTT(struct tcp_conn *conn) {
 	struct timeval current;
 	double sampRTT = 0;
 	double alpha = 0.125, beta = 0.25;
@@ -40,7 +40,7 @@ void calcRTT(struct tcp_connection *conn) {
 	PRINT_DEBUG("new: sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 }
 
-void handle_RST(struct tcp_connection *conn, struct tcp_segment *seg) {
+void handle_RST(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p", conn, seg);
 
 	//sending:
@@ -58,15 +58,18 @@ void handle_RST(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
+void handle_ACK(struct tcp_conn *conn, struct tcp_seg *seg) {
 	struct tcp_node *node;
 	struct tcp_node *temp_node;
-	struct tcp_segment *temp_seg;
+	struct tcp_seg *temp_seg;
 
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	PRINT_DEBUG("ack=%u, send=(%u, %u), sent=%u, sep=%u, fssn=%u, fsse=%u",
 			seg->ack_num-conn->issn, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->fin_sent, conn->fin_sep, conn->fssn, conn->fsse);
 	struct tcp_data *md = (struct tcp_data *) conn->module->data;
+
+	conn->stats.recv_acks++;
+	__sync_add_and_fetch(&md->total_conn_stats.recv_acks, 1);
 
 	//check if valid ACK
 	if (tcp_in_window(seg->ack_num, seg->ack_num, conn->send_seq_num, conn->send_seq_end)) {
@@ -88,6 +91,8 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 			//TODO process ACK options
 
 			conn->duplicate++; //TODO fix, creating duplicate from ACK or FIN ACK.
+			conn->stats.dup_acks++;
+			__sync_add_and_fetch(&md->total_conn_stats.dup_acks, 1);
 			//check for FR
 			if (md->fast_enabled && conn->duplicate >= md->fast_duplicates) {
 				conn->duplicate = 0;
@@ -130,7 +135,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 			//remove all segs
 			while (!tcp_queue_is_empty(conn->send_queue)) {
 				temp_node = tcp_queue_remove_front(conn->send_queue);
-				temp_seg = (struct tcp_segment *) temp_node->data;
+				temp_seg = (struct tcp_seg *) temp_node->data;
 
 				PRINT_DEBUG( "acked: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
 						temp_seg, temp_seg->seq_num-conn->issn, temp_seg->seq_end-conn->issn, temp_seg->seq_num, temp_seg->seq_end, temp_seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
@@ -193,7 +198,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//remove ACK segs
 				while (!tcp_queue_is_empty(conn->send_queue) && conn->send_queue->front != node) {
 					temp_node = tcp_queue_remove_front(conn->send_queue);
-					temp_seg = (struct tcp_segment *) temp_node->data;
+					temp_seg = (struct tcp_seg *) temp_node->data;
 
 					PRINT_DEBUG( "acked: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
 							temp_seg, temp_seg->seq_num-conn->issn, temp_seg->seq_end-conn->issn, temp_seg->seq_num, temp_seg->seq_end, temp_seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
@@ -265,7 +270,7 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//remove all segs
 		while (!tcp_queue_is_empty(conn->send_queue)) {
 			temp_node = tcp_queue_remove_front(conn->send_queue);
-			temp_seg = (struct tcp_segment *) temp_node->data;
+			temp_seg = (struct tcp_seg *) temp_node->data;
 			tcp_seg_free(temp_seg);
 			free(temp_node);
 		}
@@ -290,10 +295,12 @@ void handle_ACK(struct tcp_connection *conn, struct tcp_segment *seg) {
 		PRINT_ERROR(
 				"Invalid ACK, out of sent window: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, seqs=(%u, %u) (%u, %u), recv=(%u, %u) (%u, %u), ack=%u (%u), send=(%u, %u) (%u, %u)",
 				conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, seg->ack_num-conn->issn, seg->ack_num, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end);
+		conn->stats.bad_acks++;
+		__sync_add_and_fetch(&md->total_conn_stats.bad_acks, 1);
 	}
 }
 
-int process_flags(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *send_flags) {
+int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_flags) {
 	switch (conn->state) {
 	case TS_ESTABLISHED:
 		//can get ACKs, send/resend data, receive, send ACKs
@@ -508,7 +515,7 @@ int process_flags(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t
 	}
 }
 
-int process_flags_old(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *send_flags) {
+int process_flags_old(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_flags) {
 	switch (conn->state) {
 	case TS_ESTABLISHED:
 		//can get ACKs, send/resend data, receive, send ACKs
@@ -724,7 +731,7 @@ int process_flags_old(struct tcp_connection *conn, struct tcp_segment *seg, uint
 	}
 }
 
-int tcp_process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
+int tcp_process_options(struct tcp_conn *conn, struct tcp_seg *seg) {
 	uint8_t *pt = seg->options;
 	uint8_t i = 0;
 	uint8_t kind;
@@ -844,7 +851,7 @@ int tcp_process_options(struct tcp_connection *conn, struct tcp_segment *seg) {
 	return 1;
 }
 
-int process_seg(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *send_flags) {
+int process_seg(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_flags) {
 	int ret = process_flags(conn, seg, send_flags);
 	if (ret == -1) {
 		PRINT_ERROR("problem, dropping: conn=%p, seg=%p, send_flags=%p", conn, seg, send_flags);
@@ -883,10 +890,11 @@ int process_seg(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *
 	return 1;
 }
 
-uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
+uint16_t handle_data(struct tcp_conn *conn, struct tcp_seg *seg) {
 	struct tcp_node *node;
 
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
+	struct tcp_data *md = (struct tcp_data *) conn->module->data;
 
 	int ret;
 	//uint16_t flags = 0;
@@ -898,6 +906,8 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	//data handling
 	if (seg->seq_num == conn->recv_seq_num) { //add check for overlapping?
 		//in order seq num
+		conn->stats.in_order_segs++;
+		__sync_add_and_fetch(&md->total_conn_stats.in_order_segs, 1);
 
 		if (process_seg(conn, seg, &send_flags)) {
 			uint32_decrease(&conn->recv_win, seg->data_len);
@@ -910,7 +920,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//remove /transfer
 		while (!tcp_queue_is_empty(conn->recv_queue)) {
 			node = conn->recv_queue->front;
-			seg = (struct tcp_segment *) node->data;
+			seg = (struct tcp_seg *) node->data;
 
 			PRINT_DEBUG( "stored: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
 					seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
@@ -918,7 +928,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 			if (conn->recv_queue->front->seq_num < conn->recv_seq_num) {
 				if (conn->recv_seq_num <= conn->recv_seq_end) {
 					node = tcp_queue_remove_front(conn->recv_queue);
-					seg = (struct tcp_segment *) node->data;
+					seg = (struct tcp_seg *) node->data;
 					uint32_increase(&conn->recv_win, seg->data_len, conn->recv_max_win);
 					tcp_seg_free(seg);
 					free(node);
@@ -927,7 +937,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 						break;
 					} else {
 						node = tcp_queue_remove_front(conn->recv_queue);
-						seg = (struct tcp_segment *) node->data;
+						seg = (struct tcp_seg *) node->data;
 						uint32_increase(&conn->recv_win, seg->data_len, conn->recv_max_win);
 						tcp_seg_free(seg);
 						free(node);
@@ -935,7 +945,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				}
 			} else if (conn->recv_queue->front->seq_num == conn->recv_seq_num) {
 				node = tcp_queue_remove_front(conn->recv_queue);
-				seg = (struct tcp_segment *) node->data;
+				seg = (struct tcp_seg *) node->data;
 
 				if (process_seg(conn, seg, &send_flags)) {
 					PRINT_DEBUG("Connected to seqs=(%u, %u) (%u, %u), len=%d",
@@ -953,7 +963,7 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 						break;
 					} else {
 						node = tcp_queue_remove_front(conn->recv_queue);
-						seg = (struct tcp_segment *) node->data;
+						seg = (struct tcp_seg *) node->data;
 						uint32_increase(&conn->recv_win, seg->data_len, conn->recv_max_win);
 						tcp_seg_free(seg);
 						free(node);
@@ -976,6 +986,9 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//re-ordered segment
 		if (conn->recv_win) {
 			if (tcp_in_window(seg->seq_num, seg->seq_end, conn->recv_seq_num, conn->recv_seq_end)) {
+				conn->stats.out_order_segs++;
+				__sync_add_and_fetch(&md->total_conn_stats.out_order_segs, 1);
+
 				node = tcp_node_create((uint8_t *) seg, seg->data_len, seg->seq_num, seg->seq_end);
 				ret = tcp_queue_insert(conn->recv_queue, node, conn->recv_seq_num, conn->recv_seq_end);
 				PRINT_DEBUG("after");
@@ -988,10 +1001,19 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 				}
 			} else {
 				PRINT_DEBUG("Dropping out of window rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
+				if (0 /*if seg is within issn*/) {
+					conn->stats.dup_segs++;
+					__sync_add_and_fetch(&md->total_conn_stats.dup_segs, 1);
+				} else {
+					conn->stats.drop_segs++;
+					__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
+				}
 				tcp_seg_free(seg);
 			}
 		} else {
 			PRINT_DEBUG("Dropping window full host_window=%u", conn->recv_win);
+			conn->stats.drop_segs++;
+			__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
 			tcp_seg_free(seg);
 		}
 	}
@@ -999,8 +1021,8 @@ uint16_t handle_data(struct tcp_connection *conn, struct tcp_segment *seg) {
 	return send_flags;
 }
 
-void handle_reply(struct tcp_connection *conn, uint16_t flags) {
-	struct tcp_segment *seg;
+void handle_reply(struct tcp_conn *conn, uint16_t flags) {
+	struct tcp_seg *seg;
 	PRINT_DEBUG("Entered: conn=%p, flags=0x%x", conn, flags);
 
 	if (flags & FLAG_RST) { //TODO fix?
@@ -1065,8 +1087,8 @@ void handle_reply(struct tcp_connection *conn, uint16_t flags) {
 void *tcp_syn_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
-	struct tcp_connection_stub *conn_stub = thread_data->conn_stub;
-	struct tcp_segment *seg = thread_data->seg;
+	struct tcp_conn_stub *conn_stub = thread_data->conn_stub;
+	struct tcp_seg *seg = thread_data->seg;
 	free(thread_data);
 
 	uint16_t calc;
@@ -1117,7 +1139,7 @@ void *tcp_syn_thread(void *local) {
 	return NULL;
 }
 
-void tcp_recv_syn(struct tcp_connection_stub *conn_stub, struct tcp_segment *seg) {
+void tcp_recv_syn(struct tcp_conn_stub *conn_stub, struct tcp_seg *seg) {
 	struct tcp_node *node;
 
 	if (tcp_queue_has_space(conn_stub->syn_queue, 1)) {
@@ -1133,8 +1155,9 @@ void tcp_recv_syn(struct tcp_connection_stub *conn_stub, struct tcp_segment *seg
 	}
 }
 
-void recv_closed(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_closed(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: dropping: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
+	struct tcp_data *md = (struct tcp_data *) conn->module->data;
 
 	//TODO if RST, -, -
 	//TODO if ACK, <SEQ=SEG.ACK><CTL=RST>
@@ -1146,12 +1169,15 @@ void recv_closed(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else {
 	}
 
+	conn->stats.drop_segs++;
+	__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
 	tcp_seg_free(seg);
 }
 
-void recv_listen(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_listen(struct tcp_conn *conn, struct tcp_seg *seg) {
 	//ERROR shouldn't ever arrive here in this thread, kept if merge stubs
 	PRINT_DEBUG("Entered: Shouldn't arrive here: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
+	struct tcp_data *md = (struct tcp_data *) conn->module->data;
 
 	//TODO if RST, -, -
 	//TODO if ACK, <SEQ=SEG.ACK><CTL=RST>
@@ -1163,12 +1189,14 @@ void recv_listen(struct tcp_connection *conn, struct tcp_segment *seg) {
 	} else {
 	}
 
+	conn->stats.drop_segs++;
+	__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
 	tcp_seg_free(seg);
 }
 
-void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_syn_sent(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
-	struct tcp_segment *temp_seg;
+	struct tcp_seg *temp_seg;
 
 	//TODO ACK, If SEG.ACK =< ISS, or SEG.ACK > SND.NXT, send a reset <SEQ=SEG.ACK><CTL=RST>
 	//TODO ACK, If SND.UNA =< SEG.ACK =< SND.NXT
@@ -1297,9 +1325,10 @@ void recv_syn_sent(struct tcp_connection *conn, struct tcp_segment *seg) {
 	tcp_seg_free(seg);
 }
 
-void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_syn_recv(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
-	struct tcp_segment *temp_seg;
+
+	struct tcp_seg *temp_seg;
 	uint16_t flags;
 	//uint8_t reply;
 
@@ -1341,11 +1370,19 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 				//RTT
 				timer_stop(conn->to_gbn_data->tid);
 				conn->timeout = TCP_GBN_TO_DEFAULT;
+				conn->stats.timeout_total += conn->timeout;
+				conn->stats.timeout_count++;
 
 				//Cong
 				conn->cong_state = RENO_SLOWSTART;
+
 				conn->cong_window = (double) conn->MSS;
+				conn->stats.cong_window_total += conn->cong_window;
+				conn->stats.cong_window_count++;
+
 				conn->threshhold = conn->send_max_win / 2.0;
+				conn->stats.threshhold_total += conn->threshhold;
+				conn->stats.threshhold_count++;
 
 				if (!(seg->flags & FLAG_ACK)) {
 					flags = handle_data(conn, seg);
@@ -1475,7 +1512,7 @@ void recv_syn_recv(struct tcp_connection *conn, struct tcp_segment *seg) {
 	tcp_seg_free(seg);
 }
 
-void recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_established(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	//TODO send or resend data / get ACKs, & receive data / send ACKs
 
@@ -1498,7 +1535,7 @@ void recv_established(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_fin_wait_1(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	uint16_t flags;
 
@@ -1527,7 +1564,7 @@ void recv_fin_wait_1(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_fin_wait_1_old(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_fin_wait_1_old(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	uint16_t flags;
 
@@ -1580,7 +1617,7 @@ void recv_fin_wait_1_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_fin_wait_2(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	uint16_t flags;
 
@@ -1598,7 +1635,7 @@ void recv_fin_wait_2(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_closing(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	uint16_t flags;
 
@@ -1625,7 +1662,7 @@ void recv_closing(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_closing_old(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 
 	//TODO self, can still get ACKs & resend
@@ -1680,7 +1717,7 @@ void recv_closing_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 	tcp_seg_free(seg);
 }
 
-void recv_time_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_time_wait(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: dropping: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	uint16_t flags;
 
@@ -1707,7 +1744,7 @@ void recv_time_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_close_wait(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 
 	//TODO send or resend data / get ACKs
@@ -1723,7 +1760,7 @@ void recv_close_wait(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_last_ack(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	uint16_t flags;
 
@@ -1754,7 +1791,7 @@ void recv_last_ack(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-void recv_last_ack_old(struct tcp_connection *conn, struct tcp_segment *seg) {
+void recv_last_ack_old(struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 
 	//TODO can still get ACKs & resend data
@@ -1804,8 +1841,8 @@ void recv_last_ack_old(struct tcp_connection *conn, struct tcp_segment *seg) {
 void *tcp_recv_thread(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
-	struct tcp_segment *seg = thread_data->seg;
+	struct tcp_conn *conn = thread_data->conn;
+	struct tcp_seg *seg = thread_data->seg;
 	free(thread_data);
 
 	uint16_t calc;
@@ -1816,11 +1853,16 @@ void *tcp_recv_thread(void *local) {
 	/*#*/PRINT_DEBUG("sem_wait: conn=%p", conn);
 	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
+		conn->stats.recv_segs++;
+		__sync_add_and_fetch(&md->total_conn_stats.recv_segs, 1);
+
 		calc = tcp_seg_checksum(seg); //TODO add alt checksum
 		PRINT_DEBUG("checksum=%u, calc=%u", seg->checksum, calc);
 		if (seg->checksum == 0 || calc == 0) { //TODO remove override when IP prob fixed
 			if (seg->checksum == 0) {
 				//ignore checksum
+				conn->stats.no_checksum++;
+				__sync_add_and_fetch(&md->total_conn_stats.no_checksum, 1);
 			}
 
 			switch (conn->state) {
@@ -1861,15 +1903,22 @@ void *tcp_recv_thread(void *local) {
 				PRINT_ERROR( "Incorrect state: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p",
 						conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg);
 				PRINT_WARN("todo error");
+				conn->stats.drop_segs++;
+				__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
+				tcp_seg_free(seg);
 				break;
 			}
 		} else {
 			PRINT_ERROR( "Incorrect Checksum: conn=%p, host=%u/%u, rem=%u/%u, state=%u, seg=%p, recv checksum=%u, calc checksum=%u",
 					conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->checksum, calc);
+			conn->stats.bad_checksum++;
+			__sync_add_and_fetch(&md->total_conn_stats.bad_checksum, 1);
 			tcp_seg_free(seg);
 		}
 	} else {
 		PRINT_DEBUG("not running, dropping: seg=%p", seg);
+		conn->stats.drop_segs++;
+		__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
 		tcp_seg_free(seg);
 	}
 
@@ -1890,18 +1939,18 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
-	struct tcp_segment *seg;
-	struct tcp_connection *conn;
+	struct tcp_seg *seg;
+	struct tcp_conn *conn;
 	struct tcp_thread_data *thread_data;
 	//pthread_t thread;
-	struct tcp_connection_stub *conn_stub;
-	struct tcp_segment *temp_seg;
+	struct tcp_conn_stub *conn_stub;
+	struct tcp_seg *temp_seg;
 
 	seg = fdf_to_tcp(ff);
 	if (seg) {
 		/*#*/PRINT_DEBUG("");
 		secure_sem_wait(&md->conn_list_sem);
-		conn = (struct tcp_connection *) list_find4(md->conn_list, tcp_conn_addr_test, &seg->dst_ip, &seg->dst_port, &seg->src_ip, &seg->src_port);
+		conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &seg->dst_ip, &seg->dst_port, &seg->src_ip, &seg->src_port);
 		if (conn) {
 			if (conn->threads < TCP_THREADS_MAX) {
 				conn->threads++;
@@ -1932,7 +1981,7 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 				//check if listening sockets
 				/*#*/PRINT_DEBUG("");
 				secure_sem_wait(&md->conn_stub_list_sem);
-				conn_stub = (struct tcp_connection_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &seg->dst_ip, &seg->dst_port);
+				conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &seg->dst_ip, &seg->dst_port);
 				if (conn_stub) {
 					if (conn_stub->threads < TCP_THREADS_MAX) {
 						conn_stub->threads++;
@@ -2005,7 +2054,7 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 //################################################## Older/Not used attempts
 
-int handle_seq_num(struct tcp_connection *conn, struct tcp_segment *seg) {
+int handle_seq_num(struct tcp_conn *conn, struct tcp_seg *seg) {
 	if (tcp_in_window_overlaps(seg->seq_num, seg->seq_end, conn->recv_seq_num, conn->recv_seq_end)) {
 		if (seg->seq_num == conn->recv_seq_num) {
 			//continue processing
@@ -2023,7 +2072,7 @@ int handle_seq_num(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 }
 
-int handle_rst_test(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *reply_flags) {
+int handle_rst_test(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *reply_flags) {
 
 	if (seg->flags & FLAG_RST) {
 		switch (conn->state) {
@@ -2055,10 +2104,10 @@ int handle_rst_test(struct tcp_connection *conn, struct tcp_segment *seg, uint16
 
 	return 1;
 }
-int handle_auth(struct tcp_connection *conn, struct tcp_segment *seg) {
+int handle_auth(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
-int handle_syn(struct tcp_connection *conn, struct tcp_segment *seg) {
+int handle_syn(struct tcp_conn *conn, struct tcp_seg *seg) {
 	switch (conn->state) {
 	case TS_SYN_RECV:
 	case TS_ESTABLISHED:
@@ -2076,7 +2125,7 @@ int handle_syn(struct tcp_connection *conn, struct tcp_segment *seg) {
 	}
 	return 1;
 }
-int handle_ack_test(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *reply_flags) {
+int handle_ack_test(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *reply_flags) {
 
 	if (seg->flags & FLAG_ACK) {
 		switch (conn->state) {
@@ -2159,27 +2208,27 @@ int handle_ack_test(struct tcp_connection *conn, struct tcp_segment *seg, uint16
 	}
 	return 1;
 }
-int handle_urg(struct tcp_connection *conn, struct tcp_segment *seg) {
+int handle_urg(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
-int handle_data_test(struct tcp_connection *conn, struct tcp_segment *seg) {
+int handle_data_test(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
-int handle_fin(struct tcp_connection *conn, struct tcp_segment *seg) {
+int handle_fin(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
-int recv_closed_test(struct tcp_connection *conn, struct tcp_segment *seg) {
+int recv_closed_test(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
-int recv_listen_test(struct tcp_connection *conn, struct tcp_segment *seg) {
+int recv_listen_test(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
-int recv_syn_sent_test(struct tcp_connection *conn, struct tcp_segment *seg) {
+int recv_syn_sent_test(struct tcp_conn *conn, struct tcp_seg *seg) {
 	return 0;
 }
 
-void conn_send_ack_test(struct tcp_connection *conn) {
-	struct tcp_segment *seg;
+void conn_send_ack_test(struct tcp_conn *conn) {
+	struct tcp_seg *seg;
 
 	seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 	tcp_seg_update(seg, conn, FLAG_ACK);
@@ -2187,8 +2236,8 @@ void conn_send_ack_test(struct tcp_connection *conn) {
 	tcp_seg_free(seg);
 }
 
-void conn_send_reset_test(struct tcp_connection *conn, struct tcp_segment *seg) {
-	struct tcp_segment *temp_seg;
+void conn_send_reset_test(struct tcp_conn *conn, struct tcp_seg *seg) {
+	struct tcp_seg *temp_seg;
 
 	//<SEQ=SEG.ACK><CTL=RST>
 	temp_seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
@@ -2205,7 +2254,7 @@ void conn_send_reset_test(struct tcp_connection *conn, struct tcp_segment *seg) 
 	tcp_seg_free(temp_seg);
 }
 
-int process_seg_test(struct tcp_connection *conn, struct tcp_segment *seg, uint16_t *reply_flags) {
+int process_seg_test(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *reply_flags) {
 	int ret;
 
 	ret = handle_seq_num(conn, seg);
@@ -2279,7 +2328,7 @@ int process_seg_test(struct tcp_connection *conn, struct tcp_segment *seg, uint1
 }
 
 //doesn't cover CLOSED, LISTEN, or SYN_SENT states
-int recv_other_test(struct tcp_connection *conn, struct tcp_segment *seg) {
+int recv_other_test(struct tcp_conn *conn, struct tcp_seg *seg) {
 	int ret = 0;
 	uint16_t reply_flags = 0;
 	struct tcp_node *node;
@@ -2308,7 +2357,7 @@ int recv_other_test(struct tcp_connection *conn, struct tcp_segment *seg) {
 		//TODO process others
 		while (!tcp_queue_is_empty(conn->recv_queue)) {
 			node = conn->recv_queue->front;
-			seg = (struct tcp_segment *) node->data;
+			seg = (struct tcp_seg *) node->data;
 
 			ret = process_seg_test(conn, seg, &reply_flags);
 			if (ret == -1) {
@@ -2331,8 +2380,8 @@ int recv_other_test(struct tcp_connection *conn, struct tcp_segment *seg) {
 void *recv_thread_test(void *local) {
 	struct tcp_thread_data *thread_data = (struct tcp_thread_data *) local;
 	int id = thread_data->id;
-	struct tcp_connection *conn = thread_data->conn;
-	struct tcp_segment *seg = thread_data->seg;
+	struct tcp_conn *conn = thread_data->conn;
+	struct tcp_seg *seg = thread_data->seg;
 
 	PRINT_DEBUG("Entered: id=%u", id);
 	struct tcp_data *md = (struct tcp_data *) conn->module->data;

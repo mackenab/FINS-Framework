@@ -630,7 +630,12 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
 			if (md->sockets[hdr->sock_index].error_buf > 0) {
 				store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].error_list);
+				data_len = store->ff->ctrlFrame.data_len;
+				data = store->ff->ctrlFrame.data;
+				PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+
 				md->sockets[hdr->sock_index].error_buf--;
+				PRINT_DEBUG("after: sock_index=%d, error_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].error_buf);
 
 				if (store->addr->ss_family == AF_INET) {
 					addr_len = (uint32_t) sizeof(struct sockaddr_in);
@@ -651,8 +656,6 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 					return;
 				}
 
-				data_len = store->ff->ctrlFrame.data_len;
-				data = store->ff->ctrlFrame.data;
 			} else {
 				//NACK
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
@@ -668,7 +671,11 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		PRINT_DEBUG("before: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 		if (md->sockets[hdr->sock_index].data_buf > 0) {
 			store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].data_list);
-			md->sockets[hdr->sock_index].data_buf -= store->ff->dataFrame.pduLength - store->pos;
+			data_len = store->ff->dataFrame.pduLength;
+			data = store->ff->dataFrame.pdu;
+			PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+
+			md->sockets[hdr->sock_index].data_buf -= data_len - store->pos;
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 			if (store->addr->ss_family == AF_INET) {
@@ -689,9 +696,6 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
-
-			data_len = store->ff->dataFrame.pduLength;
-			data = store->ff->dataFrame.pdu;
 		}
 	}
 
@@ -736,8 +740,10 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			if (flags & MSG_ERRQUEUE) {
 				daemon_store_free(store);
 			} else {
+				store->pos += msg_len;
+				PRINT_DEBUG("prepending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 				list_prepend(md->sockets[hdr->sock_index].data_list, store);
-				md->sockets[hdr->sock_index].data_buf += store->ff->dataFrame.pduLength - store->pos;
+				md->sockets[hdr->sock_index].data_buf += data_len - store->pos;
 			}
 		}
 
@@ -1498,6 +1504,8 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 	uint32_t flags = POLLIN;
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_udp, module, &flags);
 
+	uint32_t data_len = ff->dataFrame.pduLength;
+	uint8_t *data = ff->dataFrame.pdu;
 	uint32_t data_pos = 0;
 	flags = 0;
 	struct daemon_call *call;
@@ -1505,10 +1513,10 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 	while (1) {
 		call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
 		if (call != NULL) {
-			data_pos += recvmsg_in_udp(call, module, ff->metaData, ff->dataFrame.pduLength - data_pos, ff->dataFrame.pdu + data_pos, src_addr, 0);
+			data_pos += recvmsg_in_udp(call, module, ff->metaData, data_len - data_pos, data + data_pos, src_addr, 0);
 			list_remove(md->sockets[sock_index].call_list, call);
 
-			if (data_pos == ff->dataFrame.pduLength) {
+			if (data_pos == data_len) {
 				freeFinsFrame(ff);
 				return;
 			}
@@ -1524,8 +1532,9 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 	store->pos = data_pos;
 
 	if (list_has_space(md->sockets[sock_index].data_list)) {
+		PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 		list_append(md->sockets[sock_index].data_list, store);
-		md->sockets[sock_index].data_buf += ff->dataFrame.pduLength;
+		md->sockets[sock_index].data_buf += data_len - store->pos;
 		PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, ff->metaData, md->sockets[sock_index].data_buf);
 	} else {
 		PRINT_ERROR("data_list full: sock_index=%d, ff=%p", sock_index, ff);

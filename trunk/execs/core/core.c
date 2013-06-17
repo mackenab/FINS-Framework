@@ -898,12 +898,12 @@ void core_termination_handler(int sig) {
 }
 
 void core_tests(void) {
-	char recv_data[4000];
-
 	while (1) {
 		PRINT_IMPORTANT("waiting...");
 		//sleep(10);
-		gets(recv_data);
+		//char recv_data[4000];
+		//gets(recv_data);
+		fgetc(stdin); //wait until user enters
 		PRINT_IMPORTANT("active");
 
 		if (0) {
