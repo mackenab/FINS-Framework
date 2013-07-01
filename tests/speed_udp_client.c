@@ -69,10 +69,10 @@ int main(int argc, char *argv[]) {
 	memset(msg, 89, 131072);
 	msg[131072] = '\0';
 
-	//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) == -1) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		perror("Socket");
-		printf("Failure\n");
+		printf("Failure");
 		exit(1);
 	}
 
@@ -121,29 +121,10 @@ int main(int argc, char *argv[]) {
 	printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
 		perror("Bind");
-		printf("Failure");
+		printf("Failure\n");
 		exit(1);
 	}
 	//*/
-
-	printf("Connecting to server: addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
-	while (1) {
-		if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
-			printf("failed connect: errno=%d errno='%s'\n", errno, strerror(errno));
-			if (errno == EINPROGRESS || errno == EALREADY) {
-			} else if (errno == EISCONN) {
-				break;
-			} else {
-				sleep(5);
-			}
-		} else {
-			break;
-		}
-	}
-
-	printf("Connection establisehed sock=%d to (%s/%d) netw=%u\n", sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
-			server_addr.sin_addr.s_addr);
-	fflush(stdout);
 
 	//fgetc(stdin); //wait until user enters
 
@@ -159,7 +140,7 @@ int main(int argc, char *argv[]) {
 
 	double total = 15;
 	double speed = 10000000; //bits per sec
-	int len = 16000; //msg size
+	int len = 1460; //msg size
 
 	double time = 8 * len / speed * 1000000;
 	int use = (int) (time + .5); //ceil(time);

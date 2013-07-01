@@ -9,6 +9,41 @@
 #include <signal.h>
 
 /** ----------------------------------------------------------------------------------*/
+
+int wifistub_setNonblocking(int fd) { //TODO move to common file?
+	int flags;
+
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 1;
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
+
+int wifistub_setBlocking(int fd) {
+	int flags;
+
+	/* If they have O_NONBLOCK, use the Posix way to do it */
+#if defined(O_NONBLOCK)
+	/* Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5. */
+	if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
+		flags = 0;
+	}
+	return fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+#else
+	/* Otherwise, use the old way of doing it */
+	flags = 0; //TODO verify is right?
+	return ioctl(fd, FIOBIO, &flags);
+#endif
+}
+
 void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared) {
 	PRINT_IMPORTANT("Entered: hdr=%p, ii_num=%u, shared=%p", hdr, hdr->ii_num, shared);
 
@@ -56,8 +91,7 @@ void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *
 		PRINT_ERROR("accept error: capture_fd=%d, errno=%u, str='%s'", shared->capture_fd, errno, strerror(errno));
 		close_pipes(shared);
 		return;
-	}
-	PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
+	}PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
 
 	sleep(5);
 
