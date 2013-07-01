@@ -181,7 +181,7 @@ void listen_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta, "backlog", &backlog, META_TYPE_INT32);
 
-	if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_EXEC, EXEC_TCP_LISTEN)) {
+	if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_EXEC, DAEMON_EXEC_TCP_LISTEN)) {
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
 		PRINT_ERROR("Exited: failed to send ff");
@@ -214,6 +214,7 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	case SS_CONNECTING:
 		if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
 			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+				PRINT_DEBUG("inserting call: hdr=%p", hdr);
 				md->calls[hdr->call_index].flags = flags;
 
 				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
@@ -317,9 +318,10 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, EXEC_TCP_CONNECT);
+	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_CONNECT);
 	if (sent > 0) {
 		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			PRINT_DEBUG("inserting call: hdr=%p", hdr);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].flags = flags;
 			md->calls[hdr->call_index].sent = sent;
@@ -365,6 +367,7 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	case SS_CONNECTING:
 		if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
 			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+				PRINT_DEBUG("inserting call: hdr=%p", hdr);
 				md->calls[hdr->call_index].flags = flags;
 
 				md->calls[hdr->call_index].sock_id_new = sock_id_new; //TODO redo so not in call? or in struct inside call as void *pt;
@@ -412,9 +415,10 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, EXEC_TCP_ACCEPT);
+	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_ACCEPT);
 	if (sent > 0) {
 		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			PRINT_DEBUG("inserting call: hdr=%p", hdr);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].flags = flags;
 			md->calls[hdr->call_index].sent = sent;
@@ -651,7 +655,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	case SS_UNCONNECTED:
 		PRINT_WARN("todo error");
 		//TODO buffer data & send ACK
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EPIPE);
 		free(data);
 		return;
 	case SS_CONNECTING:
@@ -659,12 +663,18 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		break;
 	case SS_DISCONNECTING:
 		PRINT_WARN("todo error");
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EPIPE);
 		free(data);
 		return;
 	default:
 		PRINT_WARN("todo error");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		free(data);
+		return;
+	}
+
+	if (!(md->sockets[hdr->sock_index].status & DAEMON_STATUS_WR)) {
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EPIPE); //TODO change to correct?
 		free(data);
 		return;
 	}
@@ -750,6 +760,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	uint32_t sent = daemon_fdf_to_switch(module, DAEMON_FLOW_TCP, data_len, data, meta);
 	if (sent > 0) {
 		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			PRINT_DEBUG("inserting call: hdr=%p", hdr);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].flags = flags;
 			md->calls[hdr->call_index].buf = data_len;
@@ -854,6 +865,27 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			return;
 		}
+	} else {
+		PRINT_DEBUG("status=0x%x, test=%d", md->sockets[hdr->sock_index].status, !(md->sockets[hdr->sock_index].status & DAEMON_STATUS_RD));
+		if (!(md->sockets[hdr->sock_index].status & DAEMON_STATUS_RD)) {
+			uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
+			uint32_t rem_port = (uint32_t) addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+
+			addr_len = sizeof(struct sockaddr_in);
+
+			struct sockaddr_storage addr;
+			struct sockaddr_in *addr4 = (struct sockaddr_in *) &addr;
+
+			//TODO check addressing & remove if not right?
+			addr4->sin_addr.s_addr = htonl(rem_ip);
+			addr4->sin_port = htons(rem_port);
+
+			int ret = send_wedge_recvmsg(module, hdr, addr_len, &addr, 0, NULL, 0, NULL);
+			if (!ret) {
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			}
+			return;
+		}
 	}
 
 	if (store != NULL) {
@@ -925,6 +957,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	}
 
 	if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		PRINT_DEBUG("inserting call: hdr=%p", hdr);
 		md->calls[hdr->call_index].flags = flags;
 		md->calls[hdr->call_index].buf = buf_len;
 		md->calls[hdr->call_index].ret = msg_controllen;
@@ -984,15 +1017,15 @@ void release_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	uint32_t exec_call = (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) ? EXEC_TCP_CLOSE : EXEC_TCP_CLOSE_STUB;
+	uint32_t exec_call = (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) ? DAEMON_EXEC_TCP_CLOSE : DAEMON_EXEC_TCP_CLOSE_STUB;
 	PRINT_DEBUG("serial_num=%u, state=%u, exec_call=%u", serial_num, md->sockets[hdr->sock_index].state, exec_call);
 
 	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, exec_call);
 	if (sent > 0) {
 		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			PRINT_DEBUG("inserting call: hdr=%p", hdr);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].sent = sent;
-			PRINT_DEBUG("");
 		} else {
 			PRINT_ERROR("Insert fail: hdr=%p", hdr);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1064,9 +1097,10 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 			}
 
 			uint32_t serial_num = gen_control_serial_num();
-			uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, EXEC_TCP_POLL);
+			uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_POLL);
 			if (sent > 0) {
 				if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+					PRINT_DEBUG("inserting call: hdr=%p", hdr);
 					md->calls[hdr->call_index].serial_num = serial_num;
 					md->calls[hdr->call_index].buf = events;
 					md->calls[hdr->call_index].flags = initial; //is initial
@@ -1184,9 +1218,10 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 					}
 
 					uint32_t serial_num = gen_control_serial_num();
-					uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, EXEC_TCP_POLL);
+					uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_POLL);
 					if (sent > 0) {
 						if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+							PRINT_DEBUG("inserting call: hdr=%p", hdr);
 							md->calls[hdr->call_index].serial_num = serial_num;
 							md->calls[hdr->call_index].buf = events;
 							md->calls[hdr->call_index].flags = initial; //is final
@@ -1263,9 +1298,10 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 			}
 
 			uint32_t serial_num = gen_control_serial_num();
-			uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, EXEC_TCP_POLL);
+			uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_POLL);
 			if (sent > 0) {
 				if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+					PRINT_DEBUG("inserting call: hdr=%p", hdr);
 					md->calls[hdr->call_index].serial_num = serial_num;
 					md->calls[hdr->call_index].buf = events;
 					md->calls[hdr->call_index].flags = initial; //is final
@@ -1305,12 +1341,61 @@ void socketpair_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 
 void shutdown_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int how) {
 	PRINT_DEBUG("Entered: hdr=%p, how=%d", hdr, how);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	/**
-	 * TODO Implement the checking of the shut_RD, shut_RW flags before making any operations
-	 * applied on a TCP socket
-	 */
-	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
+	uint32_t how_daemon;
+	if (how == SHUT_RD) {
+		how_daemon = DAEMON_STATUS_RD;
+	} else if (how == SHUT_WR) {
+		how_daemon = DAEMON_STATUS_WR;
+	} else if (how == SHUT_RDWR) {
+		how_daemon = DAEMON_STATUS_RDWR;
+	} else {
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EINVAL);
+		return;
+	}
+
+	if (md->sockets[hdr->sock_index].state == SS_CONNECTED) {
+		uint32_t and_test = md->sockets[hdr->sock_index].status & how_daemon;
+		PRINT_DEBUG("before: status=0x%x, how=0x%x, and=0x%x", md->sockets[hdr->sock_index].status, how_daemon, and_test);
+		if (and_test) {
+			md->sockets[hdr->sock_index].status &= ~and_test;
+			PRINT_DEBUG("after: status=0x%x, how=0x%x, and=0x%x", md->sockets[hdr->sock_index].status, how_daemon, and_test);
+
+			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+			metadata_create(meta);
+
+			uint32_t family = AF_INET;
+			secure_metadata_writeToElement(meta, "family", &family, META_TYPE_INT32);
+			uint32_t state = md->sockets[hdr->sock_index].state;
+			secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
+
+			uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+			secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
+			uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
+			secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
+			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+				uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
+				secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
+				uint32_t rem_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+				secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
+			}
+
+			secure_metadata_writeToElement(meta, "value", &and_test, META_TYPE_INT32);
+
+			if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_ALERT, DAEMON_ALERT_SHUTDOWN)) {
+				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
+			} else {
+				PRINT_ERROR("Exited: failed to send ff");
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				metadata_destroy(meta);
+			}
+		} else {
+			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		}
+	} else {
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ENOTCONN);
+	}
 }
 
 void close_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr) {
@@ -1506,11 +1591,10 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_READ_PARAM, param_id);
 		if (sent > 0) {
 			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+				PRINT_DEBUG("inserting call: hdr=%p", hdr);
 				md->calls[hdr->call_index].serial_num = serial_num;
 				md->calls[hdr->call_index].buf = optname;
 				md->calls[hdr->call_index].sent = sent;
-
-				PRINT_DEBUG("");
 			} else {
 				PRINT_ERROR("Insert fail: hdr=%p", hdr);
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1687,10 +1771,9 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_SET_PARAM, param_id);
 		if (sent > 0) {
 			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+				PRINT_DEBUG("inserting call: hdr=%p", hdr);
 				md->calls[hdr->call_index].serial_num = serial_num;
 				md->calls[hdr->call_index].sent = sent;
-
-				PRINT_DEBUG("");
 			} else {
 				PRINT_ERROR("Insert fail: hdr=%p", hdr);
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
@@ -1708,7 +1791,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index, call->flags);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	if (ff->ctrlFrame.param_id != EXEC_TCP_CONNECT) {
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CONNECT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
 		freeFinsFrame(ff);
@@ -1716,9 +1799,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	}
 
 	uint32_t ret_msg;
-
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
 
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		md->sockets[call->sock_index].state = SS_CONNECTED;
@@ -1746,7 +1827,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index, call->sock_id_new, call->sock_index_new, call->flags);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	if (ff->ctrlFrame.param_id != EXEC_TCP_ACCEPT) {
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_ACCEPT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
 		freeFinsFrame(ff);
@@ -1754,13 +1835,11 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 	}
 
 	uint32_t ret_msg;
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
 	uint32_t rem_ip;
+	secure_metadata_readFromElement(ff->metaData, "rem_ip", &rem_ip);
 	uint32_t rem_port;
-
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
-	secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
-	secure_metadata_readFromElement(meta, "rem_port", &rem_port);
+	secure_metadata_readFromElement(ff->metaData, "rem_port", &rem_port);
 
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		if (daemon_sockets_insert(module, call->sock_id_new, call->sock_index_new, md->sockets[call->sock_index].type, md->sockets[call->sock_index].protocol,
@@ -1812,7 +1891,7 @@ void sendmsg_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, flags=%u",
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index, call->flags);
 
-	if (ff->ctrlFrame.param_id != EXEC_TCP_SEND) {
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_SEND) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
 		freeFinsFrame(ff);
@@ -1820,9 +1899,7 @@ void sendmsg_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	}
 
 	uint32_t ret_msg;
-
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
 
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		ack_send(module, call->id, call->index, call->type, ret_msg);
@@ -1911,7 +1988,7 @@ void release_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d",
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index);
 
-	if ((ff->ctrlFrame.param_id != EXEC_TCP_CLOSE && ff->ctrlFrame.param_id != EXEC_TCP_CLOSE_STUB) || ff->ctrlFrame.ret_val == FCF_FALSE) {
+	if ((ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CLOSE && ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CLOSE_STUB) || ff->ctrlFrame.ret_val == FCF_FALSE) {
 		PRINT_DEBUG("Exiting, NACK: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
 	} else {
@@ -1931,12 +2008,10 @@ void poll_in_tcp_fcf(struct fins_module *module, struct finsFrame *ff, struct da
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	uint32_t ret_msg = 0;
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+	//secure_metadata_readFromElement(ff->metaData, "mask", &mask);
 
-	metadata *meta = ff->metaData;
-	secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
-	//secure_metadata_readFromElement(meta, "mask", &mask);
-
-	if ((ff->ctrlFrame.param_id != EXEC_TCP_POLL) || ff->ctrlFrame.ret_val == FCF_FALSE) {
+	if ((ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_POLL) || ff->ctrlFrame.ret_val == FCF_FALSE) {
 		PRINT_ERROR("Exiting, NACK: ff=%p, param_id=%d, ret_val=%u", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
 	} else {
@@ -1985,6 +2060,10 @@ void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint3
 
 	if (*flags & POLLERR) {
 		mask |= POLLERR;
+	}
+
+	if (*flags & POLLHUP) {
+		mask |= POLLHUP;
 	}
 
 	if (*flags & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
@@ -2285,6 +2364,72 @@ void daemon_in_poll_tcp(struct fins_module *module, struct finsFrame *ff, uint32
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &ret_msg);
 }
 
+void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg) {
+	PRINT_DEBUG("Entered: ff=%p, ret_msg=%u", ff, ret_msg);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
+	uint32_t family;
+	secure_metadata_readFromElement(ff->metaData, "family", &family);
+	uint32_t state;
+	secure_metadata_readFromElement(ff->metaData, "state", &state);
+
+	uint32_t host_ip;
+	secure_metadata_readFromElement(ff->metaData, "host_ip", &host_ip);
+	uint32_t host_port;
+	secure_metadata_readFromElement(ff->metaData, "host_port", &host_port);
+
+	uint32_t rem_ip = 0;
+	uint32_t rem_port = 0;
+	if (state > SS_UNCONNECTED) {
+		secure_metadata_readFromElement(ff->metaData, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(ff->metaData, "rem_port", &rem_port);
+	}
+
+	int sock_index = match_conn_addr4_tcp(module, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
+	if (sock_index == -1) {
+		sock_index = match_conn_addr4_tcp(module, host_ip, (uint16_t) host_port, 0, 0);
+	}
+	if (sock_index == -1) {
+		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
+		freeFinsFrame(ff);
+		return;
+	}
+
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
+
+	md->sockets[sock_index].status &= ~ret_msg;
+
+	uint32_t flags;
+
+	if (ret_msg & DAEMON_STATUS_WR) {
+		//TODO check saved poll calls & return POLLHUP?
+		flags = POLLHUP;
+		list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &flags);
+	}
+
+	if (ret_msg & DAEMON_STATUS_RD) {
+		flags = 0;
+		struct daemon_call *call;
+		uint32_t addr_len = sizeof(struct sockaddr_in);
+		struct sockaddr_storage addr;
+		addr.ss_family = md->sockets[sock_index].family;
+
+		while (1) {
+			call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
+			if (call != NULL) {
+				int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, addr_len, &addr, 0, NULL, 0, NULL);
+				if (!ret) {
+					nack_send(module, call->id, call->index, call->type, 1);
+				}
+				list_remove(md->sockets[sock_index].call_list, call);
+			} else {
+				break;
+			}
+		}
+	}
+}
+
 void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 	PRINT_DEBUG("Entered: call=%p", call);
 	struct daemon_data *md = (struct daemon_data *) module->data;
@@ -2390,7 +2535,7 @@ void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struc
 	PRINT_DEBUG("Entered: ff=%p, call=%p, reply=%d", ff, call, reply);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	if (ff->ctrlFrame.param_id != EXEC_TCP_CONNECT) {
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CONNECT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		if (reply)
 			nack_send(module, call->id, call->index, call->type, 1);
@@ -2431,7 +2576,7 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 	PRINT_DEBUG("Entered: ff=%p, call=%p, reply=%d", ff, call, reply);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	if (ff->ctrlFrame.param_id != EXEC_TCP_ACCEPT) {
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_ACCEPT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		if (reply)
 			nack_send(module, call->id, call->index, call->type, 1);

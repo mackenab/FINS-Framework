@@ -107,7 +107,9 @@
 #define OP_UNLOAD_STR "unload"
 #define OP_REPLACE_STR "replace"
 #define OP_SHUTDOWN_STR "shutdown"
-#define OP_LISTEN_STR "listen"
+
+//console specific operations
+#define OP_LISTEN_STR "listen" //TODO change this so that it informs the module reference that someone is listening?
 #define OP_CONSOLE_STR "console"
 //display params?
 //help options, operations --help

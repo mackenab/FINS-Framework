@@ -23,6 +23,9 @@ MAX_DEPTH := 10
 filter_headers = $(shell ls $(1) 2> /dev/null | grep \\.h)
 filter_headers_path = $(foreach DIR,$(1),$(addprefix $(DIR)/,$(call filter_headers,$(DIR))))
 
+
+
+
 ###### build for android (arch arm) ######
 ifdef BUILD_FOR_ANDROID_ARM
 TARGET_PLATFORM := "Android arch-ARM"
@@ -43,20 +46,21 @@ BIN := $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x
 #signals using a different system & not to set the values of CC, LD, CFLAGS, LDFLAGS
 ifndef ALTERNATIVE_BUILD
 #CC := $(BIN)/arm-eabi-gcc
-CC := $(BIN)/arm-linux-androideabi-gcc
+CC = $(BIN)/arm-linux-androideabi-gcc
 
 CCOPTS := -DBUILD_FOR_ANDROID
 CCOPTS += -g -O2 -Wall #flags for valgrind
 INCLS := -I$(USR)/include
 
 #LD := $(BIN)/arm-eabi-gcc
-LD := $(BIN)/arm-linux-androideabi-gcc
+LD = $(BIN)/arm-linux-androideabi-gcc
+
 LDOPTS := -g -O2 -Wall #flags for valgrind
 LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
 #LDOPTS += -Wl,--entry=main,-rpath-link=$(USR)/lib,-rpath=/data/local/fins,--dynamic-linker=/system/bin/linker -nostartfiles -nostdlib
-LDOPTS += 
 #LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcc.a
 #LDOPTS += $(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3/libgcov.a
+
 LIBPATHS := -L$(USR)/lib 
 #LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.4.3
 #LIBPATHS += -L$(ANDROID_NDK_ROOT)/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/4.6
@@ -100,11 +104,11 @@ EXECS_LIST := capturer console core wedge
 
 #signals using a different system & not to set the values of CC, LD, CFLAGS, LDFLAGS
 ifndef ALTERNATIVE_BUILD
-CC := gcc
+CC = gcc
 CCOPTS := -g -O0 -Wall #flags for valgrind
 INCLS :=
 
-LD := gcc
+LD = gcc
 LDOPTS := -g -O0 -Wall #flags for valgrind
 LIBPATHS :=
 LIBS := 

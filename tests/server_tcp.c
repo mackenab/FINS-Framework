@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
 	while (i < 10000) {
 		ret = poll(fds, nfds, time);
 		if (ret || 0) {
-			if (0) {
+			if (1) {
 				printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 				printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ",
 						(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR) > 0,
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
 						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 				fflush(stdout);
 			}
-			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
 				if (pID || 1) {
 					if (temp != 0) {
 						bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
@@ -345,4 +345,3 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
-

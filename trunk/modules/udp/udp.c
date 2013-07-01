@@ -229,15 +229,14 @@ void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 	uint32_t rem_ip = 0;
 	uint32_t rem_port = 0;
 
-	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
-	case EXEC_UDP_CLEAR_SENT:
-		PRINT_DEBUG("param_id=EXEC_UDP_CLEAR_SENT (%d)", ff->ctrlFrame.param_id);
+	case UDP_EXEC_CLEAR_SENT:
+		PRINT_DEBUG("param_id=UDP_EXEC_CLEAR_SENT (%d)", ff->ctrlFrame.param_id);
 
-		secure_metadata_readFromElement(meta, "host_ip", &host_ip);
-		secure_metadata_readFromElement(meta, "host_port", &host_port);
-		secure_metadata_readFromElement(meta, "rem_ip", &rem_ip);
-		secure_metadata_readFromElement(meta, "rem_port", &rem_port);
+		secure_metadata_readFromElement(ff->metaData, "host_ip", &host_ip);
+		secure_metadata_readFromElement(ff->metaData, "host_port", &host_port);
+		secure_metadata_readFromElement(ff->metaData, "rem_ip", &rem_ip);
+		secure_metadata_readFromElement(ff->metaData, "rem_port", &rem_port);
 
 		udp_exec_clear_sent(module, ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t) rem_port);
 		break;
@@ -273,7 +272,6 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 	//uint32_t udp_len;
 	//uint32_t checksum;
 
-	//metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 	case ERROR_ICMP_TTL:
 		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);

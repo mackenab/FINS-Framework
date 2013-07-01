@@ -214,10 +214,8 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		return;
 	}
 
-	metadata *meta = ff->metaData;
-
 	uint32_t protocol;
-	secure_metadata_readFromElement(meta, "recv_protocol", &protocol);
+	secure_metadata_readFromElement(ff->metaData, "recv_protocol", &protocol);
 
 	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
 		PRINT_ERROR("Protocol =/= ICMP! Discarding frame...");
@@ -325,12 +323,10 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 	struct ipv4_packet *ipv4_pkt_sent = (struct ipv4_packet *) icmp_pkt->data;
 	uint16_t sent_data_len = data_len - IPV4_HLEN(ipv4_pkt_sent);
 
-	metadata *meta = ff->metaData;
-
 	uint32_t type = icmp_pkt->type;
-	secure_metadata_writeToElement(meta, "recv_icmp_type", &type, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_icmp_type", &type, META_TYPE_INT32);
 	uint32_t code = icmp_pkt->code;
-	secure_metadata_writeToElement(meta, "recv_icmp_code", &code, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_icmp_code", &code, META_TYPE_INT32);
 
 	struct finsFrame *ff_err;
 
@@ -351,12 +347,11 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 			//TODO fix here
 			struct icmp_sent *sent = (struct icmp_sent *) list_find2(md->sent_list, icmp_sent_match_test, &sent_data_len, ipv4_pkt_sent->ip_data);
 			if (sent != NULL) {
-				metadata *meta_err = sent->ff->metaData;
-				metadata_copy(meta, meta_err);
+				metadata_copy(ff->metaData, sent->ff->metaData);
 
 				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = FF_CONTROL;
-				ff_err->metaData = meta_err;
+				ff_err->metaData = sent->ff->metaData;
 				sent->ff->metaData = NULL;
 
 				ff_err->ctrlFrame.sender_id = module->index;
@@ -391,7 +386,7 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 
 		ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 		ff_err->dataOrCtrl = FF_CONTROL;
-		ff_err->metaData = meta;
+		ff_err->metaData = ff->metaData;
 		ff->metaData = NULL;
 
 		ff_err->ctrlFrame.sender_id = module->index;
@@ -433,14 +428,12 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	icmp_pkt_reply->checksum = htons(icmp_checksum(pdu_reply, pdu_len_reply));
 	PRINT_DEBUG("checksum=0x%x", icmp_pkt_reply->checksum);
 
-	metadata *meta = ff->metaData;
-
 	uint32_t family;
-	secure_metadata_readFromElement(meta, "recv_family", &family);
+	secure_metadata_readFromElement(ff->metaData, "recv_family", &family);
 	uint32_t src_ip;
-	secure_metadata_readFromElement(meta, "recv_src_ipv4", &src_ip);
+	secure_metadata_readFromElement(ff->metaData, "recv_src_ipv4", &src_ip);
 	uint32_t dst_ip;
-	secure_metadata_readFromElement(meta, "recv_dst_ipv4", &dst_ip);
+	secure_metadata_readFromElement(ff->metaData, "recv_dst_ipv4", &dst_ip);
 
 	metadata *meta_reply = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_reply);

@@ -195,26 +195,14 @@ struct socket_options { //TODO change to common opts, then union of structs for 
 //SOL_RAW stuff
 	int FICMP_FILTER;
 
-//SOL_TCP stuff;
+	//SOL_TCP stuff;
 	int FTCP_NODELAY;
 };
 
-struct tcp_Parameters {
-
-	int SHUT_RD;
-	int SHUT_WR;
-
-};
-
-//TODO merge with ipv4 stuff & create centralized IP/MAC/Device handling
-//extern uint8_t my_host_if_name[IFNAMSIZ];
-//extern uint8_t my_host_if_num;
-//extern uint64_t my_host_mac_addr;
-//extern uint32_t my_host_ip_addr;
-//extern uint32_t my_host_mask;
-//extern uint32_t loopback_ip_addr;
-//extern uint32_t loopback_mask;
-//extern uint32_t any_ip_addr;
+#define DAEMON_STATUS_NONE 	0x0
+#define DAEMON_STATUS_RD 	0x1
+#define DAEMON_STATUS_WR 	0x2
+#define DAEMON_STATUS_RDWR (DAEMON_STATUS_RD|DAEMON_STATUS_WR)
 
 //Netlink stuff
 struct nl_wedge_to_daemon_hdr {
@@ -315,10 +303,13 @@ struct daemon_socket {
 
 	uint64_t sock_id;
 	socket_state state;
+	uint8_t status; //DAEMON_STATUS_RD=reading, DAEMON_STATUS_WR=writing, or DAEMON_STATUS_RDWR=both
 
 	uint32_t family;
 	struct sockaddr_storage host_addr; //host format
+	uint8_t host_any_addr; //signals was bound to INANY_ADDR //if bind w/INANY_ADDR, bind to current main IP, flag this for recv
 	struct sockaddr_storage rem_addr; //host format
+	//uint8_t rem_any_addr; //signals was bound to INANY_ADDR //TODO unneeded, remove?
 
 	uint8_t listening;
 	int backlog;
@@ -354,16 +345,6 @@ uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadat
 uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta);
 
 //TODO standardize these, so that there aren't different ones for each proto
-//#define EXEC_TCP_CONNECT 0
-//#define EXEC_TCP_LISTEN 1
-//#define EXEC_TCP_ACCEPT 2
-//#define EXEC_TCP_SEND 3
-//#define EXEC_TCP_RECV 4
-//#define EXEC_TCP_CLOSE 5
-//#define EXEC_TCP_CLOSE_STUB 6
-//#define EXEC_TCP_OPT 7
-//#define EXEC_TCP_POLL 8
-#define EXEC_TCP_POLL_POST 9 //only one that's used in daemon.c
 //TODO not used? what are these for in this module file?
 //#define ERROR_ICMP_TTL 0
 //#define ERROR_ICMP_DEST_UNREACH 1
@@ -453,10 +434,10 @@ int daemon_release(struct fins_module *module);
 
 void daemon_get_ff(struct fins_module *module);
 void daemon_fcf(struct fins_module *module, struct finsFrame *ff);
+void daemon_alert(struct fins_module *module, struct finsFrame *ff);
 void daemon_read_param_reply(struct fins_module *module, struct finsFrame *ff);
 void daemon_set_param(struct fins_module *module, struct finsFrame *ff);
 void daemon_set_param_reply(struct fins_module *module, struct finsFrame *ff);
-void daemon_exec(struct fins_module *module, struct finsFrame *ff);
 void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff);
 void daemon_error(struct fins_module *module, struct finsFrame *ff);
 
@@ -546,7 +527,8 @@ struct daemon_socket_other_ops {
 //void (*sendmsg_timeout)(struct fins_module *module, struct daemon_call *call); //TODO remove? not used atm
 };
 
-#define EXEC_DAEMON_GET_ADDR 0
+#define DAEMON_ALERT_POLL 0 //only one that's used in daemon.c
+#define DAEMON_ALERT_SHUTDOWN 1
 
 //don't use 0
 #define DAEMON_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS

@@ -754,6 +754,7 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	}
 
 	if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		PRINT_DEBUG("inserting call: hdr=%p", hdr);
 		md->calls[hdr->call_index].flags = flags;
 		md->calls[hdr->call_index].buf = buf_len;
 		md->calls[hdr->call_index].ret = msg_controllen;
@@ -804,7 +805,7 @@ void release_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			uint32_t state = md->sockets[hdr->sock_index].state;
 			secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 
-			if (daemon_fcf_to_switch(module, DAEMON_FLOW_UDP, meta, gen_control_serial_num(), CTRL_EXEC, EXEC_UDP_CLEAR_SENT)) {
+			if (daemon_fcf_to_switch(module, DAEMON_FLOW_UDP, meta, gen_control_serial_num(), CTRL_EXEC, DAEMON_EXEC_UDP_CLEAR_SENT)) {
 				PRINT_DEBUG("Exited, normal: hdr=%p", hdr);
 			} else {
 				PRINT_ERROR("Exited, fail sending flow msgs: hdr=%p", hdr);

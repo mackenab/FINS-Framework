@@ -45,6 +45,6 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 
 void recvmsg_timeout_udp(struct fins_module *module, struct daemon_call *call);
 
-#define EXEC_UDP_CLEAR_SENT 0
+#define DAEMON_EXEC_UDP_CLEAR_SENT 0
 
 #endif /* UDPHANDLING_H_ */

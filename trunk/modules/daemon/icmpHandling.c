@@ -646,6 +646,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	}
 
 	if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		PRINT_DEBUG("inserting call: hdr=%p", hdr);
 		md->calls[hdr->call_index].flags = flags;
 		md->calls[hdr->call_index].buf = buf_len;
 		md->calls[hdr->call_index].ret = msg_controllen;

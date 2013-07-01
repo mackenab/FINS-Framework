@@ -21,6 +21,7 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 void daemon_in_error_tcp(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
 		struct sockaddr_storage *dst_addr);
 void daemon_in_poll_tcp(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg);
+void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg);
 
 void bind_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr);
 void listen_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int backlog);
@@ -50,8 +51,8 @@ void release_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 void poll_in_tcp_fcf(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 
 void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint32_t *flags);
-uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, metadata *meta, uint32_t data_len, uint8_t *data, struct sockaddr_storage *addr,
-		uint32_t flags);
+uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, metadata *meta, uint32_t data_len, uint8_t *data,
+		struct sockaddr_storage *addr, uint32_t flags);
 
 void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call);
 void accept_timeout_tcp(struct fins_module *module, struct daemon_call *call);
@@ -60,16 +61,15 @@ void recvmsg_timeout_tcp(struct fins_module *module, struct daemon_call *call);
 void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
 void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
 
-#define EXEC_TCP_CONNECT 0
-#define EXEC_TCP_LISTEN 1
-#define EXEC_TCP_ACCEPT 2
-#define EXEC_TCP_SEND 3
-#define EXEC_TCP_RECV 4
-#define EXEC_TCP_CLOSE 5
-#define EXEC_TCP_CLOSE_STUB 6
-#define EXEC_TCP_OPT 7
-#define EXEC_TCP_POLL 8
-#define EXEC_TCP_POLL_POST 9 //only one that's used in daemon.c
+#define DAEMON_EXEC_TCP_CONNECT 0
+#define DAEMON_EXEC_TCP_LISTEN 1
+#define DAEMON_EXEC_TCP_ACCEPT 2
+#define DAEMON_EXEC_TCP_SEND 3
+#define DAEMON_EXEC_TCP_RECV 4
+#define DAEMON_EXEC_TCP_CLOSE 5
+#define DAEMON_EXEC_TCP_CLOSE_STUB 6
+#define DAEMON_EXEC_TCP_OPT 7
+#define DAEMON_EXEC_TCP_POLL 8
 
 #define SET_PARAM_TCP_HOST_WINDOW 3
 #define SET_PARAM_TCP_SOCK_OPT 4

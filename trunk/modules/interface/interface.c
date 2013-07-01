@@ -256,8 +256,8 @@ void interface_exec_reply(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	switch (ff->ctrlFrame.param_id) {
-	case EXEC_INTERFACE_GET_ADDR:
-		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+	case INTERFACE_EXEC_GET_ADDR:
+		PRINT_DEBUG("param_id=INTERFACE_EXEC_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 		interface_exec_reply_get_addr(module, ff);
 		break;
 	default:
@@ -642,7 +642,7 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 	ff->ctrlFrame.sender_id = module->index;
 	ff->ctrlFrame.serial_num = serial_num;
 	ff->ctrlFrame.opcode = CTRL_EXEC;
-	ff->ctrlFrame.param_id = EXEC_INTERFACE_GET_ADDR;
+	ff->ctrlFrame.param_id = INTERFACE_EXEC_GET_ADDR;
 
 	ff->ctrlFrame.data_len = 0;
 	ff->ctrlFrame.data = NULL;
@@ -673,6 +673,7 @@ void *capturer_to_interface(void *local) {
 	metadata *meta;
 	struct finsFrame *ff;
 
+	uint32_t count = 0;
 	while (module->state == FMS_RUNNING) {
 		//works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		do {
@@ -719,9 +720,9 @@ void *capturer_to_interface(void *local) {
 			continue;
 		}
 
-		PRINT_DEBUG("frame read: frame_len=%d", frame_len);
+		count++;
+		PRINT_DEBUG("frame read: count=%u, frame_len=%d", count, frame_len);
 		//print_hex_block(data,datalen);
-		//continue;
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
 				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];
@@ -758,6 +759,7 @@ void *capturer_to_interface(void *local) {
 		case ETH_TYPE_IP6:
 			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
 			flow = INTERFACE_FLOW_IPV6;
+
 			freeFinsFrame(ff); //TODO remove when have ipv6
 			continue;
 			//break;

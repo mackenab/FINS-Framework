@@ -173,7 +173,7 @@ void interface_out_ipv6(struct fins_module *module, struct finsFrame *ff);
 int interface_inject_pdu(int fd, uint32_t pduLength, uint8_t *pdu, uint64_t dst_mac, uint64_t src_mac, uint32_t ether_type);
 int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t dst_ip, uint32_t serial_num);
 
-#define EXEC_INTERFACE_GET_ADDR 0
+#define INTERFACE_EXEC_GET_ADDR 0
 
 //don't use 0
 #define INTERFACE_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS

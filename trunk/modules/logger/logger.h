@@ -13,6 +13,4 @@
 void logger_dummy(void);
 struct fins_module *logger_create(uint32_t index, uint32_t id, uint8_t *name);
 
-//#define EXEC_UDP_CLEAR_SENT 0
-
 #endif /* LOGGER_H_ */

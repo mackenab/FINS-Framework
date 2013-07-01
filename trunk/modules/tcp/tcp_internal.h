@@ -161,7 +161,7 @@ struct tcp_conn_stub {
 	uint16_t host_port; //Port on this machine that this connection is taking up
 
 	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
-	struct thread_pool *pool;
+	//struct thread_pool *pool;
 
 	uint32_t poll_events;
 	//int syn_threads;
@@ -190,6 +190,11 @@ typedef enum {
 typedef enum {
 	RENO_SLOWSTART = 0, RENO_AVOIDANCE, RENO_RECOVERY
 } tcp_reno_state;
+
+#define TCP_STATUS_NONE 0x0
+#define TCP_STATUS_RD 	0x1
+#define TCP_STATUS_WR 	0x2
+#define TCP_STATUS_RDWR (TCP_STATUS_RD|TCP_STATUS_WR)
 
 struct ipv4_header {
 	uint32_t src_ip; //Source ip
@@ -238,6 +243,21 @@ struct tcp_conn_stats { //Per connection & have one for totals for entire module
 	uint32_t fast; /* total number of fast retransmits */
 	uint32_t gbn; /* total number of GBN */
 
+	uint64_t sent_bytes; /* total number of byes sent */
+	uint64_t sent_data; /* total number of data sent in bytes */
+
+	uint32_t send_data_len_total; /* total send data_len */
+	uint32_t send_data_len_count; /* count send data_len */
+
+	double timeout_total; /* total timeout */
+	uint32_t timeout_count; /* count timeout */
+
+	double cong_window_total; /* total congestion window */
+	uint32_t cong_window_count; /* count congestion window */
+
+	double threshhold_total; /* total threshhold */
+	uint32_t threshhold_count; /* count threshhold */
+
 	uint16_t mismatching_lengths; /* total number of segments with mismatching segment lengths from the header and pseudoheader */
 	uint32_t recv_segs; /* total number of received TCP segments */
 	uint16_t no_checksum; /* total number of segments with no checksum */
@@ -252,7 +272,8 @@ struct tcp_conn_stats { //Per connection & have one for totals for entire module
 	uint32_t bad_acks; /* total number of bad ACKs */
 	uint32_t dup_acks; /* total number of duplicate ACKs */
 
-	uint64_t throughput; /* total number of byes received */
+	uint64_t recv_bytes; /* total number of byes received */
+	uint64_t recv_data; /* total number of data received in bytes */
 
 	uint32_t recv_data_len_total; /* total recv data_len */
 	uint32_t recv_data_len_count; /* count recv data_len */
@@ -263,15 +284,6 @@ struct tcp_conn_stats { //Per connection & have one for totals for entire module
 	double rtt_dev_total; /* total RTT deviation */
 	uint32_t rtt_dev_count; /* count RTT deviation */
 
-	double timeout_total; /* total timeout */
-	uint32_t timeout_count; /* count timeout */
-
-	double cong_window_total; /* total congestion window */
-	uint32_t cong_window_count; /* count congestion window */
-
-	double threshhold_total; /* total threshhold */
-	uint32_t threshhold_count; /* count threshhold */
-
 //Need to determine when to calculate this
 //uint32_t send_win_total; /* total send window */
 //uint32_t send_win_count; /* count send window */
@@ -281,23 +293,19 @@ struct tcp_conn_stats { //Per connection & have one for totals for entire module
 
 //Structure for TCP connections that we have open at the moment
 struct tcp_conn {
-	//## protected by conn_list_sem
-	//struct tcp_conn *next; //Next item in the list of TCP connections //TODO remove when change conn_list to circular array of ptrs
 	uint32_t threads; //Number of threads accessing this obj
-	uint32_t write_threads;
-	//##
 
 	struct fins_module *module;
 	sem_t sem; //for next, state, write_threads
-	uint8_t running_flag; //signifies if it is running, 0 when shutting down
+	uint8_t running_flag; //signifies if it is running, 0=when shutting down
 	tcp_state state;
+	uint8_t status;
 
-	uint32_t total;
-	struct thread_pool *pool;
+	//struct thread_pool *pool; //removed as no longer doing highly multithreaded
 
 	uint32_t family;
-	struct sockaddr_storage *host_addr; //IP address/port of this machine
-	struct sockaddr_storage *rem_addr; //IP address/port of remote machine
+	struct sockaddr_storage *host_addr; //IP address/port of this machine //TODO transition to this
+	struct sockaddr_storage *rem_addr; //IP address/port of remote machine //TODO transition to this
 
 	uint32_t host_ip; //IP address of this machine
 	uint16_t host_port; //Port on this machine that this connection is taking up
@@ -313,6 +321,7 @@ struct tcp_conn {
 	pthread_t main_thread;
 	uint8_t main_wait_flag;
 	sem_t main_wait_sem;
+	uint8_t main_waiting;
 
 	uint8_t request_interrupt;
 	int request_index;
@@ -323,19 +332,18 @@ struct tcp_conn {
 	uint32_t duplicate;
 	uint8_t fast_flag;
 
-	int to_msl_fd; //MSL timeout occurred
-	pthread_t to_msl_thread;
-	uint8_t to_msl_flag; //MSL timeout occurred
-	//uint8_t msl_flag; //MSL performing GBN
+	struct sem_to_timer_data *to_msl_data;
+	uint8_t to_msl_flag; //1=MSL timeout occurred
+	//uint8_t msl_flag; //1=performing MSL
 
 	struct sem_to_timer_data *to_gbn_data;
-	uint8_t to_gbn_flag; //1 GBN timeout occurred
-	uint8_t gbn_flag; //1 performing GBN
+	uint8_t to_gbn_flag; //1=GBN timeout occurred
+	uint8_t gbn_flag; //1=performing GBN
 	struct tcp_node *gbn_node;
 
 	struct sem_to_timer_data *to_delayed_data;
-	uint8_t to_delayed_flag; //1 delayed ack timeout occured
-	uint8_t delayed_flag; //0 no delayed ack, 1 delayed ack
+	uint8_t to_delayed_flag; //1=delayed ack timeout occured
+	uint8_t delayed_flag; //0=no delayed ack, 1=delayed ack
 	uint16_t delayed_ack_flags;
 
 	//host:send_win == rem:recv_win, host:recv_win == rem:send_win
@@ -344,7 +352,6 @@ struct tcp_conn {
 	uint8_t fin_sep; //TODO replace with fin_seq
 
 	uint32_t issn; //initial send seq num
-	uint32_t fssn; //final send seq num, seq of FIN
 	uint32_t fsse; //final send seq end, so fsse == ACK of FIN
 	uint32_t irsn; //initial recv seq num
 	//uint32_t frsn; //final recv seq num, so frsn == figure out?
@@ -360,6 +367,7 @@ struct tcp_conn {
 	uint32_t recv_win; //avail bytes in host recv buffer //actually 16 bits
 	uint32_t recv_seq_num; //seq of rem sendbase, tied with recv_queue
 	uint32_t recv_seq_end; //seq of last inside rem window
+	uint8_t flow_stopped; //1=in ESTABLISEHD/FIN_WAIT_1 hit recv_win==0 & sent seg to stop flow
 
 	uint16_t MSS; //max segment size
 	tcp_reno_state cong_state;
@@ -459,9 +467,8 @@ struct tcp_conn {
 
 struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int tcp_conn_addr_test(struct tcp_conn *conn, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
-//int conn_send_jinni(struct tcp_conn *conn, uint32_t param_id, uint32_t ret_val);
-int tcp_conn_send_exec(struct tcp_conn *conn, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-int tcp_conn_send_fcf(struct tcp_conn *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_send_fcf(struct tcp_conn *conn, uint16_t opcode, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_send_exec_reply(struct tcp_conn *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
 int tcp_conn_reply_fcf(struct tcp_conn *conn, uint32_t ret_val, uint32_t ret_msg);
 int tcp_conn_is_finished(struct tcp_conn *conn);
 void tcp_conn_shutdown(struct tcp_conn *conn);
@@ -527,29 +534,15 @@ struct tcp_thread_data {
 };
 
 //General functions for dealing with the incoming and outgoing frames
-int tcp_fcf_to_daemon(struct fins_module *module, uint32_t status, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port,
-		uint32_t ret_val);
+int tcp_fcf_to_daemon(struct fins_module *module, socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip,
+		uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_daemon(struct fins_module *module, uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
-#define EXEC_TCP_CONNECT 0
-#define EXEC_TCP_LISTEN 1
-#define EXEC_TCP_ACCEPT 2
-#define EXEC_TCP_SEND 3
-#define EXEC_TCP_RECV 4
-#define EXEC_TCP_CLOSE 5
-#define EXEC_TCP_CLOSE_STUB 6
-#define EXEC_TCP_OPT 7
-#define EXEC_TCP_POLL 8
-#define EXEC_TCP_POLL_POST 9
-
-#define ERROR_ICMP_TTL 0
-#define ERROR_ICMP_DEST_UNREACH 1
-
 #define TCP_REQUEST_LIST_MAX 30 //equal to DAEMON_CALL_LIST_MAX
 #define TCP_BLOCK_DEFAULT 500 //default block time (ms) for sendmsg
-void tcp_metadata_read_conn(metadata *meta, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
-void tcp_metadata_write_conn(metadata *meta, uint32_t *status, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
+void tcp_metadata_read_conn(metadata *meta, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
+void tcp_metadata_write_conn(metadata *meta, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
 
 void tcp_exec_close(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_exec_close_stub(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port);
@@ -640,6 +633,9 @@ void tcp_error(struct fins_module *module, struct finsFrame *ff);
 void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
+#define TCP_ALERT_POLL 0
+#define TCP_ALERT_SHUTDOWN 1 //TODO change to alert?
+
 //don't use 0
 #define TCP_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
 #define TCP_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
@@ -676,5 +672,19 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_SET_MSS__id 8
 #define TCP_SET_MSS__str "mss"
 #define TCP_SET_MSS__type META_TYPE_INT32
+#define TCP_SET_PARAM_STATUS 9
+
+#define TCP_EXEC_CONNECT 0
+#define TCP_EXEC_LISTEN 1
+#define TCP_EXEC_ACCEPT 2
+#define TCP_EXEC_SEND 3
+#define TCP_EXEC_RECV 4
+#define TCP_EXEC_CLOSE 5
+#define TCP_EXEC_CLOSE_STUB 6
+#define TCP_EXEC_OPT 7
+#define TCP_EXEC_POLL 8
+
+#define ERROR_ICMP_TTL 0
+#define ERROR_ICMP_DEST_UNREACH 1
 
 #endif /* TCP_INTERNAL_H_ */

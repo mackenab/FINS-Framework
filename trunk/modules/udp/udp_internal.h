@@ -125,7 +125,7 @@ int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 
 uint16_t UDP_checkSeparate(uint32_t src, uint32_t dest, uint16_t len, uint16_t protocol, uint16_t wsum);
 
-#define EXEC_UDP_CLEAR_SENT 0
+#define UDP_EXEC_CLEAR_SENT 0
 #define ERROR_ICMP_TTL 0
 #define ERROR_ICMP_DEST_UNREACH 1
 

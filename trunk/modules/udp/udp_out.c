@@ -25,22 +25,6 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint16_t packet_length;
 
 	/* read the FDF and make sure everything is correct*/
-	if (ff->dataOrCtrl != FF_DATA) {
-		// release FDF here
-		PRINT_ERROR("shouldn't reach here");
-		return;
-	}
-	if (ff->dataFrame.directionFlag != DIR_DOWN) {
-		// release FDF here
-		PRINT_ERROR("shouldn't reach here");
-		return;
-	}
-	if (ff->destinationID != module->index) { //TODO update to get from metadata
-		// release FDF here
-		PRINT_ERROR("shouldn't reach here");
-		return;
-	}
-
 	PRINT_DEBUG("UDP_out, ff=%p, meta=%p", ff, ff->metaData);
 
 	//print_finsFrame(ff);
@@ -75,16 +59,15 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint32_t dst_ip;
 	uint32_t src_ip;
 
-	metadata *meta = ff->metaData;
 	uint32_t family;
-	secure_metadata_readFromElement(meta, "send_family", &family);
-	secure_metadata_readFromElement(meta, "send_src_ipv4", &src_ip);
-	secure_metadata_readFromElement(meta, "send_src_port", &src_port);
-	secure_metadata_readFromElement(meta, "send_dst_ipv4", &dst_ip);
-	secure_metadata_readFromElement(meta, "send_dst_port", &dst_port);
+	secure_metadata_readFromElement(ff->metaData, "send_family", &family);
+	secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
+	secure_metadata_readFromElement(ff->metaData, "send_src_port", &src_port);
+	secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
+	secure_metadata_readFromElement(ff->metaData, "send_dst_port", &dst_port);
 
 	uint32_t protocol = UDP_PROTOCOL;
-	secure_metadata_writeToElement(meta, "send_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "send_protocol", &protocol, META_TYPE_INT32);
 
 	/** fixing the values because of the conflict between uint16 type and
 	 * the 32 bit META_INT_TYPE

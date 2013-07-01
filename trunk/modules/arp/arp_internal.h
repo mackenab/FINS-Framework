@@ -7,6 +7,7 @@
 #ifndef ARP_INTERNAL_H_
 #define ARP_INTERNAL_H_
 
+#include <arpa/inet.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -87,8 +88,8 @@ int check_valid_arp(struct arp_message *msg);
 #define ARP_REQUEST_LIST_MAX (2*65536) //TODO change back to 2^16?
 //#define ARP_THREADS_MAX 50
 #define ARP_RETRANS_TO_DEFAULT 1000
-#define ARP_CACHE_TO_DEFAULT 60000 //#default should be 15sec, continued use extends up to 60sec, not implemented
-#define ARP_CACHE_TO_MAX 60000
+#define ARP_CACHE_TO_DEFAULT 50000 //#default should be 15sec, continued use extends up to 50sec, not implemented
+#define ARP_CACHE_TO_MAX 50000 //unused atm
 #define ARP_RETRIES 2
 #define ARP_CACHE_LIST_MAX 8192
 
@@ -161,7 +162,7 @@ void arp_exec(struct fins_module *module, struct finsFrame *ff);
 void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 //void arp_exec_get_addr(struct finsFrame *ff, uint32_t addr_ip);
 
-#define EXEC_ARP_GET_ADDR 0
+#define ARP_EXEC_GET_ADDR 0
 
 void arp_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void arp_out_fdf(struct fins_module *module, struct finsFrame *ff);
