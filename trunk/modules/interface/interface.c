@@ -721,7 +721,7 @@ void *capturer_to_interface(void *local) {
 		}
 
 		count++;
-		PRINT_DEBUG("frame read: count=%u, frame_len=%d", count, frame_len);
+		PRINT_INFO("frame read: count=%u, frame_len=%d", count, frame_len); //TODO change back to PRINT_DEBUG?
 		//print_hex_block(data,datalen);
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)

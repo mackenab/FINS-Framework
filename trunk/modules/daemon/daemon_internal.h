@@ -329,6 +329,8 @@ struct daemon_socket {
 	uint32_t error_msg;
 	uint32_t error_call;
 
+	int count; //TODO remove, only for testing
+
 	struct socket_options sockopts;
 };
 int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock_index, int type, int protocol, struct daemon_socket_out_ops *out_ops,

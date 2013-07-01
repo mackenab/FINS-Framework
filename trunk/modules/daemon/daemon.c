@@ -224,6 +224,8 @@ int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock
 		md->sockets[sock_index].sockopts.FIP_TOS = 64;
 		md->sockets[sock_index].sockopts.FSO_REUSEADDR = 0;
 
+		md->sockets[sock_index].count = 0;
+
 		//data->daemon_sockets[sock_index].sockopts.FSO_RCVTIMEO = IPTOS_LOWDELAY;
 		//data->daemon_sockets[sock_index].sockopts.FSO_SNDTIMEO = IPTOS_LOWDELAY;
 

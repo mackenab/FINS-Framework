@@ -1501,6 +1501,9 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 		return;
 	}
 
+	md->sockets[sock_index].count++; //TODO remove, only for testing
+	PRINT_INFO("count=%d", md->sockets[sock_index].count);
+
 	//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 	uint32_t flags = POLLIN;
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_udp, module, &flags);

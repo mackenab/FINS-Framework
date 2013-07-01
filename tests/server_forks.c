@@ -17,9 +17,7 @@
 int i = 0;
 
 void termination_handler(int sig) {
-	printf(
-			"\n**********Number of packers that have been received = %d *******\n",
-			i);
+	printf("\n**********Number of packers that have been received = %d *******\n", i);
 	exit(2);
 }
 
@@ -71,7 +69,7 @@ int main(int argc, char *argv[]) {
 
 	optval = -1;
 	optlen = -1;
-	ret = getsockopt(sock, level, optname, &optval, &optlen);
+	ret = getsockopt(sock, level, optname, &optval, (socklen_t *) &optlen);
 	if (ret) {
 		printf("Sockopt fail ret=%d\n", ret);
 	} else {
@@ -89,7 +87,7 @@ int main(int argc, char *argv[]) {
 
 	optval = -1;
 	optlen = -1;
-	ret = getsockopt(sock, level, optname, &optval, &optlen);
+	ret = getsockopt(sock, level, optname, &optval, (socklen_t *) &optlen);
 	if (ret) {
 		printf("Sockopt fail ret=%d\n", ret);
 	} else {
@@ -102,8 +100,7 @@ int main(int argc, char *argv[]) {
 	//	server_addr.sin_addr.s_addr = xxx(172,31,54,87);
 	bzero(&(server_addr.sin_zero), 8);
 
-	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr))
-			== -1) {
+	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) == -1) {
 		perror("Bind");
 		printf("Failure");
 		exit(1);
@@ -130,23 +127,19 @@ int main(int argc, char *argv[]) {
 	}
 	int pID_p = getpid();
 
-	printf("UDPServer (%d: %d/%d) Waiting for client on port %d\n ", processes,
-			pID, pID_p, ntohs(server_addr.sin_port));
+	printf("UDPServer (%d: %d/%d) Waiting for client on port %d\n ", processes, pID, pID_p, ntohs(server_addr.sin_port));
 	fflush(stdout);
 
 	i = 0;
 
 	while (1) {
-
-		bytes_read = recvfrom(sock, recv_data, 4000, 0,
-				(struct sockaddr *) client_addr, &addr_len);
+		bytes_read = recvfrom(sock, recv_data, 4000, 0, (struct sockaddr *) client_addr, (socklen_t *) &addr_len);
 		//      bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
 		//	bytes_read = recv(sock,recv_data,1024,0);
 		i = i + 1;
 		recv_data[bytes_read] = '\0';
 		printf("(%d) frame number\n", i);
-		printf("(%d/%d, %s:%d) : ", pID, pID_p, inet_ntoa(
-				client_addr->sin_addr), ntohs(client_addr->sin_port));
+		printf("(%d/%d, %s:%d) : ", pID, pID_p, inet_ntoa(client_addr->sin_addr), ntohs(client_addr->sin_port));
 		//printf("(%d , %d) : ", (client_addr->sin_addr).s_addr, ntohs(client_addr->sin_port));
 		//printf("(%d , %d) : ", processes, pID);
 		printf(" (%s) to the Server\n", recv_data);
@@ -154,12 +147,12 @@ int main(int argc, char *argv[]) {
 		fflush(stdout);
 
 		//if (pID != 0) {
-			printf("closing(%d/%d)\n", pID, pID_p);
-			close(sock);
-			printf("waiting...\n");
-			while (1)
-				;
-			break;
+		printf("closing(%d/%d)\n", pID, pID_p);
+		close(sock);
+		printf("waiting...\n");
+		while (1)
+			;
+		break;
 
 		//}
 	}

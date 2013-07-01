@@ -16,7 +16,7 @@
 #define NETLINK_FINS 20
 
 //commenting stops debug printout
-//#define DEBUG
+#define DEBUG
 #define IMPORTANT
 #define ERROR
 

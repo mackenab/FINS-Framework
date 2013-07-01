@@ -37,13 +37,6 @@
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
-int i = 0;
-
-void termination_handler(int sig) {
-	printf("\n**********Number of packers that have been received = %d *******\n", i);
-	exit(2);
-}
-
 void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 	uint8_t *temp = (uint8_t *) malloc(3 * msg_len + 1);
 	uint8_t *pt = temp;
@@ -83,12 +76,25 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	return diff;
 }
 
+int i = 0;
+int total = 0;
+double diff = 0;
+struct timeval start, end;
+
+void termination_handler(int sig) {
+	gettimeofday(&end, 0);
+	diff = time_diff(&start, &end) / 1000;
+
+	printf("\n**********Number of packers that have been received = %d *******\n", i);
+	printf("\ntime=%f, frames=%d, total=%d, speed=%f\n", diff, i, total, 8.0 * total / diff);
+	exit(2);
+}
+
 int main(int argc, char *argv[]) {
 	uint16_t port;
 
 	(void) signal(SIGINT, termination_handler);
 	int sock;
-	int sock_client;
 	uint32_t addr_len = sizeof(struct sockaddr);
 	int bytes_read;
 	int recv_buf_size = 65536; //4000;
@@ -108,8 +114,8 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
-	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) < 0) {
+	if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		perror("Socket");
 		printf("Failure\n");
 		exit(1);
@@ -127,7 +133,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
 
-	printf("\nBinding to server: addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	printf("Binding to server: addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	fflush(stdout);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
 		printf("Failure: errno=%u\n", errno);
@@ -135,59 +141,28 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	int backlog = 10;
-	printf("Listening to server: backlog=%d\n", backlog);
-	fflush(stdout);
-	if (listen(sock, backlog) < 0) {
-		perror("Listen");
-		printf("Failure");
-		exit(1);
-	}
-
-	printf("TCP Server waiting for client: port %d\n", ntohs(server_addr.sin_port));
-	fflush(stdout);
-
-	while (1) {
-		sock_client = accept(sock, (struct sockaddr *) &client_addr, (socklen_t *) &addr_len);
-		if (sock_client > 0) {
-			break;
-		} else {
-			printf("failed accept: errno=%d errno='%s'\n", errno, strerror(errno));
-			fflush(stdout);
-			sleep(1);
-		}
-	}
-
-	printf("Connection establisehed sock_client=%d to (%s/%d) netw=%u\n", sock_client, inet_ntoa(client_addr.sin_addr),
-			ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
-	fflush(stdout);
-
 	//fgetc(stdin); //wait until user enters
 
 	int nfds = 2;
 	struct pollfd fds[nfds];
 	fds[0].fd = -1;
 	fds[0].events = POLLIN | POLLPRI | POLLRDNORM;
-	fds[1].fd = sock_client;
+	fds[1].fd = sock;
 	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
 	printf("fd: sock=%d, events=%x\n", sock, fds[1].events);
 	fflush(stdout);
 	int time = 1000;
 
-	struct timeval start, end;
-	gettimeofday(&start, 0);
-	double diff;
+	int init = 1;
 	double interval = 1;
 	double check = interval;
 
 	printf("Looping...\n");
 	fflush(stdout);
 
-	i = 0;
-	int total = 0;
 	while (1) {
-		ret = poll(fds, nfds, time);
-		if (ret || 0) {
+		//ret = poll(fds, nfds, time);
+		if (ret || 1) {
 			ret = 1;
 			if (0) {
 				printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
@@ -197,8 +172,12 @@ int main(int argc, char *argv[]) {
 						(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
 				fflush(stdout);
 			}
-			if (fds[ret].revents & (POLLIN | POLLRDNORM)) {
-				bytes_read = recv(sock_client, recv_data, recv_buf_size, 0);
+			if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+				bytes_read = recvfrom(sock, recv_data, recv_buf_size, 0, (struct sockaddr *) &client_addr, (socklen_t *) &addr_len);
+				if (init) {
+					gettimeofday(&start, 0);
+					init = 0;
+				}
 				if (bytes_read > 0) {
 					if (0) {
 						print_hex(3 * 4, (uint8_t *) recv_data);
@@ -232,10 +211,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-
-	printf("Closing client socket\n");
-	fflush(stdout);
-	close(sock_client);
 
 	printf("Closing server socket\n");
 	fflush(stdout);
