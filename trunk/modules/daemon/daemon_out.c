@@ -343,6 +343,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 					addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
 				} else {
 					addr4->sin_addr.s_addr = 0;
+					//TODO change
 				}
 
 				pt += sizeof(struct ifreq);
@@ -371,6 +372,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			free(temp);
 			return;
 		}
 
@@ -380,6 +382,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(temp);
 			return;
 		}
 
@@ -402,7 +405,11 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
 		} else {
-			addr4->sin_addr.s_addr = 0;
+			PRINT_ERROR("no addr4 for this interface: ifr=%p, name='%s'", ifr, ifr->name);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(msg);
+			free(temp);
+			return;
 		}
 		pt += sizeof(struct sockaddr_in);
 
@@ -422,6 +429,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			free(temp);
 			return;
 		}
 
@@ -431,6 +439,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(temp);
 			return;
 		}
 
@@ -453,7 +462,11 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
 		} else {
-			addr4->sin_addr.s_addr = 0;
+			PRINT_ERROR("no addr4 for this interface: ifr=%p, name='%s'", ifr, ifr->name);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(msg);
+			free(temp);
+			return;
 		}
 		pt += sizeof(struct sockaddr_in);
 
@@ -473,6 +486,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			free(temp);
 			return;
 		}
 
@@ -482,6 +496,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(temp);
 			return;
 		}
 
@@ -504,7 +519,11 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->bdc));
 		} else {
-			addr4->sin_addr.s_addr = 0;
+			PRINT_ERROR("no addr4 for this interface: ifr=%p, name='%s'", ifr, ifr->name);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(msg);
+			free(temp);
+			return;
 		}
 		pt += sizeof(struct sockaddr_in);
 
@@ -524,6 +543,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			free(temp);
 			return;
 		}
 
@@ -533,6 +553,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(temp);
 			return;
 		}
 
@@ -555,7 +576,11 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->mask));
 		} else {
-			addr4->sin_addr.s_addr = 0;
+			PRINT_ERROR("no addr4 for this interface: ifr=%p, name='%s'", ifr, ifr->name);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(msg);
+			free(temp);
+			return;
 		}
 		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 
@@ -625,6 +650,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			free(temp);
 			return;
 		}
 
@@ -634,6 +660,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(temp);
 			return;
 		}
 
@@ -671,6 +698,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (pt - buf != buf_len) {
 			PRINT_ERROR("READING ERROR! CRASH, diff=%d, len=%d", pt - buf, buf_len);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+			free(temp);
 			return;
 		}
 
@@ -680,6 +708,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (ifr == NULL) {
 			PRINT_ERROR("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
+			free(temp);
 			return;
 		}
 
@@ -731,6 +760,22 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		break;
 	case SIOCSIFNETMASK:
 		PRINT_DEBUG("SIOCSIFNETMASK=%d", cmd);
+		PRINT_WARN("todo");
+		break;
+	case SIOCGIFHWADDR:
+		PRINT_DEBUG("SIOCGIFHWADDR=%d", cmd);
+		PRINT_WARN("todo");
+		break;
+	case SIOCGIFMETRIC:
+		PRINT_DEBUG("SIOCGIFMETRIC=%d", cmd);
+		PRINT_WARN("todo");
+		break;
+	case SIOCGIFMAP:
+		PRINT_DEBUG("SIOCGIFMAP=%d", cmd);
+		PRINT_WARN("todo");
+		break;
+	case SIOCGIFTXQLEN:
+		PRINT_DEBUG("SIOCGIFTXQLEN=%d", cmd);
 		PRINT_WARN("todo");
 		break;
 	default:

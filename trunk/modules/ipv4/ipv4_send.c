@@ -23,12 +23,11 @@ void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct i
 	uint32_t recv_ttl = pheader->ttl;
 	PRINT_DEBUG("protocol=%u, src_ip=%u, dst_ip=%u, recv_ttl=%u", protocol, src_ip, dst_ip, recv_ttl);
 
-	metadata *meta = ff->metaData;
-	secure_metadata_writeToElement(meta, "recv_protocol", &protocol, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_family", &family, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "recv_ttl", &recv_ttl, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_protocol", &protocol, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_family", &family, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
+	secure_metadata_writeToElement(ff->metaData, "recv_ttl", &recv_ttl, META_TYPE_INT32);
 
 	uint32_t flow;
 	uint8_t *pdu = ff->dataFrame.pdu;

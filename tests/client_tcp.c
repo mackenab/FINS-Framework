@@ -121,7 +121,8 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(128,173,92,37);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
-	server_addr.sin_addr.s_addr = xxx(192,168,1,3);
+	//server_addr.sin_addr.s_addr = xxx(192,168,1,3);
+	server_addr.sin_addr.s_addr = xxx(128,173,92,33);
 	//server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -216,7 +217,7 @@ int main(int argc, char *argv[]) {
 	fds[1].fd = sock;
 	fds[1].events = POLLOUT | POLLWRNORM;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
-	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
+	printf("\n fd: sock=%d, events=%x\n", sock, fds[1].events);
 	int time = -1; //1000;
 
 	//pID = fork();
@@ -311,33 +312,37 @@ int main(int argc, char *argv[]) {
 	 */
 
 	if (1) {
-		double total = 10;
-		double speed = 200000; //bits per sec
+		double total = 15;
+		double speed = 10000000; //bits per sec
 		int len = 1000; //msg size
 
 		double time = 8 * len / speed * 1000000;
 		int use = (int) (time + .5); //ceil(time);
-		printf("time=%f, used=%u\n", time, use);
+		printf("desired=%f, time=%f, used=%u\n", speed, time, use);
 		fflush(stdout);
 
 		int *data = (int *) send_data;
 		*(data + 1) = 0;
 
 		double diff;
+		double interval = 1;
+		double check = interval;
 		struct timeval start, end;
 		gettimeofday(&start, 0);
 
-		char temp_buff[100];
+		//char temp_buff[100];
 
 		int i = 0;
 		while (1) {
 			//gets(temp_buff);
-			printf("sending=%d\n", i);
-			fflush(stdout);
-			*data = htonl(i);
+			//printf("sending=%d\n", i);
+			//fflush(stdout);
+			//*data = htonl(i);
+
 			numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 			if (numbytes != len) {
 				printf("error: len=%d, numbytes=%d\n", len, numbytes);
+				fflush(stdout);
 				break;
 			}
 			i++;
@@ -345,8 +350,11 @@ int main(int argc, char *argv[]) {
 			if (1) {
 				gettimeofday(&end, 0);
 				diff = time_diff(&start, &end) / 1000;
-				printf("time=%f, frames=%d, speed=%f\n", diff, i, 8 * len * i / diff);
-				fflush(stdout);
+				if (check <= diff) {
+					printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, i, len * i, 8 * len * i / diff);
+					fflush(stdout);
+					check += interval;
+				}
 
 				if (total <= diff) {
 					break;
@@ -363,11 +371,11 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 	//while (1);
 
-	gets(send_data);
+	//gets(send_data);
 
-	msg[0] = 'q';
-	msg[1] = '\0';
-	numbytes = send(sock, msg, 1, 0);
+	//msg[0] = 'q';
+	//msg[1] = '\0';
+	//numbytes = send(sock, msg, 1, 0);
 
 	printf("\n Closing socket");
 	fflush(stdout);

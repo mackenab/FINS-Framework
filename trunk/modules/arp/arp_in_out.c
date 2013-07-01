@@ -16,14 +16,12 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 	uint64_t dst_mac;
 	uint64_t src_mac;
 
-	metadata *meta = ff->metaData;
-
 	ifr = (struct if_record *) list_find1(md->if_list, ifr_ipv4_test, &src_ip);
 	if (ifr != NULL) {
 		src_mac = ifr->mac;
 		PRINT_DEBUG("src: if_index=%d, mac=0x%012llx, ip=%u", ifr->index, src_mac, src_ip);
 
-		secure_metadata_writeToElement(meta, "src_mac", &src_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(ff->metaData, "src_mac", &src_mac, META_TYPE_INT64);
 
 		cache = (struct arp_cache *) list_find1(md->cache_list, arp_cache_ip_test, &dst_ip);
 		if (cache != NULL) {
@@ -46,7 +44,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 				if (time_diff(&cache->updated_stamp, &current) <= ARP_CACHE_TO_DEFAULT) {
 					PRINT_DEBUG("up to date cache: cache=%p", cache);
 
-					secure_metadata_writeToElement(meta, "dst_mac", &dst_mac, META_TYPE_INT64);
+					secure_metadata_writeToElement(ff->metaData, "dst_mac", &dst_mac, META_TYPE_INT64);
 
 					ff->destinationID = ff->ctrlFrame.sender_id;
 					ff->ctrlFrame.sender_id = module->index;
@@ -222,7 +220,12 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					}
 				}
 			} else {
-				PRINT_WARN("No corresponding interface. Dropping: ff=%p, dst_ip=%u", ff, dst_ip);
+				struct in_addr temp = {.s_addr = htonl(dst_ip)};
+				if (msg->operation == ARP_OP_REQUEST) {
+					PRINT_WARN("No corresponding interface. Dropping ARP request: ff=%p, dst_ip='%s' (%u)", ff, inet_ntoa(temp), dst_ip);
+				} else { //Reply
+					PRINT_WARN("No corresponding interface. Dropping ARP reply: ff=%p, dst_ip='%s' (%u)", ff, inet_ntoa(temp), dst_ip);
+				}
 			}
 		} else {
 			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);

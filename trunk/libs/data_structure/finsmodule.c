@@ -312,7 +312,6 @@ void module_set_param_links(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
-
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 

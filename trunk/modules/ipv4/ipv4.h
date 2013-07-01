@@ -13,6 +13,4 @@
 void ipv4_dummy(void);
 struct fins_module *ipv4_create(uint32_t index, uint32_t id, uint8_t *name);
 
-//#define EXEC_UDP_CLEAR_SENT 0
-
 #endif /* IPV4_H_ */

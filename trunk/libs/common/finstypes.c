@@ -1210,7 +1210,6 @@ struct finsFrame * buildFinsFrame(void) { //TODO replace with createFinsFrame() 
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 
-	//metadata *meta;
 	PRINT_DEBUG("2.2");
 	metadata_create(meta);
 	PRINT_DEBUG("2.3");
@@ -1315,9 +1314,8 @@ struct finsFrame *cloneFinsFrame(struct finsFrame *ff) {
 	metadata *meta_clone = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_clone);
 
-	metadata *meta = ff->metaData;
-	if (meta != NULL) {
-		if (metadata_copy(meta, meta_clone) == META_FALSE) {
+	if (ff->metaData != NULL) {
+		if (metadata_copy(ff->metaData, meta_clone) == META_FALSE) {
 			PRINT_WARN("todo error");
 		}
 	} else {

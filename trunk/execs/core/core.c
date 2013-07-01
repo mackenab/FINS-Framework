@@ -423,8 +423,18 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 					PRINT_ERROR("todo: replace or add new?");
 				}
 			} else {
-				//TODO error
-				PRINT_ERROR("todo: decide just drop or add?");
+				if (family == AF_INET) {
+					PRINT_WARN(
+							"Ignoring address, no active interface: if_index=%d, family=%u, ip='%u.%u.%u.%u', mask='%u.%u.%u.%u', gw='%u.%u.%u.%u', bdc='%u.%u.%u.%u', dst='%u.%u.%u.%u'",
+							if_index, family, ip[0], ip[1], ip[2], ip[3], mask[0], mask[1], mask[2], mask[3], gw[0], gw[1], gw[2], gw[3], bdc[0], bdc[1], bdc[2], bdc[3], dst[0], dst[1], dst[2], dst[3]);
+				} else if (family == AF_INET6) {
+					//TODO
+					PRINT_WARN("todo");
+				} else {
+					//TODO error?
+					PRINT_ERROR("todo error");
+					exit(-1);
+				}
 			}
 		} else {
 			//TODO error
@@ -546,8 +556,17 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 					exit(-1);
 				}
 			} else {
-				//TODO error
-				PRINT_ERROR("todo: decide just drop or add?");
+				if (family == AF_INET) {
+					PRINT_WARN(
+							"Ignoring route, no active interface: if_index=%d, family=%u, dst='%u.%u.%u.%u', mask='%u.%u.%u.%u', gw='%u.%u.%u.%u', metric=%u, timeout=%u",
+							if_index, family, dst[0], dst[1], dst[2], dst[3], mask[0], mask[1], mask[2], mask[3], gw[0], gw[1], gw[2], gw[3], metric, timeout);
+				} else if (family == AF_INET6) {
+					//TODO
+					PRINT_WARN("todo");
+				} else {
+					//TODO error?
+					PRINT_ERROR("todo error");
+				}
 			}
 		}
 	}
@@ -1064,18 +1083,18 @@ void core_tests(void) {
 //TODO replace this option system with getopt, can see in SuperSU code
 //#include <getopt.h>
 int main(int argc, char *argv[]) {
-	PRINT_IMPORTANT("argc=%u", argc);
+	printf("argc=%u\n", argc);
 
 	int i;
 #ifdef BUILD_FOR_ANDROID
 	for (i = 0; i < 3; i++) {
-		PRINT_IMPORTANT("argv[%d]='%s'", i, argv[i]);
+		printf("argv[%d]='%s'\n", i, argv[i]);
 	}
 
 	core_main((uint8_t *)("envi.cfg"), (uint8_t *)("stack.cfg"));
 #else
 	for (i = 0; i < argc; i++) {
-		PRINT_IMPORTANT("argv[%d]='%s'", i, argv[i]);
+		printf("argv[%d]='%s'\n", i, argv[i]);
 	}
 
 	uint8_t envi_default = 1;
@@ -1207,7 +1226,7 @@ int main(int argc, char *argv[]) {
 
 	//core_tests(); //For random testing purposes
 
-	PRINT_IMPORTANT("while (1) looping...");
+	printf("while (1) looping...\n");
 	while (1) {
 		sleep(1000000);
 	}

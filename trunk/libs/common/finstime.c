@@ -159,6 +159,7 @@ void sem_to_handler(void *local) {
 	PRINT_DEBUG("Throwing TO flag: data=%p, tid=%ld", data, (long)data->tid);
 	*data->flag = 1;
 	if (*data->waiting) {
+		*data->waiting = 0;
 		PRINT_DEBUG("posting to wait_sem");
 		sem_post(data->sem);
 	}

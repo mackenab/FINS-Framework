@@ -183,6 +183,7 @@ int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock
 	if (md->sockets[sock_index].sock_id == -1) {
 		md->sockets[sock_index].sock_id = sock_id;
 		md->sockets[sock_index].state = SS_UNCONNECTED;
+		md->sockets[sock_index].status = DAEMON_STATUS_RDWR;
 
 		/**
 		 * bind the socket by default to the default IP which is assigned
@@ -393,7 +394,6 @@ int daemon_setBlocking(int fd) {
 void daemon_exec_reply_new(struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
 
-	//metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
 
 	default:
@@ -469,14 +469,13 @@ void daemon_get_ff(struct fins_module *module) {
 }
 
 void daemon_fcf(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_WARN("todo");
-		module_reply_fcf(module, ff, FCF_FALSE, 0);
+		daemon_alert(module, ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);
@@ -502,7 +501,8 @@ void daemon_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_EXEC:
 		PRINT_DEBUG("opcode=CTRL_EXEC (%d)", CTRL_EXEC);
-		daemon_exec(module, ff);
+		PRINT_WARN("todo");
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	case CTRL_EXEC_REPLY:
 		PRINT_DEBUG("opcode=CTRL_EXEC_REPLY (%d)", CTRL_EXEC_REPLY);
@@ -515,6 +515,82 @@ void daemon_fcf(struct fins_module *module, struct finsFrame *ff) {
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
 		exit(-1);
+		break;
+	}
+}
+
+void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
+	uint32_t protocol;
+	uint32_t ret_msg;
+
+	switch (ff->ctrlFrame.param_id) {
+	case DAEMON_ALERT_POLL:
+		PRINT_DEBUG("param_id=DAEMON_ALERT_POLL (%d)", ff->ctrlFrame.param_id);
+
+		secure_metadata_readFromElement(ff->metaData, "protocol", &protocol);
+		secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+		secure_sem_wait(&md->sockets_sem);
+
+		switch (protocol) {
+		case IPPROTO_ICMP:
+			//daemon_in_poll_icmp(module, ff, ret_msg);
+			PRINT_WARN("todo");
+			break;
+		case IPPROTO_TCP:
+			daemon_in_poll_tcp(module, ff, ret_msg);
+			break;
+		case IPPROTO_UDP:
+			//daemon_in_poll_udp(module, ff, ret_msg);
+			PRINT_WARN("todo");
+			break;
+		default:
+			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+			module_reply_fcf(module, ff, FCF_FALSE, 0);
+			//freeFinsFrame(ff);
+			break;
+		}
+
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->sockets_sem);
+		break;
+	case DAEMON_ALERT_SHUTDOWN:
+		PRINT_DEBUG("param_id=DAEMON_ALERT_SHUTDOWN (%d)", ff->ctrlFrame.param_id);
+
+		secure_metadata_readFromElement(ff->metaData, "protocol", &protocol);
+		secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+		secure_sem_wait(&md->sockets_sem);
+
+		switch (protocol) {
+		case IPPROTO_ICMP:
+			//daemon_in_shutdown_icmp(module, ff, ret_msg);
+			PRINT_WARN("todo");
+			break;
+		case IPPROTO_TCP:
+			daemon_in_shutdown_tcp(module, ff, ret_msg);
+			break;
+		case IPPROTO_UDP:
+			//daemon_in_shutdown_udp(module, ff, ret_msg);
+			PRINT_WARN("todo");
+			break;
+		default:
+			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+			module_reply_fcf(module, ff, FCF_FALSE, 0);
+			break;
+		}
+
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->sockets_sem);
+		break;
+	default:
+		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }
@@ -650,48 +726,6 @@ void daemon_set_param_reply(struct fins_module *module, struct finsFrame *ff) { 
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
-}
-
-void daemon_exec(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
-
-	uint32_t protocol;
-	uint32_t ret_msg;
-
-	metadata *meta = ff->metaData;
-	switch (ff->ctrlFrame.param_id) {
-	case EXEC_TCP_POLL_POST: //TODO move to ALERT?
-		PRINT_DEBUG("param_id=EXEC_TCP_POLL_POST (%d)", ff->ctrlFrame.param_id);
-
-		//daemon_in_poll()
-
-		secure_metadata_readFromElement(meta, "protocol", &protocol);
-		secure_metadata_readFromElement(meta, "ret_msg", &ret_msg);
-
-		switch (protocol) {
-		case IPPROTO_ICMP:
-			//daemon_in_poll_icmp(module, ff, ret_msg);
-			PRINT_WARN("todo");
-			break;
-		case IPPROTO_TCP:
-			daemon_in_poll_tcp(module, ff, ret_msg);
-			break;
-		case IPPROTO_UDP:
-			//daemon_in_poll_udp(module, ff, ret_msg);
-			PRINT_WARN("todo");
-			break;
-		default:
-			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
-			module_reply_fcf(module, ff, FCF_FALSE, 0);
-			//freeFinsFrame(ff);
-			break;
-		}
-		break;
-	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		module_reply_fcf(module, ff, FCF_FALSE, 0);
-		break;
-	}
 }
 
 void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TODO update to new version once Daemon EXEC_CALL's are standardized, that and split //atm suited only for wedge pass through (TCP)

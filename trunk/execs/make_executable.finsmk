@@ -37,7 +37,7 @@ BUILT_INCS = $(filter-out $(MAKE_INCS),$(INCS_DIRS))
 LOCAL_OBJS_PATHS := $(addprefix $(LOCAL_DIR)/,$(LOCAL_OBJS))
 LOCAL_EXEC := $(LOCAL_NAME)
 LOCAL_EXEC_PATH := $(OBJ_DIR)/$(LOCAL_EXEC)
-TEST := $(LOCAL_OBJS_PATHS)
+#TEST := $(LOCAL_OBJS_PATHS)
 
 LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).so)
 LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).so)

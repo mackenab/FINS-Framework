@@ -179,9 +179,7 @@ void arp_cache_shutdown(struct arp_cache *cache) {
 	//sem_post(&conn->write_sem);
 	//clear all threads using this conn_stub
 
-	/*#*/PRINT_DEBUG("");
 	//post to read/write/connect/etc threads
-	/*#*/PRINT_DEBUG("");
 }
 
 void arp_cache_free(struct arp_cache *cache) {
@@ -235,10 +233,12 @@ void print_MAC_addrs(uint64_t MAC_intg_addrs) {
  */
 void print_msgARP(struct arp_message *msg) {
 
-	if (msg->operation == ARP_OP_REQUEST)
+	if (msg->operation == ARP_OP_REQUEST) {
 		PRINT_DEBUG("ARP Message Request");
-	if (msg->operation == ARP_OP_REPLY)
+	}
+	if (msg->operation == ARP_OP_REPLY) {
 		PRINT_DEBUG("ARP Message Reply");
+	}
 
 	PRINT_DEBUG("Sender:");
 	print_IP_addrs(msg->sender_IP_addrs);
@@ -525,16 +525,15 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 void arp_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	metadata *meta = ff->metaData;
 	switch (ff->ctrlFrame.param_id) {
-	case EXEC_ARP_GET_ADDR:
-		PRINT_DEBUG("param_id=EXEC_ARP_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+	case ARP_EXEC_GET_ADDR:
+		PRINT_DEBUG("param_id=ARP_EXEC_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 
 		uint32_t src_ip;
 		uint32_t dst_ip;
 		//if_index?
-		secure_metadata_readFromElement(meta, "src_ip", &src_ip);
-		secure_metadata_readFromElement(meta, "dst_ip", &dst_ip);
+		secure_metadata_readFromElement(ff->metaData, "src_ip", &src_ip);
+		secure_metadata_readFromElement(ff->metaData, "dst_ip", &dst_ip);
 
 		arp_exec_get_addr(module, ff, src_ip, dst_ip);
 		//arp_exec_get_addr(ff, ip);
