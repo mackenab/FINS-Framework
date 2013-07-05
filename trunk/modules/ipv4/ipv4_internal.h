@@ -232,7 +232,6 @@ struct ip4_fragment* IP4_construct_fragment(struct ip4_header* pheader, struct i
 struct ip4_reass_hole* IP4_previous_hole(struct ip4_reass_hole* current_hole);
 struct ip4_reass_hole* IP4_next_hole(struct ip4_reass_hole* current_hole);
 void IP4_remove_hole(struct ip4_reass_hole* current_hole, struct ip4_reass_list *list);
-void ipv4_const_header(struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
 struct ip4_fragment IP4_fragment_data(void *data, uint16_t length, uint16_t offest, uint16_t fragment_size);
 
 struct ip4_routing_table *IP4_get_routing_table();
@@ -272,6 +271,8 @@ struct ipv4_data {
 
 	struct linked_list *route_list;
 	//struct ip4_reass_list *packet_list = NULL;
+	uint16_t unique_id;
+
 
 	struct ipv4_statistics stats;
 };
@@ -297,6 +298,7 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void ipv4_send_fdf_in(struct fins_module *module, struct finsFrame *ff, struct ip4_header *pheader, struct ip4_packet *ppacket);
 
 void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff);
+void ipv4_const_header(struct fins_module *module, struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
 void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet *ppacket, uint32_t address, int32_t if_index);
 
 //don't use 0

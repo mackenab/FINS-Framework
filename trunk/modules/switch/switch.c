@@ -15,8 +15,9 @@ void *switch_loop(void *local) {
 
 	uint32_t i;
 	int ret;
+	//int32_t val;
 	struct finsFrame *ff;
-	uint8_t index;
+	//uint8_t index;
 
 	int counter = 0;
 
@@ -26,7 +27,17 @@ void *switch_loop(void *local) {
 		secure_sem_wait(&md->overall->sem);
 		for (i = 0; i < MAX_MODULES; i++) {
 			if (md->overall->modules[i] != NULL) {
+				//helgrind says is race condition, though there will always be FF when post to event_sem
 				if (!IsEmpty(md->overall->modules[i]->output_queue)) { //added as optimization
+					/*
+					 //can possibly cause switch to be "behind"
+					 ret = sem_getvalue(md->overall->modules[i]->output_sem, &val);
+					 if (ret) {
+					 PRINT_ERROR("sem get value prob: src module_index=%u, ret=%d", i, ret);
+					 exit(-1);
+					 }*/
+
+					//if (val != 0) {
 					while ((ret = sem_wait(md->overall->modules[i]->output_sem)) && errno == EINTR)
 						;
 					if (ret != 0) {
@@ -39,41 +50,44 @@ void *switch_loop(void *local) {
 					//if (ff != NULL) { //shouldn't occur
 					counter++;
 
-					index = ff->destinationID;
-					if (index < 0 || index > MAX_MODULES) {
-						PRINT_ERROR("dropping ff: illegal destination: src module_index=%u, dst module_index=%u, ff=%p, meta=%p", i, index, ff, ff->metaData);
+					//index = ff->destinationID;
+					if (ff->destinationID < 0 || ff->destinationID > MAX_MODULES) {
+						PRINT_ERROR("dropping ff: illegal destination: src module_index=%u, dst module_index=%u, ff=%p, meta=%p",
+								i, ff->destinationID, ff, ff->metaData);
 						//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 						freeFinsFrame(ff);
 					} else { //if (i != id) //TODO add this?
-						if (md->overall->modules[index] != NULL) {
+						if (md->overall->modules[ff->destinationID] != NULL) {
 							PRINT_DEBUG("Counter=%d, from='%s', to='%s', ff=%p, meta=%p",
-									counter, md->overall->modules[i]->name, md->overall->modules[index]->name, ff, ff->metaData);
+									counter, md->overall->modules[i]->name, md->overall->modules[ff->destinationID]->name, ff, ff->metaData);
 							//TODO decide if should drop all traffic to switch input queues, or use that as linking table requests
-							if (index == module->index) {
+							if (ff->destinationID == module->index) {
 								switch_process_ff(module, ff);
 							} else {
-								while ((ret = sem_wait(md->overall->modules[index]->input_sem)) && errno == EINTR)
+								while ((ret = sem_wait(md->overall->modules[ff->destinationID]->input_sem)) && errno == EINTR)
 									;
 								if (ret != 0) {
-									PRINT_ERROR("sem wait prob: dst index=%u, ff=%p, meta=%p, ret=%d", index, ff, ff->metaData, ret);
+									PRINT_ERROR("sem wait prob: dst index=%u, ff=%p, meta=%p, ret=%d", ff->destinationID, ff, ff->metaData, ret);
 									exit(-1);
 								}
-								if (write_queue(ff, md->overall->modules[index]->input_queue)) {
-									sem_post(md->overall->modules[index]->event_sem);
-									sem_post(md->overall->modules[index]->input_sem);
+								if (write_queue(ff, md->overall->modules[ff->destinationID]->input_queue)) {
+									sem_post(md->overall->modules[ff->destinationID]->input_sem);
+									sem_post(md->overall->modules[ff->destinationID]->event_sem);
 								} else {
-									sem_post(md->overall->modules[index]->input_sem);
-									PRINT_ERROR("Write queue error: dst index=%u, ff=%p, meta=%p", index, ff, ff->metaData);
+									sem_post(md->overall->modules[ff->destinationID]->input_sem);
+									PRINT_ERROR("Write queue error: dst index=%u, ff=%p, meta=%p", ff->destinationID, ff, ff->metaData);
 									freeFinsFrame(ff);
 								}
 							}
 						} else {
-							PRINT_ERROR("dropping ff: destination not registered: src index=%u, dst index=%u, ff=%p, meta=%p", i, index, ff, ff->metaData);
+							PRINT_ERROR("dropping ff: destination not registered: src index=%u, dst index=%u, ff=%p, meta=%p",
+									i, ff->destinationID, ff, ff->metaData);
 							print_finsFrame(ff);
 							//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 							freeFinsFrame(ff);
 						}
 					}
+					//}
 					//}
 				}
 			}

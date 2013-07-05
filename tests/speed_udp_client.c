@@ -53,6 +53,12 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	return diff;
 }
 
+struct msg_hdr {
+	uint32_t id;
+	uint32_t seq_num;
+	struct timeval stamp;
+};
+
 int main(int argc, char *argv[]) {
 	int sock;
 	struct sockaddr_in server_addr;
@@ -95,7 +101,7 @@ int main(int argc, char *argv[]) {
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = PF_INET;
 	//server_addr.sin_addr.s_addr = xxx(192,168,1,3);
-	server_addr.sin_addr.s_addr = xxx(128,173,92,33);
+	server_addr.sin_addr.s_addr = xxx(128,173,92,32);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
@@ -147,6 +153,10 @@ int main(int argc, char *argv[]) {
 	printf("desired=%f, time=%f, used=%u\n", speed, time, use);
 	fflush(stdout);
 
+	struct msg_hdr *hdr = (struct msg_hdr *) send_data;
+	uint32_t id_count = 0;
+	uint32_t seq_count = 0;
+
 	double diff;
 	double interval = 1;
 	double check = interval;
@@ -158,6 +168,9 @@ int main(int argc, char *argv[]) {
 
 	int i = 0;
 	while (1) {
+		hdr->id = htonl(id_count++); //TODO change to random sequence
+		hdr->seq_num = htonl(seq_count++);
+		gettimeofday(&hdr->stamp, 0);
 		numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 		if (numbytes != len) {
 			printf("error: len=%d, numbytes=%d\n", len, numbytes);

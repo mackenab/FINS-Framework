@@ -37,10 +37,10 @@
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
-int i = 0;
+int recv_count = 0;
 
 void termination_handler(int sig) {
-	printf("\n**********Number of packers that have been received = %d *******\n", i);
+	printf("\n**********Number of packers that have been received = %d *******\n", recv_count);
 	exit(2);
 }
 
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
 	printf("Looping...\n");
 	fflush(stdout);
 
-	i = 0;
+	recv_count = 0;
 	int total = 0;
 	while (1) {
 		ret = poll(fds, nfds, time);
@@ -205,12 +205,12 @@ int main(int argc, char *argv[]) {
 					}
 					recv_data[bytes_read] = '\0';
 					total += bytes_read;
-					i++;
+					recv_count++;
 
 					gettimeofday(&end, 0);
 					diff = time_diff(&start, &end) / 1000;
 					if (check <= diff) {
-						printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, i, total, 8.0 * total / diff);
+						printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, recv_count, total, 8.0 * total / diff);
 						fflush(stdout);
 						check += interval;
 					}

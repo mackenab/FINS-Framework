@@ -212,15 +212,17 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 								arp_request_free(request);
 							}
 						} else {
-							PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
-									ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+							struct in_addr temp_src = { .s_addr = htonl(dst_ip) };
+							PRINT_WARN("Not seeking addr. Dropping ARP reply: ff=%p, src=0x%llx/'%s' (%u)", ff, src_mac, inet_ntoa(temp_src), src_ip);
+							struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
+							PRINT_WARN("ff=%p, dst=0x%llx/'%s' (%u), cache=%p", ff, dst_mac, inet_ntoa(temp_dst), dst_ip, cache);
 						}
 					} else {
 						PRINT_ERROR("No corresponding request. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
 					}
 				}
 			} else {
-				struct in_addr temp = {.s_addr = htonl(dst_ip)};
+				struct in_addr temp = { .s_addr = htonl(dst_ip) };
 				if (msg->operation == ARP_OP_REQUEST) {
 					PRINT_WARN("No corresponding interface. Dropping ARP request: ff=%p, dst_ip='%s' (%u)", ff, inet_ntoa(temp), dst_ip);
 				} else { //Reply

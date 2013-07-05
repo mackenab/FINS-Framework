@@ -29,6 +29,10 @@
 
 #include "logger.h"
 
+#define LOGGER_INTERVAL_DEFAULT 1000
+#define LOGGER_REPEATS_DEFAULT 	30
+
+
 #define LOGGER_LIB "logger"
 #define LOGGER_MAX_FLOWS 0
 //#define LOGGER_FLOW_RTM  0 //TODO remove

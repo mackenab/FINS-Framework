@@ -91,7 +91,8 @@ void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *
 		PRINT_ERROR("accept error: capture_fd=%d, errno=%u, str='%s'", shared->capture_fd, errno, strerror(errno));
 		close_pipes(shared);
 		return;
-	}PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
+	}
+	PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
 
 	sleep(5);
 

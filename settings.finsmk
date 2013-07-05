@@ -105,11 +105,13 @@ EXECS_LIST := capturer console core wedge
 #signals using a different system & not to set the values of CC, LD, CFLAGS, LDFLAGS
 ifndef ALTERNATIVE_BUILD
 CC = gcc
-CCOPTS := -g -O0 -Wall #flags for valgrind
+#CCOPTS := -g -O0 -Wall #flags for valgrind
+CCOPTS := -Wall
 INCLS :=
 
 LD = gcc
-LDOPTS := -g -O0 -Wall #flags for valgrind
+#LDOPTS := -g -O0 -Wall #flags for valgrind
+LDOPTS := -Wall
 LIBPATHS :=
 LIBS := 
 endif

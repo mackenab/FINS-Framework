@@ -29,7 +29,7 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	struct ip4_packet_header pkt;
 	struct ip4_packet *pkt_buf = (struct ip4_packet *) &pkt;
-	ipv4_const_header(pkt_buf, src_ip, dst_ip, protocol);
+	ipv4_const_header(module, pkt_buf, src_ip, dst_ip, protocol);
 
 	uint32_t send_ttl = 0;
 	if (metadata_readFromElement(ff->metaData, "send_ttl", &send_ttl) == META_TRUE) {

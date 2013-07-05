@@ -284,8 +284,8 @@ int logger_init(struct fins_module *module, metadata_element *params, struct env
 
 	//TODO extract this from meta?
 	md->logger_started = 0;
-	md->logger_interval = 1000;
-	md->logger_repeats = 10;
+	md->logger_interval = LOGGER_INTERVAL_DEFAULT;
+	md->logger_repeats = LOGGER_REPEATS_DEFAULT;
 
 	md->logger_to_data = secure_malloc(sizeof(struct intsem_to_timer_data));
 	md->logger_to_data->handler = intsem_to_handler;
@@ -300,6 +300,8 @@ int logger_init(struct fins_module *module, metadata_element *params, struct env
 int logger_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
+
+	logger_get_ff(module);
 
 	struct logger_data *md = (struct logger_data *) module->data;
 	secure_pthread_create(&md->switch_to_logger_thread, attr, switch_to_logger, module);

@@ -76,8 +76,19 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 	return diff;
 }
 
-int i = 0;
-int total = 0;
+struct msg_hdr {
+	uint32_t id;
+	uint32_t seq_num;
+	struct timeval stamp;
+};
+
+int recv_count = 0;
+int recv_total = 0;
+
+uint32_t last_seq_num = 0;
+uint32_t miss_total = 0;
+uint32_t miss_count = 0;
+
 double diff = 0;
 struct timeval start, end;
 
@@ -85,8 +96,13 @@ void termination_handler(int sig) {
 	gettimeofday(&end, 0);
 	diff = time_diff(&start, &end) / 1000;
 
-	printf("\n**********Number of packers that have been received = %d *******\n", i);
-	printf("\ntime=%f, frames=%d, total=%d, speed=%f\n", diff, i, total, 8.0 * total / diff);
+	printf("\n**********Number of packers that have been received = %d *******\n", recv_count);
+	if (recv_count != 0) {
+		printf("\ntime=%f, frames=%d, total=%d, speed=%f, drop=%f (%d), jump=%f,%u\n", diff, recv_count, recv_total, 8.0 * recv_total / diff, 100.0 * miss_total / recv_count, miss_total,
+				1.0 * miss_total / miss_count, miss_count);
+	} else {
+		printf("\ntime=%f, frames=%d, total=%d, speed=%f, drop=NA\n", diff, recv_count, recv_total, 8.0 * recv_total / diff);
+	}
 	exit(2);
 }
 
@@ -151,7 +167,10 @@ int main(int argc, char *argv[]) {
 	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
 	printf("fd: sock=%d, events=%x\n", sock, fds[1].events);
 	fflush(stdout);
-	int time = 1000;
+	//int time = 1000;
+
+	struct msg_hdr *hdr = (struct msg_hdr *) recv_data;
+	uint32_t seq_num_host;
 
 	int init = 1;
 	double interval = 1;
@@ -182,14 +201,28 @@ int main(int argc, char *argv[]) {
 					if (0) {
 						print_hex(3 * 4, (uint8_t *) recv_data);
 					}
-					recv_data[bytes_read] = '\0';
-					total += bytes_read;
-					i++;
+					//recv_data[bytes_read] = '\0';
+					recv_count++;
+					recv_total += bytes_read;
+
+					seq_num_host = ntohl(hdr->seq_num);
+					if (seq_num_host < last_seq_num) {
+						miss_total--;
+					} else if (last_seq_num == 0 && seq_num_host == 0) {
+					} else if (last_seq_num + 1 == seq_num_host) {
+						last_seq_num = seq_num_host;
+					} else {
+						miss_total += seq_num_host - last_seq_num - 1;
+						miss_count++;
+
+						last_seq_num = seq_num_host;
+					}
 
 					gettimeofday(&end, 0);
 					diff = time_diff(&start, &end) / 1000;
 					if (check <= diff) {
-						printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, i, total, 8.0 * total / diff);
+						printf("time=%f, frames=%d, total=%d, speed=%f, drop=%f (%d), jump=%f,%u\n", diff, recv_count, recv_total, 8.0 * recv_total / diff, 100.0 * miss_total / recv_count,
+								miss_total, 1.0 * miss_total / miss_count, miss_count);
 						fflush(stdout);
 						check += interval;
 					}

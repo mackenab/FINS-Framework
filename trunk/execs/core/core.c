@@ -152,7 +152,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	//######################################################################
 	overall->envi = (struct envi_record *) secure_malloc(sizeof(struct envi_record));
 
-	PRINT_IMPORTANT("loading environment");
+	PRINT_IMPORTANT("########################## loading environment: '%s'", (char *) envi_name);
 	metadata *meta_envi = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_envi);
 
@@ -165,7 +165,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	}
 
 	//############# if_list
-	PRINT_IMPORTANT("interface list");
+	PRINT_IMPORTANT("############# Configuring List of Interfaces");
 	overall->envi->if_list = list_create(MAX_INTERFACES);
 
 	list_elem = config_lookup(meta_envi, "environment.interfaces");
@@ -261,7 +261,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	PRINT_IMPORTANT("if_list: list=%p, max=%u, len=%u", overall->envi->if_list, overall->envi->if_list->max, overall->envi->if_list->len);
 
 	//############# if_loopback
-	PRINT_IMPORTANT("loopback interface");
+	PRINT_IMPORTANT("############# Configuring Loopback Interface");
 	if (overall->envi->if_loopback != NULL) {
 		PRINT_IMPORTANT("loopback: name='%s', addr_list->len=%u", overall->envi->if_loopback->name, overall->envi->if_loopback->addr_list->len);
 	} else {
@@ -269,7 +269,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	}
 
 	//############# if_main
-	PRINT_IMPORTANT("main interface");
+	PRINT_IMPORTANT("############# Configuring Main Interface");
 	uint32_t if_main;
 
 	status = config_lookup_int(meta_envi, "environment.main_interface", (int *) &if_main);
@@ -280,13 +280,13 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 
 	overall->envi->if_main = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_main);
 	if (overall->envi->if_main != NULL) {
-		PRINT_IMPORTANT("main: name='%s', addr_list->len=%u", overall->envi->if_main->name, overall->envi->if_main->addr_list->len);
+		PRINT_IMPORTANT("main interface: name='%s', addr_list->len=%u", overall->envi->if_main->name, overall->envi->if_main->addr_list->len);
 	} else {
 		PRINT_WARN("todo error");
 	}
 
 	//############# addr_list
-	PRINT_IMPORTANT("address list");
+	PRINT_IMPORTANT("############# Configuring List of Host Addresses");
 	//overall->envi->addr_list = list_create(MAX_INTERFACES * MAX_FAMILIES); //TODO use?
 
 	list_elem = config_lookup(meta_envi, "environment.addresses");
@@ -411,7 +411,9 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 					}
 
 					if (list_has_space(ifr->addr_list)) {
-						PRINT_IMPORTANT("Adding address: ifr=%p, if_index=%d, family=%u", ifr, addr->if_index, addr->family);
+						PRINT_IMPORTANT(
+								"Adding address: if_index=%d, family=%u, ip='%u.%u.%u.%u', mask='%u.%u.%u.%u', gw='%u.%u.%u.%u', bdc='%u.%u.%u.%u', dst='%u.%u.%u.%u'",
+								if_index, family, ip[0], ip[1], ip[2], ip[3], mask[0], mask[1], mask[2], mask[3], gw[0], gw[1], gw[2], gw[3], bdc[0], bdc[1], bdc[2], bdc[3], dst[0], dst[1], dst[2], dst[3]);
 						list_append(ifr->addr_list, addr);
 					} else {
 						//TODO error
@@ -420,7 +422,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 					}
 				} else {
 					//TODO error
-					PRINT_ERROR("todo: replace or add new?");
+					PRINT_ERROR("todo: previous address found, replace or add new?");
 				}
 			} else {
 				if (family == AF_INET) {
@@ -444,7 +446,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	}
 
 	//############# route_list
-	PRINT_IMPORTANT("route list");
+	PRINT_IMPORTANT("############# Configuring List of Routes");
 	overall->envi->route_list = list_create(MAX_ROUTES);
 
 	list_elem = config_lookup(meta_envi, "environment.routes");
@@ -548,7 +550,8 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 				route->timeout = timeout;
 
 				if (list_has_space(overall->envi->route_list)) {
-					PRINT_IMPORTANT("Adding route: ifr=%p, if_index=%d, family=%u", ifr, route->if_index, route->family);
+					PRINT_IMPORTANT( "Adding route: if_index=%d, family=%u, dst='%u.%u.%u.%u', mask='%u.%u.%u.%u', gw='%u.%u.%u.%u', metric=%u, timeout=%u",
+							route->if_index, route->family, dst[0], dst[1], dst[2], dst[3], mask[0], mask[1], mask[2], mask[3], gw[0], gw[1], gw[2], gw[3], metric, timeout);
 					list_append(overall->envi->route_list, route);
 				} else {
 					//TODO error
@@ -574,7 +577,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	metadata_destroy(meta_envi);
 
 	//######################################################################
-	PRINT_IMPORTANT("loading stack");
+	PRINT_IMPORTANT("########################## loading stack: '%s'", (char *) stack_name);
 	metadata *meta_stack = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_stack);
 
@@ -587,7 +590,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	}
 
 	//############# module_list
-	PRINT_IMPORTANT("module list");
+	PRINT_IMPORTANT("############# Configuring List of Modules");
 	overall->lib_list = list_create(MAX_MODULES);
 	memset(overall->modules, 0, MAX_MODULES * sizeof(struct fins_module *));
 	overall->admin_list = list_create(MAX_MODULES);
@@ -704,7 +707,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			overall->modules[i] = module;
 
 			if (module->flows_max < mod_flows_num) {
-				PRINT_ERROR("todo error");
+				PRINT_ERROR("Loading module parameters failed, too many flows for this library: specified=%u, max=%u", mod_flows_num, module->flows_max);
 				exit(-1);
 			}
 
@@ -714,7 +717,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			list_append(mt_list, mt);
 
 			if (mod_admin != NULL) {
-				PRINT_IMPORTANT("Adding admin: module=%p, lib='%s', name='%s'", module, module->lib, module->name);
+				PRINT_IMPORTANT("Adding module: module=%p, lib='%s', name='%s'", module, module->lib, module->name);
 				list_append(overall->admin_list, module);
 			}
 		} else {
@@ -731,7 +734,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	list_for_each1(overall->admin_list, assign_overall, overall);
 
 	//############# linking_list
-	PRINT_IMPORTANT("link list");
+	PRINT_IMPORTANT("############# Configuring Linking Table");
 	overall->link_list = list_create(MAX_TABLE_LINKS);
 
 	metadata_element *links_elem = config_lookup(meta_stack, "stack.links");
@@ -823,7 +826,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	metadata_destroy(meta_stack);
 
 	//######################################################################
-	PRINT_IMPORTANT("update modules");
+	PRINT_IMPORTANT("############# Updating modules with correct flows & links");
 	//send out subset of linking table to each module as update
 	//TODO table subset update
 
@@ -853,6 +856,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 			ff_update->ctrlFrame.data = (uint8_t *) mt;
 
 			module_to_switch(overall->modules[0], ff_update);
+			//module_set_param_dual(overall->modules[i], ff_update);
 		}
 	}
 	list_free(mt_list, free);
@@ -863,7 +867,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 
-	PRINT_IMPORTANT("modules: run");
+	PRINT_IMPORTANT("############# Calling run() for modules");
 
 	for (i = 0; i < MAX_MODULES; i++) {
 		if (overall->modules[i] != NULL) {
@@ -880,7 +884,7 @@ void core_termination_handler(int sig) {
 	int i;
 
 	//shutdown all module threads in backwards order of startup
-	PRINT_IMPORTANT("modules: shutdown");
+	PRINT_IMPORTANT("############# Calling shutdown() for modules");
 	for (i = MAX_MODULES - 1; i >= 0; i--) {
 		if (overall->modules[i] != NULL) {
 			overall->modules[i]->ops->shutdown(overall->modules[i]);
@@ -888,7 +892,7 @@ void core_termination_handler(int sig) {
 	}
 
 	//have each module free data & que/sem //TODO finish each of these
-	PRINT_IMPORTANT("modules: release");
+	PRINT_IMPORTANT("############# Calling release() for modules");
 	for (i = MAX_MODULES - 1; i >= 0; i--) {
 		if (overall->modules[i] != NULL) {
 			overall->modules[i]->ops->release(overall->modules[i]);

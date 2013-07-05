@@ -717,9 +717,10 @@ int rtm_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
+	rtm_get_ff(module);
+
 	struct rtm_data *md = (struct rtm_data *) module->data;
 	secure_pthread_create(&md->switch_to_rtm_thread, attr, switch_to_rtm, module);
-	usleep(1000);
 	secure_pthread_create(&md->accept_console_thread, attr, accept_console, module);
 	secure_pthread_create(&md->console_to_rtm_thread, attr, console_to_rtm, module);
 

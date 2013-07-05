@@ -675,7 +675,7 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			data = store->ff->dataFrame.pdu;
 			PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 
-			md->sockets[hdr->sock_index].data_buf -= data_len - store->pos;
+			md->sockets[hdr->sock_index].data_buf -= data_len;
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 			if (store->addr->ss_family == AF_INET) {
@@ -704,23 +704,22 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t)md->sockets[hdr->sock_index].stamp.tv_usec);
 
 		uint32_t msg_len;
-		if (buf_len < data_len - store->pos) {
+		if (buf_len < data_len) {
 			msg_len = buf_len;
 		} else {
-			msg_len = data_len - store->pos;
+			msg_len = data_len;
 		}
-		uint8_t *msg = data + store->pos;
 
 		//#######
 #ifdef DEBUG
 		uint8_t *temp = (uint8_t *) secure_malloc(msg_len + 1);
-		memcpy(temp, msg, msg_len);
+		memcpy(temp, data, msg_len);
 		temp[msg_len] = '\0';
 		PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, temp);
 		free(temp);
 
 		if (0) { //TODO change to func, print_hex
-			print_hex(msg_len, msg);
+			print_hex(msg_len, data);
 		}
 #endif
 		//#######
@@ -729,23 +728,11 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		uint8_t *control;
 		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
 
-		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, msg, control_len, control);
+		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, data, control_len, control);
 		if (!ret) {
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
-
-		if (msg_len == data_len - store->pos) {
-			daemon_store_free(store);
-		} else {
-			if (flags & MSG_ERRQUEUE) {
-				daemon_store_free(store);
-			} else {
-				store->pos += msg_len;
-				PRINT_DEBUG("prepending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
-				list_prepend(md->sockets[hdr->sock_index].data_list, store);
-				md->sockets[hdr->sock_index].data_buf += data_len - store->pos;
-			}
-		}
+		daemon_store_free(store);
 
 		if (ret_val != 0) {
 			free(control);
@@ -1501,44 +1488,33 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 		return;
 	}
 
-	md->sockets[sock_index].count++; //TODO remove, only for testing
-	PRINT_INFO("count=%d", md->sockets[sock_index].count);
+	//md->sockets[sock_index].count++; //TODO remove, only for testing
+	//PRINT_INFO("count=%d", md->sockets[sock_index].count);
 
 	//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 	uint32_t flags = POLLIN;
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_udp, module, &flags);
 
-	uint32_t data_len = ff->dataFrame.pduLength;
-	uint8_t *data = ff->dataFrame.pdu;
-	uint32_t data_pos = 0;
 	flags = 0;
-	struct daemon_call *call;
+	struct daemon_call *call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
+	if (call != NULL) {
+		recvmsg_in_udp(call, module, ff->metaData, ff->dataFrame.pduLength, ff->dataFrame.pdu, src_addr, 0);
+		list_remove(md->sockets[sock_index].call_list, call);
 
-	while (1) {
-		call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
-		if (call != NULL) {
-			data_pos += recvmsg_in_udp(call, module, ff->metaData, data_len - data_pos, data + data_pos, src_addr, 0);
-			list_remove(md->sockets[sock_index].call_list, call);
-
-			if (data_pos == data_len) {
-				freeFinsFrame(ff);
-				return;
-			}
-		} else {
-			break;
-		}
+		freeFinsFrame(ff);
+		return;
 	}
 
 	struct daemon_store *store = (struct daemon_store *) secure_malloc(sizeof(struct daemon_store));
 	store->addr = (struct sockaddr_storage *) secure_malloc(sizeof(struct sockaddr_storage));
 	memcpy(store->addr, src_addr, sizeof(struct sockaddr_storage));
 	store->ff = ff;
-	store->pos = data_pos;
+	store->pos = 0;
 
 	if (list_has_space(md->sockets[sock_index].data_list)) {
-		PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+		PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, ff->dataFrame.pduLength, ff->dataFrame.pdu, store->pos);
 		list_append(md->sockets[sock_index].data_list, store);
-		md->sockets[sock_index].data_buf += data_len - store->pos;
+		md->sockets[sock_index].data_buf += ff->dataFrame.pduLength;
 		PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", sock_index, ff, ff->metaData, md->sockets[sock_index].data_buf);
 	} else {
 		PRINT_ERROR("data_list full: sock_index=%d, ff=%p", sock_index, ff);

@@ -2912,6 +2912,8 @@ int tcp_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
+	tcp_get_ff(module);
+
 	struct tcp_data *md = (struct tcp_data *) module->data;
 	secure_pthread_create(&md->switch_to_tcp_thread, attr, switch_to_tcp, module);
 

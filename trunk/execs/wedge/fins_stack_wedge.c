@@ -3867,7 +3867,8 @@ if (call_index == -1) {
 	if (ret) {
 		PRINT_ERROR("copy_from_user fail ret=%d", ret);
 goto end;
-	}PRINT_DEBUG("len=%d", len);
+	}
+	PRINT_DEBUG("len=%d", len);
 
 // Build the message
 buf_len = sizeof(struct wedge_to_daemon_hdr) + 3 * sizeof(__s32) + (len > 0 ? len : 0);
@@ -3934,7 +3935,8 @@ wedge_calls[call_index].call_id = -1;
 if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 //TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
-}PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+}
+PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 lock_sock(sk);
 PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -4130,7 +4132,8 @@ wedge_calls[call_index].call_id = -1;
 if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 //TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
-}PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+}
+PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 lock_sock(sk);
 PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",

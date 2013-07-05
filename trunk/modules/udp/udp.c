@@ -92,8 +92,6 @@ void *switch_to_udp(void *local) {
 }
 
 void udp_get_ff(struct fins_module *module) {
-	struct udp_data *md = (struct udp_data *) module->data;
-
 	struct finsFrame *ff;
 	do {
 		secure_sem_wait(module->event_sem);
@@ -114,8 +112,6 @@ void udp_get_ff(struct fins_module *module) {
 		exit(-1);
 	}
 
-	md->stats.totalRecieved++;
-	PRINT_DEBUG("UDP Total %d, ff=%p, meta=%p", md->stats.totalRecieved, ff, ff->metaData);
 	if (ff->dataOrCtrl == FF_CONTROL) {
 		udp_fcf(module, ff);
 		PRINT_DEBUG("");
@@ -423,6 +419,8 @@ int udp_init(struct fins_module *module, metadata_element *params, struct envi_r
 int udp_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
+
+	udp_get_ff(module);
 
 	struct udp_data *md = (struct udp_data *) module->data;
 	secure_pthread_create(&md->switch_to_udp_thread, attr, switch_to_udp, module);

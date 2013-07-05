@@ -81,7 +81,7 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(MAKE_INCS),cd $(DIR); $(MAKE) build; cd $(LOCAL_DIR);)
 endif
 
-$(LOCAL_SO_PATH):$(LOCAL_OBJS) $(OTHER_SO_PATHS) #$(LOCAL_OBJS_FILE)
+$(LOCAL_SO_PATH):$(LOCAL_OBJS) $(OTHER_SO_PATHS) $(INCLUDES) #$(LOCAL_OBJS_FILE)
 #	@echo "test1='$(LOCAL_DIR)'"
 	@$(LD) $(LOCAL_OBJS) $(LDFLAGS) -shared -o $(LOCAL_SO_PATH)
 

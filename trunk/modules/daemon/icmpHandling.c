@@ -569,7 +569,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 			data = store->ff->dataFrame.pdu;
 			PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
 
-			md->sockets[hdr->sock_index].data_buf -= data_len - store->pos;
+			md->sockets[hdr->sock_index].data_buf -= data_len;
 			PRINT_DEBUG("after: sock_index=%d, data_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].data_buf);
 
 			if (store->addr->ss_family == AF_INET) {
@@ -596,23 +596,22 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t)md->sockets[hdr->sock_index].stamp.tv_usec);
 
 		uint32_t msg_len;
-		if (buf_len < data_len - store->pos) {
+		if (buf_len < data_len) {
 			msg_len = buf_len;
 		} else {
-			msg_len = data_len - store->pos;
+			msg_len = data_len;
 		}
-		uint8_t *msg = data + store->pos;
 
 		//#######
 #ifdef DEBUG
 		uint8_t *temp = (uint8_t *) secure_malloc(msg_len + 1);
-		memcpy(temp, msg, msg_len);
+		memcpy(temp, data, msg_len);
 		temp[msg_len] = '\0';
 		PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, temp);
 		free(temp);
 
 		if (0) { //TODO change to func, print_hex
-			print_hex(msg_len, msg);
+			print_hex(msg_len, data);
 		}
 #endif
 		//#######
@@ -621,23 +620,11 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		uint8_t *control;
 		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
 
-		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, msg, control_len, control);
+		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, data, control_len, control);
 		if (!ret) {
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
-
-		if (msg_len == data_len - store->pos) {
-			daemon_store_free(store);
-		} else {
-			if (flags & MSG_ERRQUEUE) {
-				daemon_store_free(store);
-			} else {
-				store->pos += msg_len;
-				PRINT_DEBUG("prepending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
-				list_prepend(md->sockets[hdr->sock_index].data_list, store);
-				md->sockets[hdr->sock_index].data_buf += data_len - store->pos;
-			}
-		}
+		daemon_store_free(store);
 
 		if (ret_val != 0) {
 			free(control);
@@ -1335,9 +1322,6 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 
 	int i;
 	uint32_t flags;
-	uint32_t data_len;
-	uint8_t *data;
-	uint32_t data_pos;
 	struct daemon_call *call;
 	struct daemon_store *store;
 
@@ -1353,28 +1337,18 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
 							md->sockets[i].sock_id, i, md->sockets[i].state, addr4_get_ip(&md->sockets[i].host_addr), addr4_get_ip(&md->sockets[i].rem_addr));
 
+					//md->sockets[i].count++; //TODO remove, only for testing
+					//PRINT_INFO("count=%d", md->sockets[i].count);
+
 					//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
 					flags = POLLIN;
 					list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
 
-					data_len = ff->dataFrame.pduLength;
-					data = ff->dataFrame.pdu;
-					data_pos = 0;
-					while (1) {
-						flags = 0;
-						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
-						if (call != NULL) {
-							data_pos += recvmsg_in_icmp(call, module, ff->metaData, data_len - data_pos, data + data_pos, src_addr, 0);
-							list_remove(md->sockets[i].call_list, call);
-
-							if (data_pos == data_len) {
-								break;
-							}
-						} else {
-							break;
-						}
-					}
-					if (data_pos == data_len) {
+					flags = 0;
+					call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
+					if (call != NULL) {
+						recvmsg_in_icmp(call, module, ff->metaData, ff->dataFrame.pduLength, ff->dataFrame.pdu, src_addr, 0);
+						list_remove(md->sockets[i].call_list, call);
 						continue;
 					}
 
@@ -1382,12 +1356,13 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 					store->addr = (struct sockaddr_storage *) secure_malloc(sizeof(struct sockaddr_storage));
 					memcpy(store->addr, src_addr, sizeof(struct sockaddr_storage));
 					store->ff = cloneFinsFrame(ff);
-					store->pos = data_pos;
+					store->pos = 0;
 
 					if (list_has_space(md->sockets[i].data_list)) {
-						PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+						PRINT_DEBUG("appending store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u",
+								store, store->ff, ff->dataFrame.pduLength, ff->dataFrame.pdu, store->pos);
 						list_append(md->sockets[i].data_list, store);
-						md->sockets[i].data_buf += data_len - store->pos;
+						md->sockets[i].data_buf += ff->dataFrame.pduLength;
 						PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", i, store->ff, ff->metaData, md->sockets[i].data_buf);
 					} else {
 						PRINT_ERROR("data_list full: sock_index=%d, ff=%p", i, store->ff);

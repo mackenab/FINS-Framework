@@ -242,6 +242,7 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	case TYPE_ECHOREPLY:
 		if (icmp_pkt->code == CODE_ECHO) {
 			//pass through to daemon
+			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
 			if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
 				PRINT_WARN("todo error");
 				freeFinsFrame(ff);
@@ -279,6 +280,7 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case TYPE_ECHOREQUEST:
 		if (icmp_pkt->code == CODE_ECHO) {
+			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
 			icmp_ping_reply(module, ff, icmp_pkt, data_len);
 		} else {
 			PRINT_ERROR("Error in ICMP packet code. Dropping...");
@@ -426,7 +428,7 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	memcpy(icmp_pkt_reply->data, icmp_pkt->data, data_len);
 
 	icmp_pkt_reply->checksum = htons(icmp_checksum(pdu_reply, pdu_len_reply));
-	PRINT_DEBUG("checksum=0x%x", icmp_pkt_reply->checksum);
+	PRINT_DEBUG("netw: id=%u, seq_num=%u, checksum=0x%x", icmp_pkt_reply->param_1, icmp_pkt_reply->param_2, icmp_pkt_reply->checksum);
 
 	uint32_t family;
 	secure_metadata_readFromElement(ff->metaData, "recv_family", &family);
@@ -568,6 +570,8 @@ int icmp_init(struct fins_module *module, metadata_element *params, struct envi_
 int icmp_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
+
+	icmp_get_ff(module);
 
 	struct icmp_data *md = (struct icmp_data *) module->data;
 	secure_pthread_create(&md->switch_to_icmp_thread, attr, switch_to_icmp, module);

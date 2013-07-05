@@ -93,6 +93,8 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 #endif
 	//#########################
 
+	md->stats.totalRecieved++;
+	PRINT_DEBUG("UDP total recv'd=%d, ff=%p, meta=%p", md->stats.totalRecieved, ff, ff->metaData);
 	if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
 		PRINT_ERROR("send to switch error, ff=%p", ff);
 		freeFinsFrame(ff);

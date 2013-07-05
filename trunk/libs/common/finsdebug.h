@@ -12,7 +12,7 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-#define DEBUG
+//#define DEBUG
 #define INFO
 #define WARN
 #define IMPORTANT
@@ -59,6 +59,7 @@
 
 #ifdef DEBUG
 //#define PRINT_DEBUG(format, args...) if (strncmp(__FILE__, "tcp", 3)==0) {printf("\033[01;37mDEBUG(%s, %s, %d):"format"\n\033[01;37m", __FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);} else {}
+//#define PRINT_DEBUG(format, args...) if (strncmp(__FILE__, "icmpHa", 6)==0) {printf("\033[01;37mDEBUG(%s, %s, %d):"format"\n\033[01;37m", __FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout);} else {}
 #define PRINT_DEBUG(format, args...) printf("\033[01;37mDEBUG(%s, %s, %d):"format"\n\033[01;37m", __FILE__, __FUNCTION__, __LINE__, ##args);fflush(stdout)
 #else
 #define PRINT_DEBUG(format, args...)

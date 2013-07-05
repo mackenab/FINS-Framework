@@ -93,6 +93,7 @@ int ipv4_init(struct fins_module *module, metadata_element *params, struct envi_
 	}
 	md->route_list->max = IPV4_ROUTE_LIST_MAX;
 
+	md->unique_id = 0;
 	//when recv pkt would need to check addresses
 	//when send pkt would need to check routing table & addresses (for ip address)
 	//both of these would need to be updated by switch etc
@@ -108,6 +109,8 @@ int ipv4_init(struct fins_module *module, metadata_element *params, struct envi_
 int ipv4_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
+
+	ipv4_get_ff(module);
 
 	struct ipv4_data *md = (struct ipv4_data *) module->data;
 	secure_pthread_create(&md->switch_to_ipv4_thread, attr, switch_to_ipv4, module);

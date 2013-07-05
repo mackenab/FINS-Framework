@@ -2231,6 +2231,9 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 		return;
 	}
 
+	//md->sockets[sock_index].count++; //TODO remove, only for testing
+	//PRINT_INFO("count=%d", md->sockets[sock_index].count);
+
 	struct timeval current;
 	gettimeofday(&current, 0);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);

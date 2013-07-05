@@ -721,7 +721,8 @@ void *capturer_to_interface(void *local) {
 		}
 
 		count++;
-		PRINT_INFO("frame read: count=%u, frame_len=%d", count, frame_len); //TODO change back to PRINT_DEBUG?
+		PRINT_DEBUG("frame read: count=%u, frame_len=%d", count, frame_len);
+		//TODO change back to PRINT_DEBUG?
 		//print_hex_block(data,datalen);
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
@@ -918,9 +919,10 @@ int interface_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
+	interface_get_ff(module);
+
 	struct interface_data *md = (struct interface_data *) module->data;
 	secure_pthread_create(&md->switch_to_interface_thread, attr, switch_to_interface, module);
-	usleep(1000);
 	secure_pthread_create(&md->capturer_to_interface_thread, attr, capturer_to_interface, module);
 
 	return 1;

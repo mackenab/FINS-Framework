@@ -633,6 +633,8 @@ int arp_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
+	arp_get_ff(module);
+
 	struct arp_data *md = (struct arp_data *) module->data;
 	secure_pthread_create(&md->switch_to_arp_thread, attr, switch_to_arp, module);
 

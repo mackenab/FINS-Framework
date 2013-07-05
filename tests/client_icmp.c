@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
 				pkt->param_1 = htons(i);
 				pkt->param_2 = htons(j++);
 
-				pkt->checksum = htons(icmp_checksum(msg, len + 8));
+				pkt->checksum = htons(icmp_checksum((uint8_t *)msg, len + 8));
 
 				//numbytes = sendto(sock, msg, len + 8, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 				numbytes = send(sock, msg, len + 8, 0);

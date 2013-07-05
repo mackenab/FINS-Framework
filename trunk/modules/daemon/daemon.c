@@ -1343,9 +1343,10 @@ int daemon_run(struct fins_module *module, pthread_attr_t *attr) {
 	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
+	daemon_get_ff(module);
+
 	struct daemon_data *md = (struct daemon_data *) module->data;
 	secure_pthread_create(&md->switch_to_daemon_thread, attr, switch_to_daemon, module);
-	usleep(1000);
 	secure_pthread_create(&md->wedge_to_daemon_thread, attr, wedge_to_daemon, module);
 
 	return 1;

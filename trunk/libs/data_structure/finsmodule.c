@@ -101,7 +101,7 @@ void link_print(struct link_record *link) {
 	int ret;
 	int i;
 	for (i = 0; i < link->dsts_num; i++) {
-		ret = sprintf((char *)pt, "%u, ", link->dsts_index[i]);
+		ret = sprintf((char *) pt, "%u, ", link->dsts_index[i]);
 		pt += ret;
 	}
 	*pt = '\0';
@@ -148,8 +148,8 @@ void module_destroy_structs(struct fins_module *module) {
 
 void module_to_switch_full(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s', ff=%p, meta=%p", module, module->id, module->name, ff, ff->metaData);
-	int ret;
 
+	int ret;
 	while ((ret = sem_wait(module->output_sem)) && errno == EINTR)
 		;
 	if (ret != 0) {
@@ -160,10 +160,12 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 #endif
 		exit(-1);
 	}
+	//PRINT_INFO("after: module=%p, id=%d, name='%s', ff=%p, meta=%p", module, module->id, module->name, ff, ff->metaData);
 	if (write_queue(ff, module->output_queue)) {
 		PRINT_DEBUG("Exited: module=%p, id=%d, name='%s', 1", module, module->id, module->name);
-		sem_post(switch_event_sem);
+		//sem_post(switch_event_sem); //post here with race condition
 		sem_post(module->output_sem);
+		sem_post(switch_event_sem); //post here with sem val check
 	} else {
 		sem_post(module->output_sem);
 #ifdef ERROR
@@ -277,7 +279,7 @@ void module_set_param_flows(struct fins_module *module, struct finsFrame *ff) {
 	uint8_t *pt = buf;
 	int ret;
 	for (i = 0; i < flows_num; i++) {
-		ret = sprintf((char *)pt, "%u, ", mt->flows[i]);
+		ret = sprintf((char *) pt, "%u, ", mt->flows[i]);
 		pt += ret;
 	}
 	*pt = '\0';
@@ -338,7 +340,7 @@ void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
 	uint8_t *pt = buf;
 	int ret;
 	for (i = 0; i < table->flows_num; i++) {
-		ret = sprintf((char *)pt, "%u, ", mt->flows[i]);
+		ret = sprintf((char *) pt, "%u, ", mt->flows[i]);
 		pt += ret;
 	}
 	*pt = '\0';
