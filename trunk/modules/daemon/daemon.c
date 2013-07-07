@@ -160,8 +160,6 @@ void daemon_calls_shutdown(struct fins_module *module, int call_index) {
 	timer_delete(md->calls[call_index].to_data->tid);
 	free(md->calls[call_index].to_data);
 
-	//sem_post(&conn->write_wait_sem);
-	//sem_post(&conn->write_sem);
 	//clear all threads using this conn_stub
 
 	PRINT_DEBUG("");
@@ -313,11 +311,8 @@ int daemon_sockets_remove(struct fins_module *module, int sock_index) {
  *
  */
 
-int randoming(int min, int max) {
-
-	srand((unsigned int) time(NULL));
+int daemon_randoming(int min, int max) {
 	return (min + (int) (max - min + 1) * (rand() / (RAND_MAX + 1.0)));
-
 }
 
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id) {
@@ -408,14 +403,14 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 
 void *switch_to_daemon(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		daemon_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -1060,7 +1055,7 @@ void daemon_handle_to(struct fins_module *module, struct daemon_call *call) {
 
 void *wedge_to_daemon(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	// Begin receive message section
@@ -1243,7 +1238,7 @@ void *wedge_to_daemon(void *local) {
 	free(recv_buf);
 	close(md->nl_sockfd);
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -1278,7 +1273,7 @@ void daemon_init_knobs(struct fins_module *module) {
 }
 
 int daemon_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	PRINT_DEBUG("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
@@ -1314,18 +1309,18 @@ int daemon_init(struct fins_module *module, metadata_element *params, struct env
 		list_free(leftover, free);
 	}
 	md->if_list->max = DAEMON_IF_LIST_MAX;
-	PRINT_IMPORTANT("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
+	PRINT_DEBUG("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
 
 	if (envi->if_loopback != NULL) {
 		md->if_loopback = (struct if_record *) list_find1(md->if_list,ifr_index_test,&envi->if_loopback->index);
-		PRINT_IMPORTANT("loopback: name='%s', addr_list->len=%u", md->if_loopback->name, md->if_loopback->addr_list->len);
+		PRINT_DEBUG("loopback: name='%s', addr_list->len=%u", md->if_loopback->name, md->if_loopback->addr_list->len);
 	} else {
 		md->if_loopback = NULL;
 	}
 
 	if (envi->if_main != NULL) {
 		md->if_main = (struct if_record *) list_find1(md->if_list,ifr_index_test,&envi->if_main->index);
-		PRINT_IMPORTANT("main: name='%s', addr_list->len=%u", md->if_main->name, md->if_main->addr_list->len);
+		PRINT_DEBUG("main: name='%s', addr_list->len=%u", md->if_main->name, md->if_main->addr_list->len);
 	} else {
 		md->if_main = NULL;
 	}
@@ -1340,7 +1335,7 @@ int daemon_init(struct fins_module *module, metadata_element *params, struct env
 }
 
 int daemon_run(struct fins_module *module, pthread_attr_t *attr) {
-	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	PRINT_DEBUG("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
 	daemon_get_ff(module);
@@ -1353,7 +1348,7 @@ int daemon_run(struct fins_module *module, pthread_attr_t *attr) {
 }
 
 int daemon_pause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_PAUSED;
 
 	//TODO
@@ -1361,7 +1356,7 @@ int daemon_pause(struct fins_module *module) {
 }
 
 int daemon_unpause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_RUNNING;
 
 	//TODO
@@ -1369,7 +1364,7 @@ int daemon_unpause(struct fins_module *module) {
 }
 
 int daemon_shutdown(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
@@ -1393,7 +1388,7 @@ int daemon_shutdown(struct fins_module *module) {
 }
 
 int daemon_release(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct daemon_data *md = (struct daemon_data *) module->data;
 	PRINT_IMPORTANT("expired_call_list->len=%u", md->expired_call_list->len);
@@ -1432,7 +1427,7 @@ static struct fins_module_ops daemon_ops = { .init = daemon_init, .run = daemon_
 		daemon_shutdown, .release = daemon_release, };
 
 struct fins_module *daemon_create(uint32_t index, uint32_t id, uint8_t *name) {
-	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+	PRINT_DEBUG("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
@@ -1445,6 +1440,6 @@ struct fins_module *daemon_create(uint32_t index, uint32_t id, uint8_t *name) {
 	module->id = id;
 	strcpy((char *) module->name, (char *) name);
 
-	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	PRINT_DEBUG("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
 	return module;
 }

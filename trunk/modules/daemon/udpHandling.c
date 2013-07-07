@@ -166,7 +166,7 @@ void connect_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
 			 */
 			while (1) {
-				host_port = (uint16_t) randoming(MIN_port, MAX_port);
+				host_port = (uint16_t) daemon_randoming(MIN_port, MAX_port);
 				if (match_host_addr4_udp(module, host_ip, host_port) == -1) {
 					break;
 				}
@@ -491,7 +491,7 @@ void sendmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
 			 */
 			while (1) {
-				host_port = (uint16_t) randoming(MIN_port, MAX_port);
+				host_port = (uint16_t) daemon_randoming(MIN_port, MAX_port);
 				if (match_host_addr4_udp(module, host_ip, (uint16_t) host_port) == -1) {
 					break;
 				}

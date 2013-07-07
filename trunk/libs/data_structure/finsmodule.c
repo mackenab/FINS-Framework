@@ -12,7 +12,7 @@ int mod_id_test(struct fins_module *mod, uint32_t *id) {
 }
 
 struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
-	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s'", lib, base_path);
+	PRINT_DEBUG("Entered: lib='%s', base_path='%s'", lib, base_path);
 
 	struct fins_library *library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
 	strcpy((char *) library->name, (char *) lib);
@@ -41,7 +41,7 @@ struct fins_library *library_load(uint8_t *lib, uint8_t *base_path) {
 
 	library->num_mods = 0;
 
-	PRINT_IMPORTANT("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
+	PRINT_DEBUG("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
 	return library;
 }
 
@@ -50,7 +50,7 @@ int library_name_test(struct fins_library *lib, uint8_t *name) {
 }
 
 void library_free(struct fins_library *lib) {
-	PRINT_IMPORTANT("Entered: library=%p, name='%s'", lib, lib->name);
+	PRINT_DEBUG("Entered: library=%p, name='%s'", lib, lib->name);
 
 	if (lib->handle != NULL) {
 		dlclose(lib->handle);
@@ -67,6 +67,10 @@ void assign_overall(struct fins_module *module, struct fins_overall *overall) {
 
 int link_id_test(struct link_record *link, uint32_t *id) {
 	return link->id == *id;
+}
+
+int link_src_test(struct link_record *link, uint32_t *index) {
+	return link->src_index == *index;
 }
 
 int link_involved_test(struct link_record *link, uint32_t *index) {
@@ -96,7 +100,7 @@ struct link_record *link_clone(struct link_record *link) {
 void link_print(struct link_record *link) {
 	PRINT_DEBUG("Entered: link=%p", link);
 
-	uint8_t buf[500];
+	uint8_t buf[1000];
 	uint8_t *pt = buf;
 	int ret;
 	int i;
@@ -154,24 +158,40 @@ void module_to_switch_full(const char *file, const char *func, int line, struct 
 		;
 	if (ret != 0) {
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n\033[01;37m", file, func, line, module,
-				module->id, module->name, ff, ff->metaData, ret);
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n", file, func, line, module, module->id, module->name, ff, ff->metaData, ret);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n\033[01;37m", file, func, line, module, module->id, module->name, ff, ff->metaData, ret); fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):output_sem wait prob: module=%p, id=%d, name='%s', ff=%p, meta=%p, ret=%d\n\033[01;37m",
+				(uint32_t) global_print_tv.tv_sec, (uint32_t) global_print_tv.tv_usec, file, func, line, module, module->id, module->name, ff, ff->metaData,
+				ret);
 		fflush(stdout);
+#endif
 #endif
 		exit(-1);
 	}
+#ifdef DEBUG
+	ret = ff->destinationID;
+#endif
 	//PRINT_INFO("after: module=%p, id=%d, name='%s', ff=%p, meta=%p", module, module->id, module->name, ff, ff->metaData);
 	if (write_queue(ff, module->output_queue)) {
-		PRINT_DEBUG("Exited: module=%p, id=%d, name='%s', 1", module, module->id, module->name);
-		//sem_post(switch_event_sem); //post here with race condition
+		PRINT_DEBUG("Exited: module=%p, id=%d, name='%s', dst=%u, 1", module, module->id, module->name, ret);
+		sem_post(global_switch_event_sem); //post here with race condition
 		sem_post(module->output_sem);
-		sem_post(switch_event_sem); //post here with sem val check
+		//sem_post(global_switch_event_sem); //post here with sem val check
 	} else {
 		sem_post(module->output_sem);
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n\033[01;37m", file, func, line, module, module->id,
-				module->name, ff);
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n", file, func, line, module, module->id, module->name, ff);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n\033[01;37m", file, func, line, module, module->id, module->name, ff); fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):write_queue fail: module=%p, id=%d, name='%s', ff=%p, 0\n\033[01;37m", (uint32_t) global_print_tv.tv_sec,
+				(uint32_t) global_print_tv.tv_usec, file, func, line, module, module->id, module->name, ff);
 		fflush(stdout);
+#endif
 #endif
 		exit(-1);
 	}
@@ -221,37 +241,38 @@ int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t 
 		return 0;
 	}
 
-	PRINT_DEBUG("table->flows[%u]=%u", flow, mt->flows[flow]);
-	if (mt->flows[flow] == LINK_NULL) {
+	PRINT_DEBUG("flow=%u, link_id=%u, link=%p", flow, mt->flows[flow].link_id, mt->flows[flow].link);
+	if (mt->flows[flow].link_id == LINK_NULL) {
 		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	}
 
-	struct link_record *link = (struct link_record *) list_find1(mt->link_list, link_id_test, &mt->flows[flow]);
-	if (link == NULL) {
+	if (mt->flows[flow].link == NULL) {
 		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	}
-	PRINT_DEBUG("link=%p, id=%u, src=%u, dst_num=%u", link, link->id, link->src_index, link->dsts_num);
+#ifdef DEBUG
+	link_print(mt->flows[flow].link);
+#endif
 
-	if (link->dsts_num == 0) {
+	if (mt->flows[flow].link->dsts_num == 0) {
 		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, 0);
 		return 0;
 	} else {
 		struct finsFrame *ff_clone;
 
 		int i;
-		for (i = 1; i < link->dsts_num; i++) {
+		for (i = 1; i < mt->flows[flow].link->dsts_num; i++) {
 			ff_clone = cloneFinsFrame(ff);
-			ff_clone->destinationID = link->dsts_index[i];
+			ff_clone->destinationID = mt->flows[flow].link->dsts_index[i];
 			module_to_switch(module, ff_clone);
 		}
 
-		ff->destinationID = link->dsts_index[0];
+		ff->destinationID = mt->flows[flow].link->dsts_index[0];
 		module_to_switch(module, ff);
 
-		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, link->dsts_num);
-		return link->dsts_num;
+		PRINT_DEBUG("Exited: module=%p, ff=%p, flow=%u, ret=%d", module, ff, flow, mt->flows[flow].link->dsts_num);
+		return mt->flows[flow].link->dsts_num;
 	}
 }
 
@@ -259,31 +280,31 @@ void module_set_param_flows(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 
-	uint32_t flows_num = ff->ctrlFrame.data_len / sizeof(uint32_t);
-	uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
-
-	if (module->flows_max < flows_num) {
+	if (module->flows_max < ff->ctrlFrame.data_len) {
 		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		return;
 	}
-	mt->flows_num = flows_num;
+	mt->flows_num = ff->ctrlFrame.data_len;
+	struct fins_module_flow *flows = (struct fins_module_flow *) ff->ctrlFrame.data;
 
 	int i;
-	for (i = 0; i < flows_num; i++) {
-		mt->flows[i] = flows[i];
+	for (i = 0; i < mt->flows_num; i++) {
+		mt->flows[i].link_id = flows[i].link_id;
+		mt->flows[i].link = (struct link_record *) list_find1(mt->link_list, link_id_test, &mt->flows[i].link_id);
 	}
 
 #ifdef DEBUG
-	uint8_t buf[500];
+	uint8_t buf[1000];
 	uint8_t *pt = buf;
 	int ret;
-	for (i = 0; i < flows_num; i++) {
-		ret = sprintf((char *) pt, "%u, ", mt->flows[i]);
+	for (i = 0; i < mt->flows_num; i++) {
+		//ret = sprintf((char *) pt, "%u, ", mt->flows[i].link_id);
+		ret = sprintf((char *) pt, "%u (%p), ", mt->flows[i].link_id, mt->flows[i].link);
 		pt += ret;
 	}
 	*pt = '\0';
-	PRINT_DEBUG("flows: max=%u, num=%u, ['%s']", module->flows_max, flows_num, buf);
+	PRINT_DEBUG("flows: max=%u, num=%u, ['%s']", module->flows_max, mt->flows_num, buf);
 #endif
 
 	//freeFF frees flows
@@ -305,6 +326,11 @@ void module_set_param_links(struct fins_module *module, struct finsFrame *ff) {
 	}
 	mt->link_list = (struct linked_list *) ff->ctrlFrame.data;
 
+	int i;
+	for (i = 0; i < mt->flows_num; i++) {
+		mt->flows[i].link = (struct link_record *) list_find1(mt->link_list, link_id_test, &mt->flows[i].link_id);
+	}
+
 #ifdef DEBUG
 	list_for_each(mt->link_list, link_print);
 #endif
@@ -324,35 +350,30 @@ void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
 	}
 	struct fins_module_table *table = (struct fins_module_table *) ff->ctrlFrame.data;
 
-	if (module->flows_max < table->flows_num) {
+	if (module->flows_max < table->flows_num || table->link_list == NULL) {
 		PRINT_WARN("todo error");
 		freeFinsFrame(ff);
 		return;
 	}
+	mt->link_list = table->link_list;
 	mt->flows_num = table->flows_num;
-
-	int i;
-	for (i = 0; i < table->flows_num; i++) {
-		mt->flows[i] = table->flows[i];
+	if (mt->flows_num != 0) {
+		memcpy(mt->flows, table->flows, mt->flows_num * sizeof(struct fins_module_flow));
 	}
+
 #ifdef DEBUG
-	uint8_t buf[500];
+	uint8_t buf[1000];
 	uint8_t *pt = buf;
 	int ret;
-	for (i = 0; i < table->flows_num; i++) {
-		ret = sprintf((char *) pt, "%u, ", mt->flows[i]);
+	int i;
+	for (i = 0; i < mt->flows_num; i++) {
+		//ret = sprintf((char *) pt, "%u, ", mt->flows[i].link_id);
+		ret = sprintf((char *) pt, "%u (%p), ", mt->flows[i].link_id, mt->flows[i].link);
 		pt += ret;
 	}
 	*pt = '\0';
-	PRINT_DEBUG("flows: max=%u, num=%u, ['%s']", module->flows_max, table->flows_num, buf);
-#endif
+	PRINT_DEBUG("flows: max=%u, num=%u, ['%s']", module->flows_max, mt->flows_num, buf);
 
-	if (mt->link_list != NULL) {
-		list_free(mt->link_list, free);
-	}
-	mt->link_list = table->link_list;
-
-#ifdef DEBUG
 	list_for_each(mt->link_list, link_print);
 #endif
 
@@ -364,17 +385,34 @@ void module_get_param_flows(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 
-	ff->ctrlFrame.data_len = mt->flows_num * sizeof(uint32_t);
+	int i;
+	ff->ctrlFrame.data_len = mt->flows_num;
 	if (mt->flows_num != 0) {
-		ff->ctrlFrame.data = (uint8_t *) secure_malloc(ff->ctrlFrame.data_len);
-		uint32_t *flows = (uint32_t *) ff->ctrlFrame.data;
+		ff->ctrlFrame.data = (uint8_t *) secure_malloc(ff->ctrlFrame.data_len * sizeof(struct fins_module_flow));
+		struct fins_module_flow *flows = (struct fins_module_flow *) ff->ctrlFrame.data;
 
-		int i;
-		for (i = 0; i < mt->flows_num; i++) {
-			flows[i] = mt->flows[i];
+		for (i = 0; i < ff->ctrlFrame.data_len; i++) {
+			flows[i].link_id = mt->flows[i].link_id;
 		}
+
+#ifdef DEBUG
+		uint8_t buf[1000];
+		uint8_t *pt = buf;
+		int ret;
+		for (i = 0; i < mt->flows_num; i++) {
+			//ret = sprintf((char *) pt, "%u, ", mt->flows[i].link_id);
+			ret = sprintf((char *) pt, "%u (%p), ", flows[i].link_id, flows[i].link);
+			pt += ret;
+		}
+		*pt = '\0';
+		PRINT_DEBUG("flows: max=%u, num=%u, ['%s']", module->flows_max, mt->flows_num, buf);
+#endif
 	} else {
 		ff->ctrlFrame.data = NULL;
+
+#ifdef DEBUG
+		PRINT_DEBUG("flows: max=%u, num=%u, ['']", module->flows_max, mt->flows_num);
+#endif
 	}
 
 	module_reply_fcf(module, ff, FCF_TRUE, 0);
@@ -387,6 +425,10 @@ void module_get_param_links(struct fins_module *module, struct finsFrame *ff) {
 	if (mt->link_list != NULL) {
 		ff->ctrlFrame.data_len = sizeof(struct linked_list);
 		ff->ctrlFrame.data = (uint8_t *) list_clone(mt->link_list, link_clone);
+
+#ifdef DEBUG
+		list_for_each(mt->link_list, link_print);
+#endif
 	} else {
 		ff->ctrlFrame.data_len = 0;
 		ff->ctrlFrame.data = NULL;
@@ -413,8 +455,26 @@ void module_get_param_dual(struct fins_module *module, struct finsFrame *ff) {
 
 	int i;
 	for (i = 0; i < table->flows_num; i++) {
-		table->flows[i] = mt->flows[i];
+		table->flows[i].link_id = mt->flows[i].link_id;
+		table->flows[i].link = (struct link_record *) list_find1(table->link_list, link_id_test, &table->flows[i].link_id);
 	}
+
+#ifdef DEBUG
+	uint8_t buf[1000];
+	uint8_t *pt = buf;
+	int ret;
+	for (i = 0; i < mt->flows_num; i++) {
+		//ret = sprintf((char *) pt, "%u, ", mt->flows[i].link_id);
+		ret = sprintf((char *) pt, "%u (%p), ", mt->flows[i].link_id, mt->flows[i].link);
+		pt += ret;
+	}
+	*pt = '\0';
+	PRINT_DEBUG("flows: max=%u, num=%u, ['%s']", module->flows_max, mt->flows_num, buf);
+
+	if (mt->link_list != NULL) {
+		list_for_each(mt->link_list, link_print);
+	}
+#endif
 
 	module_reply_fcf(module, ff, FCF_TRUE, 0);
 }

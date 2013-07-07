@@ -261,7 +261,7 @@ void IP4_exit(void);
 struct ipv4_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[IPV4_MAX_FLOWS];
+	struct fins_module_flow flows[IPV4_MAX_FLOWS];
 
 	pthread_t switch_to_ipv4_thread;
 

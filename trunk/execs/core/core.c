@@ -37,7 +37,7 @@
 #include <rtm.h>
 #endif
 
-extern sem_t control_serial_sem; //TODO remove & change gen process to RNG
+extern sem_t global_control_serial_sem; //TODO remove & change gen process to RNG
 
 struct fins_overall *overall;
 
@@ -124,7 +124,7 @@ void core_dummy(void) {
 
 }
 
-void core_main(uint8_t *envi_name, uint8_t *stack_name) {
+void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 	PRINT_IMPORTANT("Core Initiation: Starting ************");
 
 #ifdef BUILD_FOR_ANDROID
@@ -132,8 +132,13 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 #endif
 
 	register_to_signal(SIGRTMIN);
+	if (seed == DEFAULT_SEED_NUM) {
+		srand((unsigned int) time(NULL));
+	} else {
+		srand(seed);
+	}
 
-	sem_init(&control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
+	sem_init(&global_control_serial_sem, 0, 1); //TODO remove after gen_control_serial_num() converted to RNG
 
 	signal(SIGINT, core_termination_handler); //register termination handler
 
@@ -713,12 +718,18 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 
 			mt = (struct fins_module_table *) secure_malloc(sizeof(struct fins_module_table));
 			mt->flows_num = mod_flows_num;
-			memcpy(mt->flows, mod_flows, mod_flows_num * sizeof(uint32_t));
+
+			for (j = 0; j < mt->flows_num; j++) {
+				mt->flows[j].link_id = mod_flows[j];
+			}
 			list_append(mt_list, mt);
 
 			if (mod_admin != NULL) {
-				PRINT_IMPORTANT("Adding module: module=%p, lib='%s', name='%s'", module, module->lib, module->name);
+				PRINT_IMPORTANT("Adding admin module: module=%p, lib='%s', name='%s', id=%d, index=%u",
+						module, module->lib, module->name, module->id, module->index);
 				list_append(overall->admin_list, module);
+			} else {
+				PRINT_IMPORTANT("Adding module: module=%p, lib='%s', name='%s', id=%d, index=%u", module, module->lib, module->name, module->id, module->index);
 			}
 		} else {
 			PRINT_ERROR("Initialization of module failed: module=%p, lib='%s', name='%s', flows_num=%u, flows=%p, params=%p, envi=%p",
@@ -815,7 +826,17 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 		}
 
 		if (list_has_space(overall->link_list)) {
-			PRINT_IMPORTANT("Adding link: link=%p, id=%u, src_index=%u, dsts_num=%u", link, link->id, link->src_index, link->dsts_num);
+			uint8_t buf[1000];
+			uint8_t *pt = buf;
+			int ret;
+			int i;
+			for (i = 0; i < link->dsts_num; i++) {
+				ret = sprintf((char *) pt, "%u, ", link->dsts_index[i]);
+				pt += ret;
+			}
+			*pt = '\0';
+
+			PRINT_IMPORTANT("Adding link: link=%p, id=%u, src_index=%u, dsts_num=%u, ['%s']", link, link->id, link->src_index, link->dsts_num, buf);
 			list_append(overall->link_list, link);
 		} else {
 			//TODO error
@@ -836,8 +857,26 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	for (i = 0; i < MAX_MODULES; i++) {
 		if (overall->modules[i] != NULL) {
 			mt = (struct fins_module_table *) list_remove_front(mt_list);
-			mt->link_list = list_filter1(overall->link_list, link_involved_test, &overall->modules[i]->index, link_clone); //TODO is mem leak
+			mt->link_list = list_filter1(overall->link_list, link_src_test, &overall->modules[i]->index, link_clone); //was link_involved_test, decide which better?
 			PRINT_IMPORTANT("subset: i=%d, link_list=%p, len=%d", i, mt->link_list, mt->link_list->len);
+
+			for (j = 0; j < mt->flows_num; j++) {
+				mt->flows[j].link = (struct link_record *) list_find1(mt->link_list, link_id_test, &mt->flows[j].link_id);
+			}
+
+//#ifdef DEBUG
+			uint8_t buf[1000];
+			uint8_t *pt = buf;
+			int ret;
+			for (j = 0; j < mt->flows_num; j++) {
+				ret = sprintf((char *) pt, "%u (%p), ", mt->flows[j].link_id, mt->flows[j].link);
+				pt += ret;
+			}
+			*pt = '\0';
+			PRINT_IMPORTANT("flows: num=%u, ['%s']", mt->flows_num, buf);
+
+			list_for_each(mt->link_list, link_print);
+//#endif
 
 			meta_update = (metadata *) secure_malloc(sizeof(metadata));
 			metadata_create(meta_update);
@@ -864,14 +903,14 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name) {
 	//############ say by this point envi var completely init'd
 	//assumed always connect/init to switch first
 
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
+	pthread_attr_init(&overall->attr);
+	pthread_attr_setdetachstate(&overall->attr, PTHREAD_CREATE_JOINABLE);
 
 	PRINT_IMPORTANT("############# Calling run() for modules");
 
 	for (i = 0; i < MAX_MODULES; i++) {
 		if (overall->modules[i] != NULL) {
-			overall->modules[i]->ops->run(overall->modules[i], &attr);
+			overall->modules[i]->ops->run(overall->modules[i], &overall->attr);
 		}
 	}
 
@@ -890,6 +929,7 @@ void core_termination_handler(int sig) {
 			overall->modules[i]->ops->shutdown(overall->modules[i]);
 		}
 	}
+	pthread_attr_destroy(&overall->attr);
 
 	//have each module free data & que/sem //TODO finish each of these
 	PRINT_IMPORTANT("############# Calling release() for modules");
@@ -913,9 +953,10 @@ void core_termination_handler(int sig) {
 	list_free(overall->envi->route_list, free);
 	free(overall->envi);
 
+	sem_destroy(&overall->sem);
 	free(overall);
-	sem_destroy(&control_serial_sem);
 
+	sem_destroy(&global_control_serial_sem);
 	PRINT_IMPORTANT("FIN");
 	exit(-1);
 }
@@ -949,15 +990,15 @@ void core_tests(void) {
 
 			struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 			ff->dataOrCtrl = FF_DATA;
-			ff->destinationID = 1;
+			ff->destinationID = 2;
 			ff->metaData = meta;
 
 			ff->dataFrame.directionFlag = DIR_UP;
 			ff->dataFrame.pduLength = 10;
 			ff->dataFrame.pdu = (uint8_t *) secure_malloc(10);
 
-			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[1]->name);
-			module_to_switch(overall->modules[0], ff);
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[1]->name, overall->modules[2]->name);
+			module_to_switch(overall->modules[1], ff);
 		}
 
 		if (0) {
@@ -1088,17 +1129,20 @@ void core_tests(void) {
 //#include <getopt.h>
 int main(int argc, char *argv[]) {
 	printf("argc=%u\n", argc);
+	fflush(stdout);
 
 	int i;
 #ifdef BUILD_FOR_ANDROID
 	for (i = 0; i < 3; i++) {
 		printf("argv[%d]='%s'\n", i, argv[i]);
+		fflush(stdout);
 	}
 
-	core_main((uint8_t *)("envi.cfg"), (uint8_t *)("stack.cfg"));
+	core_main((uint8_t *)("envi.cfg"), (uint8_t *)("stack.cfg"), 0);
 #else
 	for (i = 0; i < argc; i++) {
 		printf("argv[%d]='%s'\n", i, argv[i]);
+		fflush(stdout);
 	}
 
 	uint8_t envi_default = 1;
@@ -1117,6 +1161,9 @@ int main(int argc, char *argv[]) {
 	uint8_t core_name[FILE_NAME_SIZE];
 	memset((char *) core_name, 0, FILE_NAME_SIZE);
 
+	uint8_t seed_default = 1;
+	uint32_t seed_num;
+
 	int j;
 	uint32_t len;
 	uint8_t ch;
@@ -1132,15 +1179,18 @@ int main(int argc, char *argv[]) {
 						if (i + 1 < argc) {
 							strcpy((char *) envi_name, argv[i + 1]);
 							printf("Using environment configuration: '%s'\n", envi_name);
+							fflush(stdout);
 							envi_default = 0;
 							i += 1;
 						} else {
 							printf("Incorrect format. Usage: -e <file>\n");
+							fflush(stdout);
 							exit(-1);
 						}
 					} else {
 						strcpy((char *) envi_name, &argv[i][j + 1]);
 						printf("Using environment configuration: '%s'\n", envi_name);
+						fflush(stdout);
 						envi_default = 0;
 						j = len;
 					}
@@ -1149,15 +1199,18 @@ int main(int argc, char *argv[]) {
 						if (i + 1 < argc) {
 							strcpy((char *) stack_name, argv[i + 1]);
 							printf("Using stack configuration: '%s'\n", stack_name);
+							fflush(stdout);
 							stack_default = 0;
 							i += 1;
 						} else {
 							printf("Incorrect format. Usage: -s <file>\n");
+							fflush(stdout);
 							exit(-1);
 						}
 					} else {
 						strcpy((char *) stack_name, &argv[i][j + 1]);
 						printf("Using stack configuration: '%s'\n", stack_name);
+						fflush(stdout);
 						stack_default = 0;
 						j = len;
 					}
@@ -1166,15 +1219,18 @@ int main(int argc, char *argv[]) {
 						if (i + 1 < argc) {
 							strcpy((char *) capturer_name, argv[i + 1]);
 							printf("Capturer output to: '%s'\n", capturer_name);
+							fflush(stdout);
 							capturer_default = 0;
 							i += 1;
 						} else {
 							printf("Incorrect format. Usage: -c <file>\n");
+							fflush(stdout);
 							exit(-1);
 						}
 					} else {
 						strcpy((char *) capturer_name, &argv[i][j + 1]);
 						printf("Capturer output to: '%s'\n", capturer_name);
+						fflush(stdout);
 						capturer_default = 0;
 						j = len;
 					}
@@ -1183,27 +1239,33 @@ int main(int argc, char *argv[]) {
 						if (i + 1 < argc) {
 							strcpy((char *) core_name, argv[i + 1]);
 							printf("Core output to: '%s'\n", core_name);
+							fflush(stdout);
 							core_default = 0;
 							i += 1;
 						} else {
 							printf("Incorrect format. Usage: -o <file>\n");
+							fflush(stdout);
 							exit(-1);
 						}
 					} else {
 						strcpy((char *) core_name, &argv[i][j + 1]);
 						printf("Core output to: '%s'\n", core_name);
+						fflush(stdout);
 						core_default = 0;
 						j = len;
 					}
 				} else if (ch == 'x' || ch == 'X') {
 					printf("option x\n");
+					fflush(stdout);
 				} else {
 					printf("Illegal option code = '%c'\n", ch);
+					fflush(stdout);
 					exit(-1);
 				}
 			}
 		} else {
 			printf("Illegal text: '%s'.\nUsage: core [-e <envi cfg>][-s <stack cfg>][-c <capturer output>][-o <core output>]\n", argv[i]);
+			fflush(stdout);
 			exit(-1);
 		}
 	}
@@ -1211,26 +1273,37 @@ int main(int argc, char *argv[]) {
 	if (envi_default == 1) {
 		strcpy((char *) envi_name, (char *) DEFAULT_ENVI_FILE);
 		printf("Using default environment configuration: '%s'\n", envi_name);
+		fflush(stdout);
 	}
 	if (stack_default == 1) {
 		strcpy((char *) stack_name, (char *) DEFAULT_STACK_FILE);
 		printf("Using default stack configuration: '%s'\n", stack_name);
+		fflush(stdout);
 	}
 	if (capturer_default == 1) {
 		strcpy((char *) capturer_name, (char *) DEFAULT_CAPTURER_FILE);
 		//printf("Default: capturer output to: '%s'\n", capturer_name);
+		//fflush(stdout);
 	}
 	if (core_default == 1) {
 		strcpy((char *) core_name, (char *) DEFAULT_CORE_FILE);
 		//printf("Default: core output to: '%s'\n", core_name);
+		//fflush(stdout);
+	}
+	if (seed_default == 1) {
+		seed_num = DEFAULT_SEED_NUM;
+		//printf("Default: seed number used: %u\n", seed_num);
+		fflush(stdout);
 	}
 
-	core_main(envi_name, stack_name);
+	core_main(envi_name, stack_name, seed_num);
 #endif
 
 	//core_tests(); //For random testing purposes
 
+	sleep(1);
 	printf("while (1) looping...\n");
+	fflush(stdout);
 	while (1) {
 		sleep(1000000);
 	}

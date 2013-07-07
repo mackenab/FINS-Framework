@@ -340,7 +340,7 @@ int daemon_sockets_find(struct fins_module *module, uint64_t sock_id);
 int daemon_sockets_check_addr6(struct fins_module *module, struct sockaddr_storage *addr, int protocol);
 int daemon_sockets_remove(struct fins_module *module, int sock_index);
 
-int randoming(int min, int max);
+int daemon_randoming(int min, int max);
 
 //TODO fix the usage of these
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
@@ -402,7 +402,7 @@ struct errhdr {
 struct daemon_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[DAEMON_MAX_FLOWS];
+	struct fins_module_flow flows[DAEMON_MAX_FLOWS];
 
 	pthread_t switch_to_daemon_thread;
 	pthread_t wedge_to_daemon_thread;

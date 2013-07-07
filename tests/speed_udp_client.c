@@ -8,30 +8,11 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <poll.h>
 #include <netinet/tcp.h>
 #include <math.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-
-//--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
-#ifndef POLLRDNORM
-#define POLLRDNORM POLLIN
-#endif
-
-#ifndef POLLRDBAND
-#define POLLRDBAND POLLIN
-#endif
-
-#ifndef POLLWRNORM
-#define POLLWRNORM POLLOUT
-#endif
-
-#ifndef POLLWRBAND
-#define POLLWRBAND POLLOUT
-#endif
-//---------------------------------------------------
 
 #define xxx(a,b,c,d) 	(16777216ul*(a) + (65536ul*(b)) + (256ul*(c)) + (d))
 
@@ -66,8 +47,9 @@ int main(int argc, char *argv[]) {
 	int numbytes;
 	char send_data[131072 + 1];
 	char msg[131092];
-	int port;
-	int client_port;
+
+	int port = 44444;
+	int client_port = 55555;
 
 	memset(send_data, 89, 131072);
 	send_data[131072] = '\0';
@@ -86,16 +68,6 @@ int main(int argc, char *argv[]) {
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	//int result = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &optval, sizeof(int));
 
-#ifdef BUILD_FOR_ANDROID
-	port = 44444;
-#else
-	if (argc > 1) { //doesn't work fro android
-		port = atoi(argv[1]);
-	} else {
-		port = 44444;
-	}
-#endif
-
 	printf("\nMY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -105,16 +77,6 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
-
-#ifdef BUILD_FOR_ANDROID
-	client_port = 55555;
-#else
-	if (argc > 2) {
-		client_port = atoi(argv[2]);
-	} else {
-		client_port = 55555;
-	}
-#endif
 
 	memset(&client_addr, 0, sizeof(client_addr));
 	client_addr.sin_family = PF_INET;
@@ -134,21 +96,11 @@ int main(int argc, char *argv[]) {
 
 	//fgetc(stdin); //wait until user enters
 
-	int nfds = 2;
-	struct pollfd fds[nfds];
-	fds[0].fd = -1;
-	fds[0].events = POLLIN | POLLRDNORM; //| POLLPRI;
-	fds[1].fd = sock;
-	fds[1].events = POLLOUT | POLLWRNORM;
-	printf("fd: sock=%d, events=%x\n", sock, fds[1].events);
-	fflush(stdout);
-	//int time = -1; //1000;
-
-	double total = 15;
+	double total = 15; //seconds
 	double speed = 10000000; //bits per sec
 	int len = 1460; //msg size
 
-	double time = 8 * len / speed * 1000000;
+	double time = 8.0 * len / speed * 1000000;
 	int use = (int) (time + .5); //ceil(time);
 	printf("desired=%f, time=%f, used=%u\n", speed, time, use);
 	fflush(stdout);
@@ -182,7 +134,7 @@ int main(int argc, char *argv[]) {
 		gettimeofday(&end, 0);
 		diff = time_diff(&start, &end) / 1000;
 		if (check <= diff) {
-			printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, i, len * i, 8 * len * i / diff);
+			printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, i, len * i, 8.0 * len * i / diff);
 			fflush(stdout);
 			check += interval;
 		}
@@ -207,4 +159,3 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
-

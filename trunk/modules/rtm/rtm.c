@@ -67,9 +67,8 @@ void console_free(struct rtm_console *console) {
 
 void *accept_console(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct rtm_data *md = (struct rtm_data *) module->data;
-
-	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	int32_t addr_size = sizeof(struct sockaddr_un);
 	struct sockaddr_un *addr;
@@ -131,15 +130,14 @@ void *accept_console(void *local) {
 	}
 	sem_post(&md->shared_sem);
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
 void *console_to_rtm(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct rtm_data *md = (struct rtm_data *) module->data;
-
-	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	int poll_num;
 	struct pollfd poll_fds[MAX_CONSOLES];
@@ -224,7 +222,7 @@ void *console_to_rtm(void *local) {
 	}
 	sem_post(&md->shared_sem);
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -344,15 +342,14 @@ void rtm_send_fcf(struct fins_module *module, struct rtm_command *cmd, metadata 
 
 void *switch_to_rtm(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		rtm_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -656,7 +653,7 @@ void rtm_init_knobs(struct fins_module *module) {
 }
 
 int rtm_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	PRINT_DEBUG("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
@@ -714,7 +711,7 @@ int rtm_init(struct fins_module *module, metadata_element *params, struct envi_r
 }
 
 int rtm_run(struct fins_module *module, pthread_attr_t *attr) {
-	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	PRINT_DEBUG("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
 	rtm_get_ff(module);
@@ -728,7 +725,7 @@ int rtm_run(struct fins_module *module, pthread_attr_t *attr) {
 }
 
 int rtm_pause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_PAUSED;
 
 //TODO
@@ -736,7 +733,7 @@ int rtm_pause(struct fins_module *module) {
 }
 
 int rtm_unpause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_RUNNING;
 
 //TODO
@@ -744,7 +741,7 @@ int rtm_unpause(struct fins_module *module) {
 }
 
 int rtm_shutdown(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
@@ -762,7 +759,7 @@ int rtm_shutdown(struct fins_module *module) {
 }
 
 int rtm_release(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct rtm_data *md = (struct rtm_data *) module->data;
 	list_free(md->console_list, console_free);
@@ -834,7 +831,7 @@ static struct fins_module_admin_ops rtm_ops = { .init = rtm_init, .run = rtm_run
 		.release = rtm_release, .pass_overall = rtm_pass_overall };
 
 struct fins_module *rtm_create(uint32_t index, uint32_t id, uint8_t *name) {
-	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+	PRINT_DEBUG("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
@@ -847,6 +844,6 @@ struct fins_module *rtm_create(uint32_t index, uint32_t id, uint8_t *name) {
 	module->id = id;
 	strcpy((char *) module->name, (char *) name);
 
-	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	PRINT_DEBUG("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
 	return module;
 }

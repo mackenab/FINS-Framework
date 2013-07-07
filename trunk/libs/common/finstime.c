@@ -177,7 +177,7 @@ void intsem_to_handler(void *local) {
 }
 
 void register_to_signal(uint32_t signal) {
-	PRINT_IMPORTANT("Registering: to_signal=%u", signal);
+	PRINT_DEBUG("Registering: to_signal=%u", signal);
 
 	struct sigaction sa;
 	sa.sa_flags = SA_SIGINFO;

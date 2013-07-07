@@ -98,16 +98,16 @@ void termination_handler(int sig) {
 
 	printf("\n**********Number of packers that have been received = %d *******\n", recv_count);
 	if (recv_count != 0) {
-		printf("\ntime=%f, frames=%d, total=%d, speed=%f, drop=%f (%d), jump=%f,%u\n", diff, recv_count, recv_total, 8.0 * recv_total / diff, 100.0 * miss_total / recv_count, miss_total,
-				1.0 * miss_total / miss_count, miss_count);
+		printf("\ntime=%f, frames=%d, Bytes=%d, bps=%f, drop=%f (%d), jump=%f*%u, last=%u\n", diff, recv_count, recv_total, 8.0 * recv_total / diff,
+				100.0 * miss_total / last_seq_num, miss_total, 1.0 * miss_total / miss_count, miss_count, last_seq_num);
 	} else {
-		printf("\ntime=%f, frames=%d, total=%d, speed=%f, drop=NA\n", diff, recv_count, recv_total, 8.0 * recv_total / diff);
+		printf("\ntime=%f, frames=%d, Bytes=%d, bps=%f, drop=NA\n", diff, recv_count, recv_total, 8.0 * recv_total / diff);
 	}
 	exit(2);
 }
 
 int main(int argc, char *argv[]) {
-	uint16_t port;
+	uint16_t port = 44444;
 
 	(void) signal(SIGINT, termination_handler);
 	int sock;
@@ -120,16 +120,6 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
 
-#ifdef BUILD_FOR_ANDROID
-	port = 44444;
-#else
-	if (argc > 1) {
-		port = atoi(argv[1]);
-	} else {
-		port = 44444;
-	}
-#endif
-
 	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) < 0) {
 	if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		perror("Socket");
@@ -139,7 +129,6 @@ int main(int argc, char *argv[]) {
 
 	int optval = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-	//setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = PF_INET;
@@ -221,8 +210,9 @@ int main(int argc, char *argv[]) {
 					gettimeofday(&end, 0);
 					diff = time_diff(&start, &end) / 1000;
 					if (check <= diff) {
-						printf("time=%f, frames=%d, total=%d, speed=%f, drop=%f (%d), jump=%f,%u\n", diff, recv_count, recv_total, 8.0 * recv_total / diff, 100.0 * miss_total / recv_count,
-								miss_total, 1.0 * miss_total / miss_count, miss_count);
+						printf("time=%f, frames=%d, Bytes=%d, bps=%f, drop=%f (%d), jump=%f*%u, last=%u\n", diff, recv_count, recv_total,
+								8.0 * recv_total / diff, 100.0 * miss_total / last_seq_num, miss_total, 1.0 * miss_total / miss_count, miss_count,
+								last_seq_num);
 						fflush(stdout);
 						check += interval;
 					}
@@ -232,12 +222,13 @@ int main(int argc, char *argv[]) {
 					}
 				} else if (bytes_read == 0) {
 					break;
-				} else /*if (errno != EWOULDBLOCK && errno != EAGAIN)*/{
+				} else {
 					printf("Error recv at the Server: ret=%d errno='%s' (%d)\n", bytes_read, strerror(errno), errno);
 					perror("Error:");
 					fflush(stdout);
-					if (errno != EWOULDBLOCK && errno != EAGAIN)
+					if (errno != EWOULDBLOCK && errno != EAGAIN) {
 						break;
+					}
 				}
 			} else if (fds[ret].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 				break;

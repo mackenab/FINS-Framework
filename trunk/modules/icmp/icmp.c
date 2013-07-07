@@ -56,14 +56,14 @@ void icmp_sent_list_gc(struct linked_list *sent_list, double timeout) {
 
 void *switch_to_icmp(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		icmp_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -553,7 +553,7 @@ void icmp_init_knobs(struct fins_module *module) {
 }
 
 int icmp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	PRINT_DEBUG("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
@@ -568,7 +568,7 @@ int icmp_init(struct fins_module *module, metadata_element *params, struct envi_
 }
 
 int icmp_run(struct fins_module *module, pthread_attr_t *attr) {
-	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	PRINT_DEBUG("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
 	icmp_get_ff(module);
@@ -580,7 +580,7 @@ int icmp_run(struct fins_module *module, pthread_attr_t *attr) {
 }
 
 int icmp_pause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_PAUSED;
 
 	//TODO
@@ -588,7 +588,7 @@ int icmp_pause(struct fins_module *module) {
 }
 
 int icmp_unpause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_RUNNING;
 
 	//TODO
@@ -596,7 +596,7 @@ int icmp_unpause(struct fins_module *module) {
 }
 
 int icmp_shutdown(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
@@ -610,7 +610,7 @@ int icmp_shutdown(struct fins_module *module) {
 }
 
 int icmp_release(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct icmp_data *md = (struct icmp_data *) module->data;
 	PRINT_IMPORTANT("sent_list->len=%u", md->sent_list->len);
@@ -633,7 +633,7 @@ static struct fins_module_ops icmp_ops = { .init = icmp_init, .run = icmp_run, .
 		.release = icmp_release, };
 
 struct fins_module *icmp_create(uint32_t index, uint32_t id, uint8_t *name) {
-	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+	PRINT_DEBUG("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
@@ -646,6 +646,6 @@ struct fins_module *icmp_create(uint32_t index, uint32_t id, uint8_t *name) {
 	module->id = id;
 	strcpy((char *) module->name, (char *) name);
 
-	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	PRINT_DEBUG("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
 	return module;
 }

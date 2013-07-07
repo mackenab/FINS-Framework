@@ -135,7 +135,7 @@ void icmp_sent_list_gc(struct linked_list *sent_list, double timeout);
 struct icmp_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[ICMP_MAX_FLOWS];
+	struct fins_module_flow flows[ICMP_MAX_FLOWS];
 
 	pthread_t switch_to_icmp_thread;
 

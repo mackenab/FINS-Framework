@@ -136,7 +136,7 @@ struct interface_to_inject_hdr {
 struct interface_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[INTERFACE_MAX_FLOWS];
+	struct fins_module_flow flows[INTERFACE_MAX_FLOWS];
 
 	pthread_t switch_to_interface_thread;
 	pthread_t capturer_to_interface_thread;

@@ -9,15 +9,17 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 LOCAL_NAME := capturer
-ifdef BUILD_FOR_ANDROID_ARM
-LOCAL_LIBS := glue pcap
-else
-LOCAL_LIBS := 
-endif
 LOCAL_MODS := 
 LOCAL_OBJS := ethermod.o htoi.o wifistub.o
 LOCAL_INCS := . ../../libs/common
 LOCAL_CFLAGS :=
-LOCAL_LDFLAGS := -lc -lpcap
+
+ifdef BUILD_FOR_ANDROID_ARM
+LOCAL_LIBS := glue pcap
+LOCAL_LDFLAGS := -lc
+else
+LOCAL_LIBS := 
+LOCAL_LDFLAGS := -lc -lpcap -lrt
+endif
 
 include $(EXECS_DIR)/make_executable.finsmk

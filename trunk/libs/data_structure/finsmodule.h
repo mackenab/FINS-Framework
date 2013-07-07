@@ -89,6 +89,7 @@ struct fins_overall {
 	sem_t sem;
 	struct envi_record *envi;
 
+	pthread_attr_t attr;
 	struct linked_list *lib_list; //list of open libraries
 	struct fins_module *modules[MAX_MODULES];
 	struct linked_list *admin_list; //list of admin modules
@@ -115,15 +116,21 @@ struct link_record {
 };
 
 int link_id_test(struct link_record *link, uint32_t *id);
+int link_src_test(struct link_record *link, uint32_t *index);
 int link_involved_test(struct link_record *link, uint32_t *index);
 struct link_record *link_clone(struct link_record *link);
 void link_print(struct link_record *link);
+
+struct fins_module_flow {
+	uint32_t link_id;
+	struct link_record *link;
+};
 
 struct fins_module_table {
 	//add max_flows? //as max number of flows
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[MAX_MOD_FLOWS];
+	struct fins_module_flow flows[MAX_MOD_FLOWS];
 };
 
 void module_create_structs(struct fins_module *module);
@@ -170,6 +177,6 @@ void module_get_param_dual(struct fins_module *module, struct finsFrame *ff);
 #define MOD_ALERT_LINKS 1
 #define MOD_ALERT_DUAL 2
 
-sem_t *switch_event_sem;
+sem_t *global_switch_event_sem;
 
 #endif /* FINSMODULE_H_ */

@@ -239,7 +239,7 @@ void rtm_process_console(struct fins_module *module, struct rtm_console *console
 struct rtm_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[RTM_MAX_FLOWS];
+	struct fins_module_flow flows[RTM_MAX_FLOWS];
 
 	pthread_t switch_to_rtm_thread;
 	pthread_t console_to_rtm_thread;

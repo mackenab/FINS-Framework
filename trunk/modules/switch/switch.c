@@ -8,9 +8,7 @@
 
 void *switch_loop(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-
-	PRINT_IMPORTANT("Entered: module=%p", module);
-
+	PRINT_DEBUG("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct switch_data *md = (struct switch_data *) module->data;
 
 	uint32_t i;
@@ -22,7 +20,7 @@ void *switch_loop(void *local) {
 	int counter = 0;
 
 	while (module->state == FMS_RUNNING) {
-		secure_sem_wait(module->event_sem);
+		secure_sem_wait(module->event_sem); //TODO uncomment, for testing
 		//secure_sem_wait(module->input_sem);
 		secure_sem_wait(&md->overall->sem);
 		for (i = 0; i < MAX_MODULES; i++) {
@@ -35,7 +33,7 @@ void *switch_loop(void *local) {
 					 if (ret) {
 					 PRINT_ERROR("sem get value prob: src module_index=%u, ret=%d", i, ret);
 					 exit(-1);
-					 }*/
+					 } //*/
 
 					//if (val != 0) {
 					while ((ret = sem_wait(md->overall->modules[i]->output_sem)) && errno == EINTR)
@@ -71,8 +69,8 @@ void *switch_loop(void *local) {
 									exit(-1);
 								}
 								if (write_queue(ff, md->overall->modules[ff->destinationID]->input_queue)) {
-									sem_post(md->overall->modules[ff->destinationID]->input_sem);
 									sem_post(md->overall->modules[ff->destinationID]->event_sem);
+									sem_post(md->overall->modules[ff->destinationID]->input_sem);
 								} else {
 									sem_post(md->overall->modules[ff->destinationID]->input_sem);
 									PRINT_ERROR("Write queue error: dst index=%u, ff=%p, meta=%p", ff->destinationID, ff, ff->metaData);
@@ -86,9 +84,9 @@ void *switch_loop(void *local) {
 							//TODO if FCF set ret_val=0 & return? or free or just exit(-1)?
 							freeFinsFrame(ff);
 						}
+						//}
+						//}
 					}
-					//}
-					//}
 				}
 			}
 		}
@@ -96,12 +94,12 @@ void *switch_loop(void *local) {
 		sem_post(&md->overall->sem);
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_DEBUG("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
 void switch_process_ff(struct fins_module *module, struct finsFrame *ff) {
-	PRINT_IMPORTANT("Entered: module=%p, ff=%p", module, ff);
+	PRINT_DEBUG("Entered: module=%p, ff=%p", module, ff);
 
 	if (ff->metaData == NULL) {
 		PRINT_ERROR("Error fcf.metadata==NULL");
@@ -136,7 +134,7 @@ void switch_process_ff(struct fins_module *module, struct finsFrame *ff) {
 void switch_fcf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	//TODO fill out
+//TODO fill out
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
@@ -215,51 +213,51 @@ void switch_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 void switch_init_knobs(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
+//int status;
 
-	//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
 	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 	if (exec_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
 
-	//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
 	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	if (get_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
-	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
+//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
 
-	//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
 	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	if (set_elem == NULL) {
 		PRINT_ERROR("todo error");
 		exit(-1);
 	}
-	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
-	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
+//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
 int switch_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	PRINT_DEBUG("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
-	switch_event_sem = module->event_sem;
+	global_switch_event_sem = module->event_sem;
 
 	switch_init_knobs(module);
 
 	module->data = secure_malloc(sizeof(struct switch_data));
-	//struct switch_data *md = (struct switch_data *) module->data;
+//struct switch_data *md = (struct switch_data *) module->data;
 
 	return 1;
 }
 
 int switch_run(struct fins_module *module, pthread_attr_t *attr) {
-	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	PRINT_DEBUG("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
 	struct switch_data *md = (struct switch_data *) module->data;
@@ -269,7 +267,7 @@ int switch_run(struct fins_module *module, pthread_attr_t *attr) {
 }
 
 int switch_pause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_PAUSED;
 
 //TODO
@@ -277,7 +275,7 @@ int switch_pause(struct fins_module *module) {
 }
 
 int switch_unpause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_RUNNING;
 
 //TODO
@@ -285,13 +283,13 @@ int switch_unpause(struct fins_module *module) {
 }
 
 int switch_shutdown(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
 	struct switch_data *md = (struct switch_data *) module->data;
 
-	//TODO expand this
+//TODO expand this
 
 	PRINT_IMPORTANT("Joining switch_thread");
 	pthread_join(md->switch_thread, NULL);
@@ -300,10 +298,10 @@ int switch_shutdown(struct fins_module *module) {
 }
 
 int switch_release(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct switch_data *md = (struct switch_data *) module->data;
-	//TODO free all module related mem
+//TODO free all module related mem
 
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
@@ -377,7 +375,7 @@ static struct fins_module_admin_ops switch_ops = { .init = switch_init, .run = s
 		switch_shutdown, .release = switch_release, .pass_overall = switch_pass_overall };
 
 struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
-	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+	PRINT_DEBUG("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
@@ -390,6 +388,6 @@ struct fins_module *switch_create(uint32_t index, uint32_t id, uint8_t *name) {
 	module->id = id;
 	strcpy((char *) module->name, (char *) name);
 
-	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	PRINT_DEBUG("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
 	return module;
 }

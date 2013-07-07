@@ -175,8 +175,6 @@ void arp_cache_shutdown(struct arp_cache *cache) {
 	//stop threads
 	timer_stop(cache->to_data->tid);
 
-	//sem_post(&conn->write_wait_sem);
-	//sem_post(&conn->write_sem);
 	//clear all threads using this conn_stub
 
 	//post to read/write/connect/etc threads
@@ -561,8 +559,7 @@ void arp_interrupt(struct fins_module *module) {
 
 void *switch_to_arp(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		arp_get_ff(module);
@@ -570,7 +567,7 @@ void *switch_to_arp(void *local) {
 		//	free(pff);
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -605,7 +602,7 @@ void arp_init_knobs(struct fins_module *module) {
 }
 
 int arp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	PRINT_DEBUG("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
@@ -621,7 +618,7 @@ int arp_init(struct fins_module *module, metadata_element *params, struct envi_r
 		list_free(leftover, free);
 	}
 	md->if_list->max = ARP_IF_LIST_MAX;
-	PRINT_IMPORTANT("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
+	PRINT_DEBUG("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
 
 	//TODO extract cache_list from meta?
 	md->cache_list = list_create(ARP_CACHE_LIST_MAX);
@@ -630,7 +627,7 @@ int arp_init(struct fins_module *module, metadata_element *params, struct envi_r
 }
 
 int arp_run(struct fins_module *module, pthread_attr_t *attr) {
-	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	PRINT_DEBUG("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
 	arp_get_ff(module);
@@ -642,7 +639,7 @@ int arp_run(struct fins_module *module, pthread_attr_t *attr) {
 }
 
 int arp_pause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_PAUSED;
 
 	//TODO
@@ -650,7 +647,7 @@ int arp_pause(struct fins_module *module) {
 }
 
 int arp_unpause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_RUNNING;
 
 	//TODO
@@ -658,7 +655,7 @@ int arp_unpause(struct fins_module *module) {
 }
 
 int arp_shutdown(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
@@ -672,7 +669,7 @@ int arp_shutdown(struct fins_module *module) {
 }
 
 int arp_release(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct arp_data *md = (struct arp_data *) module->data;
 	PRINT_IMPORTANT("if_list->len=%u", md->if_list->len);
@@ -705,7 +702,7 @@ static struct fins_module_ops arp_ops = { .init = arp_init, .run = arp_run, .pau
 		arp_release, };
 
 struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name) {
-	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+	PRINT_DEBUG("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
@@ -718,6 +715,6 @@ struct fins_module *arp_create(uint32_t index, uint32_t id, uint8_t *name) {
 	module->id = id;
 	strcpy((char *) module->name, (char *) name);
 
-	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	PRINT_DEBUG("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
 	return module;
 }

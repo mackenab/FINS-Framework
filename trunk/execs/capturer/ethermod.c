@@ -94,6 +94,11 @@ void print_hex(uint32_t msg_len, uint8_t *msg_pt) {
 	free(temp);
 }
 
+#include <errno.h>
+#include <semaphore.h>
+#include <sys/time.h>
+#include <unistd.h>
+
 void processes_init(int inject_fd) {
 	PRINT_DEBUG("Entered: inject_fd=%d", inject_fd);
 
@@ -155,6 +160,13 @@ void processes_init(int inject_fd) {
 		return;
 	}
 
+	//TODO eventually remove this
+	if (hdr->ii_num != 1) {
+		PRINT_ERROR("Currently only able to support 1 interface: if_num=%u", hdr->ii_num);
+		close(inject_fd);
+		return;
+	}
+
 	struct processes_shared *shared = (struct processes_shared *) mmap(NULL, sizeof(struct processes_shared), PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 	if (shared == MAP_FAILED) {
@@ -166,7 +178,60 @@ void processes_init(int inject_fd) {
 
 	shared->running_flag = 1;
 	shared->inject_fd = inject_fd;
-	shared->capture_fd = 0;
+
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	int32_t size = sizeof(addr);
+
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
+	unlink(addr.sun_path);
+
+	int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (server_fd < 0) {
+		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		close_pipes(shared);
+		return;
+	}
+	if (fchmod(server_fd, ALLPERMS) < 0) {
+		PRINT_ERROR("fchmod capture: capture_path='%s', errno=%u, str='%s'", CAPTURE_PATH, errno, strerror(errno));
+		close_pipes(shared);
+		close(server_fd);
+		return;
+	}
+
+	mode_t old_mask = umask(0);
+	PRINT_IMPORTANT("binding to: addr='%s'", CAPTURE_PATH);
+	if (bind(server_fd, (struct sockaddr *) &addr, size) < 0) {
+		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		close_pipes(shared);
+		close(server_fd);
+		return;
+	}
+	umask(old_mask);
+
+	if (listen(server_fd, 1) < 0) {
+		PRINT_ERROR("listen error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
+		close_pipes(shared);
+		close(server_fd);
+		return;
+	}
+
+	shared->capture_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
+	close(server_fd);
+	if (shared->capture_fd < 0) {
+		PRINT_ERROR("accept error: capture_fd=%d, errno=%u, str='%s'", shared->capture_fd, errno, strerror(errno));
+		close_pipes(shared);
+		return;
+	}
+	PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
+
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	PRINT_IMPORTANT("sleeping 5, so daemon will connect: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
+	sleep(5);
+	gettimeofday(&tv, NULL);
+	PRINT_IMPORTANT("Finished: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
 
 	pid_t pID = 0;
 	pID = fork();
@@ -253,7 +318,7 @@ void capturer_main(void) {
 
 	int inject_fd;
 	while (1) {
-		PRINT_IMPORTANT("Waiting connection...");
+		PRINT_IMPORTANT("Waiting for core connection...");
 		inject_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
 		if (inject_fd < 0) {
 			PRINT_ERROR("accept error: inject_fd=%d, errno=%u, str='%s'", inject_fd, errno, strerror(errno));
@@ -280,6 +345,7 @@ void capturer_main(void) {
 			PRINT_DEBUG("accept process: pID=%d", (int)pID);
 			//Continue accepting
 		}
+		PRINT_IMPORTANT("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!after");
 	}
 
 	close(server_fd);

@@ -23,9 +23,10 @@
 #define DEFAULT_STACK_FILE "stack.cfg"
 #define DEFAULT_CORE_FILE "output_core.txt"
 #define DEFAULT_CAPTURER_FILE "output_capturer.txt"
+#define DEFAULT_SEED_NUM 0
 
 void core_dummy(void);
-void core_main(uint8_t *envi_name, uint8_t *stack_name);
+void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed);
 void core_termination_handler(int sig);
 
 void core_tests(void); //For random testing purposes

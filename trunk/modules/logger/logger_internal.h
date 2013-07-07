@@ -40,7 +40,7 @@
 struct logger_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[LOGGER_MAX_FLOWS];
+	struct fins_module_flow flows[LOGGER_MAX_FLOWS];
 
 	pthread_t switch_to_logger_thread;
 	uint8_t interrupt_flag;

@@ -14,6 +14,10 @@ LOCAL_MODS := #rtm
 LOCAL_OBJS := console.o
 LOCAL_INCS := . ../../libs/common
 LOCAL_CFLAGS :=
+ifdef BUILD_FOR_ANDROID_ARM
 LOCAL_LDFLAGS := -lc -lm #-ldl -lpthread
+else
+LOCAL_LDFLAGS := -lc -lm -lrt #-ldl -lpthread
+endif
 
 include $(EXECS_DIR)/make_executable.finsmk

@@ -138,7 +138,7 @@ uint16_t UDP_checkSeparate(uint32_t src, uint32_t dest, uint16_t len, uint16_t p
 struct udp_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[UDP_MAX_FLOWS];
+	struct fins_module_flow flows[UDP_MAX_FLOWS];
 
 	pthread_t switch_to_udp_thread;
 

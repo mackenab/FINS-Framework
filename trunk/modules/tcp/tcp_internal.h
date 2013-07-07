@@ -502,7 +502,6 @@ struct tcp_seg {
 //uint32_t sack_len;
 };
 
-void tcp_srand(void); //Seed the random number generator
 int tcp_rand(void); //Get a random number
 uint32_t tcp_gen_thread_id(struct fins_module *module);
 
@@ -592,7 +591,7 @@ int tcp_process_options(struct tcp_conn *conn, struct tcp_seg *seg);
 struct tcp_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[TCP_MAX_FLOWS];
+	struct fins_module_flow flows[TCP_MAX_FLOWS];
 
 	pthread_t switch_to_tcp_thread;
 

@@ -47,65 +47,9 @@ int wifistub_setBlocking(int fd) {
 void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared) {
 	PRINT_IMPORTANT("Entered: hdr=%p, ii_num=%u, shared=%p", hdr, hdr->ii_num, shared);
 
-	struct sockaddr_un addr;
-	memset(&addr, 0, sizeof(struct sockaddr_un));
-	int32_t size = sizeof(addr);
-
-	addr.sun_family = AF_UNIX;
-	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
-	unlink(addr.sun_path);
-
-	int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (server_fd < 0) {
-		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
-		close_pipes(shared);
-		return;
-	}
-	if (fchmod(server_fd, ALLPERMS) < 0) {
-		PRINT_ERROR("fchmod capture: capture_path='%s', errno=%u, str='%s'", CAPTURE_PATH, errno, strerror(errno));
-		close_pipes(shared);
-		close(server_fd);
-		return;
-	}
-
-	mode_t old_mask = umask(0);
-	PRINT_IMPORTANT("binding to: addr='%s'", CAPTURE_PATH);
-	if (bind(server_fd, (struct sockaddr *) &addr, size) < 0) {
-		PRINT_ERROR("bind error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
-		close_pipes(shared);
-		close(server_fd);
-		return;
-	}
-	umask(old_mask);
-
-	if (listen(server_fd, 1) < 0) {
-		PRINT_ERROR("listen error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
-		close_pipes(shared);
-		close(server_fd);
-		return;
-	}
-
-	shared->capture_fd = accept(server_fd, (struct sockaddr *) &addr, (socklen_t *) &size);
-	close(server_fd);
-	if (shared->capture_fd < 0) {
-		PRINT_ERROR("accept error: capture_fd=%d, errno=%u, str='%s'", shared->capture_fd, errno, strerror(errno));
-		close_pipes(shared);
-		return;
-	}
-	PRINT_DEBUG("accepted at: capture_fd=%d, addr='%s'", shared->capture_fd, addr.sun_path);
-
-	sleep(5);
-
 	char filter_exp[MAX_FILTER_LEN];
 	memset(filter_exp, 0, MAX_FILTER_LEN);
 	char *pt = filter_exp;
-
-	//TODO eventually remove both of these
-	if (hdr->ii_num != 1) {
-		PRINT_ERROR("Currently only able to support 1 interface: if_num=%u", hdr->ii_num);
-		close_pipes(shared);
-		return;
-	}
 
 	int total = 0;
 
@@ -147,7 +91,7 @@ void capture_init(struct interface_to_inject_hdr *hdr, struct processes_shared *
 
 	/* get network number and mask associated with capture device */
 	if (pcap_lookupnet((char *) dev, &net, &mask, errbuf) == -1) {
-		PRINT_ERROR("Couldn't get netmask for device '%s': '%s'", dev, errbuf);
+		PRINT_WARN("Couldn't get netmask for device '%s': '%s'", dev, errbuf);
 		net = 0;
 		mask = 0;
 	}
@@ -279,7 +223,9 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 //}
 
 	++shared->capture_count;
-	PRINT_INFO("Packet captured: count=%d, size=%d", shared->capture_count, dataLength);
+	if (shared->capture_count % 1000 == 0) {
+		PRINT_DEBUG("Packet captured: count=%d, size=%d", shared->capture_count, dataLength);
+	}
 
 //print_hex_block(packetReceived, dataLength);
 //fflush(stdout);
@@ -318,15 +264,6 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 
 void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared) {
 	PRINT_IMPORTANT("Entered: hdr=%p, ii_num=%u, shared=%p", hdr, hdr->ii_num, shared);
-
-	sleep(5);
-
-	//TODO eventually remove both of these
-	if (hdr->ii_num != 1) {
-		PRINT_ERROR("Currently only able to support 1 interface: if_num=%u", hdr->ii_num);
-		close_pipes(shared);
-		return;
-	}
 
 	uint8_t *dev = hdr->iis[0].name; //TODO remove/fix!
 	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
@@ -379,7 +316,9 @@ void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *s
 				PRINT_ERROR("Injection failed: framelen=%d, errno=%u, str='%s'", framelen, errno, strerror(errno));
 			} else {
 				++shared->inject_count;
-				PRINT_INFO("Packet injected: count=%d, size=%d ", shared->inject_count, numBytes);
+				if (shared->inject_count % 1000 == 0) {
+					PRINT_DEBUG("Packet injected: count=%d, size=%d ", shared->inject_count, numBytes);
+				}
 			}
 		}
 	} // end of while loop

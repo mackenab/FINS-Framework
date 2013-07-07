@@ -405,7 +405,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		if (addr != NULL) {
 			addr4->sin_addr.s_addr = htonl(addr4_get_ip(&addr->ip));
 		} else {
-			PRINT_ERROR("no addr4 for this interface: ifr=%p, name='%s'", ifr, ifr->name);
+			PRINT_WARN("no addr4 for this interface: ifr=%p, name='%s'", ifr, ifr->name);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(msg);
 			free(temp);

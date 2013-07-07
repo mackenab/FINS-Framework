@@ -5,7 +5,7 @@ LOCAL_INCS := $(strip $(LOCAL_INCS))
 
 LOCAL_MAKE_FILE := $(LOCAL_DIR)/Makefile
 LOCAL_INCS_FILE := $(LOCAL_DIR)/INCS.finsmk
-#LOCAL_OBJS_FILE := $(LOCAL_DIR)/OBJS.finsmk
+LOCAL_OBJS_FILE := $(LOCAL_DIR)/OBJS.finsmk
 LOCAL_TEMP_FILE := $(LOCAL_DIR)/TEMP.finsmk
 
 LOCAL_INCS_DIRS := $(abspath $(addprefix $(LOCAL_DIR)/,$(LOCAL_INCS)))
@@ -81,7 +81,7 @@ ifneq ($(MAX_DEPTH),$(MAKELEVEL))
 	@$(foreach DIR,$(MAKE_INCS),cd $(DIR); $(MAKE) build; cd $(LOCAL_DIR);)
 endif
 
-$(LOCAL_SO_PATH):$(LOCAL_OBJS) $(OTHER_SO_PATHS) $(INCLUDES) #$(LOCAL_OBJS_FILE)
+$(LOCAL_SO_PATH):$(LOCAL_OBJS) $(OTHER_SO_PATHS) $(INCLUDES) $(LOCAL_OBJS_FILE)
 #	@echo "test1='$(LOCAL_DIR)'"
 	@$(LD) $(LOCAL_OBJS) $(LDFLAGS) -shared -o $(LOCAL_SO_PATH)
 
@@ -97,10 +97,11 @@ $(LOCAL_TEMP_FILE):
 	@echo "" > $(LOCAL_TEMP_FILE)
 #	@echo "temp_file[$(MAKELEVEL)]:$(LOCAL_NAME)\n";
 
-#$(LOCAL_OBJS_FILE):$(LOCAL_MAKE_FILE)
+$(LOCAL_OBJS_FILE):$(LOCAL_MAKE_FILE)
 #	@echo "OBJS.finsmk"
 #	@echo $(LOCAL_OBJS_PATHS) $(OTHER_SO_PATHS) > $(LOCAL_OBJS_FILE)
-
+	@echo $(LOCAL_OBJS_PATHS) > $(LOCAL_OBJS_FILE)
+	
 $(LIB_SO_PATHS):
 	@echo "test5='$(LOCAL_DIR)'"
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
@@ -132,7 +133,7 @@ endif
 .PHONY:clean_local
 clean_local:clean_temp_file clean_shared
 	@rm -f $(LOCAL_OBJS_PATHS)
-	@rm -f $(LOCAL_INCS_FILE) #$(LOCAL_OBJS_FILE)
+	@rm -f $(LOCAL_INCS_FILE) $(LOCAL_OBJS_FILE)
 	@echo "cleaned[$(MAKELEVEL)]:$(LOCAL_NAME)\n";
 
 .PHONY:clean_temp_file

@@ -109,14 +109,14 @@ void interface_store_free(struct interface_store *store) {
 
 void *switch_to_interface(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		interface_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 } // end of Inject Function
 
@@ -140,8 +140,6 @@ void interface_get_ff(struct fins_module *module) {
 		PRINT_ERROR("Error fcf.metadata==NULL");
 		exit(-1);
 	}
-
-	PRINT_DEBUG(" At least one frame has been read from the Switch to Etherstub ff=%p", ff);
 
 	if (ff->dataOrCtrl == FF_CONTROL) {
 		interface_fcf(module, ff);
@@ -303,7 +301,7 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 
 					//secure_metadata_writeToElement(request_resp->ff->metaData, "send_dst_mac", &dst_mac, META_TYPE_INT64);
 
-					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", ff, src_mac, dst_mac, ETH_TYPE_IP4);
+					PRINT_DEBUG("Injecting frame: ff=%p, src=0x%12.12llx, dst=0x%12.12llx, type=0x%x", request_resp->ff, src_mac, dst_mac, ETH_TYPE_IP4);
 					if (!interface_inject_pdu(md->inject_fd, request_resp->ff->dataFrame.pduLength, request_resp->ff->dataFrame.pdu, dst_mac, src_mac,
 							ETH_TYPE_IP4)) {
 						PRINT_ERROR("todo error");
@@ -656,8 +654,8 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 
 void *capturer_to_interface(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
+	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct interface_data *md = (struct interface_data *) module->data;
-	PRINT_IMPORTANT("Entered: module=%p", module);
 
 	int size_len = sizeof(int);
 	int numBytes;
@@ -776,12 +774,12 @@ void *capturer_to_interface(void *local) {
 		memcpy(ff->dataFrame.pdu, frame + SIZE_ETHERNET, ff->dataFrame.pduLength);
 
 		if (!module_send_flow(module, ff, flow)) {
-			PRINT_ERROR("send to switch error, ff=%p", ff);
+			PRINT_ERROR("send to switch error, module=%p, ff=%p, flow=%u", module, ff, flow);
 			freeFinsFrame(ff);
 		}
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p", module);
+	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	return NULL;
 }
 
@@ -816,7 +814,7 @@ void interface_init_knobs(struct fins_module *module) {
 }
 
 int interface_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
-	PRINT_IMPORTANT("Entered: module=%p, params=%p, envi=%p", module, params, envi);
+	PRINT_DEBUG("Entered: module=%p, params=%p, envi=%p", module, params, envi);
 	module->state = FMS_INIT;
 	module_create_structs(module);
 
@@ -916,7 +914,7 @@ int interface_init(struct fins_module *module, metadata_element *params, struct 
 }
 
 int interface_run(struct fins_module *module, pthread_attr_t *attr) {
-	PRINT_IMPORTANT("Entered: module=%p, attr=%p", module, attr);
+	PRINT_DEBUG("Entered: module=%p, attr=%p", module, attr);
 	module->state = FMS_RUNNING;
 
 	interface_get_ff(module);
@@ -929,7 +927,7 @@ int interface_run(struct fins_module *module, pthread_attr_t *attr) {
 }
 
 int interface_pause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_PAUSED;
 
 	//TODO
@@ -937,7 +935,7 @@ int interface_pause(struct fins_module *module) {
 }
 
 int interface_unpause(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_RUNNING;
 
 	//TODO
@@ -945,7 +943,7 @@ int interface_unpause(struct fins_module *module) {
 }
 
 int interface_shutdown(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 	module->state = FMS_SHUTDOWN;
 	sem_post(module->event_sem);
 
@@ -965,7 +963,7 @@ int interface_shutdown(struct fins_module *module) {
 }
 
 int interface_release(struct fins_module *module) {
-	PRINT_IMPORTANT("Entered: module=%p", module);
+	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct interface_data *md = (struct interface_data *) module->data;
 	PRINT_IMPORTANT("if_list->len=%u", md->if_list->len);
@@ -992,7 +990,7 @@ static struct fins_module_ops interface_ops = { .init = interface_init, .run = i
 		.shutdown = interface_shutdown, .release = interface_release, };
 
 struct fins_module *interface_create(uint32_t index, uint32_t id, uint8_t *name) {
-	PRINT_IMPORTANT("Entered: index=%u, id=%u, name='%s'", index, id, name);
+	PRINT_DEBUG("Entered: index=%u, id=%u, name='%s'", index, id, name);
 
 	struct fins_module *module = (struct fins_module *) secure_malloc(sizeof(struct fins_module));
 
@@ -1005,6 +1003,6 @@ struct fins_module *interface_create(uint32_t index, uint32_t id, uint8_t *name)
 	module->id = id;
 	strcpy((char *) module->name, (char *) name);
 
-	PRINT_IMPORTANT("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
+	PRINT_DEBUG("Exited: index=%u, id=%u, name='%s', module=%p", index, id, name, module);
 	return module;
 }

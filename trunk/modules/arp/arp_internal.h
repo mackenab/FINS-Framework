@@ -138,7 +138,7 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff);
 struct arp_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[ARP_MAX_FLOWS];
+	struct fins_module_flow flows[ARP_MAX_FLOWS];
 
 	pthread_t switch_to_arp_thread;
 	struct linked_list *if_list;

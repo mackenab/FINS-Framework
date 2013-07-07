@@ -7,15 +7,22 @@
 
 #include "finstypes.h"
 
-uint32_t control_serial_num = 0;
-sem_t control_serial_sem;
+uint32_t global_control_serial_num = 0;
+sem_t global_control_serial_sem;
 
 void *secure_malloc_full(const char *file, const char *func, int line, uint32_t len) {
 	void *buf = malloc(len);
 	if (buf == NULL) {
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):malloc: len=%u\n\033[01;37m", file, func, line, len);
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):malloc: len=%u\n", file, func, line, len);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):malloc: len=%u\n\033[01;37m", file, func, line, len);fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):malloc: len=%u\n\033[01;37m", (uint32_t) global_print_tv.tv_sec, (uint32_t) global_print_tv.tv_usec, file,
+				func, line, len);
 		fflush(stdout);
+#endif
 #endif
 		exit(-1);
 	}
@@ -24,24 +31,40 @@ void *secure_malloc_full(const char *file, const char *func, int line, uint32_t 
 }
 
 void secure_sem_wait_full(const char *file, const char *func, int line, sem_t *sem) {
-	int ret;
-	while ((ret = sem_wait(sem)) && errno == EINTR)
-		;
-	if (ret != 0) {
-		//if (sem_wait(sem)) {
+	while (1) {
+		if (sem_wait(sem)) {
+			if (errno != EINTR) {
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):sem_wait prob: sem=%p\n\033[01;37m", file, func, line, sem);
-		fflush(stdout);
+#ifdef BUILD_FOR_ANDROID
+				__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):sem_wait prob: sem=%p\n", file, func, line, sem);
+#else
+				//printf("\033[01;31mERROR(%s, %s, %d):sem_wait prob: sem=%p\n\033[01;37m", file, func, line, sem);fflush(stdout);
+				gettimeofday(&global_print_tv, NULL);
+				printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):sem_wait prob: sem=%p\n\033[01;37m", (uint32_t) global_print_tv.tv_sec,
+						(uint32_t) global_print_tv.tv_usec, file, func, line, sem);
+				fflush(stdout);
 #endif
-		exit(-1);
+#endif
+				exit(-1);
+			}
+		} else {
+			break;
+		}
 	}
 }
 
 void secure_metadata_readFromElement_full(const char *file, const char *func, int line, metadata *meta, const char *target, void *value) {
 	if (metadata_readFromElement(meta, target, value) == META_FALSE) {
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):metadata_readFromElement: meta=%p, target='%s', value=%p\n\033[01;37m", file, func, line, meta, target, value);
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):meta read: meta=%p, target='%s', value=%p\n", file, func, line, meta, target, value);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):meta read: meta=%p, target='%s', value=%p\n\033[01;37m", file, func, line, meta, target, value);fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):meta read: meta=%p, target='%s', value=%p\n\033[01;37m", (uint32_t) global_print_tv.tv_sec,
+				(uint32_t) global_print_tv.tv_usec, file, func, line, meta, target, value);
 		fflush(stdout);
+#endif
 #endif
 		exit(-1);
 	}
@@ -50,8 +73,15 @@ void secure_metadata_readFromElement_full(const char *file, const char *func, in
 void secure_metadata_writeToElement_full(const char *file, const char *func, int line, metadata *meta, char *target, void *value, int type) {
 	if (metadata_writeToElement(meta, target, value, type) == META_FALSE) {
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):metadata_writeToElement: meta=%p, target='%s', value=%p, type=%d\n\033[01;37m", file, func, line, meta, target, value, type);
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):meta write: meta=%p, target='%s', value=%p, type=%d\n", file, func, line, meta, target, value, type);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):meta write: meta=%p, target='%s', value=%p, type=%d\n\033[01;37m", file, func, line, meta, target, value, type);fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):meta write: meta=%p, target='%s', value=%p, type=%d\n\033[01;37m", (uint32_t) global_print_tv.tv_sec,
+				(uint32_t) global_print_tv.tv_usec, file, func, line, meta, target, value, type);
 		fflush(stdout);
+#endif
 #endif
 		exit(-1);
 	}
@@ -60,8 +90,15 @@ void secure_metadata_writeToElement_full(const char *file, const char *func, int
 void secure_pthread_create_full(const char *file, const char *func, int line, pthread_t *thread, pthread_attr_t *attr, void *(*routine)(void *), void *arg) {
 	if (pthread_create(thread, attr, routine, arg)) {
 #ifdef ERROR
-		printf("\033[01;31mERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n\033[01;37m", file, func, line, thread, attr, routine, arg);
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n", file, func, line, thread, attr, routine, arg);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n\033[01;37m", file, func, line, thread, attr, routine, arg);fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):pthread_create: thread=%p, attr=%p, routine=%p, arg=%p\n\033[01;37m", (uint32_t) global_print_tv.tv_sec,
+				(uint32_t) global_print_tv.tv_usec, file, func, line, thread, attr, routine, arg);
 		fflush(stdout);
+#endif
 #endif
 		exit(-1);
 	}
@@ -1191,9 +1228,9 @@ uint32_t gen_control_serial_num(void) {
 	uint32_t num;
 
 	//TODO replace this with a random number generator
-	secure_sem_wait(&control_serial_sem);
-	num = ++control_serial_num;
-	sem_post(&control_serial_sem);
+	secure_sem_wait(&global_control_serial_sem);
+	num = ++global_control_serial_num;
+	sem_post(&global_control_serial_sem);
 
 	return num;
 }

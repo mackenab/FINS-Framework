@@ -244,7 +244,7 @@ struct linked_list *list_remove_all2_full(struct linked_list *list, int (*equal)
 		uint8_t *param2);
 
 //Return true if the list has no elements
-int list_is_empty(struct linked_list *list); //change some to inline?
+int list_is_empty(struct linked_list *list);
 
 //Return true if the list has reached the limit of elements given by list->max
 int list_is_full(struct linked_list *list);

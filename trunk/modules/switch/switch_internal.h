@@ -16,7 +16,7 @@
 struct switch_data {
 	struct linked_list *link_list;
 	uint32_t flows_num;
-	uint32_t flows[SWITCH_MAX_FLOWS];
+	struct fins_module_flow flows[SWITCH_MAX_FLOWS];
 
 	pthread_t switch_thread;
 
