@@ -55,8 +55,8 @@ void capturer_termination_handler(int sig) {
 	PRINT_IMPORTANT("pid=%d", getpid());
 
 	/*
-	 PRINT_IMPORTANT("Capture: capture count=%d", server_capture_count);
-	 PRINT_IMPORTANT("Capture: inject count=%d", server_inject_count);
+	 PRINT_IMPORTANT("Capture: capture count=%llu", server_capture_count);
+	 PRINT_IMPORTANT("Capture: inject count=%llu", server_inject_count);
 
 	 if (inject_handle != NULL) {
 	 pcap_close(inject_handle);
@@ -228,10 +228,126 @@ void processes_init(int inject_fd) {
 
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	PRINT_IMPORTANT("sleeping 5, so daemon will connect: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
+	PRINT_IMPORTANT("sleeping 5s, so daemon will connect: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
 	sleep(5);
 	gettimeofday(&tv, NULL);
-	PRINT_IMPORTANT("Finished: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
+	PRINT_IMPORTANT("Active: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
+
+	for (i = 0; i < hdr->ii_num; i++) {
+		//PRINT_IMPORTANT("iis[%d]: name='%s', mac=0x%012llx", i, hdr->iis[i].name, hdr->iis[i].mac);
+		PRINT_IMPORTANT("iis[%d]: name='%s', mac='%s'", i, hdr->iis[i].name, hdr->iis[i].mac);
+	}
+
+	uint8_t *dev = hdr->iis[0].name; //TODO remove/fix!
+	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
+
+	/** Setup the Injection Interface */
+	shared->inject_handle = pcap_open_live((char *) dev, BUFSIZ, 0, -1, errbuf);
+	if (shared->inject_handle == NULL) {
+		PRINT_ERROR("Couldn't open device: dev='%s', err='%s', errno=%u, str='%s'", dev, errbuf, errno, strerror(errno));
+		close_pipes(shared);
+		return;
+	}
+
+	char filter_exp[MAX_FILTER_LEN];
+	memset(filter_exp, 0, MAX_FILTER_LEN);
+	char *pt = filter_exp;
+
+	int total = 0;
+
+	int ret;
+	uint8_t mac_str[MAC_STR_LEN];
+	for (i = 0; i < hdr->ii_num && total < MAX_FILTER_LEN; i++) {
+		/*
+		 ret = sprintf((char *) mac_str, "%02llx:%02llx:%02llx:%02llx:%02llx:%02llx", (hdr->iis[i].mac & (0x0000FF0000000000ull)) >> 40,
+		 (hdr->iis[i].mac & (0x000000FF00000000ull)) >> 32, (hdr->iis[i].mac & (0x00000000FF000000ull)) >> 24,
+		 (hdr->iis[i].mac & (0x0000000000FF0000ull)) >> 16, (hdr->iis[i].mac & (0x000000000000FF00ull)) >> 8,
+		 (hdr->iis[i].mac & (0x00000000000000FFull)));
+		 */
+		ret = sprintf((char *) mac_str, "%c%c:%c%c:%c%c:%c%c:%c%c:%c%c", hdr->iis[i].mac[0], hdr->iis[i].mac[1], hdr->iis[i].mac[2], hdr->iis[i].mac[3],
+				hdr->iis[i].mac[4], hdr->iis[i].mac[5], hdr->iis[i].mac[6], hdr->iis[i].mac[7], hdr->iis[i].mac[8], hdr->iis[i].mac[9], hdr->iis[i].mac[10],
+				hdr->iis[i].mac[11]);
+
+		if (i == 0) {
+			ret = sprintf(pt, "(ether dst %s) or (ether broadcast and (not ether src %s))", mac_str, mac_str);
+		} else {
+			ret = sprintf(pt, " or (ether dst %s) or (ether broadcast and (not ether src %s))", mac_str, mac_str);
+		}
+		if (ret > 0) {
+			total += ret;
+			pt += ret;
+		}
+	}
+
+	if (total > MAX_FILTER_LEN) {
+		PRINT_ERROR("todo error");
+		close_handles(shared);
+		close_pipes(shared);
+		return;
+	}
+
+	//uint8_t *dev = hdr->iis[0].name; //TODO Fix/replace this!
+	//char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
+	bpf_u_int32 net; /* ip */
+	bpf_u_int32 mask; /* subnet mask */
+
+	/* get network number and mask associated with capture device */
+	if (pcap_lookupnet((char *) dev, &net, &mask, errbuf) == -1) {
+		PRINT_WARN("Couldn't get netmask for device '%s': '%s'", dev, errbuf);
+		net = 0;
+		mask = 0;
+		//THIS failing seems to always cause an error
+	}
+	/* print capture info */
+	PRINT_IMPORTANT("Device='%s'", dev);
+	PRINT_IMPORTANT("Filter expression='%s'", filter_exp);
+
+	/* open capture device */
+	shared->capture_handle = pcap_open_live((char *) dev, SNAP_LEN, 0, 1000, errbuf);
+	if (shared->capture_handle == NULL) {
+		PRINT_ERROR("Couldn't open device: dev='%s', err='%s', errno=%u, str='%s'", dev, errbuf, errno, strerror(errno));
+		close_handles(shared);
+		close_pipes(shared);
+		return;
+	}
+	PRINT_IMPORTANT("capture_handle=%p", shared->capture_handle);
+
+	/* make sure we're capturing on an Ethernet device [2] */
+	int data_linkValue = pcap_datalink(shared->capture_handle);
+	if (data_linkValue != DLT_EN10MB) {
+		PRINT_ERROR("'%s' is not an Ethernet", dev);
+		close_handles(shared);
+		close_pipes(shared);
+		return;
+	}
+	PRINT_IMPORTANT("Datalink layer Description: '%s' (%d) ", pcap_datalink_val_to_description(data_linkValue), data_linkValue);
+
+	/* compile the filter expression */
+
+	struct bpf_program fp; /* compiled filter program (expression) */
+	if (pcap_compile(shared->capture_handle, &fp, filter_exp, 0, net) == -1) {
+		PRINT_ERROR("Couldn't parse filter '%s': '%s'", filter_exp, pcap_geterr(shared->capture_handle));
+		close_handles(shared);
+		close_pipes(shared);
+		return;
+	}
+
+	/* apply the compiled filter */
+	if (pcap_setfilter(shared->capture_handle, &fp) == -1) {
+		PRINT_ERROR("Couldn't install filter '%s': '%s'", filter_exp, pcap_geterr(shared->capture_handle));
+		close_handles(shared);
+		close_pipes(shared);
+		return;
+	}
+
+#ifndef BUILD_FOR_ANDROID
+	int check_monitor_mode = pcap_can_set_rfmon(shared->capture_handle); //Not supported in Bionic
+	if (check_monitor_mode) {
+		PRINT_DEBUG(" Monitor mode can be set");
+	} else if (check_monitor_mode == 0) {
+		PRINT_DEBUG(" Monitor mode could not be set");
+	}
+#endif
 
 	pid_t pID = 0;
 	pID = fork();
@@ -239,21 +355,22 @@ void processes_init(int inject_fd) {
 		PRINT_ERROR("Fork error: pid=%d, errno=%u, str='%s'", pID, errno, strerror(errno));
 		exit(1);
 	} else if (pID == 0) { // child
-		//prctl(PR_SET_PDEATHSIG, SIGHUP);
+		prctl(PR_SET_PDEATHSIG, SIGHUP); //close when parent does
 
 		pID = getpid();
 		PRINT_DEBUG("capture: pID=%d", (int)pID);
 
 		capture_init(hdr, shared);
+		pcap_freecode(&fp);
 
 		PRINT_IMPORTANT("******** Capture Process Closing ********");
-		PRINT_IMPORTANT("Capture: pID=%d, capture_count=%d", pID, shared->capture_count);
+		PRINT_IMPORTANT("Capture: pID=%d, capture_count=%llu", pID, shared->capture_count);
 	} else { // parent
 		PRINT_DEBUG("inject: pID=%d", (int)pID);
 		inject_init(hdr, shared);
 
 		PRINT_IMPORTANT("******** Inject Process Closing ********");
-		PRINT_IMPORTANT("Inject: pID=%d, inject_count=%d", pID, shared->inject_count);
+		PRINT_IMPORTANT("Inject: pID=%d, inject_count=%llu", pID, shared->inject_count);
 	}
 }
 
@@ -345,7 +462,6 @@ void capturer_main(void) {
 			PRINT_DEBUG("accept process: pID=%d", (int)pID);
 			//Continue accepting
 		}
-		PRINT_IMPORTANT("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!after");
 	}
 
 	close(server_fd);

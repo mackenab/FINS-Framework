@@ -77,17 +77,17 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 }
 
 struct msg_hdr {
-	uint32_t id;
-	uint32_t seq_num;
+	uint64_t id;
+	uint64_t seq_num;
 	struct timeval stamp;
 };
 
-int recv_count = 0;
-int recv_total = 0;
+uint64_t recv_count = 0;
+uint64_t recv_total = 0;
 
-uint32_t last_seq_num = 0;
-uint32_t miss_total = 0;
-uint32_t miss_count = 0;
+uint64_t last_seq_num = 0;
+uint64_t miss_total = 0;
+uint64_t miss_count = 0;
 
 double diff = 0;
 struct timeval start, end;
@@ -96,12 +96,12 @@ void termination_handler(int sig) {
 	gettimeofday(&end, 0);
 	diff = time_diff(&start, &end) / 1000;
 
-	printf("\n**********Number of packers that have been received = %d *******\n", recv_count);
+	printf("\n**********Number of packers that have been received = %llu *******\n", recv_count);
 	if (recv_count != 0) {
-		printf("\ntime=%f, frames=%d, Bytes=%d, bps=%f, drop=%f (%d), jump=%f*%u, last=%u\n", diff, recv_count, recv_total, 8.0 * recv_total / diff,
+		printf("\ntime=%f, pkts=%llu, Bytes=%llu, bps=%f, drop=%f (%llu), jump=%f*%llu, last=%llu\n", diff, recv_count, recv_total, 1.0 * recv_total / diff * 8.0,
 				100.0 * miss_total / last_seq_num, miss_total, 1.0 * miss_total / miss_count, miss_count, last_seq_num);
 	} else {
-		printf("\ntime=%f, frames=%d, Bytes=%d, bps=%f, drop=NA\n", diff, recv_count, recv_total, 8.0 * recv_total / diff);
+		printf("\ntime=%f, pkts=%llu, Bytes=%llu, bps=%lf, drop=NA\n", diff, recv_count, recv_total, 1.0 * recv_total / diff * 8.0);
 	}
 	exit(2);
 }
@@ -210,8 +210,8 @@ int main(int argc, char *argv[]) {
 					gettimeofday(&end, 0);
 					diff = time_diff(&start, &end) / 1000;
 					if (check <= diff) {
-						printf("time=%f, frames=%d, Bytes=%d, bps=%f, drop=%f (%d), jump=%f*%u, last=%u\n", diff, recv_count, recv_total,
-								8.0 * recv_total / diff, 100.0 * miss_total / last_seq_num, miss_total, 1.0 * miss_total / miss_count, miss_count,
+						printf("time=%f, pkts=%llu, Bytes=%llu, bps=%f, drop=%f (%llu), jump=%f*%llu, last=%llu\n", diff, recv_count, recv_total,
+								1.0 * recv_total / diff * 8.0, 100.0 * miss_total / last_seq_num, miss_total, 1.0 * miss_total / miss_count, miss_count,
 								last_seq_num);
 						fflush(stdout);
 						check += interval;

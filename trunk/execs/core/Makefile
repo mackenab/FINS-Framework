@@ -21,7 +21,7 @@ LOCAL_LIBS := config common data_structure #problem is data_structure not includ
 LOCAL_LDFLAGS := -lc
 else
 LOCAL_LIBS := common data_structure
-LOCAL_LDFLAGS := -lc -lpthread
+LOCAL_LDFLAGS := -lc -lpthread -lconfig -lrt -ldl -lm
 endif
 
 include $(EXECS_DIR)/make_executable.finsmk

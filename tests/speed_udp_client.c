@@ -35,8 +35,8 @@ double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
 }
 
 struct msg_hdr {
-	uint32_t id;
-	uint32_t seq_num;
+	uint64_t id;
+	uint64_t seq_num;
 	struct timeval stamp;
 };
 
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 
 	double total = 15; //seconds
 	double speed = 10000000; //bits per sec
-	int len = 1460; //msg size
+	uint64_t len = 1460; //msg size
 
 	double time = 8.0 * len / speed * 1000000;
 	int use = (int) (time + .5); //ceil(time);
@@ -106,8 +106,8 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	struct msg_hdr *hdr = (struct msg_hdr *) send_data;
-	uint32_t id_count = 0;
-	uint32_t seq_count = 0;
+	uint64_t id_count = 0;
+	uint64_t seq_count = 0;
 
 	double diff;
 	double interval = 1;
@@ -118,14 +118,14 @@ int main(int argc, char *argv[]) {
 	printf("Looping...\n");
 	fflush(stdout);
 
-	int i = 0;
+	uint64_t i = 0;
 	while (1) {
 		hdr->id = htonl(id_count++); //TODO change to random sequence
 		hdr->seq_num = htonl(seq_count++);
 		gettimeofday(&hdr->stamp, 0);
 		numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 		if (numbytes != len) {
-			printf("error: len=%d, numbytes=%d\n", len, numbytes);
+			printf("error: len=%llu, numbytes=%d\n", len, numbytes);
 			fflush(stdout);
 			break;
 		}
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 		gettimeofday(&end, 0);
 		diff = time_diff(&start, &end) / 1000;
 		if (check <= diff) {
-			printf("time=%f, frames=%d, total=%d, speed=%f\n", diff, i, len * i, 8.0 * len * i / diff);
+			printf("time=%f, pkts=%llu, Bytes=%llu, bps=%f\n", diff, i, len * i, 1.0 * len * i / diff * 8.0);
 			fflush(stdout);
 			check += interval;
 		}

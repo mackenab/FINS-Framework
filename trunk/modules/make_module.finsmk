@@ -33,12 +33,15 @@ BUILT_INCS = $(filter-out $(MAKE_INCS),$(INCS_DIRS))
 #CFLAGS += $(addprefix -I,$(FULL_INCS))
 
 LOCAL_OBJS_PATHS := $(addprefix $(LOCAL_DIR)/,$(LOCAL_OBJS))
-LOCAL_SO := lib$(LOCAL_NAME).so
+#LOCAL_SO := lib$(LOCAL_NAME).so
+LOCAL_SO := lib$(LOCAL_NAME).a
 LOCAL_SO_PATH := $(OBJ_DIR)/$(LOCAL_SO)
 #TEST := $(LOCAL_OBJS_PATHS)
 
-LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).so)
-LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).so)
+#LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).so)
+#LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).so)
+LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).a)
+LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).a)
 
 OTHER_SO := $(LIB_SO)
 OTHER_SO_PATHS := $(LIB_SO_PATHS)
@@ -83,7 +86,8 @@ endif
 
 $(LOCAL_SO_PATH):$(LOCAL_OBJS) $(OTHER_SO_PATHS) $(INCLUDES) $(LOCAL_OBJS_FILE)
 #	@echo "test1='$(LOCAL_DIR)'"
-	@$(LD) $(LOCAL_OBJS) $(LDFLAGS) -shared -o $(LOCAL_SO_PATH)
+#	@$(LD) $(LOCAL_OBJS) $(LDFLAGS) -shared -o $(LOCAL_SO_PATH)
+	@ar -rcs $(LOCAL_SO_PATH) $(LOCAL_OBJS)
 
 %.o:%.c $(INCLUDES)
 #	@echo "test3='$(LOCAL_DIR)'"
@@ -105,7 +109,8 @@ $(LOCAL_OBJS_FILE):$(LOCAL_MAKE_FILE)
 $(LIB_SO_PATHS):
 	@echo "test5='$(LOCAL_DIR)'"
 ifneq ($(MAX_DEPTH),$(MAKELEVEL))
-	@cd $(LIBS_DIR)/$(subst .so,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);
+#	@cd $(LIBS_DIR)/$(subst .so,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);
+	@cd $(LIBS_DIR)/$(subst .a,,$(subst $(OBJ_DIR)/lib,,$@)); $(MAKE) build; cd $(LOCAL_DIR);
 endif
 
 .PHONY:clean

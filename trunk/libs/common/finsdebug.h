@@ -12,7 +12,7 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-#define DEBUG
+//#define DEBUG
 #define INFO
 #define WARN
 #define IMPORTANT

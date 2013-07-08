@@ -101,11 +101,11 @@ struct processes_shared {
 
 	int capture_fd;
 	pcap_t *capture_handle;
-	int capture_count;
+	uint64_t capture_count;
 
 	int inject_fd;
 	pcap_t *inject_handle;
-	int inject_count;
+	uint64_t inject_count;
 };
 
 #ifndef UNIX_PATH_MAX
@@ -149,6 +149,7 @@ void /*int*/got_packet(u_char *args, const struct pcap_pkthdr *header, const u_c
 
 void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *shared);
 
+void close_handles(struct processes_shared *shared);
 void close_pipes(struct processes_shared *shared);
 
 void wifi_terminate();

@@ -24,7 +24,7 @@
 
 #include "core.h"
 
-#ifdef BUILD_FOR_ANDROID
+//#ifdef BUILD_FOR_ANDROID
 #include <switch.h>
 #include <interface.h>
 #include <arp.h>
@@ -35,7 +35,7 @@
 #include <daemon.h>
 #include <logger.h>
 #include <rtm.h>
-#endif
+//#endif
 
 extern sem_t global_control_serial_sem; //TODO remove & change gen process to RNG
 
@@ -60,7 +60,7 @@ int write_configurations() {
 	return EXIT_SUCCESS;
 }
 
-#ifdef BUILD_FOR_ANDROID
+//#ifdef BUILD_FOR_ANDROID
 //TODO fix Android problems with dynamically loading shared libraries.
 // Can find the upperlayer .so's when placed in FINS_TMP_ROOT/files and referenced at /data/data/com.BU_VT.FINS/files;
 // However, the sub so's (common, data_structure) can't be found
@@ -118,7 +118,7 @@ struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
 	PRINT_IMPORTANT("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
 	return library;
 }
-#endif
+//#endif
 
 void core_dummy(void) {
 
@@ -682,7 +682,8 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 #ifdef BUILD_FOR_ANDROID
 			library = library_fake_load(mod_lib, base_path);
 #else
-			library = library_load(mod_lib, base_path);
+			//library = library_load(mod_lib, base_path);
+			library = library_fake_load(mod_lib, base_path);
 #endif
 			if (library == NULL) {
 				PRINT_ERROR("Failed in loading library: lib='%s', base_path='%s'", mod_lib, base_path);
@@ -962,6 +963,7 @@ void core_termination_handler(int sig) {
 }
 
 void core_tests(void) {
+	int i = 0;
 	while (1) {
 		PRINT_IMPORTANT("waiting...");
 		//sleep(10);
@@ -970,7 +972,8 @@ void core_tests(void) {
 		fgetc(stdin); //wait until user enters
 		PRINT_IMPORTANT("active");
 
-		if (0) {
+		i++;
+		if (i == 1) {
 			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 			metadata_create(meta);
 
@@ -988,17 +991,19 @@ void core_tests(void) {
 			secure_metadata_writeToElement(meta, "send_ttl", &ttl, META_TYPE_INT32);
 			secure_metadata_writeToElement(meta, "send_tos", &tos, META_TYPE_INT32);
 
+			uint32_t src_index = 1;
+			uint32_t dst_index = 2;
 			struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 			ff->dataOrCtrl = FF_DATA;
-			ff->destinationID = 2;
+			ff->destinationID = dst_index;
 			ff->metaData = meta;
 
 			ff->dataFrame.directionFlag = DIR_UP;
 			ff->dataFrame.pduLength = 10;
 			ff->dataFrame.pdu = (uint8_t *) secure_malloc(10);
 
-			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[1]->name, overall->modules[2]->name);
-			module_to_switch(overall->modules[1], ff);
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[src_index]->name, overall->modules[dst_index]->name);
+			module_to_switch(overall->modules[src_index], ff);
 		}
 
 		if (0) {
@@ -1032,7 +1037,7 @@ void core_tests(void) {
 			module_to_switch(overall->modules[0], ff_req);
 		}
 
-		if (0) {
+		if (i == 2) {
 			PRINT_DEBUG("Sending data");
 
 			metadata *meta_req = (metadata *) secure_malloc(sizeof(metadata));
@@ -1043,6 +1048,8 @@ void core_tests(void) {
 			uint32_t src_ip = IP4_ADR_P2H(192, 168, 1, 5); //wlan0
 			uint32_t dst_ip = IP4_ADR_P2H(192, 168, 1, 1); //gw
 
+			uint32_t src_index = 2;
+			uint32_t dst_index = 1;
 			secure_metadata_writeToElement(meta_req, "send_ether_type", &ether_type, META_TYPE_INT32);
 			secure_metadata_writeToElement(meta_req, "send_if_index", &if_index, META_TYPE_INT32);
 			secure_metadata_writeToElement(meta_req, "send_src_ipv4", &src_ip, META_TYPE_INT32);
@@ -1050,7 +1057,7 @@ void core_tests(void) {
 
 			struct finsFrame *ff = (struct finsFrame*) secure_malloc(sizeof(struct finsFrame));
 			ff->dataOrCtrl = FF_DATA;
-			ff->destinationID = 1; //arp
+			ff->destinationID = dst_index; //arp
 			ff->metaData = meta_req;
 
 			ff->dataFrame.directionFlag = DIR_DOWN;
@@ -1058,8 +1065,9 @@ void core_tests(void) {
 			ff->dataFrame.pdu = (uint8_t *) secure_malloc(ff->dataFrame.pduLength);
 			memset(ff->dataFrame.pdu, 59, ff->dataFrame.pduLength);
 
-			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta_req, overall->modules[0]->name, overall->modules[1]->name);
-			module_to_switch(overall->modules[0], ff);
+			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'",
+					ff, meta_req, overall->modules[src_index]->name, overall->modules[dst_index]->name);
+			module_to_switch(overall->modules[src_index], ff);
 		}
 
 		if (0) {
@@ -1121,7 +1129,7 @@ void core_tests(void) {
 			PRINT_IMPORTANT("sending: ff=%p, meta=%p, src='%s' to dst='%s'", ff, meta, overall->modules[0]->name, overall->modules[dst_index]->name);
 			module_to_switch(overall->modules[0], ff);
 		}
-		break;
+		//break;
 	}
 }
 
