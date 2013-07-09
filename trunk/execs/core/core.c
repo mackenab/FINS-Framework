@@ -85,7 +85,7 @@ struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
 	strcpy((char *) library->name, (char *) lib);
 	library->handle = NULL; //RTLD_LAZY | RTLD_GLOBAL?
 
-	uint8_t lib_create[MOD_NAME_SIZE + 7];// +7 for "_create"
+	uint8_t lib_create[MOD_NAME_SIZE + 7]; // +7 for "_create"
 	sprintf((char *) lib_create, "%s_create", (char *) lib);
 
 	if (strcmp((char *) lib_create, "switch_create") == 0) {
@@ -286,6 +286,9 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 	overall->envi->if_main = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_main);
 	if (overall->envi->if_main != NULL) {
 		PRINT_IMPORTANT("main interface: name='%s', addr_list->len=%u", overall->envi->if_main->name, overall->envi->if_main->addr_list->len);
+		if (!ifr_running_test(overall->envi->if_main)) {
+			PRINT_WARN("!!!!Selected main interface is NOT running: name='%s', flagx->len=0x%x", overall->envi->if_main->name, overall->envi->if_main->flags);
+		}
 	} else {
 		PRINT_WARN("todo error");
 	}
@@ -387,7 +390,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 		//############
 		ifr = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_index);
 		if (ifr != NULL) {
-			if (ifr->flags & IFF_RUNNING) {
+			if (ifr_running_test(ifr)) {
 				if (family == AF_INET) {
 					addr = (struct addr_record *) list_find(ifr->addr_list, addr_is_v4);
 				} else {
@@ -534,7 +537,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 		//############
 		ifr = (struct if_record *) list_find1(overall->envi->if_list, ifr_index_test, &if_index);
 		if (ifr != NULL) {
-			if (ifr->flags & IFF_RUNNING) {
+			if (ifr_running_test(ifr)) {
 				route = (struct route_record *) secure_malloc(sizeof(struct route_record));
 				route->if_index = if_index;
 				route->family = family;

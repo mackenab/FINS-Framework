@@ -380,7 +380,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
 		if (ifr == NULL) {
-			PRINT_ERROR("temp='%s'", temp);
+			PRINT_WARN("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(temp);
 			return;
@@ -437,7 +437,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
 		if (ifr == NULL) {
-			PRINT_ERROR("temp='%s'", temp);
+			PRINT_WARN("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(temp);
 			return;
@@ -494,7 +494,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
 		if (ifr == NULL) {
-			PRINT_ERROR("temp='%s'", temp);
+			PRINT_WARN("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(temp);
 			return;
@@ -551,7 +551,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
 		if (ifr == NULL) {
-			PRINT_ERROR("temp='%s'", temp);
+			PRINT_WARN("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(temp);
 			return;
@@ -617,7 +617,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_index_test, &total);
 		if (ifr == NULL) {
-			PRINT_ERROR("index=%d", total);
+			PRINT_WARN("index=%d", total);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			return;
 		}
@@ -658,7 +658,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
 		if (ifr == NULL) {
-			PRINT_ERROR("temp='%s'", temp);
+			PRINT_WARN("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(temp);
 			return;
@@ -706,7 +706,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 
 		ifr = (struct if_record *) list_find1(md->if_list, ifr_name_test, temp);
 		if (ifr == NULL) {
-			PRINT_ERROR("temp='%s'", temp);
+			PRINT_WARN("temp='%s'", temp);
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRNOTAVAIL);
 			free(temp);
 			return;

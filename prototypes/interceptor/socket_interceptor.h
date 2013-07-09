@@ -85,7 +85,8 @@ struct socketIdentifier FinsHistory[MAX_sockets];
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
-	#define FINS_TMP_ROOT "/data/data/fins"
+	//#define FINS_TMP_ROOT "/data/data/fins"
+	#define FINS_TMP_ROOT "/dev/fins"
 #else
 	#define FINS_TMP_ROOT "/tmp/fins"
 #endif

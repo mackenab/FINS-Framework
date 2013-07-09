@@ -228,10 +228,10 @@ void processes_init(int inject_fd) {
 
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	PRINT_IMPORTANT("sleeping 5s, so daemon will connect: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
+	PRINT_IMPORTANT("sleeping 5s, so daemon will connect: time=%12u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
 	sleep(5);
 	gettimeofday(&tv, NULL);
-	PRINT_IMPORTANT("Active: time=%u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
+	PRINT_IMPORTANT("Active: time=%12u.%06u", (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec);
 
 	for (i = 0; i < hdr->ii_num; i++) {
 		//PRINT_IMPORTANT("iis[%d]: name='%s', mac=0x%012llx", i, hdr->iis[i].name, hdr->iis[i].mac);

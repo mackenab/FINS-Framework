@@ -92,8 +92,8 @@ int daemon_calls_insert(struct fins_module *module, uint32_t call_id, int call_i
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->calls[call_index].id != -1) { //TODO may actually remove, add check such that FCF pointing
-		PRINT_ERROR("Error, call_index in use: daemon_calls[%d].call_id=%u", call_index, md->calls[call_index].id);
-		PRINT_ERROR("Overwriting with: daemon_calls[%d].call_id=%u", call_index, call_id);
+		PRINT_WARN("Error, call_index in use: daemon_calls[%d].call_id=%u", call_index, md->calls[call_index].id);
+		PRINT_WARN("Overwriting with: daemon_calls[%d].call_id=%u", call_index, call_id);
 
 		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id
 				&& (md->calls[call_index].type == POLL_CALL || md->calls[call_index].type == RECVMSG_CALL)) {

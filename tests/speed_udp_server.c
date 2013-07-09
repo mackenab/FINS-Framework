@@ -235,6 +235,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+	shutdown(sock, SHUT_WR);
 
 	printf("Closing server socket\n");
 	fflush(stdout);

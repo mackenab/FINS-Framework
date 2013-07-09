@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
 
 		usleep(use);
 	}
-
+	shutdown(sock, SHUT_WR);
 	sleep(5);
 
 	printf("Closing socket\n");

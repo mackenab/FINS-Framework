@@ -507,6 +507,8 @@ __s32 nl_send(__s32 pid, void *msg_buf, __u32 msg_len, __s32 flags) {
 		ret = nl_send_msg(pid, seq, 0x0, part_buf, RECV_BUFFER_SIZE, flags/*| NLM_F_MULTI*/);
 		if (ret < 0) {
 			PRINT_ERROR("netlink error sending seq %d to user", seq);
+			PRINT_ERROR("Disabling old pID=%u, new pID=%u", fins_daemon_pid, -1);
+			fins_daemon_pid = -1;
 			up(&link_sem);
 			PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%u, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 			return -1;
@@ -529,6 +531,8 @@ __s32 nl_send(__s32 pid, void *msg_buf, __u32 msg_len, __s32 flags) {
 	ret = nl_send_msg(pid, seq, NLMSG_DONE, part_buf, header_size + part_len, flags);
 	if (ret < 0) {
 		PRINT_ERROR("netlink error sending seq %d to user", seq);
+		PRINT_ERROR("Disabling old pID=%u, new pID=%u", fins_daemon_pid, -1);
+		fins_daemon_pid = -1;
 		up(&link_sem);
 		PRINT_DEBUG("Exited: pid=%d, msg_buf=%p, msg_len=%u, flags=0x%x, ret=%d", pid, msg_buf, msg_len, flags, -1);
 		return -1;
@@ -3029,6 +3033,12 @@ static int fins_release(struct socket *sock) {
 		PRINT_ERROR("daemon not connected");
 		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, 0);
 		return 0; //TODO should be -1, done to prevent stalls
+	}
+
+	if (sock == NULL) {
+		PRINT_ERROR("sock null");
+		PRINT_IMPORTANT("Exited: call_pid=%d, rc=%d", call_pid, 0);
+		return 0;
 	}
 
 	sk = sock->sk;

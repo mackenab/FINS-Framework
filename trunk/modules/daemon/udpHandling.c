@@ -703,9 +703,15 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		secure_metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp);
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t)md->sockets[hdr->sock_index].stamp.tv_usec);
 
+		uint32_t msg_flags = 0;
+		if (flags & MSG_ERRQUEUE) {
+			msg_flags |= MSG_ERRQUEUE;
+		}
+
 		uint32_t msg_len;
 		if (buf_len < data_len) {
 			msg_len = buf_len;
+			msg_flags |= MSG_TRUNC;
 		} else {
 			msg_len = data_len;
 		}
@@ -726,9 +732,9 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 		int32_t control_len;
 		uint8_t *control;
-		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
+		int ret_val = recvmsg_control(module, hdr, &msg_flags, store->ff->metaData, msg_controllen, flags, &control_len, &control);
 
-		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, data, control_len, control);
+		int ret = send_wedge_recvmsg(module, hdr, msg_flags, addr_len, store->addr, msg_len, data, control_len, control);
 		if (!ret) {
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
@@ -1406,8 +1412,14 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 	secure_metadata_readFromElement(meta, "recv_stamp", &md->sockets[call->sock_index].stamp);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[call->sock_index].stamp.tv_sec, (uint32_t)md->sockets[call->sock_index].stamp.tv_usec);
 
+	uint32_t msg_flags = 0;
+	if (flags & MSG_ERRQUEUE) {
+		msg_flags |= MSG_ERRQUEUE;
+	}
+
 	if (call_len < data_len) {
 		data_len = call_len;
+		msg_flags |= MSG_TRUNC;
 	}
 
 	uint32_t addr_len;
@@ -1440,9 +1452,9 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 
 	int32_t control_len;
 	uint8_t *control;
-	int ret_val = recvmsg_control(module, (struct wedge_to_daemon_hdr *) call, meta, msg_controllen, flags, &control_len, &control);
+	int ret_val = recvmsg_control(module, (struct wedge_to_daemon_hdr *) call, &msg_flags, meta, msg_controllen, flags, &control_len, &control);
 
-	int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, addr_len, addr, data_len, data, control_len, control);
+	int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, msg_flags, addr_len, addr, data_len, data, control_len, control);
 	if (!ret) {
 		nack_send(module, call->id, call->index, call->type, 1);
 	}

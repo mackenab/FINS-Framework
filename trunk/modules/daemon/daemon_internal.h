@@ -243,10 +243,10 @@ int init_fins_nl(struct fins_module *module);
 int send_wedge(struct fins_module *module, uint8_t *buf, size_t len, int flags);
 int nack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
 int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
-int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
-		uint8_t **control);
-int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
-		uint8_t *data, uint32_t control_len, uint8_t *control);
+int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t *msg_flags, metadata *meta, uint32_t msg_controllen, int flags,
+		int32_t *control_len, uint8_t **control);
+int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t msg_flags, uint32_t addr_len, struct sockaddr_storage *addr,
+		uint32_t data_len, uint8_t *data, uint32_t control_len, uint8_t *control);
 
 struct daemon_store {
 	struct sockaddr_storage *addr;

@@ -880,7 +880,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			addr4->sin_addr.s_addr = htonl(rem_ip);
 			addr4->sin_port = htons(rem_port);
 
-			int ret = send_wedge_recvmsg(module, hdr, addr_len, &addr, 0, NULL, 0, NULL);
+			int ret = send_wedge_recvmsg(module, hdr, 0, addr_len, &addr, 0, NULL, 0, NULL);
 			if (!ret) {
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
@@ -891,6 +891,8 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	if (store != NULL) {
 		secure_metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp);
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t)md->sockets[hdr->sock_index].stamp.tv_usec);
+
+		uint32_t msg_flags = 0;
 
 		uint32_t msg_len;
 		if (buf_len < data_len - store->pos) {
@@ -916,9 +918,9 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 		int32_t control_len;
 		uint8_t *control;
-		int ret_val = recvmsg_control(module, hdr, store->ff->metaData, msg_controllen, flags, &control_len, &control);
+		int ret_val = recvmsg_control(module, hdr, &msg_flags, store->ff->metaData, msg_controllen, flags, &control_len, &control);
 
-		int ret = send_wedge_recvmsg(module, hdr, addr_len, store->addr, msg_len, msg, control_len, control);
+		int ret = send_wedge_recvmsg(module, hdr, msg_flags, addr_len, store->addr, msg_len, msg, control_len, control);
 		if (!ret) {
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
@@ -1017,7 +1019,17 @@ void release_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 
 	uint32_t serial_num = gen_control_serial_num();
-	uint32_t exec_call = (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) ? DAEMON_EXEC_TCP_CLOSE : DAEMON_EXEC_TCP_CLOSE_STUB;
+	uint32_t exec_call;
+	if (md->sockets[hdr->sock_index].listening != 0) {
+		exec_call = DAEMON_EXEC_TCP_CLOSE_STUB;
+	} else if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+		exec_call = DAEMON_EXEC_TCP_CLOSE;
+	} else {
+		daemon_sockets_remove(module, hdr->sock_index);
+		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
+		return;
+	}
+
 	PRINT_DEBUG("serial_num=%u, state=%u, exec_call=%u", serial_num, md->sockets[hdr->sock_index].state, exec_call);
 
 	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, exec_call);
@@ -2118,6 +2130,8 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 	secure_metadata_readFromElement(meta, "recv_stamp", &md->sockets[call->sock_index].stamp);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[call->sock_index].stamp.tv_sec, (uint32_t)md->sockets[call->sock_index].stamp.tv_usec);
 
+	uint32_t msg_flags = 0;
+
 	if (call_len < data_len) {
 		data_len = call_len;
 	}
@@ -2152,9 +2166,9 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 
 	int32_t control_len;
 	uint8_t *control;
-	int ret_val = recvmsg_control(module, (struct wedge_to_daemon_hdr *) call, meta, msg_controllen, flags, &control_len, &control);
+	int ret_val = recvmsg_control(module, (struct wedge_to_daemon_hdr *) call, &msg_flags, meta, msg_controllen, flags, &control_len, &control);
 
-	int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, addr_len, addr, data_len, data, control_len, control);
+	int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, msg_flags, addr_len, addr, data_len, data, control_len, control);
 	if (!ret) {
 		nack_send(module, call->id, call->index, call->type, 1);
 	}
@@ -2421,7 +2435,7 @@ void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, ui
 		while (1) {
 			call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
 			if (call != NULL) {
-				int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, addr_len, &addr, 0, NULL, 0, NULL);
+				int ret = send_wedge_recvmsg(module, (struct wedge_to_daemon_hdr *) call, 0, addr_len, &addr, 0, NULL, 0, NULL);
 				if (!ret) {
 					nack_send(module, call->id, call->index, call->type, 1);
 				}

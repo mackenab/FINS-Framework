@@ -186,7 +186,7 @@ void android_main(struct android_app *state) {
 	core_dummy();
 	core_main((uint8_t *) (FINS_TMP_ROOT "/envi.cfg"), (uint8_t *) (FINS_TMP_ROOT "/stack.cfg"), 0);
 
-	core_tests(); //For random testing purposes
+	//core_tests(); //For random testing purposes
 	//core_termination_handler(0); //############ terminating
 
 	// loop waiting for stuff to do.

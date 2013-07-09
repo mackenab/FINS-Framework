@@ -72,8 +72,8 @@
 
 //TODO change this macro to an extern in core? expect all exec apps to define FINS_TMP_ROOT
 #ifdef BUILD_FOR_ANDROID
-#define FINS_TMP_ROOT "/data/local/fins"
-//#define FINS_TMP_ROOT "/data/data/com.BU_VT.FINS/files"
+//#define FINS_TMP_ROOT "/data/local/fins"
+#define FINS_TMP_ROOT "/dev/fins"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif

@@ -41,7 +41,7 @@ LOCAL_SO_PATH := $(OBJ_DIR)/$(LOCAL_SO)
 #LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).so)
 #LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).so)
 LIB_SO := $(foreach LIB,$(LOCAL_LIBS),lib$(LIB).a)
-LIB_SO_PATHS := $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).a)
+LIB_SO_PATHS := $(sort $(foreach LIB,$(LOCAL_LIBS),$(OBJ_DIR)/lib$(LIB).a))
 
 OTHER_SO := $(LIB_SO)
 OTHER_SO_PATHS := $(LIB_SO_PATHS)

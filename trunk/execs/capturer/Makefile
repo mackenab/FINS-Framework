@@ -15,7 +15,7 @@ LOCAL_INCS := . ../../libs/common
 LOCAL_CFLAGS :=
 
 ifdef BUILD_FOR_ANDROID_ARM
-LOCAL_LIBS := glue pcap
+LOCAL_LIBS := glue pcap glue
 LOCAL_LDFLAGS := -lc
 else
 LOCAL_LIBS := 

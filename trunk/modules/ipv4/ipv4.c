@@ -52,7 +52,7 @@ void ipv4_init_knobs(struct fins_module *module) {
 }
 
 void ipv4_ifr_get_addr_func(struct if_record *ifr, struct linked_list *ret_list) {
-	if (ifr->flags & IFF_RUNNING) { //ifr->status ?
+	if (ifr_running_test(ifr)) { //ifr->status ?
 		//struct linked_list *temp_list = list_find_all(ifr->addr_list, addr_is_v4);
 		struct linked_list *temp_list = list_filter(ifr->addr_list, addr_is_v4, addr_clone);
 		if (list_join(ret_list, temp_list)) {

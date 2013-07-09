@@ -141,9 +141,10 @@ int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint3
 	return ret == 0; //TODO change to ret_val ?
 }
 
-int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, metadata *meta, uint32_t msg_controllen, int flags, int32_t *control_len,
-		uint8_t **control) {
-	PRINT_DEBUG("Entered: module=%p, hdr=%p, meta=%p, msg_controllen=%u, flags=0x%x, control_len=%p, control=%p", module, hdr, meta, msg_controllen, flags, control_len, control);
+int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t *msg_flags, metadata *meta, uint32_t msg_controllen, int flags,
+		int32_t *control_len, uint8_t **control) {
+	PRINT_DEBUG("Entered: module=%p, hdr=%p, msg_flags=%p, meta=%p, msg_controllen=%u, flags=0x%x, control_len=%p, control=%p",
+			module, hdr, msg_flags, meta, msg_controllen, flags, control_len, control);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (msg_controllen > CONTROL_LEN_MAX) {
@@ -151,7 +152,7 @@ int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		//TODO send some error
 		*control_len = 0;
 		*control = NULL;
-		PRINT_DEBUG("Exited: module=%p, hdr=%p, meta=%p, control_len=%d, control=%p", module, hdr, meta, *control_len, *control);
+		PRINT_DEBUG("Exited: module=%p, hdr=%p, msg_flags=%p, meta=%p, control_len=%d, control=%p", module, hdr, msg_flags, meta, *control_len, *control);
 		return 0;
 	}
 
@@ -185,7 +186,7 @@ int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 			*control_len += cmsg_space;
 			control_pt += cmsg_space;
 		} else {
-			PRINT_WARN("todo error");
+			*msg_flags |= MSG_CTRUNC;
 		}
 	}
 
@@ -208,10 +209,10 @@ int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 				*control_len += cmsg_space;
 				control_pt += cmsg_space;
 			} else {
-				PRINT_WARN("todo error");
+				*msg_flags |= MSG_CTRUNC;
 			}
 		} else {
-			PRINT_ERROR("no recv_ttl, meta=%p", meta);
+			//PRINT_WARN("no recv_ttl, meta=%p", meta); //TODO should we do something?
 		}
 	}
 
@@ -249,7 +250,7 @@ int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 			*control_len += cmsg_space;
 			control_pt += cmsg_space;
 		} else {
-			PRINT_WARN("todo error");
+			*msg_flags |= MSG_CTRUNC;
 		}
 	}
 
@@ -258,13 +259,14 @@ int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		exit(-1);
 	}
 
-	PRINT_DEBUG("Exited: module=%p, hdr=%p, meta=%p, control_len=%d, control=%p", module, hdr, meta, *control_len, *control);
+	PRINT_DEBUG("Exited: module=%p, hdr=%p, msg_flags=%p, meta=%p, control_len=%d, control=%p", module, hdr, msg_flags, meta, *control_len, *control);
 	return 1;
 }
 
-int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t addr_len, struct sockaddr_storage *addr, uint32_t data_len,
-		uint8_t *data, uint32_t control_len, uint8_t *control) {
-	PRINT_DEBUG("Entered: module=%p, hdr=%p, addr_len=%u, addr=%p, data_len=%u, data=%p, control_len=%u, control=%p", module, hdr, addr_len, addr, data_len, data, control_len, control);
+int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t msg_flags, uint32_t addr_len, struct sockaddr_storage *addr,
+		uint32_t data_len, uint8_t *data, uint32_t control_len, uint8_t *control) {
+	PRINT_DEBUG("Entered: module=%p, hdr=%p, msg_flags=0x%x, addr_len=%u, addr=%p, data_len=%u, data=%p, control_len=%u, control=%p",
+			module, hdr, msg_flags, addr_len, addr, data_len, data, control_len, control);
 
 	int msg_len = sizeof(struct daemon_to_wedge_hdr) + 3 * sizeof(uint32_t) + addr_len + data_len + control_len;
 	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
@@ -274,7 +276,7 @@ int send_wedge_recvmsg(struct fins_module *module, struct wedge_to_daemon_hdr *h
 	hdr_ret->call_id = hdr->call_id;
 	hdr_ret->call_index = hdr->call_index;
 	hdr_ret->ret = ACK;
-	hdr_ret->msg = 0; //TODO change to set msg_flags
+	hdr_ret->msg = msg_flags;
 	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 	*(uint32_t *) pt = addr_len;

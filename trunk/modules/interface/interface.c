@@ -312,7 +312,10 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 					interface_request_free(request_resp);
 				}
 			} else {
-				PRINT_ERROR("Not seeking addr. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p", ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+				struct in_addr temp_src = { .s_addr = htonl(src_ip) };
+				struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
+				PRINT_WARN("Not seeking addr. Dropping: ff=%p, src=0x%llx/'%s', dst=0x%llx/'%s', cache=%p",
+						ff, src_mac, inet_ntoa(temp_src), dst_mac, inet_ntoa(temp_dst), cache);
 			}
 
 			if (store->sent == 0) {
@@ -325,8 +328,11 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 				uint32_t src_ip = addr4_get_ip(&request->src_ip);
 				uint64_t dst_mac = 0;
 				uint32_t dst_ip = addr4_get_ip(&cache->ip);
-				PRINT_WARN("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u, cache=%p",
-						ff, src_mac, src_ip, dst_mac, dst_ip, cache);
+
+				struct in_addr temp_src = { .s_addr = htonl(src_ip) };
+				struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
+				PRINT_WARN("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/'%s', dst=0x%llx/'%s', cache=%p",
+						ff, src_mac, inet_ntoa(temp_src), dst_mac, inet_ntoa(temp_dst), cache);
 
 				//TODO remove all requests from same source //split cache into (src,dst) tuples?
 				if (cache->seeking) {

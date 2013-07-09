@@ -143,7 +143,8 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 			}
 		}
 	} else {
-		PRINT_ERROR("No corresponding interface: ff=%p, src_ip=%u", ff, src_ip);
+		struct in_addr temp_src = { .s_addr = htonl(src_ip) };
+		PRINT_WARN("FCF Used src_ip that has no corresponding interface: ff=%p, src_ip='%s' (%u)", ff, inet_ntoa(temp_src), src_ip);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 	}
 }
@@ -212,13 +213,16 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 								arp_request_free(request);
 							}
 						} else {
-							struct in_addr temp_src = { .s_addr = htonl(dst_ip) };
+							struct in_addr temp_src = { .s_addr = htonl(src_ip) };
 							PRINT_WARN("Not seeking addr. Dropping ARP reply: ff=%p, src=0x%llx/'%s' (%u)", ff, src_mac, inet_ntoa(temp_src), src_ip);
 							struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
 							PRINT_WARN("ff=%p, dst=0x%llx/'%s' (%u), cache=%p", ff, dst_mac, inet_ntoa(temp_dst), dst_ip, cache);
 						}
 					} else {
-						PRINT_ERROR("No corresponding request. Dropping: ff=%p, src=0x%llx/%u, dst=0x%llx/%u", ff, src_mac, src_ip, dst_mac, dst_ip);
+						struct in_addr temp_src = { .s_addr = htonl(src_ip) };
+						struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
+						PRINT_ERROR("No corresponding request. Dropping: ff=%p, src=0x%llx/'%s', dst=0x%llx/'%s'",
+								ff, src_mac, inet_ntoa(temp_src), dst_mac, inet_ntoa(temp_dst));
 					}
 				}
 			} else {
