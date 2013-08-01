@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
 	server_addr.sin_port = htons(port);
 
-	printf("Binding to server: addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	printf("Binding to server: addr='%s':%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	fflush(stdout);
 	if (bind(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
 		printf("Failure: errno=%u\n", errno);

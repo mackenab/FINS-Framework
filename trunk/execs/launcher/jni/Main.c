@@ -184,7 +184,8 @@ void android_main(struct android_app *state) {
 
 	//apk can access files in /data as well but can't write to anything
 	core_dummy();
-	core_main((uint8_t *) (FINS_TMP_ROOT "/envi.cfg"), (uint8_t *) (FINS_TMP_ROOT "/stack.cfg"), 0);
+	//core_main((uint8_t *) (FINS_TMP_ROOT "/envi.cfg"), (uint8_t *) (FINS_TMP_ROOT "/stack.cfg"), 0);
+	core_main((uint8_t *) ("/sdcard/fins/envi.cfg"), (uint8_t *) ("/sdcard/fins/stack.cfg"), 0);
 
 	//core_tests(); //For random testing purposes
 	//core_termination_handler(0); //############ terminating

@@ -79,7 +79,7 @@ void library_dummies(void) {
 }
 
 struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
-	PRINT_IMPORTANT("Entered: lib='%s', base_path='%s'", lib, base_path);
+	PRINT_DEBUG("Entered: lib='%s', base_path='%s'", lib, base_path);
 
 	struct fins_library *library = (struct fins_library *) secure_malloc(sizeof(struct fins_library));
 	strcpy((char *) library->name, (char *) lib);
@@ -115,7 +115,7 @@ struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
 
 	library->num_mods = 0;
 
-	PRINT_IMPORTANT("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
+	PRINT_DEBUG("Exited: lib='%s', base_path='%s', library=%p", lib, base_path, library);
 	return library;
 }
 //#endif
@@ -862,7 +862,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 		if (overall->modules[i] != NULL) {
 			mt = (struct fins_module_table *) list_remove_front(mt_list);
 			mt->link_list = list_filter1(overall->link_list, link_src_test, &overall->modules[i]->index, link_clone); //was link_involved_test, decide which better?
-			PRINT_IMPORTANT("subset: i=%d, link_list=%p, len=%d", i, mt->link_list, mt->link_list->len);
+			PRINT_IMPORTANT("Module link table subset: name='%s' index=%d, link_list=%p, len=%d", overall->modules[i]->name, i, mt->link_list, mt->link_list->len);
 
 			for (j = 0; j < mt->flows_num; j++) {
 				mt->flows[j].link = (struct link_record *) list_find1(mt->link_list, link_id_test, &mt->flows[j].link_id);
@@ -877,7 +877,7 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 				pt += ret;
 			}
 			*pt = '\0';
-			PRINT_IMPORTANT("flows: num=%u, ['%s']", mt->flows_num, buf);
+			PRINT_IMPORTANT("Module flows: num=%u, ['%s']", mt->flows_num, buf);
 
 			list_for_each(mt->link_list, link_print);
 //#endif
@@ -1312,8 +1312,8 @@ int main(int argc, char *argv[]) {
 
 	//core_tests(); //For random testing purposes
 
-	sleep(1);
-	printf("while (1) looping...\n");
+	//sleep(1);
+	//printf("While (1) looping...\n");
 	fflush(stdout);
 	while (1) {
 		sleep(1000000);

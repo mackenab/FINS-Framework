@@ -279,7 +279,7 @@ void tcp_close(struct fins_module *module, struct tcp_conn *conn, struct finsFra
 }
 
 void tcp_exec_close(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	PRINT_DEBUG("conn_list wait***************");
@@ -333,7 +333,7 @@ void tcp_close_stub(struct fins_module *module, struct tcp_conn_stub *conn_stub,
 }
 
 void tcp_exec_close_stub(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port) {
-	PRINT_DEBUG("Entered: host=%u/%u", host_ip, host_port);
+	PRINT_DEBUG("Entered: host=%u:%u", host_ip, host_port);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	PRINT_DEBUG("conn_stub_list wait***************");
@@ -362,7 +362,7 @@ void tcp_exec_close_stub(struct fins_module *module, struct finsFrame *ff, uint3
 }
 
 void tcp_exec_listen(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
-	PRINT_DEBUG("Entered: addr=%u/%u, backlog=%u", host_ip, host_port, backlog);
+	PRINT_DEBUG("Entered: addr=%u:%u, backlog=%u", host_ip, host_port, backlog);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	PRINT_DEBUG("conn_stub_list wait***************");
@@ -474,7 +474,9 @@ void *tcp_accept_thread(void *local) { //this will need to be changed
 						tcp_seg_send(conn->module, temp_seg);
 						tcp_seg_free(temp_seg);
 
-						timer_once_start(conn->to_gbn_data->tid, TCP_MSL_TO_DEFAULT);
+						//timer_once_start(conn->to_gbn_data->tid, TCP_MSL_TO_DEFAULT);
+						conn->timeout = TCP_GBN_TO_MIN;
+						timer_once_start(conn->to_gbn_data->tid, TCP_GBN_TO_MIN); //TODO figure out to's
 						conn->to_gbn_flag = 0;
 					} else {
 						PRINT_WARN("todo error");
@@ -544,7 +546,7 @@ void *tcp_accept_thread(void *local) { //this will need to be changed
 }
 
 void tcp_exec_accept(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t flags) {
-	PRINT_DEBUG("Entered: host=%u/%u, flags=0x%x", host_ip, host_port, flags);
+	PRINT_DEBUG("Entered: host=%u:%u, flags=0x%x", host_ip, host_port, flags);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	PRINT_DEBUG("conn_stub_list wait***************");
@@ -651,7 +653,7 @@ void tcp_connect(struct fins_module *module, struct tcp_conn *conn, struct finsF
 
 void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port,
 		uint32_t flags) {
-	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	PRINT_DEBUG("conn_list wait***************");
@@ -837,11 +839,11 @@ void tcp_poll_stub(struct fins_module *module, struct tcp_conn_stub *conn_stub, 
 
 void tcp_exec_poll(struct fins_module *module, struct finsFrame *ff, socket_state state, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip,
 		uint16_t rem_port, uint32_t initial, uint32_t flags) {
-	PRINT_DEBUG("Entered: host=%u/%u, rem=%u/%u, initial=%u, flags=%u", host_ip, host_port, rem_ip, rem_port, initial, flags);
+	PRINT_DEBUG("Entered: host=%u:%u, rem=%u:%u, initial=%u, flags=%u", host_ip, host_port, rem_ip, rem_port, initial, flags);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	if (state > SS_UNCONNECTED) {
-		PRINT_DEBUG("Entered: state=%u, host=%u/%u, rem=%u/%u, initial=%u, events=0x%x", state, host_ip, host_port, rem_ip, rem_port, initial, flags);
+		PRINT_DEBUG("Entered: state=%u, host=%u:%u, rem=%u:%u, initial=%u, events=0x%x", state, host_ip, host_port, rem_ip, rem_port, initial, flags);
 		PRINT_DEBUG("conn_list wait***************");
 		secure_sem_wait(&md->conn_list_sem);
 		struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
@@ -868,7 +870,7 @@ void tcp_exec_poll(struct fins_module *module, struct finsFrame *ff, socket_stat
 			module_reply_fcf(module, ff, FCF_TRUE, POLLERR); //TODO check on value?
 		}
 	} else {
-		PRINT_DEBUG("Entered: state=%u, host=%u/%u, initial=%u, flags=%u", state, host_ip, host_port, initial, flags);
+		PRINT_DEBUG("Entered: state=%u, host=%u:%u, initial=%u, flags=%u", state, host_ip, host_port, initial, flags);
 		PRINT_DEBUG("conn_stub_list wait***************");
 		secure_sem_wait(&md->conn_stub_list_sem);
 		struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
@@ -1321,7 +1323,7 @@ void tcp_fcf_match(struct fins_module *module, struct finsFrame *ff) {
 
 	tcp_metadata_read_conn(ff->metaData, &state, &host_ip, &host_port, &rem_ip, &rem_port);
 	if (state > SS_UNCONNECTED) {
-		PRINT_DEBUG("searching: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+		PRINT_DEBUG("searching: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
 		PRINT_DEBUG("conn_list wait***************");
 		secure_sem_wait(&md->conn_list_sem);
 		struct tcp_conn *conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &host_ip, &host_port, &rem_ip, &rem_port);
@@ -1347,7 +1349,7 @@ void tcp_fcf_match(struct fins_module *module, struct finsFrame *ff) {
 			module_reply_fcf(module, ff, FCF_FALSE, 0);
 		}
 	} else { //unconnected
-		PRINT_DEBUG("searching: host=%u/%u", host_ip, host_port);
+		PRINT_DEBUG("searching: host=%u:%u", host_ip, host_port);
 		PRINT_DEBUG("conn_stub_list wait***************");
 		secure_sem_wait(&md->conn_stub_list_sem);
 		struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);

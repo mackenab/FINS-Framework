@@ -331,6 +331,8 @@ struct tcp_conn {
 	uint8_t first_flag;
 	uint32_t duplicate;
 	uint8_t fast_flag;
+	uint32_t fast_ack;
+	uint32_t fast_retries;
 
 	struct sem_to_timer_data *to_msl_data;
 	uint8_t to_msl_flag; //1=MSL timeout occurred
@@ -427,16 +429,19 @@ struct tcp_conn {
 #define TCP_THREADS_MAX 50 //TODO set thread limits by call?
 #define TCP_MAX_QUEUE_DEFAULT 131072//65535
 #define TCP_CONN_MAX 512
-#define TCP_GBN_TO_MIN 1000
-#define TCP_GBN_TO_MAX 64000
-#define TCP_GBN_TO_DEFAULT 5000
-#define TCP_DELAYED_TO_DEFAULT 200
+#define TCP_GBN_TO_MIN 1000 //500 //1000
+#define TCP_GBN_TO_MAX 64000//10000 //64000 //testing new TOs
+#define TCP_GBN_TO_DEFAULT 5000 //5000
+#define TCP_DELAYED_TO_DEFAULT 200 //200
 #define TCP_MAX_SEQ_NUM 4294967295.0
 #define TCP_MAX_WINDOW_DEFAULT 65535//8191
 #define TCP_MSS_DEFAULT_LARGE 1460 //also said to be, 536 //Headers + MSS ≤ MTU
 #define TCP_MSS_DEFAULT_SMALL 536 //also said to be, 536
 #define TCP_MSL_TO_DEFAULT 120000 //max seg lifetime TO
 #define TCP_KA_TO_DEFAULT 7200000 //keep alive TO
+#define TCP_FAST_ENABLED_DEFAULT 1
+#define TCP_FAST_DUPLICATES_DEFAULT 3
+#define TCP_FAST_RETRIES_DEFAULT 4 //-1 //unlimited
 #define TCP_SEND_MIN 4096
 #define TCP_SEND_MAX 3444736
 #define TCP_SEND_DEFAULT 16384
@@ -607,6 +612,7 @@ struct tcp_data {
 	//module values
 	uint8_t fast_enabled;
 	uint32_t fast_duplicates;
+	uint32_t fast_retries;
 
 	uint32_t mss;
 
@@ -634,7 +640,6 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
 #define TCP_ALERT_POLL 0
 #define TCP_ALERT_SHUTDOWN 1 //TODO change to alert?
-
 //don't use 0
 #define TCP_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
 #define TCP_GET_PARAM_LINKS MOD_GET_PARAM_LINKS

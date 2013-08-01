@@ -413,7 +413,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		}
 		pt += sizeof(struct sockaddr_in);
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+		PRINT_DEBUG("temp='%s', addr='%s':%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 
 		free(temp);
 		break;
@@ -470,7 +470,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		}
 		pt += sizeof(struct sockaddr_in);
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+		PRINT_DEBUG("temp='%s', addr='%s':%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 
 		free(temp);
 		break;
@@ -527,7 +527,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 		}
 		pt += sizeof(struct sockaddr_in);
 
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+		PRINT_DEBUG("temp='%s', addr='%s':%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 
 		free(temp);
 		break;
@@ -582,7 +582,7 @@ void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint
 			free(temp);
 			return;
 		}
-		PRINT_DEBUG("temp='%s', addr=%s/%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
+		PRINT_DEBUG("temp='%s', addr='%s':%d", temp, inet_ntoa(addr4->sin_addr), addr4->sin_port);
 
 		pt += sizeof(struct sockaddr_in);
 

@@ -109,14 +109,16 @@ void interface_store_free(struct interface_store *store) {
 
 void *switch_to_interface(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Entered: module=%p", module);
+	PRINT_IMPORTANT("Thread started: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		interface_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_IMPORTANT("Thread exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Exited: module=%p", module);
 	return NULL;
 } // end of Inject Function
 
@@ -312,10 +314,8 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 					interface_request_free(request_resp);
 				}
 			} else {
-				struct in_addr temp_src = { .s_addr = htonl(src_ip) };
-				struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
-				PRINT_WARN("Not seeking addr. Dropping: ff=%p, src=0x%llx/'%s', dst=0x%llx/'%s', cache=%p",
-						ff, src_mac, inet_ntoa(temp_src), dst_mac, inet_ntoa(temp_dst), cache);
+				PRINT_WARN("Not seeking addr. Dropping: ff=%p, src=0x%llx/'%u.%u.%u.%u', dst=0x%llx/'%u.%u.%u.%u', cache=%p",
+						ff, src_mac, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), dst_mac, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), cache);
 			}
 
 			if (store->sent == 0) {
@@ -329,10 +329,8 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 				uint64_t dst_mac = 0;
 				uint32_t dst_ip = addr4_get_ip(&cache->ip);
 
-				struct in_addr temp_src = { .s_addr = htonl(src_ip) };
-				struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
-				PRINT_WARN("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/'%s', dst=0x%llx/'%s', cache=%p",
-						ff, src_mac, inet_ntoa(temp_src), dst_mac, inet_ntoa(temp_dst), cache);
+				PRINT_WARN("ARP failed to resolve address. Dropping: ff=%p, src=0x%llx/'%u.%u.%u.%u', dst=0x%llx/'%u.%u.%u.%u', cache=%p",
+						ff, src_mac, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), dst_mac, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), cache);
 
 				//TODO remove all requests from same source //split cache into (src,dst) tuples?
 				if (cache->seeking) {
@@ -660,7 +658,8 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 
 void *capturer_to_interface(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Entered: module=%p", module);
+	PRINT_IMPORTANT("Thread started: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct interface_data *md = (struct interface_data *) module->data;
 
 	int size_len = sizeof(int);
@@ -785,7 +784,8 @@ void *capturer_to_interface(void *local) {
 		}
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_IMPORTANT("Thread exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Exited: module=%p", module);
 	return NULL;
 }
 

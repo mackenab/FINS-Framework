@@ -18,7 +18,7 @@
 #include <finstime.h>
 
 struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p, host=%u/%u, rem=%u/%u", ff, ff->metaData, host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: ff=%p, meta=%p, host=%u:%u, rem=%u:%u", ff, ff->metaData, host_ip, host_port, rem_ip, rem_port);
 
 	struct udp_sent *sent = (struct udp_sent *) secure_malloc(sizeof(struct udp_sent));
 	sent->ff = ff;
@@ -79,14 +79,16 @@ void udp_sent_free(struct udp_sent *sent) {
 
 void *switch_to_udp(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Entered: module=%p", module);
+	PRINT_IMPORTANT("Thread started: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		udp_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_IMPORTANT("Thread exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Exited: module=%p", module);
 	return NULL;
 }
 
@@ -244,7 +246,7 @@ void udp_exec(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void udp_exec_clear_sent(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: module=%p, ff=%p, host=%u/%u, rem=%u/%u", module, ff, host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: module=%p, ff=%p, host=%u:%u, rem=%u:%u", module, ff, host_ip, host_port, rem_ip, rem_port);
 	struct udp_data *md = (struct udp_data *) module->data;
 
 	if (!list_is_empty(md->sent_packet_list)) {

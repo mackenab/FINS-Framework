@@ -1741,7 +1741,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 				//########
 				addr_in = (struct sockaddr_in *) addr;
 				//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
-				PRINT_DEBUG("address: %u/%u", ntohl((addr_in->sin_addr).s_addr), ntohs(addr_in->sin_port));
+				PRINT_DEBUG("address: %u:%u", ntohl((addr_in->sin_addr).s_addr), ntohs(addr_in->sin_port));
 				//########
 
 				if (pt - wedge_calls[call_index].buf != wedge_calls[call_index].len) {
@@ -2180,7 +2180,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 				//########
 				addr_in = (struct sockaddr_in *) msg->msg_name;
 				//addr_in->sin_port = ntohs(4000); //causes end port to be 4000
-				PRINT_DEBUG("address: %u/%u", ntohl((addr_in->sin_addr).s_addr), ntohs(addr_in->sin_port));
+				PRINT_DEBUG("address: %u:%u", ntohl((addr_in->sin_addr).s_addr), ntohs(addr_in->sin_port));
 				//########
 
 				buf_len = *(__u32 *) pt; //reuse var since not needed anymore
@@ -2711,7 +2711,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_addr;
 				//memcpy(addr, pt, sizeof(struct sockaddr));
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
+				PRINT_DEBUG("name='%s', addr=%u (%u:%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2739,7 +2739,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_dstaddr;
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
+				PRINT_DEBUG("name='%s', addr=%u (%u:%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2767,7 +2767,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_broadaddr;
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
+				PRINT_DEBUG("name='%s', addr=%u (%u:%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {
@@ -2795,7 +2795,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 
 				//#################
 				addr = (struct sockaddr_in *) &ifr.ifr_addr;
-				PRINT_DEBUG("name='%s', addr=%u (%u/%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
+				PRINT_DEBUG("name='%s', addr=%u (%u:%u)", ifr.ifr_name, (__s32)addr, ntohl(addr->sin_addr.s_addr), ntohs(addr->sin_port));
 				//#################
 
 				if (copy_to_user(arg_pt, &ifr, sizeof(struct ifreq))) {

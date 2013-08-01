@@ -71,10 +71,10 @@ uint16_t UDP_checksum(struct udp_packet* pcket_netw, uint32_t src_ip_netw, uint3
 	//packet is in network format
 	struct in_addr temp_src;
 	temp_src.s_addr = src_ip_netw;
-	PRINT_DEBUG("src_ip=%s", inet_ntoa(temp_src));
+	PRINT_DEBUG("src_ip='%s'", inet_ntoa(temp_src));
 	struct in_addr temp_dst;
 	temp_dst.s_addr = dst_ip_netw;
-	PRINT_DEBUG("dst_ip=%s", inet_ntoa(temp_dst));
+	PRINT_DEBUG("dst_ip='%s'", inet_ntoa(temp_dst));
 
 	struct checksum_udp_hdr hdr;
 	hdr.src_addr = src_ip_netw;

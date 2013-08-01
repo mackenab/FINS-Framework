@@ -21,7 +21,7 @@ static struct daemon_socket_other_ops tcp_other_ops = { .connect_timeout = conne
 		accept_timeout_tcp, .accept_expired = accept_expired_tcp, .recvmsg_timeout = recvmsg_timeout_tcp, };
 
 int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port) {
-	PRINT_DEBUG("Entered: module=%p, host=%u/%u", module, host_ip, host_port);
+	PRINT_DEBUG("Entered: module=%p, host=%u:%u", module, host_ip, host_port);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	//must be unique 5-ple (protocol, source ip, source port, dest ip, dest port)
@@ -44,7 +44,7 @@ int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t 
 }
 
 int match_conn_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
-	PRINT_DEBUG("Entered: module=%p, host=%u/%u, rem=%u/%u", module, host_ip, host_port, rem_ip, rem_port);
+	PRINT_DEBUG("Entered: module=%p, host=%u:%u, rem=%u:%u", module, host_ip, host_port, rem_ip, rem_port);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	//must be unique 5-ple (protocol, source ip, source port, dest ip, dest port)
@@ -123,7 +123,7 @@ void bind_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, s
 		md->sockets[hdr->sock_index].family = AF_INET;
 		addr4_set_ip(&md->sockets[hdr->sock_index].host_addr, host_ip);
 		addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 	} else if (addr->ss_family == AF_INET6) {
 		//TODO
@@ -156,7 +156,7 @@ void listen_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 		uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		/** Keep all ports and addresses in host order until later  action taken
@@ -247,8 +247,8 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		uint32_t rem_ip = ntohl(addr4_get_ip(addr));
 		uint16_t rem_port = ntohs(addr4_get_port(addr));
 
-		PRINT_DEBUG("address: rem=%u (%s):%u, rem_IP_netformat=%u", rem_ip, inet_ntoa(((struct sockaddr_in *) addr)->sin_addr), rem_port, htonl(rem_ip));
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("address: rem=%u ('%s'):%u, rem_IP_netformat=%u", rem_ip, inet_ntoa(((struct sockaddr_in *) addr)->sin_addr), rem_port, htonl(rem_ip));
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		md->sockets[hdr->sock_index].state = SS_CONNECTING;
@@ -286,7 +286,7 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 			host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 		}
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -350,7 +350,7 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 			"MSG_CMSG_CLOEXEC=%d (0x%x), MSG_DONTWAIT=%d (0x%x), MSG_ERRQUEUE=%d (0x%x), MSG_OOB=%d (0x%x), MSG_PEEK=%d (0x%x), MSG_TRUNC=%d (0x%x), MSG_WAITALL=%d (0x%x)",
 			(MSG_CMSG_CLOEXEC & flags)>0, MSG_CMSG_CLOEXEC, (MSG_DONTWAIT & flags)>0, MSG_DONTWAIT, (MSG_ERRQUEUE & flags)>0, MSG_ERRQUEUE, (MSG_OOB & flags)>0, MSG_OOB, (MSG_PEEK & flags)>0, MSG_PEEK, (MSG_TRUNC & flags)>0, MSG_TRUNC, (MSG_WAITALL & flags)>0, MSG_WAITALL);
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 	if (md->sockets[hdr->sock_index].listening == 0) {
@@ -393,7 +393,7 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
 		uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 		uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
-		PRINT_DEBUG("accept address: host=%u/%u", host_ip, host_port);
+		PRINT_DEBUG("accept address: host=%u:%u", host_ip, host_port);
 
 		//TODO process flags?
 
@@ -432,7 +432,7 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 
 			md->sockets[hdr->sock_index].state = SS_CONNECTING;
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 		} else {
 			PRINT_ERROR("Insert fail: hdr=%p", hdr);
@@ -453,7 +453,7 @@ void getname_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	struct sockaddr_storage address;
 
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		uint32_t addr_ip;
@@ -490,7 +490,7 @@ void getname_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
 		addr4->sin_addr.s_addr = htonl(addr_ip);
 		addr4->sin_port = htons(addr_port);
-		PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+		PRINT_DEBUG("addr=('%s':%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
 		PRINT_WARN("todo");
 		//TODO
@@ -717,16 +717,16 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
 		}
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		//########################
 #ifdef DEBUG
 		struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 		temp->s_addr = htonl(host_ip);
-		PRINT_DEBUG("index=%d, host=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
+		PRINT_DEBUG("index=%d, host='%s':%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
 		temp->s_addr = htonl(rem_ip);
-		PRINT_DEBUG("index=%d, rem=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
+		PRINT_DEBUG("index=%d, rem='%s':%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
 		free(temp);
 #endif
 		//########################
@@ -987,7 +987,7 @@ void release_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 	metadata *meta;
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1076,7 +1076,7 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
 			//TODO update for AF_INET6 //######################################################################################
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 			uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
@@ -1085,9 +1085,9 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 			uint32_t rem_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
 
 			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-				PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+				PRINT_DEBUG("poll address: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
 			} else {
-				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
+				PRINT_DEBUG("poll address: host=%u:%u", host_ip, host_port);
 			}
 
 			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1197,7 +1197,7 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 				}
 
 				if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //same as second one
-					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 							md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 					uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
@@ -1206,9 +1206,9 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 					uint32_t rem_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
 
 					if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-						PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+						PRINT_DEBUG("poll address: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
 					} else {
-						PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
+						PRINT_DEBUG("poll address: host=%u:%u", host_ip, host_port);
 					}
 
 					metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1277,7 +1277,7 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 
 			//mask |= POLLHUP; //TODO implement
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 			uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
@@ -1286,9 +1286,9 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 			uint32_t rem_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
 
 			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-				PRINT_DEBUG("poll address: host=%u/%u, rem=%u/%u", host_ip, host_port, rem_ip, rem_port);
+				PRINT_DEBUG("poll address: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
 			} else {
-				PRINT_DEBUG("poll address: host=%u/%u", host_ip, host_port);
+				PRINT_DEBUG("poll address: host=%u:%u", host_ip, host_port);
 			}
 
 			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1424,7 +1424,7 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1623,7 +1623,7 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1816,7 +1816,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		md->sockets[call->sock_index].state = SS_CONNECTED;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 		ack_send(module, call->id, call->index, call->type, 0);
@@ -1825,7 +1825,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 		md->sockets[call->sock_index].error_call = call->type;
 		md->sockets[call->sock_index].error_msg = ret_msg;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 		nack_send(module, call->id, call->index, call->type, ECONNREFUSED); //TODO change based off of timeout, refused etc
@@ -1862,14 +1862,14 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 			addr4_set_ip(&md->sockets[call->sock_index_new].rem_addr, rem_ip);
 			addr4_set_port(&md->sockets[call->sock_index_new].rem_addr, (uint16_t) rem_port);
 
-			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index_new].sock_id, call->sock_index_new, md->sockets[call->sock_index_new].state, addr4_get_ip(&md->sockets[call->sock_index_new].host_addr), addr4_get_port(&md->sockets[call->sock_index_new].host_addr), addr4_get_ip(&md->sockets[call->sock_index_new].rem_addr), addr4_get_port(&md->sockets[call->sock_index_new].rem_addr));
 
 			md->sockets[call->sock_index].state = SS_UNCONNECTED;
 			md->sockets[call->sock_index].sock_id_new = -1;
 			md->sockets[call->sock_index].sock_index_new = -1;
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 			ack_send(module, call->id, call->index, call->type, 0);
@@ -1880,7 +1880,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 			md->sockets[call->sock_index].error_call = call->type;
 			md->sockets[call->sock_index].error_msg = 0; //TODO fill in special value?
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 			nack_send(module, call->id, call->index, call->type, 1);
@@ -1890,7 +1890,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 		md->sockets[call->sock_index].error_call = call->type;
 		md->sockets[call->sock_index].error_msg = ret_msg;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 		nack_send(module, call->id, call->index, call->type, ECONNREFUSED); //TODO change based off of timeout, refused etc
@@ -2142,7 +2142,7 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 		addr4->sin_addr.s_addr = htonl(addr4->sin_addr.s_addr);
 		addr4->sin_port = htons(addr4->sin_port);
-		PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+		PRINT_DEBUG("address: '%s':%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else { //AF_INET6
 		PRINT_WARN("todo");
 		nack_send(module, call->id, call->index, call->type, 1);
@@ -2174,7 +2174,7 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 	}
 	daemon_calls_remove(module, call->index);
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 	if (ret_val != 0) {
@@ -2232,12 +2232,12 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 			sock_index = match_conn_addr4_tcp(module, src_ip, (uint16_t) src_port, 0, 0);
 		}
 		if (sock_index == -1) {
-			PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
-			//TODO change back  to PRINT_ERROR
+			PRINT_WARN("No matching socket, freeing TCP data: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
+					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port);
 			freeFinsFrame(ff);
 			return;
 		}
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
 		PRINT_WARN("todo");
@@ -2316,12 +2316,13 @@ void daemon_in_error_tcp(struct fins_module *module, struct finsFrame *ff, uint3
 			sock_index = match_conn_addr4_tcp(module, src_ip, (uint16_t) src_port, 0, 0);
 		}
 		if (sock_index == -1) {
-			PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+			PRINT_WARN("No matching socket, freeing TCP error msg: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
+					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port);
 			//TODO change back  to PRINT_ERROR
 			freeFinsFrame(ff);
 			return;
 		}
-		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
 		PRINT_WARN("todo");
@@ -2371,12 +2372,13 @@ void daemon_in_poll_tcp(struct fins_module *module, struct finsFrame *ff, uint32
 		sock_index = match_conn_addr4_tcp(module, host_ip, (uint16_t) host_port, 0, 0);
 	}
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
+		PRINT_WARN("No matching socket, freeing poll FCF: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
+				ff, (host_ip&0xFF000000)>>24, (host_ip&0x00FF0000)>>16, (host_ip&0x0000FF00)>>8, (host_ip&0x000000FF), (uint16_t) host_port, (rem_ip&0xFF000000)>>24, (rem_ip&0x00FF0000)>>16, (rem_ip&0x0000FF00)>>8, (rem_ip&0x000000FF), (uint16_t)rem_port);
 		freeFinsFrame(ff);
 		return;
 	}
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &ret_msg);
 }
@@ -2407,12 +2409,13 @@ void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, ui
 		sock_index = match_conn_addr4_tcp(module, host_ip, (uint16_t) host_port, 0, 0);
 	}
 	if (sock_index == -1) {
-		PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, host_ip, (uint16_t) host_port, rem_ip, (uint16_t)rem_port);
+		PRINT_WARN("No matching socket, freeing shutdown FCF: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
+				ff, (host_ip&0xFF000000)>>24, (host_ip&0x00FF0000)>>16, (host_ip&0x0000FF00)>>8, (host_ip&0x000000FF), (uint16_t) host_port, (rem_ip&0xFF000000)>>24, (rem_ip&0x00FF0000)>>16, (rem_ip&0x0000FF00)>>8, (rem_ip&0x000000FF), (uint16_t)rem_port);
 		freeFinsFrame(ff);
 		return;
 	}
 
-	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 
 	md->sockets[sock_index].status &= ~ret_msg;
@@ -2567,7 +2570,7 @@ void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struc
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		md->sockets[call->sock_index].state = SS_CONNECTED;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 		if (reply)
 			ack_send(module, call->id, call->index, call->type, 0);
@@ -2578,7 +2581,7 @@ void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struc
 
 		addr4_set_ip(&md->sockets[call->sock_index].host_addr, 0); //TODO don't clear? so that will detect error
 		addr4_set_port(&md->sockets[call->sock_index].host_addr, 0);
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 		if (reply)
@@ -2618,7 +2621,7 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 			addr4_set_ip(&md->sockets[call->sock_index_new].rem_addr, rem_ip);
 			addr4_set_port(&md->sockets[call->sock_index_new].rem_addr, (uint16_t) rem_port);
 
-			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("Accept socket created: sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 			md->sockets[call->sock_index].state = SS_UNCONNECTED;
@@ -2630,7 +2633,7 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 				md->sockets[call->sock_index].sock_index_new = call->sock_index_new;
 			}
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 			PRINT_DEBUG("Exiting, ACK: ff=%p", ff);
@@ -2643,7 +2646,7 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 			md->sockets[call->sock_index].error_call = call->type;
 			md->sockets[call->sock_index].error_msg = 0; //TODO fill in special value?
 
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 			if (reply)
@@ -2654,7 +2657,7 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 		md->sockets[call->sock_index].error_call = call->type;
 		md->sockets[call->sock_index].error_msg = ret_msg;
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 		if (reply)

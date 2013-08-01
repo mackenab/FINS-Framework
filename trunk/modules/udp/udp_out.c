@@ -83,7 +83,7 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	packet_netw->u_cksum = 0;
 	memcpy(packet_netw->u_data, pdu, ff->dataFrame.pduLength);
 
-	PRINT_DEBUG("src=%u/%u, dst=%u/%u, pkt_len=%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port, packet_length);
+	PRINT_DEBUG("src=%u:%u, dst=%u:%u, pkt_len=%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port, packet_length);
 
 	uint16_t checksum = UDP_checksum(packet_netw, htonl(src_ip), htonl(dst_ip));
 	packet_netw->u_cksum = htons(checksum);

@@ -144,7 +144,7 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 		}
 	} else {
 		struct in_addr temp_src = { .s_addr = htonl(src_ip) };
-		PRINT_WARN("FCF Used src_ip that has no corresponding interface: ff=%p, src_ip='%s' (%u)", ff, inet_ntoa(temp_src), src_ip);
+		PRINT_WARN("FCF Used src_ip that has no corresponding interface: ff=%p, src_ip='%s'", ff, inet_ntoa(temp_src));
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 	}
 }
@@ -213,28 +213,40 @@ void arp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 								arp_request_free(request);
 							}
 						} else {
-							struct in_addr temp_src = { .s_addr = htonl(src_ip) };
-							PRINT_WARN("Not seeking addr. Dropping ARP reply: ff=%p, src=0x%llx/'%s' (%u)", ff, src_mac, inet_ntoa(temp_src), src_ip);
-							struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
-							PRINT_WARN("ff=%p, dst=0x%llx/'%s' (%u), cache=%p", ff, dst_mac, inet_ntoa(temp_dst), dst_ip, cache);
+							PRINT_WARN("Not seeking addr. Dropping ARP reply: ff=%p, src=0x%llx/'%u.%u.%u.%u', dst=0x%llx/'%u.%u.%u.%u', cache=%p",
+									ff, src_mac, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), dst_mac, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), cache);
 						}
 					} else {
-						struct in_addr temp_src = { .s_addr = htonl(src_ip) };
-						struct in_addr temp_dst = { .s_addr = htonl(dst_ip) };
-						PRINT_ERROR("No corresponding request. Dropping: ff=%p, src=0x%llx/'%s', dst=0x%llx/'%s'",
-								ff, src_mac, inet_ntoa(temp_src), dst_mac, inet_ntoa(temp_dst));
+						PRINT_WARN("No corresponding request. Dropping ARP reply: ff=%p, src=0x%llx/'%u.%u.%u.%u', dst=0x%llx/'%u.%u.%u.%u'",
+								ff, src_mac, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), dst_mac, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF));
 					}
 				}
 			} else {
 				struct in_addr temp = { .s_addr = htonl(dst_ip) };
 				if (msg->operation == ARP_OP_REQUEST) {
-					PRINT_WARN("No corresponding interface. Dropping ARP request: ff=%p, dst_ip='%s' (%u)", ff, inet_ntoa(temp), dst_ip);
+					PRINT_WARN("No corresponding interface. Dropping ARP request: ff=%p, dst_ip='%s'", ff, inet_ntoa(temp));
 				} else { //Reply
-					PRINT_WARN("No corresponding interface. Dropping ARP reply: ff=%p, dst_ip='%s' (%u)", ff, inet_ntoa(temp), dst_ip);
+					PRINT_WARN("No corresponding interface. Dropping ARP reply: ff=%p, dst_ip='%s'", ff, inet_ntoa(temp));
 				}
 			}
 		} else {
-			PRINT_ERROR("Invalid Message. Dropping: ff=%p", ff);
+			if (msg->hardware_type != ARP_HWD_TYPE) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, hardware_type=%u != %u", ff, msg->hardware_type, ARP_HWD_TYPE);
+			} else if (msg->operation != ARP_OP_REQUEST && msg->operation != ARP_OP_REPLY) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, not request or reply: operation=%u", ff, msg->operation);
+			} else if (msg->hardware_addrs_length != ARP_HDW_ADDR_LEN) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, hardware_addrs_length=%u != %u", ff, msg->hardware_addrs_length, ARP_HDW_ADDR_LEN);
+			} else if (msg->protocol_addrs_length != ARP_PROTOCOL_ADDR_LEN) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, protocol_addrs_length=%u != %u", ff, msg->protocol_addrs_length, ARP_PROTOCOL_ADDR_LEN);
+			} else if (msg->protocol_type != ARP_PROTOCOL_TYPE) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, protocol_type=%u != %u", ff, msg->protocol_type, ARP_PROTOCOL_TYPE);
+			} else if (msg->sender_MAC_addrs == ARP_MAC_NULL) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, sender_MAC_addrs=%u", ff, ARP_MAC_NULL);
+			} else if (msg->sender_IP_addrs == ARP_IP_NULL) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, sender_MAC_addrs=%u", ff, ARP_IP_NULL);
+			} else if (msg->target_IP_addrs == ARP_IP_NULL) {
+				PRINT_WARN("Invalid ARP Message. Dropping: ff=%p, sender_MAC_addrs=%u", ff, ARP_IP_NULL);
+			}
 		}
 
 		PRINT_DEBUG("Freeing: msg=%p", msg);

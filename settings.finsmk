@@ -68,9 +68,8 @@ LIBS := -lc -lgcc -llog -lm
 endif
 
 GDB_CLIENT := $(BIN)/arm-eabi-gdb
-#INSTALL_DIR := /data/local/fins
+INSTALL_DIR := /data/local/fins
 #INSTALL_DIR := /sdcard/fins #can't run there
-INSTALL_DIR := /dev/fins
 endif
 
 

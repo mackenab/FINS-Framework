@@ -92,8 +92,10 @@ int daemon_calls_insert(struct fins_module *module, uint32_t call_id, int call_i
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->calls[call_index].id != -1) { //TODO may actually remove, add check such that FCF pointing
-		PRINT_WARN("Error, call_index in use: daemon_calls[%d].call_id=%u", call_index, md->calls[call_index].id);
-		PRINT_WARN("Overwriting with: daemon_calls[%d].call_id=%u", call_index, call_id);
+		PRINT_WARN("Error, call_index in use: daemon_calls[%d].call_id=%u, call_pid=%d, call_type=%u, sock_id=%llu, sock_index=%d",
+				call_index, md->calls[call_index].id, md->calls[call_index].pid, md->calls[call_index].type, md->calls[call_index].sock_id, md->calls[call_index].sock_index);
+		PRINT_WARN("Overwriting with: daemon_calls[%d].call_id=%u, call_pid=%d, call_type=%u, sock_id=%llu, sock_index=%d",
+				call_index, call_id, call_pid, call_type, sock_id, sock_index);
 
 		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id
 				&& (md->calls[call_index].type == POLL_CALL || md->calls[call_index].type == RECVMSG_CALL)) {
@@ -403,14 +405,16 @@ void daemon_exec_reply_new(struct finsFrame *ff) {
 
 void *switch_to_daemon(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Entered: module=%p", module);
+	PRINT_IMPORTANT("Thread started: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 
 	while (module->state == FMS_RUNNING) {
 		daemon_get_ff(module);
 		PRINT_DEBUG("");
 	}
 
-	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_IMPORTANT("Thread exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Exited: module=%p", module);
 	return NULL;
 }
 
@@ -775,7 +779,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 	} else {
 		int call_index = daemon_calls_find(module, ff->ctrlFrame.serial_num); //assumes all EXEC_REPLY FCF, are in daemon_calls,
 		if (call_index == -1) {
-			PRINT_ERROR("Exited, no corresponding call: ff=%p", ff);
+			PRINT_WARN("Exited, no corresponding call: ff=%p", ff);
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&md->sockets_sem);
 
@@ -945,8 +949,8 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 			temp2->s_addr = 0;
 		}
 		PRINT_DEBUG("ff=%p, prot=%u", ff, protocol);
-		PRINT_DEBUG("src=%s (%u)", inet_ntoa(*temp), src_ip);
-		PRINT_DEBUG("dst=%s (%u)", inet_ntoa(*temp2), dst_ip);
+		PRINT_DEBUG("src='%s' (%u)", inet_ntoa(*temp), src_ip);
+		PRINT_DEBUG("dst='%s' (%u)", inet_ntoa(*temp2), dst_ip);
 
 		free(temp);
 		free(temp2);
@@ -1055,7 +1059,8 @@ void daemon_handle_to(struct fins_module *module, struct daemon_call *call) {
 
 void *wedge_to_daemon(void *local) {
 	struct fins_module *module = (struct fins_module *) local;
-	PRINT_IMPORTANT("Entered: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Entered: module=%p", module);
+	PRINT_IMPORTANT("Thread started: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	// Begin receive message section
@@ -1238,7 +1243,8 @@ void *wedge_to_daemon(void *local) {
 	free(recv_buf);
 	close(md->nl_sockfd);
 
-	PRINT_IMPORTANT("Exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_IMPORTANT("Thread exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
+	PRINT_DEBUG("Exited: module=%p", module);
 	return NULL;
 }
 

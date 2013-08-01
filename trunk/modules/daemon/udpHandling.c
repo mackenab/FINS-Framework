@@ -19,7 +19,7 @@ static struct daemon_socket_in_ops udp_in_ops = { };
 static struct daemon_socket_other_ops udp_other_ops = { .recvmsg_timeout = recvmsg_timeout_udp, };
 
 int match_host_addr4_udp(struct fins_module *module, uint32_t host_ip, uint16_t host_port) {
-	PRINT_DEBUG("Entered: module=%p, host=%u/%u", module, host_ip, host_port);
+	PRINT_DEBUG("Entered: module=%p, host=%u:%u", module, host_ip, host_port);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	//must be unique 5-ple (protocol, source ip, source port, dest ip, dest port)
@@ -82,7 +82,7 @@ void bind_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, s
 		md->sockets[hdr->sock_index].family = AF_INET;
 		addr4_set_ip(&md->sockets[hdr->sock_index].host_addr, host_ip);
 		addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 	} else if (addr->ss_family == AF_INET6) {
 		//TODO
@@ -135,7 +135,7 @@ void connect_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		uint16_t rem_port = ntohs(addr4_get_port(addr));
 
 		if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-			PRINT_DEBUG("old rem=%u/%u", addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr));
+			PRINT_DEBUG("old rem=%u:%u", addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr));
 		}
 
 		PRINT_DEBUG("dest address: family=%u, rem_ip=%u, rem_port=%u", AF_INET, rem_ip, rem_port);
@@ -174,7 +174,7 @@ void connect_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
 		}
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 	} else if (addr->ss_family == AF_INET6) {
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC && md->sockets[hdr->sock_index].family != AF_INET6) {
@@ -213,7 +213,7 @@ void getname_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	struct sockaddr_storage address;
 
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		uint32_t addr_ip;
@@ -257,7 +257,7 @@ void getname_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
 		addr4->sin_addr.s_addr = htonl(addr_ip);
 		addr4->sin_port = htons(addr_port);
-		PRINT_DEBUG("addr=(%s/%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+		PRINT_DEBUG("addr=('%s':%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
 
@@ -499,16 +499,16 @@ void sendmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
 		}
 
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		//########################
 #ifdef DEBUG
 		struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 		temp->s_addr = htonl(host_ip);
-		PRINT_DEBUG("index=%d, host=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
+		PRINT_DEBUG("index=%d, host='%s':%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
 		temp->s_addr = htonl(rem_ip);
-		PRINT_DEBUG("index=%d, rem=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
+		PRINT_DEBUG("index=%d, rem='%s':%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
 		free(temp);
 #endif
 		//########################
@@ -556,16 +556,16 @@ void sendmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 				secure_metadata_writeToElement(meta, "send_src_ipv4", &host_ip, META_TYPE_INT32);
 				secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
 
-				PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+				PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 						md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, host_ip, host_port, rem_ip, rem_port);
 
 				//########################
 #ifdef DEBUG
 				struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 				temp->s_addr = htonl(host_ip);
-				PRINT_DEBUG("index=%d, host=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
+				PRINT_DEBUG("index=%d, host='%s':%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)host_port, host_ip);
 				temp->s_addr = htonl(rem_ip);
-				PRINT_DEBUG("index=%d, rem=%s/%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
+				PRINT_DEBUG("index=%d, rem='%s':%u (%u)", hdr->sock_index, inet_ntoa(*temp), (uint16_t)rem_port, rem_ip);
 				free(temp);
 #endif
 				//########################
@@ -615,8 +615,7 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
-			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0);
-	PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
+			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0); PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	struct daemon_store *store = NULL;
@@ -646,7 +645,7 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 					uint32_t dst_port = addr4->sin_port;
 					addr4->sin_port = htons(dst_port);
-					PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), dst_port, addr4->sin_addr.s_addr);
+					PRINT_DEBUG("address: '%s':%d (%u)", inet_ntoa(addr4->sin_addr), dst_port, addr4->sin_addr.s_addr);
 				} else { //AF_INET6
 					addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 					//addr6 = (struct sockaddr_in6 *) store->addr;
@@ -687,7 +686,7 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 				uint32_t src_port = addr4->sin_port;
 				addr4->sin_port = htons(src_port);
-				PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), src_port, addr4->sin_addr.s_addr);
+				PRINT_DEBUG("address: '%s':%d (%u)", inet_ntoa(addr4->sin_addr), src_port, addr4->sin_addr.s_addr);
 			} else { //AF_INET6
 				addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 				//addr6 = (struct sockaddr_in6 *) store->addr;
@@ -774,7 +773,7 @@ void release_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
 		//TODO send FCF to UDP module clearing error buffers of any msgs from this socket
@@ -1428,7 +1427,7 @@ uint32_t recvmsg_in_udp(struct daemon_call *call, struct fins_module *module, me
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 		addr4->sin_addr.s_addr = htonl(addr4->sin_addr.s_addr);
 		addr4->sin_port = htons(addr4->sin_port);
-		PRINT_DEBUG("address: %s:%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+		PRINT_DEBUG("address: '%s':%d (%u)", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else { //AF_INET6
 		PRINT_WARN("todo");
 		nack_send(module, call->id, call->index, call->type, 1);
@@ -1483,16 +1482,16 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 		addr4_set_port(src_addr, (uint16_t) src_port);
 		addr4_set_port(dst_addr, (uint16_t) dst_port);
 
-		PRINT_DEBUG("ff: src=%u/%u, dst=%u/%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_DEBUG("ff: src=%u:%u, dst=%u:%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 
 		sock_index = match_host_addr4_udp(module, dst_ip, (uint16_t) dst_port); //TODO change for multicast
 		if (sock_index == -1) {
-			PRINT_DEBUG("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+			PRINT_WARN("No matching socket, freeing UDP data: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
+					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port);
 			//TODO change back  to PRINT_ERROR
 			freeFinsFrame(ff);
 			return;
-		}
-		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		} PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
 		PRINT_WARN("todo");
@@ -1552,17 +1551,17 @@ void daemon_in_error_udp(struct fins_module *module, struct finsFrame *ff, uint3
 		addr4_set_port(src_addr, (uint16_t) src_port);
 		addr4_set_port(dst_addr, (uint16_t) dst_port);
 
-		PRINT_DEBUG("ff: src=%u/%u, dst=%u/%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+		PRINT_DEBUG("ff: src=%u:%u, dst=%u:%u", src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 
 		sock_index = match_host_addr4_udp(module, src_ip, (uint16_t) src_port); //TODO change for multicast
 		if (sock_index == -1) {
-			PRINT_ERROR("No match, freeing: ff=%p, src=%u/%u, dst=%u/%u", ff, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
-			//TODO change back  to PRINT_ERROR
+			PRINT_WARN("No matching socket, freeing UDP error msg: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
+					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port);
 			freeFinsFrame(ff);
 			return;
 		}
 
-		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u/%u, rem=%u/%u",
+		PRINT_DEBUG("Matched: sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
 		PRINT_WARN("todo");

@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 	client_addr.sin_port = htons(client_port);
 
 	///*
-	printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	printf("Binding to client_addr='%s':%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
 		perror("Bind");
 		printf("Failure\n");

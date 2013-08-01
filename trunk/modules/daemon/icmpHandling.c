@@ -201,7 +201,7 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
 		addr4->sin_addr.s_addr = htonl(addr_ip);
 		addr4->sin_port = 0;
-		PRINT_DEBUG("addr=%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
+		PRINT_DEBUG("addr='%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
 		address_len = sizeof(struct sockaddr_in6);
@@ -412,9 +412,9 @@ void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 #ifdef DEBUG
 		struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 		temp->s_addr = htonl(host_ip);
-		PRINT_DEBUG("index=%d, host=%s (%u)", hdr->sock_index, inet_ntoa(*temp), host_ip);
+		PRINT_DEBUG("index=%d, host='%s' (%u)", hdr->sock_index, inet_ntoa(*temp), host_ip);
 		temp->s_addr = htonl(rem_ip);
-		PRINT_DEBUG("index=%d, rem=%s (%u)", hdr->sock_index, inet_ntoa(*temp), rem_ip);
+		PRINT_DEBUG("index=%d, rem='%s' (%u)", hdr->sock_index, inet_ntoa(*temp), rem_ip);
 		free(temp);
 #endif
 		//########################
@@ -463,9 +463,9 @@ void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 #ifdef DEBUG
 				struct in_addr *temp = (struct in_addr *) malloc(sizeof(struct in_addr));
 				temp->s_addr = htonl(host_ip);
-				PRINT_DEBUG("index=%d, host=%s (%u)", hdr->sock_index, inet_ntoa(*temp), host_ip);
+				PRINT_DEBUG("index=%d, host='%s' (%u)", hdr->sock_index, inet_ntoa(*temp), host_ip);
 				temp->s_addr = htonl(rem_ip);
-				PRINT_DEBUG("index=%d, rem=%s (%u)", hdr->sock_index, inet_ntoa(*temp), rem_ip);
+				PRINT_DEBUG("index=%d, rem='%s' (%u)", hdr->sock_index, inet_ntoa(*temp), rem_ip);
 				free(temp);
 #endif
 				//########################
@@ -541,7 +541,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 					uint32_t dst_ip = addr4->sin_addr.s_addr;
 					addr4->sin_addr.s_addr = htonl(dst_ip);
 					addr4->sin_port = 0;
-					PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
+					PRINT_DEBUG("address:'%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 				} else { //AF_INET6
 					addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 					//addr6 = (struct sockaddr_in6 *) store->addr;
@@ -579,7 +579,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 				uint32_t src_ip = addr4->sin_addr.s_addr;
 				addr4->sin_addr.s_addr = htonl(src_ip);
 				addr4->sin_port = 0;
-				PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
+				PRINT_DEBUG("address:'%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 			} else { //AF_INET6
 				addr_len = (uint32_t) sizeof(struct sockaddr_in6);
 				//addr6 = (struct sockaddr_in6 *) store->addr;
@@ -1290,7 +1290,7 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) addr;
 		addr4->sin_addr.s_addr = htonl(addr4->sin_addr.s_addr);
 		addr4->sin_port = 0;
-		PRINT_DEBUG("address:%s (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
+		PRINT_DEBUG("address:'%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 	} else { //AF_INET6
 		PRINT_WARN("todo");
 		nack_send(module, call->id, call->index, call->type, 1);

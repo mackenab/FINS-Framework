@@ -42,8 +42,7 @@
 
 //TODO these definitions need to be gathered
 #ifdef BUILD_FOR_ANDROID
-//#define FINS_TMP_ROOT "/data/local/fins"
-#define FINS_TMP_ROOT "/dev/fins"
+#define FINS_TMP_ROOT "/data/local/fins"
 #else
 #define FINS_TMP_ROOT "/tmp/fins"
 #endif

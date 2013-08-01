@@ -55,7 +55,7 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint32_t src_port = ntohs(packet->u_src);
 	uint32_t dst_port = ntohs(packet->u_dst);
 
-	PRINT_DEBUG("proto=%u, src=%u/%u, dst=%u/%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
+	PRINT_DEBUG("proto=%u, src=%u:%u, dst=%u:%u", protocol, src_ip, (uint16_t)src_port, dst_ip, (uint16_t)dst_port);
 	PRINT_DEBUG("UDP_checksum=%u, checksum=%u", checksum, ntohs(packet->u_cksum));
 
 	if (packet->u_cksum != IGNORE_CHEKSUM) {

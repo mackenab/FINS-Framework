@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 	client_addr.sin_port = htons(client_port);
 
 	///*
-	printf("Binding to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
+	printf("Binding to client_addr='%s':%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 	if (bind(sock, (struct sockaddr *) &client_addr, sizeof(struct sockaddr)) == -1) {
 		perror("Bind");
 		printf("Failure");
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 	}
 	//*/
 
-	printf("Connecting to server: addr=%s:%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
+	printf("Connecting to server: addr='%s':%d, netw=%u\n", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
 	while (1) {
 		if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
 			printf("failed connect: errno=%d errno='%s'\n", errno, strerror(errno));
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	printf("Connection establisehed sock=%d to (%s/%d) netw=%u\n", sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
+	printf("Connection establisehed sock=%d to ('%s'/%d) netw=%u\n", sock, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
 			server_addr.sin_addr.s_addr);
 	fflush(stdout);
 
