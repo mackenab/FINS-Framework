@@ -615,7 +615,8 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	PRINT_DEBUG("SOCK_NONBLOCK=%d, SOCK_CLOEXEC=%d, O_NONBLOCK=%d, O_ASYNC=%d",
-			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0); PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
+			(SOCK_NONBLOCK & flags)>0, (SOCK_CLOEXEC & flags)>0, (O_NONBLOCK & flags)>0, (O_ASYNC & flags)>0);
+	PRINT_DEBUG( "MSG_CMSG_CLOEXEC=%d, MSG_DONTWAIT=%d, MSG_ERRQUEUE=%d, MSG_OOB=%d, MSG_PEEK=%d, MSG_TRUNC=%d, MSG_WAITALL=%d",
 			(MSG_CMSG_CLOEXEC & flags)>0, (MSG_DONTWAIT & flags)>0, (MSG_ERRQUEUE & flags)>0, (MSG_OOB & flags)>0, (MSG_PEEK & flags)>0, (MSG_TRUNC & flags)>0, (MSG_WAITALL & flags)>0);
 
 	struct daemon_store *store = NULL;
@@ -1491,7 +1492,8 @@ void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_
 			//TODO change back  to PRINT_ERROR
 			freeFinsFrame(ff);
 			return;
-		} PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
+		}
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	} else { //AF_INET
 		PRINT_WARN("todo");

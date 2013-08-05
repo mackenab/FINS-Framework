@@ -361,6 +361,44 @@ void tcp_exec_close_stub(struct fins_module *module, struct finsFrame *ff, uint3
 	}
 }
 
+void tcp_listen(struct fins_module *module, struct tcp_conn *conn_stub, struct finsFrame *ff, uint32_t backlog) {
+	PRINT_DEBUG("Entered: conn_stub=%p, ff=%p, backlog=%u", conn_stub, ff, backlog);
+	struct tcp_data *md = (struct tcp_data *) module->data;
+
+	PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
+	secure_sem_wait(&conn_stub->sem);
+	if (conn_stub->running_flag) {
+		if (conn_stub->state == TS_CLOSED) {
+			//if listen, send -, LISTEN
+			conn_stub->state = TS_LISTEN;
+
+			conn_stub->syn_list->max = backlog;
+			conn_stub->backlog_list->max = backlog;
+
+			//module_reply_fcf(module, ff, FCF_TRUE, 0);
+		} else {
+			//TODO error
+			PRINT_WARN("todo error");
+			//module_reply_fcf(module, ff, FCF_FALSE, 0);
+		}
+	} else {
+		PRINT_WARN("todo error");
+		//send NACK to connect handler
+		//module_reply_fcf(module, ff, FCF_FALSE, 1);
+	}
+	freeFinsFrame(ff);
+
+	PRINT_DEBUG("conn_stub_list wait***************");
+	secure_sem_wait(&md->conn_stub_list_sem);
+	conn_stub->threads--;
+	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
+	PRINT_DEBUG("conn_stub_list post***************");
+	sem_post(&md->conn_stub_list_sem);
+
+	PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
+	sem_post(&conn_stub->sem);
+}
+
 void tcp_exec_listen(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
 	PRINT_DEBUG("Entered: addr=%u:%u, backlog=%u", host_ip, host_port, backlog);
 	struct tcp_data *md = (struct tcp_data *) module->data;
@@ -391,6 +429,37 @@ void tcp_exec_listen(struct fins_module *module, struct finsFrame *ff, uint32_t 
 
 	//TODO send ACK to listen handler - don't? have nonblocking
 	freeFinsFrame(ff);
+}
+
+void tcp_exec_listen_new(struct fins_module *module, struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
+	PRINT_DEBUG("Entered: addr=%u:%u, backlog=%u", host_ip, host_port, backlog);
+	struct tcp_data *md = (struct tcp_data *) module->data;
+
+	PRINT_DEBUG("conn_stub_list wait***************");
+	secure_sem_wait(&md->conn_stub_list_sem);
+	struct tcp_conn *conn_stub = (struct tcp_conn *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &host_ip, &host_port);
+	if (conn_stub == NULL) {
+		if (list_has_space(md->conn_stub_list)) {
+			conn_stub = tcp_conn_create(module, host_ip, host_port, 0, 0);
+			list_append(md->conn_stub_list, conn_stub);
+
+			conn_stub->threads++;
+			PRINT_DEBUG("conn_stub_list post***************");
+			sem_post(&md->conn_stub_list_sem);
+
+			tcp_listen(module, conn_stub, ff, backlog);
+		} else {
+			PRINT_WARN("todo error");
+			PRINT_DEBUG("conn_stub_list post***************");
+			sem_post(&md->conn_stub_list_sem);
+			//TODO throw minor error
+		}
+	} else {
+		PRINT_WARN("todo error");
+		PRINT_DEBUG("conn_stub_list post***************");
+		sem_post(&md->conn_stub_list_sem);
+		//TODO error
+	}
 }
 
 void *tcp_accept_thread(void *local) { //this will need to be changed
@@ -430,7 +499,6 @@ void *tcp_accept_thread(void *local) { //this will need to be changed
 					conn->threads++;
 					PRINT_DEBUG("conn_list post***************");
 					sem_post(&md->conn_list_sem);
-					conn->module = conn_stub->module;
 
 					PRINT_DEBUG("sem_wait: conn=%p", conn);
 					secure_sem_wait(&conn->sem);
@@ -667,7 +735,6 @@ void tcp_exec_connect(struct fins_module *module, struct finsFrame *ff, uint32_t
 			conn->threads++;
 			PRINT_DEBUG("conn_list post***************");
 			sem_post(&md->conn_list_sem);
-			conn->module = module;
 
 			//if listening stub remove
 			PRINT_DEBUG("conn_stub_list wait***************");

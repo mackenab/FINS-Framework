@@ -58,8 +58,8 @@
 #define FLAG_CONTROL	0x003F
 
 //flags defined for this implementation
-#define FLAG_ACK_PLUS	0x1000
-
+#define FLAG_ACK_NOW	0x1000	//Tell the handle_reply to ACK immediately
+#define FLAG_ACK_SAME	0x2000	//Tell the handle_reply to not update the ACK segment and resend an exact duplicate
 //header & option sizes in words
 #define MAX_TCP_OPTIONS_WORDS		(10)
 #define MIN_TCP_HEADER_WORDS		(5)
@@ -312,6 +312,21 @@ struct tcp_conn {
 	uint32_t rem_ip; //IP address of remote machine
 	uint16_t rem_port; //Port on remote machine
 
+	//TODO transition to this
+	//start with it
+	struct linked_list *syn_list; //list of SYN's received
+	struct linked_list *backlog_list; //list of connections spawned from conn_stub
+
+	//not too hard
+	struct linked_list *request_list; //buffer for sendmsg requests to be added to write_queue - nonblocking requests may TO and be removed
+	//easy except, tcp_seg_add_data()
+	struct linked_list *write_list; //buffer for raw data to be transfered - guaranteed to be transfered
+	//moderate,
+	struct linked_list *send_list; //buffer for sent tcp_seg that are unACKed
+	//hard
+	struct linked_list *recv_list; //buffer for recv tcp_seg that are unACKed - ordered out of order packets
+	////struct linked_list *read_list; //buffer for raw data that has been transfered //TODO push straight to daemon?
+
 	struct tcp_queue *request_queue; //buffer for sendmsg requests to be added to write_queue - nonblocking requests may TO and be removed
 	struct tcp_queue *write_queue; //buffer for raw data to be transfered - guaranteed to be transfered
 	struct tcp_queue *send_queue; //buffer for sent tcp_seg that are unACKed
@@ -329,10 +344,14 @@ struct tcp_conn {
 	uint32_t poll_events;
 
 	uint8_t first_flag;
+
+	uint16_t ack_checksum;
 	uint32_t duplicate;
 	uint8_t fast_flag;
-	uint32_t fast_ack;
-	uint32_t fast_retries;
+	uint32_t restore_seq_end;
+
+	uint8_t temp_count; //TODO remove, are for testing/debug only
+	uint8_t temp_tries;
 
 	struct sem_to_timer_data *to_msl_data;
 	uint8_t to_msl_flag; //1=MSL timeout occurred
@@ -347,6 +366,7 @@ struct tcp_conn {
 	uint8_t to_delayed_flag; //1=delayed ack timeout occured
 	uint8_t delayed_flag; //0=no delayed ack, 1=delayed ack
 	uint16_t delayed_ack_flags;
+	struct tcp_seg *ack_seg;
 
 	//host:send_win == rem:recv_win, host:recv_win == rem:send_win
 
@@ -378,6 +398,7 @@ struct tcp_conn {
 
 	uint8_t rtt_flag;
 	uint32_t rtt_first;
+	uint32_t rtt_seq_num;
 	uint32_t rtt_seq_end;
 	struct timeval rtt_stamp;
 	double rtt_est;
@@ -429,7 +450,7 @@ struct tcp_conn {
 #define TCP_THREADS_MAX 50 //TODO set thread limits by call?
 #define TCP_MAX_QUEUE_DEFAULT 131072//65535
 #define TCP_CONN_MAX 512
-#define TCP_GBN_TO_MIN 1000 //500 //1000
+#define TCP_GBN_TO_MIN 100 //500 //1000
 #define TCP_GBN_TO_MAX 64000//10000 //64000 //testing new TOs
 #define TCP_GBN_TO_DEFAULT 5000 //5000
 #define TCP_DELAYED_TO_DEFAULT 200 //200
@@ -543,6 +564,8 @@ int tcp_fcf_to_daemon(struct fins_module *module, socket_state state, uint32_t p
 int tcp_fdf_to_daemon(struct fins_module *module, uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
+#define TCP_SYN_LIST_MAX 512 //equal to ?
+#define TCP_BACKLOG_LIST_MAX 256 //equal to ?
 #define TCP_REQUEST_LIST_MAX 30 //equal to DAEMON_CALL_LIST_MAX
 #define TCP_BLOCK_DEFAULT 500 //default block time (ms) for sendmsg
 void tcp_metadata_read_conn(metadata *meta, socket_state *state, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
@@ -612,7 +635,6 @@ struct tcp_data {
 	//module values
 	uint8_t fast_enabled;
 	uint32_t fast_duplicates;
-	uint32_t fast_retries;
 
 	uint32_t mss;
 

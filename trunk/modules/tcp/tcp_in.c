@@ -12,7 +12,8 @@ void calcRTT(struct tcp_conn *conn) {
 
 	gettimeofday(&current, 0);
 
-	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
+	PRINT_DEBUG("getting seqEndRTT=%d, current=(%d, %d)", conn->rtt_seq_end, (int) current.tv_sec, (int)current.tv_usec);
 
 	PRINT_DEBUG("old: sampleRTT=%f, estRTT=%f, devRTT=%f, timout=%f", sampRTT, conn->rtt_est, conn->rtt_dev, conn->timeout);
 
@@ -79,12 +80,12 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 			if (conn->send_win_seq < seg->seq_num || (conn->send_win_seq == seg->seq_num && conn->send_win_ack <= seg->ack_num)) {
 				if (conn->wsopt_enabled) {
 					if (((uint32_t) seg->win_size) << conn->ws_send != conn->send_max_win) {
-						//updated = 1;
+						updated = 1;
 					}
 					conn->send_max_win = ((uint32_t) seg->win_size) << conn->ws_send;
 				} else {
 					if ((uint32_t) seg->win_size != conn->send_max_win) {
-						//updated = 1;
+						updated = 1;
 					}
 					conn->send_max_win = (uint32_t) seg->win_size;
 				}
@@ -100,56 +101,44 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 			//TODO process ACK options
 
 			if (!updated) {
+				if (conn->ack_checksum == seg->checksum) {
+					//TODO should we really match this specific?
+				}
+
 				conn->duplicate++; //TODO fix, creating duplicate from ACK or FIN ACK.
 				conn->stats.dup_acks++;
 				__sync_add_and_fetch(&md->total_conn_stats.dup_acks, 1);
-				//check for FR
-				if (md->fast_enabled && conn->duplicate >= md->fast_duplicates) {
-					conn->duplicate = 0;
 
-					if (conn->fast_ack == conn->send_seq_num) {
-						//conn->fast_retries++;
-					} else {
-						conn->fast_retries = 0;
-					}
+				//Cong
+				PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
+						conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
+				switch (conn->cong_state) {
+				case RENO_SLOWSTART:
+				case RENO_AVOIDANCE:
+					//check for FR
+					if (md->fast_enabled && conn->duplicate >= md->fast_duplicates) {
+						conn->duplicate = 0;
 
-					if (conn->fast_retries <= md->fast_retries) {
 						//RTT
 						conn->rtt_flag = 0;
 						timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 						conn->to_gbn_flag = 0;
 
-						//Cong
 						PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
 								conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
-						switch (conn->cong_state) {
-						case RENO_SLOWSTART:
-						case RENO_AVOIDANCE:
-							if (conn->send_seq_num == conn->issn) {
-								//TODO do nothing don't FR
-							} else { //TODO should be only if there's no data & it doesn't update the adv window
-								conn->cong_state = RENO_RECOVERY;
-								conn->fast_flag = 1;
-								conn->fast_ack = conn->send_seq_num;
+						conn->cong_state = RENO_RECOVERY;
+						conn->fast_flag = 1;
+						conn->restore_seq_end = conn->send_seq_end;
 
-								conn->threshhold = conn->cong_window / 2.0;
-								if (conn->threshhold < (double) conn->MSS) {
-									conn->threshhold = (double) conn->MSS;
-								}
-								conn->cong_window = conn->threshhold + 3.0 * conn->MSS;
-							}
-							break;
-						case RENO_RECOVERY:
-							conn->fast_flag = 1; //TODO send FR every 3 repeated, check if should do only first then ff=0
-							conn->fast_ack = conn->send_seq_num;
-							//conn->cong_window += (double) conn->MSS; //in RFC but FR is sent right afterward in same code
-							break;
-						}
+						conn->threshhold = fmax((conn->send_seq_end - conn->send_seq_num) / 2.0, 2.0 * conn->MSS);
+						conn->cong_window = conn->threshhold + 3.0 * conn->MSS;
+					} else {
+						//duplicate ACK, no FR though
 					}
-					PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
-							conn->cong_state, conn->fast_flag, conn->cong_window, conn->threshhold, conn->timeout);
-				} else {
-					//duplicate ACK, no FR though
+					break;
+				case RENO_RECOVERY:
+					conn->cong_window += (double) conn->MSS; //in RFC but FR is sent right afterward in same code
+					break;
 				}
 			}
 		} else if (seg->ack_num == conn->send_seq_end) {
@@ -178,6 +167,7 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 				conn->send_win_seq = seg->seq_num;
 				conn->send_win_ack = seg->ack_num;
 			}
+			conn->ack_checksum = seg->checksum;
 			conn->duplicate = 0;
 
 			PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
@@ -190,7 +180,7 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 			conn->gbn_flag = 0;
 
 			//RTT
-			if (conn->rtt_flag && seg->ack_num == conn->rtt_seq_end) {
+			if (conn->rtt_flag) {
 				calcRTT(conn);
 				conn->stats.rtt_dev_total += conn->rtt_dev;
 				conn->stats.rtt_dev_count++;
@@ -198,7 +188,8 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 				conn->stats.rtt_est_count++;
 				conn->stats.timeout_total += conn->timeout;
 				conn->stats.timeout_count++;
-				//PRINT_INFO("dev=%f, est=%f, timeout=%f",conn->stats.rtt_dev_total/conn->stats.rtt_dev_count, conn->stats.rtt_est_total/conn->stats.rtt_est_count, conn->stats.timeout_total /conn->stats.timeout_count);
+				PRINT_DEBUG("dev=%f, est=%f, timeout=%f",
+						conn->stats.rtt_dev_total/conn->stats.rtt_dev_count, conn->stats.rtt_est_total/conn->stats.rtt_est_count, conn->stats.timeout_total /conn->stats.timeout_count);
 			}
 			timer_stop(conn->to_gbn_data->tid);
 
@@ -213,7 +204,7 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 				}
 				break;
 			case RENO_AVOIDANCE:
-				conn->cong_window += ((double) conn->MSS) * ((double) conn->MSS) / conn->cong_window;
+				conn->cong_window += fmax(((double) conn->MSS) * ((double) conn->MSS) / conn->cong_window, 1.0);
 				break;
 			case RENO_RECOVERY:
 				conn->cong_state = RENO_AVOIDANCE;
@@ -226,12 +217,14 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 			node = tcp_queue_find(conn->send_queue, seg->ack_num);
 			if (node) {
 				//remove ACK segs
+				uint32_t num_nodes = 1;
 				while (!tcp_queue_is_empty(conn->send_queue) && conn->send_queue->front != node) {
 					temp_node = tcp_queue_remove_front(conn->send_queue);
 					temp_seg = (struct tcp_seg *) temp_node->data;
 
 					PRINT_DEBUG( "acked: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
 							temp_seg, temp_seg->seq_num-conn->issn, temp_seg->seq_end-conn->issn, temp_seg->seq_num, temp_seg->seq_end, temp_seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
+					num_nodes++;
 
 					tcp_seg_free(temp_seg); //TODO fix major problem!
 					free(temp_node);
@@ -252,6 +245,7 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 				conn->send_win_seq = seg->seq_num;
 				conn->send_win_ack = seg->ack_num;
 
+				conn->ack_checksum = seg->checksum;
 				conn->duplicate = 0;
 
 				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
@@ -263,7 +257,7 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 				}
 
 				//RTT
-				if (conn->rtt_flag && seg->ack_num == conn->rtt_seq_end) {
+				if (conn->rtt_flag && !tcp_in_window(conn->rtt_seq_num, conn->rtt_seq_num, conn->send_seq_num, conn->send_seq_end)) {
 					calcRTT(conn);
 					conn->stats.rtt_dev_total += conn->rtt_dev;
 					conn->stats.rtt_dev_count++;
@@ -271,7 +265,8 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 					conn->stats.rtt_est_count++;
 					conn->stats.timeout_total += conn->timeout;
 					conn->stats.timeout_count++;
-					//PRINT_INFO("dev=%f, est=%f, timeout=%f",conn->stats.rtt_dev_total/conn->stats.rtt_dev_count, conn->stats.rtt_est_total/conn->stats.rtt_est_count, conn->stats.timeout_total /conn->stats.timeout_count);
+					PRINT_DEBUG("dev=%f, est=%f, timeout=%f",
+							conn->stats.rtt_dev_total/conn->stats.rtt_dev_count, conn->stats.rtt_est_total/conn->stats.rtt_est_count, conn->stats.timeout_total /conn->stats.timeout_count);
 				}
 				if (!conn->gbn_flag) {
 					timer_once_start(conn->to_gbn_data->tid, conn->timeout);
@@ -289,11 +284,16 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 					}
 					break;
 				case RENO_AVOIDANCE:
-					conn->cong_window += ((double) conn->MSS) * ((double) conn->MSS) / conn->cong_window;
+					conn->cong_window += fmax(((double) conn->MSS) * ((double) conn->MSS) / conn->cong_window, 1.0);
 					break;
 				case RENO_RECOVERY:
 					conn->cong_state = RENO_AVOIDANCE;
-					conn->cong_window = conn->threshhold;
+					if (conn->send_seq_num == conn->restore_seq_end) {
+						conn->cong_window = conn->threshhold;
+					} else {
+						conn->cong_window += ((double) num_nodes) * conn->MSS;
+						conn->fast_flag = 1;
+					}
 					break;
 				}
 				PRINT_DEBUG("cong_state=%u, fast=%u, window=%f, threshhold=%f, timeout=%f",
@@ -750,6 +750,17 @@ uint16_t handle_data(struct fins_module *module, struct tcp_conn *conn, struct t
 		conn->stats.in_order_segs++;
 		__sync_add_and_fetch(&md->total_conn_stats.in_order_segs, 1);
 
+		if (conn->temp_count++ == 60 && conn->temp_tries < 5 && 0) {
+			conn->temp_tries++;
+			conn->temp_count = 0;
+
+			PRINT_INFO( "dropping: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
+					seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
+
+			tcp_seg_free(seg);
+			return send_flags;
+		}
+
 		uint32_t data_len = seg->data_len;
 		if (process_seg(module, conn, seg, &send_flags)) {
 			PRINT_DEBUG("before: recv win=(%u, %u)", conn->recv_win, conn->recv_max_win);
@@ -766,7 +777,7 @@ uint16_t handle_data(struct fins_module *module, struct tcp_conn *conn, struct t
 			node = conn->recv_queue->front;
 			seg = (struct tcp_seg *) node->data;
 
-			PRINT_DEBUG( "stored: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
+			PRINT_DEBUG( "next stored: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
 					seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
 
 			if (conn->recv_queue->front->seq_num < conn->recv_seq_num) {
@@ -794,6 +805,7 @@ uint16_t handle_data(struct fins_module *module, struct tcp_conn *conn, struct t
 				if (process_seg(module, conn, seg, &send_flags)) {
 					PRINT_DEBUG("Connected to seqs=(%u, %u) (%u, %u), len=%d",
 							seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->seq_end-seg->seq_num);
+					send_flags |= FLAG_ACK_NOW;
 				} else {
 					PRINT_WARN("todo error");
 					//TODO error
@@ -825,7 +837,7 @@ uint16_t handle_data(struct fins_module *module, struct tcp_conn *conn, struct t
 		}
 	} else {
 		if (seg->data_len) {
-			send_flags |= FLAG_ACK;
+			send_flags |= FLAG_ACK | FLAG_ACK_NOW | FLAG_ACK_SAME;
 		} else if (seg->flags & FLAG_FIN) {
 			send_flags |= FLAG_ACK;
 		}
@@ -838,13 +850,14 @@ uint16_t handle_data(struct fins_module *module, struct tcp_conn *conn, struct t
 
 				node = tcp_node_create((uint8_t *) seg, seg->data_len, seg->seq_num, seg->seq_end);
 				ret = tcp_queue_insert(conn->recv_queue, node, conn->recv_seq_num, conn->recv_seq_end);
-				PRINT_DEBUG("after");
 				if (ret) {
+					PRINT_DEBUG("Stored out-of-order seg");
 					PRINT_DEBUG("before: recv win=(%u, %u)", conn->recv_win, conn->recv_max_win);
 					uint32_decrease(&conn->recv_win, seg->data_len);
 					PRINT_DEBUG("after: recv win=(%u, %u)", conn->recv_win, conn->recv_max_win);
 				} else {
-					PRINT_DEBUG("Dropping duplicate rem=(%u, %u), got=(%u, %u)", conn->recv_seq_num, conn->recv_seq_end, seg->seq_num, seg->seq_end);
+					PRINT_DEBUG("Dropping duplicate rem=(%u, %u) (%u, %u), got=(%u, %u) (%u, %u)",
+							conn->recv_seq_num, conn->recv_seq_end, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn);
 					tcp_seg_free(seg);
 					free(node);
 				}
@@ -876,7 +889,7 @@ void handle_reply(struct fins_module *module, struct tcp_conn *conn, uint16_t fl
 	struct tcp_seg *seg;
 
 	if (flags & FLAG_RST) { //TODO fix?
-		PRINT_ERROR("todo fix");
+		PRINT_WARN("todo fix");
 		/*
 		 PRINT_DEBUG("Sending RST");
 		 if (seg->flags & FLAG_ACK) {
@@ -891,11 +904,17 @@ void handle_reply(struct fins_module *module, struct tcp_conn *conn, uint16_t fl
 		 seg_send(module, seg);
 		 seg_free(seg);
 		 */
-	}
 
-	//send reply
-	if (flags & FLAG_FIN) { //TODO fix?
-		PRINT_ERROR("todo fix");
+		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+		tcp_seg_update(seg, conn, flags);
+		tcp_seg_send(module, seg);
+		tcp_seg_free(seg);
+
+		if (conn->recv_win == 0) {
+			conn->flow_stopped = 1;
+		}
+	} else if (flags & FLAG_FIN) { //TODO fix?
+		PRINT_WARN("todo fix");
 		if (conn->fin_sent) {
 			//TODO prob
 			PRINT_WARN("todo error");
@@ -907,29 +926,52 @@ void handle_reply(struct fins_module *module, struct tcp_conn *conn, uint16_t fl
 			conn->fsse = conn->send_seq_end + 1;
 			PRINT_DEBUG("setting: fin_sent=%u, fin_sep=%u, fsse=%u (%u)", conn->fin_sent, conn->fin_sep, conn->fsse-conn->issn, conn->fsse);
 		}
-	}
 
-	if (flags & FLAG_ACK) {
-		if (conn->delayed_flag || (flags & FLAG_FIN)) {
+		timer_stop(conn->to_delayed_data->tid);
+		conn->delayed_flag = 0;
+		conn->to_delayed_flag = 0;
+
+		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+		tcp_seg_update(seg, conn, flags);
+		tcp_seg_send(module, seg);
+		tcp_seg_free(seg);
+
+		if (conn->recv_win == 0) {
+			conn->flow_stopped = 1;
+		}
+	} else if (flags & FLAG_ACK) {
+		PRINT_DEBUG("delayed=%u, now=%u, same=%u", conn->delayed_flag, flags & FLAG_ACK_NOW, flags & FLAG_ACK_SAME);
+		if ((flags & FLAG_ACK_NOW) || conn->delayed_flag) {
+			PRINT_DEBUG("ACKing now");
 			timer_stop(conn->to_delayed_data->tid);
-			conn->delayed_flag = 0;
 			conn->to_delayed_flag = 0;
 
-			seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-			tcp_seg_update(seg, conn, flags);
-			tcp_seg_send(module, seg);
-			tcp_seg_free(seg);
+			if (flags & FLAG_ACK_SAME) {
+				if (conn->delayed_flag) {
+					conn->ack_seg->seq_num = conn->send_seq_end;
+					conn->ack_seg->seq_end = conn->send_seq_end;
+					tcp_seg_update(conn->ack_seg, conn, flags);
+				}
+				conn->delayed_flag = 0;
+			} else {
+				conn->ack_seg->seq_num = conn->send_seq_end;
+				conn->ack_seg->seq_end = conn->send_seq_end;
+				tcp_seg_update(conn->ack_seg, conn, flags);
+			}
+			tcp_seg_send(module, conn->ack_seg);
 
 			if (conn->recv_win == 0) {
 				conn->flow_stopped = 1;
 			}
 		} else {
 			conn->delayed_flag = 1;
-			conn->delayed_ack_flags = flags;
+			conn->delayed_ack_flags = flags; //TODO only FLAG_ACK?
 			timer_once_start(conn->to_delayed_data->tid, TCP_DELAYED_TO_DEFAULT);
 			conn->to_delayed_flag = 0;
 		}
 	} else {
+		//error? shouldn't really reach here unless haven't implemented other flags
+		PRINT_WARN("shouldn't reach here: flags=%x", flags);
 		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		tcp_seg_update(seg, conn, flags);
 		tcp_seg_send(module, seg);
@@ -978,7 +1020,8 @@ void tcp_syn(struct fins_module *module, struct tcp_conn_stub *conn_stub, struct
 	PRINT_DEBUG("conn_stub_list wait***************");
 	secure_sem_wait(&md->conn_stub_list_sem);
 	conn_stub->threads--;
-	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);PRINT_DEBUG("conn_stub_list post***************");
+	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
+	PRINT_DEBUG("conn_stub_list post***************");
 	sem_post(&md->conn_stub_list_sem);
 
 	PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
@@ -1597,8 +1640,14 @@ void tcp_recv(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg 
 				break;
 			}
 		} else {
-			PRINT_ERROR( "Incorrect Checksum: conn=%p, host=%u:%u, rem=%u:%u, state=%u, seg=%p, recv checksum=%u, calc checksum=%u",
+			PRINT_WARN( "Incorrect Checksum: conn=%p, host=%u:%u, rem=%u:%u, state=%u, seg=%p, recv checksum=%u, calc checksum=%u",
 					conn, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->state, seg, seg->checksum, calc);
+			PRINT_WARN("ack=%u, send=(%u, %u), sent=%u, sep=%u, fsse=%u (%u)",
+					seg->ack_num-conn->issn, conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->fin_sent, conn->fin_sep, conn->fsse-conn->issn, conn->fsse);
+			PRINT_WARN( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
+					conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
+			PRINT_WARN( "incoming: seg=%p, seqs=(%u, %u) (%u, %u), len=%d, rem: seqs=(%u, %u) (%u, %u)",
+					seg, seg->seq_num-conn->irsn, seg->seq_end-conn->irsn, seg->seq_num, seg->seq_end, seg->data_len, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end);
 			conn->stats.bad_checksum++;
 			__sync_add_and_fetch(&md->total_conn_stats.bad_checksum, 1);
 			tcp_seg_free(seg);
@@ -1613,7 +1662,8 @@ void tcp_recv(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg 
 	PRINT_DEBUG("conn_list wait***************");
 	secure_sem_wait(&md->conn_list_sem);
 	conn->threads--;
-	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);PRINT_DEBUG("conn_list post***************");
+	PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn, conn->threads);
+	PRINT_DEBUG("conn_list post***************");
 	sem_post(&md->conn_list_sem);
 
 	PRINT_DEBUG("sem_post: conn=%p", conn);

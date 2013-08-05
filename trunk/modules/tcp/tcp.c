@@ -22,60 +22,76 @@ struct tcp_node *tcp_node_create(uint8_t *data, uint32_t len, uint32_t seq_num, 
 }
 
 // assumes nodes are in window, -1=less than, 0=problem/equal, 1=greater
+//edges touching/connecting between nodes are accepted
 int tcp_node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_seq_num, uint32_t win_seq_end) {
 	// []=window, |=wrap around , ()=node, {}=cmp, ,=is in that region
 
 	//TODO add time stamps to comparison
-	PRINT_DEBUG("Entered: node=%p, cmp=%p, win_seq_num=%u, win_seq_end%u", node, cmp, win_seq_num, win_seq_end);
+	PRINT_DEBUG("Entered: node: node=%p, seqs=(%u, %u); cmp: node=%p, seqs=(%u, %u); win: seqs=(%u, %u)",
+			node, node->seq_num, node->seq_end, cmp, cmp->seq_num, cmp->seq_end, win_seq_num, win_seq_end);
 
-	if (win_seq_num <= node->seq_num) { // [ ( | ]
-		if (win_seq_num <= node->seq_end) { // [ () | ]
-			if (win_seq_num <= cmp->seq_num) { // [ (),{ | ]
-				if (win_seq_num <= cmp->seq_end) { // [ (),{} | ]
-					if (node->seq_num < cmp->seq_num) { // [ ( { | ]
-						if (node->seq_end < cmp->seq_num) { // [ () { | ]
+	if (win_seq_num <= node->seq_num) { // [ ( |
+		if (win_seq_num <= node->seq_end) { // [ () |
+			if (win_seq_num <= cmp->seq_num) { // [ (),{ |
+				if (win_seq_num <= cmp->seq_end) { // [ (),{} |
+					if (node->seq_num < cmp->seq_num) { // [ ( { |
+						if (node->seq_end <= cmp->seq_num) { // [ () { |
+							PRINT_DEBUG("Exited: node=%p, -1", node);
 							return -1;
-						} else { // [ ( { ) | ]
+						} else { // [ ( { ) |
+							PRINT_DEBUG("Exited: node=%p, 0", node);
 							return 0;
 						}
 					} else if (node->seq_num == cmp->seq_num) {
+						PRINT_DEBUG("Exited: node=%p, 0", node);
 						return 0;
-					} else { // [ { ( | ]
-						if (cmp->seq_end < node->seq_num) { // [ {} ( | ]
+					} else { // [ { ( |
+						if (cmp->seq_end <= node->seq_num) { // [ {} ( |
+							PRINT_DEBUG("Exited: node=%p, 1", node);
 							return 1;
-						} else { // [ { ( } | ]
+						} else { // [ { ( } |
+							PRINT_DEBUG("Exited: node=%p, 0", node);
 							return 0;
 						}
 					}
 				} else { // [ (),{ | } ]
 					if (node->seq_num < cmp->seq_num) { // [ ( { | } ]
-						if (node->seq_end < cmp->seq_num) { // [ () { | } ]
+						if (node->seq_end <= cmp->seq_num) { // [ () { | } ]
+							PRINT_DEBUG("Exited: node=%p, -1", node);
 							return -1;
 						} else { // [ ( { ) | } ]
+							PRINT_DEBUG("Exited: node=%p, 0", node);
 							return 0;
 						}
 					} else { // [ { () | } ]
+						PRINT_DEBUG("Exited: node=%p, 0", node);
 						return 0;
 					}
 				}
 			} else { // [ () | {} ]
+				PRINT_DEBUG("Exited: node=%p, -1", node);
 				return -1;
 			}
 		} else { // [ ( | ) ]
 			if (win_seq_num <= cmp->seq_num) { // [ (,{ | ) ]
-				if (node->seq_num < cmp->seq_num) { // [ ( { | ) ]
+				if (node->seq_num <= cmp->seq_num) { // [ ( { | ) ]
+					PRINT_DEBUG("Exited: node=%p, 0", node);
 					return 0;
 				} else { // [ { ( | ) ]
-					if (cmp->seq_end < node->seq_num) { // [ {} ( | ) ]
+					if (cmp->seq_end <= node->seq_num) { // [ {} ( | ) ]
+						PRINT_DEBUG("Exited: node=%p, 1", node);
 						return 1;
 					} else { // [ { ( } | ) ]
+						PRINT_DEBUG("Exited: node=%p, 0", node);
 						return 0;
 					}
 				}
 			} else { // [ ( | {},) ]
-				if (node->seq_end < cmp->seq_num) { // [ ( | ) {} ]
+				if (node->seq_end <= cmp->seq_num) { // [ ( | ) {} ]
+					PRINT_DEBUG("Exited: node=%p, -1", node);
 					return -1;
 				} else { // [ ( | { ) ]
+					PRINT_DEBUG("Exited: node=%p, 0", node);
 					return 0;
 				}
 			}
@@ -83,27 +99,35 @@ int tcp_node_compare(struct tcp_node *node, struct tcp_node *cmp, uint32_t win_s
 	} else { // [ | () ]
 		if (win_seq_num <= cmp->seq_num) { // [ { | () ]
 			if (win_seq_num <= cmp->seq_end) { // [ {} | () ]
+				PRINT_DEBUG("Exited: node=%p, 1", node);
 				return 1;
 			} else { // [ { | },() ]
-				if (cmp->seq_end < node->seq_num) { // [ { | } () ]
+				if (cmp->seq_end <= node->seq_num) { // [ { | } () ]
+					PRINT_DEBUG("Exited: node=%p, 1", node);
 					return 1;
 				} else { // [ { | ( } ]
+					PRINT_DEBUG("Exited: node=%p, 0", node);
 					return 0;
 				}
 			}
 		} else { // [ | {},() ]
 			if (node->seq_num < cmp->seq_num) { // [ | ( {} ]
-				if (node->seq_end < cmp->seq_num) { // [ | () {} ]
+				if (node->seq_end <= cmp->seq_num) { // [ | () {} ]
+					PRINT_DEBUG("Exited: node=%p, -1", node);
 					return -1;
 				} else { // [ | ( { ) ]
+					PRINT_DEBUG("Exited: node=%p, 0", node);
 					return 0;
 				}
 			} else if (node->seq_num == cmp->seq_num) {
+				PRINT_DEBUG("Exited: node=%p, 0", node);
 				return 0;
 			} else { // [ | { () ]
-				if (cmp->seq_end < node->seq_num) { // [ | {} () ]
+				if (cmp->seq_end <= node->seq_num) { // [ | {} () ]
+					PRINT_DEBUG("Exited: node=%p, 1", node);
 					return 1;
 				} else { // [ | { ( } ]
+					PRINT_DEBUG("Exited: node=%p, 0", node);
 					return 0;
 				}
 			}
@@ -393,6 +417,9 @@ struct tcp_conn_stub *tcp_conn_stub_create(struct fins_module *module, uint32_t 
 	return conn_stub;
 }
 
+//int tcp_conn_stub_addr_test(struct tcp_conn *conn_stub, uint32_t *host_ip, uint16_t *host_port) {
+//	return conn_stub->host_ip == *host_ip && conn_stub->host_port == *host_port && conn_stub->rem_ip == 0 && conn_stub->rem_port == 0;
+//}
 int tcp_conn_stub_addr_test(struct tcp_conn_stub *conn_stub, uint32_t *host_ip, uint16_t *host_port) {
 	return conn_stub->host_ip == *host_ip && conn_stub->host_port == *host_port;
 }
@@ -674,10 +701,7 @@ void tcp_main_syn_sent(struct tcp_conn *conn) {
 
 		conn->main_wait_flag = 0; //handle cases where TO after set waitFlag
 
-		conn->timeout *= 2;
-		if (conn->timeout > TCP_GBN_TO_MAX) {
-			conn->timeout = TCP_GBN_TO_MAX;
-		}
+		conn->timeout = fmin(2.0 * conn->timeout, TCP_GBN_TO_MAX);
 		timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 	} else {
 		conn->main_wait_flag = 1;
@@ -722,10 +746,7 @@ void tcp_main_syn_recv(struct tcp_conn *conn) {
 
 			conn->main_wait_flag = 0; //handle cases where TO after set waitFlag
 
-			conn->timeout *= 2;
-			if (conn->timeout > TCP_GBN_TO_MAX) {
-				conn->timeout = TCP_GBN_TO_MAX;
-			}
+			conn->timeout = fmin(2.0 * conn->timeout, TCP_GBN_TO_MAX);
 			timer_once_start(conn->to_gbn_data->tid, conn->timeout);
 		} else { //from accept
 			if (conn->timeout == TCP_MSL_TO_DEFAULT) {
@@ -760,10 +781,7 @@ void tcp_main_syn_recv(struct tcp_conn *conn) {
 				tcp_seg_send(conn->module, temp_seg);
 				tcp_seg_free(temp_seg);
 
-				conn->timeout *= 2;
-				if (conn->timeout > TCP_MSL_TO_DEFAULT) {
-					conn->timeout = TCP_MSL_TO_DEFAULT;
-				}
+				conn->timeout = fmin(2.0 * conn->timeout, TCP_MSL_TO_DEFAULT);
 				timer_once_start(conn->to_gbn_data->tid, conn->timeout); //TODO figure out to's
 				conn->to_gbn_flag = 0;
 			}
@@ -820,10 +838,8 @@ void tcp_main_established(struct tcp_conn *conn) {
 			switch (conn->cong_state) {
 			case RENO_SLOWSTART:
 				conn->cong_state = RENO_AVOIDANCE;
-				conn->threshhold = conn->cong_window / 2.0;
-				if (conn->threshhold < (double) conn->MSS) {
-					conn->threshhold = (double) conn->MSS;
-				}
+				flight_size = conn->send_seq_end - conn->send_seq_num;
+				conn->threshhold = fmax(flight_size / 2.0, 2.0 * conn->MSS);
 				conn->cong_window = conn->threshhold + 3.0 * conn->MSS;
 				break;
 			case RENO_AVOIDANCE:
@@ -941,8 +957,8 @@ void tcp_main_established(struct tcp_conn *conn) {
 				} else {
 					data_len = write_space;
 				}
-				if (data_len > conn->send_win) { //leave for now, move to outside if for Nagle
-					data_len = conn->send_win;
+				if (data_len > (uint32_t) conn->send_win) { //leave for now, move to outside if for Nagle
+					data_len = (uint32_t) conn->send_win;
 				}
 				if ((double) data_len > cong_space) { //TODO unneeded if (cong_space >= MSS) kept, keep if change to (cong_space > 0)
 					data_len = (uint32_t) cong_space; //TODO check if converts fine //TODO uncomment, ignores cc
@@ -957,7 +973,12 @@ void tcp_main_established(struct tcp_conn *conn) {
 				tcp_handle_requests(conn);
 
 				tcp_seg_update(seg, conn, FLAG_ACK);
-				tcp_seg_send(conn->module, seg);
+				if (conn->temp_count++ == 4 && conn->temp_tries < 40 && 0) {
+					conn->temp_tries++;
+					conn->temp_count = 0;
+				} else {
+					tcp_seg_send(conn->module, seg);
+				}
 
 				if (conn->recv_win == 0) {
 					conn->flow_stopped = 1;
@@ -972,6 +993,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 				if (conn->rtt_flag == 0) {
 					gettimeofday(&conn->rtt_stamp, 0);
 					conn->rtt_flag = 1;
+					conn->rtt_seq_num = seg->seq_num;
 					conn->rtt_seq_end = conn->send_seq_end;
 					PRINT_DEBUG("setting seqEndRTT=%u, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
 				}
@@ -1071,10 +1093,8 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 			switch (conn->cong_state) {
 			case RENO_SLOWSTART:
 				conn->cong_state = RENO_AVOIDANCE;
-				conn->threshhold = conn->cong_window / 2.0;
-				if (conn->threshhold < (double) conn->MSS) {
-					conn->threshhold = (double) conn->MSS;
-				}
+				flight_size = conn->send_seq_end - conn->send_seq_num;
+				conn->threshhold = fmax(flight_size / 2.0, 2.0 * conn->MSS);
 				conn->cong_window = conn->threshhold + 3.0 * conn->MSS;
 				break;
 			case RENO_AVOIDANCE:
@@ -1221,6 +1241,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 				if (conn->rtt_flag == 0) {
 					gettimeofday(&conn->rtt_stamp, 0);
 					conn->rtt_flag = 1;
+					conn->rtt_seq_num = seg->seq_num;
 					conn->rtt_seq_end = conn->send_seq_end;
 					PRINT_DEBUG("setting seqEndRTT=%u, stampRTT=(%d, %d)", conn->rtt_seq_end, (int)conn->rtt_stamp.tv_sec, (int)conn->rtt_stamp.tv_usec);
 				}
@@ -1482,6 +1503,9 @@ struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, u
 	conn->rem_ip = rem_ip;
 	conn->rem_port = rem_port;
 
+	conn->syn_list = list_create(TCP_SYN_LIST_MAX);
+	conn->backlog_list = list_create(TCP_BACKLOG_LIST_MAX);
+
 	conn->request_queue = tcp_queue_create(TCP_REQUEST_LIST_MAX);
 	conn->write_queue = tcp_queue_create(TCP_MAX_QUEUE_DEFAULT);
 	conn->send_queue = tcp_queue_create(TCP_MAX_QUEUE_DEFAULT);
@@ -1506,6 +1530,7 @@ struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, u
 	conn->to_delayed_data->waiting = &conn->main_waiting;
 	conn->to_delayed_data->sem = &conn->main_wait_sem;
 	timer_create_to((struct to_timer_data *) conn->to_delayed_data);
+	conn->ack_seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 
 	conn->send_max_win = TCP_MAX_WINDOW_DEFAULT;
 	conn->send_win = conn->send_max_win;
@@ -1520,8 +1545,7 @@ struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, u
 	conn->cong_window = conn->MSS;
 
 	conn->rtt_first = 1;
-	//conn->timeout = TCP_GBN_TO_DEFAULT;
-	conn->timeout = TCP_GBN_TO_MIN;
+	conn->timeout = TCP_GBN_TO_DEFAULT;
 
 	conn->tsopt_attempt = 0; //1; //TODO change to 0, trial values atm
 	conn->sack_attempt = 0; //1;
@@ -1737,7 +1761,8 @@ void tcp_conn_stop(struct tcp_conn *conn) {
 			sem_post(&md->conn_list_sem);
 			break;
 		} else {
-			PRINT_DEBUG("conn=%p, threads=%d", conn, conn->threads); PRINT_DEBUG("conn_list post***************");
+			PRINT_DEBUG("conn=%p, threads=%d", conn, conn->threads);
+			PRINT_DEBUG("conn_list post***************");
 			sem_post(&md->conn_list_sem);
 		}
 
@@ -1954,20 +1979,19 @@ struct tcp_seg *tcp_seg_create(uint32_t src_ip, uint16_t src_port, uint32_t dst_
 	seg->seq_num = seq_num;
 	seg->seq_end = seq_end;
 
-	//TODO replace all these = 0, with memset(seg, 0, sizeof(struct tcp_segment));
+	//All commented are memset to 0 by secure_malloc
+	//seg->ack_num = 0;
+	//seg->flags = 0;
+	//seg->win_size = 0;
+	//seg->checksum = 0;
+	//seg->urg_pointer = 0;
 
-	seg->ack_num = 0;
-	seg->flags = 0;
-	seg->win_size = 0;
-	seg->checksum = 0;
-	seg->urg_pointer = 0;
+	//seg->opt_len = 0;
+	////seg->options = NULL;
+	////seg->options = fins_malloc(MAX_TCP_OPTIONS_BYTES);
 
-	seg->opt_len = 0;
-	//seg->options = NULL;
-	//seg->options = fins_malloc(MAX_TCP_OPTIONS_BYTES);
-
-	seg->data_len = 0;
-	seg->data = NULL;
+	//seg->data_len = 0;
+	//seg->data = NULL;
 
 	PRINT_DEBUG("Exited: src=%u:%u, dst=%u:%u, seq_num=%u, seq_end=%u, seg=%p", src_ip, src_port, dst_ip, dst_port, seq_num, seq_end, seg);
 	return seg;
@@ -2452,7 +2476,7 @@ void tcp_seg_delayed_ack(struct tcp_seg *seg, struct tcp_conn *conn) {
 // 0=out of window, 1=in window
 int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end) {
 	//check if tcp_seg is in connection window
-	//Notation: [=rem_seq_num, ]=rem_seq_end, <=node->seq_num, >=node->seq_end, |=rollover,
+	//Notation: [=win_seq_num, ]=win_seq_end, <=seq_num, >=seq_end, |=rollover,
 	if (win_seq_num <= win_seq_end) { // [] |
 		if (seq_num <= seq_end) { // <> |
 			if (win_seq_num <= seq_num && seq_end <= win_seq_end) { // [ <> ] |
@@ -2691,6 +2715,58 @@ void *switch_to_tcp(void *local) {
 	PRINT_IMPORTANT("Thread exited: module=%p, index=%u, id=%u, name='%s'", module, module->index, module->id, module->name);
 	PRINT_DEBUG("Exited: module=%p", module);
 	return NULL;
+}
+
+void tcp_get_ff_single(struct fins_module *module) {
+	/*
+	 *ff = pull();
+	 *if (ff) {
+	 *	if (fdf) {
+	 *		etc...
+	 *	} else {
+	 *		//fcf
+	 *	}
+	 *} else if (interrupt) {
+	 *	for (each conn) {
+	 *		if (conn interrupt) {
+	 *
+	 *		}
+	 *	}
+	 *	for (each conn_stub) {
+	 *		if (conn_stub interrupt) {
+	 *
+	 *		}
+	 *	}
+	 *} else {
+	 *	//normal
+	 *	if (conn[index] !waiting) {
+	 *		send normal
+	 *	}
+	 *	index++;
+	 *}
+	 *
+	 *events:
+	 *ff
+	 *	fdf
+	 *		find conn
+	 *	fcf
+	 *		find conn
+	 *interrupt
+	 *	conn_stub interrupt
+	 *		gbn - send seg
+	 *		write TO - send FCF
+	 *	conn interrupt
+	 *		gbn - send seg
+	 *		delayed ack - send ack
+	 *		write TO - send FCF
+	 *normal
+	 *	send seg
+	 *
+	 *Turn accept to single thread & conn_stub to have thread.
+	 *When listen / create conn_stub create main thread.
+	 *Events:
+	 *	listen
+	 */
 }
 
 void tcp_get_ff(struct fins_module *module) {
@@ -2954,7 +3030,6 @@ int tcp_init(struct fins_module *module, metadata_element *params, struct envi_r
 
 	md->fast_enabled = TCP_FAST_ENABLED_DEFAULT;
 	md->fast_duplicates = TCP_FAST_DUPLICATES_DEFAULT;
-	md->fast_retries = TCP_FAST_RETRIES_DEFAULT;
 	md->mss = TCP_MSS_DEFAULT_LARGE;
 
 	return 1;

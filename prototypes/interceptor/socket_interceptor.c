@@ -213,7 +213,8 @@ int insertFinsHistory(pid_t value1, int value2, int value3) {//(pid, tempdescrip
 			return (1);
 
 		}
-	} PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
+	}
+	PRINT_DEBUG("reached maximum # of processes to be served, FINS is out of sockets");
 	return (0);
 }
 
@@ -493,7 +494,8 @@ int fins_socket(int domain, int type, int protocol) {
 
 	}
 
-	PRINT_DEBUG("index = %d",index); PRINT_DEBUG("");
+	PRINT_DEBUG("index = %d",index);
+	PRINT_DEBUG("");
 	sem_wait(FinsHistory[index].as);
 	sem_wait(FinsHistory[index].s);
 	PRINT_DEBUG("");
@@ -1392,7 +1394,8 @@ ssize_t fins_send(int sockfd, const void *buf, size_t len, int flags) {
 		PRINT_DEBUG("read processid = %d", confirmation);
 
 		return (-1);
-	} PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	numOfBytes = read(sockfd, &confirmation, sizeof(int));
 	if (confirmation != sockfd_alter) {
@@ -1401,7 +1404,8 @@ ssize_t fins_send(int sockfd, const void *buf, size_t len, int flags) {
 		PRINT_DEBUG("read sockfd = %d", confirmation);
 
 		return (-1);
-	} PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	numOfBytes = read(sockfd, &confirmation, sizeof(int));
 	//sem_post(main_channel_semaphore1);
@@ -1507,7 +1511,8 @@ ssize_t fins_sendto(int sockfd, const void *buf, size_t len, int flags,
 		PRINT_DEBUG("read processid = %d", confirmation);
 
 		return (-1);
-	} PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	numOfBytes = read(sockfd, &confirmation, sizeof(int));
 	if (confirmation != sockfd_alter) {
@@ -1516,7 +1521,8 @@ ssize_t fins_sendto(int sockfd, const void *buf, size_t len, int flags,
 		PRINT_DEBUG("read sockfd = %d", confirmation);
 
 		return (-1);
-	} PRINT_DEBUG("");
+	}
+	PRINT_DEBUG("");
 
 	numOfBytes = read(sockfd, &confirmation, sizeof(int));
 	//sem_post(main_channel_semaphore1);
@@ -1944,7 +1950,8 @@ int fins_getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 		sem_post(FinsHistory[index].s);
 		return (-1);
 
-	} PRINT_DEBUG("%d",*addrlen);
+	}
+	PRINT_DEBUG("%d",*addrlen);
 	numOfBytes = read(sockfd, addr, *addrlen);
 	sem_post(FinsHistory[index].s);
 	if (numOfBytes != *addrlen) {
