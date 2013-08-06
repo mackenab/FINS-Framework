@@ -175,8 +175,6 @@ void arp_cache_shutdown(struct arp_cache *cache) {
 	//stop threads
 	timer_stop(cache->to_data->tid);
 
-	//clear all threads using this conn_stub
-
 	//post to read/write/connect/etc threads
 }
 

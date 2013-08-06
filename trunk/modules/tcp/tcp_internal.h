@@ -136,52 +136,10 @@ int tcp_queue_is_full(struct tcp_queue *queue);
 int tcp_queue_has_space(struct tcp_queue *queue, uint32_t len);
 void tcp_queue_free(struct tcp_queue *queue);
 
-struct tcp_conn_stub_stats { //Per connection & have one for totals for entire module
-	uint16_t bad_checksum; /* total number of segments that have a bad checksum */
-	uint16_t no_checksum; /* total number of segments with no checksum */
-	uint16_t mismatching_lengths; /* total number of segments with mismatching segment lengths from the header and pseudoheader */
-	uint32_t bad_segments; /* total number of segments that were thrown away */
-	uint32_t received; /* total number of incoming TCP segments */
-	uint32_t sent; /* total number of outgoing TCP segments */
-//RSTs?
+struct tcp_store {
+	struct tcp_seg *syn_seg;
+	struct tcp_seg *reply_seg;
 };
-
-struct tcp_conn_stub {
-	//## protected by conn_stub_list_sem
-	//struct tcp_conn_stub *next;
-	uint32_t threads;
-	//##
-
-	struct fins_module *module;
-	sem_t sem;
-
-	uint32_t family;
-	struct sockaddr_storage *host_addr;
-	uint32_t host_ip; //IP address of this machine
-	uint16_t host_port; //Port on this machine that this connection is taking up
-
-	struct tcp_queue *syn_queue; //buffer for recv tcp_seg SYN requests
-	//struct thread_pool *pool;
-
-	uint32_t poll_events;
-	//int syn_threads;
-
-	//int accept_threads;
-	sem_t accept_wait_sem;
-
-	uint8_t running_flag;
-	//uint32_t backlog; //TODO ?
-
-	struct tcp_conn_stub_stats stats;
-};
-
-struct tcp_conn_stub *tcp_conn_stub_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t backlog);
-int tcp_conn_stub_addr_test(struct tcp_conn_stub *conn_stub, uint32_t *host_ip, uint16_t *host_port);
-//int conn_stub_send_jinni(struct tcp_conn_stub *conn_stub, uint32_t param_id, uint32_t ret_val);
-int tcp_conn_stub_send_daemon(struct tcp_conn_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-void tcp_conn_stub_shutdown(struct tcp_conn_stub *conn_stub);
-void tcp_conn_stub_free(struct tcp_conn_stub *conn_stub);
-//int conn_stub_add(uint32_t src_ip, uint16_t src_port);
 
 typedef enum {
 	TS_CLOSED = 0, TS_SYN_SENT, TS_LISTEN, TS_SYN_RECV, TS_ESTABLISHED, TS_FIN_WAIT_1, TS_FIN_WAIT_2, TS_CLOSING, TS_TIME_WAIT, TS_CLOSE_WAIT, TS_LAST_ACK
@@ -312,10 +270,16 @@ struct tcp_conn {
 	uint32_t rem_ip; //IP address of remote machine
 	uint16_t rem_port; //Port on remote machine
 
-	//TODO transition to this
-	//start with it
-	struct linked_list *syn_list; //list of SYN's received
-	struct linked_list *backlog_list; //list of connections spawned from conn_stub
+	//used if conn acting as stub
+	uint8_t listening; //0=not listening, 1=listening
+	uint8_t stub_list;
+	//struct linked_list *store_list; //list of SYN's received & SYN ACK's sent
+	struct linked_list *backlog_list; //list of connections spawned from listening connection
+
+	uint8_t active_open; //0=started by listen/accept, 1=started through connect
+	struct tcp_conn *parent_conn; //if non-active, parent conn that started child conn
+	uint8_t signaled; //0=haven't sent FCF, 1=have sent FCF
+	struct finsFrame *ff; //store ff for connect, accept, close
 
 	//not too hard
 	struct linked_list *request_list; //buffer for sendmsg requests to be added to write_queue - nonblocking requests may TO and be removed
@@ -405,9 +369,6 @@ struct tcp_conn {
 	double rtt_dev;
 	double timeout;
 
-	uint8_t active_open;
-	struct finsFrame *ff;
-
 	struct tcp_conn_stats stats;
 
 	//some type of options state
@@ -492,16 +453,18 @@ struct tcp_conn {
 #define TCP_OPT_TS_BYTES 10
 
 struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_conn_host_test(struct tcp_conn *conn, uint32_t *host_ip, uint16_t *host_port);
 int tcp_conn_addr_test(struct tcp_conn *conn, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port);
-int tcp_conn_send_fcf(struct tcp_conn *conn, uint16_t opcode, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-int tcp_conn_send_exec_reply(struct tcp_conn *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
-int tcp_conn_reply_fcf(struct tcp_conn *conn, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_established_test(struct tcp_conn *conn);
+int tcp_conn_send_fcf(struct fins_module *module, struct tcp_conn *conn, uint16_t opcode, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_send_exec_reply(struct fins_module *module, struct tcp_conn *conn, uint32_t serialNum, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg);
+int tcp_conn_reply_fcf(struct fins_module *module, struct tcp_conn *conn, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 int tcp_conn_is_finished(struct tcp_conn *conn);
 void tcp_conn_shutdown(struct tcp_conn *conn);
-void tcp_conn_stop(struct tcp_conn *conn); //TODO remove, move above tcp_main_thread, makes private
+void tcp_conn_stop(struct fins_module *module, struct tcp_conn *conn); //TODO remove, move above tcp_main_thread, makes private
 void tcp_conn_free(struct tcp_conn *conn);
 
-void tcp_handle_requests(struct tcp_conn *conn);
+void tcp_handle_requests(struct fins_module *module, struct tcp_conn *conn);
 
 //Object for TCP segments all values are in host format
 struct tcp_seg {
@@ -546,25 +509,13 @@ void tcp_seg_delayed_ack(struct tcp_seg *seg, struct tcp_conn *conn);
 int tcp_in_window(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 int tcp_in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_num, uint32_t win_seq_end);
 
-struct tcp_thread_data {
-	uint32_t id;
-	struct tcp_conn *conn; //TODO change conn/conn_stub to union?
-	struct tcp_conn_stub *conn_stub;
-	struct tcp_seg *seg; //TODO change seg/raw to union?
-	uint8_t *data_raw;
-	uint32_t data_len;
-	uint32_t flags;
-	uint32_t serial_num;
-	struct finsFrame *ff;
-};
-
 //General functions for dealing with the incoming and outgoing frames
 int tcp_fcf_to_daemon(struct fins_module *module, socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip,
 		uint16_t rem_port, uint32_t ret_val);
 int tcp_fdf_to_daemon(struct fins_module *module, uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
-#define TCP_SYN_LIST_MAX 512 //equal to ?
+#define TCP_STORE_LIST_MAX 512 //equal to ?
 #define TCP_BACKLOG_LIST_MAX 256 //equal to ?
 #define TCP_REQUEST_LIST_MAX 30 //equal to DAEMON_CALL_LIST_MAX
 #define TCP_BLOCK_DEFAULT 500 //default block time (ms) for sendmsg
@@ -623,11 +574,9 @@ struct tcp_data {
 
 	pthread_t switch_to_tcp_thread;
 
-	sem_t conn_stub_list_sem;
-	struct linked_list *conn_stub_list; //The list of current connections we have
-
 	sem_t conn_list_sem;
 	struct linked_list *conn_list; //The list of current connections we have
+	struct linked_list *conn_stub_list; //The list of current connections we have
 
 	uint32_t thread_id_num;
 	sem_t thread_id_sem;
@@ -638,7 +587,7 @@ struct tcp_data {
 
 	uint32_t mss;
 
-	struct tcp_conn_stub_stats total_conn_stub_stats;
+	struct tcp_conn_stats total_conn_stub_stats;
 	struct tcp_conn_stats total_conn_stats;
 //struct linked_list *if_list;
 };

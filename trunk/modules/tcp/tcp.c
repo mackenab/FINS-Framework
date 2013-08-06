@@ -389,128 +389,7 @@ void tcp_queue_free(struct tcp_queue *queue) {
 	free(queue);
 }
 
-struct tcp_conn_stub *tcp_conn_stub_create(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t backlog) {
-	PRINT_DEBUG("Entered: module=%p, host=%u:%u, backlog=%u", module, host_ip, host_port, backlog);
-
-	struct tcp_conn_stub *conn_stub = (struct tcp_conn_stub *) secure_malloc(sizeof(struct tcp_conn_stub));
-	conn_stub->module = module;
-	sem_init(&conn_stub->sem, 0, 1);
-	conn_stub->threads = 0;
-	//state?
-
-	conn_stub->host_ip = host_ip;
-	conn_stub->host_port = host_port;
-
-	conn_stub->syn_queue = tcp_queue_create(backlog);
-	//conn_stub->pool = pool_create(backlog, backlog, backlog);
-
-	conn_stub->poll_events = 0;
-
-	//conn_stub->syn_threads = 0;
-
-	//conn_stub->accept_threads = 0;
-	sem_init(&conn_stub->accept_wait_sem, 0, 0);
-
-	conn_stub->running_flag = 1;
-
-	PRINT_DEBUG("Exited: host=%u:%u, backlog=%u, conn_stub=%p", host_ip, host_port, backlog, conn_stub);
-	return conn_stub;
-}
-
-//int tcp_conn_stub_addr_test(struct tcp_conn *conn_stub, uint32_t *host_ip, uint16_t *host_port) {
-//	return conn_stub->host_ip == *host_ip && conn_stub->host_port == *host_port && conn_stub->rem_ip == 0 && conn_stub->rem_port == 0;
-//}
-int tcp_conn_stub_addr_test(struct tcp_conn_stub *conn_stub, uint32_t *host_ip, uint16_t *host_port) {
-	return conn_stub->host_ip == *host_ip && conn_stub->host_port == *host_port;
-}
-
-//TODO fix
-int tcp_conn_stub_send_daemon(struct tcp_conn_stub *conn_stub, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
-	PRINT_DEBUG("Entered: conn_stub=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn_stub, param_id, ret_val, ret_msg);
-
-	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-	metadata_create(meta);
-
-	uint32_t protocol = IPPROTO_TCP;
-	secure_metadata_writeToElement(meta, "protocol", &protocol, META_TYPE_INT32);
-	secure_metadata_writeToElement(meta, "ret_msg", &ret_msg, META_TYPE_INT32);
-
-	uint32_t family = AF_INET;
-	secure_metadata_writeToElement(meta, "family", &family, META_TYPE_INT32);
-	uint32_t state = SS_UNCONNECTED;
-	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
-
-	secure_metadata_writeToElement(meta, "host_ip", &conn_stub->host_ip, META_TYPE_INT32);
-	uint32_t host_port = conn_stub->host_port;
-	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
-
-	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-	ff->dataOrCtrl = FF_CONTROL;
-	ff->metaData = meta;
-
-	ff->ctrlFrame.sender_id = conn_stub->module->index;
-	ff->ctrlFrame.serial_num = gen_control_serial_num();
-	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
-	ff->ctrlFrame.param_id = param_id;
-	ff->ctrlFrame.ret_val = ret_val;
-
-	ff->ctrlFrame.data_len = 0;
-	ff->ctrlFrame.data = NULL;
-
-	PRINT_DEBUG("ff=%p, meta=%p", ff, meta);
-	if (module_send_flow(conn_stub->module, ff, TCP_FLOW_DAEMON)) {
-		return 1;
-	} else {
-		freeFinsFrame(ff);
-		return 0;
-	}
-}
-
-//must have conn_stub->sem before calling & conn_stub_list_sem not be taken
-void tcp_conn_stub_shutdown(struct tcp_conn_stub *conn_stub) {
-	PRINT_DEBUG("Entered: conn_stub=%p", conn_stub);
-	struct tcp_data *md = (struct tcp_data *) conn_stub->module->data;
-	conn_stub->running_flag = 0;
-
-	//clear all threads using this conn_stub
-	while (1) {
-		PRINT_DEBUG("conn_stub_list wait***************");
-		secure_sem_wait(&md->conn_stub_list_sem);
-		if (conn_stub->threads <= 1) {
-			PRINT_DEBUG("conn_stub_list post***************");
-			sem_post(&md->conn_stub_list_sem);
-			break;
-		} else {
-			//PRINT_DEBUG("conn_stub=%d, threads=%d", (int)conn_stub, conn_stub->threads);
-			PRINT_DEBUG("conn_stub_list post***************");
-			sem_post(&md->conn_stub_list_sem);
-		}
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_stub->accept_wait_sem);
-
-		PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
-		sem_post(&conn_stub->sem);
-		PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-		secure_sem_wait(&conn_stub->sem);
-	}
-
-	PRINT_DEBUG("Exited: conn_stub=%p", conn_stub);
-}
-
-void tcp_conn_stub_free(struct tcp_conn_stub *conn_stub) {
-	PRINT_DEBUG("Entered: conn_stub=%p", conn_stub);
-
-	if (conn_stub->syn_queue) {
-		tcp_queue_free(conn_stub->syn_queue);
-	}
-
-	sem_destroy(&conn_stub->sem);
-	sem_destroy(&conn_stub->accept_wait_sem);
-
-	free(conn_stub);
-}
-
-void handle_interrupt(struct tcp_conn *conn) {
+void handle_interrupt(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	if (tcp_queue_is_empty(conn->request_queue)) {
@@ -530,10 +409,10 @@ void handle_interrupt(struct tcp_conn *conn) {
 				tcp_queue_remove(conn->request_queue, temp_node);
 
 				if (temp_node == front && conn->request_index) {
-					tcp_conn_send_exec_reply(conn, request->serial_num, TCP_EXEC_SEND, FCF_TRUE, conn->request_index);
+					tcp_conn_send_exec_reply(module, conn, request->serial_num, TCP_EXEC_SEND, FCF_TRUE, conn->request_index);
 					conn->request_index = 0;
 				} else {
-					tcp_conn_send_exec_reply(conn, request->serial_num, TCP_EXEC_SEND, FCF_FALSE, EAGAIN);
+					tcp_conn_send_exec_reply(module, conn, request->serial_num, TCP_EXEC_SEND, FCF_FALSE, EAGAIN);
 				}
 
 				if (request->to_data) {
@@ -551,7 +430,7 @@ void handle_interrupt(struct tcp_conn *conn) {
 	}
 }
 
-void tcp_handle_requests(struct tcp_conn *conn) {
+void tcp_handle_requests(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	struct tcp_node *node;
@@ -589,7 +468,7 @@ void tcp_handle_requests(struct tcp_conn *conn) {
 
 			tcp_queue_remove_front(conn->request_queue); // == to temp_node
 
-			tcp_conn_send_exec_reply(conn, request->serial_num, TCP_EXEC_SEND, FCF_TRUE, request->len);
+			tcp_conn_send_exec_reply(module, conn, request->serial_num, TCP_EXEC_SEND, FCF_TRUE, request->len);
 
 			if (request->to_data) {
 				timer_delete(request->to_data->tid);
@@ -605,13 +484,13 @@ void tcp_handle_requests(struct tcp_conn *conn) {
 	if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
 		PRINT_DEBUG("conn=%p, space=%d", conn, space);
 		if (space > 0) { //only possible if request_queue is empty
-			tcp_conn_send_fcf(conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
+			tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 			conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
 		}
 	}
 }
 
-void tcp_main_closed(struct tcp_conn *conn) {
+void tcp_main_closed(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	if (conn->request_interrupt) {
@@ -633,7 +512,7 @@ void tcp_main_closed(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_listen(struct tcp_conn *conn) {
+void tcp_main_listen(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	//shouldn't happen? leave if combine stub/conn
@@ -657,7 +536,7 @@ void tcp_main_listen(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_syn_sent(struct tcp_conn *conn) {
+void tcp_main_syn_sent(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	if (conn->request_interrupt) {
@@ -671,7 +550,7 @@ void tcp_main_syn_sent(struct tcp_conn *conn) {
 			//sent FF back saying failed to connect
 			//send ACK to handler, prob accept
 			if (conn->ff) {
-				tcp_conn_reply_fcf(conn, FCF_FALSE, ETIMEDOUT); //accept needs rem ip/port
+				tcp_conn_reply_fcf(module, conn, conn->ff, FCF_FALSE, ETIMEDOUT); //accept needs rem ip/port
 				conn->ff = NULL;
 				tcp_conn_shutdown(conn);
 				return;
@@ -696,7 +575,7 @@ void tcp_main_syn_sent(struct tcp_conn *conn) {
 		//send SYN
 		struct tcp_seg *temp_seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		tcp_seg_update(temp_seg, conn, FLAG_SYN);
-		tcp_seg_send(conn->module, temp_seg);
+		tcp_seg_send(module, temp_seg);
 		tcp_seg_free(temp_seg);
 
 		conn->main_wait_flag = 0; //handle cases where TO after set waitFlag
@@ -715,7 +594,7 @@ void tcp_main_syn_sent(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_syn_recv(struct tcp_conn *conn) {
+void tcp_main_syn_recv(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	if (conn->request_interrupt) {
@@ -741,7 +620,7 @@ void tcp_main_syn_recv(struct tcp_conn *conn) {
 			//send SYN
 			struct tcp_seg *temp_seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 			tcp_seg_update(temp_seg, conn, FLAG_SYN);
-			tcp_seg_send(conn->module, temp_seg);
+			tcp_seg_send(module, temp_seg);
 			tcp_seg_free(temp_seg);
 
 			conn->main_wait_flag = 0; //handle cases where TO after set waitFlag
@@ -754,7 +633,7 @@ void tcp_main_syn_recv(struct tcp_conn *conn) {
 				//send ACK to handler, prob accept
 				if (conn->ff) {
 					//TODO change this to simply put self back into accept queue?
-					tcp_conn_reply_fcf(conn, FCF_FALSE, ETIMEDOUT); //accept needs rem ip/port
+					tcp_conn_reply_fcf(module, conn, conn->ff, FCF_FALSE, ETIMEDOUT); //accept needs rem ip/port
 					conn->ff = NULL;
 					tcp_conn_shutdown(conn);
 				} else {
@@ -778,7 +657,7 @@ void tcp_main_syn_recv(struct tcp_conn *conn) {
 				//send SYN ACK
 				struct tcp_seg *temp_seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				tcp_seg_update(temp_seg, conn, FLAG_SYN | FLAG_ACK);
-				tcp_seg_send(conn->module, temp_seg);
+				tcp_seg_send(module, temp_seg);
 				tcp_seg_free(temp_seg);
 
 				conn->timeout = fmin(2.0 * conn->timeout, TCP_MSL_TO_DEFAULT);
@@ -798,9 +677,9 @@ void tcp_main_syn_recv(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_established(struct tcp_conn *conn) {
+void tcp_main_established(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
-	struct tcp_data *md = (struct tcp_data *) conn->module->data;
+	struct tcp_data *md = (struct tcp_data *) module->data;
 	//can receive, send ACKs, send/resend data, & get ACKs
 
 	struct tcp_seg *seg;
@@ -814,7 +693,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 	if (conn->request_interrupt) {
 		conn->request_interrupt = 0;
 
-		handle_interrupt(conn);
+		handle_interrupt(module, conn);
 	} else if (conn->to_gbn_flag) {
 		conn->to_gbn_flag = 0;
 		conn->stats.gbn++;
@@ -857,7 +736,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 
 			seg = (struct tcp_seg *) conn->gbn_node->data;
 			tcp_seg_update(seg, conn, FLAG_ACK);
-			tcp_seg_send(conn->module, seg);
+			tcp_seg_send(module, seg);
 
 			if (conn->recv_win == 0) {
 				conn->flow_stopped = 1;
@@ -880,7 +759,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 		if (!tcp_queue_is_empty(conn->send_queue)) {
 			seg = (struct tcp_seg *) conn->send_queue->front->data;
 			tcp_seg_update(seg, conn, FLAG_ACK);
-			tcp_seg_send(conn->module, seg);
+			tcp_seg_send(module, seg);
 
 			if (conn->recv_win == 0) {
 				conn->flow_stopped = 1;
@@ -912,7 +791,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 				if (conn->gbn_node) {
 					seg = (struct tcp_seg *) conn->gbn_node->data;
 					tcp_seg_update(seg, conn, FLAG_ACK);
-					tcp_seg_send(conn->module, seg);
+					tcp_seg_send(module, seg);
 
 					if (conn->recv_win == 0) {
 						conn->flow_stopped = 1;
@@ -970,14 +849,14 @@ void tcp_main_established(struct tcp_conn *conn) {
 				conn->stats.sent_data += data_len;
 				PRINT_DEBUG("len=%u, sent_data=%llu", data_len, conn->stats.sent_data);
 
-				tcp_handle_requests(conn);
+				tcp_handle_requests(module, conn);
 
 				tcp_seg_update(seg, conn, FLAG_ACK);
 				if (conn->temp_count++ == 4 && conn->temp_tries < 40 && 0) {
 					conn->temp_tries++;
 					conn->temp_count = 0;
 				} else {
-					tcp_seg_send(conn->module, seg);
+					tcp_seg_send(module, seg);
 				}
 
 				if (conn->recv_win == 0) {
@@ -1009,7 +888,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 						int space = conn->write_queue->max - conn->write_queue->len;
 						PRINT_DEBUG("conn=%p, space=%d", conn, space);
 						if (space > 0) {
-							tcp_conn_send_fcf(conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
+							tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 							conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
 						}
 					}
@@ -1030,7 +909,7 @@ void tcp_main_established(struct tcp_conn *conn) {
 		//send ack
 		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-		tcp_seg_send(conn->module, seg);
+		tcp_seg_send(module, seg);
 		tcp_seg_free(seg);
 
 		if (conn->recv_win == 0) {
@@ -1041,9 +920,9 @@ void tcp_main_established(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_fin_wait_1(struct tcp_conn *conn) {
+void tcp_main_fin_wait_1(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
-	struct tcp_data *md = (struct tcp_data *) conn->module->data;
+	struct tcp_data *md = (struct tcp_data *) module->data;
 	//merge with established, can still get ACKs, receive, send ACKs, & send/resend data (don't accept new data)
 
 	struct tcp_seg *seg;
@@ -1057,7 +936,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 	if (conn->request_interrupt) {
 		conn->request_interrupt = 0;
 
-		handle_interrupt(conn);
+		handle_interrupt(module, conn);
 	} else if (conn->to_gbn_flag) {
 		conn->to_gbn_flag = 0;
 		conn->stats.gbn++;
@@ -1078,7 +957,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 				//send fin
 				seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				tcp_seg_update(seg, conn, FLAG_ACK | FLAG_FIN);
-				tcp_seg_send(conn->module, seg);
+				tcp_seg_send(module, seg);
 				tcp_seg_free(seg);
 			}
 		} else {
@@ -1111,7 +990,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 			conn->gbn_node = conn->send_queue->front;
 			seg = (struct tcp_seg *) conn->gbn_node->data;
 			tcp_seg_update(seg, conn, FLAG_ACK);
-			tcp_seg_send(conn->module, seg);
+			tcp_seg_send(module, seg);
 
 			uint32_decrease(&conn->send_win, seg->data_len);
 			//conn->timeout *= 2; //TODO uncomment, should have?
@@ -1130,7 +1009,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 		if (!tcp_queue_is_empty(conn->send_queue)) {
 			seg = (struct tcp_seg *) conn->send_queue->front->data;
 			tcp_seg_update(seg, conn, FLAG_ACK);
-			tcp_seg_send(conn->module, seg);
+			tcp_seg_send(module, seg);
 
 			uint32_decrease(&conn->send_win, seg->data_len);
 		}
@@ -1156,7 +1035,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 				if (conn->gbn_node) {
 					seg = (struct tcp_seg *) conn->gbn_node->data;
 					tcp_seg_update(seg, conn, FLAG_ACK);
-					tcp_seg_send(conn->module, seg);
+					tcp_seg_send(module, seg);
 
 					uint32_decrease(&conn->send_win, seg->data_len);
 				} else {
@@ -1184,7 +1063,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 				//send fin
 				seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 				tcp_seg_update(seg, conn, FLAG_ACK | FLAG_FIN);
-				tcp_seg_send(conn->module, seg);
+				tcp_seg_send(module, seg);
 				tcp_seg_free(seg);
 			}
 		} else {
@@ -1218,7 +1097,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 				conn->stats.sent_data += data_len;
 				PRINT_DEBUG("len=%u, sent_data=%llu", data_len, conn->stats.sent_data);
 
-				tcp_handle_requests(conn);
+				tcp_handle_requests(module, conn);
 
 				if (tcp_queue_is_empty(conn->request_queue) && tcp_queue_is_empty(conn->write_queue)) {
 					conn->fin_sent = 1;
@@ -1230,7 +1109,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 				} else {
 					tcp_seg_update(seg, conn, FLAG_ACK);
 				}
-				tcp_seg_send(conn->module, seg);
+				tcp_seg_send(module, seg);
 
 				temp_node = tcp_node_create((uint8_t *) seg, data_len, seg->seq_num, seg->seq_num + data_len - 1);
 				tcp_queue_append(conn->send_queue, temp_node);
@@ -1257,7 +1136,7 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 						int space = conn->write_queue->max - conn->write_queue->len;
 						PRINT_DEBUG("conn=%p, space=%d", conn, space);
 						if (space > 0) {
-							tcp_conn_send_fcf(conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
+							tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 							conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
 						}
 					}
@@ -1278,14 +1157,14 @@ void tcp_main_fin_wait_1(struct tcp_conn *conn) {
 		//send ack
 		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-		tcp_seg_send(conn->module, seg);
+		tcp_seg_send(module, seg);
 		tcp_seg_free(seg);
 	}
 
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_fin_wait_2(struct tcp_conn *conn) {
+void tcp_main_fin_wait_2(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	//can still receive, send ACKs
 
@@ -1306,7 +1185,7 @@ void tcp_main_fin_wait_2(struct tcp_conn *conn) {
 		//send ack
 		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-		tcp_seg_send(conn->module, seg);
+		tcp_seg_send(module, seg);
 		tcp_seg_free(seg);
 	}
 
@@ -1316,16 +1195,16 @@ void tcp_main_fin_wait_2(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_closing(struct tcp_conn *conn) {
+void tcp_main_closing(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	//self, can still get ACKs & send/resend data (don't accept new data)
 
-	tcp_main_fin_wait_1(conn);
+	tcp_main_fin_wait_1(module, conn);
 
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_time_wait(struct tcp_conn *conn) {
+void tcp_main_time_wait(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	struct tcp_seg *seg;
 
@@ -1346,7 +1225,7 @@ void tcp_main_time_wait(struct tcp_conn *conn) {
 			//send ack
 			seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 			tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-			tcp_seg_send(conn->module, seg);
+			tcp_seg_send(module, seg);
 			tcp_seg_free(seg);
 		}
 
@@ -1367,7 +1246,7 @@ void tcp_main_time_wait(struct tcp_conn *conn) {
 			//send ack
 			seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 			tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-			tcp_seg_send(conn->module, seg);
+			tcp_seg_send(module, seg);
 			tcp_seg_free(seg);
 		}
 	}
@@ -1375,20 +1254,20 @@ void tcp_main_time_wait(struct tcp_conn *conn) {
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_close_wait(struct tcp_conn *conn) {
+void tcp_main_close_wait(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	//can still send & get ACKs
-	tcp_main_established(conn);
+	tcp_main_established(module, conn);
 
 	PRINT_DEBUG("Exited: conn=%p", conn);
 }
 
-void tcp_main_last_ack(struct tcp_conn *conn) {
+void tcp_main_last_ack(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
 	//can still get ACKs & send/resend data (don't accept new data)
 
-	tcp_main_fin_wait_1(conn);
+	tcp_main_fin_wait_1(module, conn);
 
 	//TODO augment so that on final ack, call conn_shutdown(conn);
 	PRINT_DEBUG("Exited: conn=%p", conn);
@@ -1396,7 +1275,8 @@ void tcp_main_last_ack(struct tcp_conn *conn) {
 
 void *tcp_main_thread(void *local) {
 	struct tcp_conn *conn = (struct tcp_conn *) local;
-	struct tcp_data *md = (struct tcp_data *) conn->module->data;
+	struct fins_module *module = conn->module;
+	struct tcp_data *md = (struct tcp_data *) module->data;
 	PRINT_DEBUG("Entered: conn=%p", conn);
 
 	PRINT_DEBUG("sem_wait: conn=%p", conn);
@@ -1410,37 +1290,37 @@ void *tcp_main_thread(void *local) {
 
 		switch (conn->state) {
 		case TS_CLOSED:
-			tcp_main_closed(conn);
+			tcp_main_closed(module, conn);
 			break;
 		case TS_LISTEN:
-			tcp_main_listen(conn);
+			tcp_main_listen(module, conn);
 			break;
 		case TS_SYN_SENT:
-			tcp_main_syn_sent(conn);
+			tcp_main_syn_sent(module, conn);
 			break;
 		case TS_SYN_RECV:
-			tcp_main_syn_recv(conn);
+			tcp_main_syn_recv(module, conn);
 			break;
 		case TS_ESTABLISHED:
-			tcp_main_established(conn);
+			tcp_main_established(module, conn);
 			break;
 		case TS_FIN_WAIT_1:
-			tcp_main_fin_wait_1(conn);
+			tcp_main_fin_wait_1(module, conn);
 			break;
 		case TS_FIN_WAIT_2:
-			tcp_main_fin_wait_2(conn);
+			tcp_main_fin_wait_2(module, conn);
 			break;
 		case TS_CLOSING:
-			tcp_main_closing(conn);
+			tcp_main_closing(module, conn);
 			break;
 		case TS_TIME_WAIT:
-			tcp_main_time_wait(conn);
+			tcp_main_time_wait(module, conn);
 			break;
 		case TS_CLOSE_WAIT:
-			tcp_main_close_wait(conn);
+			tcp_main_close_wait(module, conn);
 			break;
 		case TS_LAST_ACK:
-			tcp_main_last_ack(conn);
+			tcp_main_last_ack(module, conn);
 			break;
 		}
 
@@ -1474,12 +1354,16 @@ void *tcp_main_thread(void *local) {
 
 	PRINT_DEBUG("conn_list wait***************");
 	secure_sem_wait(&md->conn_list_sem);
-	list_remove(md->conn_list, conn);
+	if (conn->stub_list) {
+		list_remove(md->conn_stub_list, conn);
+	} else {
+		list_remove(md->conn_list, conn);
+	}
 	PRINT_DEBUG("conn_list post***************");
 	sem_post(&md->conn_list_sem);
 
 	//close & free connection
-	tcp_conn_stop(conn);
+	tcp_conn_stop(module, conn);
 	tcp_conn_free(conn);
 
 	PRINT_DEBUG("Exited: conn=%p", conn);
@@ -1503,7 +1387,7 @@ struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, u
 	conn->rem_ip = rem_ip;
 	conn->rem_port = rem_port;
 
-	conn->syn_list = list_create(TCP_SYN_LIST_MAX);
+	//conn->store_list = list_create(TCP_STORE_LIST_MAX);
 	conn->backlog_list = list_create(TCP_BACKLOG_LIST_MAX);
 
 	conn->request_queue = tcp_queue_create(TCP_REQUEST_LIST_MAX);
@@ -1582,13 +1466,22 @@ struct tcp_conn *tcp_conn_create(struct fins_module *module, uint32_t host_ip, u
 	return conn;
 }
 
+//find a TCP connection with given host addr/port
+int tcp_conn_host_test(struct tcp_conn *conn, uint32_t *host_ip, uint16_t *host_port) {
+	return conn->host_ip == *host_ip && conn->host_port == *host_port;
+}
+
 //find a TCP connection with given host addr/port and remote addr/port
 //NOTE: this means for incoming IP FF call with (dst_ip, src_ip, dst_p, src_p)
 int tcp_conn_addr_test(struct tcp_conn *conn, uint32_t *host_ip, uint16_t *host_port, uint32_t *rem_ip, uint16_t *rem_port) {
 	return conn->host_ip == *host_ip && conn->host_port == *host_port && conn->rem_ip == *rem_ip && conn->rem_port == *rem_port;
 }
 
-int tcp_conn_send_fcf(struct tcp_conn *conn, uint16_t opcode, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
+int tcp_conn_established_test(struct tcp_conn *conn) {
+	return conn->state == TS_ESTABLISHED && !conn->signaled;
+}
+
+int tcp_conn_send_fcf(struct fins_module *module, struct tcp_conn *conn, uint16_t opcode, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1614,7 +1507,7 @@ int tcp_conn_send_fcf(struct tcp_conn *conn, uint16_t opcode, uint32_t param_id,
 	ff->dataOrCtrl = FF_CONTROL;
 	ff->metaData = meta;
 
-	ff->ctrlFrame.sender_id = conn->module->index;
+	ff->ctrlFrame.sender_id = module->index;
 	ff->ctrlFrame.serial_num = gen_control_serial_num();
 	ff->ctrlFrame.opcode = opcode;
 	ff->ctrlFrame.param_id = param_id;
@@ -1624,7 +1517,7 @@ int tcp_conn_send_fcf(struct tcp_conn *conn, uint16_t opcode, uint32_t param_id,
 	ff->ctrlFrame.data = NULL;
 
 	PRINT_DEBUG("ff=%p, meta=%p", ff, meta);
-	if (module_send_flow(conn->module, ff, TCP_FLOW_DAEMON)) {
+	if (module_send_flow(module, ff, TCP_FLOW_DAEMON)) {
 		return 1;
 	} else {
 		freeFinsFrame(ff);
@@ -1632,7 +1525,7 @@ int tcp_conn_send_fcf(struct tcp_conn *conn, uint16_t opcode, uint32_t param_id,
 	}
 }
 
-int tcp_conn_send_exec_reply(struct tcp_conn *conn, uint32_t serial_num, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
+int tcp_conn_send_exec_reply(struct fins_module *module, struct tcp_conn *conn, uint32_t serial_num, uint32_t param_id, uint32_t ret_val, uint32_t ret_msg) {
 	PRINT_DEBUG("Entered: conn=%p, param_id=%d, ret_val=%d, ret_msg=%u", conn, param_id, ret_val, ret_msg);
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -1658,7 +1551,7 @@ int tcp_conn_send_exec_reply(struct tcp_conn *conn, uint32_t serial_num, uint32_
 	ff->dataOrCtrl = FF_CONTROL;
 	ff->metaData = meta;
 
-	ff->ctrlFrame.sender_id = conn->module->index;
+	ff->ctrlFrame.sender_id = module->index;
 	ff->ctrlFrame.serial_num = serial_num;
 	ff->ctrlFrame.opcode = CTRL_EXEC_REPLY;
 	ff->ctrlFrame.param_id = param_id;
@@ -1668,7 +1561,7 @@ int tcp_conn_send_exec_reply(struct tcp_conn *conn, uint32_t serial_num, uint32_
 	ff->ctrlFrame.data = NULL;
 
 	PRINT_DEBUG("ff=%p, meta=%p", ff, meta);
-	if (module_send_flow(conn->module, ff, TCP_FLOW_DAEMON)) {
+	if (module_send_flow(module, ff, TCP_FLOW_DAEMON)) {
 		return 1;
 	} else {
 		freeFinsFrame(ff);
@@ -1676,10 +1569,8 @@ int tcp_conn_send_exec_reply(struct tcp_conn *conn, uint32_t serial_num, uint32_
 	}
 }
 
-int tcp_conn_reply_fcf(struct tcp_conn *conn, uint32_t ret_val, uint32_t ret_msg) {
-	PRINT_DEBUG("Entered: conn=%p, ret_val=%u, ret_msg=%u", conn, ret_val, ret_msg);
-
-	struct finsFrame *ff = conn->ff;
+int tcp_conn_reply_fcf(struct fins_module *module, struct tcp_conn *conn, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg) {
+	PRINT_DEBUG("Entered: conn=%p, ff=%p, ret_val=%u, ret_msg=%u", conn, ff, ret_val, ret_msg);
 
 	uint32_t protocol = IPPROTO_TCP;
 	secure_metadata_writeToElement(ff->metaData, "protocol", &protocol, META_TYPE_INT32);
@@ -1699,7 +1590,7 @@ int tcp_conn_reply_fcf(struct tcp_conn *conn, uint32_t ret_val, uint32_t ret_msg
 
 	ff->destinationID = ff->ctrlFrame.sender_id;
 
-	ff->ctrlFrame.sender_id = conn->module->index;
+	ff->ctrlFrame.sender_id = module->index;
 
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_READ_PARAM:
@@ -1718,7 +1609,7 @@ int tcp_conn_reply_fcf(struct tcp_conn *conn, uint32_t ret_val, uint32_t ret_msg
 
 	ff->ctrlFrame.ret_val = ret_val;
 
-	module_to_switch(conn->module, ff);
+	module_to_switch(module, ff);
 
 	return 1;
 }
@@ -1735,9 +1626,9 @@ void tcp_conn_shutdown(struct tcp_conn *conn) {
 	sem_post(&conn->main_wait_sem);
 }
 
-void tcp_conn_stop(struct tcp_conn *conn) {
+void tcp_conn_stop(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
-	struct tcp_data *md = (struct tcp_data *) conn->module->data;
+	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	conn->running_flag = 0;
 
@@ -1745,13 +1636,14 @@ void tcp_conn_stop(struct tcp_conn *conn) {
 	timer_stop(conn->to_gbn_data->tid);
 	timer_stop(conn->to_delayed_data->tid);
 
+	list_for_each(conn->backlog_list, tcp_conn_shutdown);
+
 	//TODO stop keepalive timer
 	//TODO stop silly window timer
 	//TODO stop nagel timer
 	//sem_post(&conn->main_wait_sem);
 	//sem_post(&conn->write_wait_sem);
 	//sem_post(&conn->write_sem);
-	//clear all threads using this conn_stub
 
 	while (1) {
 		PRINT_DEBUG("conn_list wait***************");
@@ -1776,6 +1668,10 @@ void tcp_conn_stop(struct tcp_conn *conn) {
 void tcp_conn_free(struct tcp_conn *conn) {
 	PRINT_DEBUG("conn=%p", conn);
 
+	if (conn->backlog_list) {
+		list_free(conn->backlog_list, nop_func);
+	}
+
 	if (conn->request_queue) {
 		tcp_queue_free(conn->request_queue);
 	}
@@ -1790,6 +1686,8 @@ void tcp_conn_free(struct tcp_conn *conn) {
 	}
 	//if (conn->read_queue) {
 	//	queue_free(conn->read_queue); }
+
+	tcp_seg_free(conn->ack_seg);
 
 	sem_destroy(&conn->sem);
 	sem_destroy(&conn->main_wait_sem);
@@ -3022,11 +2920,9 @@ int tcp_init(struct fins_module *module, metadata_element *params, struct envi_r
 	md->thread_id_num = 0;
 	sem_init(&md->thread_id_sem, 0, 1);
 
-	md->conn_stub_list = list_create(TCP_CONN_MAX);
-	sem_init(&md->conn_stub_list_sem, 0, 1);
-
-	md->conn_list = list_create(TCP_CONN_MAX);
 	sem_init(&md->conn_list_sem, 0, 1);
+	md->conn_list = list_create(TCP_CONN_MAX);
+	md->conn_stub_list = list_create(TCP_CONN_MAX);
 
 	md->fast_enabled = TCP_FAST_ENABLED_DEFAULT;
 	md->fast_duplicates = TCP_FAST_DUPLICATES_DEFAULT;
@@ -3089,28 +2985,9 @@ int tcp_shutdown(struct fins_module *module) {
 	 }
 	 */
 
+	//list_for_each(md->conn_stub_list, tcp_conn_shutdown);
 	PRINT_DEBUG("conn_list post***************");
 	sem_post(&md->conn_list_sem);
-
-	PRINT_DEBUG("conn_stub_list wait***************");
-	secure_sem_wait(&md->conn_stub_list_sem);
-
-	//list_for_each(md->conn_stub_list, tcp_conn_stub_shutdown);
-	/*
-	 struct tcp_conn_stub *conn_stub = md->conn_stub_list;
-	 //struct tcp_conn_stub *old_conn_stub;
-	 while (conn_stub) { //change to conn_list_is_empty()
-	 //old_conn_stub = conn_stub;
-	 conn_stub = conn_stub->next;
-
-	 //TODO add conn_stub->sem's
-	 //conn_stub_shutdown(old_conn_stub);
-	 //conn_stub_free(old_conn_stub);
-	 }
-	 */
-
-	PRINT_DEBUG("conn_stub_list post***************");
-	sem_post(&md->conn_stub_list_sem);
 
 	PRINT_IMPORTANT("Joining switch_to_tcp_thread");
 	pthread_join(md->switch_to_tcp_thread, NULL);
@@ -3122,11 +2999,10 @@ int tcp_release(struct fins_module *module) {
 	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct tcp_data *md = (struct tcp_data *) module->data;
-	//list_free(md->conn_stub_list, tcp_conn_stub_free); //TODO uncomment/fix
-	list_free(md->conn_stub_list, nop_func);
-	sem_destroy(&md->conn_stub_list_sem);
 	//list_free(md->conn_list, tcp_conn_free); //TODO uncomment/fix
 	list_free(md->conn_list, nop_func);
+	//list_free(md->conn_stub_list, tcp_conn_free); //TODO uncomment/fix
+	list_free(md->conn_stub_list, nop_func);
 	sem_destroy(&md->conn_list_sem);
 
 	if (md->link_list != NULL) {

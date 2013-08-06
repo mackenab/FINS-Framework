@@ -1911,3 +1911,13 @@ struct route_record *route_clone(struct route_record *route) {
 	PRINT_DEBUG("Exited: route=%p, ret=%p", route, route_clone);
 	return route_clone;
 }
+
+/**
+ * @brief generate a random integer between min and max
+ * @param minimum value of the range, maximum value of the range
+ * @return the random integer value
+ *
+ */
+int randoming(int min, int max) {
+	return (min + (int) (max - min + 1) * (rand() / (RAND_MAX + 1.0)));
+}

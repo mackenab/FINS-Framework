@@ -147,6 +147,8 @@ int main(int argc, char *argv[]) {
 	printf("TCP Server waiting for client: port %d\n", ntohs(server_addr.sin_port));
 	fflush(stdout);
 
+	//fgetc(stdin); //wait until user enters
+
 	while (1) {
 		sock_client = accept(sock, (struct sockaddr *) &client_addr, (socklen_t *) &addr_len);
 		if (sock_client > 0) {

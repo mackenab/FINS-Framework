@@ -162,8 +162,6 @@ void daemon_calls_shutdown(struct fins_module *module, int call_index) {
 	timer_delete(md->calls[call_index].to_data->tid);
 	free(md->calls[call_index].to_data);
 
-	//clear all threads using this conn_stub
-
 	PRINT_DEBUG("");
 	//post to read/write/connect/etc threads
 	//pthread_join(daemon_calls[call_index].to_thread, NULL);
@@ -304,17 +302,6 @@ int daemon_sockets_remove(struct fins_module *module, int sock_index) {
 	list_free(md->sockets[sock_index].data_list, daemon_store_free);
 
 	return 1;
-}
-
-/**
- * @brief generate a random integer between min and max
- * @param minimum value of the range, maximum value of the range
- * @return the random integer value
- *
- */
-
-int daemon_randoming(int min, int max) {
-	return (min + (int) (max - min + 1) * (rand() / (RAND_MAX + 1.0)));
 }
 
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id) {
@@ -541,6 +528,7 @@ void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
 		case IPPROTO_ICMP:
 			//daemon_in_poll_icmp(module, ff, ret_msg);
 			PRINT_WARN("todo");
+			freeFinsFrame(ff);
 			break;
 		case IPPROTO_TCP:
 			daemon_in_poll_tcp(module, ff, ret_msg);
@@ -548,6 +536,7 @@ void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
 		case IPPROTO_UDP:
 			//daemon_in_poll_udp(module, ff, ret_msg);
 			PRINT_WARN("todo");
+			freeFinsFrame(ff);
 			break;
 		default:
 			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -572,6 +561,7 @@ void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
 		case IPPROTO_ICMP:
 			//daemon_in_shutdown_icmp(module, ff, ret_msg);
 			PRINT_WARN("todo");
+			freeFinsFrame(ff);
 			break;
 		case IPPROTO_TCP:
 			daemon_in_shutdown_tcp(module, ff, ret_msg);
@@ -579,6 +569,7 @@ void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
 		case IPPROTO_UDP:
 			//daemon_in_shutdown_udp(module, ff, ret_msg);
 			PRINT_WARN("todo");
+			freeFinsFrame(ff);
 			break;
 		default:
 			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
@@ -1070,7 +1061,7 @@ void *wedge_to_daemon(void *local) {
 	fds[0].fd = md->nl_sockfd;
 	fds[0].events = POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND; //| POLLERR;
 	//fds[0].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
-	PRINT_DEBUG("fd: sock=%d, events=%x", md->nl_sockfd, fds[0].events);
+	PRINT_DEBUG("fd: sock=%d, events=0x%x", md->nl_sockfd, fds[0].events);
 	int time = 1000;
 
 	uint8_t *recv_buf = (uint8_t *) secure_malloc(RECV_BUFFER_SIZE + 16); //16 = NLMSGHDR size

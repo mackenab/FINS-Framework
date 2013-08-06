@@ -340,8 +340,6 @@ int daemon_sockets_find(struct fins_module *module, uint64_t sock_id);
 int daemon_sockets_check_addr6(struct fins_module *module, struct sockaddr_storage *addr, int protocol);
 int daemon_sockets_remove(struct fins_module *module, int sock_index);
 
-int daemon_randoming(int min, int max);
-
 //TODO fix the usage of these
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
 uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta);

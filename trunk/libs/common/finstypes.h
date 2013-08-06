@@ -502,4 +502,6 @@ struct envi_record {
 //struct linked_list *foward_list; //TODO add in forwarding table?
 };
 
+int randoming(int min, int max);
+
 #endif /* FINSTYPES_H_ */

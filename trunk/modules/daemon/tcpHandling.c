@@ -276,7 +276,7 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
 			 */
 			while (1) {
-				host_port = (uint16_t) daemon_randoming(MIN_port, MAX_port);
+				host_port = (uint16_t) randoming(MIN_port, MAX_port);
 				if (match_host_addr4_tcp(module, host_ip, host_port) == -1) {
 					break;
 				}
@@ -709,7 +709,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
 			 */
 			while (1) {
-				host_port = (uint16_t) daemon_randoming(MIN_port, MAX_port);
+				host_port = (uint16_t) randoming(MIN_port, MAX_port);
 				if (match_host_addr4_tcp(module, host_ip, (uint16_t) host_port) == -1) {
 					break;
 				}
@@ -1806,6 +1806,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CONNECT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -1831,6 +1832,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 		nack_send(module, call->id, call->index, call->type, ECONNREFUSED); //TODO change based off of timeout, refused etc
 	}
 
+	daemon_call_free(call);
 	freeFinsFrame(ff);
 }
 
@@ -1842,6 +1844,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_ACCEPT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -1896,6 +1899,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 		nack_send(module, call->id, call->index, call->type, ECONNREFUSED); //TODO change based off of timeout, refused etc
 	}
 
+	daemon_call_free(call);
 	freeFinsFrame(ff);
 }
 
@@ -1906,6 +1910,7 @@ void sendmsg_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_SEND) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -1919,6 +1924,7 @@ void sendmsg_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 		nack_send(module, call->id, call->index, call->type, ret_msg);
 	}
 
+	daemon_call_free(call);
 	freeFinsFrame(ff);
 }
 
@@ -2381,6 +2387,8 @@ void daemon_in_poll_tcp(struct fins_module *module, struct finsFrame *ff, uint32
 	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[sock_index].sock_id, sock_index, md->sockets[sock_index].state, addr4_get_ip(&md->sockets[sock_index].host_addr), addr4_get_port(&md->sockets[sock_index].host_addr), addr4_get_ip(&md->sockets[sock_index].rem_addr), addr4_get_port(&md->sockets[sock_index].rem_addr));
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &ret_msg);
+
+	freeFinsFrame(ff);
 }
 
 void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg) {
@@ -2448,6 +2456,8 @@ void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, ui
 			}
 		}
 	}
+
+	freeFinsFrame(ff);
 }
 
 void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call) {

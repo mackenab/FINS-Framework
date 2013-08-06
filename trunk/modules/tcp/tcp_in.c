@@ -351,7 +351,7 @@ void handle_ACK(struct fins_module *module, struct tcp_conn *conn, struct tcp_se
 	}
 }
 
-int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_flags) {
+int process_flags(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_flags) {
 	switch (conn->state) {
 	case TS_ESTABLISHED:
 		//can get ACKs, send/resend data, receive, send ACKs
@@ -360,7 +360,7 @@ int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_fla
 			return -1;
 		} else if (seg->flags & FLAG_FIN) {
 			if (seg->data_len) {
-				conn->recv_seq_num += seg->data_len;
+				conn->recv_seq_num += seg->data_len + 1;
 			} else {
 				conn->recv_seq_num++;
 			}
@@ -370,7 +370,7 @@ int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_fla
 			PRINT_DEBUG("ESTABLISHED: FIN, send ACK, CLOSE_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 			conn->state = TS_CLOSE_WAIT;
 			conn->status &= ~TCP_STATUS_RD;
-			tcp_conn_send_fcf(conn, CTRL_ALERT, TCP_ALERT_SHUTDOWN, FCF_FALSE, TCP_STATUS_RD);
+			tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_SHUTDOWN, FCF_FALSE, TCP_STATUS_RD);
 
 			*send_flags |= FLAG_ACK;
 			return 1;
@@ -389,7 +389,7 @@ int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_fla
 			return -1;
 		} else if (seg->flags & FLAG_FIN) {
 			if (seg->data_len) {
-				conn->recv_seq_num += seg->data_len;
+				conn->recv_seq_num += seg->data_len + 1;
 			} else {
 				conn->recv_seq_num++;
 			}
@@ -417,7 +417,7 @@ int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_fla
 			}
 
 			conn->status &= ~TCP_STATUS_RD;
-			tcp_conn_send_fcf(conn, CTRL_ALERT, TCP_ALERT_SHUTDOWN, FCF_FALSE, TCP_STATUS_RD);
+			tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_SHUTDOWN, FCF_FALSE, TCP_STATUS_RD);
 
 			*send_flags |= FLAG_ACK;
 			return 1;
@@ -462,7 +462,7 @@ int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_fla
 			return -1;
 		} else if (seg->flags & FLAG_FIN) {
 			if (seg->data_len) {
-				conn->recv_seq_num += seg->data_len;
+				conn->recv_seq_num += seg->data_len + 1;
 			} else {
 				conn->recv_seq_num++;
 			}
@@ -472,7 +472,7 @@ int process_flags(struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_fla
 			PRINT_DEBUG("FIN_WAIT_2: FIN, send ACK, TIME_WAIT: state=%d, conn=%p, seg=%p", conn->state, conn, seg);
 			conn->state = TS_TIME_WAIT;
 			conn->status &= ~TCP_STATUS_RD;
-			tcp_conn_send_fcf(conn, CTRL_ALERT, TCP_ALERT_SHUTDOWN, FCF_FALSE, TCP_STATUS_RD);
+			tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_SHUTDOWN, FCF_FALSE, TCP_STATUS_RD);
 
 			timer_once_start(conn->to_gbn_data->tid, 2 * TCP_MSL_TO_DEFAULT);
 			conn->to_gbn_flag = 0;
@@ -694,7 +694,7 @@ int tcp_process_options(struct tcp_conn *conn, struct tcp_seg *seg) {
 }
 
 int process_seg(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg *seg, uint16_t *send_flags) {
-	int ret = process_flags(conn, seg, send_flags);
+	int ret = process_flags(module, conn, seg, send_flags);
 	if (ret == -1) {
 		PRINT_ERROR("problem, dropping: conn=%p, seg=%p, send_flags=%p", conn, seg, send_flags);
 		//send RST etc
@@ -971,7 +971,7 @@ void handle_reply(struct fins_module *module, struct tcp_conn *conn, uint16_t fl
 		}
 	} else {
 		//error? shouldn't really reach here unless haven't implemented other flags
-		PRINT_WARN("shouldn't reach here: flags=%x", flags);
+		PRINT_WARN("shouldn't reach here: flags=0x%x", flags);
 		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
 		tcp_seg_update(seg, conn, flags);
 		tcp_seg_send(module, seg);
@@ -980,67 +980,6 @@ void handle_reply(struct fins_module *module, struct tcp_conn *conn, uint16_t fl
 		if (conn->recv_win == 0) {
 			conn->flow_stopped = 1;
 		}
-	}
-}
-
-void tcp_syn(struct fins_module *module, struct tcp_conn_stub *conn_stub, struct tcp_seg *seg) {
-	PRINT_DEBUG("Entered: conn_stub=%p, seg=%p", conn_stub, seg);
-	struct tcp_data *md = (struct tcp_data *) module->data;
-
-	uint16_t calc;
-	struct tcp_node *node;
-
-	PRINT_DEBUG("sem_wait: conn_stub=%p", conn_stub);
-	secure_sem_wait(&conn_stub->sem);
-	if (conn_stub->running_flag) {
-		calc = tcp_seg_checksum(seg); //TODO add alt checksum, not really used
-		PRINT_DEBUG("checksum=%u, calc=%u, %u", seg->checksum, calc, seg->checksum == calc);
-		if (!calc) {
-			if (tcp_queue_has_space(conn_stub->syn_queue, 1)) {
-				node = tcp_node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
-				tcp_queue_append(conn_stub->syn_queue, node);
-
-				PRINT_DEBUG("");
-				sem_post(&conn_stub->accept_wait_sem);
-			} else {
-				//queue full
-				PRINT_DEBUG("");
-				tcp_seg_free(seg);
-			}
-		} else {
-			PRINT_ERROR( "Incorrect Checksum: conn_stub=%p, host=%u:%u, seg=%p, recv checksum=%u, calc checksum=%u",
-					conn_stub, conn_stub->host_ip, conn_stub->host_port, seg, seg->checksum, calc);
-			tcp_seg_free(seg);
-		}
-	} else {
-		PRINT_DEBUG("");
-		tcp_seg_free(seg);
-	}
-
-	PRINT_DEBUG("conn_stub_list wait***************");
-	secure_sem_wait(&md->conn_stub_list_sem);
-	conn_stub->threads--;
-	PRINT_DEBUG("leaving thread: conn_stub=%p, threads=%d", conn_stub, conn_stub->threads);
-	PRINT_DEBUG("conn_stub_list post***************");
-	sem_post(&md->conn_stub_list_sem);
-
-	PRINT_DEBUG("sem_post: conn_stub=%p", conn_stub);
-	sem_post(&conn_stub->sem);
-}
-
-void tcp_recv_syn(struct tcp_conn_stub *conn_stub, struct tcp_seg *seg) {
-	struct tcp_node *node;
-
-	if (tcp_queue_has_space(conn_stub->syn_queue, 1)) {
-		node = tcp_node_create((uint8_t *) seg, 1, seg->seq_num, seg->seq_num);
-		tcp_queue_append(conn_stub->syn_queue, node);
-
-		/*#*/PRINT_DEBUG("");
-		sem_post(&conn_stub->accept_wait_sem);
-	} else {
-		//queue full
-		//drop
-		PRINT_DEBUG("");
 	}
 }
 
@@ -1064,27 +1003,128 @@ void tcp_recv_closed(struct fins_module *module, struct tcp_conn *conn, struct t
 }
 
 void tcp_recv_listen(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg *seg) {
-	//ERROR shouldn't ever arrive here in this thread, kept if merge stubs
-	PRINT_DEBUG("Entered: Shouldn't arrive here: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
+	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
 	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	//TODO if RST, -, -
 	//TODO if ACK, <SEQ=SEG.ACK><CTL=RST>
 	//TODO if SYN, check sec,
 
+	struct tcp_conn *child_conn;
+	struct tcp_seg *temp_seg;
+
 	if (seg->flags & FLAG_RST) {
 	} else if (seg->flags & FLAG_SYN) {
+		if (conn->listening) {
+			if (list_has_space(conn->backlog_list)) {
+				PRINT_DEBUG("conn_list wait***************");
+				secure_sem_wait(&md->conn_list_sem);
+				child_conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &seg->dst_ip, &seg->dst_port, &seg->src_ip, &seg->src_port);
+				if (child_conn == NULL) { //shouldn't ever occur otherwise push to other conn already
+					if (list_has_space(md->conn_list)) {
+						child_conn = tcp_conn_create(module, seg->dst_ip, seg->dst_port, seg->src_ip, seg->src_port);
+						list_append(md->conn_list, child_conn);
+
+						child_conn->threads++;
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_wait: conn=%p", child_conn);
+						secure_sem_wait(&child_conn->sem);
+						if (child_conn->running_flag) { //LISTENING state
+							//if SYN, send SYN ACK, SYN_RECV
+							PRINT_DEBUG("SYN, send SYN ACK, SYN_RECV: state=%d", conn->state);
+							child_conn->state = TS_SYN_RECV;
+							child_conn->active_open = 0;
+							child_conn->parent_conn = conn;
+
+							child_conn->poll_events = conn->poll_events; //TODO specify more
+
+							//if (flags & (1)) {
+							//	//TODO do specific flags/settings
+							//}
+
+							child_conn->issn = tcp_rand();
+							child_conn->send_seq_num = child_conn->issn;
+							child_conn->send_seq_end = child_conn->send_seq_num;
+							child_conn->send_max_win = (uint32_t) seg->win_size;
+							child_conn->send_win = child_conn->send_max_win;
+
+							child_conn->irsn = seg->seq_num;
+							child_conn->recv_seq_num = seg->seq_num + 1;
+							child_conn->recv_seq_end = child_conn->recv_seq_num + child_conn->recv_max_win;
+
+							PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
+									child_conn->send_seq_num-child_conn->issn, child_conn->send_seq_end-child_conn->issn, child_conn->send_seq_num, child_conn->send_seq_end, child_conn->recv_win, child_conn->recv_max_win, child_conn->recv_seq_num-child_conn->irsn, child_conn->recv_seq_end-child_conn->irsn, child_conn->recv_seq_num, child_conn->recv_seq_end, child_conn->send_win, child_conn->send_max_win);
+
+							//TODO process options, decide: MSS, max window size!!
+							//TODO MSS (2), Window scale (3), SACK (4), alt checksum (14)
+
+							if (seg->opt_len) {
+								tcp_process_options(child_conn, seg);
+							}
+
+							//conn_change_options(conn, tcp->options, SYN);
+
+							//send SYN ACK
+							temp_seg = tcp_seg_create(child_conn->host_ip, child_conn->host_port, child_conn->rem_ip, child_conn->rem_port,
+									child_conn->send_seq_end, child_conn->send_seq_end);
+							tcp_seg_update(temp_seg, child_conn, FLAG_SYN | FLAG_ACK);
+							tcp_seg_send(module, temp_seg);
+							tcp_seg_free(temp_seg);
+
+							//timer_once_start(conn_child->to_gbn_data->tid, TCP_MSL_TO_DEFAULT);
+							child_conn->timeout = TCP_GBN_TO_MIN;
+							timer_once_start(child_conn->to_gbn_data->tid, TCP_GBN_TO_MIN); //TODO figure out to's
+							child_conn->to_gbn_flag = 0;
+
+							list_append(conn->backlog_list, child_conn);
+						} else {
+							PRINT_WARN("todo error");
+							//TODO error
+						}
+
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						child_conn->threads--;
+						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", child_conn, child_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_post: conn=%p", child_conn);
+						sem_post(&child_conn->sem);
+					} else {
+						PRINT_WARN("todo error");
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+						//TODO throw minor error
+					}
+				} else {
+					PRINT_WARN("todo error");
+					PRINT_DEBUG("conn_list post***************");
+					sem_post(&md->conn_list_sem);
+					//TODO error
+				}
+			} else {
+				//TODO throw RST? or just drop?
+			}
+		} else {
+			PRINT_WARN("todo error");
+			//TODO error???
+		}
 	} else if (seg->flags & FLAG_FIN) {
 	} else {
 	}
 
-	conn->stats.drop_segs++;
-	__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
+	//conn->stats.drop_segs++;
+	//__sync_add_and_fetch(&md->total_conn_stats.drop_segs, 1);
 	tcp_seg_free(seg);
 }
 
 void tcp_recv_syn_sent(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
+	struct tcp_data *md = (struct tcp_data *) module->data;
+
 	struct tcp_seg *temp_seg;
 
 	//TODO ACK, If SEG.ACK =< ISS, or SEG.ACK > SND.NXT, send a reset <SEQ=SEG.ACK><CTL=RST>
@@ -1142,10 +1182,54 @@ void tcp_recv_syn_sent(struct fins_module *module, struct tcp_conn *conn, struct
 
 				//send ACK to handler, prob connect
 				if (conn->ff) {
-					module_reply_fcf(module, conn->ff, FCF_TRUE, 0);
+					conn->signaled = 1;
+					if (conn->active_open) {
+						module_reply_fcf(module, conn->ff, FCF_TRUE, 0); //connect
+					} else {
+						//shouldn't occur
+						tcp_conn_reply_fcf(module, conn, conn->ff, FCF_TRUE, 0); //accept needs rem ip/port
+					}
 					conn->ff = NULL;
 				} else {
-					PRINT_WARN("todo error");
+					if (conn->active_open) {
+						PRINT_WARN("todo error");
+					} else {
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						conn->parent_conn->threads++;
+						PRINT_DEBUG("entering thread: conn=%p, threads=%d", conn->parent_conn, conn->parent_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_wait: conn=%p", conn->parent_conn);
+						secure_sem_wait(&conn->parent_conn->sem);
+						if (conn->parent_conn->running_flag) {
+							if (conn->parent_conn->state == TS_LISTEN) {
+								if (conn->parent_conn->ff) {
+									list_remove(conn->parent_conn->backlog_list, conn);
+
+									conn->signaled = 1;
+									tcp_conn_reply_fcf(module, conn, conn->parent_conn->ff, FCF_TRUE, 0);
+									conn->parent_conn->ff = NULL;
+								} else {
+									//do nothing
+									PRINT_DEBUG("No ff, just wait");
+								}
+							} else {
+								PRINT_WARN("todo error");
+							}
+						}
+
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						conn->parent_conn->threads--;
+						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn->parent_conn, conn->parent_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_post: conn=%p", conn->parent_conn);
+						sem_post(&conn->parent_conn->sem);
+					}
 				}
 			} else {
 				PRINT_DEBUG("Invalid SYN ACK: was not sent: ack=%u, host_seq_num=%u", seg->ack_num, conn->send_seq_num);
@@ -1218,6 +1302,7 @@ void tcp_recv_syn_sent(struct fins_module *module, struct tcp_conn *conn, struct
 
 void tcp_recv_syn_recv(struct fins_module *module, struct tcp_conn *conn, struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: conn=%p, seg=%p, state=%d", conn, seg, conn->state);
+	struct tcp_data *md = (struct tcp_data *) module->data;
 
 	struct tcp_seg *temp_seg;
 	uint16_t flags;
@@ -1285,10 +1370,54 @@ void tcp_recv_syn_recv(struct fins_module *module, struct tcp_conn *conn, struct
 
 				//send ACK to handler, prob accept
 				if (conn->ff) {
-					tcp_conn_reply_fcf(conn, FCF_TRUE, 0); //accept needs rem ip/port
+					conn->signaled = 1;
+					if (conn->active_open) {
+						module_reply_fcf(module, conn->ff, FCF_TRUE, 0); //connect
+					} else {
+						//shouldn't occur
+						tcp_conn_reply_fcf(module, conn, conn->ff, FCF_TRUE, 0); //accept needs rem ip/port
+					}
 					conn->ff = NULL;
 				} else {
-					PRINT_WARN("todo error");
+					if (conn->active_open) {
+						PRINT_WARN("todo error");
+					} else {
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						conn->parent_conn->threads++;
+						PRINT_DEBUG("entering thread: conn=%p, threads=%d", conn->parent_conn, conn->parent_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_wait: conn=%p", conn->parent_conn);
+						secure_sem_wait(&conn->parent_conn->sem);
+						if (conn->parent_conn->running_flag) {
+							if (conn->parent_conn->state == TS_LISTEN) {
+								if (conn->parent_conn->ff) {
+									list_remove(conn->parent_conn->backlog_list, conn);
+
+									conn->signaled = 1;
+									tcp_conn_reply_fcf(module, conn, conn->parent_conn->ff, FCF_TRUE, 0);
+									conn->parent_conn->ff = NULL;
+								} else {
+									//do nothing
+									PRINT_DEBUG("No ff, just wait");
+								}
+							} else {
+								PRINT_WARN("todo error");
+							}
+						}
+
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						conn->parent_conn->threads--;
+						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn->parent_conn, conn->parent_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_post: conn=%p", conn->parent_conn);
+						sem_post(&conn->parent_conn->sem);
+					}
 				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent.");
@@ -1373,10 +1502,54 @@ void tcp_recv_syn_recv(struct fins_module *module, struct tcp_conn *conn, struct
 
 				//send ACK to handler, prob accept
 				if (conn->ff) {
-					tcp_conn_reply_fcf(conn, FCF_TRUE, 0); //accept needs rem ip/port
+					conn->signaled = 1;
+					if (conn->active_open) {
+						module_reply_fcf(module, conn->ff, FCF_TRUE, 0); //connect
+					} else {
+						//shouldn't occur
+						tcp_conn_reply_fcf(module, conn, conn->ff, FCF_TRUE, 0); //accept needs rem ip/port
+					}
 					conn->ff = NULL;
 				} else {
-					PRINT_WARN("todo error");
+					if (conn->active_open) {
+						PRINT_WARN("todo error");
+					} else {
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						conn->parent_conn->threads++;
+						PRINT_DEBUG("entering thread: conn=%p, threads=%d", conn->parent_conn, conn->parent_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_wait: conn=%p", conn->parent_conn);
+						secure_sem_wait(&conn->parent_conn->sem);
+						if (conn->parent_conn->running_flag) {
+							if (conn->parent_conn->state == TS_LISTEN) {
+								if (conn->parent_conn->ff) {
+									list_remove(conn->parent_conn->backlog_list, conn);
+
+									conn->signaled = 1;
+									tcp_conn_reply_fcf(module, conn, conn->parent_conn->ff, FCF_TRUE, 0);
+									conn->parent_conn->ff = NULL;
+								} else {
+									//do nothing
+									PRINT_DEBUG("No ff, just wait");
+								}
+							} else {
+								PRINT_WARN("todo error");
+							}
+						}
+
+						PRINT_DEBUG("conn_list wait***************");
+						secure_sem_wait(&md->conn_list_sem);
+						conn->parent_conn->threads--;
+						PRINT_DEBUG("leaving thread: conn=%p, threads=%d", conn->parent_conn, conn->parent_conn->threads);
+						PRINT_DEBUG("conn_list post***************");
+						sem_post(&md->conn_list_sem);
+
+						PRINT_DEBUG("sem_post: conn=%p", conn->parent_conn);
+						sem_post(&conn->parent_conn->sem);
+					}
 				}
 			} else {
 				PRINT_DEBUG("Invalid ACK: was not sent.");
@@ -1676,7 +1849,6 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	struct tcp_seg *seg;
 	struct tcp_conn *conn;
-	struct tcp_conn_stub *conn_stub;
 	struct tcp_seg *temp_seg;
 
 	seg = fdf_to_tcp(ff);
@@ -1685,47 +1857,26 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		secure_sem_wait(&md->conn_list_sem);
 		conn = (struct tcp_conn *) list_find4(md->conn_list, tcp_conn_addr_test, &seg->dst_ip, &seg->dst_port, &seg->src_ip, &seg->src_port);
 		if (conn) {
-			if (conn->threads < TCP_THREADS_MAX) {
-				conn->threads++;
-				PRINT_DEBUG("conn_list post***************");
-				sem_post(&md->conn_list_sem);
-
-				tcp_recv(module, conn, seg);
-			} else {
-				PRINT_DEBUG("conn_list post***************");
-				sem_post(&md->conn_list_sem);
-
-				PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
-				tcp_seg_free(seg);
-			}
-		} else {
+			conn->threads++;
 			PRINT_DEBUG("conn_list post***************");
 			sem_post(&md->conn_list_sem);
 
+			tcp_recv(module, conn, seg);
+		} else {
 			if ((seg->flags & FLAG_SYN) && !(seg->flags & (FLAG_RST | FLAG_ACK | FLAG_FIN))) {
 				//TODO check security, send RST if lower, etc
 
 				//check if listening sockets
-				PRINT_DEBUG("conn_stub_list wait***************");
-				secure_sem_wait(&md->conn_stub_list_sem);
-				conn_stub = (struct tcp_conn_stub *) list_find2(md->conn_stub_list, tcp_conn_stub_addr_test, &seg->dst_ip, &seg->dst_port);
-				if (conn_stub) {
-					if (conn_stub->threads < TCP_THREADS_MAX) {
-						conn_stub->threads++;
-						PRINT_DEBUG("conn_stub_list post***************");
-						sem_post(&md->conn_stub_list_sem);
+				conn = (struct tcp_conn *) list_find2(md->conn_stub_list, tcp_conn_host_test, &seg->dst_ip, &seg->dst_port);
+				if (conn) {
+					conn->threads++;
+					PRINT_DEBUG("conn_list post***************");
+					sem_post(&md->conn_list_sem);
 
-						tcp_syn(module, conn_stub, seg);
-					} else {
-						PRINT_DEBUG("conn_stub_list post***************");
-						sem_post(&md->conn_stub_list_sem);
-
-						PRINT_ERROR("Too many threads=%d. Dropping...", conn->threads);
-						tcp_seg_free(seg);
-					}
+					tcp_recv(module, conn, seg);
 				} else {
-					PRINT_DEBUG("conn_stub_list post***************");
-					sem_post(&md->conn_stub_list_sem);
+					PRINT_DEBUG("conn_list post***************");
+					sem_post(&md->conn_list_sem);
 					PRINT_DEBUG("Found no stub. Dropping...");
 
 					PRINT_DEBUG("Sending RST");
@@ -1741,6 +1892,9 @@ void tcp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 					tcp_seg_free(seg);
 				}
 			} else {
+				PRINT_DEBUG("conn_list post***************");
+				sem_post(&md->conn_list_sem);
+
 				PRINT_DEBUG("Found no connection. Dropping...");
 
 				if (seg->flags & FLAG_RST) {
