@@ -849,7 +849,7 @@ int interface_init(struct fins_module *module, metadata_element *params, struct 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
 
-	md->inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	md->inject_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (md->inject_fd < 0) {
 		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", md->inject_fd, errno, strerror(errno));
 		return 0;
@@ -902,7 +902,7 @@ int interface_init(struct fins_module *module, metadata_element *params, struct 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
 
-	md->capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	md->capture_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (md->capture_fd < 0) {
 		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", md->capture_fd, errno, strerror(errno));
 		return 0;

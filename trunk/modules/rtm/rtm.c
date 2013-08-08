@@ -676,7 +676,7 @@ int rtm_init(struct fins_module *module, metadata_element *params, struct envi_r
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CONSOLE_PATH);
 	unlink(addr.sun_path);
 
-	md->server_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	md->server_fd = socket(PF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (md->server_fd < 0) {
 		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
 		return 0;

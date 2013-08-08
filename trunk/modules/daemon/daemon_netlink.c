@@ -14,7 +14,7 @@ int init_fins_nl(struct fins_module *module) {
 	sem_init(&md->nl_sem, 0, 1);
 
 	// Get a netlink socket descriptor
-	md->nl_sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_FINS);
+	md->nl_sockfd = socket(PF_NETLINK, SOCK_RAW, NETLINK_FINS);
 	if (md->nl_sockfd == -1) {
 		return 0;
 	}

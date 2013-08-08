@@ -187,7 +187,7 @@ void processes_init(int inject_fd) {
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
 	unlink(addr.sun_path);
 
-	int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	int server_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (server_fd < 0) {
 		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
 		close_pipes(shared);
@@ -410,7 +410,7 @@ void capturer_main(void) {
 	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
 	unlink(addr.sun_path);
 
-	int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	int server_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (server_fd < 0) {
 		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", server_fd, errno, strerror(errno));
 		return;

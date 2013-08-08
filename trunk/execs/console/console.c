@@ -96,7 +96,7 @@ int main() {
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CONSOLE_PATH);
 
-	int console_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	int console_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (console_fd < 0) {
 		PRINT_ERROR("socket error: console_fd=%d, errno=%u, str='%s'", console_fd, errno, strerror(errno));
 		return 0;
