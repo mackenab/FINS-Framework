@@ -907,10 +907,15 @@ void tcp_main_established(struct fins_module *module, struct tcp_conn *conn) {
 		conn->delayed_flag = 0;
 
 		//send ack
-		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-		tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-		tcp_seg_send(module, seg);
-		tcp_seg_free(seg);
+		//seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
+		//tcp_seg_update(seg, conn, conn->delayed_ack_flags);
+		//tcp_seg_send(module, seg);
+		//tcp_seg_free(seg);
+
+		conn->ack_seg->seq_num = conn->send_seq_end;
+		conn->ack_seg->seq_end = conn->send_seq_end;
+		tcp_seg_update(conn->ack_seg, conn, conn->delayed_ack_flags);
+		tcp_seg_send(module, conn->ack_seg);
 
 		if (conn->recv_win == 0) {
 			conn->flow_stopped = 1;
@@ -1155,10 +1160,14 @@ void tcp_main_fin_wait_1(struct fins_module *module, struct tcp_conn *conn) {
 		conn->delayed_flag = 0;
 
 		//send ack
-		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-		tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-		tcp_seg_send(module, seg);
-		tcp_seg_free(seg);
+		conn->ack_seg->seq_num = conn->send_seq_end;
+		conn->ack_seg->seq_end = conn->send_seq_end;
+		tcp_seg_update(conn->ack_seg, conn, conn->delayed_ack_flags);
+		tcp_seg_send(module, conn->ack_seg);
+
+		if (conn->recv_win == 0) {
+			conn->flow_stopped = 1;
+		}
 	}
 
 	PRINT_DEBUG("Exited: conn=%p", conn);
@@ -1176,17 +1185,21 @@ void tcp_main_fin_wait_2(struct fins_module *module, struct tcp_conn *conn) {
 		conn->to_gbn_flag = 0;
 	}
 
-	struct tcp_seg *seg;
 	if (conn->to_delayed_flag) {
-		//delayed ACK timeout, send ACK
-		conn->delayed_flag = 0;
 		conn->to_delayed_flag = 0;
 
+		//delayed ACK timeout, send ACK
+		conn->delayed_flag = 0;
+
 		//send ack
-		seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-		tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-		tcp_seg_send(module, seg);
-		tcp_seg_free(seg);
+		conn->ack_seg->seq_num = conn->send_seq_end;
+		conn->ack_seg->seq_end = conn->send_seq_end;
+		tcp_seg_update(conn->ack_seg, conn, conn->delayed_ack_flags);
+		tcp_seg_send(module, conn->ack_seg);
+
+		if (conn->recv_win == 0) {
+			conn->flow_stopped = 1;
+		}
 	}
 
 	conn->main_wait_flag = 1;
@@ -1206,7 +1219,6 @@ void tcp_main_closing(struct fins_module *module, struct tcp_conn *conn) {
 
 void tcp_main_time_wait(struct fins_module *module, struct tcp_conn *conn) {
 	PRINT_DEBUG("Entered: conn=%p", conn);
-	struct tcp_seg *seg;
 
 	if (conn->request_interrupt) {
 		conn->request_interrupt = 0;
@@ -1223,10 +1235,14 @@ void tcp_main_time_wait(struct fins_module *module, struct tcp_conn *conn) {
 			conn->to_delayed_flag = 0;
 
 			//send ack
-			seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-			tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-			tcp_seg_send(module, seg);
-			tcp_seg_free(seg);
+			conn->ack_seg->seq_num = conn->send_seq_end;
+			conn->ack_seg->seq_end = conn->send_seq_end;
+			tcp_seg_update(conn->ack_seg, conn, conn->delayed_ack_flags);
+			tcp_seg_send(module, conn->ack_seg);
+
+			if (conn->recv_win == 0) {
+				conn->flow_stopped = 1;
+			}
 		}
 
 		PRINT_DEBUG("TO, CLOSE: state=%d, conn=%p", conn->state, conn);
@@ -1239,15 +1255,20 @@ void tcp_main_time_wait(struct fins_module *module, struct tcp_conn *conn) {
 		PRINT_DEBUG("flagging waitFlag");
 
 		if (conn->to_delayed_flag) {
-			//delayed ACK timeout, send ACK
-			conn->delayed_flag = 0;
 			conn->to_delayed_flag = 0;
 
+			//delayed ACK timeout, send ACK
+			conn->delayed_flag = 0;
+
 			//send ack
-			seg = tcp_seg_create(conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port, conn->send_seq_end, conn->send_seq_end);
-			tcp_seg_update(seg, conn, conn->delayed_ack_flags);
-			tcp_seg_send(module, seg);
-			tcp_seg_free(seg);
+			conn->ack_seg->seq_num = conn->send_seq_end;
+			conn->ack_seg->seq_end = conn->send_seq_end;
+			tcp_seg_update(conn->ack_seg, conn, conn->delayed_ack_flags);
+			tcp_seg_send(module, conn->ack_seg);
+
+			if (conn->recv_win == 0) {
+				conn->flow_stopped = 1;
+			}
 		}
 	}
 

@@ -918,11 +918,11 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	}
 	//release_sock(sk); //no one else can use, since socket creates
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	//lock_sock(sk); //no one else can use, since socket creates
 	//wedge_calls[call_index].sem
@@ -1076,12 +1076,12 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -1214,12 +1214,12 @@ static int fins_listen(struct socket *sock, int backlog) {
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -1358,12 +1358,12 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -1560,12 +1560,12 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 	release_sock(sk_new);
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	lock_sock(sk_new);
@@ -1713,12 +1713,12 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -1950,12 +1950,12 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -2132,12 +2132,12 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -2642,12 +2642,12 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -3130,12 +3130,12 @@ static int fins_release(struct socket *sock) {
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -3277,12 +3277,12 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -3456,12 +3456,12 @@ static int fins_shutdown(struct socket *sock, int how) {
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -3634,12 +3634,12 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -3769,12 +3769,12 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 	if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 		//TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 	}
-	PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 	lock_sock(sk);
 	PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -3941,12 +3941,12 @@ wedge_calls[call_index].call_id = -1;
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 //TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 }
-PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 lock_sock(sk);
 PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",
@@ -4138,12 +4138,12 @@ wedge_calls[call_index].call_id = -1;
 	}
 	release_sock(sk);
 
-	PRINT_DEBUG("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+	PRINT_IMPORTANT("waiting for reply: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 if (down_interruptible(&wedge_calls[call_index].wait_sem)) {
 		PRINT_ERROR("wedge_calls[%d].wait_sem acquire fail", call_index);
 //TODO potential problem with wedge_calls[call_index].id = -1: frees call after nl_data_ready verify & filling info, 3rd thread inserting call
 }
-PRINT_DEBUG("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
+PRINT_IMPORTANT("relocked my semaphore: sk=%p, sock_id=%llu, sock_index=%d, call_id=%u, call_index=%d", sk, sock_id, sock_index, call_id, call_index);
 
 lock_sock(sk);
 PRINT_DEBUG("shared recv: sock_id=%llu, call_id=%d, reply=%d, ret=%u, msg=%u, len=%u, buf=%p",

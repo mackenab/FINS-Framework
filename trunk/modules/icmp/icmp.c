@@ -501,6 +501,24 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	uint32_t protocol = ICMP_PROTOCOL;
 	secure_metadata_writeToElement(ff->metaData, "send_protocol", &protocol, META_TYPE_INT32);
 
+#ifdef DEBUG
+	struct icmp_packet *icmp_pkt = (struct icmp_packet *) ff->dataFrame.pdu;
+	uint32_t data_len = ff->dataFrame.pduLength - ICMP_HEADER_SIZE;
+	PRINT_DEBUG("ff=%p, type=%u, code=%u, data_len=%u", ff, icmp_pkt->type, icmp_pkt->code, data_len);
+
+	switch (icmp_pkt->type) {
+	case TYPE_ECHOREQUEST:
+		if (icmp_pkt->code == CODE_ECHO) {
+			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
+		} else {
+		}
+		break;
+	default:
+		PRINT_DEBUG("default: type=%u", icmp_pkt->type);
+		break;
+	}
+#endif
+
 	struct finsFrame *ff_clone = cloneFinsFrame(ff);
 	if (module_send_flow(module, ff, ICMP_FLOW_IPV4)) {
 		struct icmp_sent *sent = (struct icmp_sent *) secure_malloc(sizeof(struct icmp_sent));

@@ -95,9 +95,11 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 //}
 
 	++shared->capture_count;
+#ifdef DEBUG
 	if (shared->capture_count % 1000 == 0) {
 		PRINT_DEBUG("Packet captured: count=%llu, size=%d", shared->capture_count, dataLength);
 	}
+#endif
 
 //print_hex_block(packetReceived, dataLength);
 //fflush(stdout);
@@ -156,9 +158,11 @@ void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *s
 				PRINT_ERROR("Injection failed: framelen=%d, errno=%u, str='%s'", framelen, errno, strerror(errno));
 			} else {
 				++shared->inject_count;
+#ifdef DEBUG
 				if (shared->inject_count % 1000 == 0) {
 					PRINT_DEBUG("Packet injected: count=%llu, size=%d ", shared->inject_count, numBytes);
 				}
+#endif
 			}
 		}
 	} // end of while loop

@@ -2238,8 +2238,8 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 			sock_index = match_conn_addr4_tcp(module, src_ip, (uint16_t) src_port, 0, 0);
 		}
 		if (sock_index == -1) {
-			PRINT_WARN("No matching socket, freeing TCP data: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
-					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port);
+			PRINT_WARN("No matching socket, freeing TCP data: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u, data_len=%u",
+					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port, ff->dataFrame.pduLength);
 			freeFinsFrame(ff);
 			return;
 		}
@@ -2322,8 +2322,8 @@ void daemon_in_error_tcp(struct fins_module *module, struct finsFrame *ff, uint3
 			sock_index = match_conn_addr4_tcp(module, src_ip, (uint16_t) src_port, 0, 0);
 		}
 		if (sock_index == -1) {
-			PRINT_WARN("No matching socket, freeing TCP error msg: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u",
-					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port);
+			PRINT_WARN("No matching socket, freeing TCP error msg: ff=%p, src='%u.%u.%u.%u':%u, dst='%u.%u.%u.%u':%u, data_len=%u",
+					ff, (src_ip&0xFF000000)>>24, (src_ip&0x00FF0000)>>16, (src_ip&0x0000FF00)>>8, (src_ip&0x000000FF), (uint16_t) src_port, (dst_ip&0xFF000000)>>24, (dst_ip&0x00FF0000)>>16, (dst_ip&0x0000FF00)>>8, (dst_ip&0x000000FF), (uint16_t)dst_port, ff->ctrlFrame.data_len);
 			//TODO change back  to PRINT_ERROR
 			freeFinsFrame(ff);
 			return;
