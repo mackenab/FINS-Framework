@@ -22,8 +22,8 @@
 
 void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	struct udp_data *md = (struct udp_data *) module->data;
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
-	PRINT_DEBUG("UDP_in ff=%p", ff);
 	/* point to the necessary data in the FDF */
 	PRINT_DEBUG("%d", (int)ff);
 	struct udp_header* packet = (struct udp_header*) ff->dataFrame.pdu;

@@ -14,7 +14,7 @@
 #define SWITCH_MAX_FLOWS 0
 
 struct switch_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[SWITCH_MAX_FLOWS];
 
@@ -37,9 +37,9 @@ void switch_fcf(struct fins_module *module, struct finsFrame *ff);
 void switch_set_param(struct fins_module *module, struct finsFrame *ff);
 
 //don't use 0
-#define SWITCH_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define SWITCH_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define SWITCH_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define SWITCH_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define SWITCH_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define SWITCH_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 
 #define SWITCH_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define SWITCH_SET_PARAM_LINKS MOD_SET_PARAM_LINKS

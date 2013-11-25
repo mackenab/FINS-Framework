@@ -228,15 +228,15 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case INTERFACE_SET_PARAM_FLOWS:
-		PRINT_DEBUG("INTERFACE_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=INTERFACE_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case INTERFACE_SET_PARAM_LINKS:
-		PRINT_DEBUG("INTERFACE_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=INTERFACE_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case INTERFACE_SET_PARAM_DUAL:
-		PRINT_DEBUG("INTERFACE_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=INTERFACE_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	default:
@@ -338,6 +338,8 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 
 					struct interface_request *request_resp;
 					struct interface_store *temp_store;
+					struct finsFrame *ff_err;
+					int sent;
 					while (!list_is_empty(cache->request_list)) {
 						request_resp = (struct interface_request *) list_remove_front(cache->request_list);
 
@@ -347,8 +349,30 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 							interface_store_free(temp_store);
 						}
 
-						//TODO generate ICMP msg, send FCF error frame?
-						//TODO or send icmp msg to ip/transport proto
+						ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+						ff_err->dataOrCtrl = FF_CONTROL;
+						ff_err->metaData = request_resp->ff->metaData;
+						request_resp->ff->metaData = NULL;
+
+						ff_err->ctrlFrame.sender_id = module->index;
+						ff_err->ctrlFrame.serial_num = gen_control_serial_num();
+						ff_err->ctrlFrame.opcode = CTRL_ERROR;
+						ff_err->ctrlFrame.param_id = INTERFACE_ERROR_GET_ADDR;
+
+						ff_err->ctrlFrame.data_len = request_resp->ff->dataFrame.pduLength;
+						ff_err->ctrlFrame.data = request_resp->ff->dataFrame.pdu;
+						request_resp->ff->dataFrame.pduLength = 0;
+						request_resp->ff->dataFrame.pdu = NULL;
+
+						//should we separate icmp & error messages? what about disabling ICMP, what errors should it stop?
+						//if yes, eth->ip->icmp or ip->proto
+						//if no, eth->icmp->proto
+						//if partial, eth->ip->icmp->proto (allows for similar to iptables)
+						//Sending to ICMP mimic kernel func, if remove icmp stops error
+						sent = module_send_flow(module, ff_err, INTERFACE_FLOW_IPV4);
+						if (sent == 0) {
+							freeFinsFrame(ff_err);
+						}
 
 						interface_request_free(request_resp);
 					}
@@ -358,14 +382,15 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 					//cache already confirmed, so do nothing
 					list_remove(cache->request_list, request);
 
-					//TODO generate ICMP msg, send FCF error frame?
-					//TODO or send icmp msg to ip/transport proto
+					//Send FCF error to IPv4, then? IPv4 send to ICMP or to each proto?
 
 					interface_request_free(request);
 
 					store->cache = NULL;
 					interface_store_free(store);
 				}
+			} else {
+				//do nothing, other requests sent
 			}
 		}
 	} else {

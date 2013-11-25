@@ -451,11 +451,11 @@ struct if_record { //for an interface
 	uint64_t mac; //SIOCGIFHWADDR
 
 	//changeable
-	uint8_t mode; //1=infrastructure, 2=adhoc modes //TODO rename to mode
+	uint8_t mode; //1=infrastructure, 2=adhoc modes
 	uint32_t mtu; //SIOCGIFMTU
 	uint32_t flags; //TODO use? //SIOCGIFFLAGS
 
-	struct linked_list *addr_list;
+	struct linked_list *addr_list; //linked list of addr_record structs, representing addresses for this interface
 };
 struct if_record *ifr_clone(struct if_record *ifr);
 int ifr_running_test(struct if_record *ifr);
@@ -492,12 +492,12 @@ struct cache_record {
 };
 
 struct envi_record {
-	struct linked_list *if_list; //list of if_record, for a list of interfaces
+	struct linked_list *if_list; //linked list of if_record structs, representing the interfaces
 	struct if_record *if_loopback;
 	struct if_record *if_main;
-	//struct linked_list *addr_list; //list of addr_record, for interfaces
+	//struct linked_list *addr_list; //linked list of addr_record structs, representing addresses of all interfaces
 
-	struct linked_list *route_list; //list of route_record, for a routing table
+	struct linked_list *route_list; //linked list of route_record structs, for a routing table
 //struct linked_list *route_cache; //TODO add in routing cache?
 //struct linked_list *foward_list; //TODO add in forwarding table?
 };

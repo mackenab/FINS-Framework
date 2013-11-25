@@ -381,7 +381,7 @@ void module_set_param_dual(struct fins_module *module, struct finsFrame *ff) {
 	freeFinsFrame(ff);
 }
 
-void module_get_param_flows(struct fins_module *module, struct finsFrame *ff) {
+void module_read_param_flows(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 
@@ -418,7 +418,7 @@ void module_get_param_flows(struct fins_module *module, struct finsFrame *ff) {
 	module_reply_fcf(module, ff, FCF_TRUE, 0);
 }
 
-void module_get_param_links(struct fins_module *module, struct finsFrame *ff) {
+void module_read_param_links(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 
@@ -437,7 +437,7 @@ void module_get_param_links(struct fins_module *module, struct finsFrame *ff) {
 	module_reply_fcf(module, ff, FCF_TRUE, 0);
 }
 
-void module_get_param_dual(struct fins_module *module, struct finsFrame *ff) {
+void module_read_param_dual(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct fins_module_table *mt = (struct fins_module_table *) module->data;
 

@@ -107,7 +107,7 @@ struct arp_cache {
 	uint64_t mac;
 	uint32_t ip;
 
-	struct linked_list *request_list;
+	struct linked_list *request_list; //linked list of arp_request structs, representing requests for this cache
 	uint8_t seeking;
 	struct timeval updated_stamp;
 
@@ -136,13 +136,13 @@ struct arp_message *fdf_to_arp(struct finsFrame *ff);
 #define ARP_FLOW_INTERFACE	0
 
 struct arp_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[ARP_MAX_FLOWS];
 
 	pthread_t switch_to_arp_thread;
-	struct linked_list *if_list;
-	struct linked_list *cache_list;
+	struct linked_list *if_list; //linked list of if_record structs, representing all interfaces
+	struct linked_list *cache_list; //linked list of cache_record structs, representing ARP cache
 
 	uint8_t interrupt_flag;
 	int thread_count;
@@ -171,9 +171,9 @@ void arp_interrupt(struct fins_module *module);
 void arp_handle_to(struct fins_module *module, struct arp_cache *cache);
 
 //don't use 0
-#define ARP_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define ARP_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define ARP_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define ARP_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define ARP_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define ARP_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 
 #define ARP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define ARP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS

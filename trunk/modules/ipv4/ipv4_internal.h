@@ -259,17 +259,17 @@ void IP4_exit(void);
 #define IPV4_FLOW_UDP 		3
 
 struct ipv4_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[IPV4_MAX_FLOWS];
 
 	pthread_t switch_to_ipv4_thread;
 
-	struct linked_list *addr_list;
+	struct linked_list *addr_list; //list of IPv4 addresses for all of the interfaces
 	struct addr_record *addr_loopback;
 	struct addr_record *addr_main;
 
-	struct linked_list *route_list;
+	struct linked_list *route_list; //list of route_record, for a routing table
 	//struct ip4_reass_list *packet_list = NULL;
 	uint16_t unique_id;
 
@@ -301,10 +301,14 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff);
 void ipv4_const_header(struct fins_module *module, struct ip4_packet *packet, uint32_t source, uint32_t destination, uint8_t protocol);
 void ipv4_send_fdf_out(struct fins_module *module, struct finsFrame *ff, struct ip4_packet *ppacket, uint32_t address, int32_t if_index);
 
+#define IPV4_ERROR_TTL 0
+#define IPV4_ERROR_DEST_UNREACH 1
+#define IPV4_ERROR_GET_ADDR 2
+
 //don't use 0
-#define IPV4_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define IPV4_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define IPV4_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define IPV4_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define IPV4_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define IPV4_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 
 #define IPV4_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define IPV4_SET_PARAM_LINKS MOD_SET_PARAM_LINKS

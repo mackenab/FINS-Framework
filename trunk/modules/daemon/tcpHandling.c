@@ -34,7 +34,7 @@ int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t 
 			test_host_ip = addr4_get_ip(&md->sockets[i].host_addr);
 			test_host_port = addr4_get_port(&md->sockets[i].host_addr);
 
-			if (test_host_port == host_port && (test_host_ip == INADDR_ANY || test_host_ip == host_ip)) {
+			if (test_host_port == host_port && (test_host_ip == DAEMON_ADDR_ANY || test_host_ip == host_ip)) {
 				return i;
 			}
 		}
@@ -62,8 +62,8 @@ int match_conn_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t 
 			test_rem_ip = addr4_get_ip(&md->sockets[i].rem_addr);
 			test_rem_port = addr4_get_port(&md->sockets[i].rem_addr);
 
-			if (test_host_port == host_port && test_rem_port == rem_port && (test_host_ip == INADDR_ANY || test_host_ip == host_ip)
-					&& (test_rem_ip == INADDR_ANY || test_rem_ip == rem_ip)) {
+			if (test_host_port == host_port && test_rem_port == rem_port && (test_host_ip == DAEMON_ADDR_ANY || test_host_ip == host_ip)
+					&& (test_rem_ip == DAEMON_ADDR_ANY || test_rem_ip == rem_ip)) {
 				return i;
 			}
 		}
@@ -105,21 +105,24 @@ void bind_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, s
 		uint16_t host_port = ntohs(addr4_get_port(addr));
 		PRINT_DEBUG("bind address: family=%u, host_ip=%u, host_port=%u", AF_INET, host_ip, host_port);
 
-		if (match_host_addr4_tcp(module, host_ip, host_port) != -1) {
-			PRINT_ERROR("this port is not free");
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRINUSE);
-			return;
-		}
-
-		if (host_ip == INADDR_ANY) { //TODO check if this is right? should TCP get INADDR_ANY
-			struct addr_record *address = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
-			if (address != NULL) {
-				host_ip = addr4_get_ip(&address->ip);
-			} else {
-				PRINT_WARN("todo error");
+		if (host_port == DAEMON_PORT_ANY) {
+			/**
+			 * It is supposed to be randomly selected from the range found in
+			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
+			 */
+			while (1) {
+				host_port = (uint16_t) randoming(DAEMON_PORT_MIN, DAEMON_PORT_MAX);
+				if (match_host_addr4_udp(module, host_ip, (uint16_t) host_port) == -1) {
+					break;
+				}
+			}
+		} else {
+			if (match_host_addr4_udp(module, host_ip, host_port) != -1 && !md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR) {
+				PRINT_ERROR("this port is not free");
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EADDRINUSE);
+				return;
 			}
 		}
-
 		md->sockets[hdr->sock_index].family = AF_INET;
 		addr4_set_ip(&md->sockets[hdr->sock_index].host_addr, host_ip);
 		addr4_set_port(&md->sockets[hdr->sock_index].host_addr, host_port);
@@ -180,6 +183,8 @@ void listen_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	uint32_t state = md->sockets[hdr->sock_index].state;
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta, "backlog", &backlog, META_TYPE_INT32);
+
+	//TODO include other sockopts that have been set
 
 	if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_EXEC, DAEMON_EXEC_TCP_LISTEN)) {
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -276,7 +281,7 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
 			 */
 			while (1) {
-				host_port = (uint16_t) randoming(MIN_port, MAX_port);
+				host_port = (uint16_t) randoming(DAEMON_PORT_MIN, DAEMON_PORT_MAX);
 				if (match_host_addr4_tcp(module, host_ip, host_port) == -1) {
 					break;
 				}
@@ -316,6 +321,8 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	uint32_t state = md->sockets[hdr->sock_index].state;
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta, "flags", &flags, META_TYPE_INT32);
+
+	//TODO include other sockopts that have been set
 
 	uint32_t serial_num = gen_control_serial_num();
 	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_CONNECT);
@@ -462,6 +469,15 @@ void getname_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		if (peer == 0) { //getsockname
 			addr_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 			addr_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
+
+			if (addr_ip == DAEMON_ADDR_ANY) { //TODO change this when have multiple interfaces
+				struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+				if (addr != NULL) {
+					addr_ip = addr4_get_ip(&addr->ip);
+				} else {
+					PRINT_WARN("todo error");
+				}
+			}
 		} else if (peer == 1) { //getpeername
 			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
 				addr_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
@@ -479,12 +495,12 @@ void getname_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 				addr_port = 0;
 			}
 		} else {
-			//TODO error
 			PRINT_WARN("todo error");
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //remove
-			return;
+			addr_ip = 0;
+			addr_port = 0;
 		}
 
+		address.ss_family = md->sockets[hdr->sock_index].family;
 		address_len = sizeof(struct sockaddr_in);
 
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
@@ -492,21 +508,50 @@ void getname_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		addr4->sin_port = htons(addr_port);
 		PRINT_DEBUG("addr=('%s':%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
+
+		uint16_t addr_port;
+
+		if (peer == 0) { //getsockname
+			addr_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
+		} else if (peer == 1) { //getpeername
+			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+				addr_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+			} else {
+				addr_port = 0;
+			}
+		} else if (peer == 2) { //accept4 //TODO figure out supposed to do??
+			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+				addr_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
+			} else {
+				addr_port = 0;
+			}
+		} else {
+			addr_port = 0;
+		}
+
+		address.ss_family = md->sockets[hdr->sock_index].family;
+		address_len = sizeof(struct sockaddr_in6);
+
+		struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &address;
+		addr6->sin6_port = htons(addr_port);
 		PRINT_WARN("todo");
-		//TODO
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
+		//TODO finish
 	} else {
+		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
 		//AF_UNSPEC, only occurs when not bound
-		PRINT_WARN("todo");
-
-		//returns struct sockaddr with just family filled out
+		//Observed returns struct sockaddr with just family filled out
 		//Family defaults to AF_INET, probably because of the main address of main interface
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1); //remove
-		return;
-	}
 
-	address.ss_family = md->sockets[hdr->sock_index].family;
+		//TODO figure out correct response to this
+		address.ss_family = AF_INET;
+		address_len = sizeof(struct sockaddr_in);
+
+		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
+		addr4->sin_addr.s_addr = 0;
+		addr4->sin_port = 0;
+		PRINT_DEBUG("addr=('%s':%d) netw=%u", inet_ntoa(addr4->sin_addr), ntohs(addr4->sin_port), addr4->sin_addr.s_addr);
+	}
 
 	//send msg to wedge
 	int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + address_len;
@@ -709,7 +754,7 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			 * /proc/sys/net/ipv4/ip_local_port_range default range in Ubuntu is 32768 - 61000
 			 */
 			while (1) {
-				host_port = (uint16_t) randoming(MIN_port, MAX_port);
+				host_port = (uint16_t) randoming(DAEMON_PORT_MIN, DAEMON_PORT_MAX);
 				if (match_host_addr4_tcp(module, host_ip, (uint16_t) host_port) == -1) {
 					break;
 				}
@@ -949,7 +994,7 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "value", &msg_len, META_TYPE_INT32);
 
-		if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_SET_PARAM, SET_PARAM_TCP_HOST_WINDOW)) {
+		if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_SET_PARAM, DAEMON_SET_PARAM_TCP_HOST_WINDOW)) {
 			PRINT_DEBUG("Exited, normal: hdr=%p", hdr);
 		} else {
 			PRINT_ERROR("Exited, fail sending flow msgs: hdr=%p", hdr);
@@ -1056,7 +1101,8 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 	uint32_t mask = 0;
 
 	if (events) { //initial
-		PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+		PRINT_DEBUG(
+				"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 				(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 		if (events & (POLLERR)) {
@@ -1179,7 +1225,7 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
 				PRINT_DEBUG(
-						"POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+						"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
@@ -1446,112 +1492,232 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 	}
 
+	/*
+	 * 7 levels+:
+	 * SOL_SOCKET == 1
+	 * IPPROTO_IP == SOL_IP == 0
+	 * IPPROTO_IPV6 == SOL_IPV6 == 41
+	 * IPPROTO_ICMP == 1
+	 * IPPROTO_ICMPV6 == SOL_ICMPV6 == 58
+	 * IPPROTO_RAW == SOL_RAW == 255
+	 * IPPROTO_TCP == SOL_TCP == 6
+	 */
+
 	int send_dst = -1;
 	int len = 0;
 	uint8_t *val = NULL;
 
-	uint32_t param_id = optname;
-
-	switch (optname) {
-	case SO_DEBUG:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_DEBUG; //TODO move into sem's
-			send_dst = 0;
+	switch (level) {
+	case SOL_IP:
+		switch (optname) {
+		case IP_TOS:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_TOS;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_RECVERR:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_RECVERR;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_MTU_DISCOVER:
+			//TODO
+			PRINT_WARN("todo");
+			break;
+		case IP_RECVTTL:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_TTL:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_TTL;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
 		}
 		break;
-	case SO_REUSEADDR:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR; //TODO move into sem's
-			send_dst = 0;
+	case SOL_RAW:
+		//TODO check whether this should throw an error
+		switch (optname) {
+		case ICMP_FILTER:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FICMP_FILTER;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
 		}
 		break;
-	case SO_TYPE:
+	case SOL_TCP:
+		switch (optname) {
+		case TCP_NODELAY:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
+		}
+		break;
+	case SOL_SOCKET:
+		switch (optname) {
+		case SO_DEBUG:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_DEBUG;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_REUSEADDR:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_TYPE:
 #ifndef BUILD_FOR_ANDROID
-	case SO_PROTOCOL:
-	case SO_DOMAIN:
+		case SO_PROTOCOL:
+		case SO_DOMAIN:
 #endif
-	case SO_ERROR:
-	case SO_DONTROUTE:
-	case SO_BROADCAST:
-		break;
-	case SO_SNDBUF:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF; //TODO move into sem's
-			send_dst = 0;
-		}
-		break;
-	case SO_SNDBUFFORCE:
-		break;
-	case SO_RCVBUF:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF; //TODO move into sem's
-			send_dst = 0;
-		}
-		break;
-	case SO_RCVBUFFORCE:
-		break;
-	case SO_KEEPALIVE:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE; //TODO move into sem's
-			send_dst = 0;
-		}
-		break;
-	case SO_OOBINLINE:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE; //TODO move into sem's
-			send_dst = 0;
-		}
-		break;
-	case SO_NO_CHECK:
-		break;
-	case SO_PRIORITY:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY; //TODO move into sem's
-			send_dst = 0;
-		}
-		break;
-	case SO_LINGER:
-	case SO_BSDCOMPAT:
-	case SO_TIMESTAMP:
+		case SO_ERROR:
+		case SO_DONTROUTE:
+		case SO_BROADCAST:
+			break;
+		case SO_SNDBUF:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_SNDBUFFORCE:
+			break;
+		case SO_RCVBUF:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_RCVBUFFORCE:
+			break;
+		case SO_KEEPALIVE:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_OOBINLINE:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_NO_CHECK:
+			break;
+		case SO_PRIORITY:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_LINGER:
+		case SO_BSDCOMPAT:
+			break;
+		case SO_TIMESTAMP:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
 #ifndef BUILD_FOR_ANDROID
-	case SO_TIMESTAMPNS:
-	case SO_TIMESTAMPING:
+		case SO_TIMESTAMPNS:
+		case SO_TIMESTAMPING:
 #endif
-	case SO_RCVTIMEO:
-	case SO_SNDTIMEO:
-	case SO_RCVLOWAT:
-	case SO_SNDLOWAT:
-		break;
-	case SO_PASSCRED:
-		if (optlen >= sizeof(int)) {
-			len = sizeof(int);
-			val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_PASSCRED; //TODO move into sem's
-			send_dst = 0;
-		}
-		break;
-	case SO_PEERCRED:
-		//TODO trickier
-	case SO_PEERNAME:
-	case SO_ACCEPTCONN:
-	case SO_PASSSEC:
-	case SO_PEERSEC:
+		case SO_RCVTIMEO:
+			//TODO less - gets 8 byte value, timestamp??
+		case SO_SNDTIMEO:
+			//TODO less - gets 8 byte value, timestamp??
+		case SO_RCVLOWAT:
+		case SO_SNDLOWAT:
+			break;
+		case SO_PASSCRED:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_PASSCRED;
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_PEERCRED:
+			//TODO trickier
+		case SO_PEERNAME:
+		case SO_ACCEPTCONN:
+		case SO_PASSSEC:
+		case SO_PEERSEC:
 #ifndef BUILD_FOR_ANDROID
-	case SO_MARK:
-	case SO_RXQ_OVFL:
+		case SO_MARK:
+		case SO_RXQ_OVFL:
 #endif
-	case SO_ATTACH_FILTER:
-	case SO_DETACH_FILTER:
+		case SO_ATTACH_FILTER:
+		case SO_DETACH_FILTER:
+			PRINT_WARN("todo");
+			break;
+		default:
+			//nack?
+			PRINT_ERROR("default=%d", optname);
+			break;
+		}
 		break;
 	default:
-		//nack?
-		PRINT_ERROR("default=%d", optname);
 		break;
 	}
 
@@ -1559,7 +1725,7 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		PRINT_ERROR("send_dst == -1");
 		metadata_destroy(meta);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-	} else if (send_dst == 0) {
+	} else if (send_dst == 0 || md->sockets[hdr->sock_index].state == SS_UNCONNECTED) {
 		metadata_destroy(meta);
 
 		//send msg to wedge
@@ -1599,13 +1765,19 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		}
 		free(msg);
 	} else {
+		uint32_t opt_level = level;
+		secure_metadata_writeToElement(meta, "opt_level", &opt_level, META_TYPE_INT32);
+		uint32_t opt_name = optname;
+		secure_metadata_writeToElement(meta, "opt_name", &opt_name, META_TYPE_INT32);
+		uint32_t opt_len = optlen;
+		secure_metadata_writeToElement(meta, "opt_len", &opt_len, META_TYPE_INT32);
+
 		uint32_t serial_num = gen_control_serial_num();
-		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_READ_PARAM, param_id);
+		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_READ_PARAM, DAEMON_READ_PARAM_TCP_SOCK_OPT);
 		if (sent > 0) {
 			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 				PRINT_DEBUG("inserting call: hdr=%p", hdr);
 				md->calls[hdr->call_index].serial_num = serial_num;
-				md->calls[hdr->call_index].buf = optname;
 				md->calls[hdr->call_index].sent = sent;
 			} else {
 				PRINT_ERROR("Insert fail: hdr=%p", hdr);
@@ -1645,22 +1817,105 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
 	}
 
-	int send_dst = -1;
-	//int len = 0;
-	//uint8_t *val = NULL;
+	/*
+	 * 7 levels+:
+	 * SOL_SOCKET == 1
+	 * IPPROTO_IP == SOL_IP == 0
+	 * IPPROTO_IPV6 == SOL_IPV6 == 41
+	 * IPPROTO_ICMP == 1
+	 * IPPROTO_ICMPV6 == SOL_ICMPV6 == 58
+	 * IPPROTO_RAW == SOL_RAW == 255
+	 * IPPROTO_TCP == SOL_TCP == 6
+	 */
 
-	uint32_t param_id = optname;
+	int send_dst = -1;
 
 	switch (level) {
 	case SOL_IP:
-		PRINT_WARN("todo error");
+		switch (optname) {
+		case IP_TOS:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FIP_TOS = *(int *) optval;
+				PRINT_DEBUG("FIP_TOS=%d", md->sockets[hdr->sock_index].sockopts.FIP_TOS);
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_RECVERR:
+			if (optlen >= sizeof(int)) {
+				int old = md->sockets[hdr->sock_index].sockopts.FIP_RECVERR;
+				md->sockets[hdr->sock_index].sockopts.FIP_RECVERR = *(int *) optval;
+				PRINT_DEBUG("FIP_RECVERR=%d", md->sockets[hdr->sock_index].sockopts.FIP_RECVERR);
+				send_dst = 0;
+
+				if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+					if (old && !md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) { //FIP_RECVERR opt changed from 1 to 0
+						struct daemon_store *old_store;
+						while (md->sockets[hdr->sock_index].error_list->len > 1) {
+							old_store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].error_list);
+							daemon_store_free(old_store);
+						}
+					}
+				}
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_MTU_DISCOVER:
+			//TODO
+			PRINT_ERROR("todo: IP_MTU_DISCOVER");
+			break;
+		case IP_RECVTTL:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL = *(int *) optval;
+				PRINT_DEBUG("FIP_RECVTTL=%d", md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_TTL:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FIP_TTL = *(int *) optval;
+				PRINT_DEBUG("FIP_TTL=%d", md->sockets[hdr->sock_index].sockopts.FIP_TTL);
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
+		}
 		break;
 	case SOL_RAW:
-		PRINT_WARN("todo error");
+		//TODO check whether this should throw an error
+		switch (optname) {
+		case ICMP_FILTER:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FICMP_FILTER = *(int *) optval;
+				PRINT_DEBUG("FICMP_FILTER=%d", md->sockets[hdr->sock_index].sockopts.FICMP_FILTER);
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
+		}
 		break;
 	case SOL_TCP:
 		switch (optname) {
 		case TCP_NODELAY:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY = *(int *) optval;
+				PRINT_DEBUG("FTCP_NODELAY=%d", md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
+
+				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY, META_TYPE_INT32);
+				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
+			}
 			break;
 		default:
 			break;
@@ -1671,16 +1926,23 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		case SO_DEBUG:
 			if (optlen >= sizeof(int)) {
 				md->sockets[hdr->sock_index].sockopts.FSO_DEBUG = *(int *) optval;
+				PRINT_DEBUG("FSO_DEBUG=%d", md->sockets[hdr->sock_index].sockopts.FSO_DEBUG);
 
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_DEBUG, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_REUSEADDR:
 			if (optlen >= sizeof(int)) {
 				md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR = *(int *) optval;
+				PRINT_DEBUG("FSO_REUSEADDR=%d", md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
+
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_TYPE:
@@ -1695,17 +1957,25 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		case SO_SNDBUF:
 			if (optlen >= sizeof(int)) {
 				md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF = *(int *) optval;
+				PRINT_DEBUG("FSO_SNDBUF=%d", md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
+
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_SNDBUFFORCE:
 			break;
 		case SO_RCVBUF:
 			if (optlen >= sizeof(int)) {
-				md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF = *(int *) optval;
+				md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF = *(int *) optval; //TODO check if this is right!
+				PRINT_DEBUG("FSO_RCVBUF=%d", md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
+
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_RCVBUFFORCE:
@@ -1713,15 +1983,23 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		case SO_KEEPALIVE:
 			if (optlen >= sizeof(int)) {
 				md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE = *(int *) optval;
+				PRINT_DEBUG("FSO_KEEPALIVE=%d", md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE);
+
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_OOBINLINE:
 			if (optlen >= sizeof(int)) {
 				md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE = *(int *) optval;
+				PRINT_DEBUG("FSO_OOBINLINE=%d", md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE);
+
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_NO_CHECK:
@@ -1729,19 +2007,34 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		case SO_PRIORITY:
 			if (optlen >= sizeof(int)) {
 				md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY = *(int *) optval;
+				PRINT_DEBUG("FSO_PRIORITY=%d", md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY);
+
 				secure_metadata_writeToElement(meta, "value", &md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY, META_TYPE_INT32);
 				send_dst = 1;
+			} else {
+				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_LINGER:
 		case SO_BSDCOMPAT:
+			break;
 		case SO_TIMESTAMP:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP = *(int *) optval;
+				PRINT_DEBUG("FSO_TIMESTAMP=%d", md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
+				send_dst = 0;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
 #ifndef BUILD_FOR_ANDROID
 		case SO_TIMESTAMPNS:
 		case SO_TIMESTAMPING:
 #endif
 		case SO_RCVTIMEO:
+			//TODO less - gets 8 byte value, timestamp??
 		case SO_SNDTIMEO:
+			//TODO less - gets 8 byte value, timestamp??
 		case SO_RCVLOWAT:
 		case SO_SNDLOWAT:
 		case SO_PASSCRED:
@@ -1758,6 +2051,7 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 #endif
 		case SO_ATTACH_FILTER:
 		case SO_DETACH_FILTER:
+			PRINT_WARN("todo");
 			break;
 		default:
 			//nack?
@@ -1774,13 +2068,17 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 
 		metadata_destroy(meta);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-	} else if (send_dst == 0) {
+	} else if (send_dst == 0 || md->sockets[hdr->sock_index].state == SS_UNCONNECTED) {
 		metadata_destroy(meta);
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
-		uint32_t serial_num = gen_control_serial_num();
+		uint32_t opt_name = optname;
+		secure_metadata_writeToElement(meta, "opt_name", &opt_name, META_TYPE_INT32);
+		uint32_t opt_len = optlen;
+		secure_metadata_writeToElement(meta, "opt_len", &opt_len, META_TYPE_INT32);
 
-		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_SET_PARAM, param_id);
+		uint32_t serial_num = gen_control_serial_num();
+		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_SET_PARAM, DAEMON_SET_PARAM_TCP_SOCK_OPT);
 		if (sent > 0) {
 			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
 				PRINT_DEBUG("inserting call: hdr=%p", hdr);
@@ -1820,7 +2118,7 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
-		ack_send(module, call->id, call->index, call->type, 0);
+		ack_send(module, call->id, call->index, call->type, ret_msg);
 	} else {
 		md->sockets[call->sock_index].state = SS_UNCONNECTED;
 		md->sockets[call->sock_index].error_call = call->type;
@@ -1875,7 +2173,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
-			ack_send(module, call->id, call->index, call->type, 0);
+			ack_send(module, call->id, call->index, call->type, ret_msg);
 		} else {
 			PRINT_ERROR("Exited: insert failed: ff=%p", ff);
 
@@ -1932,11 +2230,18 @@ void getsockopt_in_tcp(struct fins_module *module, struct finsFrame *ff, struct 
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, data=%u",
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index, call->buf);
 
-	if ((int) ff->ctrlFrame.param_id != (int) call->buf || ff->ctrlFrame.ret_val == FCF_FALSE) { //TODO remove (int)'s?
-		PRINT_DEBUG("Exiting, meta errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
+	if (ff->ctrlFrame.param_id != DAEMON_READ_PARAM_TCP_SOCK_OPT) {
+		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
-	} else {
+		daemon_call_free(call);
+		freeFinsFrame(ff);
+		return;
+	}
 
+	uint32_t ret_msg;
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		//################ //TODO switch by param_id, convert into val/len
 		int len = 0;
 		uint8_t *val = NULL;
@@ -1951,7 +2256,7 @@ void getsockopt_in_tcp(struct fins_module *module, struct finsFrame *ff, struct 
 		hdr_ret->call_id = call->id;
 		hdr_ret->call_index = call->index;
 		hdr_ret->ret = ACK;
-		hdr_ret->msg = 0;
+		hdr_ret->msg = ret_msg;
 		uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		*(int *) pt = len;
@@ -1980,6 +2285,8 @@ void getsockopt_in_tcp(struct fins_module *module, struct finsFrame *ff, struct 
 			PRINT_DEBUG("Exited: normal: ff=%p", ff);
 		}
 		free(msg);
+	} else {
+		nack_send(module, call->id, call->index, call->type, ret_msg);
 	}
 
 	daemon_call_free(call);
@@ -1990,12 +2297,21 @@ void setsockopt_in_tcp(struct fins_module *module, struct finsFrame *ff, struct 
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d, data=%u",
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index, call->buf);
 
-	if ((int) ff->ctrlFrame.param_id != (int) call->buf || ff->ctrlFrame.ret_val == FCF_FALSE) { //TODO remove (int)'s?
-		PRINT_DEBUG("Exited: meta errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
+	if (ff->ctrlFrame.param_id != DAEMON_SET_PARAM_TCP_SOCK_OPT) {
+		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
+		freeFinsFrame(ff);
+		return;
+	}
+
+	uint32_t ret_msg;
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
+		ack_send(module, call->id, call->index, call->type, ret_msg);
 	} else {
-		PRINT_DEBUG("Exited: normal: ff=%p", ff);
-		ack_send(module, call->id, call->index, call->type, 0);
+		nack_send(module, call->id, call->index, call->type, ret_msg);
 	}
 
 	daemon_call_free(call);
@@ -2006,14 +2322,21 @@ void release_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 	PRINT_DEBUG("Entered: ff=%p, call_id=%u, call_index=%d, call_type=%u, sock_id=%llu, sock_index=%d",
 			ff, call->id, call->index, call->type, call->sock_id, call->sock_index);
 
-	if ((ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CLOSE && ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CLOSE_STUB) || ff->ctrlFrame.ret_val == FCF_FALSE) {
-		PRINT_DEBUG("Exiting, NACK: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CLOSE && ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CLOSE_STUB) {
+		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
+		freeFinsFrame(ff);
+		return;
+	}
+
+	uint32_t ret_msg;
+	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
+
+	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
+		ack_send(module, call->id, call->index, call->type, ret_msg);
 	} else {
-		PRINT_DEBUG("");
-		daemon_sockets_remove(module, call->sock_index);
-		PRINT_DEBUG("Exiting, ACK: ff=%p", ff);
-		ack_send(module, call->id, call->index, call->type, 0);
+		nack_send(module, call->id, call->index, call->type, ret_msg);
 	}
 
 	daemon_call_free(call);
@@ -2063,7 +2386,7 @@ void poll_in_tcp_fcf(struct fins_module *module, struct finsFrame *ff, struct da
 }
 
 void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint32_t *flags) {
-	if (call->type == POLL_CALL) {
+	if (call->type != POLL_CALL) {
 		return;
 	}
 
@@ -2209,7 +2532,7 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 		secure_metadata_writeToElement(meta_reply, "rem_port", &rem_port, META_TYPE_INT32);
 	}
 
-	if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta_reply, gen_control_serial_num(), CTRL_SET_PARAM, SET_PARAM_TCP_HOST_WINDOW)) {
+	if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta_reply, gen_control_serial_num(), CTRL_SET_PARAM, DAEMON_SET_PARAM_TCP_HOST_WINDOW)) {
 		PRINT_DEBUG("Exited, normal: call=%p", call);
 	} else {
 		PRINT_ERROR("Exited, fail sending flow msgs: call=%p", call);
@@ -2260,6 +2583,7 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 	secure_metadata_writeToElement(ff->metaData, "recv_stamp", &current, META_TYPE_INT64);
 
 	//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
+	PRINT_DEBUG("sockets[%d].call_list->len=%u", sock_index, md->sockets[sock_index].call_list->len);
 	uint32_t flags = POLLIN;
 	list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &flags);
 
@@ -2341,15 +2665,10 @@ void daemon_in_error_tcp(struct fins_module *module, struct finsFrame *ff, uint3
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 	secure_metadata_writeToElement(ff->metaData, "recv_stamp", &current, META_TYPE_INT64);
 
-	if (md->sockets[sock_index].sockopts.FIP_RECVERR) {
-		uint32_t flags = POLLERR;
-		list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &flags);
+	uint32_t flags = POLLERR;
+	list_for_each2(md->sockets[sock_index].call_list, poll_in_tcp_fdf, module, &flags);
 
-		freeFinsFrame(ff);
-	} else {
-		PRINT_WARN("todo");
-		freeFinsFrame(ff);
-	}
+	freeFinsFrame(ff);
 }
 
 void daemon_in_poll_tcp(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg) {
@@ -2582,8 +2901,9 @@ void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struc
 
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
-		if (reply)
+		if (reply) {
 			ack_send(module, call->id, call->index, call->type, 0);
+		}
 	} else {
 		md->sockets[call->sock_index].state = SS_UNCONNECTED;
 		md->sockets[call->sock_index].error_call = call->type;
@@ -2647,8 +2967,9 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
 			PRINT_DEBUG("Exiting, ACK: ff=%p", ff);
-			if (reply)
+			if (reply) {
 				ack_send(module, call->id, call->index, call->type, 0);
+			}
 		} else {
 			PRINT_ERROR("Exited: insert failed: ff=%p", ff);
 

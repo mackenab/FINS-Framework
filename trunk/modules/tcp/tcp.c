@@ -2871,16 +2871,23 @@ void tcp_error(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	switch (ff->ctrlFrame.param_id) {
-	case ERROR_ICMP_TTL:
-		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
+	case TCP_ERROR_TTL:
+		PRINT_DEBUG("param_id=TCP_ERROR_TTL (%d)", ff->ctrlFrame.param_id);
 		PRINT_WARN("todo");
 
 		//TODO finish for
 		//if (ff->ctrlFrame.para)
 		freeFinsFrame(ff);
 		break;
-	case ERROR_ICMP_DEST_UNREACH:
-		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+	case TCP_ERROR_DEST_UNREACH:
+		PRINT_DEBUG("param_id=TCP_ERROR_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("todo");
+
+		//TODO finish
+		freeFinsFrame(ff);
+		break;
+	case TCP_ERROR_GET_ADDR:
+		PRINT_DEBUG("param_id=TCP_ERROR_GET_ADDR (%d)", ff->ctrlFrame.param_id);
 		PRINT_WARN("todo");
 
 		//TODO finish

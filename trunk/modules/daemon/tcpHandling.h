@@ -71,10 +71,20 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 #define DAEMON_EXEC_TCP_OPT 7
 #define DAEMON_EXEC_TCP_POLL 8
 
-#define SET_PARAM_TCP_HOST_WINDOW 3
-#define SET_PARAM_TCP_SOCK_OPT 4
+#define DAEMON_SET_PARAM_TCP_HOST_WINDOW 3
+#define DAEMON_SET_PARAM_TCP_SOCK_OPT 4
 
-#define READ_PARAM_TCP_HOST_WINDOW 3
-#define READ_PARAM_TCP_SOCK_OPT 4
+#define DAEMON_READ_PARAM_TCP_HOST_WINDOW 3
+#define DAEMON_READ_PARAM_TCP_SOCK_OPT 4
+
+//sockopts trying to support
+//TCP_NODELAY
+//SO_DEBUG
+//SO_REUSEADDR
+//SO_SNDBUF
+//SO_RCVBUF
+//SO_KEEPALIVE
+//SO_OOBINLINE
+//SO_PRIORITY
 
 #endif /* TCPHANDLING_H_ */

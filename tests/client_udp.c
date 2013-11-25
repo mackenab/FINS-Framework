@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
 	int sock;
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
-	int addr_len = sizeof(struct sockaddr);
+	//int addr_len = sizeof(struct sockaddr);
 	int numbytes;
 	//struct hostent *host;
 	int send_len = 200000;
@@ -148,7 +148,8 @@ int main(int argc, char *argv[]) {
 	if (argc > 1) { //doesn't work fro android
 		port = atoi(argv[1]);
 	} else {
-		port = 45454;
+		//port = 45454;
+		port = 53;
 	}
 #endif
 
@@ -159,7 +160,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 	//server_addr.sin_port = htons(53);
 
-	server_addr.sin_addr.s_addr = xxx(192,168,1,9);
+	server_addr.sin_addr.s_addr = xxx(192,168,1,13);
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(74,125,224,72);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -209,7 +210,7 @@ int main(int argc, char *argv[]) {
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	printf("\n fd: sock=%d, events=%x\n", sock, fds[1].events);
 	fflush(stdout);
-	int time = 1000;
+	//int timeout = 1000;
 
 	//pID = fork();
 	if (pID == 0) { // child -- Capture process
@@ -271,7 +272,7 @@ int main(int argc, char *argv[]) {
 	 numbytes = sendto(sock, send_data, len, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 	 //sleep(1);
 
-	 ret = poll(fds, nfds, time);
+	 ret = poll(fds, nfds, timeout);
 	 if (ret || 0) {
 	 if (1) {
 	 printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);

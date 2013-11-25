@@ -49,7 +49,7 @@ struct udp_sent {
 };
 struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int udp_sent_host_test(struct udp_sent *sent, uint32_t *host_ip, uint16_t *host_port);
-int udp_sent_data_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len);
+int udp_sent_match_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len);
 void udp_sent_free(struct udp_sent *sent);
 
 //void udp_sent_list_gc(struct udp_sent_list *sent_list, double timeout);
@@ -125,10 +125,6 @@ int UDP_InputQueue_Read_local(struct finsFrame *pff_local);
 
 uint16_t UDP_checkSeparate(uint32_t src, uint32_t dest, uint16_t len, uint16_t protocol, uint16_t wsum);
 
-#define UDP_EXEC_CLEAR_SENT 0
-#define ERROR_ICMP_TTL 0
-#define ERROR_ICMP_DEST_UNREACH 1
-
 #define UDP_LIB "udp"
 #define UDP_MAX_FLOWS 	3
 #define UDP_FLOW_IPV4 	0
@@ -136,14 +132,14 @@ uint16_t UDP_checkSeparate(uint32_t src, uint32_t dest, uint16_t len, uint16_t p
 #define UDP_FLOW_DAEMON	2
 
 struct udp_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[UDP_MAX_FLOWS];
 
 	pthread_t switch_to_udp_thread;
 
 	struct udp_statistics stats;
-	struct linked_list *sent_packet_list;
+	struct linked_list *sent_packet_list; //linked list of udp_sent structs, representing UDP datagrams sent
 };
 
 int udp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
@@ -169,5 +165,15 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void udp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
 void udp_interrupt(struct fins_module *module);
+
+#define UDP_EXEC_CLEAR_SENT 0
+
+#define UDP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
+#define UDP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
+#define UDP_SET_PARAM_DUAL 	MOD_SET_PARAM_DUAL
+
+#define UDP_ERROR_TTL 0
+#define UDP_ERROR_DEST_UNREACH 1
+#define UDP_ERROR_GET_ADDR 2
 
 #endif /* UDP_INTERNAL_H_ */

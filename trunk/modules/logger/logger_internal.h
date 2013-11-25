@@ -38,7 +38,7 @@
 //#define LOGGER_FLOW_RTM  0 //TODO remove
 
 struct logger_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[LOGGER_MAX_FLOWS];
 
@@ -88,9 +88,9 @@ void logger_interrupt(struct fins_module *module);
 #define RTM_EXEC_STOP 4
 
 //don't use 0
-#define LOGGER_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define LOGGER_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define LOGGER_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define LOGGER_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define LOGGER_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define LOGGER_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 #define LOGGER_GET_INTERVAL__id 3
 #define LOGGER_GET_INTERVAL__str "interval"
 #define LOGGER_GET_INTERVAL__type META_TYPE_FLOAT

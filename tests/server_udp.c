@@ -118,7 +118,8 @@ int main(int argc, char *argv[]) {
 	if (argc > 1) {
 		port = atoi(argv[1]);
 	} else {
-		port = 45454;
+		//port = 45454;
+		port = 53; //dnsmasq
 	}
 #endif
 
@@ -156,7 +157,7 @@ int main(int argc, char *argv[]) {
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
 	//server_addr.sin_addr.s_addr = xxx(114,53,31,172);
 	//server_addr.sin_addr.s_addr = xxx(172,31,54,87);
-	//server_addr.sin_addr.s_addr = xxx(192,168,1,20);
+	//server_addr.sin_addr.s_addr = xxx(192,168,1,13);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	server_addr.sin_addr.s_addr = htonl(server_addr.sin_addr.s_addr);
@@ -173,10 +174,15 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in client_addr2;
 	uint32_t socklen = sizeof(struct sockaddr_in);
 	int ret_val = getsockname(sock, (struct sockaddr *) &client_addr2, &socklen);
-	printf("\n UDPServer bound at family=%u, client_addr=%s/%d, netw=%u\n", client_addr2.sin_family, inet_ntoa(client_addr2.sin_addr),
-			ntohs(client_addr2.sin_port), client_addr2.sin_addr.s_addr);
-	fflush(stdout);
-
+	if (ret_val < 0) {
+		perror("getsockname");
+		printf("Failure");
+		exit(1);
+	} else {
+		printf("\n UDPServer bound at family=%u, client_addr=%s/%d, netw=%u\n", client_addr2.sin_family, inet_ntoa(client_addr2.sin_addr),
+				ntohs(client_addr2.sin_port), client_addr2.sin_addr.s_addr);
+		fflush(stdout);
+	}
 	addr_len = sizeof(struct sockaddr);
 
 	printf("\n UDPServer Waiting for client at server_addr=%s/%d, netw=%u", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
@@ -193,7 +199,7 @@ int main(int argc, char *argv[]) {
 	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
-	int time = -1;
+	//int timeout = -1;
 
 	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x", POLLIN, POLLPRI,
 			POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
@@ -238,7 +244,7 @@ int main(int argc, char *argv[]) {
 		while (1) {
 			//printf("\n pID=%d poll before", pID);
 			//fflush(stdout);
-			//ret = poll(fds, nfds, time);
+			//ret = poll(fds, nfds, timeout);
 			//printf("\n poll: pID=%d, ret=%d, revents=%x", pID, ret, fds[ret].revents);
 			//fflush(stdout);
 			if (ret || 1) {

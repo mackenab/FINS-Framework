@@ -13,8 +13,8 @@
 //The FINS Framework socket interceptor (wedge) is compatible with kernel versions v2.6.38 up to but not including v3.8.0.
 //When configuring the wedge for a particular kernel it follows the format <MAJOR>.<MINOR>.<REVISION> e.g. 3.2.0
 #define KERNEL_MAJOR 3
-#define KERNEL_MINOR 2
-#define KERNEL_REVISION 0
+#define KERNEL_MINOR 2 //1 //for android
+#define KERNEL_REVISION 0 //10 //for android
 
 #define NETLINK_FINS 20
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//16384//8192	// Same as userspace, Pick an appropriate value here //NLMSG_GOODSIZE
@@ -636,7 +636,7 @@ void nl_data_ready(struct sk_buff *skb) {
 				}
 				if (wedge_sockets[hdr->sock_index].sock_id == hdr->sock_id) {
 					if (hdr->ret == ACK) {
-						PRINT_DEBUG("triggering socket: sock_id=%llu, sock_index=%d, mask=0x%x", hdr->sock_id, hdr->sock_index, hdr->msg);
+						PRINT_IMPORTANT("triggering socket: sock_id=%llu, sock_index=%d, mask=0x%x", hdr->sock_id, hdr->sock_index, hdr->msg);
 
 						//TODO change so that it wakes up only a single task with the pID given in wedge_sockets[hdr->sock_index].msg
 						if (waitqueue_active(sk_sleep(wedge_sockets[hdr->sock_index].sk))) {

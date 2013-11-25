@@ -55,8 +55,10 @@
 
 #define ACK 	200
 #define NACK 	6666
-#define MIN_port 32768
-#define MAX_port 61000
+#define DAEMON_ADDR_ANY INADDR_ANY
+#define DAEMON_PORT_MIN 32768
+#define DAEMON_PORT_MAX 61000
+#define DAEMON_PORT_ANY 0
 #define DEFAULT_BACKLOG 5
 #define DAEMON_BLOCK_DEFAULT 500
 #define CONTROL_LEN_MAX 10240
@@ -186,13 +188,13 @@ struct socket_options { //TODO change to common opts, then union of structs for 
 	int FSO_ATTACH_FILTER;
 	int FSO_DETACH_FILTER;
 
-//SOL_IP stuff
+	//SOL_IP stuff
 	int FIP_TOS;
 	int FIP_TTL;
 	int FIP_RECVERR;
 	int FIP_RECVTTL;
 
-//SOL_RAW stuff
+	//SOL_RAW stuff
 	int FICMP_FILTER;
 
 	//SOL_TCP stuff;
@@ -317,15 +319,15 @@ struct daemon_socket {
 	uint64_t sock_id_new;
 	int sock_index_new;
 
-	struct linked_list *call_list;
+	struct linked_list *call_list; //linked list of daemon_call structs, representing calls for this socket
 	struct timeval stamp;
 
-	struct linked_list *data_list;
+	struct linked_list *data_list; //linked list of daemon_store structs, holding FDF received by socket
 	int data_buf;
 
-	struct linked_list *error_list;
-	int error_buf;
+	struct linked_list *error_list; //linked list of daemon_store structs, holding FCF errors received by socket
 
+	//struct daemon_store *error_store;
 	uint32_t error_msg;
 	uint32_t error_call;
 
@@ -343,11 +345,6 @@ int daemon_sockets_remove(struct fins_module *module, int sock_index);
 //TODO fix the usage of these
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
 uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta);
-
-//TODO standardize these, so that there aren't different ones for each proto
-//TODO not used? what are these for in this module file?
-//#define ERROR_ICMP_TTL 0
-//#define ERROR_ICMP_DEST_UNREACH 1
 
 struct errhdr {
 	struct sock_extended_err ee;
@@ -398,7 +395,7 @@ struct errhdr {
 #define DAEMON_FLOW_UDP		2
 
 struct daemon_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[DAEMON_MAX_FLOWS];
 
@@ -409,7 +406,7 @@ struct daemon_data {
 	struct daemon_socket sockets[DAEMON_MAX_SOCKETS];
 
 	struct daemon_call calls[DAEMON_MAX_CALLS];
-	struct linked_list *expired_call_list;
+	struct linked_list *expired_call_list; //linked list of daemon_call structs, representing calls that timedout and expired
 
 	uint8_t interrupt_flag;
 
@@ -418,11 +415,9 @@ struct daemon_data {
 	int nl_sockfd; //temp for now
 	sem_t nl_sem;
 
-	struct linked_list *if_list;
+	struct linked_list *if_list; //linked list of if_record structs, representing all interfaces
 	struct if_record *if_loopback;
 	struct if_record *if_main;
-
-	struct linked_list *store_list; //Stored FDF waiting to send
 };
 
 int daemon_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
@@ -531,13 +526,18 @@ struct daemon_socket_other_ops {
 #define DAEMON_ALERT_SHUTDOWN 1
 
 //don't use 0
-#define DAEMON_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define DAEMON_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define DAEMON_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define DAEMON_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define DAEMON_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define DAEMON_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 
 #define DAEMON_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define DAEMON_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define DAEMON_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+
+//change to be the errno.h values?
+#define DAEMON_ERROR_TTL 0
+#define DAEMON_ERROR_DEST_UNREACH 1
+#define DAEMON_ERROR_GET_ADDR 2
 
 #include "udpHandling.h"
 #include "tcpHandling.h"

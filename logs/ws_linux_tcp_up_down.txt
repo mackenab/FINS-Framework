@@ -1,0 +1,1002 @@
+No.     Time        Source                Destination           Protocol Info
+     22 15.960255   10.0.2.15             50.23.225.49          TCP      56759 > http [SYN] Seq=0 Win=14600 Len=0 MSS=1460 SACK_PERM=1 TSV=20926004 TSER=0 WS=6
+
+Frame 22: 76 bytes on wire (608 bits), 76 bytes captured (608 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.258772000 EDT
+    Epoch Time: 1339821769.258772000 seconds
+    [Time delta from previous captured frame: 0.048844000 seconds]
+    [Time delta from previous displayed frame: 0.000000000 seconds]
+    [Time since reference or first frame: 15.960255000 seconds]
+    Frame Number: 22
+    Frame Length: 76 bytes (608 bits)
+    Capture Length: 76 bytes (608 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Sent by us (4)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: CadmusCo_a5:5f:13 (08:00:27:a5:5f:13)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 10.0.2.15 (10.0.2.15), Dst: 50.23.225.49 (50.23.225.49)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 60
+    Identification: 0x19d4 (6612)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x0191 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 10.0.2.15 (10.0.2.15)
+    Destination: 50.23.225.49 (50.23.225.49)
+Transmission Control Protocol, Src Port: 56759 (56759), Dst Port: http (80), Seq: 0, Len: 0
+    Source port: 56759 (56759)
+    Destination port: http (80)
+    [Stream index: 2]
+    Sequence number: 0    (relative sequence number)
+    Header length: 40 bytes
+    Flags: 0x02 (SYN)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...0 .... = Acknowledgement: Not set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..1. = Syn: Set
+            [Expert Info (Chat/Sequence): Connection establish request (SYN): server port http]
+                [Message: Connection establish request (SYN): server port http]
+                [Severity level: Chat]
+                [Group: Sequence]
+        .... .... ...0 = Fin: Not set
+    Window size: 14600
+    Checksum: 0x1f86 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    Options: (20 bytes)
+        Maximum segment size: 1460 bytes
+        TCP SACK Permitted Option: True
+        Timestamps: TSval 20926004, TSecr 0
+        NOP
+        Window scale: 6 (multiply by 64)
+
+0000  00 04 00 01 00 06 08 00 27 a5 5f 13 00 00 08 00   ........'._.....
+0010  45 00 00 3c 19 d4 40 00 40 06 01 91 0a 00 02 0f   E..<..@.@.......
+0020  32 17 e1 31 dd b7 00 50 4b 5a 57 e0 00 00 00 00   2..1...PKZW.....
+0030  a0 02 39 08 1f 86 00 00 02 04 05 b4 04 02 08 0a   ..9.............
+0040  01 3f 4e 34 00 00 00 00 01 03 03 06               .?N4........
+No.     Time        Source                Destination           Protocol Info
+     23 15.961135   50.23.225.49          10.0.2.15             TCP      http > 56759 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+
+Frame 23: 62 bytes on wire (496 bits), 62 bytes captured (496 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.259652000 EDT
+    Epoch Time: 1339821769.259652000 seconds
+    [Time delta from previous captured frame: 0.000880000 seconds]
+    [Time delta from previous displayed frame: 0.000880000 seconds]
+    [Time since reference or first frame: 15.961135000 seconds]
+    Frame Number: 23
+    Frame Length: 62 bytes (496 bits)
+    Capture Length: 62 bytes (496 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Unicast to us (0)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: RealtekU_12:35:02 (52:54:00:12:35:02)
+    Protocol: IP (0x0800)
+    Trailer: 0000
+Internet Protocol, Src: 50.23.225.49 (50.23.225.49), Dst: 10.0.2.15 (10.0.2.15)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 44
+    Identification: 0x014b (331)
+    Flags: 0x00
+        0... .... = Reserved bit: Not set
+        .0.. .... = Don't fragment: Not set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x5a2a [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 50.23.225.49 (50.23.225.49)
+    Destination: 10.0.2.15 (10.0.2.15)
+Transmission Control Protocol, Src Port: http (80), Dst Port: 56759 (56759), Seq: 0, Ack: 1, Len: 0
+    Source port: http (80)
+    Destination port: 56759 (56759)
+    [Stream index: 2]
+    Sequence number: 0    (relative sequence number)
+    Acknowledgement number: 1    (relative ack number)
+    Header length: 24 bytes
+    Flags: 0x12 (SYN, ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..1. = Syn: Set
+            [Expert Info (Chat/Sequence): Connection establish acknowledge (SYN+ACK): server port http]
+                [Message: Connection establish acknowledge (SYN+ACK): server port http]
+                [Severity level: Chat]
+                [Group: Sequence]
+        .... .... ...0 = Fin: Not set
+    Window size: 65535
+    Checksum: 0x22cd [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    Options: (4 bytes)
+        Maximum segment size: 1460 bytes
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 22]
+        [The RTT to ACK the segment was: 0.000880000 seconds]
+
+0000  00 00 00 01 00 06 52 54 00 12 35 02 00 00 08 00   ......RT..5.....
+0010  45 00 00 2c 01 4b 00 00 40 06 5a 2a 32 17 e1 31   E..,.K..@.Z*2..1
+0020  0a 00 02 0f 00 50 dd b7 00 ad d4 01 4b 5a 57 e1   .....P......KZW.
+0030  60 12 ff ff 22 cd 00 00 02 04 05 b4 00 00         `...".........
+No.     Time        Source                Destination           Protocol Info
+     24 15.961174   10.0.2.15             50.23.225.49          TCP      56759 > http [ACK] Seq=1 Ack=1 Win=14600 Len=0
+
+Frame 24: 56 bytes on wire (448 bits), 56 bytes captured (448 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.259691000 EDT
+    Epoch Time: 1339821769.259691000 seconds
+    [Time delta from previous captured frame: 0.000039000 seconds]
+    [Time delta from previous displayed frame: 0.000039000 seconds]
+    [Time since reference or first frame: 15.961174000 seconds]
+    Frame Number: 24
+    Frame Length: 56 bytes (448 bits)
+    Capture Length: 56 bytes (448 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Sent by us (4)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: CadmusCo_a5:5f:13 (08:00:27:a5:5f:13)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 10.0.2.15 (10.0.2.15), Dst: 50.23.225.49 (50.23.225.49)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x19d5 (6613)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x01a4 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 10.0.2.15 (10.0.2.15)
+    Destination: 50.23.225.49 (50.23.225.49)
+Transmission Control Protocol, Src Port: 56759 (56759), Dst Port: http (80), Seq: 1, Ack: 1, Len: 0
+    Source port: 56759 (56759)
+    Destination port: http (80)
+    [Stream index: 2]
+    Sequence number: 1    (relative sequence number)
+    Acknowledgement number: 1    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x10 (ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 14600
+    Checksum: 0x1f72 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 23]
+        [The RTT to ACK the segment was: 0.000039000 seconds]
+
+0000  00 04 00 01 00 06 08 00 27 a5 5f 13 00 00 08 00   ........'._.....
+0010  45 00 00 28 19 d5 40 00 40 06 01 a4 0a 00 02 0f   E..(..@.@.......
+0020  32 17 e1 31 dd b7 00 50 4b 5a 57 e1 00 ad d4 02   2..1...PKZW.....
+0030  50 10 39 08 1f 72 00 00                           P.9..r..
+No.     Time        Source                Destination           Protocol Info
+     25 15.962364   10.0.2.15             50.23.225.49          HTTP     GET /j?Uf9XklMscWYgX18jW1/7NC8= HTTP/1.1 
+
+Frame 25: 544 bytes on wire (4352 bits), 544 bytes captured (4352 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.260881000 EDT
+    Epoch Time: 1339821769.260881000 seconds
+    [Time delta from previous captured frame: 0.001190000 seconds]
+    [Time delta from previous displayed frame: 0.001190000 seconds]
+    [Time since reference or first frame: 15.962364000 seconds]
+    Frame Number: 25
+    Frame Length: 544 bytes (4352 bits)
+    Capture Length: 544 bytes (4352 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp:http]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Sent by us (4)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: CadmusCo_a5:5f:13 (08:00:27:a5:5f:13)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 10.0.2.15 (10.0.2.15), Dst: 50.23.225.49 (50.23.225.49)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 528
+    Identification: 0x19d6 (6614)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0xffba [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 10.0.2.15 (10.0.2.15)
+    Destination: 50.23.225.49 (50.23.225.49)
+Transmission Control Protocol, Src Port: 56759 (56759), Dst Port: http (80), Seq: 1, Ack: 1, Len: 488
+    Source port: 56759 (56759)
+    Destination port: http (80)
+    [Stream index: 2]
+    Sequence number: 1    (relative sequence number)
+    [Next sequence number: 489    (relative sequence number)]
+    Acknowledgement number: 1    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x18 (PSH, ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 1... = Push: Set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 14600
+    Checksum: 0x215a [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [Number of bytes in flight: 488]
+Hypertext Transfer Protocol
+    GET /j?Uf9XklMscWYgX18jW1/7NC8= HTTP/1.1\r\n
+        [Expert Info (Chat/Sequence): GET /j?Uf9XklMscWYgX18jW1/7NC8= HTTP/1.1\r\n]
+            [Message: GET /j?Uf9XklMscWYgX18jW1/7NC8= HTTP/1.1\r\n]
+            [Severity level: Chat]
+            [Group: Sequence]
+        Request Method: GET
+        Request URI: /j?Uf9XklMscWYgX18jW1/7NC8=
+        Request Version: HTTP/1.1
+    Host: test.com\r\n
+    User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:13.0) Gecko/20100101 Firefox/13.0\r\n
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n
+    Accept-Language: en-us,en;q=0.5\r\n
+    Accept-Encoding: gzip, deflate\r\n
+    Connection: keep-alive\r\n
+    Referer: http://www.google.com/url?sa=t&rct=j&q=test&source=web&cd=1&ved=0CGIQFjAA&url=http%3A%2F%2Ftest.com%2F&ei=nA7cT76JArGf6QGP94SHCw&usg=AFQjCNFOu11ntRBzX7MsPNhB_fDzErp8qg\r\n
+    \r\n
+
+0000  00 04 00 01 00 06 08 00 27 a5 5f 13 00 00 08 00   ........'._.....
+0010  45 00 02 10 19 d6 40 00 40 06 ff ba 0a 00 02 0f   E.....@.@.......
+0020  32 17 e1 31 dd b7 00 50 4b 5a 57 e1 00 ad d4 02   2..1...PKZW.....
+0030  50 18 39 08 21 5a 00 00 47 45 54 20 2f 6a 3f 55   P.9.!Z..GET /j?U
+0040  66 39 58 6b 6c 4d 73 63 57 59 67 58 31 38 6a 57   f9XklMscWYgX18jW
+0050  31 2f 37 4e 43 38 3d 20 48 54 54 50 2f 31 2e 31   1/7NC8= HTTP/1.1
+0060  0d 0a 48 6f 73 74 3a 20 74 65 73 74 2e 63 6f 6d   ..Host: test.com
+0070  0d 0a 55 73 65 72 2d 41 67 65 6e 74 3a 20 4d 6f   ..User-Agent: Mo
+0080  7a 69 6c 6c 61 2f 35 2e 30 20 28 58 31 31 3b 20   zilla/5.0 (X11; 
+0090  55 62 75 6e 74 75 3b 20 4c 69 6e 75 78 20 69 36   Ubuntu; Linux i6
+00a0  38 36 3b 20 72 76 3a 31 33 2e 30 29 20 47 65 63   86; rv:13.0) Gec
+00b0  6b 6f 2f 32 30 31 30 30 31 30 31 20 46 69 72 65   ko/20100101 Fire
+00c0  66 6f 78 2f 31 33 2e 30 0d 0a 41 63 63 65 70 74   fox/13.0..Accept
+00d0  3a 20 74 65 78 74 2f 68 74 6d 6c 2c 61 70 70 6c   : text/html,appl
+00e0  69 63 61 74 69 6f 6e 2f 78 68 74 6d 6c 2b 78 6d   ication/xhtml+xm
+00f0  6c 2c 61 70 70 6c 69 63 61 74 69 6f 6e 2f 78 6d   l,application/xm
+0100  6c 3b 71 3d 30 2e 39 2c 2a 2f 2a 3b 71 3d 30 2e   l;q=0.9,*/*;q=0.
+0110  38 0d 0a 41 63 63 65 70 74 2d 4c 61 6e 67 75 61   8..Accept-Langua
+0120  67 65 3a 20 65 6e 2d 75 73 2c 65 6e 3b 71 3d 30   ge: en-us,en;q=0
+0130  2e 35 0d 0a 41 63 63 65 70 74 2d 45 6e 63 6f 64   .5..Accept-Encod
+0140  69 6e 67 3a 20 67 7a 69 70 2c 20 64 65 66 6c 61   ing: gzip, defla
+0150  74 65 0d 0a 43 6f 6e 6e 65 63 74 69 6f 6e 3a 20   te..Connection: 
+0160  6b 65 65 70 2d 61 6c 69 76 65 0d 0a 52 65 66 65   keep-alive..Refe
+0170  72 65 72 3a 20 68 74 74 70 3a 2f 2f 77 77 77 2e   rer: http://www.
+0180  67 6f 6f 67 6c 65 2e 63 6f 6d 2f 75 72 6c 3f 73   google.com/url?s
+0190  61 3d 74 26 72 63 74 3d 6a 26 71 3d 74 65 73 74   a=t&rct=j&q=test
+01a0  26 73 6f 75 72 63 65 3d 77 65 62 26 63 64 3d 31   &source=web&cd=1
+01b0  26 76 65 64 3d 30 43 47 49 51 46 6a 41 41 26 75   &ved=0CGIQFjAA&u
+01c0  72 6c 3d 68 74 74 70 25 33 41 25 32 46 25 32 46   rl=http%3A%2F%2F
+01d0  74 65 73 74 2e 63 6f 6d 25 32 46 26 65 69 3d 6e   test.com%2F&ei=n
+01e0  41 37 63 54 37 36 4a 41 72 47 66 36 51 47 50 39   A7cT76JArGf6QGP9
+01f0  34 53 48 43 77 26 75 73 67 3d 41 46 51 6a 43 4e   4SHCw&usg=AFQjCN
+0200  46 4f 75 31 31 6e 74 52 42 7a 58 37 4d 73 50 4e   FOu11ntRBzX7MsPN
+0210  68 42 5f 66 44 7a 45 72 70 38 71 67 0d 0a 0d 0a   hB_fDzErp8qg....
+No.     Time        Source                Destination           Protocol Info
+     26 15.962745   50.23.225.49          10.0.2.15             TCP      http > 56759 [ACK] Seq=1 Ack=489 Win=65535 Len=0
+
+Frame 26: 62 bytes on wire (496 bits), 62 bytes captured (496 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.261262000 EDT
+    Epoch Time: 1339821769.261262000 seconds
+    [Time delta from previous captured frame: 0.000381000 seconds]
+    [Time delta from previous displayed frame: 0.000381000 seconds]
+    [Time since reference or first frame: 15.962745000 seconds]
+    Frame Number: 26
+    Frame Length: 62 bytes (496 bits)
+    Capture Length: 62 bytes (496 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Unicast to us (0)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: RealtekU_12:35:02 (52:54:00:12:35:02)
+    Protocol: IP (0x0800)
+    Trailer: 000000000000
+Internet Protocol, Src: 50.23.225.49 (50.23.225.49), Dst: 10.0.2.15 (10.0.2.15)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x014c (332)
+    Flags: 0x00
+        0... .... = Reserved bit: Not set
+        .0.. .... = Don't fragment: Not set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x5a2d [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 50.23.225.49 (50.23.225.49)
+    Destination: 10.0.2.15 (10.0.2.15)
+Transmission Control Protocol, Src Port: http (80), Dst Port: 56759 (56759), Seq: 1, Ack: 489, Len: 0
+    Source port: http (80)
+    Destination port: 56759 (56759)
+    [Stream index: 2]
+    Sequence number: 1    (relative sequence number)
+    Acknowledgement number: 489    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x10 (ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 65535
+    Checksum: 0x38a2 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 25]
+        [The RTT to ACK the segment was: 0.000381000 seconds]
+
+0000  00 00 00 01 00 06 52 54 00 12 35 02 00 00 08 00   ......RT..5.....
+0010  45 00 00 28 01 4c 00 00 40 06 5a 2d 32 17 e1 31   E..(.L..@.Z-2..1
+0020  0a 00 02 0f 00 50 dd b7 00 ad d4 02 4b 5a 59 c9   .....P......KZY.
+0030  50 10 ff ff 38 a2 00 00 00 00 00 00 00 00         P...8.........
+No.     Time        Source                Destination           Protocol Info
+     27 16.376138   50.23.225.49          10.0.2.15             TCP      [TCP segment of a reassembled PDU]
+
+Frame 27: 211 bytes on wire (1688 bits), 211 bytes captured (1688 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.674655000 EDT
+    Epoch Time: 1339821769.674655000 seconds
+    [Time delta from previous captured frame: 0.413393000 seconds]
+    [Time delta from previous displayed frame: 0.413393000 seconds]
+    [Time since reference or first frame: 16.376138000 seconds]
+    Frame Number: 27
+    Frame Length: 211 bytes (1688 bits)
+    Capture Length: 211 bytes (1688 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp:http]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Unicast to us (0)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: RealtekU_12:35:02 (52:54:00:12:35:02)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 50.23.225.49 (50.23.225.49), Dst: 10.0.2.15 (10.0.2.15)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 195
+    Identification: 0x014d (333)
+    Flags: 0x00
+        0... .... = Reserved bit: Not set
+        .0.. .... = Don't fragment: Not set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x5991 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 50.23.225.49 (50.23.225.49)
+    Destination: 10.0.2.15 (10.0.2.15)
+Transmission Control Protocol, Src Port: http (80), Dst Port: 56759 (56759), Seq: 1, Ack: 489, Len: 155
+    Source port: http (80)
+    Destination port: 56759 (56759)
+    [Stream index: 2]
+    Sequence number: 1    (relative sequence number)
+    [Next sequence number: 156    (relative sequence number)]
+    Acknowledgement number: 489    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x18 (PSH, ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 1... = Push: Set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 65535
+    Checksum: 0xed1f [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [Number of bytes in flight: 155]
+    TCP segment data (155 bytes)
+
+0000  00 00 00 01 00 06 52 54 00 12 35 02 00 00 08 00   ......RT..5.....
+0010  45 00 00 c3 01 4d 00 00 40 06 59 91 32 17 e1 31   E....M..@.Y.2..1
+0020  0a 00 02 0f 00 50 dd b7 00 ad d4 02 4b 5a 59 c9   .....P......KZY.
+0030  50 18 ff ff ed 1f 00 00 48 54 54 50 2f 31 2e 30   P.......HTTP/1.0
+0040  20 33 30 32 20 46 6f 75 6e 64 0d 0a 43 61 63 68    302 Found..Cach
+0050  65 2d 43 6f 6e 74 72 6f 6c 3a 20 6e 6f 2d 63 61   e-Control: no-ca
+0060  63 68 65 2c 20 6e 6f 2d 73 74 6f 72 65 2c 20 6d   che, no-store, m
+0070  75 73 74 2d 72 65 76 61 6c 69 64 61 74 65 2c 20   ust-revalidate, 
+0080  6d 61 78 2d 61 67 65 3d 30 0d 0a 45 78 70 69 72   max-age=0..Expir
+0090  65 73 3a 20 54 68 75 2c 20 30 31 20 4a 61 6e 20   es: Thu, 01 Jan 
+00a0  31 39 37 30 20 30 30 3a 30 30 3a 30 30 20 47 4d   1970 00:00:00 GM
+00b0  54 0d 0a 43 6f 6e 6e 65 63 74 69 6f 6e 3a 20 63   T..Connection: c
+00c0  6c 6f 73 65 0d 0a 4c 6f 63 61 74 69 6f 6e 3a 20   lose..Location: 
+00d0  2f 0d 0a                                          /..
+No.     Time        Source                Destination           Protocol Info
+     28 16.376165   10.0.2.15             50.23.225.49          TCP      56759 > http [ACK] Seq=489 Ack=156 Win=15544 Len=0
+
+Frame 28: 56 bytes on wire (448 bits), 56 bytes captured (448 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.674682000 EDT
+    Epoch Time: 1339821769.674682000 seconds
+    [Time delta from previous captured frame: 0.000027000 seconds]
+    [Time delta from previous displayed frame: 0.000027000 seconds]
+    [Time since reference or first frame: 16.376165000 seconds]
+    Frame Number: 28
+    Frame Length: 56 bytes (448 bits)
+    Capture Length: 56 bytes (448 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Sent by us (4)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: CadmusCo_a5:5f:13 (08:00:27:a5:5f:13)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 10.0.2.15 (10.0.2.15), Dst: 50.23.225.49 (50.23.225.49)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x19d7 (6615)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x01a2 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 10.0.2.15 (10.0.2.15)
+    Destination: 50.23.225.49 (50.23.225.49)
+Transmission Control Protocol, Src Port: 56759 (56759), Dst Port: http (80), Seq: 489, Ack: 156, Len: 0
+    Source port: 56759 (56759)
+    Destination port: http (80)
+    [Stream index: 2]
+    Sequence number: 489    (relative sequence number)
+    Acknowledgement number: 156    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x10 (ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 15544
+    Checksum: 0x1f72 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 27]
+        [The RTT to ACK the segment was: 0.000027000 seconds]
+
+0000  00 04 00 01 00 06 08 00 27 a5 5f 13 00 00 08 00   ........'._.....
+0010  45 00 00 28 19 d7 40 00 40 06 01 a2 0a 00 02 0f   E..(..@.@.......
+0020  32 17 e1 31 dd b7 00 50 4b 5a 59 c9 00 ad d4 9d   2..1...PKZY.....
+0030  50 10 3c b8 1f 72 00 00                           P.<..r..
+No.     Time        Source                Destination           Protocol Info
+     29 16.376198   50.23.225.49          10.0.2.15             HTTP     HTTP/1.0 302 Found 
+
+Frame 29: 62 bytes on wire (496 bits), 62 bytes captured (496 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.674715000 EDT
+    Epoch Time: 1339821769.674715000 seconds
+    [Time delta from previous captured frame: 0.000033000 seconds]
+    [Time delta from previous displayed frame: 0.000033000 seconds]
+    [Time since reference or first frame: 16.376198000 seconds]
+    Frame Number: 29
+    Frame Length: 62 bytes (496 bits)
+    Capture Length: 62 bytes (496 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp:http]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Unicast to us (0)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: RealtekU_12:35:02 (52:54:00:12:35:02)
+    Protocol: IP (0x0800)
+    Trailer: 00000000
+Internet Protocol, Src: 50.23.225.49 (50.23.225.49), Dst: 10.0.2.15 (10.0.2.15)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 42
+    Identification: 0x014e (334)
+    Flags: 0x00
+        0... .... = Reserved bit: Not set
+        .0.. .... = Don't fragment: Not set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x5a29 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 50.23.225.49 (50.23.225.49)
+    Destination: 10.0.2.15 (10.0.2.15)
+Transmission Control Protocol, Src Port: http (80), Dst Port: 56759 (56759), Seq: 156, Ack: 489, Len: 2
+    Source port: http (80)
+    Destination port: 56759 (56759)
+    [Stream index: 2]
+    Sequence number: 156    (relative sequence number)
+    [Next sequence number: 158    (relative sequence number)]
+    Acknowledgement number: 489    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x18 (PSH, ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 1... = Push: Set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 65535
+    Checksum: 0x2af3 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [Number of bytes in flight: 2]
+    TCP segment data (2 bytes)
+[Reassembled TCP Segments (157 bytes): #27(155), #29(2)]
+    [Frame: 27, payload: 0-154 (155 bytes)]
+    [Frame: 29, payload: 155-156 (2 bytes)]
+    [Reassembled TCP length: 157]
+Hypertext Transfer Protocol
+    HTTP/1.0 302 Found\r\n
+        [Expert Info (Chat/Sequence): HTTP/1.0 302 Found\r\n]
+            [Message: HTTP/1.0 302 Found\r\n]
+            [Severity level: Chat]
+            [Group: Sequence]
+        Request Version: HTTP/1.0
+        Response Code: 302
+    Cache-Control: no-cache, no-store, must-revalidate, max-age=0\r\n
+    Expires: Thu, 01 Jan 1970 00:00:00 GMT\r\n
+    Connection: close\r\n
+    Location: /\r\n
+    \r\n
+
+Frame (62 bytes):
+
+0000  00 00 00 01 00 06 52 54 00 12 35 02 00 00 08 00   ......RT..5.....
+0010  45 00 00 2a 01 4e 00 00 40 06 5a 29 32 17 e1 31   E..*.N..@.Z)2..1
+0020  0a 00 02 0f 00 50 dd b7 00 ad d4 9d 4b 5a 59 c9   .....P......KZY.
+0030  50 18 ff ff 2a f3 00 00 0d 0a 00 00 00 00         P...*.........
+
+Reassembled TCP (157 bytes):
+
+0000  48 54 54 50 2f 31 2e 30 20 33 30 32 20 46 6f 75   HTTP/1.0 302 Fou
+0010  6e 64 0d 0a 43 61 63 68 65 2d 43 6f 6e 74 72 6f   nd..Cache-Contro
+0020  6c 3a 20 6e 6f 2d 63 61 63 68 65 2c 20 6e 6f 2d   l: no-cache, no-
+0030  73 74 6f 72 65 2c 20 6d 75 73 74 2d 72 65 76 61   store, must-reva
+0040  6c 69 64 61 74 65 2c 20 6d 61 78 2d 61 67 65 3d   lidate, max-age=
+0050  30 0d 0a 45 78 70 69 72 65 73 3a 20 54 68 75 2c   0..Expires: Thu,
+0060  20 30 31 20 4a 61 6e 20 31 39 37 30 20 30 30 3a    01 Jan 1970 00:
+0070  30 30 3a 30 30 20 47 4d 54 0d 0a 43 6f 6e 6e 65   00:00 GMT..Conne
+0080  63 74 69 6f 6e 3a 20 63 6c 6f 73 65 0d 0a 4c 6f   ction: close..Lo
+0090  63 61 74 69 6f 6e 3a 20 2f 0d 0a 0d 0a            cation: /....
+No.     Time        Source                Destination           Protocol Info
+     30 16.376208   10.0.2.15             50.23.225.49          TCP      56759 > http [ACK] Seq=489 Ack=158 Win=15544 Len=0
+
+Frame 30: 56 bytes on wire (448 bits), 56 bytes captured (448 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.674725000 EDT
+    Epoch Time: 1339821769.674725000 seconds
+    [Time delta from previous captured frame: 0.000010000 seconds]
+    [Time delta from previous displayed frame: 0.000010000 seconds]
+    [Time since reference or first frame: 16.376208000 seconds]
+    Frame Number: 30
+    Frame Length: 56 bytes (448 bits)
+    Capture Length: 56 bytes (448 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Sent by us (4)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: CadmusCo_a5:5f:13 (08:00:27:a5:5f:13)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 10.0.2.15 (10.0.2.15), Dst: 50.23.225.49 (50.23.225.49)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x19d8 (6616)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x01a1 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 10.0.2.15 (10.0.2.15)
+    Destination: 50.23.225.49 (50.23.225.49)
+Transmission Control Protocol, Src Port: 56759 (56759), Dst Port: http (80), Seq: 489, Ack: 158, Len: 0
+    Source port: 56759 (56759)
+    Destination port: http (80)
+    [Stream index: 2]
+    Sequence number: 489    (relative sequence number)
+    Acknowledgement number: 158    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x10 (ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 15544
+    Checksum: 0x1f72 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 29]
+        [The RTT to ACK the segment was: 0.000010000 seconds]
+
+0000  00 04 00 01 00 06 08 00 27 a5 5f 13 00 00 08 00   ........'._.....
+0010  45 00 00 28 19 d8 40 00 40 06 01 a1 0a 00 02 0f   E..(..@.@.......
+0020  32 17 e1 31 dd b7 00 50 4b 5a 59 c9 00 ad d4 9f   2..1...PKZY.....
+0030  50 10 3c b8 1f 72 00 00                           P.<..r..
+No.     Time        Source                Destination           Protocol Info
+     31 16.376226   50.23.225.49          10.0.2.15             TCP      http > 56759 [FIN, ACK] Seq=158 Ack=489 Win=65535 Len=0
+
+Frame 31: 62 bytes on wire (496 bits), 62 bytes captured (496 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.674743000 EDT
+    Epoch Time: 1339821769.674743000 seconds
+    [Time delta from previous captured frame: 0.000018000 seconds]
+    [Time delta from previous displayed frame: 0.000018000 seconds]
+    [Time since reference or first frame: 16.376226000 seconds]
+    Frame Number: 31
+    Frame Length: 62 bytes (496 bits)
+    Capture Length: 62 bytes (496 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Unicast to us (0)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: RealtekU_12:35:02 (52:54:00:12:35:02)
+    Protocol: IP (0x0800)
+    Trailer: 000000000000
+Internet Protocol, Src: 50.23.225.49 (50.23.225.49), Dst: 10.0.2.15 (10.0.2.15)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x014f (335)
+    Flags: 0x00
+        0... .... = Reserved bit: Not set
+        .0.. .... = Don't fragment: Not set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x5a2a [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 50.23.225.49 (50.23.225.49)
+    Destination: 10.0.2.15 (10.0.2.15)
+Transmission Control Protocol, Src Port: http (80), Dst Port: 56759 (56759), Seq: 158, Ack: 489, Len: 0
+    Source port: http (80)
+    Destination port: 56759 (56759)
+    [Stream index: 2]
+    Sequence number: 158    (relative sequence number)
+    Acknowledgement number: 489    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x11 (FIN, ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...1 = Fin: Set
+            [Expert Info (Chat/Sequence): Connection finish (FIN)]
+                [Message: Connection finish (FIN)]
+                [Severity level: Chat]
+                [Group: Sequence]
+    Window size: 65535
+    Checksum: 0x3804 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+
+0000  00 00 00 01 00 06 52 54 00 12 35 02 00 00 08 00   ......RT..5.....
+0010  45 00 00 28 01 4f 00 00 40 06 5a 2a 32 17 e1 31   E..(.O..@.Z*2..1
+0020  0a 00 02 0f 00 50 dd b7 00 ad d4 9f 4b 5a 59 c9   .....P......KZY.
+0030  50 11 ff ff 38 04 00 00 00 00 00 00 00 00         P...8.........
+No.     Time        Source                Destination           Protocol Info
+     32 16.376943   10.0.2.15             50.23.225.49          TCP      56759 > http [FIN, ACK] Seq=489 Ack=159 Win=15544 Len=0
+
+Frame 32: 56 bytes on wire (448 bits), 56 bytes captured (448 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.675460000 EDT
+    Epoch Time: 1339821769.675460000 seconds
+    [Time delta from previous captured frame: 0.000717000 seconds]
+    [Time delta from previous displayed frame: 0.000717000 seconds]
+    [Time since reference or first frame: 16.376943000 seconds]
+    Frame Number: 32
+    Frame Length: 56 bytes (448 bits)
+    Capture Length: 56 bytes (448 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Sent by us (4)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: CadmusCo_a5:5f:13 (08:00:27:a5:5f:13)
+    Protocol: IP (0x0800)
+Internet Protocol, Src: 10.0.2.15 (10.0.2.15), Dst: 50.23.225.49 (50.23.225.49)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x19d9 (6617)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x01a0 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 10.0.2.15 (10.0.2.15)
+    Destination: 50.23.225.49 (50.23.225.49)
+Transmission Control Protocol, Src Port: 56759 (56759), Dst Port: http (80), Seq: 489, Ack: 159, Len: 0
+    Source port: 56759 (56759)
+    Destination port: http (80)
+    [Stream index: 2]
+    Sequence number: 489    (relative sequence number)
+    Acknowledgement number: 159    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x11 (FIN, ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...1 = Fin: Set
+            [Expert Info (Chat/Sequence): Connection finish (FIN)]
+                [Message: Connection finish (FIN)]
+                [Severity level: Chat]
+                [Group: Sequence]
+    Window size: 15544
+    Checksum: 0x1f72 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 31]
+        [The RTT to ACK the segment was: 0.000717000 seconds]
+
+0000  00 04 00 01 00 06 08 00 27 a5 5f 13 00 00 08 00   ........'._.....
+0010  45 00 00 28 19 d9 40 00 40 06 01 a0 0a 00 02 0f   E..(..@.@.......
+0020  32 17 e1 31 dd b7 00 50 4b 5a 59 c9 00 ad d4 a0   2..1...PKZY.....
+0030  50 11 3c b8 1f 72 00 00                           P.<..r..
+No.     Time        Source                Destination           Protocol Info
+     33 16.378229   50.23.225.49          10.0.2.15             TCP      http > 56759 [ACK] Seq=159 Ack=490 Win=65535 Len=0
+
+Frame 33: 62 bytes on wire (496 bits), 62 bytes captured (496 bits)
+    Arrival Time: Jun 16, 2012 00:42:49.676746000 EDT
+    Epoch Time: 1339821769.676746000 seconds
+    [Time delta from previous captured frame: 0.001286000 seconds]
+    [Time delta from previous displayed frame: 0.001286000 seconds]
+    [Time since reference or first frame: 16.378229000 seconds]
+    Frame Number: 33
+    Frame Length: 62 bytes (496 bits)
+    Capture Length: 62 bytes (496 bits)
+    [Frame is marked: False]
+    [Frame is ignored: False]
+    [Protocols in frame: sll:ip:tcp]
+    [Coloring Rule Name: HTTP]
+    [Coloring Rule String: http || tcp.port == 80]
+Linux cooked capture
+    Packet type: Unicast to us (0)
+    Link-layer address type: 1
+    Link-layer address length: 6
+    Source: RealtekU_12:35:02 (52:54:00:12:35:02)
+    Protocol: IP (0x0800)
+    Trailer: 000000000000
+Internet Protocol, Src: 50.23.225.49 (50.23.225.49), Dst: 10.0.2.15 (10.0.2.15)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x00 (DSCP 0x00: Default; ECN: 0x00)
+        0000 00.. = Differentiated Services Codepoint: Default (0x00)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 40
+    Identification: 0x0150 (336)
+    Flags: 0x00
+        0... .... = Reserved bit: Not set
+        .0.. .... = Don't fragment: Not set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: TCP (6)
+    Header checksum: 0x5a29 [correct]
+        [Good: True]
+        [Bad: False]
+    Source: 50.23.225.49 (50.23.225.49)
+    Destination: 10.0.2.15 (10.0.2.15)
+Transmission Control Protocol, Src Port: http (80), Dst Port: 56759 (56759), Seq: 159, Ack: 490, Len: 0
+    Source port: http (80)
+    Destination port: 56759 (56759)
+    [Stream index: 2]
+    Sequence number: 159    (relative sequence number)
+    Acknowledgement number: 490    (relative ack number)
+    Header length: 20 bytes
+    Flags: 0x10 (ACK)
+        000. .... .... = Reserved: Not set
+        ...0 .... .... = Nonce: Not set
+        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        .... .0.. .... = ECN-Echo: Not set
+        .... ..0. .... = Urgent: Not set
+        .... ...1 .... = Acknowledgement: Set
+        .... .... 0... = Push: Not set
+        .... .... .0.. = Reset: Not set
+        .... .... ..0. = Syn: Not set
+        .... .... ...0 = Fin: Not set
+    Window size: 65535
+    Checksum: 0x3803 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+    [SEQ/ACK analysis]
+        [This is an ACK to the segment in frame: 32]
+        [The RTT to ACK the segment was: 0.001286000 seconds]
+
+0000  00 00 00 01 00 06 52 54 00 12 35 02 00 00 08 00   ......RT..5.....
+0010  45 00 00 28 01 50 00 00 40 06 5a 29 32 17 e1 31   E..(.P..@.Z)2..1
+0020  0a 00 02 0f 00 50 dd b7 00 ad d4 a0 4b 5a 59 ca   .....P......KZY.
+0030  50 10 ff ff 38 03 00 00 00 00 00 00 00 00         P...8.........

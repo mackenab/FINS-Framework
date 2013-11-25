@@ -236,7 +236,7 @@ void rtm_process_console(struct fins_module *module, struct rtm_console *console
 #define RTM_MAX_FLOWS 0
 
 struct rtm_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[RTM_MAX_FLOWS];
 
@@ -251,10 +251,10 @@ struct rtm_data {
 	sem_t shared_sem;
 	int console_fds[MAX_CONSOLES];
 
-	struct linked_list *console_list;
+	struct linked_list *console_list; //linked list of rtm_console structs, representing connections from console-type applications
 	uint32_t console_counter;
 
-	struct linked_list *cmd_list;
+	struct linked_list *cmd_list; //linked list of rtm_command structs, representing cmds that sent a FCF and are waiting a reply
 	uint32_t cmd_counter;
 };
 
@@ -284,9 +284,9 @@ void rtm_exec_reply(struct fins_module *module, struct finsFrame *ff);
 void rtm_interrupt(struct fins_module *module);
 
 //don't use 0
-#define RTM_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define RTM_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define RTM_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define RTM_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define RTM_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define RTM_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 
 #define RTM_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define RTM_SET_PARAM_LINKS MOD_SET_PARAM_LINKS

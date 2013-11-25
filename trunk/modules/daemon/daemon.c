@@ -213,7 +213,6 @@ int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock
 		md->sockets[sock_index].data_buf = 0;
 
 		md->sockets[sock_index].error_list = list_create(MAX_QUEUE_SIZE); //only used when RECVERR enabled for ICMP/UDP
-		md->sockets[sock_index].error_buf = 0;
 
 		md->sockets[sock_index].error_call = 0;
 		md->sockets[sock_index].error_msg = 0;
@@ -647,15 +646,15 @@ void daemon_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case DAEMON_SET_PARAM_FLOWS:
-		PRINT_DEBUG("DAEMON_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=DAEMON_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case DAEMON_SET_PARAM_LINKS:
-		PRINT_DEBUG("DAEMON_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=DAEMON_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case DAEMON_SET_PARAM_DUAL:
-		PRINT_DEBUG("DAEMON_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=DAEMON_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	default:

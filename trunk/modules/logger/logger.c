@@ -143,15 +143,15 @@ void logger_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case LOGGER_SET_PARAM_FLOWS:
-		PRINT_DEBUG("LOGGER_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=LOGGER_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case LOGGER_SET_PARAM_LINKS:
-		PRINT_DEBUG("LOGGER_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=LOGGER_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case LOGGER_SET_PARAM_DUAL:
-		PRINT_DEBUG("LOGGER_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=LOGGER_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	case LOGGER_SET_INTERVAL__id:

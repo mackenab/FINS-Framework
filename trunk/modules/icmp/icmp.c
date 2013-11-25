@@ -153,8 +153,7 @@ void icmp_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_WARN("todo");
-		freeFinsFrame(ff);
+		icmp_error(module, ff);
 		break;
 	default:
 		PRINT_DEBUG("opcode=default (%d)", ff->ctrlFrame.opcode);
@@ -174,15 +173,15 @@ void icmp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case ICMP_SET_PARAM_FLOWS:
-		PRINT_DEBUG("ICMP_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=ICMP_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case ICMP_SET_PARAM_LINKS:
-		PRINT_DEBUG("ICMP_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=ICMP_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case ICMP_SET_PARAM_DUAL:
-		PRINT_DEBUG("ICMP_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=ICMP_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	default:
@@ -196,6 +195,67 @@ void icmp_exec(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_WARN("todo");
 	module_reply_fcf(module, ff, FCF_FALSE, 0);
+}
+
+void icmp_error(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	struct icmp_data *md = (struct icmp_data *) module->data;
+
+	switch (ff->ctrlFrame.param_id) {
+	case ICMP_ERROR_GET_ADDR:
+		PRINT_DEBUG("param_id=ICMP_ERROR_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+
+		//should we separate icmp & error messages? what about disabling ICMP, what errors should it stop?
+		//if yes, eth->ip->icmp or ip->proto
+		//if no, eth->icmp->proto
+		//if partial, eth->ip->icmp->proto (allows for similar to iptables)
+		//Sending to ICMP mimic kernel func, if remove icmp stops error
+
+		uint32_t protocol;
+		secure_metadata_readFromElement(ff->metaData, "send_protocol", &protocol);
+
+		uint32_t flow;
+		switch (protocol) {
+		case IPPROTO_ICMP:
+			//TODO figure out? send to daemon?
+			flow = ICMP_FLOW_DAEMON;
+
+			if (!list_is_empty(md->sent_list)) {
+				uint8_t *pdu = ff->ctrlFrame.data;
+				if (pdu != NULL) { //TODO make func!!
+					struct icmp_sent *sent_pkt = (struct icmp_sent *) list_find2(md->sent_list,icmp_sent_match_test,pdu,&ff->ctrlFrame.data_len);
+					if (sent_pkt != NULL) {
+						list_remove(md->sent_list, sent_pkt);
+						icmp_sent_free(sent_pkt);
+					}
+				}
+			}
+			break;
+		case IPPROTO_TCP:
+			flow = ICMP_FLOW_TCP;
+			break;
+		case IPPROTO_UDP:
+			flow = ICMP_FLOW_UDP;
+			break;
+		default:
+			break;
+		}
+
+		ff->ctrlFrame.sender_id = module->index;
+		//ff->ctrlFrame.param_id = ICMP_ERROR_GET_ADDR;
+
+		//reroute to icmp, though could go directly
+		int sent = module_send_flow(module, ff, flow);
+		if (sent == 0) {
+			freeFinsFrame(ff);
+		}
+		break;
+	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("todo");
+		freeFinsFrame(ff);
+		break;
+	}
 }
 
 void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
@@ -241,8 +301,8 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	PRINT_DEBUG("ff=%p, type=%u, code=%u, data_len=%u", ff, icmp_pkt->type, icmp_pkt->code, data_len);
 	switch (icmp_pkt->type) {
-	case TYPE_ECHOREPLY:
-		if (icmp_pkt->code == CODE_ECHO) {
+	case ICMP_TYPE_ECHOREPLY:
+		if (icmp_pkt->code == ICMP_CODE_ECHO) {
 			//pass through to daemon
 			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
 			if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
@@ -254,24 +314,24 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 			freeFinsFrame(ff);
 		}
 		break;
-	case TYPE_DESTUNREACH:
+	case ICMP_TYPE_DESTUNREACH:
 		PRINT_DEBUG("Destination unreachable");
-		if (icmp_pkt->code == CODE_NETUNREACH) {
+		if (icmp_pkt->code == ICMP_CODE_NETUNREACH) {
 			PRINT_WARN("todo");
 			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == CODE_HOSTUNREACH) {
+		} else if (icmp_pkt->code == ICMP_CODE_HOSTUNREACH) {
 			PRINT_WARN("todo");
 			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == CODE_PROTOUNREACH) {
+		} else if (icmp_pkt->code == ICMP_CODE_PROTOUNREACH) {
 			PRINT_WARN("todo");
 			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == CODE_PORTUNREACH) {
-			icmp_handle_error(module, ff, icmp_pkt, data_len, ERROR_ICMP_DEST_UNREACH);
-		} else if (icmp_pkt->code == CODE_FRAGNEEDED) {
+		} else if (icmp_pkt->code == ICMP_CODE_PORTUNREACH) {
+			icmp_handle_error(module, ff, icmp_pkt, data_len, ICMP_ERROR_DEST_UNREACH);
+		} else if (icmp_pkt->code == ICMP_CODE_FRAGNEEDED) {
 			PRINT_WARN("todo");
 			//TODO use icmp_pkt->param_2 as Next-Hop MTU
 			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == CODE_SRCROUTEFAIL) {
+		} else if (icmp_pkt->code == ICMP_CODE_SRCROUTEFAIL) {
 			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else {
@@ -280,8 +340,8 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 			return;
 		}
 		break;
-	case TYPE_ECHOREQUEST:
-		if (icmp_pkt->code == CODE_ECHO) {
+	case ICMP_TYPE_ECHOREQUEST:
+		if (icmp_pkt->code == ICMP_CODE_ECHO) {
 			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
 			icmp_ping_reply(module, ff, icmp_pkt, data_len);
 		} else {
@@ -289,11 +349,11 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 			freeFinsFrame(ff);
 		}
 		break;
-	case TYPE_TTLEXCEED:
+	case ICMP_TYPE_TTLEXCEED:
 		PRINT_DEBUG("TTL Exceeded");
-		if (icmp_pkt->code == CODE_TTLEXCEEDED) {
-			icmp_handle_error(module, ff, icmp_pkt, data_len, ERROR_ICMP_TTL);
-		} else if (icmp_pkt->code == CODE_DEFRAGTIMEEXCEEDED) {
+		if (icmp_pkt->code == ICMP_CODE_TTLEXCEEDED) {
+			icmp_handle_error(module, ff, icmp_pkt, data_len, ICMP_ERROR_TTL);
+		} else if (icmp_pkt->code == ICMP_CODE_DEFRAGTIMEEXCEEDED) {
 			PRINT_WARN("todo");
 			freeFinsFrame(ff);
 		} else {
@@ -421,8 +481,8 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	uint8_t *pdu_reply = (uint8_t *) secure_malloc(pdu_len_reply);
 
 	struct icmp_packet *icmp_pkt_reply = (struct icmp_packet *) pdu_reply;
-	icmp_pkt_reply->type = TYPE_ECHOREPLY;
-	icmp_pkt_reply->code = CODE_ECHO;
+	icmp_pkt_reply->type = ICMP_TYPE_ECHOREPLY;
+	icmp_pkt_reply->code = ICMP_CODE_ECHO;
 	icmp_pkt_reply->checksum = 0;
 	icmp_pkt_reply->param_1 = icmp_pkt->param_1; //id
 	icmp_pkt_reply->param_2 = icmp_pkt->param_2; //seq num
@@ -507,8 +567,8 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("ff=%p, type=%u, code=%u, data_len=%u", ff, icmp_pkt->type, icmp_pkt->code, data_len);
 
 	switch (icmp_pkt->type) {
-	case TYPE_ECHOREQUEST:
-		if (icmp_pkt->code == CODE_ECHO) {
+	case ICMP_TYPE_ECHOREQUEST:
+		if (icmp_pkt->code == ICMP_CODE_ECHO) {
 			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
 		} else {
 		}

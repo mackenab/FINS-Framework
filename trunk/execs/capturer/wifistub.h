@@ -29,7 +29,7 @@
 #ifdef BUILD_FOR_ANDROID
 #include <stdio.h>
 
-//#define DEBUG
+#define DEBUG
 #define INFO
 #define WARN
 #define IMPORTANT

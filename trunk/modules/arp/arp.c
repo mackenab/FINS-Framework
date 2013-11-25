@@ -500,15 +500,15 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case ARP_SET_PARAM_FLOWS:
-		PRINT_DEBUG("ARP_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=ARP_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case ARP_SET_PARAM_LINKS:
-		PRINT_DEBUG("ARP_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=ARP_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case ARP_SET_PARAM_DUAL:
-		PRINT_DEBUG("ARP_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=ARP_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	default:

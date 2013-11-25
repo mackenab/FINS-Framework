@@ -14,7 +14,7 @@ typedef struct {
 
 //extern uidiv_return __aeabi_uidivmod(unsigned int numerator, unsigned int denominator);
 //extern idiv_return __aeabi_idivmod(int numerator, int denominator);
-///*
+/*
 unsigned int __aeabi_uidiv(unsigned int numerator, unsigned int denominator) {
 	//printf("numerator=%u, denominator=%u\n", numerator, denominator);
 	if (numerator == 0) {

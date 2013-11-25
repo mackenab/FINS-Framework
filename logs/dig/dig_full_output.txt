@@ -1,0 +1,20 @@
+fins1@fins1-laptop:~/FINS/FINS-Framework/logs/dig$ strace -f -ttt -x -v -o strace_dig_full.txt dig ubuntu.com
+
+; <<>> DiG 9.7.0-P1 <<>> ubuntu.com
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38170
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;ubuntu.com.			IN	A
+
+;; ANSWER SECTION:
+ubuntu.com.		600	IN	A	91.189.94.156
+
+;; Query time: 46 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)
+;; WHEN: Fri Nov 22 23:26:43 2013
+;; MSG SIZE  rcvd: 44
+
+fins1@fins1-laptop:~/FINS/FINS-Framework/logs/dig$

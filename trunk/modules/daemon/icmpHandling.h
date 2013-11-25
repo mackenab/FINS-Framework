@@ -46,8 +46,4 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 
 void recvmsg_timeout_icmp(struct fins_module *module, struct daemon_call *call);
 
-//TODO not used? what are these for in this module file?
-#define ERROR_ICMP_TTL 0
-#define ERROR_ICMP_DEST_UNREACH 1
-
 #endif /* ICMPHANDLING_H_ */

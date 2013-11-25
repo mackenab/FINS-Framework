@@ -90,11 +90,11 @@ struct fins_overall {
 	struct envi_record *envi;
 
 	pthread_attr_t attr;
-	struct linked_list *lib_list; //list of open libraries
+	struct linked_list *lib_list; //linked list of fins_library structs, representing all open libraries
 	struct fins_module *modules[MAX_MODULES];
-	struct linked_list *admin_list; //list of admin modules
+	struct linked_list *admin_list; //linked list of fins_module structs, representing all admin modules
 
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing all links in linking table
 };
 
 struct fins_module_admin_ops {
@@ -128,7 +128,7 @@ struct fins_module_flow {
 
 struct fins_module_table {
 	//add max_flows? //as max number of flows
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[MAX_MOD_FLOWS];
 };
@@ -160,14 +160,14 @@ void module_set_param_flows(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_links(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_dual(struct fins_module *module, struct finsFrame *ff);
 
-void module_get_param_flows(struct fins_module *module, struct finsFrame *ff);
-void module_get_param_links(struct fins_module *module, struct finsFrame *ff);
-void module_get_param_dual(struct fins_module *module, struct finsFrame *ff);
+void module_read_param_flows(struct fins_module *module, struct finsFrame *ff);
+void module_read_param_links(struct fins_module *module, struct finsFrame *ff);
+void module_read_param_dual(struct fins_module *module, struct finsFrame *ff);
 
 //SET_PARAM / GET_PARAM
-#define MOD_GET_PARAM_FLOWS 0
-#define MOD_GET_PARAM_LINKS 1
-#define MOD_GET_PARAM_DUAL 2
+#define MOD_READ_PARAM_FLOWS 0
+#define MOD_READ_PARAM_LINKS 1
+#define MOD_READ_PARAM_DUAL 2
 
 #define MOD_SET_PARAM_FLOWS 0
 #define MOD_SET_PARAM_LINKS 1

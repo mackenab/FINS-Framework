@@ -18,14 +18,12 @@
 
 void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	struct udp_data *md = (struct udp_data *) module->data;
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	//struct udp_metadata_parsed parsed_meta;
 
 	//struct udp_packet packet_host;
 	struct udp_packet *packet_netw;
 	uint16_t packet_length;
-
-	/* read the FDF and make sure everything is correct*/
-	PRINT_DEBUG("UDP_out, ff=%p, meta=%p", ff, ff->metaData);
 
 	//print_finsFrame(ff);
 

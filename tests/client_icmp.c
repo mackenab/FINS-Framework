@@ -83,14 +83,14 @@ int main(int argc, char *argv[]) {
 	int sock;
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
-	int addr_len = sizeof(struct sockaddr);
+	//int addr_len = sizeof(struct sockaddr);
 	int numbytes;
 	//struct hostent *host;
 	char send_data[1024];
 	char msg[1032];
 	int port;
 	int client_port;
-	pid_t pID;
+	pid_t pID = 0;
 
 	struct icmp_packet *pkt = (struct icmp_packet *) msg;
 	pkt->type = 8;
@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
 							printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
 
 							struct cmsghdr *cmsg;
-							int *ttlptr;
+							//int *ttlptr;
 							int received_ttl;
 
 							/* Receive auxiliary data in msgh */
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
 							printf("recv_bytes=%d, msg_controllen=%d\n", recv_bytes, recv_msg.msg_controllen);
 
 							struct cmsghdr *cmsg;
-							int *ttlptr;
+							//int *ttlptr;
 							int received_ttl;
 
 							/* Receive auxiliary data in msgh */
@@ -343,6 +343,7 @@ int main(int argc, char *argv[]) {
 									//break;
 								} else if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SO_TIMESTAMP) {
 									struct timeval *stamp = (struct timeval *) CMSG_DATA(cmsg);
+									printf("stamp=%u.%u\n", (uint32_t) stamp->tv_sec, (uint32_t) stamp->tv_usec);
 								}
 							}
 							if (cmsg == NULL) {

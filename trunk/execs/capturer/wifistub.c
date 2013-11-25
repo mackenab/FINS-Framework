@@ -105,9 +105,13 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 //fflush(stdout);
 //return;
 
-	uint32_t numBytes = write(shared->capture_fd, &dataLength, sizeof(u_int));
+	int numBytes = write(shared->capture_fd, &dataLength, sizeof(u_int));
 	if (numBytes <= 0) {
-		PRINT_ERROR("size write fail: numBytes=%u", numBytes);
+		if (numBytes < 0) {
+			PRINT_ERROR("size write failed: numBytes=%d, errno=%u, str='%s'", numBytes, errno, strerror(errno));
+		} else {
+			PRINT_ERROR("size write fail: numBytes=%d", numBytes);
+		}
 		close_handles(shared);
 		close_pipes(shared);
 		return;
@@ -115,7 +119,11 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 
 	numBytes = write(shared->capture_fd, packetReceived, dataLength);
 	if (numBytes <= 0) {
-		PRINT_ERROR("frame write fail: numBytes=%u, frame_len=%u", numBytes, dataLength);
+		if (numBytes < 0) {
+			PRINT_ERROR("frame write failed: frame_len=%u, numBytes=%d, errno=%u, str='%s'", dataLength, numBytes, errno, strerror(errno));
+		} else {
+			PRINT_ERROR("frame write fail: frame_len=%u, numBytes=%d", dataLength, numBytes);
+		}
 		close_handles(shared);
 		close_pipes(shared);
 		return;
@@ -138,13 +146,21 @@ void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *s
 	while (shared->running_flag) {
 		numBytes = read(shared->inject_fd, &framelen, sizeof(int));
 		if (numBytes <= 0) {
-			PRINT_ERROR("size read fail: numBytes=%u", numBytes);
+			if (numBytes < 0) {
+				PRINT_ERROR("size read failed: numBytes=%d, errno=%u, str='%s'", numBytes, errno, strerror(errno));
+			} else {
+				PRINT_ERROR("size read fail: numBytes=%d", numBytes);
+			}
 			break;
 		}
 
 		numBytes = read(shared->inject_fd, frame, framelen);
 		if (numBytes <= 0) {
-			PRINT_ERROR("frame read fail: numBytes=%u, frame_len=%u", numBytes, framelen);
+			if (numBytes < 0) {
+				PRINT_ERROR("frame read failed: frame_len=%d, numBytes=%d, errno=%u, str='%s'", framelen, numBytes, errno, strerror(errno));
+			} else {
+				PRINT_ERROR("frame read failed: frame_len=%d, numBytes=%d", framelen, numBytes);
+			}
 			break;
 		}
 
@@ -154,8 +170,8 @@ void inject_init(struct interface_to_inject_hdr *hdr, struct processes_shared *s
 
 		if (framelen > 0) {
 			numBytes = pcap_inject(shared->inject_handle, frame, framelen);
-			if (numBytes == -1) {
-				PRINT_ERROR("Injection failed: framelen=%d, errno=%u, str='%s'", framelen, errno, strerror(errno));
+			if (numBytes < 0 || numBytes == -1) {
+				PRINT_ERROR("Injection failed: framelen=%d, numBytes=%d, errno=%u, str='%s'", framelen, numBytes, errno, strerror(errno));
 			} else {
 				++shared->inject_count;
 #ifdef DEBUG

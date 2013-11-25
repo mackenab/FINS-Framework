@@ -12,6 +12,7 @@
 #include <linux/net.h>
 #include <math.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <poll.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -568,7 +569,7 @@ int tcp_process_options(struct tcp_conn *conn, struct tcp_seg *seg);
 #define TCP_FLOW_DAEMON	2
 
 struct tcp_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[TCP_MAX_FLOWS];
 
@@ -612,9 +613,9 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_ALERT_POLL 0
 #define TCP_ALERT_SHUTDOWN 1 //TODO change to alert?
 //don't use 0
-#define TCP_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define TCP_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define TCP_GET_PARAM_DUAL 	MOD_GET_PARAM_DUAL
+#define TCP_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define TCP_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define TCP_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 #define TCP_GET_HOST_WINDOW 3
 #define TCP_GET_SOCK_OPT 	4
 #define TCP_GET_FAST_ENABLED__id 5
@@ -659,7 +660,18 @@ void tcp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 #define TCP_EXEC_OPT 7
 #define TCP_EXEC_POLL 8
 
-#define ERROR_ICMP_TTL 0
-#define ERROR_ICMP_DEST_UNREACH 1
+#define TCP_ERROR_TTL 0
+#define TCP_ERROR_DEST_UNREACH 1
+#define TCP_ERROR_GET_ADDR 2
+
+//sockopts trying to support
+//TCP_NODELAY
+//SO_DEBUG
+//SO_REUSEADDR
+//SO_SNDBUF
+//SO_RCVBUF
+//SO_KEEPALIVE
+//SO_OOBINLINE
+//SO_PRIORITY
 
 #endif /* TCP_INTERNAL_H_ */

@@ -138,9 +138,23 @@ void connect_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		return;
 	} else {
-		PRINT_ERROR("Wrong address family=%d", addr->ss_family);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
-		return;
+		if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
+			md->sockets[hdr->sock_index].state = SS_UNCONNECTED;
+
+			if (md->sockets[hdr->sock_index].family == AF_INET) {
+				addr4_set_ip(&md->sockets[hdr->sock_index].rem_addr, 0);
+			} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
+				PRINT_WARN("todo");
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				return;
+			} else {
+				//TODO find out? do nothing?
+			}
+		} else {
+			PRINT_ERROR("Wrong address family=%d", addr->ss_family);
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAFNOSUPPORT);
+			return;
+		}
 	}
 
 	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
@@ -172,7 +186,7 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		if (peer == 0) { //getsockname
 			addr_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 
-			if (addr_ip == INADDR_ANY) { //TODO change this when have multiple interfaces
+			if (addr_ip == DAEMON_ADDR_ANY) { //TODO change this when have multiple interfaces
 				struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
 				if (addr != NULL) {
 					addr_ip = addr4_get_ip(&addr->ip);
@@ -197,29 +211,37 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 			addr_ip = 0;
 		}
 
+		address.ss_family = md->sockets[hdr->sock_index].family;
 		address_len = sizeof(struct sockaddr_in);
+
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
 		addr4->sin_addr.s_addr = htonl(addr_ip);
 		addr4->sin_port = 0;
 		PRINT_DEBUG("addr='%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 	} else if (md->sockets[hdr->sock_index].family == AF_INET6) {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
+		address.ss_family = md->sockets[hdr->sock_index].family;
 		address_len = sizeof(struct sockaddr_in6);
 
+		struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &address;
+		addr6->sin6_port = 0;
 		PRINT_WARN("todo");
+		//TODO finish
 	} else {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u", md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state);
 		//AF_UNSPEC, only occurs when not bound
-		//returns struct sockaddr with just family filled out
+		//Observed returns struct sockaddr with just family filled out
 		//Family defaults to AF_INET, probably because of the main address of main interface
 
+		//TODO figure out correct response to this
+		address.ss_family = AF_INET;
 		address_len = sizeof(struct sockaddr_in);
+
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &address;
-		addr4->sin_family = md->sockets[hdr->sock_index].family;
 		addr4->sin_addr.s_addr = 0;
 		addr4->sin_port = 0;
+		PRINT_DEBUG("addr='%s' netw=%u", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
 	}
-	address.ss_family = md->sockets[hdr->sock_index].family;
 
 	//send msg to wedge
 	int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + address_len;
@@ -386,7 +408,7 @@ void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		if (md->sockets[hdr->sock_index].family != AF_UNSPEC) {
 			host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 
-			if (host_ip == INADDR_ANY) { //TODO change this when have multiple interfaces
+			if (host_ip == DAEMON_ADDR_ANY) { //TODO change this when have multiple interfaces
 				struct addr_record *address = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
 				if (address != NULL) {
 					host_ip = addr4_get_ip(&address->ip);
@@ -524,41 +546,32 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	uint8_t *data = NULL;
 
 	if (flags & MSG_ERRQUEUE) {
-		if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-			if (md->sockets[hdr->sock_index].error_buf > 0) {
-				store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].error_list);
-				data_len = store->ff->ctrlFrame.data_len;
-				data = store->ff->ctrlFrame.data;
-				PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+		if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+			store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].error_list);
+			data_len = store->ff->ctrlFrame.data_len;
+			data = store->ff->ctrlFrame.data;
+			PRINT_DEBUG("removed store: store=%p, ff=%p, data_len=%u, data=%p, pos=%u", store, store->ff, data_len, data, store->pos);
+			PRINT_DEBUG("after: sock_index=%d, error_list->len=%d", hdr->sock_index, md->sockets[hdr->sock_index].error_list->len);
 
-				md->sockets[hdr->sock_index].error_buf--;
-				PRINT_DEBUG("after: sock_index=%d, error_buf=%d", hdr->sock_index, md->sockets[hdr->sock_index].error_buf);
+			if (store->addr->ss_family == AF_INET) {
+				addr_len = (uint32_t) sizeof(struct sockaddr_in);
+				addr4 = (struct sockaddr_in *) store->addr;
 
-				if (store->addr->ss_family == AF_INET) {
-					addr_len = (uint32_t) sizeof(struct sockaddr_in);
-					addr4 = (struct sockaddr_in *) store->addr;
+				uint32_t dst_ip = addr4->sin_addr.s_addr;
+				addr4->sin_addr.s_addr = htonl(dst_ip);
+				addr4->sin_port = 0;
+				PRINT_DEBUG("address:'%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
+			} else { //AF_INET6
+				addr_len = (uint32_t) sizeof(struct sockaddr_in6);
+				//addr6 = (struct sockaddr_in6 *) store->addr;
 
-					uint32_t dst_ip = addr4->sin_addr.s_addr;
-					addr4->sin_addr.s_addr = htonl(dst_ip);
-					addr4->sin_port = 0;
-					PRINT_DEBUG("address:'%s' (%u)", inet_ntoa(addr4->sin_addr), addr4->sin_addr.s_addr);
-				} else { //AF_INET6
-					addr_len = (uint32_t) sizeof(struct sockaddr_in6);
-					//addr6 = (struct sockaddr_in6 *) store->addr;
-
-					PRINT_WARN("todo");
-					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-					return;
-				}
-			} else {
-				//NACK
-				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
+				PRINT_WARN("todo");
+				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				return;
 			}
 		} else {
 			//NACK
-			//TODO check this might be wrong, maybe handle
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 11); //Resource temporarily unavailable
+			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAGAIN); //Resource temporarily unavailable
 			return;
 		}
 	} else {
@@ -692,16 +705,13 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 	 }
 	 */
 	if (events) { //initial
-		PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+		PRINT_DEBUG(
+				"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 				(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 		if (events & (POLLERR)) {
-			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-				if (md->sockets[hdr->sock_index].error_buf > 0) {
-					mask |= POLLERR;
-				}
-			} else {
-				PRINT_WARN("todo: POLLERR");
+			if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+				mask |= POLLERR;
 			}
 		}
 
@@ -758,16 +768,12 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else {
 				PRINT_DEBUG(
-						"POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+						"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 				if (events & (POLLERR)) {
-					if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-						if (md->sockets[hdr->sock_index].error_buf > 0) {
-							mask |= POLLERR;
-						}
-					} else {
-						PRINT_WARN("todo: POLLERR");
+					if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+						mask |= POLLERR;
 					}
 				}
 
@@ -793,12 +799,8 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 
-			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
-				if (md->sockets[hdr->sock_index].error_buf > 0) {
-					mask |= POLLERR;
-				}
-			} else {
-				PRINT_WARN("todo: POLLERR");
+			if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+				mask |= POLLERR;
 			}
 
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
@@ -845,27 +847,281 @@ void sendpage_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *h
 	PRINT_WARN("todo");
 }
 
+void getsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval) {
+	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
+	struct daemon_data *md = (struct daemon_data *) module->data;
+
+	/*
+	 * 7 levels+:
+	 * SOL_SOCKET == 1
+	 * IPPROTO_IP == SOL_IP == 0
+	 * IPPROTO_IPV6 == SOL_IPV6 == 41
+	 * IPPROTO_ICMP == 1
+	 * IPPROTO_ICMPV6 == SOL_ICMPV6 == 58
+	 * IPPROTO_RAW == SOL_RAW == 255
+	 * IPPROTO_TCP == SOL_TCP == 6
+	 */
+
+	int len = 0;
+	uint8_t *val = NULL;
+
+	switch (level) {
+	case SOL_IP:
+		switch (optname) {
+		case IP_TOS:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_TOS;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_RECVERR:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_RECVERR;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_MTU_DISCOVER:
+			//TODO
+			PRINT_WARN("todo");
+			break;
+		case IP_RECVTTL:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case IP_TTL:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FIP_TTL;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
+		}
+		break;
+	case SOL_RAW:
+		switch (optname) {
+		case ICMP_FILTER:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FICMP_FILTER;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
+		}
+		break;
+	case SOL_TCP:
+		//TODO check whether this should throw an error
+		switch (optname) {
+		case TCP_NODELAY:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		default:
+			break;
+		}
+		break;
+	case SOL_SOCKET:
+		switch (optname) {
+		case SO_DEBUG:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_DEBUG;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_REUSEADDR:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_TYPE:
+#ifndef BUILD_FOR_ANDROID
+		case SO_PROTOCOL:
+		case SO_DOMAIN:
+#endif
+		case SO_ERROR:
+		case SO_DONTROUTE:
+		case SO_BROADCAST:
+			break;
+		case SO_SNDBUF:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_SNDBUFFORCE:
+			break;
+		case SO_RCVBUF:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_RCVBUFFORCE:
+			break;
+		case SO_KEEPALIVE:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_OOBINLINE:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_NO_CHECK:
+			break;
+		case SO_PRIORITY:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_LINGER:
+		case SO_BSDCOMPAT:
+			break;
+		case SO_TIMESTAMP:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+#ifndef BUILD_FOR_ANDROID
+		case SO_TIMESTAMPNS:
+		case SO_TIMESTAMPING:
+#endif
+		case SO_RCVTIMEO:
+			//TODO less - gets 8 byte value, timestamp??
+		case SO_SNDTIMEO:
+			//TODO less - gets 8 byte value, timestamp??
+		case SO_RCVLOWAT:
+		case SO_SNDLOWAT:
+			break;
+		case SO_PASSCRED:
+			if (optlen >= sizeof(int)) {
+				len = sizeof(int);
+				val = (uint8_t *) &md->sockets[hdr->sock_index].sockopts.FSO_PASSCRED;
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
+		case SO_PEERCRED:
+			//TODO trickier
+		case SO_PEERNAME:
+		case SO_ACCEPTCONN:
+		case SO_PASSSEC:
+		case SO_PEERSEC:
+#ifndef BUILD_FOR_ANDROID
+		case SO_MARK:
+		case SO_RXQ_OVFL:
+#endif
+		case SO_ATTACH_FILTER:
+		case SO_DETACH_FILTER:
+			PRINT_WARN("todo");
+			break;
+		default:
+			//nack?
+			PRINT_ERROR("default=%d", optname);
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+
+	//if (len) {
+	//send msg to wedge
+	int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + (len > 0 ? len : 0);
+	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
+
+	struct daemon_to_wedge_hdr *hdr_ret = (struct daemon_to_wedge_hdr *) msg;
+	hdr_ret->call_type = hdr->call_type;
+	hdr_ret->call_id = hdr->call_id;
+	hdr_ret->call_index = hdr->call_index;
+	hdr_ret->ret = ACK;
+	hdr_ret->msg = 0;
+	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
+
+	*(int *) pt = len;
+	pt += sizeof(int);
+
+	if (len > 0) {
+		memcpy(pt, val, len);
+		pt += len;
+	}
+
+	if (pt - msg != msg_len) {
+		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
+		free(msg);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		return;
+	}
+
+	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
+	if (send_wedge(module, msg, msg_len, 0)) {
+		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
+		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+	} else {
+
+	}
+	free(msg);
+	//} else {
+	//	nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+	//}
+}
+
 void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval) {
 	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	/*
 	 * 7 levels+:
-	 * IPPROTO_IP
-	 * IPPROTO_IPv6
-	 * IPPROTO_ICMP
-	 * IPPROTO_RAW
-	 * IPPROTO_TCP
-	 * IPPROTO_ICMP
-	 *
-	 * SOL_IP - must match IPPROTO_xxx
-	 * SOL_RAW
-	 * SOL_TCP - not declared??
-	 * SOL_SOCKET
+	 * SOL_SOCKET == 1
+	 * IPPROTO_IP == SOL_IP == 0
+	 * IPPROTO_IPV6 == SOL_IPV6 == 41
+	 * IPPROTO_ICMP == 1
+	 * IPPROTO_ICMPV6 == SOL_ICMPV6 == 58
+	 * IPPROTO_RAW == SOL_RAW == 255
+	 * IPPROTO_TCP == SOL_TCP == 6
 	 */
 
 	switch (level) {
-	case IPPROTO_IP:
+	case SOL_IP:
 		switch (optname) {
 		case IP_TOS:
 			if (optlen >= sizeof(int)) {
@@ -877,8 +1133,19 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 			break;
 		case IP_RECVERR:
 			if (optlen >= sizeof(int)) {
+				int old = md->sockets[hdr->sock_index].sockopts.FIP_RECVERR;
 				md->sockets[hdr->sock_index].sockopts.FIP_RECVERR = *(int *) optval;
 				PRINT_DEBUG("FIP_RECVERR=%d", md->sockets[hdr->sock_index].sockopts.FIP_RECVERR);
+
+				if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+					if (old && !md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) { //FIP_RECVERR opt changed from 1 to 0
+						struct daemon_store *old_store;
+						while (md->sockets[hdr->sock_index].error_list->len > 1) {
+							old_store = (struct daemon_store *) list_remove_front(md->sockets[hdr->sock_index].error_list);
+							daemon_store_free(old_store);
+						}
+					}
+				}
 			} else {
 				PRINT_WARN("todo error");
 			}
@@ -907,7 +1174,7 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 			break;
 		}
 		break;
-	case IPPROTO_RAW:
+	case SOL_RAW:
 		switch (optname) {
 		case ICMP_FILTER:
 			if (optlen >= sizeof(int)) {
@@ -921,7 +1188,8 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 			break;
 		}
 		break;
-	case IPPROTO_TCP:
+	case SOL_TCP:
+		//TODO check whether this should throw an error
 		switch (optname) {
 		case TCP_NODELAY:
 			if (optlen >= sizeof(int)) {
@@ -974,17 +1242,40 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 			break;
 		case SO_RCVBUF:
 			if (optlen >= sizeof(int)) {
-				md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF = 2 * (*(int *) optval); //TODO add conditions
+				md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF = 2 * (*(int *) optval); //TODO add conditions //TODO check if this is right!
 				PRINT_DEBUG("FSO_RCVBUF=%d", md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
 			} else {
 				PRINT_WARN("todo error");
 			}
 			break;
 		case SO_RCVBUFFORCE:
+			break;
 		case SO_KEEPALIVE:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE = *(int *) optval;
+				PRINT_DEBUG("FSO_KEEPALIVE=%d", md->sockets[hdr->sock_index].sockopts.FSO_KEEPALIVE);
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
 		case SO_OOBINLINE:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE = *(int *) optval;
+				PRINT_DEBUG("FSO_OOBINLINE=%d", md->sockets[hdr->sock_index].sockopts.FSO_OOBINLINE);
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
 		case SO_NO_CHECK:
+			break;
 		case SO_PRIORITY:
+			if (optlen >= sizeof(int)) {
+				md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY = *(int *) optval;
+				PRINT_DEBUG("FSO_PRIORITY=%d", md->sockets[hdr->sock_index].sockopts.FSO_PRIORITY);
+			} else {
+				PRINT_WARN("todo error");
+			}
+			break;
 		case SO_LINGER:
 		case SO_BSDCOMPAT:
 			break;
@@ -1007,7 +1298,9 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 		case SO_RCVLOWAT:
 		case SO_SNDLOWAT:
 		case SO_PASSCRED:
+			//TODO later
 		case SO_PEERCRED:
+			//TODO later
 		case SO_PEERNAME:
 		case SO_ACCEPTCONN:
 		case SO_PASSSEC:
@@ -1021,6 +1314,7 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 			PRINT_WARN("todo");
 			break;
 		default:
+			//nack?
 			PRINT_ERROR("default=%d", optname);
 			break;
 		}
@@ -1036,184 +1330,16 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 	}
 }
 
-void getsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval) {
-	PRINT_DEBUG("Entered: hdr=%p, level=%d, optname=%d, optlen=%d", hdr, level, optname, optlen);
-	struct daemon_data *md = (struct daemon_data *) module->data;
-
-	int len = 0;
-	char *val;
-
-	switch (level) {
-	case IPPROTO_IP:
-		switch (optname) {
-		case IP_TOS:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FIP_TOS);
-			break;
-		case IP_RECVERR:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FIP_RECVERR);
-			break;
-		case IP_MTU_DISCOVER:
-			//TODO
-			PRINT_WARN("todo");
-			break;
-		case IP_RECVTTL:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FIP_RECVTTL);
-			break;
-		case IP_TTL:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FIP_TTL);
-			break;
-		default:
-			break;
-		}
-		break;
-	case IPPROTO_RAW:
-		switch (optname) {
-		case ICMP_FILTER:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FICMP_FILTER);
-			break;
-		default:
-			break;
-		}
-		break;
-	case IPPROTO_TCP:
-		switch (optname) {
-		case TCP_NODELAY:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FTCP_NODELAY);
-			break;
-		default:
-			break;
-		}
-		break;
-	case SOL_SOCKET:
-		switch (optname) {
-		case SO_DEBUG:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FSO_DEBUG);
-			break;
-		case SO_REUSEADDR:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FSO_REUSEADDR);
-			break;
-		case SO_TYPE:
-#ifndef BUILD_FOR_ANDROID
-		case SO_PROTOCOL:
-		case SO_DOMAIN:
-#endif
-		case SO_ERROR:
-		case SO_DONTROUTE:
-		case SO_BROADCAST:
-			break;
-		case SO_SNDBUF:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FSO_SNDBUF);
-			break;
-		case SO_SNDBUFFORCE:
-			break;
-		case SO_RCVBUF:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FSO_RCVBUF);
-			break;
-		case SO_RCVBUFFORCE:
-		case SO_KEEPALIVE:
-		case SO_OOBINLINE:
-		case SO_NO_CHECK:
-		case SO_PRIORITY:
-		case SO_LINGER:
-		case SO_BSDCOMPAT:
-			break;
-		case SO_TIMESTAMP:
-			len = sizeof(int);
-			val = (char *) &(md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP);
-			break;
-#ifndef BUILD_FOR_ANDROID
-		case SO_TIMESTAMPNS:
-		case SO_TIMESTAMPING:
-#endif
-		case SO_RCVTIMEO:
-			//TODO less - gets 8 byte value, timestamp??
-		case SO_SNDTIMEO:
-			//TODO less - gets 8 byte value, timestamp??
-		case SO_RCVLOWAT:
-		case SO_SNDLOWAT:
-		case SO_PASSCRED:
-		case SO_PEERCRED:
-		case SO_PEERNAME:
-		case SO_ACCEPTCONN:
-		case SO_PASSSEC:
-		case SO_PEERSEC:
-#ifndef BUILD_FOR_ANDROID
-		case SO_MARK:
-		case SO_RXQ_OVFL:
-#endif
-		case SO_ATTACH_FILTER:
-		case SO_DETACH_FILTER:
-			PRINT_WARN("todo");
-			break;
-		default:
-			PRINT_ERROR("default=%d", optname);
-			break;
-		}
-		break;
-	default:
-		break;
-	}
-
-	//if (len) {
-	//send msg to wedge
-	int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + (len > 0 ? len : 0);
-	uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
-
-	struct daemon_to_wedge_hdr *hdr_ret = (struct daemon_to_wedge_hdr *) msg;
-	hdr_ret->call_type = hdr->call_type;
-	hdr_ret->call_id = hdr->call_id;
-	hdr_ret->call_index = hdr->call_index;
-	hdr_ret->ret = ACK;
-	hdr_ret->msg = 0;
-	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
-
-	*(int *) pt = len;
-	pt += sizeof(int);
-
-	if (len > 0) {
-		memcpy(pt, val, len);
-		pt += len;
-	}
-
-	if (pt - msg != msg_len) {
-		PRINT_ERROR("write error: diff=%d, len=%d", pt - msg, msg_len);
-		free(msg);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		return;
-	}
-
-	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (send_wedge(module, msg, msg_len, 0)) {
-		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-	} else {
-
-	}
-	free(msg);
-	//} else {
-	//	nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-	//}
-}
-
 void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t *flags) {
-	if (call->type == POLL_CALL) {
+	if (call->type != POLL_CALL) {
 		return;
 	}
 
 	PRINT_DEBUG("Entered: call=%p, flags=0x%x", call, *flags);
 	uint32_t events = call->buf;
 
-	PRINT_DEBUG("POLLIN=%x, POLLPRI=%x, POLLOUT=%x, POLLERR=%x, POLLHUP=%x, POLLNVAL=%x, POLLRDNORM=%x, POLLRDBAND=%x, POLLWRNORM=%x, POLLWRBAND=%x",
+	PRINT_DEBUG(
+			"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 			(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 	uint32_t mask = 0;
@@ -1345,7 +1471,7 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 		for (i = 0; i < DAEMON_MAX_SOCKETS; i++) {
 			if (md->sockets[i].sock_id != -1 && md->sockets[i].protocol == IPPROTO_ICMP && md->sockets[i].family == AF_INET) {
 				host_ip = addr4_get_ip(&md->sockets[i].host_addr);
-				if (host_ip == INADDR_ANY || host_ip == dst_ip) {
+				if (host_ip == DAEMON_ADDR_ANY || host_ip == dst_ip) {
 					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
 							md->sockets[i].sock_id, i, md->sockets[i].state, addr4_get_ip(&md->sockets[i].host_addr), addr4_get_ip(&md->sockets[i].rem_addr));
 
@@ -1401,6 +1527,7 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 	uint32_t flags;
 	struct daemon_call *call;
 	struct daemon_store *store;
+	struct daemon_store *old_store;
 
 	if (family == AF_INET) {
 		uint32_t src_ip = addr4_get_ip(src_addr);
@@ -1410,14 +1537,25 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 		for (i = 0; i < DAEMON_MAX_SOCKETS; i++) {
 			if (md->sockets[i].sock_id != -1 && md->sockets[i].protocol == IPPROTO_ICMP && md->sockets[i].family == AF_INET) {
 				host_ip = addr4_get_ip(&md->sockets[i].host_addr);
-				if (host_ip == INADDR_ANY || host_ip == src_ip) {
+				if (host_ip == DAEMON_ADDR_ANY || host_ip == src_ip) {
 					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
 							md->sockets[i].sock_id, i, md->sockets[i].state, addr4_get_ip(&md->sockets[i].host_addr), addr4_get_ip(&md->sockets[i].rem_addr));
 
-					if (md->sockets[i].sockopts.FIP_RECVERR) {
-						flags = POLLERR;
-						list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
+					flags = POLLERR;
+					list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
 
+					if (ff->ctrlFrame.param_id == DAEMON_ERROR_GET_ADDR) {
+						flags = 0;
+						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
+						if (call != NULL) {
+							nack_send(module, call->id, call->index, call->type, EAGAIN);
+							daemon_calls_remove(module, call->index);
+							list_remove(md->sockets[i].call_list, call);
+						}
+					}
+
+					PRINT_DEBUG("FIP_RECVERR=%d", md->sockets[i].sockopts.FIP_RECVERR);
+					if (md->sockets[i].sockopts.FIP_RECVERR) {
 						flags = 1;
 						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
 						if (call != NULL) {
@@ -1425,23 +1563,25 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 							list_remove(md->sockets[i].call_list, call);
 							continue;
 						}
+					}
 
-						store = (struct daemon_store *) secure_malloc(sizeof(struct daemon_store));
-						store->addr = (struct sockaddr_storage *) secure_malloc(sizeof(struct sockaddr_storage));
-						memcpy(store->addr, src_addr, sizeof(struct sockaddr_storage));
-						store->ff = cloneFinsFrame(ff);
+					store = (struct daemon_store *) secure_malloc(sizeof(struct daemon_store));
+					store->addr = (struct sockaddr_storage *) secure_malloc(sizeof(struct sockaddr_storage));
+					memcpy(store->addr, src_addr, sizeof(struct sockaddr_storage));
+					store->ff = cloneFinsFrame(ff);
 
-						if (list_has_space(md->sockets[i].error_list)) {
-							list_append(md->sockets[i].error_list, store);
-							md->sockets[i].error_buf++;
-							PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, data_buf=%d", i, store->ff, ff->metaData, md->sockets[i].data_buf);
-						} else {
-							PRINT_ERROR("data_list full: sock_index=%d, ff=%p", i, store->ff);
-							daemon_store_free(store);
+					if (list_has_space(md->sockets[i].error_list)) {
+						if (!md->sockets[i].sockopts.FIP_RECVERR) {
+							while (!list_is_empty(md->sockets[i].error_list)) {
+								old_store = (struct daemon_store *) list_remove_front(md->sockets[i].error_list);
+								daemon_store_free(old_store);
+							}
 						}
+						list_append(md->sockets[i].error_list, store);
+						PRINT_DEBUG("stored, sock_index=%d, ff=%p, meta=%p, error_list->len=%d", i, store->ff, ff->metaData, md->sockets[i].error_list->len);
 					} else {
-						//TODO have a buffer of a single FF that you respond to, or simply a buffer with a single error code
-						PRINT_WARN("todo");
+						PRINT_ERROR("data_list full: sock_index=%d, ff=%p", i, store->ff);
+						daemon_store_free(store);
 					}
 				}
 			}

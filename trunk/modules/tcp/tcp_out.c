@@ -979,6 +979,72 @@ void tcp_conn_read_param(struct fins_module *module, struct tcp_conn *conn, stru
 		PRINT_DEBUG("param_id=TCP_GET_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 		//fill in with switch of opts? or have them separate?
 
+		PRINT_DEBUG("param_id=TCP_SET_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
+		//fill in with switch of opts? or have them separate?
+
+		uint32_t opt_level;
+		secure_metadata_readFromElement(ff->metaData, "opt_level", &opt_level);
+		uint32_t opt_name;
+		secure_metadata_readFromElement(ff->metaData, "opt_name", &opt_name);
+		uint32_t opt_len;
+		secure_metadata_readFromElement(ff->metaData, "opt_len", &opt_len);
+
+		PRINT_WARN("todo");
+
+		//sockopts trying to support
+		//TCP_NODELAY
+		//SO_DEBUG
+		//SO_REUSEADDR
+		//SO_SNDBUF
+		//SO_RCVBUF
+		//SO_KEEPALIVE
+		//SO_OOBINLINE
+		//SO_PRIORITY
+
+		switch (opt_level) {
+		case SOL_IP:
+			switch (opt_name) {
+			default:
+				break;
+			}
+			break;
+		case SOL_RAW:
+			//TODO check whether this should throw an error
+			switch (opt_name) {
+			default:
+				break;
+			}
+			break;
+		case SOL_TCP:
+			switch (opt_name) {
+			default:
+				break;
+			}
+			break;
+		case SOL_SOCKET:
+			switch (opt_name) {
+			case SO_SNDBUF:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_RCVBUF:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			default:
+				//nack?
+				PRINT_ERROR("default=%d", opt_name);
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+
 		//TODO read sock opts
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
@@ -1016,19 +1082,120 @@ void tcp_conn_set_param(struct fins_module *module, struct tcp_conn *conn, struc
 			tcp_seg_free(seg);
 		}
 
-		if (0) {
-			module_reply_fcf(module, ff, FCF_TRUE, value);
-		} else {
-			freeFinsFrame(ff);
-		}
+		//module_reply_fcf(module, ff, FCF_TRUE, value);
+		freeFinsFrame(ff); //Daemon isn't expecting a reply
 		break;
 	case TCP_SET_SOCK_OPT:
 		PRINT_DEBUG("param_id=TCP_SET_SOCK_OPT (%d)", ff->ctrlFrame.param_id);
 		//fill in with switch of opts? or have them separate?
 
+		uint32_t opt_level;
+		secure_metadata_readFromElement(ff->metaData, "opt_level", &opt_level);
+		uint32_t opt_name;
+		secure_metadata_readFromElement(ff->metaData, "opt_name", &opt_name);
+		uint32_t opt_len;
+		secure_metadata_readFromElement(ff->metaData, "opt_len", &opt_len);
+		secure_metadata_readFromElement(ff->metaData, "value", &value);
+
 		PRINT_WARN("todo");
 
-		if (0) {
+		//sockopts trying to support
+		//TCP_NODELAY
+		//SO_DEBUG
+		//SO_REUSEADDR
+		//SO_SNDBUF
+		//SO_RCVBUF
+		//SO_KEEPALIVE
+		//SO_OOBINLINE
+		//SO_PRIORITY
+
+		switch (opt_level) {
+		case SOL_IP:
+			switch (opt_name) {
+			default:
+				break;
+			}
+			break;
+		case SOL_RAW:
+			//TODO check whether this should throw an error
+			switch (opt_name) {
+			default:
+				break;
+			}
+			break;
+		case SOL_TCP:
+			switch (opt_name) {
+			case TCP_NODELAY:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+		case SOL_SOCKET:
+			switch (opt_name) {
+			case SO_DEBUG:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_REUSEADDR:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_SNDBUF:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_RCVBUF:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_KEEPALIVE:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_OOBINLINE:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_PRIORITY:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			case SO_PASSCRED:
+				if (opt_len >= sizeof(int)) {
+				} else {
+					PRINT_WARN("todo error");
+				}
+				break;
+			default:
+				//nack?
+				PRINT_ERROR("default=%d", opt_name);
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+
+		if (1) {
 			module_reply_fcf(module, ff, FCF_TRUE, value);
 		} else {
 			freeFinsFrame(ff);
@@ -1165,17 +1332,17 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 	//float val_float;
 
 	switch (ff->ctrlFrame.param_id) {
-	case TCP_GET_PARAM_FLOWS:
-		PRINT_DEBUG("TCP_GET_PARAM_FLOWS");
-		module_get_param_flows(module, ff);
+	case TCP_READ_PARAM_FLOWS:
+		PRINT_DEBUG("param_id=TCP_READ_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
+		module_read_param_flows(module, ff);
 		break;
-	case TCP_GET_PARAM_LINKS:
-		PRINT_DEBUG("TCP_GET_PARAM_LINKS");
-		module_get_param_links(module, ff);
+	case TCP_READ_PARAM_LINKS:
+		PRINT_DEBUG("param_id=TCP_READ_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
+		module_read_param_links(module, ff);
 		break;
-	case TCP_GET_PARAM_DUAL:
-		PRINT_DEBUG("TCP_GET_PARAM_DUAL");
-		module_get_param_dual(module, ff);
+	case TCP_READ_PARAM_DUAL:
+		PRINT_DEBUG("param_id=TCP_READ_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
+		module_read_param_dual(module, ff);
 		break;
 	case TCP_GET_HOST_WINDOW: //conn/conn_stub specific READ_PARAMS
 	case TCP_GET_SOCK_OPT:
@@ -1183,7 +1350,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		tcp_fcf_match(module, ff);
 		break;
 	case TCP_GET_FAST_ENABLED__id:
-		PRINT_DEBUG("TCP_GET_FAST_ENABLED");
+		PRINT_DEBUG("param_id=TCP_GET_FAST_ENABLED (%d)", ff->ctrlFrame.param_id);
 
 		val_int32 = (uint32_t) md->fast_enabled;
 		secure_metadata_writeToElement(ff->metaData, "value", &val_int32, META_TYPE_INT32);
@@ -1191,7 +1358,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	case TCP_GET_FAST_DUPLICATES__id:
-		PRINT_DEBUG("TCP_GET_FAST_DUPLICATES");
+		PRINT_DEBUG("param_id=TCP_GET_FAST_DUPLICATES (%d)", ff->ctrlFrame.param_id);
 
 		val_int32 = (uint32_t) md->fast_duplicates;
 		secure_metadata_writeToElement(ff->metaData, "value", &val_int32, META_TYPE_INT32);
@@ -1199,7 +1366,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	case TCP_GET_FAST_RETRANSMITS__id:
-		PRINT_DEBUG("TCP_GET_FAST_RETRANSMITS");
+		PRINT_DEBUG("param_id=TCP_GET_FAST_RETRANSMITS (%d)", ff->ctrlFrame.param_id);
 
 		//fast_retransmits
 		val_int32 = (uint32_t) md->total_conn_stats.fast;
@@ -1208,7 +1375,7 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	case TCP_GET_MSS__id:
-		PRINT_DEBUG("TCP_GET_MSS");
+		PRINT_DEBUG("param_id=TCP_GET_MSS (%d)", ff->ctrlFrame.param_id);
 
 		val_int32 = (uint32_t) md->mss;
 		secure_metadata_writeToElement(ff->metaData, "value", &val_int32, META_TYPE_INT32);
@@ -1230,15 +1397,15 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case TCP_SET_PARAM_FLOWS:
-		PRINT_DEBUG("TCP_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=TCP_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case TCP_SET_PARAM_LINKS:
-		PRINT_DEBUG("TCP_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=TCP_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case TCP_SET_PARAM_DUAL:
-		PRINT_DEBUG("TCP_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=TCP_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	case TCP_SET_HOST_WINDOW: //conn/conn_stub specific SET_PARAMS
@@ -1248,7 +1415,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		tcp_fcf_match(module, ff);
 		break;
 	case TCP_SET_FAST_ENABLED__id:
-		PRINT_DEBUG("TCP_SET_FAST_ENABLED");
+		PRINT_DEBUG("param_id=TCP_SET_FAST_ENABLED (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
 		md->fast_enabled = (uint8_t) val_int32;
@@ -1256,7 +1423,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	case TCP_SET_FAST_DUPLICATES__id:
-		PRINT_DEBUG("TCP_SET_FAST_DUPLICATES");
+		PRINT_DEBUG("param_id=TCP_SET_FAST_DUPLICATES (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
 		md->fast_duplicates = (uint32_t) val_int32;
@@ -1264,7 +1431,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	case TCP_SET_FAST_RETRANSMITS__id:
-		PRINT_DEBUG("TCP_SET_FAST_RETRANSMITS");
+		PRINT_DEBUG("param_id=TCP_SET_FAST_RETRANSMITS (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
 		md->total_conn_stats.fast = (uint32_t) val_int32;
@@ -1272,7 +1439,7 @@ void tcp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	case TCP_SET_MSS__id:
-		PRINT_DEBUG("TCP_SET_MSS");
+		PRINT_DEBUG("param_id=TCP_SET_MSS (%d)", ff->ctrlFrame.param_id);
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_int32);
 		md->mss = (uint32_t) val_int32;

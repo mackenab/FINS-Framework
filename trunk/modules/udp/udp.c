@@ -35,7 +35,7 @@ int udp_sent_host_test(struct udp_sent *sent, uint32_t *host_ip, uint16_t *host_
 	return sent->host_ip == *host_ip && sent->host_port == *host_port;
 }
 
-int udp_sent_data_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len) {
+int udp_sent_match_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len) {
 	if (sent->ff->dataFrame.pduLength >= *data_len) { //TODO check if this logic is sound
 		return strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, *data_len) == 0;
 	} else {
@@ -198,16 +198,16 @@ void udp_set_param(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 
 	switch (ff->ctrlFrame.param_id) {
-	case MOD_SET_PARAM_FLOWS:
-		PRINT_DEBUG("PARAM_FLOWS");
+	case UDP_SET_PARAM_FLOWS:
+		PRINT_DEBUG("param_id=UDP_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
-	case MOD_SET_PARAM_LINKS:
-		PRINT_DEBUG("PARAM_LINKS");
+	case UDP_SET_PARAM_LINKS:
+		PRINT_DEBUG("param_id=UDP_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
-	case MOD_SET_PARAM_DUAL:
-		PRINT_DEBUG("PARAM_DUAL");
+	case UDP_SET_PARAM_DUAL:
+		PRINT_DEBUG("param_id=UDP_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	default:
@@ -270,8 +270,8 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 	//uint32_t checksum;
 
 	switch (ff->ctrlFrame.param_id) {
-	case ERROR_ICMP_TTL:
-		PRINT_DEBUG("param_id=ERROR_ICMP_TTL (%d)", ff->ctrlFrame.param_id);
+	case UDP_ERROR_TTL:
+		PRINT_DEBUG("param_id=UDP_ERROR_TTL (%d)", ff->ctrlFrame.param_id);
 
 		/*
 		 struct udp_packet *udp_hdr = (struct udp_packet *) ff->ctrlFrame.data;
@@ -291,12 +291,12 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) { //TODO make func!!
-				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_data_test,md,&ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, pdu, &ff->ctrlFrame.data_len);
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
 					ff->ctrlFrame.sender_id = module->index;
-					//ff->ctrlFrame.param_id = ERROR_ICMP_TTL; //TODO error msg code //ERROR_UDP_TTL?
+					//ff->ctrlFrame.param_id = UDP_ERROR_TTL; //TODO error msg code //ERROR_UDP_TTL?
 
 					ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
 					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
@@ -322,8 +322,8 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 			}
 		}
 		break;
-	case ERROR_ICMP_DEST_UNREACH:
-		PRINT_DEBUG("param_id=ERROR_ICMP_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
+	case UDP_ERROR_DEST_UNREACH:
+		PRINT_DEBUG("param_id=UDP_ERROR_DEST_UNREACH (%d)", ff->ctrlFrame.param_id);
 
 		if (list_is_empty(md->sent_packet_list)) {
 			PRINT_WARN("todo error");
@@ -332,12 +332,12 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) {
-				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_data_test, md, &ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, pdu, &ff->ctrlFrame.data_len);
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
 					ff->ctrlFrame.sender_id = module->index;
-					//ff->ctrlFrame.param_id = ERROR_ICMP_DEST_UNREACH; //TODO error msg code //ERROR_UDP_TTL?
+					//ff->ctrlFrame.param_id = UDP_ERROR_DEST_UNREACH; //TODO error msg code //ERROR_UDP_TTL?
 
 					ff->ctrlFrame.data_len = sent->ff->dataFrame.pduLength;
 					ff->ctrlFrame.data = sent->ff->dataFrame.pdu;
@@ -361,6 +361,28 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 				PRINT_WARN("todo");
 				freeFinsFrame(ff);
 			}
+		}
+		break;
+	case UDP_ERROR_GET_ADDR:
+		PRINT_DEBUG("param_id=UDP_ERROR_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+
+		if (!list_is_empty(md->sent_packet_list)) {
+			uint8_t *pdu = ff->ctrlFrame.data;
+			if (pdu != NULL) { //TODO make func!!
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test,pdu,&ff->ctrlFrame.data_len);
+				if (sent != NULL) {
+					list_remove(md->sent_packet_list, sent);
+					udp_sent_free(sent);
+				}
+			}
+		}
+
+		ff->ctrlFrame.sender_id = module->index;
+		//ff->ctrlFrame.param_id = UDP_ERROR_TTL; //TODO error msg code //ERROR_UDP_TTL?
+
+		if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
+			PRINT_WARN("todo error");
+			freeFinsFrame(ff);
 		}
 		break;
 	default:

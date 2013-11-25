@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
 	fds[1].events = POLLOUT | POLLWRNORM;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	printf("\n fd: sock=%d, events=%x\n", sock, fds[1].events);
-	int time = -1; //1000;
+	//int timeout = -1; //1000;
 
 	//pID = fork();
 
@@ -255,7 +255,7 @@ int main(int argc, char *argv[]) {
 
 	 if ((len > 0 && len < 1024) || 1) {
 	 if (pID == 0) {
-	 //ret = poll(fds, nfds, time);
+	 //ret = poll(fds, nfds, timeout);
 	 //printf("poll: ret=%d, revents=%x, pID=%d\n", ret, fds[ret].revents, pID);
 	 }
 	 if (ret || 1) {

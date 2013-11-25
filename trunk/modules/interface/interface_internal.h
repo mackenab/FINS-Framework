@@ -89,7 +89,7 @@ struct interface_cache {
 	struct sockaddr_storage ip; //unique id
 	uint64_t mac;
 
-	struct linked_list *request_list;
+	struct linked_list *request_list; //linked list of interface_request structs, representing requests made to resolve the MAC
 	uint8_t seeking;
 	struct timeval updated_stamp;
 };
@@ -133,7 +133,7 @@ struct interface_to_inject_hdr {
 #define INTERFACE_FLOW_ARP 	1
 #define INTERFACE_FLOW_IPV6	2 //TODO add eventually
 struct interface_data {
-	struct linked_list *link_list;
+	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
 	struct fins_module_flow flows[INTERFACE_MAX_FLOWS];
 
@@ -143,11 +143,11 @@ struct interface_data {
 	int capture_fd;
 	int inject_fd;
 
-	struct linked_list *if_list;
+	struct linked_list *if_list; //linked list of if_record structs, representing all interfaces
 	struct if_record *if_loopback;
 	struct if_record *if_main;
-	struct linked_list *cache_list; //The list of current cache we have
-	struct linked_list *store_list; //Stored FDF waiting to send
+	struct linked_list *cache_list; //linked list of interface_cache structs, representing internal cache for this module
+	struct linked_list *store_list; //linked list of interface_store structs, holding FDF waiting on MAC addr to send
 };
 
 int interface_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);
@@ -175,12 +175,16 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 #define INTERFACE_EXEC_GET_ADDR 0
 
 //don't use 0
-#define INTERFACE_GET_PARAM_FLOWS MOD_GET_PARAM_FLOWS
-#define INTERFACE_GET_PARAM_LINKS MOD_GET_PARAM_LINKS
-#define INTERFACE_GET_PARAM_DUAL MOD_GET_PARAM_DUAL
+#define INTERFACE_READ_PARAM_FLOWS MOD_READ_PARAM_FLOWS
+#define INTERFACE_READ_PARAM_LINKS MOD_READ_PARAM_LINKS
+#define INTERFACE_READ_PARAM_DUAL MOD_READ_PARAM_DUAL
 
 #define INTERFACE_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define INTERFACE_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define INTERFACE_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+
+#define INTERFACE_ERROR_TTL 0
+#define INTERFACE_ERROR_DEST_UNREACH 1
+#define INTERFACE_ERROR_GET_ADDR 2
 
 #endif /* INTERFACE_INTERNAL_H_ */

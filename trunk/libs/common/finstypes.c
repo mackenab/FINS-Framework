@@ -150,7 +150,7 @@ struct linked_list *list_create(uint32_t max) {
 
 //Prepend the pointer to the front of the list
 void list_prepend_full(struct linked_list *list, uint8_t *data) {
-	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
+	PRINT_DEBUG("Entered: list=%p, len=%u, data=%p", list, list->len, data);
 
 	struct list_node *node = (struct list_node *) secure_malloc(sizeof(struct list_node));
 	node->data = data;
@@ -171,7 +171,7 @@ void list_prepend_full(struct linked_list *list, uint8_t *data) {
 
 //Append the pointer to the end of the list
 void list_append_full(struct linked_list *list, uint8_t *data) {
-	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
+	PRINT_DEBUG("Entered: list=%p, len=%u, data=%p", list, list->len, data);
 
 	struct list_node *node = (struct list_node *) secure_malloc(sizeof(struct list_node));
 	node->data = data;
@@ -193,7 +193,7 @@ void list_append_full(struct linked_list *list, uint8_t *data) {
 
 //Insert the pointer after the pointer given by <prev>
 void list_insert_full(struct linked_list *list, uint8_t *data, uint8_t *prev) {
-	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
+	PRINT_DEBUG("Entered: list=%p, len=%u, data=%p", list, list->len, data);
 
 	if (list_is_empty(list)) {
 		//list_check(list);
@@ -263,7 +263,7 @@ int list_check(struct linked_list *list) { //TODO remove all references
 	}
 
 	if (count == list->len) {
-		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 1);
+		PRINT_DEBUG("Exited: list=%p, len=%u, count=%u, check=%u", list, list->len, count, 1);
 		return LIST_TRUE;
 	} else {
 		PRINT_ERROR("todo error: list=%p, max=%u, len=%u, count=%u, check=%u", list, list->max, list->len, count, count == list->len);
@@ -273,21 +273,21 @@ int list_check(struct linked_list *list) { //TODO remove all references
 			count++;
 			temp = temp->next;
 		}
-		PRINT_DEBUG("Exited: list=%p, count=%u, check=%u", list, count, 0);
+		PRINT_DEBUG("Exited: list=%p, len=%u, count=%u, check=%u", list, list->len, count, 0);
 		return LIST_FALSE;
 	}
 }
 
 //Return the pointer at the <index> location in the list
 uint8_t *list_look(struct linked_list *list, uint32_t index) {
-	PRINT_DEBUG("Entered: list=%p, index=%u", list, index);
+	PRINT_DEBUG("Entered: list=%p, len=%u, index=%u", list, list->len, index);
 
 	uint32_t i = 0;
 	struct list_node *comp = list->front;
 	while (comp) {
 		if (i == index) {
 			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, index=%u, data=%p", list, index, comp->data);
+			PRINT_DEBUG("Exited: list=%p, len=%u, index=%u, data=%p", list, list->len, index, comp->data);
 			return comp->data;
 		} else {
 			comp = comp->next;
@@ -296,17 +296,17 @@ uint8_t *list_look(struct linked_list *list, uint32_t index) {
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, index=%u, data=%p", list, index, NULL);
+	PRINT_DEBUG("Exited: list=%p, len=%u, index=%u, data=%p", list, list->len, index, NULL);
 	return NULL;
 }
 
 //Return true if the list contains the pointer data
 int list_contains_full(struct linked_list *list, uint8_t *data) {
-	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
+	PRINT_DEBUG("Entered: list=%p, len=%u, data=%p", list, list->len, data);
 
 	if (list_is_empty(list)) {
 		//list_check(list);
-		PRINT_DEBUG("Exited: list=%p, data=%p, 0", list, data);
+		PRINT_DEBUG("Exited: list=%p, len=%u, data=%p, 0", list, list->len, data);
 		return LIST_FALSE;
 	}
 
@@ -314,7 +314,7 @@ int list_contains_full(struct linked_list *list, uint8_t *data) {
 	while (node) {
 		if (node->data == data) {
 			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, data=%p, 1", list, data);
+			PRINT_DEBUG("Exited: list=%p, len=%u, data=%p, 1", list, list->len, data);
 			return LIST_TRUE;
 		} else {
 			node = node->next;
@@ -322,13 +322,13 @@ int list_contains_full(struct linked_list *list, uint8_t *data) {
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p, 0", list, data);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p, 0", list, list->len, data);
 	return LIST_FALSE;
 }
 
 //Remove the first element of the list & return it
 uint8_t *list_remove_front(struct linked_list *list) {
-	PRINT_DEBUG("Entered: list=%p", list);
+	PRINT_DEBUG("Entered: list=%p, len=%u", list, list->len);
 
 	if (list_is_empty(list)) {
 		//list_check(list);
@@ -357,7 +357,7 @@ uint8_t *list_remove_front(struct linked_list *list) {
 
 //Remove first instance of the specific pointer <data> from the list
 void list_remove_full(struct linked_list *list, uint8_t *data) {
-	PRINT_DEBUG("Entered: list=%p, data=%p", list, data);
+	PRINT_DEBUG("Entered: list=%p, len=%u, data=%p", list, list->len, data);
 
 	if (list_is_empty(list)) {
 		//list_check(list);
@@ -405,7 +405,7 @@ void list_remove_full(struct linked_list *list, uint8_t *data) {
 //1 if equal
 //0 if not
 struct linked_list *list_remove_all_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p", list, list->len, equal);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -455,7 +455,7 @@ struct linked_list *list_remove_all_full(struct linked_list *list, int (*equal)(
 
 //See list_remove_all()
 struct linked_list *list_remove_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param=%p", list, list->len, equal, param);
 
 	struct linked_list *list_ret = list_create(list->max);
 
@@ -506,7 +506,7 @@ struct linked_list *list_remove_all1_full(struct linked_list *list, int (*equal)
 //See list_remove_all()
 struct linked_list *list_remove_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1,
 		uint8_t *param2) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p", list, list->len, equal, param1, param2);
 
 	struct linked_list *list_ret = list_create(list->max);
 
@@ -578,7 +578,7 @@ uint32_t list_space(struct linked_list *list) {
 //Clone the list and return the new list
 //<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
 struct linked_list *list_clone_full(struct linked_list *list, uint8_t *(*clone)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, clone=%p", list, clone);
+	PRINT_DEBUG("Entered: list=%p, len=%u, clone=%p", list, list->len, clone);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -598,7 +598,7 @@ struct linked_list *list_clone_full(struct linked_list *list, uint8_t *(*clone)(
 
 //Remove & append as many elements of <list2> to <list1> up to its max, return true if all of <list2> appended to <list1>
 int list_join(struct linked_list *list1, struct linked_list *list2) {
-	PRINT_DEBUG("Entered: list1=%p, list2=%p", list1, list2);
+	PRINT_DEBUG("Entered: list1=%p, len=%u, list2=%p, len=%u", list1, list1->len, list2, list2->len);
 	if (list_is_empty(list2)) {
 		//list_check(list1);
 		//list_check(list2);
@@ -664,7 +664,7 @@ int list_join(struct linked_list *list1, struct linked_list *list2) {
 
 //Remove all elements of <list> after <index> & return rest as separate list
 struct linked_list *list_split(struct linked_list *list, uint32_t index) {
-	PRINT_DEBUG("Entered: list=%p, index=%u", list, index);
+	PRINT_DEBUG("Entered: list=%p, len=%u, index=%u", list, list->len, index);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -795,7 +795,7 @@ int list_add_full(struct linked_list *list, uint8_t *data, int (*comparer)(uint8
 //1 if equal
 //0 if not
 uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p", list, list->len, equal);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -803,7 +803,7 @@ uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 		next = comp->next;
 		if (equal(comp->data)) {
 			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
+			PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, comp->data);
 			return comp->data;
 		} else {
 			comp = next;
@@ -811,13 +811,13 @@ uint8_t *list_find_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, NULL);
 	return NULL;
 }
 
 //See list_find()
 uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param=%p", list, list->len, equal, param);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -825,7 +825,7 @@ uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 		next = comp->next;
 		if (equal(comp->data, param)) {
 			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
+			PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, comp->data);
 			return comp->data;
 		} else {
 			comp = next;
@@ -833,13 +833,13 @@ uint8_t *list_find1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, NULL);
 	return NULL;
 }
 
 //See list_find()
 uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p", list, list->len, equal, param1, param2);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -847,7 +847,7 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 		next = comp->next;
 		if (equal(comp->data, param1, param2)) {
 			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
+			PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, comp->data);
 			return comp->data;
 		} else {
 			comp = next;
@@ -855,14 +855,14 @@ uint8_t *list_find2_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, NULL);
 	return NULL;
 }
 
 //See list_find()
 uint8_t *list_find4_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4),
 		uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, param3=%p, param4=%p", list, equal, param1, param2, param3, param4);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p, param3=%p, param4=%p", list, list->len, equal, param1, param2, param3, param4);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -870,7 +870,7 @@ uint8_t *list_find4_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 		next = comp->next;
 		if (equal(comp->data, param1, param2, param3, param4)) {
 			//list_check(list);
-			PRINT_DEBUG("Exited: list=%p, data=%p", list, comp->data);
+			PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, comp->data);
 			return comp->data;
 		} else {
 			comp = next;
@@ -878,7 +878,7 @@ uint8_t *list_find4_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, NULL);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, NULL);
 	return NULL;
 }
 
@@ -887,7 +887,7 @@ uint8_t *list_find4_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 //1 if equal
 //0 if not
 struct linked_list *list_find_all_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p", list, list->len, equal);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -903,13 +903,13 @@ struct linked_list *list_find_all_full(struct linked_list *list, int (*equal)(ui
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
 //See list_find_all()
 struct linked_list *list_find_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param=%p", list, list->len, equal, param);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -925,14 +925,14 @@ struct linked_list *list_find_all1_full(struct linked_list *list, int (*equal)(u
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
 //See list_find_all()
 struct linked_list *list_find_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1,
 		uint8_t *param2) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p", list, list->len, equal, param1, param2);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -948,7 +948,7 @@ struct linked_list *list_find_all2_full(struct linked_list *list, int (*equal)(u
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
@@ -957,7 +957,7 @@ struct linked_list *list_find_all2_full(struct linked_list *list, int (*equal)(u
 //1 if equal
 //0 if not
 uint8_t *list_find_last_full(struct linked_list *list, int (*equal)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p", list, equal);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p", list, list->len, equal);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -971,13 +971,13 @@ uint8_t *list_find_last_full(struct linked_list *list, int (*equal)(uint8_t *dat
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, ret->data);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, ret->data);
 	return ret->data;
 }
 
 //See list_find_last()
 uint8_t *list_find_last1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p", list, equal, param);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param=%p", list, list->len, equal, param);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -991,13 +991,13 @@ uint8_t *list_find_last1_full(struct linked_list *list, int (*equal)(uint8_t *da
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, ret->data);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, ret->data);
 	return ret->data;
 }
 
 //See list_find_last()
 uint8_t *list_find_last2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p", list, equal, param1, param2);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p", list, list->len, equal, param1, param2);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -1011,14 +1011,14 @@ uint8_t *list_find_last2_full(struct linked_list *list, int (*equal)(uint8_t *da
 	}
 
 	//list_check(list);
-	PRINT_DEBUG("Exited: list=%p, data=%p", list, ret->data);
+	PRINT_DEBUG("Exited: list=%p, len=%u, data=%p", list, list->len, ret->data);
 	return ret->data;
 }
 
 //Iterates through list and calls <apply> on each element
 //<apply> should do something on the element, removing an element in <apply> is permissible
 void list_for_each_full(struct linked_list *list, void (*apply)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, apply=%p", list, apply);
+	PRINT_DEBUG("Entered: list=%p, len=%u, apply=%p", list, list->len, apply);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -1033,7 +1033,7 @@ void list_for_each_full(struct linked_list *list, void (*apply)(uint8_t *data)) 
 
 //See list_for_each()
 void list_for_each1_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param), uint8_t *param) {
-	PRINT_DEBUG("Entered: list=%p, apply=%p, param=%p", list, apply, param);
+	PRINT_DEBUG("Entered: list=%p, len=%u, apply=%p, param=%p", list, list->len, apply, param);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -1048,7 +1048,7 @@ void list_for_each1_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 
 //See list_for_each()
 void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2) {
-	PRINT_DEBUG("Entered: list=%p, apply=%p, param1=%p, param2=%p", list, apply, param1, param2);
+	PRINT_DEBUG("Entered: list=%p, len=%u, apply=%p, param1=%p, param2=%p", list, list->len, apply, param1, param2);
 
 	struct list_node *comp = list->front;
 	struct list_node *next;
@@ -1067,7 +1067,7 @@ void list_for_each2_full(struct linked_list *list, void (*apply)(uint8_t *data, 
 //0 if not
 //<clone> should return a pointer to a copied version of an element, returning the same pointer is permissible but must be handled
 struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint8_t *data), uint8_t *(*clone)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, clone=%p", list, equal, clone);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, clone=%p", list, list->len, equal, clone);
 
 	struct linked_list *list_ret = list_create(list->max); //should it be list->len?
 
@@ -1083,13 +1083,13 @@ struct linked_list *list_filter_full(struct linked_list *list, int (*equal)(uint
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
 //See list_filter()
 struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, uint8_t *(*clone)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p, clone=%p", list, equal, param, clone);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param=%p, clone=%p", list, list->len, equal, param, clone);
 
 	struct linked_list *list_ret = list_create(list->max);
 
@@ -1105,14 +1105,14 @@ struct linked_list *list_filter1_full(struct linked_list *list, int (*equal)(uin
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
 //See list_filter()
 struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
 		uint8_t *(*clone)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, clone=%p", list, equal, param1, param2, clone);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p, clone=%p", list, list->len, equal, param1, param2, clone);
 
 	struct linked_list *list_ret = list_create(list->max);
 
@@ -1128,14 +1128,14 @@ struct linked_list *list_filter2_full(struct linked_list *list, int (*equal)(uin
 
 	//list_check(list);
 	//list_check(list_ret);
-	PRINT_DEBUG("Exited: list=%p, ret=%p, len=%u", list, list_ret, list_ret->len);
+	PRINT_DEBUG("Exited: list=%p, len=%u, ret=%p, len=%u", list, list->len, list_ret, list_ret->len);
 	return list_ret;
 }
 
 //Iterate and free the elements of <list>, afterwards free the list
 //<release> should free the data structure in the element as well as any subcomponents
 void list_free_full(struct linked_list *list, void (*release)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, release=%p", list, release);
+	PRINT_DEBUG("Entered: list=%p, len=%u, release=%p", list, list->len, release);
 
 	//list_check(list);
 
@@ -1162,7 +1162,7 @@ void list_free_full(struct linked_list *list, void (*release)(uint8_t *data)) {
 //0 if not
 //<release> should free the data structure in the element as well as any subcomponents
 void list_free_all_full(struct linked_list *list, int (*equal)(uint8_t *data), void (*release)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, release=%p", list, equal, release);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, release=%p", list, list->len, equal, release);
 
 	//list_check(list);
 
@@ -1183,7 +1183,7 @@ void list_free_all_full(struct linked_list *list, int (*equal)(uint8_t *data), v
 
 //See list_free_all()
 void list_free_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param), uint8_t *param, void (*release)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param=%p, release=%p", list, equal, param, release);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param=%p, release=%p", list, list->len, equal, param, release);
 
 	//list_check(list);
 
@@ -1205,7 +1205,7 @@ void list_free_all1_full(struct linked_list *list, int (*equal)(uint8_t *data, u
 //See list_free_all()
 void list_free_all2_full(struct linked_list *list, int (*equal)(uint8_t *data, uint8_t *param1, uint8_t *param2), uint8_t *param1, uint8_t *param2,
 		void (*release)(uint8_t *data)) {
-	PRINT_DEBUG("Entered: list=%p, equal=%p, param1=%p, param2=%p, release=%p", list, equal, param1, param2, release);
+	PRINT_DEBUG("Entered: list=%p, len=%u, equal=%p, param1=%p, param2=%p, release=%p", list, list->len, equal, param1, param2, release);
 
 	//list_check(list);
 

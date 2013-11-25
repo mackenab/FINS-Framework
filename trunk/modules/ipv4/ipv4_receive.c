@@ -96,8 +96,7 @@ void ipv4_fcf(struct fins_module *module, struct finsFrame *ff) {
 		break;
 	case CTRL_ERROR:
 		PRINT_DEBUG("opcode=CTRL_ERROR (%d)", CTRL_ERROR);
-		PRINT_WARN("todo");
-		freeFinsFrame(ff);
+		ipv4_error(module, ff);
 		break;
 	default:
 		PRINT_ERROR("opcode=default (%d)", ff->ctrlFrame.opcode);
@@ -117,15 +116,15 @@ void ipv4_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 	switch (ff->ctrlFrame.param_id) {
 	case IPV4_SET_PARAM_FLOWS:
-		PRINT_DEBUG("IPV4_SET_PARAM_FLOWS");
+		PRINT_DEBUG("param_id=IPV4_SET_PARAM_FLOWS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_flows(module, ff);
 		break;
 	case IPV4_SET_PARAM_LINKS:
-		PRINT_DEBUG("IPV4_SET_PARAM_LINKS");
+		PRINT_DEBUG("param_id=IPV4_SET_PARAM_LINKS (%d)", ff->ctrlFrame.param_id);
 		module_set_param_links(module, ff);
 		break;
 	case IPV4_SET_PARAM_DUAL:
-		PRINT_DEBUG("IPV4_SET_PARAM_DUAL");
+		PRINT_DEBUG("param_id=IPV4_SET_PARAM_DUAL (%d)", ff->ctrlFrame.param_id);
 		module_set_param_dual(module, ff);
 		break;
 	default:
@@ -146,4 +145,37 @@ void ipv4_exec_reply(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	PRINT_WARN("todo");
 	freeFinsFrame(ff);
+}
+
+void ipv4_error(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+
+	switch (ff->ctrlFrame.param_id) {
+	case IPV4_ERROR_GET_ADDR:
+		PRINT_DEBUG("param_id=IPV4_ERROR_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+
+		//should we separate icmp & error messages? what about disabling ICMP, what errors should it stop?
+		//if yes, eth->ip->icmp or ip->proto
+		//if no, eth->icmp->proto
+		//if partial, eth->ip->icmp->proto (allows for similar to iptables)
+		//Sending to ICMP mimic kernel func, if remove icmp stops error
+
+		//if doing routing tables, factor in and process
+
+		ff->ctrlFrame.sender_id = module->index;
+		ff->ctrlFrame.param_id = IPV4_ERROR_GET_ADDR;
+
+		//reroute to icmp, though could go directly
+		int sent = module_send_flow(module, ff, IPV4_FLOW_ICMP);
+		if (sent == 0) {
+			freeFinsFrame(ff);
+		}
+		break;
+	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("todo");
+		freeFinsFrame(ff);
+		break;
+	}
+
 }
