@@ -726,6 +726,9 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		}
 	}
 
+	//asm-generic/errno.h
+	//recvmsg(fd, &buf, MSG_DONTWAIT) = -1 EHOSTUNREACH (no route to host)
+
 	if (store != NULL) {
 		secure_metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp);
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t)md->sockets[hdr->sock_index].stamp.tv_usec);
