@@ -2073,7 +2073,7 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
 		uint32_t opt_level = level;
-		secure_metadata_writeFromElement(meta, "opt_level", &opt_level, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "opt_level", &opt_level, META_TYPE_INT32);
 		uint32_t opt_name = optname;
 		secure_metadata_writeToElement(meta, "opt_name", &opt_name, META_TYPE_INT32);
 		uint32_t opt_len = optlen;

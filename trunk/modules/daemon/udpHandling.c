@@ -727,7 +727,7 @@ void recvmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	}
 
 	//asm-generic/errno.h
-	//recvmsg(fd, &buf, MSG_DONTWAIT) = -1 EHOSTUNREACH (no route to host)
+	//recvmsg(fd, &buf, MSG_DONTWAIT) = -1 EHOSTUNREACH (no route to host) //after 3 attempts to sendmsg on route?
 
 	if (store != NULL) {
 		secure_metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp);

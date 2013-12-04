@@ -15,7 +15,6 @@
 #define KERNEL_MAJOR 3
 #define KERNEL_MINOR 2 //1 //for android
 #define KERNEL_REVISION 0 //10 //for android
-
 #define NETLINK_FINS 20
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//16384//8192	// Same as userspace, Pick an appropriate value here //NLMSG_GOODSIZE
 #define AF_FINS 2
@@ -937,7 +936,7 @@ static int fins_create(struct net *net, struct socket *sock, int protocol, int k
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 	//wedge_calls[call_index].sem
@@ -1095,7 +1094,7 @@ static int fins_bind(struct socket *sock, struct sockaddr *addr, int addr_len) {
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -1233,7 +1232,7 @@ static int fins_listen(struct socket *sock, int backlog) {
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -1377,7 +1376,7 @@ static int fins_connect(struct socket *sock, struct sockaddr *addr, int addr_len
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -1592,7 +1591,7 @@ static int fins_accept(struct socket *sock, struct socket *sock_new, int flags) 
 			up(&wedge_sockets_sem);
 		}
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -1772,7 +1771,7 @@ static int fins_getname(struct socket *sock, struct sockaddr *addr, int *len, in
 			rc = -1;
 		}
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -1990,7 +1989,7 @@ static int fins_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 			rc = -1;
 		}
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -2297,7 +2296,7 @@ static int fins_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *
 			rc = -1;
 		}
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -2635,7 +2634,7 @@ static int fins_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) 
 			goto end;
 		}
 
-	PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
+		PRINT_DEBUG("call_type=%d, sock_id=%llu, buf_len=%u", call_type, sock_id, buf_len);
 
 	// Send message to fins_daemon
 	ret = nl_send(fins_daemon_pid, buf, buf_len, 0);
@@ -3149,7 +3148,7 @@ static int fins_release(struct socket *sock) {
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = 0;//-EINTR;//-1;
+		rc = 0; //-EINTR;//-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -3237,11 +3236,11 @@ static unsigned int fins_poll(struct file *file, struct socket *sock, poll_table
 #if KERNEL_MAJOR < 3
 		events = table->key; //key added in Kv2.6.38? still there in Kv3.3.8
 #elif KERNEL_MAJOR == 3
-	#if KERNEL_MINOR < 4
+#if KERNEL_MINOR < 4
 		events = table->key; //key added in Kv2.6.38? still there in Kv3.3.8
-	#else
-		events = table->_key; //for Kv3.4.0
-	#endif
+#else
+				events = table->_key; //for Kv3.4.0
+#endif
 #else
 		events = table->_key; //for Kv3.4.0
 #endif
@@ -3485,7 +3484,7 @@ static int fins_shutdown(struct socket *sock, int how) {
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -3663,7 +3662,7 @@ static int fins_mmap(struct file *file, struct socket *sock, struct vm_area_stru
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -3798,7 +3797,7 @@ static ssize_t fins_sendpage(struct socket *sock, struct page *page, int offset,
 	if (wedge_calls[call_index].reply) {
 		rc = checkConfirmation(call_index);
 	} else {
-		rc = -EINTR;//-1;
+		rc = -EINTR; //-1;
 	}
 	wedge_calls[call_index].call_id = -1;
 
@@ -4259,14 +4258,14 @@ static __s32 setup_fins_netlink(void) {
 	fins_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, 0, nl_data_ready, NULL, THIS_MODULE);
 #else
 	struct netlink_kernel_cfg cfg = {
-			.input = nl_data_ready,
+		.input = nl_data_ready,
 	};
 
 	fins_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, &cfg);
 #endif
 #else
 	struct netlink_kernel_cfg cfg = {
-			.input = nl_data_ready,
+		.input = nl_data_ready,
 	};
 
 	fins_nl_sk = netlink_kernel_create(&init_net, NETLINK_FINS, &cfg);
