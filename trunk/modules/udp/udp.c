@@ -35,7 +35,7 @@ int udp_sent_host_test(struct udp_sent *sent, uint32_t *host_ip, uint16_t *host_
 	return sent->host_ip == *host_ip && sent->host_port == *host_port;
 }
 
-int udp_sent_match_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len) {
+int udp_sent_match_test(struct udp_sent *sent, uint32_t *data_len, uint8_t *data) {
 	if (sent->ff->dataFrame.pduLength >= *data_len) { //TODO check if this logic is sound
 		return strncmp((char *) sent->ff->dataFrame.pdu, (char *) data, *data_len) == 0;
 	} else {
@@ -291,7 +291,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) { //TODO make func!!
-				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, pdu, &ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, &ff->ctrlFrame.data_len, pdu);
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
@@ -332,7 +332,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		} else {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) {
-				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, pdu, &ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, &ff->ctrlFrame.data_len, pdu);
 				if (sent != NULL) {
 					metadata_copy(sent->ff->metaData, ff->metaData);
 
@@ -351,7 +351,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 					list_remove(md->sent_packet_list, sent);
 					udp_sent_free(sent);
 					PRINT_DEBUG("Freeing: pdu=%p", pdu);
-					free(md);
+					free(pdu);
 				} else {
 					PRINT_WARN("todo error");
 					//TODO drop?
@@ -369,7 +369,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		if (!list_is_empty(md->sent_packet_list)) {
 			uint8_t *pdu = ff->ctrlFrame.data;
 			if (pdu != NULL) { //TODO make func!!
-				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test,pdu,&ff->ctrlFrame.data_len);
+				struct udp_sent *sent = (struct udp_sent *) list_find2(md->sent_packet_list, udp_sent_match_test, &ff->ctrlFrame.data_len, pdu);
 				if (sent != NULL) {
 					list_remove(md->sent_packet_list, sent);
 					udp_sent_free(sent);
@@ -378,7 +378,7 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 		}
 
 		ff->ctrlFrame.sender_id = module->index;
-		//ff->ctrlFrame.param_id = UDP_ERROR_TTL; //TODO error msg code //ERROR_UDP_TTL?
+		//ff->ctrlFrame.param_id = UDP_ERROR_GET_ADDR; //TODO error msg code //ERROR_UDP_TTL?
 
 		if (!module_send_flow(module, ff, UDP_FLOW_DAEMON)) {
 			PRINT_WARN("todo error");
@@ -394,32 +394,13 @@ void udp_error(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void udp_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
+	//metadata_element *root = config_root_setting(module->knobs);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(get_elem, UDP_GET_INTERVAL__str, UDP_GET_INTERVAL__id, UDP_GET_INTERVAL__type);
-	//elem_add_param(get_elem, UDP_GET_REPEATS__str, UDP_GET_REPEATS__id, UDP_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(set_elem, UDP_SET_INTERVAL__str, UDP_SET_INTERVAL__id, UDP_SET_INTERVAL__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	//elem_add_param(set_elem, UDP_SET_REPEATS__str, UDP_SET_REPEATS__id, UDP_SET_REPEATS__type);
 }
 
@@ -485,12 +466,12 @@ int udp_release(struct fins_module *module) {
 	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct udp_data *md = (struct udp_data *) module->data;
-	//TODO free all module related mem
 
-	//delete threads
+	//free all module related mem
 	PRINT_IMPORTANT("sent_packet_list->len=%u", md->sent_packet_list->len);
 	list_free(md->sent_packet_list, udp_sent_free);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

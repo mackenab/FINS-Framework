@@ -94,8 +94,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
 		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 	//val = 3;
 	//setsockopt(sock, SOL_IP, IP_TTL, &val, sizeof(val));
 
-	server_addr.sin_family = PF_INET;
+	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);
@@ -160,9 +160,9 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 
 	int temp = fds[1].events;
-	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)", (temp
-			& POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0, (temp & POLLRDNORM)
-			> 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
+	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x val=%d (%x)",
+			(temp & POLLIN) > 0, (temp & POLLPRI) > 0, (temp & POLLOUT) > 0, (temp & POLLERR) > 0, (temp & POLLHUP) > 0, (temp & POLLNVAL) > 0,
+			(temp & POLLRDNORM) > 0, (temp & POLLRDBAND) > 0, (temp & POLLWRNORM) > 0, (temp & POLLWRBAND) > 0, temp, temp);
 
 	struct timeval tv;
 
@@ -206,9 +206,10 @@ int main(int argc, char *argv[]) {
 				if (1) {
 					printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 					printf("\n POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d ",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR)
-									> 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
-							(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+							(fds[ret].revents & POLLWRBAND) > 0);
 					fflush(stdout);
 				}
 
@@ -224,10 +225,19 @@ int main(int argc, char *argv[]) {
 
 						if (bytes_read > 28) {
 							struct ip4_packet *ipv4_pkt = (struct ip4_packet *) recv_data;
-							struct icmp_packet *icmp_pkt = (struct icmp_packet *) ipv4_pkt->ip_data;
-
-							printf("\n data_len=%d, data='%s'", bytes_read - 28, icmp_pkt->data);
+							printf("\n proto=%d", ipv4_pkt->ip_proto);
 							fflush(stdout);
+							if (ipv4_pkt->ip_proto == IPPROTO_ICMP) {
+								struct icmp_packet *icmp_pkt = (struct icmp_packet *) ipv4_pkt->ip_data;
+								printf("\n type=%d, code=%d", icmp_pkt->type, icmp_pkt->code);
+								fflush(stdout);
+								printf("\n data_len=%d, data='%s'", bytes_read - 28, icmp_pkt->data);
+								fflush(stdout);
+							} else if (ipv4_pkt->ip_proto == IPPROTO_UDP) {
+
+							} else if (ipv4_pkt->ip_proto == IPPROTO_TCP) {
+
+							}
 						}
 
 						//bytes_read = sendto(sock, recv_data, 1, 0, (struct sockaddr *) client_addr, sizeof(struct sockaddr_in));

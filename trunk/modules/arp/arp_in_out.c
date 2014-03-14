@@ -138,7 +138,6 @@ void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_
 			} else {
 				PRINT_DEBUG("switch send failed");
 				freeFinsFrame(ff_req);
-
 				module_reply_fcf(module, ff, FCF_FALSE, 0);
 			}
 		}
@@ -288,13 +287,11 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache) {
 				int sent = module_send_flow(module, ff_req, ARP_FLOW_INTERFACE);
 				if (sent > 0) {
 					cache->retries++;
-
 					//gettimeofday(&cache->updated_stamp, 0);
 					timer_once_start(cache->to_data->tid, ARP_RETRANS_TO_DEFAULT);
 				} else {
 					PRINT_WARN("todo error");
 					freeFinsFrame(ff_req);
-
 					//TODO send error FCF
 				}
 			}

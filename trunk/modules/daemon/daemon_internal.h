@@ -53,16 +53,19 @@
 #define DAEMON_IF_LIST_MAX 256
 //#define MAX_QUEUE_SIZE 100000
 
-#define ACK 	200
-#define NACK 	6666
+#define DAEMON_ACK 	200
+#define DAEMON_NACK 6666
 #define DAEMON_ADDR_ANY INADDR_ANY
 #define DAEMON_PORT_MIN 32768
 #define DAEMON_PORT_MAX 61000
 #define DAEMON_PORT_ANY 0
-#define DEFAULT_BACKLOG 5
+#define DAEMON_BACKLOG_DEFAULT 5
 #define DAEMON_BLOCK_DEFAULT 500
-#define CONTROL_LEN_MAX 10240
-#define CONTROL_LEN_DEFAULT 1024
+#define DAEMON_CONTROL_LEN_MAX 10240
+#define DAEMON_CONTROL_LEN_DEFAULT 1024
+#define DAEMON_TTL_MIN 1
+#define DAEMON_TTL_MAX 255
+#define DAEMON_TTL_DEFAULT 64
 
 /** Socket related calls and their codes */
 typedef enum {
@@ -242,7 +245,7 @@ struct daemon_to_wedge_hdr {
 #define NETLINK_FINS	20		// Pick an appropriate protocol or define a new one in include/linux/netlink.h
 #define RECV_BUFFER_SIZE	4096//1024//NLMSG_DEFAULT_SIZE//NLMSG_GOODSIZE//8192 //Pick an appropriate value here
 int init_fins_nl(struct fins_module *module);
-int send_wedge(struct fins_module *module, uint8_t *buf, size_t len, int flags);
+int send_wedge(struct fins_module *module, size_t len, uint8_t *buf, int flags);
 int nack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
 int ack_send(struct fins_module *module, uint32_t call_id, int call_index, uint32_t call_type, uint32_t msg);
 int recvmsg_control(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t *msg_flags, metadata *meta, uint32_t msg_controllen, int flags,
@@ -441,28 +444,28 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void daemon_interrupt(struct fins_module *module);
 void daemon_handle_to(struct fins_module *module, struct daemon_call *call);
 
-void daemon_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *msg_pt, int msg_len);
-typedef void (*call_out_type)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void daemon_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int msg_len, uint8_t *msg_pt);
+typedef void (*call_out_type)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 
 /** calls handling functions */
-void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void bind_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void listen_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void connect_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void accept_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void getname_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void sendmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void recvmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void getsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void setsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void release_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void poll_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void mmap_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void socketpair_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void shutdown_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void close_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
-void sendpage_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint8_t *buf, int len);
+void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void bind_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void listen_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void connect_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void accept_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void getname_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void ioctl_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void sendmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void recvmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void getsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void setsockopt_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void release_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void poll_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void mmap_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void socketpair_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void shutdown_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void close_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
+void sendpage_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 
 struct daemon_socket_general_ops {
 	uint32_t proto;
@@ -483,9 +486,9 @@ struct daemon_socket_out_ops {
 	void (*connect_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr, int flags);
 	void (*accept_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint64_t uniqueSockID_new, int index_new, int flags);
 	void (*getname_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int peer);
-	void (*ioctl_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
-	void (*sendmsg_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
-			struct sockaddr_storage *dest_addr, int addr_len);
+	void (*ioctl_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, int buf_len, uint8_t *buf);
+	void (*sendmsg_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags, int addr_len,
+			struct sockaddr_storage *dest_addr);
 	void (*recvmsg_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int data_len, uint32_t msg_controllen, int flags);
 	void (*getsockopt_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);
 	void (*setsockopt_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);

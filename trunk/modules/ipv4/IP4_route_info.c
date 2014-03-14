@@ -128,7 +128,7 @@ struct ip4_routing_table *IP4_get_routing_table_old() {
 
 	uint32_t pid = (uint32_t) getpid();
 	uint32_t seq = (uint32_t) getppid();
-	if ((sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {
+	if ((sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {
 		PRINT_DEBUG("couldn't open NETLINK_ROUTE socket");
 		return NULL;
 	}

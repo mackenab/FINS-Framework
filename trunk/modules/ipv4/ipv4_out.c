@@ -68,24 +68,6 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 		if (loopback != 0) {
 			PRINT_DEBUG("internal, routing back to netw layer");
-			struct timeval current;
-			gettimeofday(&current, 0);
-			secure_metadata_writeToElement(ff->metaData, "recv_stamp", &current, META_TYPE_INT64);
-
-			secure_metadata_writeToElement(ff->metaData, "recv_protocol", &protocol, META_TYPE_INT32);
-			secure_metadata_writeToElement(ff->metaData, "recv_family", &family, META_TYPE_INT32);
-			secure_metadata_writeToElement(ff->metaData, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(ff->metaData, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
-
-			if (send_ttl) {
-				secure_metadata_writeToElement(ff->metaData, "recv_ttl", &send_ttl, META_TYPE_INT32);
-			}
-			if (send_tos) {
-				secure_metadata_writeToElement(ff->metaData, "recv_tos", &send_tos, META_TYPE_INT32);
-			}
-
-			ff->dataFrame.directionFlag = DIR_UP;
-
 			uint32_t flow;
 			switch (protocol) {
 			case IP4_PT_ICMP:
@@ -119,6 +101,24 @@ void ipv4_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 				//exit(-1);
 				return;
 			}
+
+			struct timeval current;
+			gettimeofday(&current, 0);
+			secure_metadata_writeToElement(ff->metaData, "recv_stamp", &current, META_TYPE_INT64);
+
+			secure_metadata_writeToElement(ff->metaData, "recv_protocol", &protocol, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_family", &family, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_src_ipv4", &src_ip, META_TYPE_INT32);
+			secure_metadata_writeToElement(ff->metaData, "recv_dst_ipv4", &dst_ip, META_TYPE_INT32);
+
+			if (send_ttl) {
+				secure_metadata_writeToElement(ff->metaData, "recv_ttl", &send_ttl, META_TYPE_INT32);
+			}
+			if (send_tos) {
+				secure_metadata_writeToElement(ff->metaData, "recv_tos", &send_tos, META_TYPE_INT32);
+			}
+
+			ff->dataFrame.directionFlag = DIR_UP;
 
 			if (!module_send_flow(module, ff, flow)) {
 				PRINT_WARN("todo error");

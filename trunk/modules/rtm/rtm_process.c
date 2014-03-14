@@ -262,7 +262,7 @@ void rtm_process_get(struct fins_module *module, struct rtm_console *console, st
 		return;
 	}
 
-//TODO identify module
+	//TODO identify module
 	struct fins_module **modules = md->overall->modules;
 
 	secure_sem_wait(&md->overall->sem);

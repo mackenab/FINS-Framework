@@ -155,6 +155,8 @@ int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t 
 #define OP_REPLACE_STR "replace"
 #define OP_SHUTDOWN_STR "shutdown"
 #define OP_LISTEN_STR "listen"
+//actually needed by module: exec, get, set, listen
+//rest are handled in RTM/admin module
 
 void module_set_param_flows(struct fins_module *module, struct finsFrame *ff);
 void module_set_param_links(struct fins_module *module, struct finsFrame *ff);

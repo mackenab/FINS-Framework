@@ -14,7 +14,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 #TEST = $(wildcard $(FULL_LIBRARY_LIST))
 #DIRS := $(foreach dir,$(dirs),$(wildcard $(dir)/*))
 
-MODULES_LIST_ALL = arp daemon icmp interface ipv4 logger rtm switch tcp udp
+MODULES_LIST_ALL = arp daemon icmp interface ipv4 logger rtm switch tcp udp template
 #TEST := $(subst /,,$(subst $(LIBS_DIR)/,,$(wildcard $(LIBS_DIR)/*/)))
 #TEST := $(wildcard $(LIBS_DIR)/*/)
 

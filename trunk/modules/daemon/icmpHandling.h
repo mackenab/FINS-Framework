@@ -25,9 +25,9 @@ void listen_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 void connect_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr, int flags);
 void accept_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint64_t sock_id_new, int sock_index_new, int flags);
 void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int peer);
-void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
-void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
-		struct sockaddr_storage *dest_addr, int addr_len);
+void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, int buf_len, uint8_t *buf);
+void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags, int addr_len,
+		struct sockaddr_storage *dest_addr);
 void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int buf_len, uint32_t msg_controllen, int flags);
 void getsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);
 void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);

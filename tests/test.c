@@ -74,31 +74,31 @@ int main(int argc, char *argv[]) {
 		//gets(recv_data);
 		//sleep(15);
 		errno = 0;
-		int fd1 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+		int fd1 = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 		PRINT_IMPORTANT("fd1=%d, errno=%u, str='%s'", fd1, errno, strerror(errno));
-		int fd2 = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
+		int fd2 = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
 		PRINT_IMPORTANT("fd2=%d, errno=%u, str='%s'", fd2, errno, strerror(errno));
-		int fd3 = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL));
+		int fd3 = socket(AF_INET, SOCK_PACKET, htons(ETH_P_ALL));
 		PRINT_IMPORTANT("fd3=%d, errno=%u, str='%s'", fd3, errno, strerror(errno));
-		int fd4 = socket(PF_UNIX, SOCK_STREAM, 0);
+		int fd4 = socket(AF_UNIX, SOCK_STREAM, 0);
 		PRINT_IMPORTANT("fd4=%d, errno=%u, str='%s'", fd4, errno, strerror(errno));
-		int fd5 = socket(PF_INET, SOCK_DGRAM, 0);
+		int fd5 = socket(AF_INET, SOCK_DGRAM, 0);
 		PRINT_IMPORTANT("fd5=%d, errno=%u, str='%s'", fd5, errno, strerror(errno));
-		int fd6 = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		int fd6 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 		PRINT_IMPORTANT("fd6=%d, errno=%u, str='%s'", fd6, errno, strerror(errno));
-		int fd7 = socket(PF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
+		int fd7 = socket(AF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
 		PRINT_IMPORTANT("fd7=%d, errno=%u, str='%s'", fd7, errno, strerror(errno));
-		int fd8 = socket(PF_INET, SOCK_STREAM, 0);
+		int fd8 = socket(AF_INET, SOCK_STREAM, 0);
 		PRINT_IMPORTANT("fd8=%d, errno=%u, str='%s'", fd8, errno, strerror(errno));
-		int fd9 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+		int fd9 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		PRINT_IMPORTANT("fd9=%d, errno=%u, str='%s'", fd9, errno, strerror(errno));
-		int fd10 = socket(PF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
+		int fd10 = socket(AF_INET, SOCK_STREAM | O_NONBLOCK, IPPROTO_TCP);
 		PRINT_IMPORTANT("fd10=%d, errno=%u, str='%s'", fd10, errno, strerror(errno));
-		int fd11 = socket(PF_INET, SOCK_RAW, 0);
+		int fd11 = socket(AF_INET, SOCK_RAW, 0);
 		PRINT_IMPORTANT("fd11=%d, errno=%u, str='%s'", fd11, errno, strerror(errno));
-		int fd12 = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+		int fd12 = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		PRINT_IMPORTANT("fd12=%d, errno=%u, str='%s'", fd12, errno, strerror(errno));
-		int fd13 = socket(PF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
+		int fd13 = socket(AF_INET, SOCK_RAW | O_NONBLOCK, IPPROTO_ICMP);
 		PRINT_IMPORTANT("fd13=%d, errno=%u, str='%s'", fd13, errno, strerror(errno));
 		//}
 	}
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (0) { //test interfaces
-		int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 		struct ifreq ifr;
 		int num;

@@ -108,8 +108,8 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	//if ((sock = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
-	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	//if ((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Socket");
 		printf("Failure\n");
 		exit(1);
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
 	//setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 	memset(&server_addr, 0, sizeof(server_addr));
-	server_addr.sin_family = PF_INET;
+	server_addr.sin_family = AF_INET;
 
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;

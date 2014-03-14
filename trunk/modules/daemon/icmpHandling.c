@@ -114,6 +114,7 @@ void connect_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		//uint32_t host_ip;
 
 		if (md->sockets[hdr->sock_index].family == AF_UNSPEC) {
+			PRINT_DEBUG("Auto binding");
 			md->sockets[hdr->sock_index].family = AF_INET;
 
 			//auto bind
@@ -177,6 +178,7 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 
 	int address_len;
 	struct sockaddr_storage address;
+	memset(&address, 0, sizeof(struct sockaddr_storage));
 
 	if (md->sockets[hdr->sock_index].family == AF_INET) {
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
@@ -251,7 +253,7 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	hdr_ret->call_type = hdr->call_type;
 	hdr_ret->call_id = hdr->call_id;
 	hdr_ret->call_index = hdr->call_index;
-	hdr_ret->ret = ACK;
+	hdr_ret->ret = DAEMON_ACK;
 	hdr_ret->msg = 0;
 	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
@@ -269,7 +271,7 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (send_wedge(module, msg, msg_len, 0)) {
+	if (send_wedge(module, msg_len, msg, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
@@ -278,7 +280,7 @@ void getname_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	free(msg);
 }
 
-void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, uint8_t *buf, int buf_len) {
+void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, int buf_len, uint8_t *buf) {
 	PRINT_DEBUG("Entered: hdr=%p, cmd=%d, len=%d", hdr, cmd, buf_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -302,7 +304,7 @@ void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
-		hdr_ret->ret = ACK;
+		hdr_ret->ret = DAEMON_ACK;
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
@@ -330,13 +332,17 @@ void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		hdr_ret->call_type = hdr->call_type;
 		hdr_ret->call_id = hdr->call_id;
 		hdr_ret->call_index = hdr->call_index;
-		hdr_ret->ret = ACK;
+		hdr_ret->ret = DAEMON_ACK;
 		hdr_ret->msg = 0;
 		pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
 		*(uint32_t *) pt = len;
 		pt += sizeof(uint32_t);
 
+		//if stamp == 0, then get current time
+		if (md->sockets[hdr->sock_index].stamp.tv_sec == 0 && md->sockets[hdr->sock_index].stamp.tv_usec == 0) {
+			gettimeofday(&md->sockets[hdr->sock_index].stamp, 0);
+		}
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t) md->sockets[hdr->sock_index].stamp.tv_usec);
 
 		memcpy(pt, &md->sockets[hdr->sock_index].stamp, len);
@@ -362,15 +368,15 @@ void ioctl_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		return;
 	}
 
-	if (send_wedge(module, msg, msg_len, 0)) {
+	if (send_wedge(module, msg_len, msg, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 	free(msg);
 }
 
-void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
-		struct sockaddr_storage *addr, int addr_len) {
+void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags, int addr_len,
+		struct sockaddr_storage *addr) {
 	PRINT_DEBUG("Entered: hdr=%p, data_len=%d, flags=%d, addr_len=%d", hdr, data_len, flags, addr_len);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -518,8 +524,6 @@ void sendmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	} else {
 		PRINT_ERROR("Exited: failed to send ff");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-		metadata_destroy(meta);
-		free(data);
 	}
 }
 
@@ -571,6 +575,7 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 			}
 		} else {
 			//NACK
+			//TODO check?
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EAGAIN); //Resource temporarily unavailable
 			return;
 		}
@@ -605,7 +610,11 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 	}
 
 	if (store != NULL) {
-		secure_metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp);
+		if (metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp) == META_FALSE) {
+			gettimeofday(&md->sockets[hdr->sock_index].stamp, 0);
+			PRINT_DEBUG("no stamp, taking current");
+		}
+		//secure_metadata_readFromElement(store->ff->metaData, "recv_stamp", &md->sockets[hdr->sock_index].stamp);
 		PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[hdr->sock_index].stamp.tv_sec, (uint32_t)md->sockets[hdr->sock_index].stamp.tv_usec);
 
 		uint32_t msg_flags = 0;
@@ -696,22 +705,22 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	uint32_t mask = 0;
+	struct daemon_call *call;
+	uint32_t ret_mask;
+	uint32_t events_left;
 
-	/*
-	 if (md->sockets[hdr->sock_index].sock_id != hdr->sock_id) {
-	 PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, hdr->sock_id=%llu", hdr->sock_index, md->sockets[hdr->sock_index].sock_id, hdr->sock_id);
-	 nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, POLLNVAL);
-	 return;
-	 }
-	 */
 	if (events) { //initial
 		PRINT_DEBUG(
 				"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
 				(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
 		if (events & (POLLERR)) {
-			if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
-				mask |= POLLERR;
+			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+				if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+					mask |= POLLERR;
+				}
+			} else {
+				//TODO
 			}
 		}
 
@@ -729,78 +738,108 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 			mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 		}
 
-		uint32_t ret_mask = events & mask;
-		PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
-		if (ret_mask) {
-			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
-		} else {
-			struct daemon_call *call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
-			call->buf = events;
-			call->ret = 0;
+		ret_mask = events & mask;
+		events_left = events & ~mask;
+		PRINT_DEBUG("initial: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", events, mask, ret_mask, events_left);
 
-			struct linked_list *call_list = md->sockets[hdr->sock_index].call_list;
-			if (list_has_space(call_list)) {
-				list_append(call_list, call);
-				PRINT_DEBUG("");
-				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
-			} else {
-				PRINT_ERROR("call_list full");
-				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		if (events_left) { //if events has leftover search for call
+			call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
+			if (call) { //update events of call
+				PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
+						call->buf, call->flags, call->ret, events_left, ret_mask, 0);
+				call->buf = events_left;
+				call->flags = ret_mask;
+				call->ret = 0;
+
+				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
+			} else { //create new
+				call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+				call->buf = events_left;
+				call->flags = ret_mask;
+				call->ret = 0;
+
+				if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
+					list_append(md->sockets[hdr->sock_index].call_list, call);
+					PRINT_DEBUG("");
+					ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
+				} else { //shouldn't happen, only occur if >30 threads/forks
+					PRINT_ERROR("call_list full");
+					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+				}
 			}
+		} else { //no leftover events, clear if has call
+			call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
+			if (call) { //remove call
+				list_remove(md->sockets[hdr->sock_index].call_list, call);
+				daemon_call_free(call);
+			} else { //nothing
+			}
+
+			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 		}
 	} else { //final
-		struct daemon_call *call =
-				(struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
+		call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
 		if (call) {
 			events = call->buf;
-			mask = call->ret;
+			//call->flags = 0; //events already used
+			ret_mask = call->ret;
 
-			list_remove(md->sockets[hdr->sock_index].call_list, call);
-			if (call->alloc) {
-				daemon_call_free(call);
-			} else {
-				PRINT_WARN("todo error");
-			}
+			PRINT_DEBUG(
+					"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
+					(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
 
-			uint32_t ret_mask = events & mask;
-			PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
-			if (ret_mask) {
-				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
-			} else {
-				PRINT_DEBUG(
-						"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
-						(events & POLLIN) > 0, (events & POLLPRI) > 0, (events & POLLOUT) > 0, (events & POLLERR) > 0, (events & POLLHUP) > 0, (events & POLLNVAL) > 0, (events & POLLRDNORM) > 0, (events & POLLRDBAND) > 0, (events & POLLWRNORM) > 0, (events & POLLWRBAND) > 0);
-
-				if (events & (POLLERR)) {
+			if (events & (POLLERR)) {
+				if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
 					if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
 						mask |= POLLERR;
 					}
+				} else {
+					//TODO
 				}
+			}
 
-				if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
-					if (md->sockets[hdr->sock_index].data_buf > 0) {
-						mask |= POLLIN | POLLRDNORM | POLLPRI;
-					}
+			if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
+				if (md->sockets[hdr->sock_index].data_buf > 0) {
+					mask |= POLLIN | POLLRDNORM | POLLPRI;
 				}
+			}
 
-				if (events & (POLLHUP)) {
-					//mask |= POLLHUP; //TODO implement
-				}
+			if (events & (POLLHUP)) {
+				//mask |= POLLHUP; //TODO implement
+			}
 
-				if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-				}
+			if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+				mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
+			}
 
-				ret_mask = events & mask;
-				PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
+			ret_mask |= events & mask;
+			events_left = events & ~mask;
+			PRINT_DEBUG("final: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", events, mask, ret_mask, events_left);
+
+			if (events_left) { //if events has leftover keep call
+				PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
+						call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, 0);
+				call->buf = events_left;
+				call->flags |= ret_mask;
+				call->ret = 0;
+
+				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
+			} else { //otherwise, remove call
+				list_remove(md->sockets[hdr->sock_index].call_list, call);
+				daemon_call_free(call);
+
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			}
 		} else {
 			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 
-			if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
-				mask |= POLLERR;
+			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
+				if (!list_is_empty(md->sockets[hdr->sock_index].error_list)) {
+					mask |= POLLERR;
+				}
+			} else {
+				//TODO
 			}
 
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
@@ -811,7 +850,7 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 
 			//mask |= POLLHUP; //TODO implement
 
-			PRINT_DEBUG("mask=0x%x", mask);
+			PRINT_DEBUG("odd: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", 0, mask, mask, 0);
 			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, mask);
 		}
 	}
@@ -1073,7 +1112,7 @@ void getsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 	hdr_ret->call_type = hdr->call_type;
 	hdr_ret->call_id = hdr->call_id;
 	hdr_ret->call_index = hdr->call_index;
-	hdr_ret->ret = ACK;
+	hdr_ret->ret = DAEMON_ACK;
 	hdr_ret->msg = 0;
 	uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
@@ -1093,7 +1132,7 @@ void getsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 	}
 
 	PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-	if (send_wedge(module, msg, msg_len, 0)) {
+	if (send_wedge(module, msg_len, msg, 0)) {
 		PRINT_ERROR("Exited: fail send_wedge: hdr=%p", hdr);
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	} else {
@@ -1177,9 +1216,9 @@ void setsockopt_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr 
 	case SOL_RAW:
 		switch (optname) {
 		case ICMP_FILTER:
-			if (optlen >= sizeof(int)) {
+			if (optlen >= sizeof(int)) { //positive values are filtered out of ICMP msgs going to recv queue, errors still processed
 				md->sockets[hdr->sock_index].sockopts.FICMP_FILTER = *(int *) optval;
-				PRINT_DEBUG("FICMP_FILTER=%d", md->sockets[hdr->sock_index].sockopts.FICMP_FILTER);
+				PRINT_DEBUG("FICMP_FILTER=0x%x (%u)", md->sockets[hdr->sock_index].sockopts.FICMP_FILTER, md->sockets[hdr->sock_index].sockopts.FICMP_FILTER);
 			} else {
 				PRINT_WARN("todo error");
 			}
@@ -1350,14 +1389,21 @@ void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t
 		}
 	}
 
+	if (*flags & POLLHUP) {
+		if (events & (POLLHUP)) {
+			//mask |= POLLHUP;
+		}
+	}
+
 	if (*flags & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
-			mask |= POLLIN | POLLRDNORM | POLLPRI;
+			mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 		}
 	}
 
 	uint32_t ret_mask = events & mask;
-	PRINT_DEBUG("events=0x%x, mask=0x%x, ret_mask=0x%x", events, mask, ret_mask);
+	uint32_t events_left = events & ~mask;
+	PRINT_DEBUG("in: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", events, mask, ret_mask, events_left);
 	if (ret_mask) {
 		//send msg to wedge
 		int msg_len = sizeof(struct daemon_to_wedge_hdr);
@@ -1367,7 +1413,7 @@ void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t
 		hdr_ret->call_type = POLL_EVENT_CALL;
 		hdr_ret->sock_id = call->sock_id;
 		hdr_ret->sock_index = call->sock_index;
-		hdr_ret->ret = ACK;
+		hdr_ret->ret = DAEMON_ACK;
 		hdr_ret->msg = ret_mask;
 		uint8_t *pt = msg + sizeof(struct daemon_to_wedge_hdr);
 
@@ -1378,13 +1424,17 @@ void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t
 		}
 
 		PRINT_DEBUG("msg_len=%d, msg='%s'", msg_len, msg);
-		if (send_wedge(module, msg, msg_len, 0)) {
+		if (send_wedge(module, msg_len, msg, 0)) {
 			PRINT_ERROR("Exited: send_wedge error: call=%p", call);
 		} else {
 
 		}
 		free(msg);
 
+		PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
+				call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, call->ret|ret_mask);
+		call->buf = events_left;
+		call->flags |= ret_mask;
 		call->ret |= ret_mask;
 	}
 }
@@ -1397,12 +1447,19 @@ uint32_t recvmsg_in_icmp(struct daemon_call *call, struct fins_module *module, m
 	uint32_t call_len = call->buf; //buffer size
 	uint32_t msg_controllen = call->ret;
 
-	secure_metadata_readFromElement(meta, "recv_stamp", &md->sockets[call->sock_index].stamp);
+	if (metadata_readFromElement(meta, "recv_stamp", &md->sockets[call->sock_index].stamp) == META_FALSE) {
+		gettimeofday(&md->sockets[call->sock_index].stamp, 0);
+		PRINT_DEBUG("no stamp, taking current");
+	}
+	//secure_metadata_readFromElement(meta, "recv_stamp", &md->sockets[call->sock_index].stamp);
 	PRINT_DEBUG("stamp=%u.%u", (uint32_t)md->sockets[call->sock_index].stamp.tv_sec, (uint32_t)md->sockets[call->sock_index].stamp.tv_usec);
 
 	uint32_t msg_flags = 0;
 	if (flags & MSG_ERRQUEUE) {
 		msg_flags |= MSG_ERRQUEUE;
+
+		md->sockets[call->sock_index].error_call = call->type;
+		md->sockets[call->sock_index].error_msg = EHOSTUNREACH; //ff->ctrlFrame.param_id; //get from meta?
 	}
 
 	if (call_len < data_len) {
@@ -1458,30 +1515,47 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 	PRINT_DEBUG("Entered: ff=%p, family=%u, src_addr=%p, dst_addr=%p", ff, family, src_addr, dst_addr);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
+	uint32_t type;
+	secure_metadata_readFromElement(ff->metaData, "recv_icmp_type", &type);
+	uint32_t code;
+	secure_metadata_readFromElement(ff->metaData, "recv_icmp_code", &code);
+
 	int i;
 	uint32_t flags;
 	struct daemon_call *call;
 	struct daemon_store *store;
 
 	if (family == AF_INET) {
-		//uint32_t src_ip = addr4_get_ip(src_addr);
+		uint32_t src_ip = addr4_get_ip(src_addr);
 		uint32_t dst_ip = addr4_get_ip(dst_addr);
 
+		PRINT_DEBUG("ff: src=%u, dst=%u", src_ip, dst_ip);
+
+		//normal pkt: (src, dst), all 2 are nonzero
+		//match order:
+		//(host, rem) - host==dst && rem==src
+		//(any, rem) - host==0 && rem==src
+		//(host, any) - host==dst && rem==0
+		//(any, any) - host==0 && rem==0
+
 		uint32_t host_ip;
+		uint32_t rem_ip;
 		for (i = 0; i < DAEMON_MAX_SOCKETS; i++) {
 			if (md->sockets[i].sock_id != -1 && md->sockets[i].protocol == IPPROTO_ICMP && md->sockets[i].family == AF_INET) {
 				host_ip = addr4_get_ip(&md->sockets[i].host_addr);
-				if (host_ip == DAEMON_ADDR_ANY || host_ip == dst_ip) {
-					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
-							md->sockets[i].sock_id, i, md->sockets[i].state, addr4_get_ip(&md->sockets[i].host_addr), addr4_get_ip(&md->sockets[i].rem_addr));
+				rem_ip = addr4_get_ip(&md->sockets[i].rem_addr);
+
+				//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
+				if ((host_ip == DAEMON_ADDR_ANY || host_ip == dst_ip) && (rem_ip == DAEMON_ADDR_ANY || rem_ip == src_ip)) {
+					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u", md->sockets[i].sock_id, i, md->sockets[i].state, host_ip, rem_ip);
+					if (type < 32 && ((1U << type) & md->sockets[i].sockopts.FICMP_FILTER)) {
+						continue;
+					}
 
 					//md->sockets[i].count++; //TODO remove, only for testing
 					//PRINT_INFO("count=%d", md->sockets[i].count);
 
-					//TODO check if this datagram comes from the address this socket has been previously connected to it (Only if the socket is already connected to certain address)
-					flags = POLLIN;
-					list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
-
+					//TODO check if the order of recvmsg then poll is correct!!!!!!!!
 					flags = 0;
 					call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
 					if (call != NULL) {
@@ -1489,6 +1563,9 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 						list_remove(md->sockets[i].call_list, call);
 						continue;
 					}
+
+					flags = POLLIN;
+					list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
 
 					store = (struct daemon_store *) secure_malloc(sizeof(struct daemon_store));
 					store->addr = (struct sockaddr_storage *) secure_malloc(sizeof(struct sockaddr_storage));
@@ -1523,6 +1600,9 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 	PRINT_DEBUG("Entered: ff=%p, family=%u, src_addr=%p, dst_addr=%p", ff, family, src_addr, dst_addr);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
+	//uint32_t err_type;
+	//secure_metadata_readFromElement(ff->metaData, "err_type", &err_type);
+
 	int i;
 	uint32_t flags;
 	struct daemon_call *call;
@@ -1531,38 +1611,38 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 
 	if (family == AF_INET) {
 		uint32_t src_ip = addr4_get_ip(src_addr);
-		//uint32_t dst_ip = addr4_get_ip(dst_addr);
+		uint32_t dst_ip = addr4_get_ip(dst_addr);
+
+		PRINT_DEBUG("ff: src=%u, dst=%u", src_ip, dst_ip);
 
 		uint32_t host_ip;
+		uint32_t rem_ip;
 		for (i = 0; i < DAEMON_MAX_SOCKETS; i++) {
 			if (md->sockets[i].sock_id != -1 && md->sockets[i].protocol == IPPROTO_ICMP && md->sockets[i].family == AF_INET) {
 				host_ip = addr4_get_ip(&md->sockets[i].host_addr);
-				if (host_ip == DAEMON_ADDR_ANY || host_ip == src_ip) {
-					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u",
-							md->sockets[i].sock_id, i, md->sockets[i].state, addr4_get_ip(&md->sockets[i].host_addr), addr4_get_ip(&md->sockets[i].rem_addr));
+				rem_ip = addr4_get_ip(&md->sockets[i].rem_addr);
 
-					flags = POLLERR;
-					list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
+				if ((host_ip == DAEMON_ADDR_ANY || host_ip == src_ip) && (rem_ip == DAEMON_ADDR_ANY || rem_ip == dst_ip)) {
+					PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u, rem=%u", md->sockets[i].sock_id, i, md->sockets[i].state, host_ip, rem_ip);
 
-					if (ff->ctrlFrame.param_id == DAEMON_ERROR_GET_ADDR) {
-						flags = 0;
-						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
-						if (call != NULL) {
-							nack_send(module, call->id, call->index, call->type, EAGAIN);
-							daemon_calls_remove(module, call->index);
-							list_remove(md->sockets[i].call_list, call);
-						}
-					}
+					//ICMP_NET_UNREACH & ICMP_HOST_UNREACH; //these 2 do get returned in the msg_iovec from MSG_ERRQUEUE
+					//for ICMP_HOST_UNREACH, first return the actual FDF icmp frame, on next recvmsg nack EHOSTUNREACH.
+					//md->sockets[call->sock_index].error_call = call->type;
+					//md->sockets[call->sock_index].error_msg = EHOSTUNREACH; //ff->ctrlFrame.param_id; //?
 
+					//TODO check if the order of recvmsg then poll is correct!!!!!!!!
 					PRINT_DEBUG("FIP_RECVERR=%d", md->sockets[i].sockopts.FIP_RECVERR);
 					if (md->sockets[i].sockopts.FIP_RECVERR) {
 						flags = 1;
 						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
 						if (call != NULL) {
-							recvmsg_in_icmp(call, module, ff->metaData, ff->dataFrame.pduLength, ff->dataFrame.pdu, dst_addr, MSG_ERRQUEUE);
+							recvmsg_in_icmp(call, module, ff->metaData, ff->ctrlFrame.data_len, ff->ctrlFrame.data, dst_addr, MSG_ERRQUEUE);
 							list_remove(md->sockets[i].call_list, call);
 							continue;
 						}
+
+						flags = POLLERR;
+						list_for_each2(md->sockets[i].call_list, poll_in_icmp, module, &flags);
 					}
 
 					store = (struct daemon_store *) secure_malloc(sizeof(struct daemon_store));

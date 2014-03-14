@@ -24,32 +24,13 @@ void *switch_to_ipv4(void *local) {
 
 //####################################### autoconfig
 void ipv4_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
+	//metadata_element *root = config_root_setting(module->knobs);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
@@ -157,6 +138,7 @@ int ipv4_release(struct fins_module *module) {
 	list_free(md->addr_list, free);
 	list_free(md->route_list, free);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

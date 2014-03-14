@@ -18,6 +18,7 @@
 #include <linux/delay.h>	/* For sleep */
 #include <linux/if.h>		/* Needed for fins_ioctl */
 #include <linux/types.h>
+#include <linux/time.h>		/* Needed for getntime & time structs */
 
 /*
  * NETLINK_FINS must match a corresponding constant in the userspace daemon program that is to talk to this module.  

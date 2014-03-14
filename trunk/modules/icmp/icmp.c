@@ -185,7 +185,7 @@ void icmp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("param_id=default (%d)", ff->ctrlFrame.param_id);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -201,9 +201,13 @@ void icmp_error(struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
 	struct icmp_data *md = (struct icmp_data *) module->data;
 
+	//TODO convert initial error into FDF sent to IPv4 as if received by Eth
+
 	switch (ff->ctrlFrame.param_id) {
 	case ICMP_ERROR_GET_ADDR:
 		PRINT_DEBUG("param_id=ICMP_ERROR_GET_ADDR (%d)", ff->ctrlFrame.param_id);
+		//created actual FDF icmp pkt for this error & send to daemon, then continue the FCF flow upwards
+		//This should really send a ICMP fdf pkt down through IPv4/loopback that creates a real FCF error
 
 		//should we separate icmp & error messages? what about disabling ICMP, what errors should it stop?
 		//if yes, eth->ip->icmp or ip->proto
@@ -211,44 +215,45 @@ void icmp_error(struct fins_module *module, struct finsFrame *ff) {
 		//if partial, eth->ip->icmp->proto (allows for similar to iptables)
 		//Sending to ICMP mimic kernel func, if remove icmp stops error
 
-		uint32_t protocol;
-		secure_metadata_readFromElement(ff->metaData, "send_protocol", &protocol);
+		//should be: IPv4(self, self), ICMP(dest unreach, host unreach), IPv4(sent pkt), proto(...)
+		metadata *meta_data = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta_data);
 
-		uint32_t flow;
-		switch (protocol) {
-		case IPPROTO_ICMP:
-			//TODO figure out? send to daemon?
-			flow = ICMP_FLOW_DAEMON;
-
-			if (!list_is_empty(md->sent_list)) {
-				uint8_t *pdu = ff->ctrlFrame.data;
-				if (pdu != NULL) { //TODO make func!!
-					struct icmp_sent *sent_pkt = (struct icmp_sent *) list_find2(md->sent_list,icmp_sent_match_test,pdu,&ff->ctrlFrame.data_len);
-					if (sent_pkt != NULL) {
-						list_remove(md->sent_list, sent_pkt);
-						icmp_sent_free(sent_pkt);
-					}
-				}
-			}
-			break;
-		case IPPROTO_TCP:
-			flow = ICMP_FLOW_TCP;
-			break;
-		case IPPROTO_UDP:
-			flow = ICMP_FLOW_UDP;
-			break;
-		default:
-			break;
+		uint32_t host_ip;
+		struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			host_ip = addr4_get_ip(&addr->ip);
+		} else {
+			PRINT_WARN("todo error");
 		}
 
-		ff->ctrlFrame.sender_id = module->index;
-		//ff->ctrlFrame.param_id = ICMP_ERROR_GET_ADDR;
+		//daemon meta
+		uint32_t family = AF_INET;
+		secure_metadata_writeToElement(meta_data, "send_family", &family, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_data, "send_src_ipv4", &host_ip, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta_data, "send_dst_ipv4", &host_ip, META_TYPE_INT32);
 
-		//reroute to icmp, though could go directly
-		int sent = module_send_flow(module, ff, flow);
-		if (sent == 0) {
-			freeFinsFrame(ff);
-		}
+		struct finsFrame *ff_data = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+		ff_data->dataOrCtrl = FF_DATA;
+		ff_data->metaData = meta_data;
+
+		ff_data->dataFrame.directionFlag = DIR_DOWN;
+		ff_data->dataFrame.pduLength = ff->ctrlFrame.data_len + ICMP_HEADER_SIZE;
+		ff_data->dataFrame.pdu = (uint8_t *) secure_malloc(ff_data->dataFrame.pduLength); //add ICMP hdr
+
+		struct icmp_packet *icmp_pkt = (struct icmp_packet *) ff_data->dataFrame.pdu;
+		icmp_pkt->type = ICMP_TYPE_DESTUNREACH;
+		icmp_pkt->code = ICMP_CODE_HOSTUNREACH;
+		icmp_pkt->checksum = 0;
+		icmp_pkt->param_1 = 0; //id
+		icmp_pkt->param_2 = 0; //seq num
+
+		memcpy(icmp_pkt->data, ff->ctrlFrame.data, ff->ctrlFrame.data_len);
+		icmp_pkt->checksum = htons(icmp_checksum(ff_data->dataFrame.pdu, ff_data->dataFrame.pduLength));
+
+		icmp_out_fdf(module, ff_data);
+
+		freeFinsFrame(ff);
 		break;
 	default:
 		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
@@ -271,7 +276,6 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	if (icmp_len < ICMP_HEADER_SIZE) {
 		PRINT_DEBUG("packet too small: icmp_len=%u, icmp_req=%u", icmp_len, ICMP_HEADER_SIZE);
-
 		freeFinsFrame(ff);
 		return;
 	}
@@ -280,7 +284,7 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	secure_metadata_readFromElement(ff->metaData, "recv_protocol", &protocol);
 
 	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
-		PRINT_ERROR("Protocol =/= ICMP! Discarding frame...");
+		PRINT_WARN("Protocol =/= ICMP! Discarding frame...");
 		freeFinsFrame(ff);
 		return;
 	}
@@ -289,86 +293,85 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		PRINT_DEBUG("checksum==0");
 	} else {
 		if (icmp_checksum(ipv4_pkt->ip_data, icmp_len) != 0) {
-			PRINT_ERROR("Error in checksum of packet. Discarding...");
+			PRINT_WARN("Error in checksum of packet. Discarding...");
 			freeFinsFrame(ff);
 			return;
 		} else {
-
+			//do nothing
 		}
 	}
 
+	uint32_t type = icmp_pkt->type;
+	secure_metadata_writeToElement(ff->metaData, "recv_icmp_type", &type, META_TYPE_INT32);
+	uint32_t code = icmp_pkt->code;
+	secure_metadata_writeToElement(ff->metaData, "recv_icmp_code", &code, META_TYPE_INT32);
 	uint32_t data_len = icmp_len - ICMP_HEADER_SIZE;
 
-	PRINT_DEBUG("ff=%p, type=%u, code=%u, data_len=%u", ff, icmp_pkt->type, icmp_pkt->code, data_len);
-	switch (icmp_pkt->type) {
+	//all icmp pkts pass through to daemon, special ones cause auto responses/errors
+	PRINT_DEBUG("ff=%p, type=%u, code=%u, data_len=%u", ff, type, code, data_len);
+	switch (type) {
 	case ICMP_TYPE_ECHOREPLY:
-		if (icmp_pkt->code == ICMP_CODE_ECHO) {
+		if (code == ICMP_CODE_ECHO) {
 			//pass through to daemon
 			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
-			if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
-				PRINT_WARN("todo error");
-				freeFinsFrame(ff);
-			}
 		} else {
-			PRINT_ERROR("Error in ICMP packet code. Dropping...");
-			freeFinsFrame(ff);
+			PRINT_WARN("Error in ICMP packet code.");
 		}
 		break;
 	case ICMP_TYPE_DESTUNREACH:
 		PRINT_DEBUG("Destination unreachable");
-		if (icmp_pkt->code == ICMP_CODE_NETUNREACH) {
+		if (code == ICMP_CODE_NETUNREACH) {
 			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == ICMP_CODE_HOSTUNREACH) {
+		} else if (code == ICMP_CODE_HOSTUNREACH) {
+			//create FCF & send to proto then daemon
 			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == ICMP_CODE_PROTOUNREACH) {
-			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == ICMP_CODE_PORTUNREACH) {
+			//spawn error FCF
 			icmp_handle_error(module, ff, icmp_pkt, data_len, ICMP_ERROR_DEST_UNREACH);
-		} else if (icmp_pkt->code == ICMP_CODE_FRAGNEEDED) {
+		} else if (code == ICMP_CODE_PROTOUNREACH) {
+			PRINT_WARN("todo");
+		} else if (code == ICMP_CODE_PORTUNREACH) {
+			//create FCF & send to proto then daemon
+			icmp_handle_error(module, ff, icmp_pkt, data_len, ICMP_ERROR_DEST_UNREACH); //TODO get to send after fdf passed up
+			return;
+		} else if (code == ICMP_CODE_FRAGNEEDED) {
 			PRINT_WARN("todo");
 			//TODO use icmp_pkt->param_2 as Next-Hop MTU
-			freeFinsFrame(ff);
-		} else if (icmp_pkt->code == ICMP_CODE_SRCROUTEFAIL) {
+		} else if (code == ICMP_CODE_SRCROUTEFAIL) {
 			PRINT_WARN("todo");
-			freeFinsFrame(ff);
 		} else {
-			PRINT_ERROR("Unrecognized code. Dropping...");
-			freeFinsFrame(ff);
-			return;
+			PRINT_WARN("Unrecognized code.");
 		}
 		break;
 	case ICMP_TYPE_ECHOREQUEST:
-		if (icmp_pkt->code == ICMP_CODE_ECHO) {
+		if (code == ICMP_CODE_ECHO) {
 			PRINT_DEBUG("id=%u, seq_num=%u", ntohs(icmp_pkt->param_1), ntohs(icmp_pkt->param_2));
-			icmp_ping_reply(module, ff, icmp_pkt, data_len);
+			icmp_ping_reply(module, ff, icmp_pkt, data_len); //TODO get to send after fdf passed up
+			return;
 		} else {
-			PRINT_ERROR("Error in ICMP packet code. Dropping...");
-			freeFinsFrame(ff);
+			PRINT_WARN("Error in ICMP packet code.");
 		}
 		break;
 	case ICMP_TYPE_TTLEXCEED:
 		PRINT_DEBUG("TTL Exceeded");
-		if (icmp_pkt->code == ICMP_CODE_TTLEXCEEDED) {
-			icmp_handle_error(module, ff, icmp_pkt, data_len, ICMP_ERROR_TTL);
-		} else if (icmp_pkt->code == ICMP_CODE_DEFRAGTIMEEXCEEDED) {
+		if (code == ICMP_CODE_TTLEXCEEDED) {
+			icmp_handle_error(module, ff, icmp_pkt, data_len, ICMP_ERROR_TTL); //TODO get to send after fdf passed up
+			return;
+		} else if (code == ICMP_CODE_DEFRAGTIMEEXCEEDED) {
 			PRINT_WARN("todo");
-			freeFinsFrame(ff);
 		} else {
-			PRINT_ERROR("Error in ICMP packet code. Dropping...");
-			freeFinsFrame(ff);
+			PRINT_WARN("Error in ICMP packet code.");
 		}
 		break;
 	default:
-		PRINT_DEBUG("default: type=%u", icmp_pkt->type);
+		PRINT_DEBUG("default: type=%u", type);
 		//Simply pass up the stack,
-		if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
-			PRINT_WARN("todo error");
-			freeFinsFrame(ff);
-		}
 		break;
+	}
+
+	//all icmp pkts pass through to daemon, special ones cause auto responses/errors
+	if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+		PRINT_WARN("todo error");
+		freeFinsFrame(ff);
 	}
 }
 
@@ -377,20 +380,18 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 	struct icmp_data *md = (struct icmp_data *) module->data;
 
 	if (data_len < IPV4_MIN_HLEN) {
-		PRINT_ERROR("data too small: data_len=%u, ipv4_req=%u", data_len, IPV4_MIN_HLEN);
+		PRINT_WARN("data too small: data_len=%u, ipv4_req=%u", data_len, IPV4_MIN_HLEN);
 		//stats.badhlen++;
 		//stats.droppedtotal++;
-		freeFinsFrame(ff);
+		if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+			PRINT_WARN("todo error");
+			freeFinsFrame(ff);
+		}
 		return;
 	}
 
 	struct ipv4_packet *ipv4_pkt_sent = (struct ipv4_packet *) icmp_pkt->data;
 	uint16_t sent_data_len = data_len - IPV4_HLEN(ipv4_pkt_sent);
-
-	uint32_t type = icmp_pkt->type;
-	secure_metadata_writeToElement(ff->metaData, "recv_icmp_type", &type, META_TYPE_INT32);
-	uint32_t code = icmp_pkt->code;
-	secure_metadata_writeToElement(ff->metaData, "recv_icmp_code", &code, META_TYPE_INT32);
 
 	struct finsFrame *ff_err;
 
@@ -399,19 +400,39 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 	case ICMP_PROTOCOL:
 		//cast first 8 bytes of ip->data to TCP frag, store in metadata
 		if (sent_data_len < ICMP_FRAG_SIZE) {
-			PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, ICMP_FRAG_SIZE);
-			freeFinsFrame(ff);
+			PRINT_WARN("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, ICMP_FRAG_SIZE);
+			if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+				PRINT_WARN("todo error");
+				freeFinsFrame(ff);
+			}
 			return;
 		}
 
 		if (list_is_empty(md->sent_list)) {
 			PRINT_WARN("todo error");
-			//TODO drop
+			//TODO drop?
 		} else {
 			//TODO fix here
 			struct icmp_sent *sent = (struct icmp_sent *) list_find2(md->sent_list, icmp_sent_match_test, &sent_data_len, ipv4_pkt_sent->ip_data);
 			if (sent != NULL) {
-				metadata_copy(ff->metaData, sent->ff->metaData);
+				//ff=fdf, sent->ff=fdf, ff_err=fcf
+				//ff_err should have sent->ff meta + recv info for: icmp_type, stamp, ttl,
+
+				//uint32_t err_errno = EHOSTUNREACH; //from where? has to come from meta
+				uint32_t err_src_ip;
+				secure_metadata_readFromElement(ff->metaData, "recv_src_ipv4", &err_src_ip);
+				secure_metadata_writeToElement(sent->ff->metaData, "recv_src_ipv4", &err_src_ip, META_TYPE_INT32);
+				uint32_t err_ttl;
+				secure_metadata_readFromElement(ff->metaData, "recv_ttl", &err_ttl);
+				secure_metadata_writeToElement(sent->ff->metaData, "recv_ttl", &err_ttl, META_TYPE_INT32);
+
+				uint32_t err_origin = SO_EE_ORIGIN_ICMP;
+				secure_metadata_writeToElement(sent->ff->metaData, "recv_ee_origin", &err_origin, META_TYPE_INT32);
+
+				uint32_t err_icmp_type = icmp_pkt->type;
+				secure_metadata_writeToElement(sent->ff->metaData, "recv_icmp_type", &err_icmp_type, META_TYPE_INT32);
+				uint32_t err_icmp_code = icmp_pkt->code;
+				secure_metadata_writeToElement(sent->ff->metaData, "recv_icmp_code", &err_icmp_code, META_TYPE_INT32);
 
 				ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 				ff_err->dataOrCtrl = FF_CONTROL;
@@ -427,6 +448,11 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 				ff_err->ctrlFrame.data = sent->ff->dataFrame.pdu;
 				sent->ff->dataFrame.pdu = NULL;
 
+				if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+					PRINT_WARN("todo error");
+					freeFinsFrame(ff);
+				}
+
 				if (!module_send_flow(module, ff_err, ICMP_FLOW_DAEMON)) {
 					PRINT_WARN("todo error");
 					freeFinsFrame(ff_err);
@@ -434,6 +460,7 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 
 				list_remove(md->sent_list, sent);
 				icmp_sent_free(sent);
+				return;
 			} else {
 				PRINT_WARN("todo error");
 				//TODO drop?
@@ -443,15 +470,20 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 	case UDP_PROTOCOL:
 		//cast first 8 bytes of ip->data to udp frag, store in metadata
 		if (sent_data_len < UDP_FRAG_SIZE) {
-			PRINT_ERROR("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, UDP_FRAG_SIZE);
-			freeFinsFrame(ff);
+			PRINT_WARN("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, UDP_FRAG_SIZE);
+			if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+				PRINT_WARN("todo error");
+				freeFinsFrame(ff);
+			}
 			return;
 		}
 
 		ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 		ff_err->dataOrCtrl = FF_CONTROL;
-		ff_err->metaData = ff->metaData;
-		ff->metaData = NULL;
+		ff_err->metaData = metadata_clone(ff->metaData);
+
+		uint32_t err_origin = SO_EE_ORIGIN_ICMP;
+		secure_metadata_writeToElement(ff->metaData, "recv_ee_origin", &err_origin, META_TYPE_INT32);
 
 		ff_err->ctrlFrame.sender_id = module->index;
 		ff_err->ctrlFrame.serial_num = gen_control_serial_num();
@@ -462,16 +494,30 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 		ff_err->ctrlFrame.data = (uint8_t *) secure_malloc(ff_err->ctrlFrame.data_len);
 		memcpy(ff_err->ctrlFrame.data, ipv4_pkt_sent->ip_data, ff_err->ctrlFrame.data_len);
 
+		if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+			PRINT_WARN("todo error");
+			freeFinsFrame(ff);
+		}
+
 		if (!module_send_flow(module, ff_err, ICMP_FLOW_UDP)) {
 			PRINT_WARN("todo error");
 			freeFinsFrame(ff_err);
 		}
+		return;
+	case TCP_PROTOCOL:
+		PRINT_WARN("todo");
+		//copy what's used for UDP?
 		break;
 	default:
 		PRINT_WARN("todo error");
 		break;
 	}
-	freeFinsFrame(ff);
+
+	//continue flow upwards for ICMP fdf
+	if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+		PRINT_WARN("todo error");
+		freeFinsFrame(ff);
+	}
 }
 
 void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct icmp_packet *icmp_pkt, uint32_t data_len) {
@@ -488,7 +534,6 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	icmp_pkt_reply->param_2 = icmp_pkt->param_2; //seq num
 
 	memcpy(icmp_pkt_reply->data, icmp_pkt->data, data_len);
-
 	icmp_pkt_reply->checksum = htons(icmp_checksum(pdu_reply, pdu_len_reply));
 	PRINT_DEBUG("netw: id=%u, seq_num=%u, checksum=0x%x", icmp_pkt_reply->param_1, icmp_pkt_reply->param_2, icmp_pkt_reply->checksum);
 
@@ -516,12 +561,15 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	ff_reply->dataFrame.pduLength = pdu_len_reply;
 	ff_reply->dataFrame.pdu = pdu_reply;
 
+	if (!module_send_flow(module, ff, ICMP_FLOW_DAEMON)) {
+		PRINT_WARN("todo error");
+		freeFinsFrame(ff);
+	}
+
 	if (!module_send_flow(module, ff_reply, ICMP_FLOW_IPV4)) {
 		PRINT_WARN("todo error");
 		freeFinsFrame(ff_reply);
 	}
-
-	freeFinsFrame(ff);
 }
 uint16_t icmp_checksum(uint8_t *pt, uint32_t len) {
 	PRINT_DEBUG("Entered: pt=%p, len=%u", pt, len);
@@ -603,32 +651,13 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void icmp_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
+	//metadata_element *root = config_root_setting(module->knobs);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
@@ -641,6 +670,29 @@ int icmp_init(struct fins_module *module, metadata_element *params, struct envi_
 
 	module->data = secure_malloc(sizeof(struct icmp_data));
 	struct icmp_data *md = (struct icmp_data *) module->data;
+
+	md->if_list = list_clone(envi->if_list, ifr_clone);
+	if (md->if_list->len > ICMP_IF_LIST_MAX) {
+		PRINT_WARN("todo");
+		struct linked_list *leftover = list_split(md->if_list, ICMP_IF_LIST_MAX - 1);
+		list_free(leftover, free);
+	}
+	md->if_list->max = ICMP_IF_LIST_MAX;
+	PRINT_DEBUG("if_list: list=%p, max=%u, len=%u", md->if_list, md->if_list->max, md->if_list->len);
+
+	if (envi->if_loopback != NULL) {
+		md->if_loopback = (struct if_record *) list_find1(md->if_list,ifr_index_test,&envi->if_loopback->index);
+		PRINT_DEBUG("loopback: name='%s', addr_list->len=%u", md->if_loopback->name, md->if_loopback->addr_list->len);
+	} else {
+		md->if_loopback = NULL;
+	}
+
+	if (envi->if_main != NULL) {
+		md->if_main = (struct if_record *) list_find1(md->if_list,ifr_index_test,&envi->if_main->index);
+		PRINT_DEBUG("main: name='%s', addr_list->len=%u", md->if_main->name, md->if_main->addr_list->len);
+	} else {
+		md->if_main = NULL;
+	}
 
 	md->sent_list = list_create(ICMP_SENT_LIST_MAX);
 
@@ -696,6 +748,7 @@ int icmp_release(struct fins_module *module) {
 	PRINT_IMPORTANT("sent_list->len=%u", md->sent_list->len);
 	list_free(md->sent_list, icmp_sent_free);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

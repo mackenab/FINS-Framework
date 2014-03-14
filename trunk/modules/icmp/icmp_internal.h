@@ -8,6 +8,7 @@
 #ifndef ICMP_INTERNAL_H_
 #define ICMP_INTERNAL_H_
 
+#include <linux/errqueue.h>
 #include <stdint.h>
 #include <pthread.h>
 
@@ -20,6 +21,7 @@
 #include <icmp.h>
 
 //typedef unsigned long IP4addr; /*  internet address			*/
+#define ICMP_IF_LIST_MAX 256
 
 //ADDED mrd015 !!!!!
 #ifdef BUILD_FOR_ANDROID
@@ -69,6 +71,7 @@
 #define UDP_FRAG_SIZE 8
 
 //Generic use
+#define	IPV4_VERSION		4		/* current version value								*/
 #define	IPV4_MIN_HLEN	20		/* minimum IP header length (in bytes)					*/
 #define	IPV4_HLEN(pip)			((pip->ip_verlen & 0xf)<<2)
 #define ICMP_HEADER_SIZE	8
@@ -136,6 +139,10 @@ struct icmp_data {
 
 	pthread_t switch_to_icmp_thread;
 
+	struct linked_list *if_list; //linked list of if_record structs, representing all interfaces
+	struct if_record *if_loopback;
+	struct if_record *if_main;
+
 	struct linked_list *sent_list; //linked list of icmp_sent structs, representing ICMP datagrams sent out + timestamp
 };
 
@@ -169,6 +176,7 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff); //Processes
 #define ICMP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define ICMP_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
 
+//Should be globally the same?
 #define ICMP_ERROR_TTL 0
 #define ICMP_ERROR_DEST_UNREACH 1
 #define ICMP_ERROR_GET_ADDR 2

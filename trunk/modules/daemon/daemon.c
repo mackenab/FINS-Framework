@@ -201,7 +201,7 @@ int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock
 		memset(&md->sockets[sock_index].rem_addr, 0, sizeof(struct sockaddr_storage));
 
 		md->sockets[sock_index].listening = 0;
-		md->sockets[sock_index].backlog = DEFAULT_BACKLOG;
+		md->sockets[sock_index].backlog = DAEMON_BACKLOG_DEFAULT;
 
 		md->sockets[sock_index].sock_id_new = -1;
 		md->sockets[sock_index].sock_index_new = -1;
@@ -217,7 +217,7 @@ int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock
 		md->sockets[sock_index].error_call = 0;
 		md->sockets[sock_index].error_msg = 0;
 
-		md->sockets[sock_index].sockopts.FIP_TTL = 64;
+		md->sockets[sock_index].sockopts.FIP_TTL = DAEMON_TTL_DEFAULT;
 		md->sockets[sock_index].sockopts.FIP_TOS = 64;
 		md->sockets[sock_index].sockopts.FSO_REUSEADDR = 0;
 
@@ -658,7 +658,7 @@ void daemon_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("param_id=default (%d)", ff->ctrlFrame.param_id);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -1218,7 +1218,7 @@ void *wedge_to_daemon(void *local) {
 			msg_pt = msg_buf + sizeof(struct wedge_to_daemon_hdr);
 			msg_len -= sizeof(struct wedge_to_daemon_hdr);
 
-			daemon_out(module, hdr, msg_pt, msg_len);
+			daemon_out(module, hdr, msg_len, msg_pt);
 
 			free(msg_buf);
 			doneFlag = 0;
@@ -1239,32 +1239,13 @@ void *wedge_to_daemon(void *local) {
 }
 
 void daemon_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
+	//metadata_element *root = config_root_setting(module->knobs);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
@@ -1367,7 +1348,7 @@ int daemon_shutdown(struct fins_module *module) {
 	struct daemon_data *md = (struct daemon_data *) module->data;
 	//inform the kernel daemon is shutting down
 	int daemoncode = DAEMON_STOP_CALL;
-	int ret = send_wedge(module, (uint8_t *) &daemoncode, sizeof(int), 0);
+	int ret = send_wedge(module, sizeof(int), (uint8_t *) &daemoncode, 0);
 	if (ret) {
 		PRINT_ERROR("send_wedge failure");
 		//perror("sendfins() caused an error");
@@ -1406,6 +1387,7 @@ int daemon_release(struct fins_module *module) {
 	sem_destroy(&md->nl_sem);
 	sem_destroy(&md->sockets_sem);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

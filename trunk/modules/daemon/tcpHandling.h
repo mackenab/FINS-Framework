@@ -14,6 +14,7 @@
 
 int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port);
 int match_conn_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int match_packet_addr4_tcp(struct fins_module *module, uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port);
 
 int socket_tcp_test(int domain, int type, int protocol);
 void socket_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
@@ -28,9 +29,9 @@ void listen_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr, int flags);
 void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint64_t sock_id_new, int sock_index_new, int flags);
 void getname_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int peer);
-void ioctl_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, uint8_t *buf, int buf_len);
-void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags,
-		struct sockaddr_storage *dest_addr, int addr_len);
+void ioctl_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t cmd, int buf_len, uint8_t *buf);
+void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, uint32_t data_len, uint8_t *data, uint32_t flags, int addr_len,
+		struct sockaddr_storage *dest_addr);
 void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int buf_len, uint32_t msg_controllen, int flags);
 void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);
 void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int level, int optname, int optlen, uint8_t *optval);

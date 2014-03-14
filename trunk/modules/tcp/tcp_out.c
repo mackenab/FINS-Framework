@@ -1383,6 +1383,9 @@ void tcp_read_param(struct fins_module *module, struct finsFrame *ff) {
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
 	default:
+		PRINT_DEBUG("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("todo");
+		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
 }

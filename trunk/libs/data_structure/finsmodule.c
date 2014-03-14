@@ -132,6 +132,13 @@ void module_create_structs(struct fins_module *module) {
 
 	module->knobs = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(module->knobs);
+
+	/*metadata_element *root = config_root_setting(module->knobs);
+	secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
+	secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
+	secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
+	secure_config_setting_add(root, OP_LISTEN_STR, META_TYPE_GROUP);
+	*/
 }
 
 void module_destroy_structs(struct fins_module *module) {

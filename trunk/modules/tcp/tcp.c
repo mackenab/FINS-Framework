@@ -1727,17 +1727,6 @@ int tcp_rand(void) {
 	return rand(); //Just use the standard C random number generator for now
 }
 
-uint32_t tcp_gen_thread_id(struct fins_module *module) {
-	struct tcp_data *md = (struct tcp_data *) module->data;
-	uint32_t num;
-
-	secure_sem_wait(&md->thread_id_sem);
-	num = ++md->thread_id_num;
-	sem_post(&md->thread_id_sem);
-
-	return num;
-}
-
 struct finsFrame *tcp_to_fdf(struct tcp_seg *seg) {
 	PRINT_DEBUG("Entered: seg=%p", seg);
 
@@ -2578,7 +2567,7 @@ int tcp_fcf_to_daemon(struct fins_module *module, socket_state state, uint32_t p
 	}
 }
 
-int tcp_fdf_to_daemon(struct fins_module *module, uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
+int tcp_fdf_to_daemon(struct fins_module *module, int data_len, uint8_t *data, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port) {
 	PRINT_DEBUG("Entered: host=%u:%u, rem=%u:%u, len=%d", host_ip, host_port, rem_ip, rem_port, data_len);
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
@@ -2903,32 +2892,16 @@ void tcp_error(struct fins_module *module, struct finsFrame *ff) {
 
 void tcp_init_knobs(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 	elem_add_param(get_elem, TCP_GET_FAST_ENABLED__str, TCP_GET_FAST_ENABLED__id, TCP_GET_FAST_ENABLED__type);
 	elem_add_param(get_elem, TCP_GET_FAST_DUPLICATES__str, TCP_GET_FAST_DUPLICATES__id, TCP_GET_FAST_DUPLICATES__type);
 	elem_add_param(get_elem, TCP_GET_FAST_RETRANSMITS__str, TCP_GET_FAST_RETRANSMITS__id, TCP_GET_FAST_RETRANSMITS__type);
 	elem_add_param(get_elem, TCP_GET_MSS__str, TCP_GET_MSS__id, TCP_GET_MSS__type);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	elem_add_param(set_elem, TCP_SET_FAST_ENABLED__str, TCP_SET_FAST_ENABLED__id, TCP_SET_FAST_ENABLED__type);
 	elem_add_param(set_elem, TCP_SET_FAST_DUPLICATES__str, TCP_SET_FAST_DUPLICATES__id, TCP_SET_FAST_DUPLICATES__type);
 	elem_add_param(set_elem, TCP_SET_FAST_RETRANSMITS__str, TCP_SET_FAST_RETRANSMITS__id, TCP_SET_FAST_RETRANSMITS__type);
@@ -2944,9 +2917,6 @@ int tcp_init(struct fins_module *module, metadata_element *params, struct envi_r
 
 	module->data = secure_malloc(sizeof(struct tcp_data));
 	struct tcp_data *md = (struct tcp_data *) module->data;
-
-	md->thread_id_num = 0;
-	sem_init(&md->thread_id_sem, 0, 1);
 
 	sem_init(&md->conn_list_sem, 0, 1);
 	md->conn_list = list_create(TCP_CONN_MAX);
@@ -3033,6 +3003,7 @@ int tcp_release(struct fins_module *module) {
 	list_free(md->conn_stub_list, nop_func);
 	sem_destroy(&md->conn_list_sem);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

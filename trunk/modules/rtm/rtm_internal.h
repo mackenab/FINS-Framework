@@ -93,27 +93,32 @@
 #define INDEX_PARAM 2
 #define INDEX_VAL 3
 
-//operations
-#define OP_HELP_STR "help"
-#define OP_EXEC_STR "exec"
-#define OP_GET_STR "get"
-#define OP_SET_STR "set"
-#define OP_PAUSE_STR "pause"
-#define OP_UNPAUSE_STR "unpause"
-#define OP_LINK_STR "link"
-#define OP_UNLINK_STR "unlink"
-#define OP_LOAD_STR "load"
-#define OP_UNLOAD_STR "unload"
-#define OP_REPLACE_STR "replace"
-#define OP_SHUTDOWN_STR "shutdown"
+
+//All Operations:
+//admin specifc operations
+#define OP_PAUSE_STR "pause" 	//Pause one or all the modules.
+#define OP_UNPAUSE_STR "unpause" //Un-pause one or all the modules.
+#define OP_LINK_STR "link" 		//Add/change? link in linking table.
+#define OP_UNLINK_STR "unlink" 	//Remove link in linking table.
+#define OP_LOAD_STR "load" 		//Load a library and start a new module.
+#define OP_UNLOAD_STR "unload" 	//Shutdown & remove a module.
+#define OP_REPLACE_STR "replace" //Pause a module, unload it (keep module data), load a new module with that data.
+#define OP_SHUTDOWN_STR "shutdown" //Shutdown the FINS Core.
 
 //console specific operations
-#define OP_LISTEN_STR "listen" //TODO change this so that it informs the module reference that someone is listening?
-#define OP_CONSOLE_STR "console"
+#define OP_HELP_STR "help" 		//Get documentation on available operations and their usage.
+#define OP_CONSOLE_STR "console" //Change behavior of the console
 //display params?
 //help options, operations --help
 //tab complete?
-//list of modules / current state
+//list of modules / current state?
+
+//module/console operations
+#define OP_EXEC_STR "exec" 		//Execute a procedure for one or all of the modules.
+#define OP_GET_STR "get" 		//Get the value of a parameter or sub-parameter for a module.
+#define OP_SET_STR "set" 		//Set the value of a parameter or sub-parameter for a module.
+#define OP_LISTEN_STR "listen" 	//Register/unregister to listen for alerts and push them to the console. //TODO inform module has listeners
+
 
 #define OP_HELP_MSG "Available operations:"
 
@@ -124,14 +129,14 @@
 #define OP_SET_INFO "Set the value of a parameter or sub-parameter for a module."
 #define OP_PAUSE_INFO "Pause one or all the modules." //TODO finish
 #define OP_UNPAUSE_INFO "Un-pause one or all the modules." //TODO finish
-#define OP_LINK_INFO "todo"
-#define OP_UNLINK_INFO "todo"
-#define OP_LOAD_INFO "todo"
-#define OP_UNLOAD_INFO "todo"
-#define OP_REPLACE_INFO "todo"
-#define OP_SHUTDOWN_INFO "todo"
+#define OP_LINK_INFO "todo" 	//TODO Add/change? link in linking table.
+#define OP_UNLINK_INFO "todo" 	//TODO Remove link in linking table.
+#define OP_LOAD_INFO "todo" 	//TODO Load a library and start a new module.
+#define OP_UNLOAD_INFO "todo" 	//TODO Shutdown & remove a module.
+#define OP_REPLACE_INFO "todo" 	//TODO Pause a module, unload it (keep module data), load a new module with that data.
+#define OP_SHUTDOWN_INFO "todo" //TODO Shutdown the FINS Core.
 #define OP_LISTEN_INFO "Register/unregister to listen for alerts and push them to the console."
-#define OP_CONSOLE_INFO "todo" //Change behavior of the console
+#define OP_CONSOLE_INFO "todo" 	//Change behavior of the console
 
 //TODO finish
 #define OP_HELP_USAGE "help <operation>"

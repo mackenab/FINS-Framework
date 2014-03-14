@@ -255,7 +255,7 @@ struct tcp_conn {
 	uint32_t threads; //Number of threads accessing this obj
 
 	struct fins_module *module;
-	sem_t sem; //for next, state, write_threads
+	sem_t sem; //lock for conn //for next, state, write_threads
 	uint8_t running_flag; //signifies if it is running, 0=when shutting down
 	tcp_state state;
 	uint8_t status;
@@ -493,7 +493,6 @@ struct tcp_seg {
 };
 
 int tcp_rand(void); //Get a random number
-uint32_t tcp_gen_thread_id(struct fins_module *module);
 
 struct finsFrame *tcp_to_fdf(struct tcp_seg *tcp);
 struct tcp_seg *fdf_to_tcp(struct finsFrame *ff);
@@ -513,7 +512,7 @@ int tcp_in_window_overlaps(uint32_t seq_num, uint32_t seq_end, uint32_t win_seq_
 //General functions for dealing with the incoming and outgoing frames
 int tcp_fcf_to_daemon(struct fins_module *module, socket_state state, uint32_t param_id, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip,
 		uint16_t rem_port, uint32_t ret_val);
-int tcp_fdf_to_daemon(struct fins_module *module, uint8_t *data, int data_len, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
+int tcp_fdf_to_daemon(struct fins_module *module, int data_len, uint8_t *data, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 void tcp_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 
 #define TCP_STORE_LIST_MAX 512 //equal to ?
@@ -578,9 +577,6 @@ struct tcp_data {
 	sem_t conn_list_sem;
 	struct linked_list *conn_list; //The list of current connections we have
 	struct linked_list *conn_stub_list; //The list of current connections we have
-
-	uint32_t thread_id_num;
-	sem_t thread_id_sem;
 
 	//module values
 	uint8_t fast_enabled;

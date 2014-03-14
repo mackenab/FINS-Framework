@@ -25,6 +25,7 @@
 #include "core.h"
 
 //#ifdef BUILD_FOR_ANDROID
+//Include desired modules
 #include <switch.h>
 #include <interface.h>
 #include <arp.h>
@@ -35,6 +36,7 @@
 #include <daemon.h>
 #include <logger.h>
 #include <rtm.h>
+#include <template.h>
 //#endif
 
 extern sem_t global_control_serial_sem; //TODO remove & change gen process to RNG
@@ -76,6 +78,7 @@ void library_dummies(void) {
 	daemon_dummy();
 	logger_dummy();
 	rtm_dummy();
+	template_dummy();
 }
 
 struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
@@ -108,6 +111,8 @@ struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
 		library->create = (mod_create_type) logger_create;
 	} else if (strcmp((char *) lib_create, "rtm_create") == 0) {
 		library->create = (mod_create_type) rtm_create;
+	} else if (strcmp((char *) lib_create, "template_create") == 0) {
+		library->create = (mod_create_type) template_create;
 	} else {
 		PRINT_ERROR("default: unknown library: lib='%s'", lib);
 		exit(-1);
@@ -862,7 +867,8 @@ void core_main(uint8_t *envi_name, uint8_t *stack_name, uint32_t seed) {
 		if (overall->modules[i] != NULL) {
 			mt = (struct fins_module_table *) list_remove_front(mt_list);
 			mt->link_list = list_filter1(overall->link_list, link_src_test, &overall->modules[i]->index, link_clone); //was link_involved_test, decide which better?
-			PRINT_IMPORTANT("Module link table subset: name='%s' index=%d, link_list=%p, len=%d", overall->modules[i]->name, i, mt->link_list, mt->link_list->len);
+			PRINT_IMPORTANT("Module link table subset: name='%s' index=%d, link_list=%p, len=%d",
+					overall->modules[i]->name, i, mt->link_list, mt->link_list->len);
 
 			for (j = 0; j < mt->flows_num; j++) {
 				mt->flows[j].link = (struct link_record *) list_find1(mt->link_list, link_id_test, &mt->flows[j].link_id);

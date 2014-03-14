@@ -49,7 +49,7 @@ struct udp_sent {
 };
 struct udp_sent *udp_sent_create(struct finsFrame *ff, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int udp_sent_host_test(struct udp_sent *sent, uint32_t *host_ip, uint16_t *host_port);
-int udp_sent_match_test(struct udp_sent *sent, uint8_t *data, uint32_t *data_len);
+int udp_sent_match_test(struct udp_sent *sent, uint32_t *data_len, uint8_t *data);
 void udp_sent_free(struct udp_sent *sent);
 
 //void udp_sent_list_gc(struct udp_sent_list *sent_list, double timeout);

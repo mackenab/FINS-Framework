@@ -10,8 +10,9 @@
 
 #include "fins_stack_wedge.h"	/* Defs for this module */
 
-//The FINS Framework socket interceptor (wedge) is compatible with kernel versions v2.6.38 up to but not including v3.8.0.
-//When configuring the wedge for a particular kernel it follows the format <MAJOR>.<MINOR>.<REVISION> e.g. 3.2.0
+//The FINS Framework socket interceptor (wedge) is compatible with kernel versions v2.6.38 up to and including v3.8.0.
+//When configuring the wedge for a particular kernel it follows the format <MAJOR>.<MINOR>.<REVISION>, where each variable is a single digit.
+//For example for the Linux 3.2.0-030200-generic kernel you would use <3>.<2>.<0> .
 #define KERNEL_MAJOR 3
 #define KERNEL_MINOR 2 //1 //for android
 #define KERNEL_REVISION 0 //10 //for android

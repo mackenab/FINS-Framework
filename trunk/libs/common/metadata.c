@@ -405,6 +405,25 @@ metadata *metadata_clone(metadata *meta) {
 
  */
 
+metadata_element *secure_config_setting_add_full(const char *file, const char *func, int line, metadata_element *root, char *name, int type) {
+	metadata_element *elem = config_setting_add(root, name, type);
+	if (elem == NULL) {
+#ifdef ERROR
+#ifdef BUILD_FOR_ANDROID
+		__android_log_print(ANDROID_LOG_ERROR, "FINS", "ERROR(%s, %s, %d):config_setting_add: root=%p, name='%s', type=%d\n", file, func, line, root, name, type);
+#else
+		//printf("\033[01;31mERROR(%s, %s, %d):config_setting_add: root=%p, name='%s', type=%d\n\033[01;37m", file, func, line, root, name, type);fflush(stdout);
+		gettimeofday(&global_print_tv, NULL);
+		printf("\033[01;31m%u.%06u:ERROR(%s, %s, %d):config_setting_add: root=%p, name='%s', type=%d\n\033[01;37m", (uint32_t) global_print_tv.tv_sec,
+				(uint32_t) global_print_tv.tv_usec, file, func, line, root, name, type);
+		fflush(stdout);
+#endif
+#endif
+		exit(-1);
+	}
+	return elem;
+}
+
 void elem_add_param(metadata_element *elem, char *param_str, int param_id, int param_type) {
 	metadata_element *param = config_setting_add(elem, param_str, CONFIG_TYPE_GROUP);
 	if (param == NULL) {

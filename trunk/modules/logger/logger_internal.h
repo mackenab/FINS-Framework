@@ -45,21 +45,21 @@ struct logger_data {
 	pthread_t switch_to_logger_thread;
 	uint8_t interrupt_flag;
 
-	double logger_interval;
-	int logger_repeats;
+	double interval;
+	int repeats;
 
-	int logger_started;
-	int logger_packets;
-	int logger_bytes;
-	int logger_saved_packets;
-	int logger_saved_bytes;
+	int started;
+	int packets;
+	int bytes;
+	int saved_packets;
+	int saved_bytes;
 
-	struct timeval logger_start;
-	double logger_saved_curr;
-	struct timeval logger_end;
+	struct timeval start;
+	double saved_curr;
+	struct timeval end;
 
-	struct intsem_to_timer_data *logger_to_data;
-	uint8_t logger_flag;
+	struct intsem_to_timer_data *to_data;
+	uint8_t flag;
 };
 
 int logger_init(struct fins_module *module, metadata_element *params, struct envi_record *envi);

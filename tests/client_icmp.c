@@ -12,6 +12,7 @@
 //#include <netinet/in.h>
 //#include <netinet/ip.h>
 #include <linux/errqueue.h>
+#include <linux/icmp.h>
 
 //--------------------------------------------------- //temp stuff to cross compile, remove/implement better eventual?
 #ifndef POLLRDNORM
@@ -105,8 +106,8 @@ int main(int argc, char *argv[]) {
 
 	//host= (struct hostent *) gethostbyname((char *)"127.0.0.1");
 
-	//if ((sock = socket(PF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
 	if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
 		perror("socket");
 		exit(1);
@@ -126,6 +127,11 @@ int main(int argc, char *argv[]) {
 
 	val = 10;
 	setsockopt(sock, SOL_IP, IP_TTL, &val, sizeof(val));
+
+	val = 0;
+	unsigned int sizeval=sizeof(val);
+	//getsockopt(sock, SOL_RAW, ICMP_FILTER, &val, &sizeval);
+	printf("ICMP_FILTER=0x%x (%u)\n", val, val);
 
 	if (argc > 1) {
 		port = atoi(argv[1]);
@@ -170,8 +176,8 @@ int main(int argc, char *argv[]) {
 
 	printf("Bound to client_addr=%s:%d, netw=%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_addr.sin_addr.s_addr);
 
-	printf("Connecting to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), server_addr.sin_addr.s_addr);
-
+	printf("Connecting to server: pID=%d addr=%s:%d, netw=%u\n", pID, inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port),
+			server_addr.sin_addr.s_addr);
 	if (connect(sock, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
 		perror("Connect");
 		printf("Failure");
@@ -220,7 +226,7 @@ int main(int argc, char *argv[]) {
 				pkt->param_1 = htons(i);
 				pkt->param_2 = htons(j++);
 
-				pkt->checksum = htons(icmp_checksum((uint8_t *)msg, len + 8));
+				pkt->checksum = htons(icmp_checksum((uint8_t *) msg, len + 8));
 
 				//numbytes = sendto(sock, msg, len + 8, 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
 				numbytes = send(sock, msg, len + 8, 0);
@@ -258,9 +264,10 @@ int main(int argc, char *argv[]) {
 					///*
 					printf("poll: ret=%d, revents=%x\n", ret, fds[ret].revents);
 					printf("POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x\n",
-							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0, (fds[ret].revents & POLLERR)
-									> 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0, (fds[ret].revents & POLLRDNORM) > 0,
-							(fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0, (fds[ret].revents & POLLWRBAND) > 0);
+							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
+							(fds[ret].revents & POLLERR) > 0, (fds[ret].revents & POLLHUP) > 0, (fds[ret].revents & POLLNVAL) > 0,
+							(fds[ret].revents & POLLRDNORM) > 0, (fds[ret].revents & POLLRDBAND) > 0, (fds[ret].revents & POLLWRNORM) > 0,
+							(fds[ret].revents & POLLWRBAND) > 0);
 					fflush(stdout);
 					//*/
 					struct msghdr recv_msg;

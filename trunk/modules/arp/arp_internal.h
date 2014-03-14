@@ -162,8 +162,6 @@ void arp_exec(struct fins_module *module, struct finsFrame *ff);
 void arp_exec_get_addr(struct fins_module *module, struct finsFrame *ff, uint32_t src_ip, uint32_t dst_ip);
 //void arp_exec_get_addr(struct finsFrame *ff, uint32_t addr_ip);
 
-#define ARP_EXEC_GET_ADDR 0
-
 void arp_in_fdf(struct fins_module *module, struct finsFrame *ff);
 void arp_out_fdf(struct fins_module *module, struct finsFrame *ff);
 
@@ -178,5 +176,10 @@ void arp_handle_to(struct fins_module *module, struct arp_cache *cache);
 #define ARP_SET_PARAM_FLOWS MOD_SET_PARAM_FLOWS
 #define ARP_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define ARP_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
+
+#define ARP_EXEC_GET_ADDR 0
+#define ARP_EXEC_GET_ADDR__id 1
+#define ARP_EXEC_GET_ADDR__str "get_addr"
+#define ARP_EXEC_GET_ADDR__type META_TYPE_INT32
 
 #endif /* ARP_INTERNAL_H_ */

@@ -627,35 +627,15 @@ void rtm_interrupt(struct fins_module *module) {
 }
 
 void rtm_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
+	//metadata_element *root = config_root_setting(module->knobs);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *listen_elem = config_setting_add(root, OP_LISTEN_STR, META_TYPE_GROUP);
-	if (listen_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *listen_elem = secure_config_setting_add(root, OP_LISTEN_STR, META_TYPE_GROUP);
 }
 
 int rtm_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
@@ -676,7 +656,7 @@ int rtm_init(struct fins_module *module, metadata_element *params, struct envi_r
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CONSOLE_PATH);
 	unlink(addr.sun_path);
 
-	md->server_fd = socket(PF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	md->server_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (md->server_fd < 0) {
 		PRINT_ERROR("socket error: server_fd=%d, errno=%u, str='%s'", md->server_fd, errno, strerror(errno));
 		return 0;
@@ -771,6 +751,7 @@ int rtm_release(struct fins_module *module) {
 	list_free(md->console_list, console_free);
 	list_free(md->cmd_list, free);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

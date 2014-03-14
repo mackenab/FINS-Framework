@@ -512,7 +512,7 @@ void arp_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("param_id=default (%d)", ff->ctrlFrame.param_id);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -534,8 +534,10 @@ void arp_exec(struct fins_module *module, struct finsFrame *ff) {
 		arp_exec_get_addr(module, ff, src_ip, dst_ip);
 		//arp_exec_get_addr(ff, ip);
 		break;
+	case ARP_EXEC_GET_ADDR__id:
+		//TODO
 	default:
-		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("param_id=default (%d)", ff->ctrlFrame.param_id);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -573,32 +575,13 @@ void *switch_to_arp(void *local) {
 
 void arp_init_knobs(struct fins_module *module) {
 	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
+	elem_add_param(exec_elem, ARP_EXEC_GET_ADDR__str, ARP_EXEC_GET_ADDR__id, ARP_EXEC_GET_ADDR__type);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
-	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 }
 
 int arp_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
@@ -685,6 +668,7 @@ int arp_release(struct fins_module *module) {
 	}
 	free(md->cache_list);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

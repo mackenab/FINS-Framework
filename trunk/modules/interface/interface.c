@@ -240,7 +240,7 @@ void interface_set_param(struct fins_module *module, struct finsFrame *ff) {
 		module_set_param_dual(module, ff);
 		break;
 	default:
-		PRINT_ERROR("param_id=default (%d)", ff->ctrlFrame.param_id);
+		PRINT_WARN("param_id=default (%d)", ff->ctrlFrame.param_id);
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
 		break;
 	}
@@ -349,6 +349,24 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 							interface_store_free(temp_store);
 						}
 
+						uint32_t flow;
+						switch (request_resp->src_ip.ss_family) {
+						case AF_INET:
+							//32bit addr
+							flow = INTERFACE_FLOW_ICMP; //INTERFACE_FLOW_IPV4;
+							break;
+						case AF_INET6:
+							//128bit addr
+							//flow = INTERFACE_FLOW_ICMPV6; //INTERFACE_FLOW_IPV6;
+							//break;
+							interface_request_free(request_resp);
+							continue;
+						default:
+							PRINT_WARN("todo: family=%u", request_resp->src_ip.ss_family);
+							interface_request_free(request_resp);
+							continue;
+						}
+
 						ff_err = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 						ff_err->dataOrCtrl = FF_CONTROL;
 						ff_err->metaData = request_resp->ff->metaData;
@@ -369,7 +387,7 @@ void interface_exec_reply_get_addr(struct fins_module *module, struct finsFrame 
 						//if no, eth->icmp->proto
 						//if partial, eth->ip->icmp->proto (allows for similar to iptables)
 						//Sending to ICMP mimic kernel func, if remove icmp stops error
-						sent = module_send_flow(module, ff_err, INTERFACE_FLOW_IPV4);
+						sent = module_send_flow(module, ff_err, flow);
 						if (sent == 0) {
 							freeFinsFrame(ff_err);
 						}
@@ -763,18 +781,6 @@ void *capturer_to_interface(void *local) {
 		PRINT_DEBUG("recv frame: dst=0x%12.12llx, src=0x%12.12llx, type=0x%x, stamp=%u.%u",
 				dst_mac, src_mac, ether_type, (uint32_t)current.tv_sec, (uint32_t)current.tv_usec);
 
-		meta = (metadata *) secure_malloc(sizeof(metadata));
-		metadata_create(meta);
-
-		secure_metadata_writeToElement(meta, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
-		secure_metadata_writeToElement(meta, "recv_src_mac", &src_mac, META_TYPE_INT64);
-		secure_metadata_writeToElement(meta, "recv_ether_type", &ether_type, META_TYPE_INT32);
-		secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
-
-		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
-		ff->dataOrCtrl = FF_DATA;
-		ff->metaData = meta;
-
 		uint32_t flow;
 		switch (ether_type) {
 		case ETH_TYPE_IP4:
@@ -788,15 +794,24 @@ void *capturer_to_interface(void *local) {
 		case ETH_TYPE_IP6:
 			PRINT_DEBUG("IPv6: proto=0x%x (%u)", ether_type, ether_type);
 			flow = INTERFACE_FLOW_IPV6;
-
-			freeFinsFrame(ff); //TODO remove when have ipv6
 			continue;
 			//break;
 		default:
 			PRINT_DEBUG("default: proto=0x%x (%u)", ether_type, ether_type);
-			freeFinsFrame(ff);
 			continue;
 		}
+
+		meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		secure_metadata_writeToElement(meta, "recv_dst_mac", &dst_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "recv_src_mac", &src_mac, META_TYPE_INT64);
+		secure_metadata_writeToElement(meta, "recv_ether_type", &ether_type, META_TYPE_INT32);
+		secure_metadata_writeToElement(meta, "recv_stamp", &current, META_TYPE_INT64);
+
+		ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+		ff->dataOrCtrl = FF_DATA;
+		ff->metaData = meta;
 
 		ff->dataFrame.directionFlag = DIR_UP;
 		ff->dataFrame.pduLength = frame_len - SIZE_ETHERNET;
@@ -815,32 +830,13 @@ void *capturer_to_interface(void *local) {
 }
 
 void interface_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
-	//int status;
+	//metadata_element *root = config_root_setting(module->knobs);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-	//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-	//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-	//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
 	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
@@ -874,7 +870,7 @@ int interface_init(struct fins_module *module, metadata_element *params, struct 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, INJECT_PATH);
 
-	md->inject_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	md->inject_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (md->inject_fd < 0) {
 		PRINT_ERROR("socket error: inject_fd=%d, errno=%u, str='%s'", md->inject_fd, errno, strerror(errno));
 		return 0;
@@ -927,7 +923,7 @@ int interface_init(struct fins_module *module, metadata_element *params, struct 
 	addr.sun_family = AF_UNIX;
 	snprintf(addr.sun_path, UNIX_PATH_MAX, CAPTURE_PATH);
 
-	md->capture_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	md->capture_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (md->capture_fd < 0) {
 		PRINT_ERROR("socket error: capture_fd=%d, errno=%u, str='%s'", md->capture_fd, errno, strerror(errno));
 		return 0;
@@ -1004,6 +1000,7 @@ int interface_release(struct fins_module *module) {
 	PRINT_IMPORTANT("store_list->len=%u", md->store_list->len);
 	list_free(md->store_list, free);
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

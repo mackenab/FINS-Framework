@@ -115,8 +115,8 @@ void interface_store_free(struct interface_store *store);
 
 struct interface_interface_info {
 	uint8_t name[IFNAMSIZ];
-	uint8_t mac[2*MAC_ADDR_LEN];
-	//uint64_t mac; //should work but doesn't
+	uint8_t mac[2 * MAC_ADDR_LEN];
+//uint64_t mac; //should work but doesn't
 };
 
 #define INTERFACE_INFO_MIN_SIZE (sizeof(uint32_t))
@@ -128,10 +128,12 @@ struct interface_to_inject_hdr {
 };
 
 #define INTERFACE_LIB "interface"
-#define INTERFACE_MAX_FLOWS 3
+#define INTERFACE_MAX_FLOWS 5
 #define INTERFACE_FLOW_IPV4 0
 #define INTERFACE_FLOW_ARP 	1
-#define INTERFACE_FLOW_IPV6	2 //TODO add eventually
+#define INTERFACE_FLOW_ICMP	2
+#define INTERFACE_FLOW_IPV6		3 //TODO add eventually
+#define INTERFACE_FLOW_ICMPV6	4 //TODO add eventually
 struct interface_data {
 	struct linked_list *link_list; //linked list of link_record structs, representing links for this module
 	uint32_t flows_num;
@@ -183,6 +185,7 @@ int interface_send_request(struct fins_module *module, uint32_t src_ip, uint32_t
 #define INTERFACE_SET_PARAM_LINKS MOD_SET_PARAM_LINKS
 #define INTERFACE_SET_PARAM_DUAL MOD_SET_PARAM_DUAL
 
+//globally the same
 #define INTERFACE_ERROR_TTL 0
 #define INTERFACE_ERROR_DEST_UNREACH 1
 #define INTERFACE_ERROR_GET_ADDR 2

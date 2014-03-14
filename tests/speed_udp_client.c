@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
 	memset(msg, 89, 131072);
 	msg[131072] = '\0';
 
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		perror("Socket");
 		printf("Failure");
 		exit(1);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	printf("\nMY DEST PORT BEFORE AND AFTER\n");
 	printf("%d, %d\n", port, htons(port));
 	memset(&server_addr, 0, sizeof(server_addr));
-	server_addr.sin_family = PF_INET;
+	server_addr.sin_family = AF_INET;
 	//server_addr.sin_addr.s_addr = xxx(192,168,1,3);
 	server_addr.sin_addr.s_addr = xxx(128,173,92,32);
 	//server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 	server_addr.sin_port = htons(port);
 
 	memset(&client_addr, 0, sizeof(client_addr));
-	client_addr.sin_family = PF_INET;
+	client_addr.sin_family = AF_INET;
 	client_addr.sin_addr.s_addr = INADDR_ANY;
 	//client_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 	client_addr.sin_addr.s_addr = htonl(client_addr.sin_addr.s_addr);
@@ -151,6 +151,9 @@ int main(int argc, char *argv[]) {
 	printf("Closing socket\n");
 	fflush(stdout);
 	close(sock);
+
+	printf("time=%f, pkts/sec=%f, Bytes/sec=%f, bps=%f\n", diff, 1.0*i/diff, 1.0*len * i/diff, 1.0 * len * i / diff * 8.0);
+	fflush(stdout);
 
 	printf("FIN\n");
 	fflush(stdout);

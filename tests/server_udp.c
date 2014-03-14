@@ -124,8 +124,8 @@ int main(int argc, char *argv[]) {
 #endif
 
 	client_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-	//if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+	//if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1) {
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		//if ((sock = socket(39, SOCK_DGRAM, 0)) == -1) {
 		perror("Socket");
 		exit(1);
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 	//int FSO_SNDTIMEO = 0;
 	//setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &FSO_SNDTIMEO, sizeof(FSO_SNDTIMEO));
 
-	server_addr.sin_family = PF_INET;
+	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
 	//server_addr.sin_addr.s_addr = xxx(127,0,0,1);

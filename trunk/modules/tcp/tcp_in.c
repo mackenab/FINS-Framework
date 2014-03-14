@@ -715,7 +715,7 @@ int tcp_process_seg(struct fins_module *module, struct tcp_conn *conn, struct tc
 
 		if (seg->data_len) {
 			//send data to daemon
-			if (tcp_fdf_to_daemon(module, seg->data, seg->data_len, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port)) {
+			if (tcp_fdf_to_daemon(module, seg->data_len, seg->data, conn->host_ip, conn->host_port, conn->rem_ip, conn->rem_port)) {
 				//fine
 				/*#*/PRINT_DEBUG("");
 				seg->data_len = 0;

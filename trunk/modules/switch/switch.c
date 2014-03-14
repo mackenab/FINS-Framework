@@ -20,7 +20,8 @@ void *switch_loop(void *local) {
 	int counter = 0;
 
 	while (module->state == FMS_RUNNING) {
-		secure_sem_wait(module->event_sem); //TODO uncomment, for testing
+		secure_sem_wait(module->event_sem);
+		//TODO uncomment, for testing
 		//secure_sem_wait(module->input_sem);
 		secure_sem_wait(&md->overall->sem);
 		for (i = 0; i < MAX_MODULES; i++) {
@@ -212,33 +213,14 @@ void switch_set_param(struct fins_module *module, struct finsFrame *ff) {
 }
 
 void switch_init_knobs(struct fins_module *module) {
-	metadata_element *root = config_root_setting(module->knobs);
-//int status;
+	//metadata_element *root = config_root_setting(module->knobs);
 
-//-------------------------------------------------------------------------------------------
-	metadata_element *exec_elem = config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
-	if (exec_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
+	//metadata_element *exec_elem = secure_config_setting_add(root, OP_EXEC_STR, META_TYPE_GROUP);
 
-//-------------------------------------------------------------------------------------------
-	metadata_element *get_elem = config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
-	if (get_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-//elem_add_param(get_elem, LOGGER_GET_INTERVAL__str, LOGGER_GET_INTERVAL__id, LOGGER_GET_INTERVAL__type);
-//elem_add_param(get_elem, LOGGER_GET_REPEATS__str, LOGGER_GET_REPEATS__id, LOGGER_GET_REPEATS__type);
+	//metadata_element *get_elem = secure_config_setting_add(root, OP_GET_STR, META_TYPE_GROUP);
 
-//-------------------------------------------------------------------------------------------
-	metadata_element *set_elem = config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
-	if (set_elem == NULL) {
-		PRINT_ERROR("todo error");
-		exit(-1);
-	}
-//elem_add_param(set_elem, LOGGER_SET_INTERVAL__str, LOGGER_SET_INTERVAL__id, LOGGER_SET_INTERVAL__type);
-//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
+	//metadata_element *set_elem = secure_config_setting_add(root, OP_SET_STR, META_TYPE_GROUP);
+	//elem_add_param(set_elem, LOGGER_SET_REPEATS__str, LOGGER_SET_REPEATS__id, LOGGER_SET_REPEATS__type);
 }
 
 int switch_init(struct fins_module *module, metadata_element *params, struct envi_record *envi) {
@@ -301,8 +283,9 @@ int switch_release(struct fins_module *module) {
 	PRINT_DEBUG("Entered: module=%p", module);
 
 	struct switch_data *md = (struct switch_data *) module->data;
-//TODO free all module related mem
+	//TODO free all module related mem
 
+	//free common module data
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}
