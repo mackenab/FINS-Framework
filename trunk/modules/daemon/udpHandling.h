@@ -16,6 +16,7 @@ int match_host_addr4_udp(struct fins_module *module, uint32_t host_ip, uint16_t 
 int match_conn_addr4_udp(struct fins_module *module, uint32_t host_ip, uint16_t host_port, uint32_t rem_ip, uint16_t rem_port);
 int match_packet_addr4_udp(struct fins_module *module, uint32_t src_ip, uint16_t src_port, uint32_t dst_ip, uint16_t dst_port);
 
+int udp_proto_register(struct fins_module *module);
 int socket_udp_test(int domain, int type, int protocol);
 void socket_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
 void daemon_in_fdf_udp(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr, struct sockaddr_storage *dst_addr);

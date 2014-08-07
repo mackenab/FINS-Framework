@@ -96,10 +96,18 @@ int daemon_calls_insert(struct fins_module *module, uint32_t call_id, int call_i
 				call_index, md->calls[call_index].id, md->calls[call_index].pid, md->calls[call_index].type, md->calls[call_index].sock_id, md->calls[call_index].sock_index);
 		PRINT_WARN("Overwriting with: daemon_calls[%d].call_id=%u, call_pid=%d, call_type=%u, sock_id=%llu, sock_index=%d",
 				call_index, call_id, call_pid, call_type, sock_id, sock_index);
+		if (md->calls[call_index].sent > 0) {
+			//TODO copy to somewhere else?
+			//insert into expired or send alert saying overwritten?
+		} //else //uncomment else when finish sent>0 case
+		{
+			timer_stop(md->calls[call_index].to_data->tid);
+			md->calls[call_index].to_flag = 0;
 
-		if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id
-				&& (md->calls[call_index].type == POLL_CALL || md->calls[call_index].type == RECVMSG_CALL)) {
-			list_remove(md->sockets[md->calls[call_index].sock_index].call_list, &md->calls[call_index]);
+			if (md->sockets[md->calls[call_index].sock_index].sock_id == md->calls[call_index].sock_id) {
+				//&& (md->calls[call_index].type == POLL_CALL || md->calls[call_index].type == RECVMSG_CALL)) { //atm only poll/recvmsg are added to call_list
+				list_remove(md->sockets[md->calls[call_index].sock_index].call_list, &md->calls[call_index]);
+			}
 		}
 
 		//this should only occur on a ^C which breaks the wedge sem_wait(), thus exiting the call before hearing back from the daemon and then re-using the index
@@ -155,7 +163,7 @@ void daemon_calls_remove(struct fins_module *module, int call_index) {
 }
 
 void daemon_calls_shutdown(struct fins_module *module, int call_index) {
-	PRINT_DEBUG("Entered: module=%p, call_index=%d", module, call_index);
+	PRINT_DEBUG("Entered: call_index=%d", call_index);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	//stop threads
@@ -174,7 +182,7 @@ void daemon_calls_shutdown(struct fins_module *module, int call_index) {
  * @return value of 1 on success , -1 on failure
  */
 int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock_index, int type, int protocol, struct daemon_socket_out_ops *out_ops,
-		struct daemon_socket_in_ops *in_ops, struct daemon_socket_other_ops *other_ops) {
+		struct daemon_socket_in_ops *in_ops, struct daemon_socket_timeout_ops *timeout_ops, struct daemon_socket_expired_ops *expired_ops) {
 	PRINT_DEBUG("Entered: sock_id=%llu, sock_index=%d, type=%d, protocol=%d", sock_id, sock_index, type, protocol);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -194,7 +202,8 @@ int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock
 		md->sockets[sock_index].protocol = protocol;
 		md->sockets[sock_index].out_ops = out_ops;
 		md->sockets[sock_index].in_ops = in_ops;
-		md->sockets[sock_index].other_ops = other_ops;
+		md->sockets[sock_index].timeout_ops = timeout_ops;
+		md->sockets[sock_index].expired_ops = expired_ops;
 
 		md->sockets[sock_index].family = AF_UNSPEC;
 		memset(&md->sockets[sock_index].host_addr, 0, sizeof(struct sockaddr_storage));
@@ -262,7 +271,7 @@ int daemon_sockets_find(struct fins_module *module, uint64_t sock_id) {
  */
 int daemon_sockets_remove(struct fins_module *module, int sock_index) {
 	struct daemon_data *md = (struct daemon_data *) module->data;
-	PRINT_DEBUG("Entered: module=%p, sock_id=%llu, sock_index=%d", module, md->sockets[sock_index].sock_id, sock_index);
+	PRINT_DEBUG("Entered: sock_id=%llu, sock_index=%d", md->sockets[sock_index].sock_id, sock_index);
 
 	md->sockets[sock_index].sock_id = -1;
 	md->sockets[sock_index].state = SS_FREE;
@@ -287,7 +296,7 @@ int daemon_sockets_remove(struct fins_module *module, int sock_index) {
 
 					daemon_calls_remove(module, call->index);
 				} else {
-					PRINT_ERROR("todo error: call_id=%u, call_index=%d, call_type=%u", call->id, call->index, call->type);
+					PRINT_WARN("todo error: call_id=%u, call_index=%d, call_type=%u", call->id, call->index, call->type);
 				}
 			}
 		} else {
@@ -324,7 +333,7 @@ uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadat
 }
 
 uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta) {
-	PRINT_DEBUG("Entered: flow=%u, data=%p, data_len=%u, meta=%p", flow, data, data_len, meta);
+	PRINT_DEBUG("Entered: module=%p, flow=%u, data=%p, data_len=%u, meta=%p", module, flow, data, data_len, meta);
 
 	struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
 	ff->dataOrCtrl = FF_DATA;
@@ -376,16 +385,28 @@ int daemon_setBlocking(int fd) {
 #endif
 }
 
-void daemon_exec_reply_new(struct finsFrame *ff) {
-	PRINT_DEBUG("Entered: ff=%p, meta=%p", ff, ff->metaData);
+int daemon_proto_register(struct fins_module *module, struct daemon_socket_proto_ops *proto_ops) {
+	PRINT_DEBUG("Entered: module=%p, proto=%p", module, proto_ops);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	switch (ff->ctrlFrame.param_id) {
+	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
+	secure_sem_wait(&md->sockets_sem);
+	if (proto_ops->proto < DAEMON_MAX_PROTOS) {
+		if (md->protos[proto_ops->proto] != NULL) {
+			//TODO error?
+			PRINT_WARN("replacing proto=%p", md->protos[proto_ops->proto]);
+		}
+		md->protos[proto_ops->proto] = proto_ops;
 
-	default:
-		PRINT_ERROR("Error unknown param_id=%d", ff->ctrlFrame.param_id);
-		//TODO implement?
-		freeFinsFrame(ff);
-		break;
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->sockets_sem);
+		return 1;
+	} else {
+		PRINT_WARN("Proto id unsupported: max id=%u, proto=%u", DAEMON_MAX_PROTOS, proto_ops->proto);
+
+		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
+		sem_post(&md->sockets_sem);
+		return 0;
 	}
 }
 
@@ -522,28 +543,19 @@ void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
 
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		secure_sem_wait(&md->sockets_sem);
-
-		switch (protocol) {
-		case IPPROTO_ICMP:
-			//daemon_in_poll_icmp(module, ff, ret_msg);
-			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-			break;
-		case IPPROTO_TCP:
-			daemon_in_poll_tcp(module, ff, ret_msg);
-			break;
-		case IPPROTO_UDP:
-			//daemon_in_poll_udp(module, ff, ret_msg);
-			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-			break;
-		default:
-			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
-			module_reply_fcf(module, ff, FCF_FALSE, 0);
-			//freeFinsFrame(ff);
-			break;
+		if (protocol < DAEMON_MAX_PROTOS) {
+			if (md->protos[protocol] != NULL) {
+				if (md->protos[protocol]->daemon_in_poll != NULL) {
+					(md->protos[protocol]->daemon_in_poll)(module, ff, ret_msg);
+				} else {
+					PRINT_WARN("todo");
+					freeFinsFrame(ff);
+				}
+			} else {
+				PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+				module_reply_fcf(module, ff, FCF_FALSE, 0);
+			}
 		}
-
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&md->sockets_sem);
 		break;
@@ -555,27 +567,19 @@ void daemon_alert(struct fins_module *module, struct finsFrame *ff) {
 
 		PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 		secure_sem_wait(&md->sockets_sem);
-
-		switch (protocol) {
-		case IPPROTO_ICMP:
-			//daemon_in_shutdown_icmp(module, ff, ret_msg);
-			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-			break;
-		case IPPROTO_TCP:
-			daemon_in_shutdown_tcp(module, ff, ret_msg);
-			break;
-		case IPPROTO_UDP:
-			//daemon_in_shutdown_udp(module, ff, ret_msg);
-			PRINT_WARN("todo");
-			freeFinsFrame(ff);
-			break;
-		default:
-			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
-			module_reply_fcf(module, ff, FCF_FALSE, 0);
-			break;
+		if (protocol < DAEMON_MAX_PROTOS) {
+			if (md->protos[protocol] != NULL) {
+				if (md->protos[protocol]->daemon_in_shutdown != NULL) {
+					(md->protos[protocol]->daemon_in_shutdown)(module, ff, ret_msg);
+				} else {
+					PRINT_WARN("todo");
+					freeFinsFrame(ff);
+				}
+			} else {
+				PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+				module_reply_fcf(module, ff, FCF_FALSE, 0);
+			}
 		}
-
 		PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 		sem_post(&md->sockets_sem);
 		break;
@@ -603,9 +607,7 @@ void daemon_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 	}
 
 	struct daemon_call *call = daemon_call_clone(&md->calls[call_index]);
-	if (--md->calls[call_index].sent == 0) {
-		daemon_calls_remove(module, call_index);
-	}
+	daemon_calls_remove(module, call_index);
 
 	if (md->sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
 		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
@@ -617,14 +619,13 @@ void daemon_read_param_reply(struct fins_module *module, struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		return;
 	}
-	if (call->type == POLL_CALL || call->type == RECVMSG_CALL) {
-		list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
-	}
+	//md->calls[call_index].id == -1, but is fine
+	list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
 
 	switch (call->type) {
 	case GETSOCKOPT_CALL:
 		if (md->sockets[call->sock_index].in_ops->getsockopt_in != NULL) {
-			(md->sockets[call->sock_index].in_ops->getsockopt_in)(module, ff, call); //CTRL_READ_PARAM_REPLY
+			(md->sockets[call->sock_index].in_ops->getsockopt_in)(module, ff, call);
 		} else {
 			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
@@ -681,9 +682,7 @@ void daemon_set_param_reply(struct fins_module *module, struct finsFrame *ff) { 
 	}
 
 	struct daemon_call *call = daemon_call_clone(&md->calls[call_index]);
-	if (--md->calls[call_index].sent == 0) {
-		daemon_calls_remove(module, call_index);
-	}
+	daemon_calls_remove(module, call_index);
 
 	if (md->sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
 		PRINT_ERROR("Exited, socket closed: ff=%p", ff);
@@ -695,14 +694,13 @@ void daemon_set_param_reply(struct fins_module *module, struct finsFrame *ff) { 
 		freeFinsFrame(ff);
 		return;
 	}
-	if (call->type == POLL_CALL || call->type == RECVMSG_CALL) {
-		list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
-	}
+	//md->calls[call_index].id == -1, but is fine
+	list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
 
 	switch (call->type) {
 	case SETSOCKOPT_CALL:
 		if (md->sockets[call->sock_index].in_ops->setsockopt_in != NULL) {
-			(md->sockets[call->sock_index].in_ops->setsockopt_in)(module, ff, call); //CTRL_SET_PARAM_REPLY
+			(md->sockets[call->sock_index].in_ops->setsockopt_in)(module, ff, call);
 		} else {
 			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
@@ -734,14 +732,15 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 			sem_post(&md->sockets_sem);
 
+			daemon_call_free(call);
 			freeFinsFrame(ff);
 			return;
 		}
 
 		switch (call->type) {
 		case CONNECT_CALL:
-			if (md->sockets[call->sock_index].other_ops->connect_expired != NULL) {
-				(md->sockets[call->sock_index].other_ops->connect_expired)(module, ff, call, 0); //TODO include data? or don't post until after?
+			if (md->sockets[call->sock_index].expired_ops->connect_expired != NULL) {
+				(md->sockets[call->sock_index].expired_ops->connect_expired)(module, ff, call, 0);
 			} else {
 				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
@@ -750,8 +749,8 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			}
 			break;
 		case ACCEPT_CALL:
-			if (md->sockets[call->sock_index].other_ops->accept_expired != NULL) {
-				(md->sockets[call->sock_index].other_ops->accept_expired)(module, ff, call, 0); //TODO include data? or don't post until after?
+			if (md->sockets[call->sock_index].expired_ops->accept_expired != NULL) {
+				(md->sockets[call->sock_index].expired_ops->accept_expired)(module, ff, call, 0);
 			} else {
 				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
@@ -778,9 +777,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 		}
 
 		call = daemon_call_clone(&md->calls[call_index]);
-		if (--md->calls[call_index].sent == 0) {
-			daemon_calls_remove(module, call_index);
-		}
+		daemon_calls_remove(module, call_index);
 
 		if (md->sockets[call->sock_index].sock_id != call->sock_id) { //TODO shouldn't happen, check release
 			PRINT_ERROR("Exited, socket closed: ff=%p", ff);
@@ -792,9 +789,8 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			freeFinsFrame(ff);
 			return;
 		}
-		if (call->type == POLL_CALL || call->type == RECVMSG_CALL) {
-			list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
-		}
+		//md->calls[call_index].id == -1, but is fine
+		list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
 
 		switch (call->type) {
 		case CONNECT_CALL:
@@ -819,7 +815,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			break;
 		case SENDMSG_CALL:
 			if (md->sockets[call->sock_index].in_ops->sendmsg_in != NULL) {
-				(md->sockets[call->sock_index].in_ops->sendmsg_in)(module, ff, call); //FDF, so get EXEC? //atm CTRL_EXEC_REPLY
+				(md->sockets[call->sock_index].in_ops->sendmsg_in)(module, ff, call);
 			} else {
 				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
@@ -839,7 +835,7 @@ void daemon_exec_reply(struct fins_module *module, struct finsFrame *ff) { //TOD
 			break;
 		case POLL_CALL:
 			if (md->sockets[call->sock_index].in_ops->poll_in != NULL) {
-				(md->sockets[call->sock_index].in_ops->poll_in)(module, ff, call); //CTRL_EXEC_REPLY
+				(md->sockets[call->sock_index].in_ops->poll_in)(module, ff, call);
 			} else {
 				PRINT_WARN("todo error");
 				nack_send(module, call->id, call->index, call->type, 1);
@@ -885,20 +881,19 @@ void daemon_error(struct fins_module *module, struct finsFrame *ff) { //TODO exp
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&md->sockets_sem);
-	switch (protocol) {
-	case IPPROTO_ICMP:
-		daemon_in_error_icmp(module, ff, family, &src_addr, &dst_addr);
-		break;
-	case IPPROTO_TCP:
-		daemon_in_error_tcp(module, ff, family, &src_addr, &dst_addr);
-		break;
-	case IPPROTO_UDP:
-		daemon_in_error_udp(module, ff, family, &src_addr, &dst_addr);
-		break;
-	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
-		exit(-1);
-		break;
+	if (protocol < DAEMON_MAX_PROTOS) {
+		if (md->protos[protocol] != NULL) {
+			if (md->protos[protocol]->daemon_in_error != NULL) {
+				(md->protos[protocol]->daemon_in_error)(module, ff, family, &src_addr, &dst_addr);
+			} else {
+				PRINT_WARN("todo");
+				freeFinsFrame(ff);
+			}
+		} else {
+			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+			//module_reply_fcf(module, ff, FCF_FALSE, 0);
+			freeFinsFrame(ff);
+		}
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
@@ -961,20 +956,19 @@ void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 
 	PRINT_DEBUG("wait$$$$$$$$$$$$$$$");
 	secure_sem_wait(&md->sockets_sem);
-	switch (protocol) {
-	case IPPROTO_ICMP:
-		daemon_in_fdf_icmp(module, ff, family, &src_addr, &dst_addr);
-		break;
-	case IPPROTO_TCP:
-		daemon_in_fdf_tcp(module, ff, family, &src_addr, &dst_addr);
-		break;
-	case IPPROTO_UDP:
-		daemon_in_fdf_udp(module, ff, family, &src_addr, &dst_addr);
-		break;
-	default:
-		PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
-		exit(-1);
-		break;
+	if (protocol < DAEMON_MAX_PROTOS) {
+		if (md->protos[protocol] != NULL) {
+			if (md->protos[protocol]->daemon_in_fdf != NULL) {
+				(md->protos[protocol]->daemon_in_fdf)(module, ff, family, &src_addr, &dst_addr);
+			} else {
+				PRINT_WARN("todo");
+				freeFinsFrame(ff);
+			}
+		} else {
+			PRINT_ERROR("Unknown protocol, protocol=%u", protocol);
+			//module_reply_fcf(module, ff, FCF_FALSE, 0);
+			freeFinsFrame(ff);
+		}
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
@@ -992,54 +986,57 @@ void daemon_interrupt(struct fins_module *module) {
 		if (md->calls[i].sock_id != -1 && md->calls[i].to_flag) {
 			md->calls[i].to_flag = 0;
 
-			daemon_handle_to(module, &md->calls[i]);
+			daemon_handle_to(module, i);
 		}
 	}
 	PRINT_DEBUG("post$$$$$$$$$$$$$$$");
 	sem_post(&md->sockets_sem);
 }
 
-void daemon_handle_to(struct fins_module *module, struct daemon_call *call) {
-	PRINT_DEBUG("Entered: call=%p, call_index=%d", call, call->index);
+void daemon_handle_to(struct fins_module *module, int call_index) {
+	PRINT_DEBUG("Entered: call_index=%d", call_index);
 	struct daemon_data *md = (struct daemon_data *) module->data;
+
+	struct daemon_call *call = daemon_call_clone(&md->calls[call_index]);
+	daemon_calls_remove(module, call_index);
 
 	if (md->sockets[call->sock_index].sock_id != call->sock_id) {
 		PRINT_ERROR("Socket Mismatch: sock_index=%d, sock_id=%llu, call->sock_id=%llu", call->sock_index, md->sockets[call->sock_index].sock_id, call->sock_id);
-
 		nack_send(module, call->id, call->index, call->type, 1);
-		daemon_calls_remove(module, call->index);
+		daemon_call_free(call);
 		return;
 	}
+	//md->calls[call_index].id == -1, but is fine
+	list_remove(md->sockets[call->sock_index].call_list, &md->calls[call_index]);
 
 	switch (call->type) {
 	case CONNECT_CALL:
-		if (md->sockets[call->sock_index].other_ops->connect_timeout != NULL) {
-			(md->sockets[call->sock_index].other_ops->connect_timeout)(module, call);
+		if (md->sockets[call->sock_index].timeout_ops->connect_timeout != NULL) {
+			(md->sockets[call->sock_index].timeout_ops->connect_timeout)(module, call);
 		} else {
 			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
-			daemon_calls_remove(module, call->index);
+			daemon_call_free(call);
 		}
 		break;
 	case ACCEPT_CALL:
-		if (md->sockets[call->sock_index].other_ops->accept_timeout != NULL) {
-			(md->sockets[call->sock_index].other_ops->accept_timeout)(module, call);
+		if (md->sockets[call->sock_index].timeout_ops->accept_timeout != NULL) {
+			(md->sockets[call->sock_index].timeout_ops->accept_timeout)(module, call);
 		} else {
 			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
-			daemon_calls_remove(module, call->index);
+			daemon_call_free(call);
 		}
 		break;
 	case RECVMSG_CALL:
-		if (md->sockets[call->sock_index].other_ops->recvmsg_timeout != NULL) {
-			(md->sockets[call->sock_index].other_ops->recvmsg_timeout)(module, call);
+		if (md->sockets[call->sock_index].timeout_ops->recvmsg_timeout != NULL) {
+			(md->sockets[call->sock_index].timeout_ops->recvmsg_timeout)(module, call);
 		} else {
 			PRINT_WARN("todo error");
 			nack_send(module, call->id, call->index, call->type, 1);
-			daemon_calls_remove(module, call->index);
+			daemon_call_free(call);
 		}
 		break;
-		//Close or poll? sendmsg TO in TCP
 	default:
 		PRINT_ERROR("Not supported dropping: call_type=%d", call->type);
 		exit(-1);
@@ -1308,6 +1305,12 @@ int daemon_init(struct fins_module *module, metadata_element *params, struct env
 		PRINT_ERROR("netlink setup failed");
 		exit(-1);
 	}
+
+	//since these are part of the same module, do this roundabout so that the central code of daemon is independent of protocol
+	icmp_proto_register(module);
+	udp_proto_register(module);
+	tcp_proto_register(module);
+
 	return 1;
 }
 

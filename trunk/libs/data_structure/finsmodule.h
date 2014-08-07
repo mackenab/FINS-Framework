@@ -136,8 +136,8 @@ struct fins_module_table {
 void module_create_structs(struct fins_module *module);
 void module_destroy_structs(struct fins_module *module);
 
-#define module_to_switch(module, ff) module_to_switch_full(__FILE__, __FUNCTION__, __LINE__, module, ff)
-void module_to_switch_full(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff);
+#define module_to_switch(module, ff) module_to_switch_macro(__FILE__, __FUNCTION__, __LINE__, module, ff)
+void module_to_switch_macro(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff);
 void module_reply_fcf(struct fins_module *module, struct finsFrame *ff, uint32_t ret_val, uint32_t ret_msg);
 int module_send_flow(struct fins_module *module, struct finsFrame *ff, uint32_t flow);
 

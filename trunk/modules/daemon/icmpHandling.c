@@ -8,15 +8,20 @@
 #include "icmpHandling.h"
 #include <finstypes.h>
 
-struct daemon_socket_general_ops icmp_general_ops = { .proto = IPPROTO_ICMP, .socket_type_test = socket_icmp_test, .socket_out = socket_out_icmp,
-		.daemon_in_fdf = daemon_in_fdf_icmp, .daemon_in_error = daemon_in_error_icmp, };
+struct daemon_socket_proto_ops icmp_proto_ops = { .proto = IPPROTO_ICMP, .socket_type_test = socket_icmp_test, .socket_out = socket_out_icmp, .daemon_in_fdf =
+		daemon_in_fdf_icmp, .daemon_in_error = daemon_in_error_icmp };
 static struct daemon_socket_out_ops icmp_out_ops = { .socket_out = socket_out_icmp, .bind_out = bind_out_icmp, .listen_out = listen_out_icmp, .connect_out =
 		connect_out_icmp, .accept_out = accept_out_icmp, .getname_out = getname_out_icmp, .ioctl_out = ioctl_out_icmp, .sendmsg_out = sendmsg_out_icmp,
 		.recvmsg_out = recvmsg_out_icmp, .getsockopt_out = getsockopt_out_icmp, .setsockopt_out = setsockopt_out_icmp, .release_out = release_out_icmp,
 		.poll_out = poll_out_icmp, .mmap_out = mmap_out_icmp, .socketpair_out = socketpair_out_icmp, .shutdown_out = shutdown_out_icmp, .close_out =
-				close_out_icmp, .sendpage_out = sendpage_out_icmp, };
+				close_out_icmp, .sendpage_out = sendpage_out_icmp };
 static struct daemon_socket_in_ops icmp_in_ops = { };
-static struct daemon_socket_other_ops icmp_other_ops = { .recvmsg_timeout = recvmsg_timeout_icmp, };
+static struct daemon_socket_timeout_ops icmp_timeout_ops = { .recvmsg_timeout = recvmsg_timeout_icmp };
+static struct daemon_socket_expired_ops icmp_expired_ops = { };
+
+int icmp_proto_register(struct fins_module *module) {
+	return daemon_proto_register(module, &icmp_proto_ops);
+}
 
 int socket_icmp_test(int domain, int type, int protocol) {
 	return type == SOCK_RAW && (protocol == IPPROTO_ICMP || protocol == IPPROTO_IP);
@@ -25,7 +30,8 @@ int socket_icmp_test(int domain, int type, int protocol) {
 void socket_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain) {
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d", hdr, domain);
 
-	int ret = daemon_sockets_insert(module, hdr->sock_id, hdr->sock_index, SOCK_RAW, IPPROTO_ICMP, &icmp_out_ops, &icmp_in_ops, &icmp_other_ops);
+	int ret = daemon_sockets_insert(module, hdr->sock_id, hdr->sock_index, SOCK_RAW, IPPROTO_ICMP, &icmp_out_ops, &icmp_in_ops, &icmp_timeout_ops,
+			&icmp_expired_ops);
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 
 	if (ret) {
@@ -660,25 +666,20 @@ void recvmsg_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 		return;
 	}
 
-	if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+	if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 		PRINT_DEBUG("inserting call: hdr=%p", hdr);
+		daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 		md->calls[hdr->call_index].flags = flags;
 		md->calls[hdr->call_index].buf = buf_len;
 		md->calls[hdr->call_index].ret = msg_controllen;
 
-		struct linked_list *call_list = md->sockets[hdr->sock_index].call_list;
-		if (list_has_space(call_list)) {
-			list_append(call_list, &md->calls[hdr->call_index]);
+		list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 
-			if (flags & (MSG_DONTWAIT)) {
-				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
-			}
-		} else {
-			PRINT_ERROR("call_list full");
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		if (flags & (MSG_DONTWAIT)) {
+			timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 		}
 	} else {
-		PRINT_ERROR("Insert fail: hdr=%p", hdr);
+		PRINT_ERROR("call_list full");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -704,10 +705,20 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 	PRINT_DEBUG("Entered: hdr=%p, events=0x%x", hdr, events);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
+	//poll_out_icmp() & poll_in_icmp() use the several params of the struct daemon_call structure.
+	//NOTE: difference between "triggered" vs "ACK'd"
+	//buf == events not yet triggered
+	//flags == events triggered but not ACK'd
+	//ret == events already triggered & ACK'd
+
+	//buf | flags == events not yet ACK'd to Wedge
+	//flags | ret == events triggered
+	//buf | flags | ret == original events received
+
 	uint32_t mask = 0;
-	struct daemon_call *call;
 	uint32_t ret_mask;
 	uint32_t events_left;
+	struct daemon_call *call;
 
 	if (events) { //initial
 		PRINT_DEBUG(
@@ -726,7 +737,7 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
-				mask |= POLLIN | POLLRDNORM | POLLPRI;
+				mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 			}
 		}
 
@@ -745,20 +756,20 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 		if (events_left) { //if events has leftover search for call
 			call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
 			if (call) { //update events of call
-				PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
-						call->buf, call->flags, call->ret, events_left, ret_mask, 0);
-				call->buf = events_left;
-				call->flags = ret_mask;
-				call->ret = 0;
+				PRINT_DEBUG("updating: old: events=0x%x, triggered=0x%x, ACK'd=0x%x, new: events=0x%x, triggered=0x%x, ACK'd=0x%x",
+						call->buf, call->flags, call->ret, events_left, 0, ret_mask);
+				call->buf = events_left; //events not yet triggered
+				call->flags = 0; //events triggered but not ACK'd
+				call->ret = ret_mask; //events already triggered & ACK'd
 
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else { //create new
-				call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
-				call->buf = events_left;
-				call->flags = ret_mask;
-				call->ret = 0;
-
 				if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
+					call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+					call->buf = events_left; //events not yet triggered
+					call->flags = 0; //events triggered but not ACK'd
+					call->ret = ret_mask; //events already triggered & ACK'd
+
 					list_append(md->sockets[hdr->sock_index].call_list, call);
 					PRINT_DEBUG("");
 					ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
@@ -780,9 +791,10 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 	} else { //final
 		call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
 		if (call) {
-			events = call->buf;
-			//call->flags = 0; //events already used
-			ret_mask = call->ret;
+			//call->buf; //events not yet triggered
+			//call->flags; //events triggered but not ACK'd
+			//call->ret; //events already triggered & ACK'd
+			events = call->buf | call->flags; //events not yet ACK'd to Wedge
 
 			PRINT_DEBUG(
 					"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
@@ -800,7 +812,7 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 
 			if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 				if (md->sockets[hdr->sock_index].data_buf > 0) {
-					mask |= POLLIN | POLLRDNORM | POLLPRI;
+					mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 				}
 			}
 
@@ -812,16 +824,16 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 				mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 			}
 
-			ret_mask |= events & mask;
+			ret_mask = events & mask;
 			events_left = events & ~mask;
 			PRINT_DEBUG("final: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", events, mask, ret_mask, events_left);
 
 			if (events_left) { //if events has leftover keep call
-				PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
-						call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, 0);
-				call->buf = events_left;
-				call->flags |= ret_mask;
-				call->ret = 0;
+				PRINT_DEBUG("updating: old: events=0x%x, triggered=0x%x, ACK'd=0x%x, new: events=0x%x, triggered=0x%x, ACK'd=0x%x",
+						call->buf, call->flags, call->ret, events_left, 0, call->ret|ret_mask);
+				call->buf = events_left; //events not yet triggered
+				call->flags = 0; //events triggered but not ACK'd
+				call->ret |= ret_mask; //events already triggered & ACK'd
 
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			} else { //otherwise, remove call
@@ -843,7 +855,7 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 			}
 
 			if (md->sockets[hdr->sock_index].data_buf > 0) {
-				mask |= POLLIN | POLLRDNORM | POLLPRI;
+				mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
 			}
 
 			mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
@@ -1375,7 +1387,9 @@ void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t
 	}
 
 	PRINT_DEBUG("Entered: call=%p, flags=0x%x", call, *flags);
-	uint32_t events = call->buf;
+	uint32_t events = call->buf; //events not yet triggered
+	//call->flags; //events triggered but not ACK'd
+	//call->ret; //events already triggered & ACK'd
 
 	PRINT_DEBUG(
 			"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
@@ -1391,13 +1405,19 @@ void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t
 
 	if (*flags & POLLHUP) {
 		if (events & (POLLHUP)) {
-			//mask |= POLLHUP;
+			mask |= POLLHUP;
 		}
 	}
 
 	if (*flags & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) {
 			mask |= POLLIN | POLLRDNORM | POLLPRI; //TODO check man page says should be set in revents even if data_buf==0
+		}
+	}
+
+	if (*flags & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+			mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 		}
 	}
 
@@ -1431,11 +1451,11 @@ void poll_in_icmp(struct daemon_call *call, struct fins_module *module, uint32_t
 		}
 		free(msg);
 
-		PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
-				call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, call->ret|ret_mask);
-		call->buf = events_left;
-		call->flags |= ret_mask;
-		call->ret |= ret_mask;
+		PRINT_DEBUG("updating: old: events=0x%x, triggered=0x%x, ACK'd=0x%x, new: events=0x%x, triggered=0x%x, ACK'd=0x%x",
+				call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, call->ret);
+		call->buf = events_left; //events not yet triggered
+		call->flags |= ret_mask; //events triggered but not ACK'd
+		//call->ret; //events already triggered & ACK'd
 	}
 }
 
@@ -1559,8 +1579,9 @@ void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32
 					flags = 0;
 					call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
 					if (call != NULL) {
-						recvmsg_in_icmp(call, module, ff->metaData, ff->dataFrame.pduLength, ff->dataFrame.pdu, src_addr, 0);
 						list_remove(md->sockets[i].call_list, call);
+
+						recvmsg_in_icmp(call, module, ff->metaData, ff->dataFrame.pduLength, ff->dataFrame.pdu, src_addr, 0);
 						continue;
 					}
 
@@ -1636,8 +1657,9 @@ void daemon_in_error_icmp(struct fins_module *module, struct finsFrame *ff, uint
 						flags = 1;
 						call = (struct daemon_call *) list_find1(md->sockets[i].call_list, daemon_call_recvmsg_test, &flags);
 						if (call != NULL) {
-							recvmsg_in_icmp(call, module, ff->metaData, ff->ctrlFrame.data_len, ff->ctrlFrame.data, dst_addr, MSG_ERRQUEUE);
 							list_remove(md->sockets[i].call_list, call);
+
+							recvmsg_in_icmp(call, module, ff->metaData, ff->ctrlFrame.data_len, ff->ctrlFrame.data, dst_addr, MSG_ERRQUEUE);
 							continue;
 						}
 
@@ -1679,13 +1701,14 @@ void recvmsg_timeout_icmp(struct fins_module *module, struct daemon_call *call) 
 	PRINT_DEBUG("Entered: call=%p", call);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
-	list_remove(md->sockets[call->sock_index].call_list, call);
-
 	switch (md->sockets[call->sock_index].state) {
 	case SS_UNCONNECTED:
 		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	case SS_CONNECTING:
+		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
+		break;
+	case SS_CONNECTED:
 		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK
 		break;
 	default:
@@ -1694,5 +1717,5 @@ void recvmsg_timeout_icmp(struct fins_module *module, struct daemon_call *call) 
 		break;
 	}
 
-	daemon_calls_remove(module, call->index);
+	daemon_call_free(call);
 }

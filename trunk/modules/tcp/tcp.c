@@ -409,9 +409,11 @@ void handle_interrupt(struct fins_module *module, struct tcp_conn *conn) {
 				tcp_queue_remove(conn->request_queue, temp_node);
 
 				if (temp_node == front && conn->request_index) {
+					PRINT_DEBUG("TO'd, removing: request=%p, front, index=%d", request, conn->request_index);
 					tcp_conn_send_exec_reply(module, conn, request->serial_num, TCP_EXEC_SEND, FCF_TRUE, conn->request_index);
 					conn->request_index = 0;
 				} else {
+					PRINT_DEBUG("TO'd, removing: request=%p", request);
 					tcp_conn_send_exec_reply(module, conn, request->serial_num, TCP_EXEC_SEND, FCF_FALSE, EAGAIN);
 				}
 
@@ -439,7 +441,7 @@ void tcp_handle_requests(struct fins_module *module, struct tcp_conn *conn) {
 	int avail;
 	uint8_t *buf;
 
-	int space = conn->write_queue->max - conn->write_queue->len;
+	int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
 	while (space && !tcp_queue_is_empty(conn->request_queue)) {
 		temp_node = conn->request_queue->front;
 		request = (struct tcp_request *) temp_node->data;
@@ -486,6 +488,7 @@ void tcp_handle_requests(struct fins_module *module, struct tcp_conn *conn) {
 		if (space > 0) { //only possible if request_queue is empty
 			tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 			conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+			PRINT_DEBUG("poll: removing=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 		}
 	}
 }
@@ -885,11 +888,12 @@ void tcp_main_established(struct fins_module *module, struct tcp_conn *conn) {
 
 				if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //TODO remove?
 					if (tcp_queue_is_empty(conn->request_queue)) {
-						int space = conn->write_queue->max - conn->write_queue->len;
+						int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
 						PRINT_DEBUG("conn=%p, space=%d", conn, space);
 						if (space > 0) {
 							tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 							conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+							PRINT_DEBUG("poll: removing=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 						}
 					}
 				}
@@ -1138,11 +1142,12 @@ void tcp_main_fin_wait_1(struct fins_module *module, struct tcp_conn *conn) {
 
 				if (conn->poll_events & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //TODO remove?
 					if (tcp_queue_is_empty(conn->request_queue)) {
-						int space = conn->write_queue->max - conn->write_queue->len;
+						int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
 						PRINT_DEBUG("conn=%p, space=%d", conn, space);
 						if (space > 0) {
 							tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 							conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+							PRINT_DEBUG("poll: removing=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 						}
 					}
 				}
@@ -2725,8 +2730,7 @@ void tcp_fcf(struct fins_module *module, struct finsFrame *ff) {
 	switch (ff->ctrlFrame.opcode) {
 	case CTRL_ALERT:
 		PRINT_DEBUG("opcode=CTRL_ALERT (%d)", CTRL_ALERT);
-		PRINT_WARN("todo");
-		module_reply_fcf(module, ff, FCF_FALSE, 0);
+		tcp_alert(module, ff);
 		break;
 	case CTRL_ALERT_REPLY:
 		PRINT_DEBUG("opcode=CTRL_ALERT_REPLY (%d)", CTRL_ALERT_REPLY);

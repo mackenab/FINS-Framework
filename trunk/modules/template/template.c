@@ -27,8 +27,10 @@ void template_get_ff(struct fins_module *module) {
 
 	struct finsFrame *ff;
 	do {
-		secure_sem_wait(module->event_sem); //Wait until something occurs, constrains looping
-		secure_sem_wait(module->input_sem); //Protects input queue
+		secure_sem_wait(module->event_sem);
+		//Wait until something occurs, constrains looping
+		secure_sem_wait(module->input_sem);
+		//Protects input queue
 		ff = read_queue(module->input_queue); //Try to pull a FF from the queue
 		sem_post(module->input_sem);
 	} while (module->state == FMS_RUNNING && ff == NULL && !md->interrupt_flag); //break if state changes, gets FF, or interrupt
@@ -182,6 +184,7 @@ void template_set_param(struct fins_module *module, struct finsFrame *ff) {
 
 		secure_metadata_readFromElement(ff->metaData, "value", &val_float);
 		md->timeout = (double) val_float;
+		timer_repeat_start(md->to_data->tid, md->timeout);
 
 		module_reply_fcf(module, ff, FCF_TRUE, 0);
 		break;
@@ -212,6 +215,28 @@ void template_interrupt(struct fins_module *module) {
 		md->flag = 0;
 
 		//handle TO
+
+		//as an example send a control frame to the logger
+		metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
+		metadata_create(meta);
+
+		uint32_t info = 10;
+		secure_metadata_writeToElement(meta, "info", &info, META_TYPE_INT32);
+
+		struct finsFrame *ff = (struct finsFrame *) secure_malloc(sizeof(struct finsFrame));
+		ff->dataOrCtrl = FF_CONTROL;
+		ff->metaData = meta;
+
+		ff->ctrlFrame.sender_id = module->index;
+		ff->ctrlFrame.serial_num = gen_control_serial_num();
+		ff->ctrlFrame.opcode = CTRL_ALERT;
+		ff->ctrlFrame.param_id = TEMPLATE_ALERT_TO;
+
+		PRINT_DEBUG("ff=%p, meta=%p", ff, meta);
+		int sent = module_send_flow(module, ff, TEMPLATE_FLOW_LOGGER);
+		if (sent == 0) {
+			freeFinsFrame(ff);
+		}
 	}
 }
 
@@ -254,6 +279,8 @@ int template_init(struct fins_module *module, metadata_element *params, struct e
 	md->to_data->sem = module->event_sem; //trigger module thread to handle interrupt
 	timer_create_to((struct to_timer_data *) md->to_data); //Create system alert-based timer
 
+	md->timeout = TEMPLATE_TIMEOUT_DEFAULT;
+
 	return 1;
 }
 
@@ -265,6 +292,9 @@ int template_run(struct fins_module *module, pthread_attr_t *attr) {
 
 	struct template_data *md = (struct template_data *) module->data;
 	secure_pthread_create(&md->switch_to_template_thread, attr, switch_to_template, module);
+
+	timer_repeat_start(md->to_data->tid, md->timeout);
+	//timer_once_start(md->to_data->tid, md->timeout);
 
 	return 1;
 }
