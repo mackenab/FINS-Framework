@@ -32,6 +32,9 @@
 //module specific constants
 #define TEMPLATE_LIST_SIZE 10
 
+//default timeout for the timer example
+#define TEMPLATE_TIMEOUT_DEFAULT 10000
+
 //required module info
 #define TEMPLATE_LIB "template"
 #define TEMPLATE_MAX_FLOWS 1
@@ -94,5 +97,7 @@ void template_interrupt(struct fins_module *module);
 #define TEMPLATE_ALERT_FLOWS MOD_ALERT_FLOWS //0
 #define TEMPLATE_ALERT_LINKS MOD_ALERT_LINKS //1
 #define TEMPLATE_ALERT_DUAL MOD_ALERT_DUAL //2
+#define TEMPLATE_ALERT_TO 3
+
 
 #endif /* TEMPLATE_INTERNAL_H_ */

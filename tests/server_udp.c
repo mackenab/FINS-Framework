@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
 	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
-	//int timeout = -1;
+	int timeout = 10000;
 
 	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x", POLLIN, POLLPRI,
 			POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDNORM, POLLRDBAND, POLLWRNORM, POLLWRBAND);
@@ -242,13 +242,13 @@ int main(int argc, char *argv[]) {
 		j = 0;
 		int k = 0;
 		while (1) {
-			//printf("\n pID=%d poll before", pID);
-			//fflush(stdout);
-			//ret = poll(fds, nfds, timeout);
+			printf("\n pID=%d poll before", pID);
+			fflush(stdout);
+			ret = poll(fds, nfds, timeout);
 			//printf("\n poll: pID=%d, ret=%d, revents=%x", pID, ret, fds[ret].revents);
 			//fflush(stdout);
-			if (ret || 1) {
-				if (0) {
+			if (ret || 0) {
+				if (1) {
 					printf("\n poll: ret=%d, revents=%x", ret, fds[ret].revents);
 					printf("\n POLLIN=%d POLLPRI=%d POLLOUT=%d POLLERR=%d POLLHUP=%d POLLNVAL=%d POLLRDNORM=%d POLLRDBAND=%d POLLWRNORM=%d POLLWRBAND=%d ",
 							(fds[ret].revents & POLLIN) > 0, (fds[ret].revents & POLLPRI) > 0, (fds[ret].revents & POLLOUT) > 0,
@@ -258,7 +258,7 @@ int main(int argc, char *argv[]) {
 					fflush(stdout);
 				}
 
-				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 1) {
+				if ((fds[ret].revents & (POLLIN | POLLRDNORM)) || 0) {
 					//bytes_read = recvfrom(sock, recv_data, 200000, MSG_DONTWAIT, (struct sockaddr *) client_addr, &addr_len);
 					bytes_read = recvfrom(sock, recv_data, 200000, 0, (struct sockaddr *) client_addr, &addr_len);
 					//bytes_read = recvfrom(sock,recv_data,1024,0,NULL, NULL);
@@ -286,6 +286,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			j++;
+			sleep(2);
 			//break;
 		}
 	}

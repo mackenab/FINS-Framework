@@ -47,6 +47,7 @@
 #include "daemon.h"
 
 /** FINS Sockets database related defined constants */
+#define DAEMON_MAX_PROTOS 256 //IPPROTO_MAX
 #define DAEMON_MAX_SOCKETS 50 //TODO increase
 #define DAEMON_MAX_CALLS 50 //TODO increase
 #define DAEMON_CALL_LIST_MAX 30
@@ -304,7 +305,8 @@ struct daemon_socket {
 	int protocol;
 	struct daemon_socket_out_ops *out_ops;
 	struct daemon_socket_in_ops *in_ops;
-	struct daemon_socket_other_ops *other_ops;
+	struct daemon_socket_timeout_ops *timeout_ops;
+	struct daemon_socket_expired_ops *expired_ops;
 
 	uint64_t sock_id;
 	socket_state state;
@@ -339,7 +341,7 @@ struct daemon_socket {
 	struct socket_options sockopts;
 };
 int daemon_sockets_insert(struct fins_module *module, uint64_t sock_id, int sock_index, int type, int protocol, struct daemon_socket_out_ops *out_ops,
-		struct daemon_socket_in_ops *in_ops, struct daemon_socket_other_ops *other_ops);
+		struct daemon_socket_in_ops *in_ops, struct daemon_socket_timeout_ops *timeout_ops, struct daemon_socket_expired_ops *expired_ops);
 int daemon_sockets_find(struct fins_module *module, uint64_t sock_id);
 //int check_daemonSocket(struct fins_module *module, uint64_t sock_id);
 int daemon_sockets_check_addr6(struct fins_module *module, struct sockaddr_storage *addr, int protocol);
@@ -348,6 +350,21 @@ int daemon_sockets_remove(struct fins_module *module, int sock_index);
 //TODO fix the usage of these
 uint32_t daemon_fcf_to_switch(struct fins_module *module, uint32_t flow, metadata *meta, uint32_t serial_num, uint16_t opcode, uint32_t param_id);
 uint32_t daemon_fdf_to_switch(struct fins_module *module, uint32_t flow, uint32_t data_len, uint8_t *data, metadata *meta);
+
+struct daemon_socket_proto_ops {
+	uint32_t proto;
+	int (*socket_type_test)(int domain, int type, int protocol);
+	void (*socket_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
+
+	//operations performed when a FF or event occurs, potentially independent of previous system calls; ff matched to socket by address
+	void (*daemon_in_fdf)(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
+			struct sockaddr_storage *dst_addr);
+	void (*daemon_in_error)(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
+			struct sockaddr_storage *dst_addr);
+	void (*daemon_in_poll)(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg); //change to exec?
+	void (*daemon_in_shutdown)(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg);
+};
+int daemon_proto_register(struct fins_module *module, struct daemon_socket_proto_ops *proto_ops);
 
 struct errhdr {
 	struct sock_extended_err ee;
@@ -406,10 +423,12 @@ struct daemon_data {
 	pthread_t wedge_to_daemon_thread;
 
 	sem_t sockets_sem;
+	struct daemon_socket_proto_ops *protos[DAEMON_MAX_PROTOS];
+
 	struct daemon_socket sockets[DAEMON_MAX_SOCKETS];
 
-	struct daemon_call calls[DAEMON_MAX_CALLS];
-	struct linked_list *expired_call_list; //linked list of daemon_call structs, representing calls that timedout and expired
+	struct daemon_call calls[DAEMON_MAX_CALLS]; //stores calls that are blocking & are processed in multiple parts, or calls that interact with other modules (TCP)
+	struct linked_list *expired_call_list; //linked list of daemon_call structs, representing calls that timed out and expired; calls should be all malloc'd
 
 	uint8_t interrupt_flag;
 
@@ -442,12 +461,12 @@ void daemon_error(struct fins_module *module, struct finsFrame *ff);
 void daemon_in_fdf(struct fins_module *module, struct finsFrame *ff);
 
 void daemon_interrupt(struct fins_module *module);
-void daemon_handle_to(struct fins_module *module, struct daemon_call *call);
+void daemon_handle_to(struct fins_module *module, int call_index);
 
 void daemon_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int msg_len, uint8_t *msg_pt);
 typedef void (*call_out_type)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 
-/** calls handling functions */
+/** call handling functions, these functions unpack system calls from the wedge and multiplex  */
 void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 void bind_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 void listen_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
@@ -467,19 +486,9 @@ void shutdown_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, i
 void close_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 void sendpage_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf);
 
-struct daemon_socket_general_ops {
-	uint32_t proto;
-	int (*socket_type_test)(int domain, int type, int protocol);
-	void (*socket_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
-	void (*daemon_in_fdf)(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
-			struct sockaddr_storage *dst_addr);
-	void (*daemon_in_error)(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr,
-			struct sockaddr_storage *dst_addr);
-	void (*daemon_in_poll)(struct fins_module *module, struct finsFrame *ff, uint32_t ret_msg); //change to exec?
-};
-
+//operations performed when the daemon unpacks a call from the wedge
 struct daemon_socket_out_ops {
-	//convert to socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct socket_out_hdr *shdr);
+	//TODO potentially convert to socket_out(struct fins_module *module, struct nl_wedge_to_daemon *hdr, struct socket_out_hdr *shdr);
 	void (*socket_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
 	void (*bind_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, struct sockaddr_storage *addr);
 	void (*listen_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int backlog);
@@ -501,28 +510,74 @@ struct daemon_socket_out_ops {
 	void (*sendpage_out)(struct fins_module *module, struct wedge_to_daemon_hdr *hdr);
 };
 
-typedef void (*call_in_type)(struct fins_module *module, struct daemon_call *call);
-
+//operations performed when a call sends out a ff and daemon receives a reply; ff is matched to call by serial_num
+typedef void (*call_in_type)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 struct daemon_socket_in_ops {
+	void (*socket_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*bind_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*listen_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*connect_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*accept_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*getname_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*ioctl_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*sendmsg_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*recvmsg_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*getsockopt_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*setsockopt_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*release_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 	void (*poll_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*mmap_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*socketpair_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*shutdown_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*close_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
+	void (*sendpage_in)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call);
 };
 
-struct daemon_socket_other_ops {
+//operations performed when a nonblocking call doesn't receive the expected event or complete within DAEMON_BLOCK_DEFAULT
+typedef void (*call_timeout_type)(struct fins_module *module, struct daemon_call *call);
+struct daemon_socket_timeout_ops {
+	void (*socket_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*bind_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*listen_timeout)(struct fins_module *module, struct daemon_call *call);
 	void (*connect_timeout)(struct fins_module *module, struct daemon_call *call);
-	void (*connect_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
-
 	void (*accept_timeout)(struct fins_module *module, struct daemon_call *call);
-	void (*accept_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
-
+	void (*getname_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*ioctl_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*sendmsg_timeout)(struct fins_module *module, struct daemon_call *call);
 	void (*recvmsg_timeout)(struct fins_module *module, struct daemon_call *call);
-//void (*poll_timeout)(struct fins_module *module, struct daemon_call *call); //TODO remove? not used atm
-//void (*sendmsg_timeout)(struct fins_module *module, struct daemon_call *call); //TODO remove? not used atm
+	void (*getsockopt_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*setsockopt_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*release_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*poll_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*mmap_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*socketpair_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*shutdown_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*close_timeout)(struct fins_module *module, struct daemon_call *call);
+	void (*sendpage_timeout)(struct fins_module *module, struct daemon_call *call);
+};
+
+//TODO merge with daemon_socket_in_ops by using the call_in(m, ff, c) == call_expired(m, ff, c, 1)
+//operations performed when a nonblocking call sends out a ff, times out, and then daemon receives a reply; ff is matched to call by serial_num
+typedef void (*call_expired_type)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+struct daemon_socket_expired_ops {
+	void (*socket_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*bind_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*listen_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*connect_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*accept_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*getname_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*ioctl_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*sendmsg_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*recvmsg_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*getsockopt_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*setsockopt_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*release_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*poll_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*mmap_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*socketpair_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*shutdown_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*close_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
+	void (*sendpage_expired)(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply);
 };
 
 #define DAEMON_ALERT_POLL 0 //only one that's used in daemon.c

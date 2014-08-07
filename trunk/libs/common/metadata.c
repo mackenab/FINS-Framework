@@ -405,7 +405,7 @@ metadata *metadata_clone(metadata *meta) {
 
  */
 
-metadata_element *secure_config_setting_add_full(const char *file, const char *func, int line, metadata_element *root, char *name, int type) {
+metadata_element *secure_config_setting_add_macro(const char *file, const char *func, int line, metadata_element *root, char *name, int type) {
 	metadata_element *elem = config_setting_add(root, name, type);
 	if (elem == NULL) {
 #ifdef ERROR

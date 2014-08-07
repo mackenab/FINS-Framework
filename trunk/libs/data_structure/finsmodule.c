@@ -157,7 +157,7 @@ void module_destroy_structs(struct fins_module *module) {
 	metadata_destroy(module->knobs);
 }
 
-void module_to_switch_full(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff) {
+void module_to_switch_macro(const char *file, const char *func, int line, struct fins_module *module, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: module=%p, id=%d, name='%s', ff=%p, meta=%p", module, module->id, module->name, ff, ff->metaData);
 
 	int ret;

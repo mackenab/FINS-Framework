@@ -14,6 +14,7 @@
 
 #define MAX_DATA_PER_ICMP 4096
 
+int icmp_proto_register(struct fins_module *module);
 int socket_icmp_test(int domain, int type, int protocol);
 void socket_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain);
 void daemon_in_fdf_icmp(struct fins_module *module, struct finsFrame *ff, uint32_t family, struct sockaddr_storage *src_addr, struct sockaddr_storage *dst_addr);

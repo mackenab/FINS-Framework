@@ -74,6 +74,7 @@ void daemon_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int
 
 void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf) {
 	PRINT_DEBUG("Entered: hdr=%p, len=%d", hdr, len);
+	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	uint8_t *pt = buf;
 	//convert to: struct socket_call_hdr *hdr = (struct socket_call_hdr *)buf;
@@ -101,16 +102,23 @@ void socket_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int
 	}
 
 	//change to list containing struct socket_type: has create(), equal() funcs?
-	if (socket_icmp_test(domain, type, protocol)) {
-		socket_out_icmp(module, hdr, domain);
-	} else if (socket_tcp_test(domain, type, protocol)) {
-		socket_out_tcp(module, hdr, domain);
-	} else if (socket_udp_test(domain, type, protocol)) {
-		socket_out_udp(module, hdr, domain);
-	} else {
-		PRINT_ERROR("non supported socket: type=%d, protocol=%d", type, protocol);
-		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EACCES);
+	int i;
+	for (i = 0; i < DAEMON_MAX_PROTOS; i++) {
+		if (md->protos[i] != NULL) {
+			if (md->protos[i]->socket_type_test != NULL) {
+				if ((md->protos[i]->socket_type_test)(domain, type, protocol)) {
+					(md->protos[i]->socket_out)(module, hdr, domain);
+					return;
+				}
+			} else {
+				//shouldn't happen
+				PRINT_WARN("todo error: i=%u, protos=%p", i, md->protos[i]);
+			}
+		}
 	}
+
+	PRINT_ERROR("non supported socket: domain=%d, type=%d, protocol=%d", domain, type, protocol);
+	nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, EACCES);
 }
 
 void bind_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int len, uint8_t *buf) {
@@ -934,9 +942,6 @@ void recvmsg_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, in
 
 	PRINT_DEBUG("flags=0x%x", flags);
 
-	/** Notice that send is only used with tcp connections since
-	 * the receiver is already known
-	 */
 	md->sockets[hdr->sock_index].sockopts.FSO_TIMESTAMP |= timestamp;
 
 	if (md->sockets[hdr->sock_index].out_ops->recvmsg_out != NULL) {
@@ -1102,7 +1107,7 @@ void mmap_out(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int l
 
 	if (md->sockets[hdr->sock_index].out_ops->mmap_out != NULL) {
 		//(md->sockets[hdr->sock_index].out_ops->mmap_out)(module, hdr);
-		PRINT_DEBUG("implement mmap_icmp");
+		PRINT_DEBUG("implement mmap_out");
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
 		PRINT_WARN("todo error");

@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
 	fds[1].events = POLLIN | POLLPRI | POLLRDNORM;
 	//fds[1].events = POLLIN | POLLPRI | POLLOUT | POLLERR | POLLHUP | POLLNVAL | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
 	printf("\n fd: sock=%d, events=%x", sock, fds[1].events);
-	int time = 1000;
+	int time = 10000;
 
 	///*
 	printf("\n POLLIN=%x POLLPRI=%x POLLOUT=%x POLLERR=%x POLLHUP=%x POLLNVAL=%x POLLRDNORM=%x POLLRDBAND=%x POLLWRNORM=%x POLLWRBAND=%x ", POLLIN, POLLPRI,
@@ -268,6 +268,8 @@ int main(int argc, char *argv[]) {
 	int total = 0;
 	int temp = 1;
 	while (i < 10000) {
+		printf("\n pID=%d poll before", pID);
+		fflush(stdout);
 		ret = poll(fds, nfds, time);
 		if (ret || 0) {
 			if (1) {

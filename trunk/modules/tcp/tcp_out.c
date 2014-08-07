@@ -18,7 +18,7 @@ void tcp_write(struct fins_module *module, struct tcp_conn *conn, uint32_t calle
 		if (conn->state == TS_SYN_SENT || conn->state == TS_SYN_RECV) { //equiv to non blocking
 			PRINT_DEBUG("pre-connected non-blocking");
 
-			int space = conn->write_queue->max - conn->write_queue->len;
+			int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
 			PRINT_DEBUG("space=%d, called_len=%u", space, called_len);
 			if (space >= called_len) {
 				node = tcp_node_create(called_data, called_len, 0, called_len - 1);
@@ -44,6 +44,7 @@ void tcp_write(struct fins_module *module, struct tcp_conn *conn, uint32_t calle
 					if (space > 0) { //only possible if request_queue is empty
 						tcp_conn_send_fcf(module, conn, CTRL_ALERT, TCP_ALERT_POLL, FCF_TRUE, POLLOUT | POLLWRNORM | POLLWRBAND);
 						conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+						PRINT_DEBUG("poll: removing=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 					}
 				}
 			}
@@ -687,45 +688,76 @@ void tcp_poll(struct fins_module *module, struct tcp_conn *conn, struct finsFram
 	PRINT_DEBUG("sem_wait: conn=%p", conn);
 	secure_sem_wait(&conn->sem);
 	if (conn->running_flag) {
-		//TODO redo, for now mostly does POLLOUT
+		if (initial) {
+			//do initial check & add if not met
+			if (events & (POLLERR)) {
+				//TODO errors
+			}
 
-		if (events & (POLLERR)) {
-			//TODO errors
-		}
+			if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) { //handled by daemon
+				//mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
 
-		if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) { //TODO remove - handled by daemon
-			//mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+				//add a check to see if conn moves to CLOSE_WAIT, post: POLLHUP
+			}
 
-			//add a check to see if conn moves to CLOSE_WAIT, post: POLLHUP
-		}
-
-		if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
-			if (tcp_queue_is_empty(conn->request_queue)) {
-				int space = conn->write_queue->max - conn->write_queue->len;
-				if (space > 0) {
-					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-				} else {
-					if (initial) {
-						conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
-						PRINT_DEBUG("adding: poll_events=0x%x", conn->poll_events);
+			if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+				//write_queue is the SNDBUF, SO_SNDBUF changes it's size, return POLLOUT when can write to queue
+				//request_queue holds system calls that request to write, requests only stored if write_queue full
+				//if request_queue empty check if write_queue has space
+				//TODO: change to calculating if
+				if (tcp_queue_is_empty(conn->request_queue)) {
+					int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
+					if (space > 0) {
+						mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 					} else {
-						conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
-						PRINT_DEBUG("removing: poll_events=0x%x", conn->poll_events);
+						conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+						PRINT_DEBUG("poll: adding=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 					}
-				}
-			} else {
-				if (initial) {
-					conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
-					PRINT_DEBUG("adding: poll_events=0x%x", conn->poll_events);
 				} else {
-					conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
-					PRINT_DEBUG("removing: poll_events=0x%x", conn->poll_events);
+					conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+					PRINT_DEBUG("poll: adding=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 				}
 			}
-		}
 
-		if (events & (POLLHUP)) {
-			//TODO errors
+			if (events & (POLLHUP)) {
+				//TODO errors
+			}
+		} else { //final
+			if (events) {
+				//do final check, if nothing left remove
+				//shouldn't occur? tcpHandling shouldn't send FCF to TCP
+
+				//conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+				//PRINT_DEBUG("poll: removing=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
+			} else {
+				//check everything, don't add/remove
+				if (events & (POLLERR)) {
+					//TODO errors
+				}
+
+				if (events & (POLLIN | POLLRDNORM | POLLPRI | POLLRDBAND)) { //handled by daemon
+					//mask |= POLLIN | POLLRDNORM; //TODO POLLPRI?
+
+					//add a check to see if conn moves to CLOSE_WAIT, post: POLLHUP
+				}
+
+				if (events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+					if (tcp_queue_is_empty(conn->request_queue)) {
+						int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
+						if (space > 0) {
+							mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
+						} else {
+							//do nothing
+						}
+					} else {
+						//do nothing
+					}
+				}
+
+				if (events & (POLLHUP)) {
+					//TODO errors
+				}
+			}
 		}
 
 		module_reply_fcf(module, ff, FCF_TRUE, mask);
@@ -772,14 +804,31 @@ void tcp_poll_stub(struct fins_module *module, struct tcp_conn *conn, struct fin
 			//sem_getvalue(&conn->write_sem, &val);
 			//PRINT_DEBUG("conn_stub=%p, conn->write_sem=%d", conn_stub, val);
 
+			//TODO check what this is supposed to do?
+
 			if (val) {
 				mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 			} else {
 				if (initial) {
 					conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+					PRINT_DEBUG("poll: adding=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 				} else {
 					conn->poll_events &= ~(POLLOUT | POLLWRNORM | POLLWRBAND);
+					PRINT_DEBUG("poll: removing=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 				}
+			}
+
+			if (tcp_queue_is_empty(conn->request_queue)) {
+				int space = conn->write_queue->max - (conn->write_queue->len - conn->write_index);
+				if (space > 0) {
+					mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
+				} else {
+					conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+					PRINT_DEBUG("poll: adding=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
+				}
+			} else {
+				conn->poll_events |= (POLLOUT | POLLWRNORM | POLLWRBAND);
+				PRINT_DEBUG("poll: adding=0x%x, poll_events=0x%x", (POLLOUT | POLLWRNORM | POLLWRBAND), conn->poll_events);
 			}
 		}
 
@@ -866,6 +915,7 @@ void tcp_conn_alert(struct fins_module *module, struct tcp_conn *conn, struct fi
 		if (value == TCP_STATUS_RD) {
 			//TODO RD, handled at daemon
 			conn->status &= ~value;
+			freeFinsFrame(ff);
 		} else if (value == TCP_STATUS_WR || value == TCP_STATUS_RDWR) {
 			//TODO if WR, send FIN
 			conn->status &= ~value;
@@ -876,7 +926,8 @@ void tcp_conn_alert(struct fins_module *module, struct tcp_conn *conn, struct fi
 				PRINT_DEBUG("SHUT_WR, send FIN, FIN_WAIT_1: state=%d, conn=%p", conn->state, conn);
 				conn->state = TS_FIN_WAIT_1;
 
-				module_reply_fcf(module, ff, FCF_TRUE, 0);
+				//module_reply_fcf(module, ff, FCF_TRUE, 0);
+				freeFinsFrame(ff);
 
 				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 						conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
@@ -902,7 +953,8 @@ void tcp_conn_alert(struct fins_module *module, struct tcp_conn *conn, struct fi
 				PRINT_DEBUG("CLOSE_WAIT: SHUT_WR, send FIN, LAST_ACK: state=%d, conn=%p", conn->state, conn);
 				conn->state = TS_LAST_ACK;
 
-				module_reply_fcf(module, ff, FCF_TRUE, 0);
+				//module_reply_fcf(module, ff, FCF_TRUE, 0); //daemon expects no reply
+				freeFinsFrame(ff);
 
 				PRINT_DEBUG( "host: seqs=(%u, %u) (%u, %u), win=(%u/%u), rem: seqs=(%u, %u) (%u, %u), win=(%u/%u)",
 						conn->send_seq_num-conn->issn, conn->send_seq_end-conn->issn, conn->send_seq_num, conn->send_seq_end, conn->recv_win, conn->recv_max_win, conn->recv_seq_num-conn->irsn, conn->recv_seq_end-conn->irsn, conn->recv_seq_num, conn->recv_seq_end, conn->send_win, conn->send_max_win);
@@ -938,7 +990,8 @@ void tcp_conn_alert(struct fins_module *module, struct tcp_conn *conn, struct fi
 				 }
 				 */
 
-				module_reply_fcf(module, ff, FCF_TRUE, 0); //TODO check move to end of last_ack/start of time_wait?
+				//module_reply_fcf(module, ff, FCF_TRUE, 0); //TODO check move to end of last_ack/start of time_wait? //daemon expects no reply
+				freeFinsFrame(ff);
 
 				tcp_conn_shutdown(conn);
 			} else if (conn->state == TS_CLOSED || conn->state == TS_TIME_WAIT) {
@@ -947,12 +1000,14 @@ void tcp_conn_alert(struct fins_module *module, struct tcp_conn *conn, struct fi
 				} else {
 					PRINT_DEBUG("TIME_WAIT: SHUT_WR, -, TIME_WAIT: state=%d, conn=%p", conn->state, conn);
 				}
-				module_reply_fcf(module, ff, FCF_TRUE, 0);
+				//module_reply_fcf(module, ff, FCF_TRUE, 0); //daemon expects no reply
+				freeFinsFrame(ff);
 			} else {
 				PRINT_WARN("todo error");
 
 				PRINT_DEBUG("conn=%p, state=%u", conn, conn->state);
 				//TODO figure out:
+				freeFinsFrame(ff);
 			}
 		} else {
 			PRINT_WARN("todo error");
@@ -969,6 +1024,8 @@ void tcp_conn_alert(struct fins_module *module, struct tcp_conn *conn, struct fi
 
 void tcp_conn_read_param(struct fins_module *module, struct tcp_conn *conn, struct finsFrame *ff) {
 	PRINT_DEBUG("Entered: conn=%p, ff=%p", conn, ff);
+
+	uint32_t value = 0;
 
 	switch (ff->ctrlFrame.param_id) { //TODO optimize this code better when control format is fully fleshed out
 	case TCP_GET_HOST_WINDOW:
@@ -1025,6 +1082,7 @@ void tcp_conn_read_param(struct fins_module *module, struct tcp_conn *conn, stru
 			switch (opt_name) {
 			case SO_SNDBUF:
 				if (opt_len >= sizeof(int)) {
+					//value = conn->write_queue->max;
 				} else {
 					PRINT_WARN("todo error");
 				}
@@ -1151,12 +1209,16 @@ void tcp_conn_set_param(struct fins_module *module, struct tcp_conn *conn, struc
 				break;
 			case SO_SNDBUF:
 				if (opt_len >= sizeof(int)) {
+					//send buff should be: write
+					//TODO change conn->write_queue->max
 				} else {
 					PRINT_WARN("todo error");
 				}
 				break;
 			case SO_RCVBUF:
 				if (opt_len >= sizeof(int)) {
+					//send buff should be: read (in daemon)
+					//TODO change
 				} else {
 					PRINT_WARN("todo error");
 				}
@@ -1320,6 +1382,25 @@ void tcp_fcf_match(struct fins_module *module, struct finsFrame *ff) {
 
 		//TODO error
 		module_reply_fcf(module, ff, FCF_FALSE, 0);
+	}
+}
+
+void tcp_alert(struct fins_module *module, struct finsFrame *ff) {
+	PRINT_DEBUG("Entered: module=%p, ff=%p, meta=%p", module, ff, ff->metaData);
+	//struct tcp_data *md = (struct tcp_data *) module->data;
+
+	//int32_t val_int32;
+	//int64_t val_int64;
+	//float val_float;
+
+	switch (ff->ctrlFrame.param_id) {
+	case TCP_ALERT_POLL: //conn/conn_stub specific SET_PARAMS
+	case TCP_ALERT_SHUTDOWN:
+		PRINT_DEBUG("conn/conn_stub ALERT");
+		tcp_fcf_match(module, ff);
+		break;
+	default:
+		break;
 	}
 }
 

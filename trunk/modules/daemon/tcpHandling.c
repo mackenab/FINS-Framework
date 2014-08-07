@@ -8,17 +8,18 @@
 #include "tcpHandling.h"
 #include <finstypes.h>
 
-struct daemon_socket_general_ops tcp_general_ops = { .proto = IPPROTO_TCP, .socket_type_test = socket_tcp_test, .socket_out = socket_out_tcp, .daemon_in_fdf =
-		daemon_in_fdf_tcp, .daemon_in_error = daemon_in_error_tcp, .daemon_in_poll = daemon_in_poll_tcp };
+struct daemon_socket_proto_ops tcp_proto_ops = { .proto = IPPROTO_TCP, .socket_type_test = socket_tcp_test, .socket_out = socket_out_tcp, .daemon_in_fdf =
+		daemon_in_fdf_tcp, .daemon_in_error = daemon_in_error_tcp, .daemon_in_poll = daemon_in_poll_tcp, .daemon_in_shutdown = daemon_in_shutdown_tcp };
 static struct daemon_socket_out_ops tcp_out_ops = { .socket_out = socket_out_tcp, .bind_out = bind_out_tcp, .listen_out = listen_out_tcp, .connect_out =
 		connect_out_tcp, .accept_out = accept_out_tcp, .getname_out = getname_out_tcp, .ioctl_out = ioctl_out_tcp, .sendmsg_out = sendmsg_out_tcp,
 		.recvmsg_out = recvmsg_out_tcp, .getsockopt_out = getsockopt_out_tcp, .setsockopt_out = setsockopt_out_tcp, .release_out = release_out_tcp, .poll_out =
 				poll_out_tcp, .mmap_out = mmap_out_tcp, .socketpair_out = socketpair_out_tcp, .shutdown_out = shutdown_out_tcp, .close_out = close_out_tcp,
-		.sendpage_out = sendpage_out_tcp, };
+		.sendpage_out = sendpage_out_tcp };
 static struct daemon_socket_in_ops tcp_in_ops = { .connect_in = connect_in_tcp, .accept_in = accept_in_tcp, .sendmsg_in = sendmsg_in_tcp, .getsockopt_in =
-		getsockopt_in_tcp, .setsockopt_in = setsockopt_in_tcp, .release_in = release_in_tcp, .poll_in = poll_in_tcp_fcf, };
-static struct daemon_socket_other_ops tcp_other_ops = { .connect_timeout = connect_timeout_tcp, .connect_expired = connect_expired_tcp, .accept_timeout =
-		accept_timeout_tcp, .accept_expired = accept_expired_tcp, .recvmsg_timeout = recvmsg_timeout_tcp, };
+		getsockopt_in_tcp, .setsockopt_in = setsockopt_in_tcp, .release_in = release_in_tcp, .poll_in = poll_in_tcp_fcf };
+static struct daemon_socket_timeout_ops tcp_timeout_ops = { .connect_timeout = connect_timeout_tcp, .accept_timeout = accept_timeout_tcp, .recvmsg_timeout =
+		recvmsg_timeout_tcp };
+static struct daemon_socket_expired_ops tcp_expired_ops = { .connect_expired = connect_expired_tcp, .accept_expired = accept_expired_tcp };
 
 int match_host_addr4_tcp(struct fins_module *module, uint32_t host_ip, uint16_t host_port) {
 	PRINT_DEBUG("Entered: module=%p, host=%u:%u", module, host_ip, host_port);
@@ -110,6 +111,10 @@ int match_packet_addr4_tcp(struct fins_module *module, uint32_t src_ip, uint16_t
 	return index;
 }
 
+int tcp_proto_register(struct fins_module *module) {
+	return daemon_proto_register(module, &tcp_proto_ops);
+}
+
 int socket_tcp_test(int domain, int type, int protocol) {
 	return type == SOCK_STREAM && (protocol == IPPROTO_TCP || protocol == IPPROTO_IP);
 }
@@ -117,7 +122,8 @@ int socket_tcp_test(int domain, int type, int protocol) {
 void socket_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, int domain) {
 	PRINT_DEBUG("Entered: hdr=%p, domain=%d", hdr, domain);
 
-	int ret = daemon_sockets_insert(module, hdr->sock_id, hdr->sock_index, SOCK_STREAM, IPPROTO_TCP, &tcp_out_ops, &tcp_in_ops, &tcp_other_ops);
+	int ret = daemon_sockets_insert(module, hdr->sock_id, hdr->sock_index, SOCK_STREAM, IPPROTO_TCP, &tcp_out_ops, &tcp_in_ops, &tcp_timeout_ops,
+			&tcp_expired_ops);
 	PRINT_DEBUG("sock_index=%d, ret=%d", hdr->sock_index, ret);
 
 	if (ret) {
@@ -235,6 +241,8 @@ void listen_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	//TODO include other sockopts that have been set
 
 	if (daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, gen_control_serial_num(), CTRL_EXEC, DAEMON_EXEC_TCP_LISTEN)) {
+		//TODO remove ACK, add listen_in_tcp() that NACK/ACKs
+
 		ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 0);
 	} else {
 		PRINT_ERROR("Exited: failed to send ff");
@@ -265,13 +273,16 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		break;
 	case SS_CONNECTING:
 		if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
-			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
+				daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 				PRINT_DEBUG("inserting call: hdr=%p", hdr);
 				md->calls[hdr->call_index].flags = flags;
 
+				list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+
 				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			} else {
-				PRINT_ERROR("Insert fail: hdr=%p", hdr);
+				PRINT_ERROR("call_list full");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		} else {
@@ -345,6 +356,17 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		meta = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(meta);
 
+		///*
+		if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+			if (addr != NULL) {
+				host_ip = addr4_get_ip(&addr->ip);
+			} else {
+				PRINT_WARN("todo error");
+			}
+		}
+		//*/
+
 		secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
@@ -375,17 +397,20 @@ void connect_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 	uint32_t serial_num = gen_control_serial_num();
 	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_CONNECT);
 	if (sent > 0) {
-		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 			PRINT_DEBUG("inserting call: hdr=%p", hdr);
+			daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].flags = flags;
 			md->calls[hdr->call_index].sent = sent;
+
+			list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 
 			if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
 				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			}
 		} else {
-			PRINT_ERROR("Insert fail: hdr=%p", hdr);
+			PRINT_ERROR("call_list full");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
@@ -420,16 +445,19 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		break;
 	case SS_CONNECTING:
 		if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
-			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 				PRINT_DEBUG("inserting call: hdr=%p", hdr);
+				daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 				md->calls[hdr->call_index].flags = flags;
 
 				md->calls[hdr->call_index].sock_id_new = sock_id_new; //TODO redo so not in call? or in struct inside call as void *pt;
 				md->calls[hdr->call_index].sock_index_new = sock_index_new;
 
+				list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+
 				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 			} else {
-				PRINT_ERROR("Insert fail: hdr=%p", hdr);
+				PRINT_ERROR("call_list full");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		} else {
@@ -454,6 +482,17 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 		meta = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(meta);
 
+		///*
+		if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+			if (addr != NULL) {
+				host_ip = addr4_get_ip(&addr->ip);
+			} else {
+				PRINT_WARN("todo error");
+			}
+		}
+		//*/
+
 		secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
 	} else { //AF_INET6
@@ -471,14 +510,17 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 	uint32_t serial_num = gen_control_serial_num();
 	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_ACCEPT);
 	if (sent > 0) {
-		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 			PRINT_DEBUG("inserting call: hdr=%p", hdr);
+			daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].flags = flags;
 			md->calls[hdr->call_index].sent = sent;
 
 			md->calls[hdr->call_index].sock_id_new = sock_id_new; //TODO redo so not in call? or in struct inside call as void *pt;
 			md->calls[hdr->call_index].sock_index_new = sock_index_new;
+
+			list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 
 			if (flags & (SOCK_NONBLOCK | O_NONBLOCK)) {
 				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
@@ -489,7 +531,7 @@ void accept_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr,
 			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 		} else {
-			PRINT_ERROR("Insert fail: hdr=%p", hdr);
+			PRINT_ERROR("call_list full");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
@@ -829,6 +871,17 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		meta = (metadata *) secure_malloc(sizeof(metadata));
 		metadata_create(meta);
 
+		///*
+		if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+			if (addr != NULL) {
+				host_ip = addr4_get_ip(&addr->ip);
+			} else {
+				PRINT_WARN("todo error");
+			}
+		}
+		//*/
+
 		secure_metadata_writeToElement(meta, "send_src_ipv4", &host_ip, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_src_port", &host_port, META_TYPE_INT32);
 		secure_metadata_writeToElement(meta, "send_dst_ipv4", &rem_ip, META_TYPE_INT32);
@@ -854,18 +907,21 @@ void sendmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 	uint32_t sent = daemon_fdf_to_switch(module, DAEMON_FLOW_TCP, data_len, data, meta);
 	if (sent > 0) {
-		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 			PRINT_DEBUG("inserting call: hdr=%p", hdr);
+			daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].flags = flags;
 			md->calls[hdr->call_index].buf = data_len;
 			md->calls[hdr->call_index].sent = sent;
 
+			list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+
 			if (flags & (MSG_DONTWAIT)) {
-				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
+				//TO handled by TCP module
 			}
 		} else {
-			PRINT_ERROR("Insert fail: hdr=%p", hdr);
+			PRINT_ERROR("call_list full");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
@@ -939,6 +995,17 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 			meta = (metadata *) secure_malloc(sizeof(metadata));
 			metadata_create(meta);
+
+			///*
+			if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+				if (addr != NULL) {
+					host_ip = addr4_get_ip(&addr->ip);
+				} else {
+					PRINT_WARN("todo error");
+				}
+			}
+			//*/
 
 			secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 			secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
@@ -1048,25 +1115,20 @@ void recvmsg_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		return;
 	}
 
-	if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+	if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 		PRINT_DEBUG("inserting call: hdr=%p", hdr);
+		daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 		md->calls[hdr->call_index].flags = flags;
 		md->calls[hdr->call_index].buf = buf_len;
 		md->calls[hdr->call_index].ret = msg_controllen;
 
-		struct linked_list *call_list = md->sockets[hdr->sock_index].call_list;
-		if (list_has_space(call_list)) {
-			list_append(call_list, &md->calls[hdr->call_index]);
+		list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 
-			if (flags & (MSG_DONTWAIT)) {
-				timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
-			}
-		} else {
-			PRINT_ERROR("call_list full");
-			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
+		if (flags & (MSG_DONTWAIT)) {
+			timer_once_start(md->calls[hdr->call_index].to_data->tid, DAEMON_BLOCK_DEFAULT);
 		}
 	} else {
-		PRINT_ERROR("Insert fail: hdr=%p", hdr);
+		PRINT_ERROR("call_list full");
 		nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 	}
 }
@@ -1084,6 +1146,18 @@ void release_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 		metadata_create(meta);
 
 		uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+
+		///*
+		if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+			if (addr != NULL) {
+				host_ip = addr4_get_ip(&addr->ip);
+			} else {
+				PRINT_WARN("todo error");
+			}
+		}
+		//*/
+
 		secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 		uint32_t host_port = (uint32_t) addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 		secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
@@ -1124,12 +1198,15 @@ void release_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 
 	uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, exec_call);
 	if (sent > 0) {
-		if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+		if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 			PRINT_DEBUG("inserting call: hdr=%p", hdr);
+			daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 			md->calls[hdr->call_index].serial_num = serial_num;
 			md->calls[hdr->call_index].sent = sent;
+
+			list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 		} else {
-			PRINT_ERROR("Insert fail: hdr=%p", hdr);
+			PRINT_ERROR("call_list full");
 			nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 		}
 	} else {
@@ -1145,6 +1222,7 @@ int poll_send_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 	PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 			md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
 
+	//TODO update for AF_INET6 //######################################################################################
 	uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
 	uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 	uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
@@ -1158,6 +1236,17 @@ int poll_send_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 
 	metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta);
+
+	///*
+	if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			host_ip = addr4_get_ip(&addr->ip);
+		} else {
+			PRINT_WARN("todo error");
+		}
+	}
+	//*/
 
 	secure_metadata_writeToElement(meta, "initial", &initial, META_TYPE_INT32);
 	uint32_t family = AF_INET;
@@ -1180,10 +1269,20 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 	PRINT_DEBUG("Entered: hdr=%p, events=0x%x", hdr, events);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
+	//poll_out_tcp(), poll_in_tcp_fdf(), poll_in_tcp_fcf() use the several params of the struct daemon_call structure.
+	//NOTE: difference between "triggered" vs "ACK'd"
+	//buf == events not yet triggered
+	//flags == events triggered but not ACK'd
+	//ret == events already triggered & ACK'd
+
+	//buf | flags == events not yet ACK'd to Wedge
+	//flags | ret == events triggered
+	//buf | flags | ret == original events received
+
 	uint32_t mask = 0;
-	struct daemon_call *call;
 	uint32_t ret_mask;
 	uint32_t events_left;
+	struct daemon_call *call;
 
 	if (events) { //initial
 		PRINT_DEBUG(
@@ -1220,36 +1319,29 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 			call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
 			if (call) { //update events of call
 				if (events_left & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //send to TCP to handle, remove old call, insert new call
-					//TODO check if this is fine! Especially if TCP sending FCF back
-					//maybe move to expired instead?
 					list_remove(md->sockets[hdr->sock_index].call_list, call);
 					daemon_call_free(call);
 
-					//TODO update for AF_INET6 //######################################################################################
 					uint32_t initial = 1;
 					uint32_t serial_num = gen_control_serial_num();
 					int sent = poll_send_tcp(module, hdr, events, initial, serial_num);
 					if (sent > 0) {
-						if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+						if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 							PRINT_DEBUG("inserting call: hdr=%p", hdr);
-							md->calls[hdr->call_index].buf = events_left;
-							md->calls[hdr->call_index].flags = ret_mask;
-							md->calls[hdr->call_index].ret = 0;
+							daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+							md->calls[hdr->call_index].buf = events_left; //events not yet triggered
+							md->calls[hdr->call_index].flags = ret_mask; //events triggered but not ACK'd
+							md->calls[hdr->call_index].ret = 0; //events already triggered & ACK'd
 
 							md->calls[hdr->call_index].sock_index_new = initial; //is initial
 							md->calls[hdr->call_index].serial_num = serial_num;
 							md->calls[hdr->call_index].sent = sent;
 
-							if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
-								list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
-								PRINT_DEBUG("");
-								ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
-							} else {
-								PRINT_ERROR("call_list full");
-								nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-							}
+							list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+							PRINT_DEBUG("");
+							//Wait for response from TCP to ACK/NACK
 						} else {
-							PRINT_ERROR("Insert fail: hdr=%p", hdr);
+							PRINT_ERROR("call_list full");
 							nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 						}
 					} else {
@@ -1257,41 +1349,36 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 						nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					}
 				} else { //update old call
-					PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
-							call->buf, call->flags, call->ret, events_left, ret_mask, 0);
-					call->buf = events_left;
-					call->flags = ret_mask;
-					call->ret = 0;
+					PRINT_DEBUG("updating: old: events=0x%x, triggered=0x%x, ACK'd=0x%x, new: events=0x%x, triggered=0x%x, ACK'd=0x%x",
+							call->buf, call->flags, call->ret, events_left, 0, ret_mask);
+					call->buf = events_left; //events not yet triggered
+					call->flags = 0; //events triggered but not ACK'd
+					call->ret = ret_mask; //events already triggered & ACK'd
 
 					ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 				}
 			} else { //create new
 				if (events_left & (POLLOUT | POLLWRNORM | POLLWRBAND)) { //send to TCP to handle, insert new call
-					//TODO update for AF_INET6 //######################################################################################
 					uint32_t initial = 1;
 					uint32_t serial_num = gen_control_serial_num();
 					int sent = poll_send_tcp(module, hdr, events, initial, serial_num);
 					if (sent > 0) {
-						if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+						if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 							PRINT_DEBUG("inserting call: hdr=%p", hdr);
-							md->calls[hdr->call_index].buf = events_left;
-							md->calls[hdr->call_index].flags = ret_mask;
-							md->calls[hdr->call_index].ret = 0;
+							daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+							md->calls[hdr->call_index].buf = events_left; //events not yet triggered
+							md->calls[hdr->call_index].flags = ret_mask; //events triggered but not ACK'd
+							md->calls[hdr->call_index].ret = 0; //events already triggered & ACK'd
 
 							md->calls[hdr->call_index].sock_index_new = initial; //is initial
 							md->calls[hdr->call_index].serial_num = serial_num;
 							md->calls[hdr->call_index].sent = sent;
 
-							if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
-								list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
-								PRINT_DEBUG("");
-								ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
-							} else {
-								PRINT_ERROR("call_list full");
-								nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-							}
+							list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+							PRINT_DEBUG("");
+							//Wait for response from TCP to ACK/NACK
 						} else {
-							PRINT_ERROR("Insert fail: hdr=%p", hdr);
+							PRINT_ERROR("call_list full");
 							nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 						}
 					} else {
@@ -1299,12 +1386,12 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 						nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					}
 				} else { //malloc new call
-					call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
-					call->buf = events_left;
-					call->flags = ret_mask;
-					call->ret = 0;
-
 					if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
+						call = daemon_call_create(hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+						call->buf = events_left; //events not yet triggered
+						call->flags = 0; //events triggered but not ACK'd
+						call->ret = ret_mask; //events already triggered & ACK'd
+
 						list_append(md->sockets[hdr->sock_index].call_list, call);
 						PRINT_DEBUG("");
 						ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
@@ -1327,9 +1414,10 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 	} else { //final
 		call = (struct daemon_call *) list_find2(md->sockets[hdr->sock_index].call_list, daemon_call_pid_test, &hdr->call_pid, &hdr->call_type);
 		if (call) {
-			events = call->buf;
-			//call->flags = 0; //events already used
-			ret_mask = call->ret;
+			//call->buf; //events not yet triggered
+			//call->flags; //events triggered but not ACK'd
+			//call->ret; //events already triggered & ACK'd
+			events = call->buf | call->flags; //events not yet ACK'd to Wedge
 
 			PRINT_DEBUG(
 					"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
@@ -1358,7 +1446,7 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 				//mask |= POLLOUT | POLLWRNORM | POLLWRBAND; //handled by TCP module
 			}
 
-			ret_mask |= events & mask;
+			ret_mask = events & mask;
 			events_left = events & ~mask;
 			PRINT_DEBUG("final: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", events, mask, ret_mask, events_left);
 
@@ -1367,43 +1455,38 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 					list_remove(md->sockets[hdr->sock_index].call_list, call);
 					daemon_call_free(call);
 
-					//TODO update for AF_INET6 //######################################################################################
 					uint32_t initial = 0;
 					uint32_t serial_num = gen_control_serial_num();
 					int sent = poll_send_tcp(module, hdr, events, initial, serial_num);
 					if (sent > 0) {
-						if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+						if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 							PRINT_DEBUG("inserting call: hdr=%p", hdr);
-							md->calls[hdr->call_index].buf = events_left;
-							md->calls[hdr->call_index].flags = ret_mask;
-							md->calls[hdr->call_index].ret = 0;
+							daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+							md->calls[hdr->call_index].buf = events_left; //events not yet triggered
+							md->calls[hdr->call_index].flags = ret_mask; //events triggered but not ACK'd
+							md->calls[hdr->call_index].ret = 0; //events already triggered & ACK'd
 
 							md->calls[hdr->call_index].sock_index_new = initial; //is final
 							md->calls[hdr->call_index].serial_num = serial_num;
 							md->calls[hdr->call_index].sent = sent;
 
-							if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
-								list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
-								PRINT_DEBUG("");
-								ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
-							} else {
-								PRINT_ERROR("call_list full");
-								nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-							}
+							list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+							PRINT_DEBUG("");
+							//Wait for response from TCP to ACK/NACK
 						} else {
-							PRINT_ERROR("Insert fail: hdr=%p", hdr);
+							PRINT_ERROR("call_list full");
 							nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 						}
 					} else {
 						PRINT_ERROR("Exited: failed to send ff");
 						nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 					}
-				} else {
+				} else { //update old call
 					PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
-							call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, 0);
-					call->buf = events_left;
-					call->flags |= ret_mask;
-					call->ret = 0;
+							call->buf, call->flags, call->ret, events_left, 0, call->ret|ret_mask);
+					call->buf = events_left; //events not yet triggered
+					call->flags = 0; //events triggered but not ACK'd
+					call->ret |= ret_mask; //events already triggered & ACK'd
 
 					ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 				}
@@ -1434,70 +1517,35 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 			//mask |= POLLHUP; //TODO implement
 
 			PRINT_DEBUG("odd: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", 0, mask, mask, 0);
-			ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, mask);
-
-			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
-					md->sockets[hdr->sock_index].sock_id, hdr->sock_index, md->sockets[hdr->sock_index].state, addr4_get_ip(&md->sockets[hdr->sock_index].host_addr), addr4_get_port(&md->sockets[hdr->sock_index].host_addr), addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr), addr4_get_port(&md->sockets[hdr->sock_index].rem_addr));
-
-			uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
-			uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
-			uint32_t rem_ip = addr4_get_ip(&md->sockets[hdr->sock_index].rem_addr);
-			uint32_t rem_port = addr4_get_port(&md->sockets[hdr->sock_index].rem_addr);
-
-			if (md->sockets[hdr->sock_index].state > SS_UNCONNECTED) {
-				PRINT_DEBUG("poll address: host=%u:%u, rem=%u:%u", host_ip, host_port, rem_ip, rem_port);
-			} else {
-				PRINT_DEBUG("poll address: host=%u:%u", host_ip, host_port);
-			}
-
-			metadata *meta = (metadata *) secure_malloc(sizeof(metadata));
-			metadata_create(meta);
+//ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, mask);
 
 			uint32_t initial = 0;
-			secure_metadata_writeToElement(meta, "initial", &initial, META_TYPE_INT32);
-			uint32_t family = AF_INET;
-			secure_metadata_writeToElement(meta, "family", &family, META_TYPE_INT32);
-			uint32_t state = md->sockets[hdr->sock_index].state;
-			secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "flags", &events, META_TYPE_INT32);
-
-			secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
-			secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
-			if (state > SS_UNCONNECTED) {
-				secure_metadata_writeToElement(meta, "rem_ip", &rem_ip, META_TYPE_INT32);
-				secure_metadata_writeToElement(meta, "rem_port", &rem_port, META_TYPE_INT32);
-			}
-
 			uint32_t serial_num = gen_control_serial_num();
-			uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_EXEC, DAEMON_EXEC_TCP_POLL);
+			int sent = poll_send_tcp(module, hdr, events, initial, serial_num);
 			if (sent > 0) {
-				if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+				if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 					PRINT_DEBUG("inserting call: hdr=%p", hdr);
-					//Problem is: is there any events?
-					md->calls[hdr->call_index].buf = 0;
-					md->calls[hdr->call_index].flags = mask;
-					md->calls[hdr->call_index].ret = 0;
+					daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
+					md->calls[hdr->call_index].buf = 0; //events not yet triggered
+					md->calls[hdr->call_index].flags = mask; //events triggered but not ACK'd
+					md->calls[hdr->call_index].ret = 0; //events already triggered & ACK'd
 
 					md->calls[hdr->call_index].sock_index_new = initial; //is final
 					md->calls[hdr->call_index].serial_num = serial_num;
 					md->calls[hdr->call_index].sent = sent;
 
-					if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
-						list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
-						PRINT_DEBUG("");
-					} else {
-						PRINT_ERROR("call_list full");
-						nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
-					}
+					list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
+					PRINT_DEBUG("");
+					//ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, mask);
+					//Wait for response from TCP to ACK/NACK
 				} else {
-					PRINT_ERROR("Insert fail: hdr=%p", hdr);
+					PRINT_ERROR("call_list full");
 					nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 				}
 			} else {
 				PRINT_ERROR("Exited: failed to send ff");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
-			return;
 		}
 	}
 }
@@ -1543,6 +1591,18 @@ void shutdown_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hd
 			secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 
 			uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+
+			///*
+			if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+				if (addr != NULL) {
+					host_ip = addr4_get_ip(&addr->ip);
+				} else {
+					PRINT_WARN("todo error");
+				}
+			}
+			//*/
+
 			secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 			uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 			secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
@@ -1606,6 +1666,18 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 
 	uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+
+	///*
+	if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			host_ip = addr4_get_ip(&addr->ip);
+		} else {
+			PRINT_WARN("todo error");
+		}
+	}
+	//*/
+
 	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 	uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
@@ -1888,12 +1960,15 @@ void getsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		uint32_t serial_num = gen_control_serial_num();
 		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_READ_PARAM, DAEMON_READ_PARAM_TCP_SOCK_OPT);
 		if (sent > 0) {
-			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 				PRINT_DEBUG("inserting call: hdr=%p", hdr);
+				daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 				md->calls[hdr->call_index].serial_num = serial_num;
 				md->calls[hdr->call_index].sent = sent;
+
+				list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 			} else {
-				PRINT_ERROR("Insert fail: hdr=%p", hdr);
+				PRINT_ERROR("call_list full");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		} else {
@@ -1930,6 +2005,18 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 	secure_metadata_writeToElement(meta, "state", &state, META_TYPE_INT32);
 
 	uint32_t host_ip = addr4_get_ip(&md->sockets[hdr->sock_index].host_addr);
+
+	///*
+	if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			host_ip = addr4_get_ip(&addr->ip);
+		} else {
+			PRINT_WARN("todo error");
+		}
+	}
+	//*/
+
 	secure_metadata_writeToElement(meta, "host_ip", &host_ip, META_TYPE_INT32);
 	uint32_t host_port = addr4_get_port(&md->sockets[hdr->sock_index].host_addr);
 	secure_metadata_writeToElement(meta, "host_port", &host_port, META_TYPE_INT32);
@@ -2194,12 +2281,15 @@ void setsockopt_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *
 		uint32_t serial_num = gen_control_serial_num();
 		uint32_t sent = daemon_fcf_to_switch(module, DAEMON_FLOW_TCP, meta, serial_num, CTRL_SET_PARAM, DAEMON_SET_PARAM_TCP_SOCK_OPT);
 		if (sent > 0) {
-			if (daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index)) {
+			if (list_has_space(md->sockets[hdr->sock_index].call_list)) {
 				PRINT_DEBUG("inserting call: hdr=%p", hdr);
+				daemon_calls_insert(module, hdr->call_id, hdr->call_index, hdr->call_pid, hdr->call_type, hdr->sock_id, hdr->sock_index);
 				md->calls[hdr->call_index].serial_num = serial_num;
 				md->calls[hdr->call_index].sent = sent;
+
+				list_append(md->sockets[hdr->sock_index].call_list, &md->calls[hdr->call_index]);
 			} else {
-				PRINT_ERROR("Insert fail: hdr=%p", hdr);
+				PRINT_ERROR("call_list full");
 				nack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, 1);
 			}
 		} else {
@@ -2237,6 +2327,8 @@ void connect_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 		md->sockets[call->sock_index].error_call = call->type;
 		md->sockets[call->sock_index].error_msg = ret_msg;
 
+		addr4_set_ip(&md->sockets[call->sock_index].rem_addr, 0); //TODO don't clear? so that will detect error
+		addr4_set_port(&md->sockets[call->sock_index].rem_addr, 0);
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
@@ -2269,7 +2361,7 @@ void accept_in_tcp(struct fins_module *module, struct finsFrame *ff, struct daem
 
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		if (daemon_sockets_insert(module, call->sock_id_new, call->sock_index_new, md->sockets[call->sock_index].type, md->sockets[call->sock_index].protocol,
-				&tcp_out_ops, &tcp_in_ops, &tcp_other_ops)) {
+				&tcp_out_ops, &tcp_in_ops, &tcp_timeout_ops, &tcp_expired_ops)) {
 			md->sockets[call->sock_index_new].family = md->sockets[call->sock_index].family;
 			md->sockets[call->sock_index_new].state = SS_CONNECTED;
 			memcpy(&md->sockets[call->sock_index_new].host_addr, &md->sockets[call->sock_index].host_addr, sizeof(struct sockaddr_storage));
@@ -2360,7 +2452,7 @@ void getsockopt_in_tcp(struct fins_module *module, struct finsFrame *ff, struct 
 		uint8_t *val = NULL;
 		//################
 
-		//send msg to wedge
+//send msg to wedge
 		int msg_len = sizeof(struct daemon_to_wedge_hdr) + sizeof(int) + (len > 0 ? len : 0);
 		uint8_t *msg = (uint8_t *) secure_malloc(msg_len);
 
@@ -2448,6 +2540,7 @@ void release_in_tcp(struct fins_module *module, struct finsFrame *ff, struct dae
 
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		ack_send(module, call->id, call->index, call->type, ret_msg);
+		daemon_sockets_remove(module, call->sock_index);
 	} else {
 		nack_send(module, call->id, call->index, call->type, ret_msg);
 	}
@@ -2463,38 +2556,44 @@ void poll_in_tcp_fcf(struct fins_module *module, struct finsFrame *ff, struct da
 
 	uint32_t ret_msg = 0;
 	secure_metadata_readFromElement(ff->metaData, "ret_msg", &ret_msg);
-	//secure_metadata_readFromElement(ff->metaData, "mask", &mask);
 
-	if ((ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_POLL) || ff->ctrlFrame.ret_val == FCF_FALSE) {
+	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_POLL || ff->ctrlFrame.ret_val == FCF_FALSE) {
 		PRINT_ERROR("Exiting, NACK: ff=%p, param_id=%d, ret_val=%u", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
 		nack_send(module, call->id, call->index, call->type, 1);
 	} else {
-		if (ret_msg) {
-			ack_send(module, call->id, call->index, call->type, ret_msg);
-		} else {
-			if (call->flags) { //flags == initial
-				//struct daemon_call *call_store = daemon_call_create(call->id, call->index, call->pid, call->type, call->sock_id, call->sock_index);
-				//call_store->buf = call->buf;
-				//call_store->ret = 0;
-				call->ret = 0;
+		uint32_t events = call->buf; //events not yet triggered
+		uint32_t ret_mask = call->flags; //events triggered but not ACK'd
+		//call->ret; //events already triggered & ACK'd
 
-				struct linked_list *call_list = md->sockets[call->sock_index].call_list;
-				if (list_has_space(call_list)) {
-					//list_append(call_list, call_store);
-					list_append(call_list, call);
-					PRINT_DEBUG("");
-					ack_send(module, call->id, call->index, call->type, 0);
-				} else {
-					PRINT_ERROR("call_list full");
-					nack_send(module, call->id, call->index, call->type, 1);
-				}
-			} else {
-				ack_send(module, call->id, call->index, call->type, 0);
+		if (events) {
+			ret_mask |= events & ret_msg;
+		} else {
+			ret_mask |= ret_msg;
+		}
+		uint32_t events_left = events & ~ret_msg;
+		PRINT_DEBUG("in: events=0x%x, mask=0x%x, ret_mask=0x%x, left=0x%x", events, ret_msg, ret_mask, events_left);
+
+		if (events_left) { //if events has leftover store call
+			if (list_has_space(md->sockets[call->sock_index].call_list)) {
+				call->buf = events_left; //events not yet triggered
+				call->flags = 0; //events triggered but not ACK'd
+				call->ret |= ret_mask; //events already triggered & ACK'd
+
+				list_append(md->sockets[call->sock_index].call_list, call);
+				PRINT_DEBUG("");
+				ack_send(module, call->id, call->index, call->type, ret_mask);
+			} else { //shouldn't happen, only occur if >30 threads/forks
+				PRINT_ERROR("call_list full");
+				nack_send(module, call->id, call->index, call->type, 1);
+				daemon_call_free(call);
 			}
+		} else { //else free call
+			daemon_call_free(call);
+
+			ack_send(module, call->id, call->index, call->type, ret_mask);
 		}
 	}
 
-	daemon_call_free(call);
 	freeFinsFrame(ff);
 }
 
@@ -2504,7 +2603,9 @@ void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint3
 	}
 
 	PRINT_DEBUG("Entered: call=%p, flags=0x%x", call, *flags);
-	uint32_t events = call->buf;
+	uint32_t events = call->buf; //events not yet triggered
+	//call->flags; //events triggered but not ACK'd
+	//call->ret; //events already triggered & ACK'd
 
 	PRINT_DEBUG(
 			"POLLIN=0x%x, POLLPRI=0x%x, POLLOUT=0x%x, POLLERR=0x%x, POLLHUP=0x%x, POLLNVAL=0x%x, POLLRDNORM=0x%x, POLLRDBAND=0x%x, POLLWRNORM=0x%x, POLLWRBAND=0x%x",
@@ -2566,11 +2667,11 @@ void poll_in_tcp_fdf(struct daemon_call *call, struct fins_module *module, uint3
 		}
 		free(msg);
 
-		PRINT_DEBUG("updating: old: events=0x%x, used=0x%x, ret=0x%x, new: events=0x%x, used=0x%x, ret=0x%x",
-				call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, call->ret|ret_mask);
-		//call->buf = events_left;
-		//call->flags |= ret_mask;
-		call->ret |= ret_mask;
+		PRINT_DEBUG("updating: old: events=0x%x, triggered=0x%x, ACK'd=0x%x, new: events=0x%x, triggered=0x%x, ACK'd=0x%x",
+				call->buf, call->flags, call->ret, events_left, call->flags|ret_mask, call->ret);
+		call->buf = events_left; //events not yet triggered
+		call->flags |= ret_mask; //events triggered but not ACK'd
+		//call->ret; //events already triggered & ACK'd
 	}
 }
 
@@ -2652,6 +2753,18 @@ uint32_t recvmsg_in_tcp_fdf(struct daemon_call *call, struct fins_module *module
 	secure_metadata_writeToElement(meta_reply, "state", &state, META_TYPE_INT32);
 
 	uint32_t host_ip = addr4_get_ip(&md->sockets[call->sock_index].host_addr);
+
+	///*
+	if (host_ip == DAEMON_ADDR_ANY) { //TODO remove when fix with TCP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		struct addr_record *addr = (struct addr_record *) list_find(md->if_main->addr_list, addr_is_v4);
+		if (addr != NULL) {
+			host_ip = addr4_get_ip(&addr->ip);
+		} else {
+			PRINT_WARN("todo error");
+		}
+	}
+	//*/
+
 	secure_metadata_writeToElement(meta_reply, "host_ip", &host_ip, META_TYPE_INT32);
 	uint32_t host_port = addr4_get_port(&md->sockets[call->sock_index].host_addr);
 	secure_metadata_writeToElement(meta_reply, "host_port", &host_port, META_TYPE_INT32);
@@ -2724,10 +2837,10 @@ void daemon_in_fdf_tcp(struct fins_module *module, struct finsFrame *ff, uint32_
 
 	while (1) {
 		call = (struct daemon_call *) list_find1(md->sockets[sock_index].call_list, daemon_call_recvmsg_test, &flags);
-		if (call != NULL) {
-			data_pos += recvmsg_in_tcp_fdf(call, module, ff->metaData, data_len - data_pos, data + data_pos, dst_addr, 0);
+		if (call != NULL) { //as a recvmsg call can only be non-malloc'd & in md->calls[]
 			list_remove(md->sockets[sock_index].call_list, call);
 
+			data_pos += recvmsg_in_tcp_fdf(call, module, ff->metaData, data_len - data_pos, data + data_pos, dst_addr, 0);
 			if (data_pos == ff->dataFrame.pduLength) {
 				freeFinsFrame(ff);
 				return;
@@ -2913,7 +3026,7 @@ void daemon_in_shutdown_tcp(struct fins_module *module, struct finsFrame *ff, ui
 	freeFinsFrame(ff);
 }
 
-void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
+void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call) { //TODO update for new
 	PRINT_DEBUG("Entered: call=%p", call);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
@@ -2925,26 +3038,38 @@ void connect_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 
 			md->sockets[call->sock_index].error_call = 0; //TODO remove?
 			md->sockets[call->sock_index].error_msg = 0;
+		} else {
+			nack_send(module, call->id, call->index, call->type, -1);
 		}
+
+		daemon_call_free(call);
 		break;
 	case SS_CONNECTING:
-		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK, or should it be EINPROGRESS?
-
 		if (call->serial_num != 0) { //was sent outside of module
-			struct daemon_call *call_clone = daemon_call_clone(call);
-			list_append(md->expired_call_list, call_clone);
+			if (list_has_space(md->expired_call_list)) {
+				nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK, or should it be EINPROGRESS?
+
+				list_append(md->expired_call_list, call);
+			} else {
+				PRINT_ERROR("expired_call_list full");
+				nack_send(module, call->id, call->index, call->type, 1);
+				daemon_call_free(call);
+			}
+		} else {
+			nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK, or should it be EINPROGRESS?
+			daemon_call_free(call);
 		}
 		break;
 	case SS_CONNECTED:
 		ack_send(module, call->id, call->index, call->type, 0);
+		daemon_call_free(call);
 		break;
 	default:
 		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
 		break;
 	}
-
-	daemon_calls_remove(module, call->index);
 }
 
 void accept_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
@@ -2968,29 +3093,36 @@ void accept_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 		} else {
 			nack_send(module, call->id, call->index, call->type, EAGAIN); //TODO fix; this is a patch such that if 2 accepts are called at the same time in different threads
 		}
+
+		daemon_call_free(call);
 		break;
 	case SS_CONNECTING:
-		nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK, or should it be EINPROGRESS?
-
 		if (call->serial_num != 0) { //was sent outside of module
-			struct daemon_call *call_clone = daemon_call_clone(call);
-			list_append(md->expired_call_list, call_clone);
+			if (list_has_space(md->expired_call_list)) {
+				nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK, or should it be EINPROGRESS?
+
+				list_append(md->expired_call_list, call);
+			} else {
+				PRINT_ERROR("expired_call_list full");
+				nack_send(module, call->id, call->index, call->type, 1);
+				daemon_call_free(call);
+			}
+		} else {
+			nack_send(module, call->id, call->index, call->type, EAGAIN); //nack EAGAIN or EWOULDBLOCK, or should it be EINPROGRESS?
+			daemon_call_free(call);
 		}
 		break;
 	default:
 		PRINT_WARN("todo error");
 		nack_send(module, call->id, call->index, call->type, 1);
+		daemon_call_free(call);
 		break;
 	}
-
-	daemon_calls_remove(module, call->index);
 }
 
 void recvmsg_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 	PRINT_DEBUG("Entered: call=%p", call);
 	struct daemon_data *md = (struct daemon_data *) module->data;
-
-	list_remove(md->sockets[call->sock_index].call_list, call);
 
 	switch (md->sockets[call->sock_index].state) {
 	case SS_UNCONNECTED:
@@ -3010,18 +3142,19 @@ void recvmsg_timeout_tcp(struct fins_module *module, struct daemon_call *call) {
 		break;
 	}
 
-	daemon_calls_remove(module, call->index);
+	daemon_call_free(call);
 }
 
 //##############################################################################
-void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply) { //almost equiv to connect_in_tcp //TODO combine the two?
+void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct daemon_call *call, uint8_t reply) { //pretty much equiv to connect_in_tcp //TODO combine the two?
 	PRINT_DEBUG("Entered: ff=%p, call=%p, reply=%d", ff, call, reply);
 	struct daemon_data *md = (struct daemon_data *) module->data;
 
 	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_CONNECT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
-		if (reply)
+		if (reply) {
 			nack_send(module, call->id, call->index, call->type, 1);
+		}
 		daemon_call_free(call);
 		freeFinsFrame(ff);
 		return;
@@ -3043,13 +3176,14 @@ void connect_expired_tcp(struct fins_module *module, struct finsFrame *ff, struc
 		md->sockets[call->sock_index].error_call = call->type;
 		md->sockets[call->sock_index].error_msg = ret_msg;
 
-		addr4_set_ip(&md->sockets[call->sock_index].host_addr, 0); //TODO don't clear? so that will detect error
-		addr4_set_port(&md->sockets[call->sock_index].host_addr, 0);
+		addr4_set_ip(&md->sockets[call->sock_index].rem_addr, 0); //TODO don't clear? so that will detect error
+		addr4_set_port(&md->sockets[call->sock_index].rem_addr, 0);
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
-		if (reply)
+		if (reply) {
 			nack_send(module, call->id, call->index, call->type, ECONNREFUSED); //TODO change based off of timeout, refused etc
+		}
 	}
 
 	daemon_call_free(call);
@@ -3062,8 +3196,9 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 
 	if (ff->ctrlFrame.param_id != DAEMON_EXEC_TCP_ACCEPT) {
 		PRINT_ERROR("Exiting, param_id errors: ff=%p, param_id=%d, ret_val=%d", ff, ff->ctrlFrame.param_id, ff->ctrlFrame.ret_val);
-		if (reply)
+		if (reply) {
 			nack_send(module, call->id, call->index, call->type, 1);
+		}
 		daemon_call_free(call);
 		freeFinsFrame(ff);
 		return;
@@ -3078,7 +3213,7 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 
 	if (ff->ctrlFrame.ret_val == FCF_TRUE) {
 		if (daemon_sockets_insert(module, call->sock_id_new, call->sock_index_new, md->sockets[call->sock_index].type, md->sockets[call->sock_index].protocol,
-				&tcp_out_ops, &tcp_in_ops, &tcp_other_ops)) {
+				&tcp_out_ops, &tcp_in_ops, &tcp_timeout_ops, &tcp_expired_ops)) {
 			md->sockets[call->sock_index_new].family = md->sockets[call->sock_index].family;
 			md->sockets[call->sock_index_new].state = SS_CONNECTED;
 			memcpy(&md->sockets[call->sock_index_new].host_addr, &md->sockets[call->sock_index].host_addr, sizeof(struct sockaddr_storage));
@@ -3100,9 +3235,8 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
-			PRINT_DEBUG("Exiting, ACK: ff=%p", ff);
 			if (reply) {
-				ack_send(module, call->id, call->index, call->type, 0);
+				ack_send(module, call->id, call->index, call->type, ret_msg);
 			}
 		} else {
 			PRINT_ERROR("Exited: insert failed: ff=%p", ff);
@@ -3114,8 +3248,9 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 			PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 					md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
-			if (reply)
+			if (reply) {
 				nack_send(module, call->id, call->index, call->type, 1);
+			}
 		}
 	} else {
 		md->sockets[call->sock_index].state = SS_UNCONNECTED;
@@ -3125,8 +3260,9 @@ void accept_expired_tcp(struct fins_module *module, struct finsFrame *ff, struct
 		PRINT_DEBUG("sock_id=%llu, sock_index=%d, state=%u, host=%u:%u, rem=%u:%u",
 				md->sockets[call->sock_index].sock_id, call->sock_index, md->sockets[call->sock_index].state, addr4_get_ip(&md->sockets[call->sock_index].host_addr), addr4_get_port(&md->sockets[call->sock_index].host_addr), addr4_get_ip(&md->sockets[call->sock_index].rem_addr), addr4_get_port(&md->sockets[call->sock_index].rem_addr));
 
-		if (reply)
+		if (reply) {
 			nack_send(module, call->id, call->index, call->type, ECONNREFUSED); //TODO change based off of timeout, refused etc
+		}
 	}
 
 	daemon_call_free(call);

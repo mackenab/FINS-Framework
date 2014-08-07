@@ -45,8 +45,8 @@ int metadata_copy(metadata *meta, metadata *meta_copy);
 metadata *metadata_clone(metadata *meta);
 
 //tags need to start with letter
-#define secure_config_setting_add(root, name, type) secure_config_setting_add_full(__FILE__, __FUNCTION__, __LINE__, root, name, type)
-metadata_element *secure_config_setting_add_full(const char *file, const char *func, int line, metadata_element *root, char *name, int type);
+#define secure_config_setting_add(root, name, type) secure_config_setting_add_macro(__FILE__, __FUNCTION__, __LINE__, root, name, type)
+metadata_element *secure_config_setting_add_macro(const char *file, const char *func, int line, metadata_element *root, char *name, int type);
 
 #define PARAM_ID "info___id"
 #define PARAM_TYPE "info___type"

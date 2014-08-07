@@ -292,6 +292,7 @@ struct tcp_conn {
 	struct linked_list *recv_list; //buffer for recv tcp_seg that are unACKed - ordered out of order packets
 	////struct linked_list *read_list; //buffer for raw data that has been transfered //TODO push straight to daemon?
 
+	//TODO convert to each to struct linked_list *request_list & have int request_size
 	struct tcp_queue *request_queue; //buffer for sendmsg requests to be added to write_queue - nonblocking requests may TO and be removed
 	struct tcp_queue *write_queue; //buffer for raw data to be transfered - guaranteed to be transfered
 	struct tcp_queue *send_queue; //buffer for sent tcp_seg that are unACKed
@@ -598,6 +599,7 @@ int tcp_release(struct fins_module *module);
 
 void tcp_get_ff(struct fins_module *module);
 void tcp_fcf(struct fins_module *module, struct finsFrame *ff);
+void tcp_alert(struct fins_module *module, struct finsFrame *ff);
 void tcp_read_param(struct fins_module *module, struct finsFrame *ff);
 void tcp_set_param(struct fins_module *module, struct finsFrame *ff);
 void tcp_exec(struct fins_module *module, struct finsFrame *ff);
