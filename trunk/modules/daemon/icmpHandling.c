@@ -843,7 +843,7 @@ void poll_out_icmp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, 
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			}
 		} else {
-			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d, call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 
 			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {

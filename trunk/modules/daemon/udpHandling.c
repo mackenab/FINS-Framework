@@ -543,9 +543,6 @@ void sendmsg_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr
 			MSG_CONFIRM & flags, MSG_CONFIRM, MSG_DONTROUTE & flags, MSG_DONTROUTE, MSG_DONTWAIT & flags, MSG_DONTWAIT, MSG_EOR & flags, MSG_EOR, MSG_MORE & flags, MSG_MORE, MSG_NOSIGNAL & flags, MSG_NOSIGNAL, MSG_OOB & flags, MSG_OOB);
 
 	/** TODO handle flags cases */
-	ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, data_len);
-	free(data);
-	return;
 
 	if (data_len == 0) { //TODO check this prob wrong!
 		PRINT_ERROR("todo/redo");
@@ -1051,7 +1048,7 @@ void poll_out_udp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			}
 		} else {
-			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d, call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 
 			if (md->sockets[hdr->sock_index].sockopts.FIP_RECVERR) {
