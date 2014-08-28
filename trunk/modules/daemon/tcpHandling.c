@@ -1497,7 +1497,7 @@ void poll_out_tcp(struct fins_module *module, struct wedge_to_daemon_hdr *hdr, u
 				ack_send(module, hdr->call_id, hdr->call_index, hdr->call_type, ret_mask);
 			}
 		} else {
-			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d,  call_type=%u, call_id=%u, call_index=%d",
+			PRINT_WARN("final: no corresponding call: sock_id=%llu, sock_index=%d, call_pid=%d, call_type=%u, call_id=%u, call_index=%d",
 					hdr->sock_id, hdr->sock_index, hdr->call_pid, hdr->call_type, hdr->call_id, hdr->call_index);
 			//TODO this shouldn't occur that often unless some time of problem happened
 			//TODO change this so that it waits for reply from TCP to reply?

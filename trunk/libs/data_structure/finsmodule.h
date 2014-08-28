@@ -133,6 +133,7 @@ struct fins_module_table {
 	struct fins_module_flow flows[MAX_MOD_FLOWS];
 };
 
+//struct fins_module *module_create(uint8_t *lib, uint32_t flows_max, struct fins_module_ops *ops, uint32_t index, uint32_t id, uint8_t *name); //TODO have each module call in <module>_create to reduce repetitive code
 void module_create_structs(struct fins_module *module);
 void module_destroy_structs(struct fins_module *module);
 

@@ -148,8 +148,7 @@ struct daemon_to_wedge_hdr {
 };
 
 struct fins_wedge_call {
-	__s32 running; //TODO remove?
-
+	//__u32 call_pid; //add?
 	__u32 call_id;
 	__u32 call_type;
 
@@ -174,8 +173,6 @@ __s32 wedge_calls_remove(__u32 id);
 void wedge_calls_remove_all(void);
 
 struct fins_wedge_socket {
-	__s32 running; //TODO remove? merge with release_flag
-
 	__u64 sock_id;
 	struct socket *sock;
 	struct sock *sk;
