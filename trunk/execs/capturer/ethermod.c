@@ -154,14 +154,13 @@ void processes_init(int inject_fd) {
 		PRINT_IMPORTANT("iis[%d]: name='%s', mac='%s'", i, hdr->iis[i].name, hdr->iis[i].mac);
 	}
 
-	if (hdr->ii_num == 0) {
+	if (hdr->ii_num == 0) { //comment when reading from local loopback of traditional stack
 		PRINT_ERROR("no active interfaces: ii_num=%u", hdr->ii_num);
 		close(inject_fd);
 		return;
 	}
 
-	//TODO eventually remove this
-	if (hdr->ii_num != 1) {
+	if (hdr->ii_num > 1) { //TODO eventually remove this when capturer can support multiple interfaces (when dev = "any" works).
 		PRINT_ERROR("Currently only able to support 1 interface: if_num=%u", hdr->ii_num);
 		close(inject_fd);
 		return;
@@ -238,7 +237,9 @@ void processes_init(int inject_fd) {
 		PRINT_IMPORTANT("iis[%d]: name='%s', mac='%s'", i, hdr->iis[i].name, hdr->iis[i].mac);
 	}
 
+	//char dev[] = "any"; //TODO fix & change to this
 	uint8_t *dev = hdr->iis[0].name; //TODO remove/fix!
+	//char dev[] = "lo"; //uncomment when reading from local loopback of traditional stack
 	char errbuf[PCAP_ERRBUF_SIZE]; /* error buffer */
 
 	/** Setup the Injection Interface */
@@ -278,6 +279,18 @@ void processes_init(int inject_fd) {
 			pt += ret;
 		}
 	}
+
+	/*
+	if (i == 0) { //uncomment when reading from local loopback of traditional stack
+		ret = sprintf(pt, "(ip src 127.0.0.1) or (ip dst 127.0.0.1)");
+	} else {
+		ret = sprintf(pt, " or (ip src 127.0.0.1) or (ip dst 127.0.0.1)");
+	}
+	if (ret > 0) {
+		total += ret;
+		pt += ret;
+	}
+	*/
 
 	if (total > MAX_FILTER_LEN) {
 		PRINT_ERROR("todo error");

@@ -30,7 +30,14 @@
 #define U_HEADER_LEN 8 										/* UDP header length in bytes, 64 bits. */
 #define U_MAXLEN  4096  	/* Maximum amount of data in the UDP packet */
 
-#define UDP_PROTOCOL 	17									/* udp protocol number used in the pseudoheader	*/
+/* Some Assigned Protocol Numbers */
+#define	UDP_PT_ICMP		1		/* protocol type for ICMP packets	*/
+#define	UDP_PT_IGMP		2		/* protocol type for IGMP packets	*/
+#define	UDP_PT_TCP		6		/* protocol type for TCP packets	*/
+#define UDP_PT_EGP		8		/* protocol type for EGP packets	*/
+#define	UDP_PT_UDP		17		/* protocol type for UDP packets	*/
+#define	UDP_PT_OSPF		89		/* protocol type for OSPF packets	*/
+
 #define IGNORE_CHEKSUM  0									/* the checksum value when it is not being used */
 
 #define UDP_MSL_TO_DEFAULT 512000

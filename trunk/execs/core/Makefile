@@ -9,7 +9,7 @@ include $(FINS_ROOT_DIR)/settings.finsmk
 
 #Name of the module
 LOCAL_NAME := core
-LOCAL_MODS := switch interface ipv4 arp icmp tcp udp daemon logger rtm template
+LOCAL_MODS := switch interface ipv4 arp icmp tcp udp daemon logger rtm template logger_iperf
 #LOCAL_MODS := $(subst /,,$(subst $(MODULES_DIR)/,,$(wildcard $(MODULES_DIR)/*/)))
 #this code breaks if anything besides folders containing modules are in MODULES_DIR
 LOCAL_OBJS := core.o

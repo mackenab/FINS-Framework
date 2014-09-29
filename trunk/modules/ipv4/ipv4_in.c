@@ -56,12 +56,12 @@ void ipv4_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 		freeFinsFrame(ff);
 		return;
 	}
-	int hlen = IP4_HLEN(ppacket);
-	PRINT_DEBUG("hdr_len=%u, hlen=%u", header.header_length, IP4_HLEN(ppacket));
+	//int hlen = header.header_length; //IP4_HLEN(ppacket);
+	//PRINT_DEBUG("hdr_len=%u, hlen=%u", header.header_length, IP4_HLEN(ppacket));
 
 	/* Check the integrity of the header. Drop the packet if corrupted header.*/
-	if (ipv4_checksum(ppacket, hlen) != 0) { //TODO check this checksum, don't think it does uneven?
-		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, ipv4_checksum(ppacket, IP4_HLEN(ppacket)));
+	if (ipv4_checksum(ppacket, header.header_length) != 0) { //TODO check this checksum, don't think it does uneven?
+		PRINT_ERROR("Checksum check failed on packet ID %d, non zero result: %d", header.id, ipv4_checksum(ppacket, header.header_length));
 		md->stats.badsum++;
 		md->stats.droppedtotal++;
 

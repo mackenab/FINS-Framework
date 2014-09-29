@@ -9,7 +9,7 @@
 
 uint32_t to_signal;
 
-double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1
+double time_diff(struct timeval *time1, struct timeval *time2) { //time2 - time1, returns difference in milliseconds
 	PRINT_DEBUG("Entered: time1=%p, time2=%p", time1, time2);
 
 	double decimal = 0, diff = 0;

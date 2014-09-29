@@ -189,6 +189,11 @@ void tcp_close(struct fins_module *module, struct tcp_conn *conn, struct finsFra
 			PRINT_DEBUG("LISTEN: CLOSE, send -, CLOSED: state=%d, conn=%p", conn->state, conn);
 			conn->state = TS_CLOSED;
 
+			if (conn->ff) {
+				module_reply_fcf(module, conn->ff, FCF_FALSE, 0); //send NACK about accept call
+				conn->ff = NULL;
+			}
+
 			module_reply_fcf(module, ff, FCF_TRUE, 0);
 
 			//TODO shutdown all conn's in backlog_list
@@ -201,14 +206,10 @@ void tcp_close(struct fins_module *module, struct tcp_conn *conn, struct finsFra
 			PRINT_DEBUG("SYN_SENT: CLOSE, send -, CLOSED: state=%d, conn=%p", conn->state, conn);
 			conn->state = TS_CLOSED;
 
-			/*
-			 if (conn->ff) {
-			 module_reply_fcf(conn->ff, 0, 0); //send NACK about connect call
-			 conn->ff = NULL;
-			 } else {
-			 PRINT_WARN("todo error");
-			 }
-			 */
+			if (conn->ff) {
+				module_reply_fcf(module, conn->ff, FCF_FALSE, 0); //send NACK about connect call
+				conn->ff = NULL;
+			}
 
 			module_reply_fcf(module, ff, FCF_TRUE, 0); //TODO check move to end of last_ack/start of time_wait?
 
@@ -221,6 +222,12 @@ void tcp_close(struct fins_module *module, struct tcp_conn *conn, struct finsFra
 				PRINT_DEBUG("ESTABLISHED: CLOSE, send FIN, FIN_WAIT_1: state=%d, conn=%p", conn->state, conn);
 			}
 			conn->state = TS_FIN_WAIT_1;
+
+			if (conn->ff) { //shouldn't occur, as soon as ESTABLISHED conn->ff==NULL & only conn in backlog_list should reach SYN_RECV
+				PRINT_WARN("shouldn't occur, conn->ff not NULL, sending NACK: module=%p, conn->ff=%p", module, conn->ff);
+				module_reply_fcf(module, conn->ff, FCF_FALSE, 0);
+				conn->ff = NULL;
+			}
 
 			module_reply_fcf(module, ff, FCF_TRUE, 0);
 
@@ -1082,7 +1089,7 @@ void tcp_conn_read_param(struct fins_module *module, struct tcp_conn *conn, stru
 			switch (opt_name) {
 			case SO_SNDBUF:
 				if (opt_len >= sizeof(int)) {
-					//value = conn->write_queue->max;
+					value = conn->write_queue->max;
 				} else {
 					PRINT_WARN("todo error");
 				}

@@ -75,11 +75,16 @@
 #define	IPV4_MIN_HLEN	20		/* minimum IP header length (in bytes)					*/
 #define	IPV4_HLEN(pip)			((pip->ip_verlen & 0xf)<<2)
 #define ICMP_HEADER_SIZE	8
-#define ICMP_PROTOCOL		1	//Protocol number for ICMP packets
-#define TCP_PROTOCOL		6
-#define UDP_PROTOCOL		17	//Protocol number for UDP packets
 #define UNREACH_INCLUDE_DATA_SIZE	64	//How many bytes of data are included in destination unreachable and TTL exceeded ICMP messages.
 // Defined here as a macro for simplicity. 512 bits seems reasonable in my opinion, but it can be tweaked.
+
+/* Some Assigned Protocol Numbers */
+#define	ICMP_PT_ICMP		1		/* protocol type for ICMP packets	*/
+#define	ICMP_PT_IGMP		2		/* protocol type for IGMP packets	*/
+#define	ICMP_PT_TCP			6		/* protocol type for TCP packets	*/
+#define ICMP_PT_EGP			8		/* protocol type for EGP packets	*/
+#define	ICMP_PT_UDP			17		/* protocol type for UDP packets	*/
+#define	ICMP_PT_OSPF		89		/* protocol type for OSPF packets	*/
 
 #define ICMP_MSL_TO_DEFAULT 512000
 #define ICMP_SENT_LIST_MAX (2*65536)

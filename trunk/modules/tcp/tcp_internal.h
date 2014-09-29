@@ -76,7 +76,14 @@
 #define TCP_HEADER_BYTES(flags)		WORDS_TO_BYTES(TCP_HEADER_WORDS(flags))	//For easily grabbing the size of the header in bytes from the flags field
 #define TCP_OPTIONS_BYTES(flags)	WORDS_TO_BYTES(TCP_OPTIONS_WORDS(flags))
 
-//#define TCP_PROTOCOL 		IPPROTO_TCP //6
+/* Some Assigned Protocol Numbers */
+#define	TCP_PT_ICMP		1		/* protocol type for ICMP packets	*/
+#define	TCP_PT_IGMP		2		/* protocol type for IGMP packets	*/
+#define	TCP_PT_TCP		6		/* protocol type for TCP packets	*/
+#define TCP_PT_EGP		8		/* protocol type for EGP packets	*/
+#define	TCP_PT_UDP		17		/* protocol type for UDP packets	*/
+#define	TCP_PT_OSPF		89		/* protocol type for OSPF packets	*/
+
 #define IP_HEADER_WORDS 	3
 #define IP_HEADER_BYTES 	(IP_HEADER_WORDS*4)
 

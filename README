@@ -1,9 +1,15 @@
 This is a README file for the FINS checkout.
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+NOTE: Unfortunatley, technical issues have taken down our wiki so for the time being I am adding a link to Module 2 of our 2013 Workshop Handout, to provide additional information about FINS and show how to configure envi.cfg. Sadly, since the workshop relied on precompiled binaries the step-by-step instructions may be slightly different and it is most useful as a supplementary guide to the instructions below. https://docs.google.com/document/d/11DcDhlVPtAVPSaH4Oeor99DZ3zJzAdx7e-GIsK60mCo/edit?pli=1#heading=h.dfid0q2qufsg
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 ########################
 Introduction
 ########################
-Flexible Internetwork Stack (FINS) Framework v1.0.0 is a platform made to move the traditional TCP/IP stack to the user-space and enable easier research and development of new protocols. More detail on FINS can be found at the wiki: http://finsframework.org/mediawiki/index.php/Documentation_-_FINS_v1.0.0.
+Flexible Internetwork Stack (FINS) Framework v1.0.0 is a platform made to move the traditional TCP/IP stack to the user-space and enable easier research and development of new protocols. A much more detailed description of the FINS Framework along with in depth instructions are available on our wiki: http://finsframework.org/mediawiki/index.php/Documentation_-_FINS_v1.0.0.
+
 
 ########################
 Dependencies
@@ -11,32 +17,59 @@ Dependencies
 The FINS Framework requires the following libraries:
 	C: libc
 	Pcap: libpcap
-	Config: libconfig
+	Config: libconfig (http://www.hyperrealm.com/libconfig)
 	Pthread: libpthread
+
 
 ########################
 Build steps
 ########################
-Provided in the root directory of FINS (<FINS_ROOT>) is a build system preconfigured for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command.
+Provided in the root directory of FINS (<FINS_ROOT>) is a build system preset for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command. Finally, to ready the framework for execution or deploy the binaries to connected mobile devices run "make install". To recursively clean all possible modules/folders run "make clean_full".
+
+
+########################
+Experiment Design steps
+########################
+The FINS Framework sets up a protocol suite using configuration files provided by the user (or by default ./envi.cfg and ./stack.cfg), namely an environment file and a stack file. The environment file includes information about the identify of the node, including the available interface devices, their state, IP addresses of the node, and the starting routing table. The stack file includes the starting configuration of the protocol suite, i.e. the initial running modules and the links between them. For running a full stack on a new node, changes will primarily be needed in <FINS_ROOT>/obj/envi.cfg to reflect the interfaces and their MAC addresses. An example configuration of a fully functional stack is already provided in  <FINS_ROOT>/obj/stack.cfg.
+!!!!See workshop Module 2 as a general guide for editing envi.cfg!!!!
+
 
 ########################
 Run steps
 ########################
 
-From <FINS_ROOT> directory:
+From <FINS_ROOT>/obj directory:
 
-1) Insert the wedge LKM:
-$ insmod <FINS_ROOT>/trunk/wedge/FINS_stack_wedge.ko
-or
+1) Make sure the desired interface devices are up and connected its gateway/access point (for simplicity).
+$ iwconfig
+and
+$ ifconfig
+
+2) Block traffic from the traditional stack:
+$ ./drop_tables.sh
+
+3) Insert the wedge LKM:
 $ ./inswedge.sh
+$ <enter>
+or
+$ sudo modprobe fins_stack_wedge
+or
+$ insmod <FINS_ROOT>/trunk/execs/wedge/FINS_stack_wedge.ko
 
-2) In a second terminal run the Capturer executable:
-$ ./<FINS_ROOT>/trunk/capturer/capturer
+4) In a second terminal run the Capturer executable:
+$ cd <FINS_ROOT>/obj
+$ sudo ./capturer
+Wait a few  seconds.
 
-3) In a third terminal run the Core executable:
-$ ./<FINS_ROOT>/trunk/core/core
+5) In a third terminal run the Core executable:
+$ cd <FINS_ROOT>/obj
+$ ./core
+or
+$ ./<FINS_ROOT>/obj/core -e <desired_envi.cfg> -s <desired_stack.cfg>
+Wait a few  seconds.
 
-4)Run the application(s).
+5)Run the application(s).
+
 
 ########################
 Shutdown steps
@@ -49,4 +82,10 @@ Shutdown steps
 3) Terminate the Capturer process, typically through “Control + C” (^C)
 
 4) Remove the wedge LKM through:
-$ rmmod -f trunk/wedge/FINS_stack_wedge
+$ sudo -r modprobe fins_stack_wedge
+or 
+$ rmmod -f <FINS_ROOT>/trunk/execs/wedge/FINS_stack_wedge
+
+5) If usage of the traditional stack is necessary reboot the system.
+
+Note that the FINS Framework can be restarted by simply terminating and starting the Core executable, without removing the wedge and or terminating the Capturer executable.

@@ -12,8 +12,8 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
-#define DEBUG
-#define INFO
+//#define DEBUG
+//#define INFO
 #define WARN
 #define IMPORTANT
 #define ERROR

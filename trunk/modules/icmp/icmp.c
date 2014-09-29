@@ -283,8 +283,11 @@ void icmp_in_fdf(struct fins_module *module, struct finsFrame *ff) {
 	uint32_t protocol;
 	secure_metadata_readFromElement(ff->metaData, "recv_protocol", &protocol);
 
-	if (protocol != ICMP_PROTOCOL) { //TODO remove this check?
-		PRINT_WARN("Protocol =/= ICMP! Discarding frame...");
+	if (protocol != ICMP_PT_ICMP) { //TODO remove this check?
+		//md->stats.wrongProtocol++;
+		//md->stats.totalBadDatagrams++;
+
+		PRINT_WARN("wrong protocol: expected=%u, proto=%u", ICMP_PT_ICMP, protocol);
 		freeFinsFrame(ff);
 		return;
 	}
@@ -397,7 +400,7 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 
 	PRINT_DEBUG("sent: proto=%u, data_len=%u", ipv4_pkt_sent->ip_proto, sent_data_len);
 	switch (ipv4_pkt_sent->ip_proto) {
-	case ICMP_PROTOCOL:
+	case ICMP_PT_ICMP:
 		//cast first 8 bytes of ip->data to TCP frag, store in metadata
 		if (sent_data_len < ICMP_FRAG_SIZE) {
 			PRINT_WARN("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, ICMP_FRAG_SIZE);
@@ -467,7 +470,7 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 			}
 		}
 		break;
-	case UDP_PROTOCOL:
+	case ICMP_PT_UDP:
 		//cast first 8 bytes of ip->data to udp frag, store in metadata
 		if (sent_data_len < UDP_FRAG_SIZE) {
 			PRINT_WARN("data too small: sent_data_len=%u, frag_size=%u", sent_data_len, UDP_FRAG_SIZE);
@@ -504,7 +507,7 @@ void icmp_handle_error(struct fins_module *module, struct finsFrame* ff, struct 
 			freeFinsFrame(ff_err);
 		}
 		return;
-	case TCP_PROTOCOL:
+	case ICMP_PT_TCP:
 		PRINT_WARN("todo");
 		//copy what's used for UDP?
 		break;
@@ -547,7 +550,7 @@ void icmp_ping_reply(struct fins_module *module, struct finsFrame* ff, struct ic
 	metadata *meta_reply = (metadata *) secure_malloc(sizeof(metadata));
 	metadata_create(meta_reply);
 
-	uint32_t protocol = ICMP_PROTOCOL;
+	uint32_t protocol = ICMP_PT_ICMP;
 	secure_metadata_writeToElement(meta_reply, "send_protocol", &protocol, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta_reply, "send_family", &family, META_TYPE_INT32);
 	secure_metadata_writeToElement(meta_reply, "send_src_ipv4", &dst_ip, META_TYPE_INT32);
@@ -606,7 +609,7 @@ void icmp_out_fdf(struct fins_module *module, struct finsFrame *ff) {
 	secure_metadata_readFromElement(ff->metaData, "send_src_ipv4", &src_ip);
 	uint32_t dst_ip;
 	secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
-	uint32_t protocol = ICMP_PROTOCOL;
+	uint32_t protocol = ICMP_PT_ICMP;
 	secure_metadata_writeToElement(ff->metaData, "send_protocol", &protocol, META_TYPE_INT32);
 
 #ifdef DEBUG
@@ -749,6 +752,9 @@ int icmp_release(struct fins_module *module) {
 	list_free(md->sent_list, icmp_sent_free);
 
 	//free common module data
+	PRINT_IMPORTANT("if_list->len=%u", md->if_list->len);
+	list_free(md->if_list, ifr_free);
+
 	if (md->link_list != NULL) {
 		list_free(md->link_list, free);
 	}

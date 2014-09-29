@@ -64,7 +64,7 @@ void udp_out_fdf(struct fins_module *module, struct finsFrame* ff) {
 	secure_metadata_readFromElement(ff->metaData, "send_dst_ipv4", &dst_ip);
 	secure_metadata_readFromElement(ff->metaData, "send_dst_port", &dst_port);
 
-	uint32_t protocol = UDP_PROTOCOL;
+	uint32_t protocol = UDP_PT_UDP;
 	secure_metadata_writeToElement(ff->metaData, "send_protocol", &protocol, META_TYPE_INT32);
 
 	/** fixing the values because of the conflict between uint16 type and

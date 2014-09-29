@@ -99,7 +99,7 @@ void udp_get_ff(struct fins_module *module) {
 		secure_sem_wait(module->input_sem);
 		ff = read_queue(module->input_queue);
 		sem_post(module->input_sem);
-	} while (module->state == FMS_RUNNING && ff == NULL); //TODO change logic here, combine with switch_to_logger?
+	} while (module->state == FMS_RUNNING && ff == NULL); //TODO change logic here, combine with switch_to_udp?
 
 	if (module->state != FMS_RUNNING) {
 		if (ff != NULL) {

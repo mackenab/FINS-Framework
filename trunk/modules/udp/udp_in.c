@@ -37,6 +37,15 @@ void udp_in_fdf(struct fins_module *module, struct finsFrame* ff) {
 	uint32_t dst_ip;
 	secure_metadata_readFromElement(ff->metaData, "recv_dst_ipv4", &dst_ip);
 
+	if (protocol != UDP_PT_UDP) {
+		md->stats.wrongProtocol++;
+		md->stats.totalBadDatagrams++;
+
+		PRINT_WARN("wrong protocol: expected=%u, proto=%u", UDP_PT_UDP, protocol);
+		freeFinsFrame(ff);
+		return;
+	}
+
 	/* begins checking the UDP packets integrity */
 	/** TODO Fix the length check below , I will highlighted for now */
 	uint32_t hlen = ntohs(packet->u_len);

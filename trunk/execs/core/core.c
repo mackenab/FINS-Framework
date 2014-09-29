@@ -37,6 +37,7 @@
 #include <logger.h>
 #include <rtm.h>
 #include <template.h>
+#include <logger_iperf.h>
 //#endif
 
 extern sem_t global_control_serial_sem; //TODO remove & change gen process to RNG
@@ -79,6 +80,7 @@ void library_dummies(void) {
 	logger_dummy();
 	rtm_dummy();
 	template_dummy();
+	logger_iperf_dummy();
 }
 
 struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
@@ -113,6 +115,8 @@ struct fins_library *library_fake_load(uint8_t *lib, uint8_t *base_path) {
 		library->create = (mod_create_type) rtm_create;
 	} else if (strcmp((char *) lib_create, "template_create") == 0) {
 		library->create = (mod_create_type) template_create;
+	} else if (strcmp((char *) lib_create, "logger_iperf_create") == 0) {
+		library->create = (mod_create_type) logger_iperf_create;
 	} else {
 		PRINT_ERROR("default: unknown library: lib='%s'", lib);
 		exit(-1);

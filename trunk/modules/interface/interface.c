@@ -719,7 +719,9 @@ void *capturer_to_interface(void *local) {
 	metadata *meta;
 	struct finsFrame *ff;
 
+#ifdef DEBUG
 	uint32_t count = 0;
+#endif
 	while (module->state == FMS_RUNNING) {
 		//works but blocks, so can't shutdown properly, have to double ^C, kill, or wait for frame/kill capturer
 		do {
@@ -766,10 +768,12 @@ void *capturer_to_interface(void *local) {
 			continue;
 		}
 
+#ifdef DEBUG
 		count++;
 		PRINT_DEBUG("frame read: count=%u, frame_len=%d", count, frame_len);
 		//TODO change back to PRINT_DEBUG?
 		//print_hex_block(data,datalen);
+#endif
 
 		dst_mac = ((uint64_t) hdr->ether_dhost[0] << 40) + ((uint64_t) hdr->ether_dhost[1] << 32) + ((uint64_t) hdr->ether_dhost[2] << 24)
 				+ ((uint64_t) hdr->ether_dhost[3] << 16) + ((uint64_t) hdr->ether_dhost[4] << 8) + (uint64_t) hdr->ether_dhost[5];

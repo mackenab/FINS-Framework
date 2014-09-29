@@ -80,7 +80,7 @@ uint16_t UDP_checksum(struct udp_packet* pcket_netw, uint32_t src_ip_netw, uint3
 	hdr.src_addr = src_ip_netw;
 	hdr.dst_addr = dst_ip_netw;
 	hdr.zeros = 0;
-	hdr.protocol = UDP_PROTOCOL;
+	hdr.protocol = UDP_PT_UDP;
 	hdr.udp_len = pcket_netw->u_len;
 
 	pt = (uint8_t *) &hdr;
