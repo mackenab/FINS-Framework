@@ -12,6 +12,7 @@
 #ifndef FINSDEBUG_H_
 #define FINSDEBUG_H_
 
+//commenting stops debug printout
 //#define DEBUG
 //#define INFO
 #define WARN

@@ -1,0 +1,14 @@
+adb reboot bootloader
+cd grouper
+sudo su
+fastboot devices
+fastboot erase boot
+fastboot erase cache
+fastboot erase recovery
+fastboot erase system
+fastboot erase userdata
+fastboot flash boot boot.img
+fastboot flash recovery recovery.img
+fastboot flash system system.img
+fastboot flash userdata userdata.img
+fastboot reboot

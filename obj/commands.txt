@@ -1,0 +1,60 @@
+git log
+git status
+git diff
+git commit -am "message"
+git remote -v
+git pull origin master
+git push origin master
+
+sudo modprobe -r b43
+sudo modprobe b43
+
+make clean_full
+make clean
+make
+make install
+
+sudo service network-manager stop
+sudo ifconfig eth0 up
+sudo ifconfig eth0 128.173.92.32 netmask 255.255.255.0 up
+
+./drop_tables.sh
+sudo iptables --list
+iptables -A INPUT -p icmp -j DROP
+iptables -D INPUT 1
+
+./inswedge.sh
+sudo modprobe fins_stack_wedge
+sudo modprobe -r fins_stack_wedge
+
+sudo ./capturer > output_capturer.txt
+./core -e envi.cfg -s stack.cfg > output_core.txt
+./core -s stack_daemon.cfg > output_core.txt
+
+ifconfig
+iwconfig
+dmesg > output_dmesg.txt
+cat /var/log/syslog | grep FINS > output_dmesg.txt
+
+ping 192.168.1.1
+
+iperf -c 192.168.1.18 -u -b 10m -t 30 -i 10
+iperf -s -u -i 10
+
+iperf -c 192.168.1.18 -t 30 -i 10
+iperf -s -i 10
+
+dig www.vt.edu
+
+strace -f -ttt -x -v -o strace_ping_fail_fins.txt ping 128.173.92.38
+
+valgrind --leak-check=full --track-origins=yes -v --log-file=valgrind_output.txt ./capturer > output_capturer.txt
+valgrind --leak-check=full --track-origins=yes --show-reachable=yes -v --log-file=valgrind_output.txt ./core > output_core.txt
+LD_LIBRARY_PATH=. valgrind --leak-check=full --track-origins=yes --show-reachable=yes -v --log-file=valgrind_output.txt ./core > output_core.txt
+
+adb devices
+sudo su
+adb kill-server
+adb start-server
+adb shell
+

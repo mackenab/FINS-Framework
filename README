@@ -22,6 +22,40 @@ The FINS Framework requires the following libraries:
 
 
 ########################
+Platforms
+########################
+The FINS Framework has been made to operate across Linux platforms and has been successfully tested on Ubuntu and Android devices. Similarly a majority of the code/variables has been converted to platform independent values and has been evaluatated on 32-bit and 64-bit machines. Details and values that need to be changed are for the most part contained within the <FINS_ROOT>/settings.finsmk file. In addition this, the kernel components within FINS (the socket calls interceptor) has been tested on kernel versions 2.6 to 3.8, though requires some configuration. To configure the socket calls interceptor for the kernel version of the platform open <FINS_ROOT>/trunk/execs/wedge/fins_stack_wedge.c to lines 13-18:
+//The FINS Framework socket interceptor (wedge) is compatible with kernel versions v2.6.38 up to and including v3.8.0.
+//When configuring the wedge for a particular kernel it follows the format <MAJOR>.<MINOR>.<REVISION>, where each variable is a single digit.
+//For example for the Linux 3.2.0-030200-generic kernel you would use <3>.<2>.<0> .
+#define KERNEL_MAJOR 3
+#define KERNEL_MINOR 2
+#define KERNEL_REVISION 0
+
+
+########################
+Debug Options
+########################
+The framework has been coded with and provides several debug levels for outputing information:
+* debug - white - for tracing function calls (Entered/Exited function)
+* info - blue - human readable text that doesn't need context (resolved/didn't resolve MAC address)
+* warn - yellow - potentially bad occurrances but not errors (poll not finding initial call)
+* important - green - crucially important output (modules going up/down, console connecting)
+* error - red - fatal errors
+
+Each of these output leves can be enabled/disabled for the FINS Core before compilation by opening <FINS_ROOT>/trunk/libs/common/finsdebug.h to lines 14-19:
+//commenting stops debug printout
+//#define DEBUG
+//#define INFO
+#define WARN
+#define IMPORTANT
+#define ERROR
+
+Similarly, debug in the kernel by the socket calls interceptor can be enabled/disabled by opening <FINS_ROOT>/trunk/execs/wedge/fins_stack_wedge.c to lines 24-29.
+
+
+
+########################
 Build steps
 ########################
 Provided in the root directory of FINS (<FINS_ROOT>) is a build system preset for several platforms. The default platform is set to build on a x86 Linux system, which can be changed by editing the settings.finsmk file. Once configured, the build system simply requires the user to run the "make" or "make clean all" command. Finally, to ready the framework for execution or deploy the binaries to connected mobile devices run "make install". To recursively clean all possible modules/folders run "make clean_full".
